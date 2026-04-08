@@ -39,7 +39,7 @@ echo "=== Provisioning LXC concerts (VMID : $VMID) ==="
 # 1. Template Debian 13
 # ---------------------------------------------------------------
 
-TEMPLATE="debian-13-standard_13.4-1_amd64.tar.zst"
+TEMPLATE="debian-13-standard_13.1-2_amd64.tar.zst"
 TEMPLATE_PATH="/var/lib/vz/template/cache/$TEMPLATE"
 
 if [ ! -f "$TEMPLATE_PATH" ]; then
