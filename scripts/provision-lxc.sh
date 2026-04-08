@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 
 # provision-lxc.sh — création et provisioning du LXC strapontin
 # À exécuter depuis le HOST Proxmox (192.168.1.99) en tant que root
