@@ -6,7 +6,7 @@ set -euo pipefail
 # Prérequis : /app/.env configuré, PostgreSQL et Redis démarrés
 
 REPO_URL="${1:-}"
-APP_DIR="/app"
+APP_DIR="/opt/strapontin"
 
 if [ -z "$REPO_URL" ]; then
     echo "Usage : deploy.sh <url_du_repo>" >&2

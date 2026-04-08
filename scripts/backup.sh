@@ -5,7 +5,7 @@ set -euo pipefail
 # À exécuter depuis le LXC en tant que root ou strapontin
 
 BACKUP_DIR="/mnt/backup"
-APP_DIR="/app"
+APP_DIR="/opt/strapontin"
 
 # Vérifier que le backup NAS est monté
 if ! mountpoint -q "$BACKUP_DIR"; then

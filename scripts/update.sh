@@ -5,7 +5,7 @@ set -euo pipefail
 # À exécuter depuis le LXC (déclenché par Woodpecker via SSH)
 # Ordre strict : backup → pull → install → build → migrate → restart → healthcheck
 
-APP_DIR="/app"
+APP_DIR="/opt/strapontin"
 
 cd "$APP_DIR"
 
