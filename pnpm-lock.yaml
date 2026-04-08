@@ -10,7 +10,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@concert-web/core':
+      '@strapontin/core':
         specifier: workspace:*
         version: link:../../packages/core
       better-auth:

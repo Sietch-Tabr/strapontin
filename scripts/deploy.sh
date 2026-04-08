@@ -38,7 +38,7 @@ pnpm install --frozen-lockfile
 # Migrations DB
 echo "Migrations..."
 set -a; source "$APP_DIR/.env"; set +a
-pnpm --filter @concert-web/core db:migrate
+pnpm --filter @strapontin/core db:migrate
 
 # Build
 echo "Build..."

@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { PUBLIC_BASE_URL } from "$env/static/public";
 import { db } from "$lib/server/db";
-import * as schema from "@concert-web/core/schema";
+import * as schema from "@strapontin/core/schema";
 
 export const auth = betterAuth({
   baseURL: PUBLIC_BASE_URL,

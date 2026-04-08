@@ -30,7 +30,7 @@ pnpm build
 # 5. Migrations DB
 echo "[5/6] migrations..."
 set -a; source "$APP_DIR/.env"; set +a
-pnpm --filter @concert-web/core db:migrate
+pnpm --filter @strapontin/core db:migrate
 
 # 6. Redémarrage des services
 echo "[6/6] redémarrage..."

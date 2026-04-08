@@ -14,7 +14,7 @@ set -euo pipefail
 # ---------------------------------------------------------------
 
 VMID=$(pvesh get /cluster/nextid)
-HOSTNAME="concert"
+HOSTNAME="strapontin"
 TEMPLATE_STORAGE="local"
 DISK_STORAGE="local-lvm"
 BRIDGE="vmbr0"
@@ -22,7 +22,6 @@ VLAN_TAG="20"
 IP="192.168.20.79/24"
 GW="192.168.20.1"
 MAC="02:00:00:00:00:13"
-NAMESERVER="192.168.1.3"
 MEMORY="2048"
 CORES="2"
 DISK="20"
@@ -72,7 +71,6 @@ pct create "$VMID" "$TEMPLATE_PATH" \
     --memory "$MEMORY" \
     --rootfs "$DISK_STORAGE:$DISK" \
     --net0 "name=eth0,bridge=$BRIDGE,tag=$VLAN_TAG,hwaddr=$MAC,ip=$IP,gw=$GW" \
-    --nameserver "$NAMESERVER" \
     --unprivileged 1 \
     --features "nesting=1" \
     --ostype debian \
@@ -94,8 +92,18 @@ pct start "$VMID"
 sleep 5
 
 # ---------------------------------------------------------------
-# 5. Installation des paquets dans le LXC
+# 5. Locale, fuseau horaire, paquets
 # ---------------------------------------------------------------
+
+echo "[5] Configuration locale et fuseau horaire..."
+pct exec "$VMID" -- bash -c "
+    echo 'fr_FR.UTF-8 UTF-8' >> /etc/locale.gen
+    locale-gen
+    update-locale LANG=fr_FR.UTF-8 LC_ALL=fr_FR.UTF-8
+    ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime
+    echo 'Europe/Paris' > /etc/timezone
+    dpkg-reconfigure -f noninteractive tzdata
+"
 
 echo "[5] Autologin root sur la console Proxmox..."
 pct exec "$VMID" -- bash -c "
@@ -127,8 +135,9 @@ pct exec "$VMID" -- npm install -g pnpm
 # PostgreSQL 18
 echo "[5] Installation PostgreSQL $PG_VERSION..."
 pct exec "$VMID" -- bash -c "
+    CODENAME=\$(lsb_release -cs)
     curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
-    echo 'deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt \$(lsb_release -cs)-pgdg main' > /etc/apt/sources.list.d/pgdg.list
+    echo \"deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt \${CODENAME}-pgdg main\" > /etc/apt/sources.list.d/pgdg.list
     apt-get update
     apt-get install -y postgresql-${PG_VERSION}
 "
@@ -136,8 +145,9 @@ pct exec "$VMID" -- bash -c "
 # Redis 8
 echo "[5] Installation Redis 8..."
 pct exec "$VMID" -- bash -c "
+    CODENAME=\$(lsb_release -cs)
     curl -fsSL https://packages.redis.io/gpg | gpg --dearmor -o /usr/share/keyrings/redis.gpg
-    echo 'deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb \$(lsb_release -cs) main' > /etc/apt/sources.list.d/redis.list
+    echo \"deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb \${CODENAME} main\" > /etc/apt/sources.list.d/redis.list
     apt-get update
     apt-get install -y redis
 "

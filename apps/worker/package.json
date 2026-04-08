@@ -1,5 +1,5 @@
 {
-  "name": "@concert-web/worker",
+  "name": "@strapontin/worker",
   "private": true,
   "version": "0.0.1",
   "type": "module",
