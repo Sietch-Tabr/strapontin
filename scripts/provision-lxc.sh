@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# provision-lxc.sh — création et provisioning du LXC concert
+# provision-lxc.sh — création et provisioning du LXC strapontin
 # À exécuter depuis le HOST Proxmox (192.168.1.99) en tant que root
 # Idempotent : peut être relancé sans danger
 #
 # Prérequis :
-#   - /volume1/backup/strapontin/ créé dans DSM (Synology File Station)
+#   - /volume1/backup/Strapontin/ créé dans DSM (Synology File Station)
 #   - /mnt/synology/backup/ monté sur le host Proxmox (NFS4)
 
 # ---------------------------------------------------------------
@@ -75,6 +75,7 @@ pct create "$VMID" "$TEMPLATE_PATH" \
     --features "nesting=1" \
     --ostype debian \
     --onboot 1 \
+    --protection 1 \
     --start 0
 
 # ---------------------------------------------------------------
@@ -93,7 +94,7 @@ pct start "$VMID"
 sleep 5
 
 # ---------------------------------------------------------------
-# 5. Locale, fuseau horaire, paquets
+# 5. Système de base
 # ---------------------------------------------------------------
 
 echo "[5] Configuration locale et fuseau horaire..."
@@ -115,19 +116,42 @@ pct exec "$VMID" -- bash -c "
     systemctl daemon-reload
 "
 
+echo "[5] Paramètres noyau (Redis + réseau)..."
+pct exec "$VMID" -- bash -c "
+    cat >> /etc/sysctl.d/99-strapontin.conf << 'EOF'
+vm.overcommit_memory = 1
+net.core.somaxconn = 511
+EOF
+    sysctl -p /etc/sysctl.d/99-strapontin.conf
+"
+
+echo "[5] Configuration journald..."
+pct exec "$VMID" -- bash -c "
+    mkdir -p /etc/systemd/journald.conf.d
+    printf '[Journal]\nSystemMaxUse=100M\n' > /etc/systemd/journald.conf.d/strapontin.conf
+    systemctl restart systemd-journald
+"
+
 echo "[5] Mise à jour des paquets..."
-pct exec "$VMID" -- bash -c "apt-get update && apt-get upgrade -y"
+pct exec "$VMID" -- bash -c "
+    DEBIAN_FRONTEND=noninteractive apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+"
 
 echo "[5] Installation des dépendances de base..."
-pct exec "$VMID" -- apt-get install -y \
-    curl git gnupg2 ca-certificates lsb-release \
-    build-essential
+pct exec "$VMID" -- bash -c "
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        curl git gnupg2 ca-certificates lsb-release build-essential \
+        unattended-upgrades
+    printf 'APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";\n' \
+        > /etc/apt/apt.conf.d/20auto-upgrades
+"
 
 # Node 22 (NodeSource)
 echo "[5] Installation Node $NODE_VERSION..."
 pct exec "$VMID" -- bash -c "
     curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
-    apt-get install -y nodejs
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
 "
 
 # pnpm
@@ -141,7 +165,7 @@ pct exec "$VMID" -- bash -c "
     curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
     echo \"deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt \${CODENAME}-pgdg main\" > /etc/apt/sources.list.d/pgdg.list
     apt-get update
-    apt-get install -y postgresql-${PG_VERSION}
+    DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-${PG_VERSION}
 "
 
 # Redis 8
@@ -151,11 +175,11 @@ pct exec "$VMID" -- bash -c "
     curl -fsSL https://packages.redis.io/gpg | gpg --dearmor -o /usr/share/keyrings/redis.gpg
     echo \"deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb \${CODENAME} main\" > /etc/apt/sources.list.d/redis.list
     apt-get update
-    apt-get install -y redis
+    DEBIAN_FRONTEND=noninteractive apt-get install -y redis
 "
 
 # ---------------------------------------------------------------
-# 6. Utilisateur et base de données
+# 6. Utilisateur, clé SSH, dépôt, base de données
 # ---------------------------------------------------------------
 
 echo "[6] Création utilisateur système '$APP_USER'..."
@@ -177,7 +201,6 @@ echo "================================================================"
 echo "ACTION REQUISE : ajouter la clé ci-dessus dans"
 echo "  Codeberg → Settings → Deploy Keys (lecture seule suffit)"
 echo "  https://codeberg.org/Kwaite/strapontin/settings/keys"
-echo "  Puis relancer ce script depuis l'étape [6b] ou continuer"
 echo "================================================================"
 read -r -p "Clé ajoutée dans Codeberg ? [o pour continuer] " _confirm
 
@@ -214,16 +237,17 @@ echo "[7] Création des services systemd..."
 pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-web.service << 'UNIT'
 [Unit]
 Description=Strapontin — serveur web
-After=network.target postgresql.service redis.service
+After=network.target postgresql.service redis-server.service
 
 [Service]
 Type=simple
 User=strapontin
-WorkingDirectory=/app
-EnvironmentFile=/app/.env
-ExecStart=/usr/bin/node /app/apps/web/build/index.js
+WorkingDirectory=/opt/strapontin
+EnvironmentFile=/opt/strapontin/.env
+ExecStart=/usr/bin/node /opt/strapontin/apps/web/build/index.js
 Restart=on-failure
 RestartSec=5
+LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target
@@ -232,29 +256,29 @@ UNIT"
 pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-worker.service << 'UNIT'
 [Unit]
 Description=Strapontin — worker BullMQ
-After=network.target redis.service
+After=network.target redis-server.service
 
 [Service]
 Type=simple
 User=strapontin
-WorkingDirectory=/app
-EnvironmentFile=/app/.env
-ExecStart=/usr/bin/node /app/apps/worker/dist/index.js
+WorkingDirectory=/opt/strapontin
+EnvironmentFile=/opt/strapontin/.env
+ExecStart=/usr/bin/node /opt/strapontin/apps/worker/dist/index.js
 Restart=on-failure
 RestartSec=5
+LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target
 UNIT"
 
-# Cron systemd backup quotidien
 pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-backup.service << 'UNIT'
 [Unit]
 Description=Strapontin — backup quotidien
 
 [Service]
 Type=oneshot
-ExecStart=/app/scripts/backup.sh
+ExecStart=/opt/strapontin/scripts/backup.sh
 UNIT"
 
 pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-backup.timer << 'UNIT'
