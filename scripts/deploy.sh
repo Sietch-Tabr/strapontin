@@ -36,8 +36,7 @@ su - strapontin -c "cd $APP_DIR && pnpm install --frozen-lockfile"
 
 # Migrations DB
 echo "Migrations..."
-set -a; source "$APP_DIR/.env"; set +a
-su - strapontin -c "cd $APP_DIR && pnpm --filter @strapontin/core db:migrate"
+su - strapontin -c "set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && pnpm --filter @strapontin/core db:migrate"
 
 # Build
 echo "Build..."
