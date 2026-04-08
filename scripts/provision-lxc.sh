@@ -84,6 +84,11 @@ pct create "$VMID" "$TEMPLATE_PATH" \
 echo "[3] Montage NAS /mnt/backup..."
 pct set "$VMID" --mp0 "/mnt/synology/backup/Strapontin,mp=/mnt/backup"
 
+echo "[3] Paramètre noyau vm.overcommit_memory sur le host (requis par Redis)..."
+grep -qxF 'vm.overcommit_memory = 1' /etc/sysctl.d/99-redis.conf 2>/dev/null \
+    || echo 'vm.overcommit_memory = 1' >> /etc/sysctl.d/99-redis.conf
+sysctl -w vm.overcommit_memory=1
+
 # ---------------------------------------------------------------
 # 4. Démarrage
 # ---------------------------------------------------------------
@@ -115,12 +120,9 @@ pct exec "$VMID" -- bash -c "
     systemctl daemon-reload
 "
 
-echo "[5] Paramètres noyau (Redis + réseau)..."
+echo "[5] Paramètre réseau net.core.somaxconn dans le LXC..."
 pct exec "$VMID" -- bash -c "
-    cat >> /etc/sysctl.d/99-strapontin.conf << 'EOF'
-vm.overcommit_memory = 1
-net.core.somaxconn = 511
-EOF
+    echo 'net.core.somaxconn = 511' > /etc/sysctl.d/99-strapontin.conf
     sysctl -p /etc/sysctl.d/99-strapontin.conf
 "
 
