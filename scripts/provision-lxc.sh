@@ -235,8 +235,8 @@ pct exec "$VMID" -- bash -c "
 "
 
 echo "[6] Génération du .env..."
-DB_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
-AUTH_SECRET=$(openssl rand -base64 48 | tr -d '\n')
+DB_PASSWORD=$(openssl rand -hex 16)
+AUTH_SECRET=$(openssl rand -hex 32)
 pct exec "$VMID" -- bash -c "
     cp $APP_DIR/.env.example $APP_DIR/.env
     sed -i 's|changeme|${DB_PASSWORD}|' $APP_DIR/.env
