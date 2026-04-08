@@ -186,10 +186,21 @@ pct exec "$VMID" -- bash -c "
     su - $APP_USER -c 'GIT_SSH_COMMAND=\"ssh -i ~/.ssh/id_ed25519\" git clone git@codeberg.org:Kwaite/strapontin.git $APP_DIR'
 "
 
+echo "[6] Génération du .env..."
+DB_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
+AUTH_SECRET=$(openssl rand -base64 48 | tr -d '\n')
+pct exec "$VMID" -- bash -c "
+    cp $APP_DIR/.env.example $APP_DIR/.env
+    sed -i 's|changeme|${DB_PASSWORD}|' $APP_DIR/.env
+    sed -i 's|BETTER_AUTH_SECRET=|BETTER_AUTH_SECRET=${AUTH_SECRET}|' $APP_DIR/.env
+    chown $APP_USER:$APP_USER $APP_DIR/.env
+    chmod 600 $APP_DIR/.env
+"
+
 echo "[6] Création base PostgreSQL..."
 pct exec "$VMID" -- bash -c "
     systemctl start postgresql
-    su - postgres -c \"psql -c \\\"CREATE USER $DB_USER WITH PASSWORD 'changeme';\\\" 2>/dev/null || true\"
+    su - postgres -c \"psql -c \\\"CREATE USER $DB_USER WITH PASSWORD '${DB_PASSWORD}';\\\" 2>/dev/null || true\"
     su - postgres -c \"psql -c \\\"CREATE DATABASE $DB_NAME OWNER $DB_USER;\\\" 2>/dev/null || true\"
 "
 
@@ -275,5 +286,6 @@ echo "=== Provisioning terminé ==="
 echo "LXC $VMID ($HOSTNAME) — 192.168.20.79"
 echo ""
 echo "Étapes suivantes :"
-echo "  1. Créer $APP_DIR/.env (cp $APP_DIR/.env.example $APP_DIR/.env et compléter)"
+echo "  1. (optionnel) Ajouter les clés API dans $APP_DIR/.env"
+echo "     pct exec $VMID -- nano $APP_DIR/.env"
 echo "  2. Lancer : pct exec $VMID -- $APP_DIR/scripts/deploy.sh <url_repo>"
