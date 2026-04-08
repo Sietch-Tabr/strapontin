@@ -1,4 +1,4 @@
-# CLAUDE.md — concert-web (scenes.kwaite.fr)
+# CLAUDE.md — concert-web (strapontin.kwaite.fr)
 
 ## Lancer l'application (développement)
 
@@ -127,7 +127,7 @@ Cron systemd (`OnCalendar=daily`) sur le LXC — indépendant des mises à jour 
   - VMID : `pvesh get /cluster/nextid` au moment de l'exécution (ne pas hardcoder)
   - Réseau : `--net0 name=eth0,bridge=vmbr0,tag=20,hwaddr=02:00:00:00:00:13,ip=192.168.20.79/24,gw=192.168.20.1`
 - 4 services systemd dans un seul LXC : `postgresql` (18), `redis` (8), `concerts-web`, `concerts-worker`
-- Nginx Proxy Manager → `scenes.kwaite.fr` → `192.168.20.79:3000`
+- Nginx Proxy Manager → `strapontin.kwaite.fr` → `192.168.20.79:3000`
 - Provisioning : `scripts/provision-lxc.sh` (depuis host Proxmox 192.168.1.99)
   - VMID résolu dynamiquement : `VMID=$(pvesh get /cluster/nextid)`
 - Variables : `.env` sur le serveur (non commité), `.env.example` versionné
@@ -141,7 +141,7 @@ DATABASE_URL=postgresql://concerts:password@localhost:5432/concerts
 REDIS_URL=redis://localhost:6379
 BETTER_AUTH_SECRET=
 RESEND_API_KEY=
-PUBLIC_BASE_URL=https://scenes.kwaite.fr
+PUBLIC_BASE_URL=https://strapontin.kwaite.fr
 ```
 
 ## Sources de données
