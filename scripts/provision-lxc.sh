@@ -39,15 +39,26 @@ echo "=== Provisioning LXC concerts (VMID : $VMID) ==="
 # 1. Template Debian 13
 # ---------------------------------------------------------------
 
-TEMPLATE="debian-13-standard_13.1-2_amd64.tar.zst"
+echo "[1] Résolution du template Debian 13..."
+pveam update > /dev/null
+TEMPLATE=$(pveam available --section system \
+    | awk '{print $2}' \
+    | grep "^debian-13-standard" \
+    | sort -V \
+    | tail -1)
+
+if [ -z "$TEMPLATE" ]; then
+    echo "ERREUR : aucun template debian-13 disponible" >&2
+    exit 1
+fi
+
 TEMPLATE_PATH="/var/lib/vz/template/cache/$TEMPLATE"
 
 if [ ! -f "$TEMPLATE_PATH" ]; then
-    echo "[1] Téléchargement du template Debian 13..."
-    pveam update
+    echo "[1] Téléchargement : $TEMPLATE"
     pveam download "$TEMPLATE_STORAGE" "$TEMPLATE"
 else
-    echo "[1] Template Debian 13 déjà présent"
+    echo "[1] Template déjà présent : $TEMPLATE"
 fi
 
 # ---------------------------------------------------------------
