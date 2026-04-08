@@ -131,7 +131,7 @@ Montage NAS dans le LXC :
 ```bash
 # Dans provision-lxc.sh (à exécuter depuis le host Proxmox)
 # Prérequis : créer /volume1/backup/concerts/ dans DSM au préalable
-pct set $VMID --mp0 /mnt/synology/backup/concerts,mp=/mnt/backup
+pct set $VMID --mp0 /mnt/synology/backup/Strapontin,mp=/mnt/backup
 ```
 
 ### Backup automatique

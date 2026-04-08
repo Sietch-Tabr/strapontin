@@ -72,7 +72,7 @@ pct create "$VMID" "$TEMPLATE_PATH" \
 # ---------------------------------------------------------------
 
 echo "[3] Montage NAS /mnt/backup..."
-pct set "$VMID" --mp0 "/mnt/synology/backup/concerts,mp=/mnt/backup"
+pct set "$VMID" --mp0 "/mnt/synology/backup/Strapontin,mp=/mnt/backup"
 
 # ---------------------------------------------------------------
 # 4. Démarrage
