@@ -327,7 +327,77 @@ pct exec "$VMID" -- bash -c "
     systemctl start strapontin-backup.timer
 "
 
-echo "[9] Premier déploiement..."
+echo "[9] Vérifications pré-déploiement..."
+CHECKS_OK=1
+pct exec "$VMID" -- bash -c "
+    set -euo pipefail
+    ERREURS=0
+
+    # Espace disque (>= 2 Go libres)
+    LIBRE_MO=\$(df /opt --output=avail -m | tail -1)
+    if [ \"\$LIBRE_MO\" -lt 2048 ]; then
+        echo '  [ECHEC] Espace disque insuffisant ('\$LIBRE_MO' Mo libres, 2048 requis)'
+        ERREURS=\$((ERREURS+1))
+    else
+        echo '  [OK]    Espace disque : '\$LIBRE_MO' Mo libres'
+    fi
+
+    # NAS monté
+    if mountpoint -q /mnt/backup; then
+        echo '  [OK]    NAS /mnt/backup monté'
+    else
+        echo '  [ECHEC] NAS /mnt/backup non monté'
+        ERREURS=\$((ERREURS+1))
+    fi
+
+    # pnpm disponible
+    if command -v pnpm > /dev/null 2>&1; then
+        echo '  [OK]    pnpm disponible'
+    else
+        echo '  [ECHEC] pnpm introuvable'
+        ERREURS=\$((ERREURS+1))
+    fi
+
+    # Variables .env obligatoires
+    source $APP_DIR/.env
+    for VAR in DATABASE_URL REDIS_URL BETTER_AUTH_SECRET PUBLIC_BASE_URL; do
+        VAL=\$(eval echo \\\$\$VAR)
+        if [ -z \"\$VAL\" ]; then
+            echo '  [ECHEC] '\$VAR' vide dans .env'
+            ERREURS=\$((ERREURS+1))
+        else
+            echo '  [OK]    '\$VAR' défini'
+        fi
+    done
+
+    # PostgreSQL accessible
+    if su - postgres -c 'psql -U ${DB_USER} -d ${DB_NAME} -c \"\\q\"' > /dev/null 2>&1; then
+        echo '  [OK]    PostgreSQL accessible'
+    else
+        echo '  [ECHEC] PostgreSQL inaccessible (utilisateur/base)'
+        ERREURS=\$((ERREURS+1))
+    fi
+
+    # Redis accessible
+    if redis-cli ping | grep -q PONG; then
+        echo '  [OK]    Redis accessible'
+    else
+        echo '  [ECHEC] Redis inaccessible'
+        ERREURS=\$((ERREURS+1))
+    fi
+
+    exit \$ERREURS
+" || CHECKS_OK=0
+
+if [ "$CHECKS_OK" -eq 0 ]; then
+    echo ""
+    echo "ERREUR : vérifications échouées — déploiement annulé" >&2
+    echo "Corrigez les erreurs ci-dessus puis relancez :" >&2
+    echo "  pct exec $VMID -- $APP_DIR/scripts/deploy.sh" >&2
+    exit 1
+fi
+
+echo "[10] Premier déploiement..."
 pct exec "$VMID" -- "$APP_DIR/scripts/deploy.sh"
 
 echo ""
