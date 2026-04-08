@@ -8,21 +8,20 @@ set -euo pipefail
 REPO_URL="${1:-}"
 APP_DIR="/opt/strapontin"
 
-if [ -z "$REPO_URL" ]; then
-    echo "Usage : deploy.sh <url_du_repo>" >&2
+echo "=== Premier déploiement Strapontin ==="
+
+# Cloner ou synchroniser le dépôt
+if [ -d "$APP_DIR/.git" ]; then
+    echo "Dépôt déjà présent, synchronisation..."
+    su - strapontin -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519' git -C $APP_DIR pull"
+elif [ -n "$REPO_URL" ]; then
+    git clone "$REPO_URL" "$APP_DIR"
+else
+    echo "ERREUR : dépôt absent et aucune URL fournie" >&2
     exit 1
 fi
 
-echo "=== Premier déploiement Strapontin ==="
-
-# Cloner le dépôt
-if [ -d "$APP_DIR/.git" ]; then
-    echo "Dépôt déjà présent dans $APP_DIR, utilisation de git pull"
-    cd "$APP_DIR" && git pull
-else
-    git clone "$REPO_URL" "$APP_DIR"
-    cd "$APP_DIR"
-fi
+cd "$APP_DIR"
 
 # Vérifier que le .env est en place
 if [ ! -f "$APP_DIR/.env" ]; then
