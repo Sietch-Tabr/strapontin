@@ -1,11 +1,19 @@
-import { auth } from '$lib/auth';
-import { svelteKitHandler } from 'better-auth/svelte-kit';
-import type { Handle } from '@sveltejs/kit';
+import { auth } from "$lib/auth";
+import { svelteKitHandler } from "better-auth/svelte-kit";
+import type { Handle } from "@sveltejs/kit";
 
 export const handle: Handle = async ({ event, resolve }) => {
-	// Lecture du cookie thème pour éviter le FOUC
-	const theme = event.cookies.get('theme') ?? 'light';
-	event.locals.theme = theme;
+  const theme = event.cookies.get("theme") ?? "light";
+  event.locals.theme = theme;
 
-	return svelteKitHandler({ event, resolve, auth });
+  return svelteKitHandler({
+    event,
+    resolve: (event) =>
+      resolve(event, {
+        // Injection SSR de la classe dark sur <html> — évite le FOUC
+        transformPageChunk: ({ html }) =>
+          theme === "dark" ? html.replace("<html", '<html class="dark"') : html,
+      }),
+    auth,
+  });
 };

@@ -1,24 +1,26 @@
-import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { db } from '@concert-web/core/db';
-import * as schema from '@concert-web/core/schema';
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { PUBLIC_BASE_URL } from "$env/static/public";
+import { db } from "$lib/server/db";
+import * as schema from "@concert-web/core/schema";
 
 export const auth = betterAuth({
-	database: drizzleAdapter(db, {
-		provider: 'pg',
-		schema: {
-			user: schema.users,
-		},
-	}),
-	emailAndPassword: {
-		enabled: true,
-	},
-	user: {
-		additionalFields: {
-			role: {
-				type: 'string',
-				defaultValue: 'user',
-			},
-		},
-	},
+  baseURL: PUBLIC_BASE_URL,
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema: {
+      user: schema.users,
+    },
+  }),
+  emailAndPassword: {
+    enabled: true,
+  },
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        defaultValue: "user",
+      },
+    },
+  },
 });
