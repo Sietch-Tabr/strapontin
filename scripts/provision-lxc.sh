@@ -203,7 +203,7 @@ echo "ACTION REQUISE : ajouter la clé ci-dessus dans"
 echo "  Codeberg → Settings → Deploy Keys (lecture seule suffit)"
 echo "  https://codeberg.org/Kwaite/strapontin/settings/keys"
 echo "================================================================"
-read -r -p "Clé ajoutée dans Codeberg ? [o pour continuer] " _confirm
+printf "Clé ajoutée dans Codeberg ? [o pour continuer] " > /dev/tty; read -r _confirm < /dev/tty
 
 echo "[6] Clone du dépôt..."
 pct exec "$VMID" -- bash -c "
@@ -226,9 +226,9 @@ echo ""
 echo "================================================================"
 echo "  Clés API (Entrée pour ignorer, valeur sera laissée vide)"
 echo "================================================================"
-read -r -p "  TICKETMASTER_API_KEY  : " TM_KEY
-read -r -p "  BANDSINTOWN_APP_ID    : " BST_ID
-read -r -p "  RESEND_API_KEY        : " RESEND_KEY
+printf "  TICKETMASTER_API_KEY  : " > /dev/tty; read -r TM_KEY < /dev/tty
+printf "  BANDSINTOWN_APP_ID    : " > /dev/tty; read -r BST_ID < /dev/tty
+printf "  RESEND_API_KEY        : " > /dev/tty; read -r RESEND_KEY < /dev/tty
 echo ""
 
 if [ -n "$TM_KEY" ] || [ -n "$BST_ID" ] || [ -n "$RESEND_KEY" ]; then
