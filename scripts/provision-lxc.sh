@@ -222,6 +222,23 @@ pct exec "$VMID" -- bash -c "
     chmod 600 $APP_DIR/.env
 "
 
+echo ""
+echo "================================================================"
+echo "  Clés API (Entrée pour ignorer, valeur sera laissée vide)"
+echo "================================================================"
+read -r -p "  TICKETMASTER_API_KEY  : " TM_KEY
+read -r -p "  BANDSINTOWN_APP_ID    : " BST_ID
+read -r -p "  RESEND_API_KEY        : " RESEND_KEY
+echo ""
+
+if [ -n "$TM_KEY" ] || [ -n "$BST_ID" ] || [ -n "$RESEND_KEY" ]; then
+    pct exec "$VMID" -- bash -c "
+        [ -n '${TM_KEY}' ]     && sed -i 's|TICKETMASTER_API_KEY=|TICKETMASTER_API_KEY=${TM_KEY}|' $APP_DIR/.env
+        [ -n '${BST_ID}' ]     && sed -i 's|BANDSINTOWN_APP_ID=|BANDSINTOWN_APP_ID=${BST_ID}|' $APP_DIR/.env
+        [ -n '${RESEND_KEY}' ] && sed -i 's|RESEND_API_KEY=|RESEND_API_KEY=${RESEND_KEY}|' $APP_DIR/.env
+    "
+fi
+
 echo "[6] Création base PostgreSQL..."
 pct exec "$VMID" -- bash -c "
     systemctl start postgresql
