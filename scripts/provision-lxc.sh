@@ -131,7 +131,7 @@ pct exec "$VMID" -- bash -c "
 
 # pnpm
 echo "[5] Installation pnpm..."
-pct exec "$VMID" -- npm install -g pnpm
+pct exec "$VMID" -- bash -c "NPM_CONFIG_UPDATE_NOTIFIER=false npm install -g pnpm --quiet"
 
 # PostgreSQL 18
 echo "[5] Installation PostgreSQL $PG_VERSION..."
@@ -159,7 +159,7 @@ pct exec "$VMID" -- bash -c "
 
 echo "[6] Création utilisateur système '$APP_USER'..."
 pct exec "$VMID" -- bash -c "
-    id $APP_USER &>/dev/null || useradd -m -d $APP_DIR -s /bin/bash $APP_USER
+    id $APP_USER &>/dev/null || useradd -m -s /bin/bash $APP_USER
     mkdir -p $APP_DIR
     chown $APP_USER:$APP_USER $APP_DIR
 "
