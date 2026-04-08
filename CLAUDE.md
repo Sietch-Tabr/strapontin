@@ -71,7 +71,7 @@ steps:
     commands:
       - apk add openssh-client
       - echo "$$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
-      - ssh -i /tmp/key concerts@$$LXC_HOST "/app/scripts/update.sh"
+      - ssh -i /tmp/key concerts@$$LXC_HOST "/opt/strapontin/scripts/update.sh"
     when:
       branch: main
 ```
@@ -122,7 +122,7 @@ Le NAS est monté en bind mount dans le LXC sur `/mnt/backup/` — pas de rsync,
 
 ```bash
 pg_dump concerts | gzip > /mnt/backup/concerts_$(date +%Y%m%d_%H%M%S).sql.gz
-cp /app/.env /mnt/backup/.env.$(date +%Y%m%d)
+cp /opt/strapontin/.env /mnt/backup/.env.$(date +%Y%m%d)
 find /mnt/backup/ -name "*.sql.gz" -mtime +30 -delete
 ```
 
