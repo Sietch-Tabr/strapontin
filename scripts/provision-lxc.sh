@@ -75,7 +75,6 @@ pct create "$VMID" "$TEMPLATE_PATH" \
     --features "nesting=1" \
     --ostype debian \
     --onboot 1 \
-    --protection 1 \
     --start 0
 
 # ---------------------------------------------------------------
@@ -296,6 +295,9 @@ UNIT"
 # ---------------------------------------------------------------
 # 8. Activation des services
 # ---------------------------------------------------------------
+
+echo "[8] Protection du LXC contre la suppression accidentelle..."
+pct set "$VMID" --protection 1
 
 echo "[8] Activation des services..."
 pct exec "$VMID" -- bash -c "
