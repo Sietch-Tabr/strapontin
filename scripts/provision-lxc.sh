@@ -35,6 +35,17 @@ PG_VERSION="18"
 echo "=== Provisioning LXC strapontin (VMID : $VMID) ==="
 
 # ---------------------------------------------------------------
+# 0. Saisies interactives (avant toute opération automatisée)
+# ---------------------------------------------------------------
+
+echo ""
+echo "Clés API optionnelles (Entrée pour ignorer) :"
+printf "  TICKETMASTER_API_KEY  : "; read -r TM_KEY
+printf "  BANDSINTOWN_APP_ID    : "; read -r BST_ID
+printf "  RESEND_API_KEY        : "; read -r RESEND_KEY
+echo ""
+
+# ---------------------------------------------------------------
 # 1. Template Debian 13
 # ---------------------------------------------------------------
 
@@ -205,16 +216,15 @@ echo "  https://codeberg.org/Kwaite/strapontin/settings/keys"
 echo "================================================================"
 
 while true; do
-    printf "Clé ajoutée ? Entrée pour tester la connexion SSH... " > /dev/tty
-    read -r _confirm < /dev/tty
+    printf "Clé ajoutée ? Entrée pour tester la connexion SSH... "; read -r _confirm
     if pct exec "$VMID" -- bash -c \
         "su - $APP_USER -c 'ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new git@codeberg.org 2>&1 | grep -q \"successfully authenticated\"'" \
         2>/dev/null; then
         echo "  [OK] Connexion SSH Codeberg vérifiée"
         break
     else
-        echo "  [ECHEC] Connexion SSH échouée — clé non reconnue ou non ajoutée" > /dev/tty
-        echo "  Retente dans Codeberg puis appuie sur Entrée..." > /dev/tty
+        echo "  [ECHEC] Connexion SSH échouée — clé non reconnue ou non ajoutée"
+        echo "  Retente dans Codeberg puis appuie sur Entrée..."
     fi
 done
 
@@ -234,15 +244,6 @@ pct exec "$VMID" -- bash -c "
     chown $APP_USER:$APP_USER $APP_DIR/.env
     chmod 600 $APP_DIR/.env
 "
-
-echo ""
-echo "================================================================"
-echo "  Clés API (Entrée pour ignorer, valeur sera laissée vide)"
-echo "================================================================"
-printf "  TICKETMASTER_API_KEY  : " > /dev/tty; read -r TM_KEY < /dev/tty
-printf "  BANDSINTOWN_APP_ID    : " > /dev/tty; read -r BST_ID < /dev/tty
-printf "  RESEND_API_KEY        : " > /dev/tty; read -r RESEND_KEY < /dev/tty
-echo ""
 
 if [ -n "$TM_KEY" ] || [ -n "$BST_ID" ] || [ -n "$RESEND_KEY" ]; then
     pct exec "$VMID" -- bash -c "
