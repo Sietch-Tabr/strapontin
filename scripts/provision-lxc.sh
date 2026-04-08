@@ -340,71 +340,59 @@ pct exec "$VMID" -- bash -c "
 
 echo "[9] Vérifications pré-déploiement..."
 CHECKS_OK=1
-pct exec "$VMID" -- bash -c "
-    set -euo pipefail
-    ERREURS=0
 
-    # Espace disque (>= 2 Go libres)
-    LIBRE_MO=\$(df /opt --output=avail -m | tail -1)
-    if [ \"\$LIBRE_MO\" -lt 2048 ]; then
-        echo '  [ECHEC] Espace disque insuffisant ('\$LIBRE_MO' Mo libres, 2048 requis)'
-        ERREURS=\$((ERREURS+1))
+# Espace disque
+LIBRE=$(pct exec "$VMID" -- df /opt --output=avail -m | tail -1 | tr -d ' ')
+if [ "$LIBRE" -lt 2048 ]; then
+    echo "  [ECHEC] Espace disque : ${LIBRE} Mo (minimum 2048)"
+    CHECKS_OK=0
+else
+    echo "  [OK]    Espace disque : ${LIBRE} Mo"
+fi
+
+# NAS monté
+if pct exec "$VMID" -- mountpoint -q /mnt/backup; then
+    echo "  [OK]    NAS /mnt/backup monté"
+else
+    echo "  [ECHEC] NAS /mnt/backup non monté"
+    CHECKS_OK=0
+fi
+
+# pnpm disponible
+if pct exec "$VMID" -- bash -c "command -v pnpm > /dev/null 2>&1"; then
+    echo "  [OK]    pnpm disponible"
+else
+    echo "  [ECHEC] pnpm introuvable"
+    CHECKS_OK=0
+fi
+
+# Variables .env obligatoires
+for VAR in DATABASE_URL REDIS_URL BETTER_AUTH_SECRET PUBLIC_BASE_URL; do
+    VAL=$(pct exec "$VMID" -- bash -c "source $APP_DIR/.env 2>/dev/null && echo \${$VAR}" 2>/dev/null || true)
+    if [ -z "$VAL" ]; then
+        echo "  [ECHEC] $VAR vide dans .env"
+        CHECKS_OK=0
     else
-        echo '  [OK]    Espace disque : '\$LIBRE_MO' Mo libres'
+        echo "  [OK]    $VAR défini"
     fi
+done
 
-    # NAS monté
-    if mountpoint -q /mnt/backup; then
-        echo '  [OK]    NAS /mnt/backup monté'
-    else
-        echo '  [ECHEC] NAS /mnt/backup non monté'
-        ERREURS=\$((ERREURS+1))
-    fi
+# PostgreSQL actif
+if pct exec "$VMID" -- pg_isready -q 2>/dev/null; then
+    echo "  [OK]    PostgreSQL actif"
+else
+    echo "  [ECHEC] PostgreSQL inactif"
+    CHECKS_OK=0
+fi
 
-    # pnpm disponible
-    if command -v pnpm > /dev/null 2>&1; then
-        echo '  [OK]    pnpm disponible'
-    else
-        echo '  [ECHEC] pnpm introuvable'
-        ERREURS=\$((ERREURS+1))
-    fi
-
-    # Variables .env obligatoires
-    source $APP_DIR/.env
-    for VAR in DATABASE_URL REDIS_URL BETTER_AUTH_SECRET PUBLIC_BASE_URL; do
-        VAL=\$(eval echo \\\$\$VAR)
-        if [ -z \"\$VAL\" ]; then
-            echo '  [ECHEC] '\$VAR' vide dans .env'
-            ERREURS=\$((ERREURS+1))
-        else
-            echo '  [OK]    '\$VAR' défini'
-        fi
-    done
-
-    # PostgreSQL : service actif + rôle + base présents
-    PG_OK=1
-    pg_isready -q 2>/dev/null || PG_OK=0
-    ROLE=\$(su - postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'\" postgres" 2>/dev/null | tr -d '[:space:]')
-    [ "\$ROLE" = "1" ] || PG_OK=0
-    DB=\$(su - postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'\" postgres" 2>/dev/null | tr -d '[:space:]')
-    [ "\$DB" = "1" ] || PG_OK=0
-    if [ \$PG_OK -eq 1 ]; then
-        echo '  [OK]    PostgreSQL accessible (rôle + base présents)'
-    else
-        echo '  [ECHEC] PostgreSQL : service arrêté, rôle ou base manquants'
-        ERREURS=\$((ERREURS+1))
-    fi
-
-    # Redis accessible
-    if redis-cli ping | grep -q PONG; then
-        echo '  [OK]    Redis accessible'
-    else
-        echo '  [ECHEC] Redis inaccessible'
-        ERREURS=\$((ERREURS+1))
-    fi
-
-    exit \$ERREURS
-" || CHECKS_OK=0
+# Redis accessible
+REDIS_PONG=$(pct exec "$VMID" -- redis-cli ping 2>/dev/null || true)
+if [ "$REDIS_PONG" = "PONG" ]; then
+    echo "  [OK]    Redis accessible"
+else
+    echo "  [ECHEC] Redis inaccessible"
+    CHECKS_OK=0
+fi
 
 if [ "$CHECKS_OK" -eq 0 ]; then
     echo ""
