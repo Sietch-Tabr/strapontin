@@ -203,7 +203,20 @@ echo "ACTION REQUISE : ajouter la clé ci-dessus dans"
 echo "  Codeberg → Settings → Deploy Keys (lecture seule suffit)"
 echo "  https://codeberg.org/Kwaite/strapontin/settings/keys"
 echo "================================================================"
-printf "Clé ajoutée dans Codeberg ? [o pour continuer] " > /dev/tty; read -r _confirm < /dev/tty
+
+while true; do
+    printf "Clé ajoutée ? Entrée pour tester la connexion SSH... " > /dev/tty
+    read -r _confirm < /dev/tty
+    if pct exec "$VMID" -- bash -c \
+        "su - $APP_USER -c 'ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new git@codeberg.org 2>&1 | grep -q \"successfully authenticated\"'" \
+        2>/dev/null; then
+        echo "  [OK] Connexion SSH Codeberg vérifiée"
+        break
+    else
+        echo "  [ECHEC] Connexion SSH échouée — clé non reconnue ou non ajoutée" > /dev/tty
+        echo "  Retente dans Codeberg puis appuie sur Entrée..." > /dev/tty
+    fi
+done
 
 echo "[6] Clone du dépôt..."
 pct exec "$VMID" -- bash -c "
