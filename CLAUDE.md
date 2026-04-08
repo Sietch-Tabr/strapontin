@@ -30,8 +30,8 @@ concert-web/
 ## Stack technique
 
 - **SvelteKit** + TypeScript — frontend SSR + API routes
-- **Drizzle ORM** + PostgreSQL 17 — données persistantes
-- **BullMQ** + Redis 7 — jobs background (fetch concerts toutes les 2h)
+- **Drizzle ORM** + PostgreSQL 18 — données persistantes
+- **BullMQ** + Redis 8 — jobs background (fetch concerts toutes les 2h)
 - **Better-Auth** — auth email/password, invite-only
 - **Resend** — notifications email (tier gratuit 3 000/mois)
 - **pnpm workspaces** — monorepo sans Turborepo
@@ -45,7 +45,7 @@ pnpm dev        # SvelteKit HMR (port 3000)
 pnpm worker:dev # BullMQ worker (process séparé)
 ```
 
-- PostgreSQL 17 + Redis 7 installés via Homebrew sur le Mac
+- PostgreSQL 18 + Redis 8 installés via Homebrew sur le Mac
 - `.env.local` (prioritaire sur `.env`) pointe sur la DB locale
 - Le dev server est accessible depuis le réseau via WireGuard (`http://192.168.100.3:3000`)
   pour tester sur mobile ou valider le SSR sans déployer
@@ -126,7 +126,7 @@ Cron systemd (`OnCalendar=daily`) sur le LXC — indépendant des mises à jour 
 - LXC `concerts` — **192.168.20.79**, VLAN 20, Debian 13, 2 vCPU, 2 Go RAM, 20 Go
   - VMID : `pvesh get /cluster/nextid` au moment de l'exécution (ne pas hardcoder)
   - Réseau : `--net0 name=eth0,bridge=vmbr0,tag=20,hwaddr=02:00:00:00:00:13,ip=192.168.20.79/24,gw=192.168.20.1`
-- 4 services systemd dans un seul LXC : `postgresql`, `redis`, `concerts-web`, `concerts-worker`
+- 4 services systemd dans un seul LXC : `postgresql` (18), `redis` (8), `concerts-web`, `concerts-worker`
 - Nginx Proxy Manager → `scenes.kwaite.fr` → `192.168.20.79:3000`
 - Provisioning : `scripts/provision-lxc.sh` (depuis host Proxmox 192.168.1.99)
   - VMID résolu dynamiquement : `VMID=$(pvesh get /cluster/nextid)`
