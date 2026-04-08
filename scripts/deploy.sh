@@ -32,26 +32,31 @@ fi
 
 # Installer les dépendances
 echo "Installation des dépendances..."
-pnpm install --frozen-lockfile
+su - strapontin -c "cd $APP_DIR && pnpm install --frozen-lockfile"
 
 # Migrations DB
 echo "Migrations..."
 set -a; source "$APP_DIR/.env"; set +a
-pnpm --filter @strapontin/core db:migrate
+su - strapontin -c "cd $APP_DIR && pnpm --filter @strapontin/core db:migrate"
 
 # Build
 echo "Build..."
-pnpm build
+su - strapontin -c "cd $APP_DIR && pnpm build"
 
 # Démarrer les services
 echo "Démarrage des services..."
 systemctl restart strapontin-web strapontin-worker
 
-# Healthcheck
-sleep 3
-if curl -sf http://localhost:3000/health > /dev/null; then
-    echo "=== Déploiement réussi — strapontin.kwaite.fr ==="
-else
-    echo "ERREUR : healthcheck échoué" >&2
+# Healthcheck — retries sur 30s (port 3000)
+echo "Healthcheck..."
+RETRIES=10
+until curl -sf http://localhost:3000 > /dev/null 2>&1 || [ "$RETRIES" -eq 0 ]; do
+    sleep 3
+    RETRIES=$((RETRIES - 1))
+done
+if [ "$RETRIES" -eq 0 ]; then
+    echo "ERREUR : le serveur ne répond pas sur le port 3000" >&2
+    systemctl status strapontin-web --no-pager >&2
     exit 1
 fi
+echo "=== Déploiement réussi — strapontin.kwaite.fr ==="

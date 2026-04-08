@@ -21,26 +21,30 @@ su - strapontin -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519' git -C $APP_DIR p
 
 # 3. Installer les dépendances
 echo "[3/6] pnpm install..."
-pnpm install --frozen-lockfile
+su - strapontin -c "cd $APP_DIR && pnpm install --frozen-lockfile"
 
 # 4. Build
 echo "[4/6] build..."
-pnpm build
+su - strapontin -c "cd $APP_DIR && pnpm build"
 
 # 5. Migrations DB
 echo "[5/6] migrations..."
 set -a; source "$APP_DIR/.env"; set +a
-pnpm --filter @strapontin/core db:migrate
+su - strapontin -c "cd $APP_DIR && pnpm --filter @strapontin/core db:migrate"
 
 # 6. Redémarrage des services
 echo "[6/6] redémarrage..."
 systemctl restart strapontin-web strapontin-worker
 
-# Healthcheck
-sleep 3
-if curl -sf http://localhost:3000/health > /dev/null; then
-    echo "=== Mise à jour réussie ==="
-else
-    echo "ERREUR : healthcheck échoué après redémarrage" >&2
+# Healthcheck — retries sur 30s
+RETRIES=10
+until curl -sf http://localhost:3000 > /dev/null 2>&1 || [ "$RETRIES" -eq 0 ]; do
+    sleep 3
+    RETRIES=$((RETRIES - 1))
+done
+if [ "$RETRIES" -eq 0 ]; then
+    echo "ERREUR : le serveur ne répond pas sur le port 3000" >&2
+    systemctl status strapontin-web --no-pager >&2
     exit 1
 fi
+echo "=== Mise à jour réussie ==="
