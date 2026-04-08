@@ -1,0 +1,10 @@
+steps:
+  - name: deploy
+    image: alpine
+    secrets: [ssh_key, lxc_host]
+    commands:
+      - apk add openssh-client
+      - echo "$$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
+      - ssh -i /tmp/key -o StrictHostKeyChecking=no concerts@$$LXC_HOST "/app/scripts/update.sh"
+    when:
+      branch: main

@@ -78,6 +78,23 @@ steps:
 
 Secrets Woodpecker : `ssh_key` (clé privée SSH), `lxc_host` (IP du LXC sur VLAN 20).
 
+### Configuration CI/CD (une seule fois)
+
+1. Générer la clé SSH dédiée (en local) :
+   `ssh-keygen -t ed25519 -C "woodpecker-deploy" -f ~/.ssh/woodpecker_concerts -N ""`
+
+2. Créer le repo sur Codeberg puis pousser :
+   `git remote add origin https://codeberg.org/Kwaite/strapontin.git`
+   `git push -u origin main`
+
+3. Dans Woodpecker (http://LXC-111) :
+   - Activer le repo `Kwaite/strapontin`
+   - Ajouter le secret `ssh_key` (contenu de `~/.ssh/woodpecker_concerts`)
+   - Ajouter le secret `lxc_host` = `192.168.20.79`
+
+4. Après provisioning du LXC, copier la clé publique :
+   `ssh-copy-id -i ~/.ssh/woodpecker_concerts.pub concerts@192.168.20.79`
+
 ## Scripts d'exploitation
 
 ```
