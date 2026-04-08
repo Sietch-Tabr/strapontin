@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# provision-lxc.sh — création et provisioning du LXC concerts
+# provision-lxc.sh — création et provisioning du LXC concert
 # À exécuter depuis le HOST Proxmox (192.168.1.99) en tant que root
 # Idempotent : peut être relancé sans danger
 #
@@ -14,7 +14,7 @@ set -euo pipefail
 # ---------------------------------------------------------------
 
 VMID=$(pvesh get /cluster/nextid)
-HOSTNAME="concerts"
+HOSTNAME="concert"
 TEMPLATE_STORAGE="local"
 DISK_STORAGE="local-lvm"
 BRIDGE="vmbr0"
@@ -96,6 +96,14 @@ sleep 5
 # ---------------------------------------------------------------
 # 5. Installation des paquets dans le LXC
 # ---------------------------------------------------------------
+
+echo "[5] Autologin root sur la console Proxmox..."
+pct exec "$VMID" -- bash -c "
+    mkdir -p /etc/systemd/system/getty@tty1.service.d
+    printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin root --noclear %%I \$TERM\n' \
+        > /etc/systemd/system/getty@tty1.service.d/autologin.conf
+    systemctl daemon-reload
+"
 
 echo "[5] Mise à jour des paquets..."
 pct exec "$VMID" -- bash -c "apt-get update && apt-get upgrade -y"
