@@ -381,11 +381,15 @@ pct exec "$VMID" -- bash -c "
         fi
     done
 
-    # PostgreSQL accessible
-    if su - postgres -c 'psql -U ${DB_USER} -d ${DB_NAME} -c \"\\q\"' > /dev/null 2>&1; then
-        echo '  [OK]    PostgreSQL accessible'
+    # PostgreSQL : service actif + rôle + base présents
+    PG_OK=1
+    pg_isready -q || PG_OK=0
+    su - postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'\" postgres | grep -q 1" > /dev/null 2>&1 || PG_OK=0
+    su - postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'\" postgres | grep -q 1" > /dev/null 2>&1 || PG_OK=0
+    if [ \$PG_OK -eq 1 ]; then
+        echo '  [OK]    PostgreSQL accessible (rôle + base présents)'
     else
-        echo '  [ECHEC] PostgreSQL inaccessible (utilisateur/base)'
+        echo '  [ECHEC] PostgreSQL : service arrêté, rôle ou base manquants'
         ERREURS=\$((ERREURS+1))
     fi
 
