@@ -74,6 +74,7 @@ pct create "$VMID" "$TEMPLATE_PATH" \
     --unprivileged 1 \
     --features "nesting=1" \
     --ostype debian \
+    --onboot 1 \
     --start 0
 
 # ---------------------------------------------------------------
@@ -109,7 +110,7 @@ pct exec "$VMID" -- bash -c "
 echo "[5] Autologin root sur la console Proxmox..."
 pct exec "$VMID" -- bash -c "
     mkdir -p /etc/systemd/system/getty@tty1.service.d
-    printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin root --noclear %%I \$TERM\n' \
+    printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin root --noclear %%I linux\n' \
         > /etc/systemd/system/getty@tty1.service.d/autologin.conf
     systemctl daemon-reload
 "
