@@ -17,7 +17,7 @@ echo "[1/6] Sauvegarde..."
 
 # 2. Récupérer les dernières modifications
 echo "[2/6] git pull..."
-git pull
+su - strapontin -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519' git -C $APP_DIR pull"
 
 # 3. Installer les dépendances
 echo "[3/6] pnpm install..."
@@ -34,7 +34,7 @@ pnpm --filter @strapontin/core db:migrate
 
 # 6. Redémarrage des services
 echo "[6/6] redémarrage..."
-systemctl restart concerts-web concerts-worker
+systemctl restart strapontin-web strapontin-worker
 
 # Healthcheck
 sleep 3

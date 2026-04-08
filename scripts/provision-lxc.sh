@@ -6,7 +6,7 @@ set -euo pipefail
 # Idempotent : peut être relancé sans danger
 #
 # Prérequis :
-#   - /volume1/backup/concerts/ créé dans DSM (Synology File Station)
+#   - /volume1/backup/strapontin/ créé dans DSM (Synology File Station)
 #   - /mnt/synology/backup/ monté sur le host Proxmox (NFS4)
 
 # ---------------------------------------------------------------
@@ -26,13 +26,13 @@ MEMORY="2048"
 CORES="2"
 DISK="20"
 APP_DIR="/app"
-APP_USER="concerts"
-DB_NAME="concerts"
-DB_USER="concerts"
+APP_USER="strapontin"
+DB_NAME="strapontin"
+DB_USER="strapontin"
 NODE_VERSION="22"
 PG_VERSION="18"
 
-echo "=== Provisioning LXC concerts (VMID : $VMID) ==="
+echo "=== Provisioning LXC strapontin (VMID : $VMID) ==="
 
 # ---------------------------------------------------------------
 # 1. Template Debian 13
@@ -97,12 +97,13 @@ sleep 5
 
 echo "[5] Configuration locale et fuseau horaire..."
 pct exec "$VMID" -- bash -c "
+    echo 'en_US.UTF-8 UTF-8' >> /etc/locale.gen
     echo 'fr_FR.UTF-8 UTF-8' >> /etc/locale.gen
     locale-gen
     update-locale LANG=fr_FR.UTF-8 LC_ALL=fr_FR.UTF-8
     ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime
     echo 'Europe/Paris' > /etc/timezone
-    dpkg-reconfigure -f noninteractive tzdata
+    DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -f noninteractive tzdata
 "
 
 echo "[5] Autologin root sur la console Proxmox..."
@@ -163,6 +164,28 @@ pct exec "$VMID" -- bash -c "
     chown $APP_USER:$APP_USER $APP_DIR
 "
 
+echo "[6] Clé SSH deploy pour git..."
+pct exec "$VMID" -- bash -c "
+    su - $APP_USER -c 'ssh-keygen -t ed25519 -C deploy@strapontin -f ~/.ssh/id_ed25519 -N \"\"'
+    su - $APP_USER -c 'cat ~/.ssh/id_ed25519.pub'
+    echo 'Host codeberg.org' > /etc/ssh/ssh_config.d/codeberg.conf
+    echo '  StrictHostKeyChecking accept-new' >> /etc/ssh/ssh_config.d/codeberg.conf
+"
+
+echo "================================================================"
+echo "ACTION REQUISE : ajouter la clé ci-dessus dans"
+echo "  Codeberg → Settings → Deploy Keys (lecture seule suffit)"
+echo "  https://codeberg.org/Kwaite/strapontin/settings/keys"
+echo "  Puis relancer ce script depuis l'étape [6b] ou continuer"
+echo "================================================================"
+read -r -p "Clé ajoutée dans Codeberg ? [o pour continuer] " _confirm
+
+echo "[6] Clone du dépôt..."
+pct exec "$VMID" -- bash -c "
+    git config --global --add safe.directory $APP_DIR
+    su - $APP_USER -c 'GIT_SSH_COMMAND=\"ssh -i ~/.ssh/id_ed25519\" git clone git@codeberg.org:Kwaite/strapontin.git $APP_DIR'
+"
+
 echo "[6] Création base PostgreSQL..."
 pct exec "$VMID" -- bash -c "
     systemctl start postgresql
@@ -176,14 +199,14 @@ pct exec "$VMID" -- bash -c "
 
 echo "[7] Création des services systemd..."
 
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/concerts-web.service << 'UNIT'
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-web.service << 'UNIT'
 [Unit]
 Description=Strapontin — serveur web
 After=network.target postgresql.service redis.service
 
 [Service]
 Type=simple
-User=concerts
+User=strapontin
 WorkingDirectory=/app
 EnvironmentFile=/app/.env
 ExecStart=/usr/bin/node /app/apps/web/build/index.js
@@ -194,14 +217,14 @@ RestartSec=5
 WantedBy=multi-user.target
 UNIT"
 
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/concerts-worker.service << 'UNIT'
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-worker.service << 'UNIT'
 [Unit]
 Description=Strapontin — worker BullMQ
 After=network.target redis.service
 
 [Service]
 Type=simple
-User=concerts
+User=strapontin
 WorkingDirectory=/app
 EnvironmentFile=/app/.env
 ExecStart=/usr/bin/node /app/apps/worker/dist/index.js
@@ -213,7 +236,7 @@ WantedBy=multi-user.target
 UNIT"
 
 # Cron systemd backup quotidien
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/concerts-backup.service << 'UNIT'
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-backup.service << 'UNIT'
 [Unit]
 Description=Strapontin — backup quotidien
 
@@ -222,7 +245,7 @@ Type=oneshot
 ExecStart=/app/scripts/backup.sh
 UNIT"
 
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/concerts-backup.timer << 'UNIT'
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-backup.timer << 'UNIT'
 [Unit]
 Description=Strapontin — timer backup quotidien
 
@@ -241,10 +264,10 @@ UNIT"
 echo "[8] Activation des services..."
 pct exec "$VMID" -- bash -c "
     systemctl daemon-reload
-    systemctl enable postgresql redis
-    systemctl enable concerts-web concerts-worker
-    systemctl enable concerts-backup.timer
-    systemctl start concerts-backup.timer
+    systemctl enable postgresql redis-server
+    systemctl enable strapontin-web strapontin-worker
+    systemctl enable strapontin-backup.timer
+    systemctl start strapontin-backup.timer
 "
 
 echo ""

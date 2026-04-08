@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # deploy.sh — premier déploiement de l'application sur le LXC
-# À exécuter depuis le LXC en tant que concerts (ou root)
+# À exécuter depuis le LXC en tant que strapontin (ou root)
 # Prérequis : /app/.env configuré, PostgreSQL et Redis démarrés
 
 REPO_URL="${1:-}"
@@ -46,7 +46,7 @@ pnpm build
 
 # Démarrer les services
 echo "Démarrage des services..."
-systemctl restart concerts-web concerts-worker
+systemctl restart strapontin-web strapontin-worker
 
 # Healthcheck
 sleep 3

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # backup.sh — sauvegarde pg_dump + .env vers le NAS
-# À exécuter depuis le LXC en tant que root ou concerts
+# À exécuter depuis le LXC en tant que root ou strapontin
 
 BACKUP_DIR="/mnt/backup"
 APP_DIR="/app"
@@ -18,7 +18,7 @@ HORODATAGE=$(date +%Y%m%d_%H%M%S)
 echo "Sauvegarde en cours — $HORODATAGE"
 
 # Dump PostgreSQL
-pg_dump -U concerts concerts | gzip > "$BACKUP_DIR/concerts_${HORODATAGE}.sql.gz"
+pg_dump -U strapontin strapontin | gzip > "$BACKUP_DIR/strapontin_${HORODATAGE}.sql.gz"
 echo "  dump DB : OK"
 
 # Sauvegarde .env
