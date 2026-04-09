@@ -4,8 +4,8 @@
 
 	let { data }: { data: PageData } = $props();
 
-	let recherche = $state(data.recherche);
-	let mois = $state(data.mois);
+	let recherche = $state<string>(data.recherche);
+	let mois = $state<string>(data.mois);
 
 	function formaterDate(dateStr: string): string {
 		const [annee, moisNum, jour] = dateStr.split('-').map(Number);

@@ -5,7 +5,8 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	let termeRecherche = $state(data.recherche);
+	// Valeur initiale extraite du prop pour éviter le warning state_referenced_locally
+	let termeRecherche = $state<string>(data.recherche);
 </script>
 
 <div class="p-6 lg:p-8">

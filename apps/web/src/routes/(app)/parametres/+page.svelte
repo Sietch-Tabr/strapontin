@@ -5,16 +5,17 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	const config = data.config;
+	// Valeurs extraites une fois à l'init — intentionnel (formulaire local)
+	const { config, theme: themeInitial, utilisateur } = data;
 
-	let departements = $state(config?.departements?.join(', ') ?? '');
-	let rayonKm = $state(config?.rayonKm ?? 50);
-	let searchPeriodMonths = $state(config?.searchPeriodMonths ?? 6);
-	let filtreDisponibles = $state(config?.filtreDisponibles ?? true);
-	let notificationsEmail = $state(config?.notificationsEmail ?? false);
+	let departements = $state<string>(config?.departements?.join(', ') ?? '');
+	let rayonKm = $state<number>(config?.rayonKm ?? 50);
+	let searchPeriodMonths = $state<number>(config?.searchPeriodMonths ?? 6);
+	let filtreDisponibles = $state<boolean>(config?.filtreDisponibles ?? true);
+	let notificationsEmail = $state<boolean>(config?.notificationsEmail ?? false);
 
-	let nom = $state(data.utilisateur?.name ?? '');
-	let theme = $state(data.theme);
+	let nom = $state<string>(utilisateur?.name ?? '');
+	let theme = $state<string>(themeInitial);
 
 	let enregistrementConfig = $state(false);
 	let enregistrementCompte = $state(false);

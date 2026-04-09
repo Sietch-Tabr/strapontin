@@ -45,8 +45,10 @@
 	}
 
 	function estSuivi(artisteNorm: string): boolean {
-		return data.resultats.find((c) => c.artisteNorm === artisteNorm)?.dejaSuivi ?? false
-			|| artistesAjoutes.has(artisteNorm);
+		return (
+			(data.resultats.find((c) => c.artisteNorm === artisteNorm)?.dejaSuivi ?? false) ||
+			artistesAjoutes.has(artisteNorm)
+		);
 	}
 </script>
 
