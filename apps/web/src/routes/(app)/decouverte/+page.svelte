@@ -123,46 +123,45 @@
 			{/if}
 		</div>
 
-		<!-- Filtre départements : coches multiples -->
+		<!-- Filtre départements : chips cliquables -->
 		{#if data.deptsDisponibles.length > 0}
-			<div class="rounded-md border border-border bg-background p-3">
-				<div class="mb-2 flex items-center justify-between">
-					<span class="text-xs font-medium text-muted-foreground">Départements</span>
-					<div class="flex gap-2">
-						<button
-							type="button"
-							onclick={toutAfficher}
-							class="text-xs text-muted-foreground transition-colors hover:text-foreground"
-						>
-							Tout afficher
-						</button>
-						{#if data.userDepts.length > 0}
-							<span class="text-xs text-muted-foreground">·</span>
-							<button
-								type="button"
-								onclick={resetMesDepts}
-								class="text-xs text-muted-foreground transition-colors hover:text-foreground"
-							>
-								Mes depts
-							</button>
-						{/if}
-					</div>
-				</div>
-				<div class="flex flex-wrap gap-2">
-					{#each data.deptsDisponibles as d (d)}
-						<label class="flex cursor-pointer items-center gap-1.5">
-							<input
-								type="checkbox"
-								name="dept"
-								value={d}
-								checked={deptsCoches.has(d)}
-								onchange={() => toggleDept(d)}
-								class="rounded border-border accent-foreground"
-							/>
-							<span class="text-xs {data.userDepts.includes(d) ? 'font-medium text-foreground' : 'text-muted-foreground'}">{d}</span>
-						</label>
-					{/each}
-				</div>
+			<div class="flex flex-wrap items-center gap-1.5">
+				{#each data.deptsDisponibles as d (d)}
+					<!-- input caché pour la soumission du formulaire -->
+					{#if deptsCoches.has(d)}
+						<input type="hidden" name="dept" value={d} />
+					{/if}
+					<button
+						type="button"
+						onclick={() => toggleDept(d)}
+						class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+							{deptsCoches.has(d)
+								? 'border-foreground bg-foreground text-background'
+								: data.userDepts.includes(d)
+									? 'border-foreground/40 bg-transparent text-foreground hover:border-foreground'
+									: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+					>
+						{d}
+					</button>
+				{/each}
+				{#if data.userDepts.length > 0 && deptsCoches.size !== data.userDepts.length}
+					<button
+						type="button"
+						onclick={resetMesDepts}
+						class="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+					>
+						Mes depts
+					</button>
+				{/if}
+				{#if deptsCoches.size > 0}
+					<button
+						type="button"
+						onclick={toutAfficher}
+						class="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+					>
+						Tout
+					</button>
+				{/if}
 			</div>
 		{/if}
 	</form>
