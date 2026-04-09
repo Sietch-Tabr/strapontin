@@ -1,41 +1,51 @@
 <script lang="ts">
-	import { untrack, tick } from 'svelte';
+	import { untrack } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import { Compass, Search, X, Check } from '@lucide/svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	let formulaire: HTMLFormElement;
 	let recherche = $state(untrack(() => data.recherche));
-	let deptsCoches = $state(untrack(() => new Set(data.deptsActifs)));
+	let deptsCoches = $state(new Set<string>());
 	let mois = $state(untrack(() => data.mois));
 	let genre = $state(untrack(() => data.genre));
+
+	// Resynchronise les chips avec les données serveur après chaque navigation
+	$effect(() => {
+		deptsCoches = new Set(data.deptsActifs);
+	});
 
 	// Mois disponibles pour le filtre (basé sur les résultats actuels)
 	const moisDisponibles = $derived(
 		[...new Set(data.resultats.map((c) => c.date.slice(0, 7)))].sort()
 	);
 
+	async function soumettreDepts(depts: Set<string>) {
+		const params = new URLSearchParams();
+		if (recherche) params.set('q', recherche);
+		if (mois) params.set('mois', mois);
+		if (genre) params.set('genre', genre);
+		// Marqueur : l'user a interagi avec le filtre dept (distingue "vide voulu" de "première visite")
+		params.set('dept_filtre', '1');
+		for (const d of depts) params.append('dept', d);
+		await goto(`/decouverte?${params}`, { replaceState: true });
+	}
+
 	async function toutAfficher() {
-		deptsCoches = new Set();
-		await tick();
-		formulaire.requestSubmit();
+		await soumettreDepts(new Set());
 	}
 
 	async function resetMesDepts() {
-		deptsCoches = new Set(data.userDepts);
-		await tick();
-		formulaire.requestSubmit();
+		await soumettreDepts(new Set(data.userDepts));
 	}
 
 	async function toggleDept(dept: string) {
 		const nouveau = new Set(deptsCoches);
 		if (nouveau.has(dept)) nouveau.delete(dept);
 		else nouveau.add(dept);
-		deptsCoches = nouveau;
-		await tick();
-		formulaire.requestSubmit();
+		await soumettreDepts(nouveau);
 	}
 
 	function formaterDate(dateStr: string): string {
@@ -80,7 +90,7 @@
 	</div>
 
 	<!-- Filtres -->
-	<form bind:this={formulaire} method="GET" class="mb-6 space-y-3">
+	<form method="GET" class="mb-6 space-y-3">
 		<div class="flex flex-wrap gap-2">
 			<input
 				type="text"
@@ -134,10 +144,6 @@
 		{#if data.deptsDisponibles.length > 0}
 			<div class="flex flex-wrap items-center gap-1.5">
 				{#each data.deptsDisponibles as d (d)}
-					<!-- input caché pour la soumission du formulaire -->
-					{#if deptsCoches.has(d)}
-						<input type="hidden" name="dept" value={d} />
-					{/if}
 					<button
 						type="button"
 						onclick={() => toggleDept(d)}

@@ -18,11 +18,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const userDepts = configs[0]?.departements ?? [];
 
   // Filtre département : multi-valeur via URL ?dept=33&dept=69
-  // Si aucun param URL, on applique les depts de l'user par défaut
+  // dept_filtre=1 : l'user a interagi avec les chips (même sélection vide = tout afficher)
+  // Sans dept_filtre : première visite, on applique les depts de l'user par défaut
+  const deptFiltre = url.searchParams.has("dept_filtre");
   const deptsUrl = url.searchParams
     .getAll("dept")
     .filter((d) => /^\d{2,3}$/.test(d));
-  const deptsActifs = deptsUrl.length > 0 ? deptsUrl : userDepts;
+  const deptsActifs = deptFiltre ? deptsUrl : userDepts;
 
   const conditions: SQL[] = [
     gte(concerts.date, aujourdhui),
