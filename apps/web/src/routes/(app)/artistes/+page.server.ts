@@ -70,7 +70,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       .selectDistinct({ artiste: concerts.artiste })
       .from(concerts)
       .where(ilike(concerts.artiste, `%${recherche}%`))
-      .orderBy(sql`lower(${concerts.artiste})`)
+      .orderBy(concerts.artiste)
       .limit(5);
 
     const nomsSuivisNormalises = new Set(
