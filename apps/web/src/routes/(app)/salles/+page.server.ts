@@ -1,7 +1,7 @@
 import { db } from "$lib/server/db";
 import { queue } from "$lib/server/queue";
 import { userSalles, concerts } from "@strapontin/core/schema";
-import { eq, and, ilike } from "drizzle-orm";
+import { eq, and, ilike, sql } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import { TICKETMASTER_API_KEY } from "$env/static/private";
 import type { PageServerLoad, Actions } from "./$types";
