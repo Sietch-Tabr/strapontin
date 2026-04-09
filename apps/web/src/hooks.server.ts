@@ -1,6 +1,7 @@
 import { auth } from "$lib/auth";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 import { redirect } from "@sveltejs/kit";
+import { building } from "$app/environment";
 import type { Handle } from "@sveltejs/kit";
 
 const ROUTES_PUBLIQUES = ["/login", "/setup"];
@@ -21,6 +22,7 @@ export const handle: Handle = async ({ event, resolve }) => {
               : html,
         }),
       auth,
+      building,
     });
   }
 
@@ -36,6 +38,7 @@ export const handle: Handle = async ({ event, resolve }) => {
               : html,
         }),
       auth,
+      building,
     });
   }
 
@@ -48,7 +51,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     redirect(302, "/login");
   }
 
-  event.locals.session = session;
+  event.locals.session = session.session;
   event.locals.user = session.user;
 
   return svelteKitHandler({
@@ -59,5 +62,6 @@ export const handle: Handle = async ({ event, resolve }) => {
           theme === "dark" ? html.replace("<html", '<html class="dark"') : html,
       }),
     auth,
+    building,
   });
 };

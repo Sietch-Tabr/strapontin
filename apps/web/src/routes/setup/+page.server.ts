@@ -39,11 +39,11 @@ export const actions: Actions = {
       });
     }
 
-    const resultat = await auth.api.signUpEmail({
-      body: { name: nom, email, password: motDePasse },
-    });
-
-    if (resultat.error) {
+    try {
+      await auth.api.signUpEmail({
+        body: { name: nom, email, password: motDePasse },
+      });
+    } catch {
       return fail(400, { erreur: "Impossible de créer le compte." });
     }
 
