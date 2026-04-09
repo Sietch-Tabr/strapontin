@@ -7,7 +7,10 @@ import postgres from "postgres";
 import { userArtistes, users } from "../packages/core/src/schema.js";
 import { eq } from "drizzle-orm";
 import { readFileSync } from "fs";
-import { resolve } from "path";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const DATABASE_URL = process.env.DATABASE_URL;
 const USER_EMAIL = process.env.USER_EMAIL;
@@ -22,8 +25,7 @@ if (!USER_EMAIL) {
   process.exit(1);
 }
 
-const fichier =
-  process.argv[2] ?? resolve(import.meta.dirname, "artistes-seed.txt");
+const fichier = process.argv[2] ?? resolve(__dirname, "artistes-seed.txt");
 
 function normaliserArtiste(nom: string): string {
   return nom
