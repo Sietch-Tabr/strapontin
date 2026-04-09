@@ -4,7 +4,7 @@ import pino from "pino";
 import type { Job } from "bullmq";
 import type { ConcertBrut } from "@strapontin/sources";
 import { dedoublonner } from "@strapontin/core";
-import { userArtistes } from "@strapontin/core/schema";
+import { userArtistes, userConfig } from "@strapontin/core/schema";
 import { db } from "./db.js";
 import { ticketmaster, bandsintown, eventim } from "./sources.js";
 import { persisterConcerts, recalculerMatches } from "./persister.js";
@@ -28,6 +28,7 @@ export interface JobFetchArtiste {
   type: "fetch:artiste";
   artiste: string;
   userId?: string;
+  mois?: number;
 }
 
 export interface JobFetchArtistesBatch {
@@ -38,6 +39,8 @@ export interface JobFetchRegion {
   type: "fetch:region";
   depts: string[];
   userId?: string;
+  rayonKm?: number;
+  mois?: number;
 }
 
 export interface JobFetchSalle {
@@ -65,8 +68,9 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     case "fetch:artiste": {
       logger.info({ artiste: data.artiste }, "fetch:artiste démarré");
 
+      const moisArtiste = data.mois ?? 6;
       const [resultsTM, resultsBIT, resultsEventim] = await Promise.allSettled([
-        ticketmaster.fetchArtiste(data.artiste),
+        ticketmaster.fetchArtiste(data.artiste, moisArtiste),
         bandsintown.fetchArtiste(data.artiste),
         eventim.fetchArtiste(data.artiste),
       ]);
@@ -129,6 +133,12 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
       if (rows.length === 0) break;
 
+      // Max searchPeriodMonths parmi tous les users
+      const configsRows = await db
+        .select({ mois: userConfig.searchPeriodMonths })
+        .from(userConfig);
+      const moisBatch = Math.max(...configsRows.map((c) => c.mois ?? 6), 6);
+
       // Résoudre les attraction IDs (Redis cache → TM si absent)
       const idsParNorm = new Map<string, string>();
       const sansId: { nom: string; norm: string }[] = [];
@@ -162,7 +172,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
       const concertsTM: ConcertBrut[] = [];
       for (let i = 0; i < tousIds.length; i += TAILLE_LOT) {
         const lot = tousIds.slice(i, i + TAILLE_LOT);
-        const resultats = await ticketmaster.fetchArtistesBatch(lot);
+        const resultats = await ticketmaster.fetchArtistesBatch(lot, moisBatch);
         concertsTM.push(...resultats);
         if (i + TAILLE_LOT < tousIds.length) {
           await new Promise((r) => setTimeout(r, 250));
@@ -179,7 +189,10 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         (r) => !nomsAvecId.has(r.artisteNormalise),
       );
       for (const { artisteAffiche } of artistes_sans_tm) {
-        const resultats = await ticketmaster.fetchArtiste(artisteAffiche);
+        const resultats = await ticketmaster.fetchArtiste(
+          artisteAffiche,
+          moisBatch,
+        );
         concertsTM.push(...resultats);
         await new Promise((r) => setTimeout(r, 250));
       }
@@ -221,8 +234,10 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     case "fetch:region": {
       logger.info({ depts: data.depts }, "fetch:region démarré");
 
+      const rayonKmRegion = data.rayonKm ?? 50;
+      const moisRegion = data.mois ?? 6;
       const [resultsTM, resultsEventim] = await Promise.allSettled([
-        ticketmaster.fetchRegion(data.depts),
+        ticketmaster.fetchRegion(data.depts, undefined, rayonKmRegion, moisRegion),
         eventim.fetchRegion(data.depts),
       ]);
 

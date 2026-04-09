@@ -116,9 +116,8 @@ function mapEvenement(evt: Record<string, unknown>): ConcertBrut | null {
 
     const datesData = evt["dates"] as Record<string, unknown> | undefined;
     const statut =
-      (datesData?.["status"] as Record<string, string> | undefined)?.[
-        "code"
-      ] ?? null;
+      (datesData?.["status"] as Record<string, string> | undefined)?.["code"] ??
+      null;
 
     const classificationsData = evt["classifications"] as
       | Record<string, unknown>[]
@@ -209,17 +208,20 @@ export class TicketmasterSource implements SourceConcerts {
     return this._dernierQuota;
   }
 
-  async fetchArtiste(nom: string): Promise<ConcertBrut[]> {
+  async fetchArtiste(nom: string, mois = 6): Promise<ConcertBrut[]> {
+    const fin = new Date();
+    fin.setMonth(fin.getMonth() + mois);
     const params = new URLSearchParams({
       keyword: nom,
       classificationName: CLASSIFICATIONS.join(","),
       size: String(TAILLE_PAGE),
       sort: "date,asc",
+      endDateTime: fin.toISOString().slice(0, 19) + "Z",
     });
 
     const { events, total, quota } = await fetchPage(params, this.apiKey);
     if (quota) this._dernierQuota = quota;
-    logger.info({ artiste: nom, total }, "TM fetchArtiste");
+    logger.info({ artiste: nom, total, mois }, "TM fetchArtiste");
     return events;
   }
 
@@ -258,24 +260,35 @@ export class TicketmasterSource implements SourceConcerts {
     }
   }
 
-  async fetchArtistesBatch(attractionIds: string[]): Promise<ConcertBrut[]> {
+  async fetchArtistesBatch(
+    attractionIds: string[],
+    mois = 6,
+  ): Promise<ConcertBrut[]> {
     if (attractionIds.length === 0) return [];
+    const fin = new Date();
+    fin.setMonth(fin.getMonth() + mois);
     const params = new URLSearchParams({
       attractionId: attractionIds.join(","),
       size: String(TAILLE_PAGE),
       sort: "date,asc",
+      endDateTime: fin.toISOString().slice(0, 19) + "Z",
     });
     const { events, quota } = await fetchPage(params, this.apiKey);
     if (quota) this._dernierQuota = quota;
-    logger.info({ ids: attractionIds.length }, "TM fetchArtistesBatch");
+    logger.info({ ids: attractionIds.length, mois }, "TM fetchArtistesBatch");
     return events;
   }
 
   async fetchRegion(
     depts: string[],
     classifs: string[] = CLASSIFICATIONS,
+    rayonKm = 50,
+    mois = 6,
   ): Promise<ConcertBrut[]> {
     const tous: ConcertBrut[] = [];
+    const fin = new Date();
+    fin.setMonth(fin.getMonth() + mois);
+    const endDateTime = fin.toISOString().slice(0, 19) + "Z";
 
     for (const dept of depts) {
       const centre = CENTRES_DEPT[dept];
@@ -286,11 +299,12 @@ export class TicketmasterSource implements SourceConcerts {
 
       const params = new URLSearchParams({
         latlong: `${centre.lat},${centre.lng}`,
-        radius: "50",
+        radius: String(rayonKm),
         unit: "km",
         classificationName: classifs.join(","),
         size: String(TAILLE_PAGE),
         sort: "date,asc",
+        endDateTime,
       });
 
       const { events, quota } = await fetchPage(params, this.apiKey);
