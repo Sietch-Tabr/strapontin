@@ -1,8 +1,9 @@
 // Planification des jobs récurrents — toutes les 2h pour chaque user actif.
+// Note : BullMQ v5 interdit les ":" dans les jobId — utiliser "__" comme séparateur.
 
 import pino from "pino";
 import { Queue } from "bullmq";
-import { userArtistes, userSalles, userConfig } from "@strapontin/core/schema";
+import { userArtistes, userConfig } from "@strapontin/core/schema";
 import { db } from "./db.js";
 import type { JobData } from "./jobs.js";
 
@@ -31,8 +32,8 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
       "fetch:artiste",
       { type: "fetch:artiste", artiste: artisteAffiche },
       {
-        // jobId sur le nom normalisé pour éviter les doublons liés à la casse/accents
-        jobId: `artiste:${artisteNormalise}`,
+        // jobId sur le nom normalisé — BullMQ v5 interdit ":", utiliser "__"
+        jobId: `artiste__${artisteNormalise}`,
         removeOnComplete: { count: 10 },
         removeOnFail: { count: 20 },
       },
@@ -58,7 +59,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
       "fetch:region",
       { type: "fetch:region", depts: [...tousLesDepts] },
       {
-        jobId: "region:all",
+        jobId: "region__all",
         removeOnComplete: { count: 10 },
         removeOnFail: { count: 20 },
       },
@@ -70,7 +71,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     "recalculer:matches",
     { type: "recalculer:matches" },
     {
-      jobId: "matches:all",
+      jobId: "matches__all",
       delay: 60_000, // 1 min après les fetches
       removeOnComplete: { count: 10 },
       removeOnFail: { count: 20 },
