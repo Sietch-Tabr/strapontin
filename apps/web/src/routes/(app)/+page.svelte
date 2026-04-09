@@ -48,7 +48,7 @@
 			</a>
 		</div>
 	{:else}
-		<div class="space-y-6">
+		<div class="space-y-4 max-w-2xl">
 			{#each data.artistesGroupes as groupe (groupe.artiste)}
 				<div class="rounded-xl border border-border bg-card overflow-hidden">
 					<!-- En-tête artiste -->

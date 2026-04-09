@@ -18,6 +18,37 @@ function normaliserSalleCle(nom: string): string {
     .replace(/[^a-z0-9]/g, "");
 }
 
+// Calcule la distance de Levenshtein entre deux chaînes.
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const ligne = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    let prev = ligne[0];
+    ligne[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = ligne[j];
+      ligne[j] =
+        a[i - 1] === b[j - 1]
+          ? prev
+          : 1 + Math.min(prev, ligne[j - 1], ligne[j]);
+      prev = tmp;
+    }
+  }
+  return ligne[n];
+}
+
+// Retourne true si deux noms de salle désignent le même lieu, en tolérant jusqu'à
+// 2 caractères d'écart après normalisation (gère les corruptions d'encodage type "D??fense").
+function estMemeSalle(a: string, b: string): boolean {
+  const na = normaliserSalleCle(a);
+  const nb = normaliserSalleCle(b);
+  if (na === nb) return true;
+  // Seuil proportionnel à la longueur pour éviter les faux positifs sur les noms courts
+  const seuil = Math.max(2, Math.floor(Math.min(na.length, nb.length) * 0.1));
+  return levenshtein(na, nb) <= seuil;
+}
+
 interface ResultatSalle {
   salle: string;
   ville: string | null;
@@ -77,16 +108,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     // Compléter avec Ticketmaster si < 3 résultats
     if (resultatsRecherche.length < 3) {
       const tmResultats = await rechercherSallesTM(recherche);
-      // Utiliser la clé normalisée (sans accents ni ponctuation) pour éviter les doublons
-      // même quand la DB contient des données avec encodage corrompu (ex : "D??fense")
-      const sallesDejaPresentes = new Set([
-        ...resultatsRecherche.map((r) => normaliserSalleCle(r.salle)),
-        ...[...sallesDejaAjoutees].map(normaliserSalleCle),
-      ]);
+      // Déduplication fuzzy (distance ≤ 2) pour gérer les corruptions d'encodage
+      // ex : "Paris La D??fense Arena" (DB) ≈ "Paris La Defense Arena" (TM)
+      const sallesDejaPresentes = [
+        ...resultatsRecherche.map((r) => r.salle),
+        ...[...sallesDejaAjoutees],
+      ];
       for (const r of tmResultats) {
-        if (!sallesDejaPresentes.has(normaliserSalleCle(r.salle))) {
+        if (!sallesDejaPresentes.some((s) => estMemeSalle(s, r.salle))) {
           resultatsRecherche.push(r);
-          sallesDejaPresentes.add(normaliserSalleCle(r.salle));
+          sallesDejaPresentes.push(r.salle);
         }
       }
     }
