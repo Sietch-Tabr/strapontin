@@ -1,10 +1,18 @@
 import { db } from "$lib/server/db";
+import { redis, CLE_QUOTA_TM } from "$lib/server/redis";
 import { auth } from "$lib/auth";
 import { users } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
+
+interface QuotaTM {
+  dispo: number;
+  total: number;
+  reset: number;
+  misAJour: string;
+}
 
 const FORMAT_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -24,7 +32,10 @@ export const load: PageServerLoad = async ({ locals }) => {
     .from(users)
     .orderBy(users.createdAt);
 
-  return { utilisateurs: tousLesUsers };
+  const quotaJson = await redis.get(CLE_QUOTA_TM).catch(() => null);
+  const quotaTM: QuotaTM | null = quotaJson ? JSON.parse(quotaJson) : null;
+
+  return { utilisateurs: tousLesUsers, quotaTM };
 };
 
 export const actions: Actions = {

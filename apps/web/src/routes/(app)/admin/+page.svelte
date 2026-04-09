@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { UserPlus, Trash2, ShieldCheck } from '@lucide/svelte';
+	import { UserPlus, Trash2, ShieldCheck, Zap } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -8,6 +8,15 @@
 	let nomNouvelUser = $state('');
 	let emailNouvelUser = $state('');
 	let creationEnCours = $state(false);
+
+	function formaterReset(timestampMs: number): string {
+		if (!timestampMs) return '—';
+		return new Date(timestampMs).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+	}
+
+	function formaterMisAJour(iso: string): string {
+		return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+	}
 </script>
 
 <div class="p-6 lg:p-8">
@@ -17,6 +26,44 @@
 	</div>
 
 	<div class="max-w-2xl space-y-10">
+
+		<!-- Quota Ticketmaster -->
+		<section>
+			<h2 class="mb-4 text-base font-medium text-foreground flex items-center gap-2">
+				<Zap size={16} class="text-muted-foreground" />
+				Quota Ticketmaster API
+			</h2>
+
+			{#if data.quotaTM}
+				{@const pct = data.quotaTM.total > 0 ? Math.round((data.quotaTM.dispo / data.quotaTM.total) * 100) : 0}
+				{@const couleur = pct > 30 ? 'bg-green-500' : pct > 10 ? 'bg-yellow-500' : 'bg-red-500'}
+				<div class="rounded-xl border border-border bg-card p-4">
+					<div class="mb-3 flex items-end justify-between">
+						<div>
+							<p class="text-2xl font-semibold tabular-nums text-foreground">
+								{data.quotaTM.dispo.toLocaleString('fr-FR')}
+								<span class="text-base font-normal text-muted-foreground">
+									/ {data.quotaTM.total.toLocaleString('fr-FR')}
+								</span>
+							</p>
+							<p class="text-xs text-muted-foreground">appels restants</p>
+						</div>
+						<p class="text-sm font-medium text-foreground">{pct} %</p>
+					</div>
+					<div class="h-2 w-full overflow-hidden rounded-full bg-muted">
+						<div class="h-2 rounded-full transition-all {couleur}" style="width: {pct}%"></div>
+					</div>
+					<div class="mt-3 flex justify-between text-xs text-muted-foreground">
+						<span>Remise à zéro vers {formaterReset(data.quotaTM.reset)}</span>
+						<span>Mis à jour {formaterMisAJour(data.quotaTM.misAJour)}</span>
+					</div>
+				</div>
+			{:else}
+				<div class="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+					Aucune donnée — quota disponible après le prochain fetch Ticketmaster.
+				</div>
+			{/if}
+		</section>
 
 		<!-- Créer un compte -->
 		<section>

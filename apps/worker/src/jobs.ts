@@ -5,8 +5,16 @@ import type { Job } from "bullmq";
 import { dedoublonner } from "@strapontin/core";
 import { ticketmaster, bandsintown, eventim } from "./sources.js";
 import { persisterConcerts, recalculerMatches } from "./persister.js";
+import { redis, CLE_QUOTA_TM } from "./redis.js";
 
 const logger = pino({ name: "jobs" });
+
+async function sauvegarderQuotaTM(): Promise<void> {
+  const quota = ticketmaster.obtenirQuota();
+  if (quota) {
+    await redis.set(CLE_QUOTA_TM, JSON.stringify(quota)).catch(() => {});
+  }
+}
 
 export interface JobFetchArtiste {
   type: "fetch:artiste";
@@ -75,6 +83,8 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         );
       }
 
+      await sauvegarderQuotaTM();
+
       const dedoublonnes = dedoublonner(tous);
       logger.info(
         {
@@ -106,6 +116,8 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         ...(resultsEventim.status === "fulfilled" ? resultsEventim.value : []),
       ];
 
+      await sauvegarderQuotaTM();
+
       const dedoublonnes = dedoublonner(tous);
       logger.info(
         {
@@ -132,6 +144,8 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         { venueId: data.venueId, total: concertsSalle.length },
         "TM fetchSalle terminé",
       );
+
+      await sauvegarderQuotaTM();
 
       const dedoublonnes = dedoublonner(concertsSalle);
       await persisterConcerts(dedoublonnes);

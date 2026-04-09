@@ -13,6 +13,13 @@ const BASE_URL = "https://app.ticketmaster.com/discovery/v2";
 const CLASSIFICATIONS = ["music", "theatre", "opera", "musical"];
 const TAILLE_PAGE = 20;
 
+export interface QuotaTM {
+  dispo: number;
+  total: number;
+  reset: number; // Unix timestamp ms
+  misAJour: string; // ISO 8601
+}
+
 // Correspondance code département → latitude/longitude centre
 const CENTRES_DEPT: Record<string, { lat: number; lng: number }> = {
   "01": { lat: 46.2, lng: 5.23 },
@@ -149,7 +156,7 @@ function mapEvenement(evt: Record<string, unknown>): ConcertBrut | null {
 async function fetchPage(
   params: URLSearchParams,
   apiKey: string,
-): Promise<{ events: ConcertBrut[]; total: number }> {
+): Promise<{ events: ConcertBrut[]; total: number; quota: QuotaTM | null }> {
   params.set("apikey", apiKey);
   params.set("locale", "fr");
   params.set("countryCode", "FR");
@@ -157,9 +164,20 @@ async function fetchPage(
   const url = `${BASE_URL}/events.json?${params.toString()}`;
   const res = await fetch(url);
 
+  // Extraire le quota depuis les headers TM (présents même sur les erreurs)
+  const quota: QuotaTM | null =
+    res.headers.has("Rate-Limit-Available")
+      ? {
+          dispo: parseInt(res.headers.get("Rate-Limit-Available") ?? "0"),
+          total: parseInt(res.headers.get("Rate-Limit") ?? "0"),
+          reset: parseInt(res.headers.get("Rate-Limit-Reset") ?? "0"),
+          misAJour: new Date().toISOString(),
+        }
+      : null;
+
   if (!res.ok) {
     logger.error({ status: res.status, url }, "erreur HTTP Ticketmaster");
-    return { events: [], total: 0 };
+    return { events: [], total: 0, quota };
   }
 
   const data = (await res.json()) as Record<string, unknown>;
@@ -168,16 +186,22 @@ async function fetchPage(
 
   const embedded = data["_embedded"] as Record<string, unknown> | undefined;
   const evts = embedded?.["events"] as Record<string, unknown>[] | undefined;
-  if (!evts) return { events: [], total };
+  if (!evts) return { events: [], total, quota };
 
   const events = evts
     .map(mapEvenement)
     .filter((e): e is ConcertBrut => e !== null);
-  return { events, total };
+  return { events, total, quota };
 }
 
 export class TicketmasterSource implements SourceConcerts {
+  private _dernierQuota: QuotaTM | null = null;
+
   constructor(private readonly apiKey: string) {}
+
+  obtenirQuota(): QuotaTM | null {
+    return this._dernierQuota;
+  }
 
   async fetchArtiste(nom: string): Promise<ConcertBrut[]> {
     const params = new URLSearchParams({
@@ -187,7 +211,8 @@ export class TicketmasterSource implements SourceConcerts {
       sort: "date,asc",
     });
 
-    const { events, total } = await fetchPage(params, this.apiKey);
+    const { events, total, quota } = await fetchPage(params, this.apiKey);
+    if (quota) this._dernierQuota = quota;
     logger.info({ artiste: nom, total }, "TM fetchArtiste");
     return events;
   }
@@ -199,7 +224,8 @@ export class TicketmasterSource implements SourceConcerts {
       sort: "date,asc",
     });
 
-    const { events, total } = await fetchPage(params, this.apiKey);
+    const { events, total, quota } = await fetchPage(params, this.apiKey);
+    if (quota) this._dernierQuota = quota;
     logger.info({ venueId, total }, "TM fetchSalle");
     return events;
   }
@@ -226,7 +252,8 @@ export class TicketmasterSource implements SourceConcerts {
         sort: "date,asc",
       });
 
-      const { events } = await fetchPage(params, this.apiKey);
+      const { events, quota } = await fetchPage(params, this.apiKey);
+      if (quota) this._dernierQuota = quota;
       tous.push(...events);
 
       // Respecter le rate limit TM (5 req/s)
