@@ -53,7 +53,10 @@ function extraireDept(codePostal: string | undefined): string | null {
   return codePostal.slice(0, 2);
 }
 
-function parseDateTM(dateStr: string, heureStr: string | undefined): { date: string; heure: string | null } {
+function parseDateTM(
+  dateStr: string,
+  heureStr: string | undefined,
+): { date: string; heure: string | null } {
   const date = dateStr.slice(0, 10);
   if (!heureStr) return { date, heure: null };
   return { date, heure: heureStr.slice(0, 5) };
@@ -72,18 +75,27 @@ function mapEvenement(evt: Record<string, unknown>): ConcertBrut | null {
     );
 
     const embedded = evt["_embedded"] as Record<string, unknown>;
-    const attractions = embedded?.["attractions"] as Record<string, unknown>[] | undefined;
-    const artiste = (attractions?.[0]?.["name"] as string | undefined) ?? (evt["name"] as string);
+    const attractions = embedded?.["attractions"] as
+      | Record<string, unknown>[]
+      | undefined;
+    const artiste =
+      (attractions?.[0]?.["name"] as string | undefined) ??
+      (evt["name"] as string);
     if (!artiste) return null;
 
-    const venues = embedded?.["venues"] as Record<string, unknown>[] | undefined;
+    const venues = embedded?.["venues"] as
+      | Record<string, unknown>[]
+      | undefined;
     const venue = venues?.[0];
     const salle = (venue?.["name"] as string | undefined) ?? "Salle inconnue";
-    const ville = (venue?.["city"] as Record<string, string> | undefined)?.["name"] ?? null;
-    const cp = (venue?.["postalCode"] as string | undefined);
+    const ville =
+      (venue?.["city"] as Record<string, string> | undefined)?.["name"] ?? null;
+    const cp = venue?.["postalCode"] as string | undefined;
     const dept = extraireDept(cp);
 
-    const priceRanges = evt["priceRanges"] as Record<string, number>[] | undefined;
+    const priceRanges = evt["priceRanges"] as
+      | Record<string, number>[]
+      | undefined;
     const prixMin = priceRanges?.[0]?.["min"] ?? null;
     const prixMax = priceRanges?.[0]?.["max"] ?? null;
 
@@ -107,7 +119,10 @@ function mapEvenement(evt: Record<string, unknown>): ConcertBrut | null {
   }
 }
 
-async function fetchPage(params: URLSearchParams, apiKey: string): Promise<{ events: ConcertBrut[]; total: number }> {
+async function fetchPage(
+  params: URLSearchParams,
+  apiKey: string,
+): Promise<{ events: ConcertBrut[]; total: number }> {
   params.set("apikey", apiKey);
   params.set("locale", "fr");
   params.set("countryCode", "FR");
@@ -120,7 +135,7 @@ async function fetchPage(params: URLSearchParams, apiKey: string): Promise<{ eve
     return { events: [], total: 0 };
   }
 
-  const data = await res.json() as Record<string, unknown>;
+  const data = (await res.json()) as Record<string, unknown>;
   const page = data["page"] as Record<string, number> | undefined;
   const total = page?.["totalElements"] ?? 0;
 
@@ -128,7 +143,9 @@ async function fetchPage(params: URLSearchParams, apiKey: string): Promise<{ eve
   const evts = embedded?.["events"] as Record<string, unknown>[] | undefined;
   if (!evts) return { events: [], total };
 
-  const events = evts.map(mapEvenement).filter((e): e is ConcertBrut => e !== null);
+  const events = evts
+    .map(mapEvenement)
+    .filter((e): e is ConcertBrut => e !== null);
   return { events, total };
 }
 
@@ -148,7 +165,10 @@ export class TicketmasterSource implements SourceConcerts {
     return events;
   }
 
-  async fetchRegion(depts: string[], classifs: string[] = CLASSIFICATIONS): Promise<ConcertBrut[]> {
+  async fetchRegion(
+    depts: string[],
+    classifs: string[] = CLASSIFICATIONS,
+  ): Promise<ConcertBrut[]> {
     const tous: ConcertBrut[] = [];
 
     for (const dept of depts) {

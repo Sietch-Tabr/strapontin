@@ -6,7 +6,11 @@
 // Fallback  : (date, salle_norm) pour les grandes salles avec villes divergentes
 
 import type { ConcertBrut } from "@strapontin/sources";
-import { normaliserTexte, normaliserVille, similarite } from "./normalisation.js";
+import {
+  normaliserTexte,
+  normaliserVille,
+  similarite,
+} from "./normalisation.js";
 
 const SEUIL_SIMILARITE = 0.85;
 
@@ -95,7 +99,10 @@ export function dedoublonner(concerts: ConcertBrut[]): ConcertBrut[] {
 
       for (let j = i + 1; j < groupe.length; j++) {
         if (traites.has(j)) continue;
-        const sim = similarite(groupe[i]!._artisteNorm, groupe[j]!._artisteNorm);
+        const sim = similarite(
+          groupe[i]!._artisteNorm,
+          groupe[j]!._artisteNorm,
+        );
         if (sim >= SEUIL_SIMILARITE) {
           sousGroupe.push(groupe[j]!);
           traites.add(j);
@@ -125,7 +132,12 @@ export function dedoublonner(concerts: ConcertBrut[]): ConcertBrut[] {
 
   for (const groupe of groupesDateSalle.values()) {
     if (groupe.length <= 1) {
-      const { _artisteNorm: _a, _villeNorm: _v, _salleNorm: _s, ...concert } = groupe[0]!;
+      const {
+        _artisteNorm: _a,
+        _villeNorm: _v,
+        _salleNorm: _s,
+        ...concert
+      } = groupe[0]!;
       resultat.push(concert);
       continue;
     }
@@ -141,7 +153,10 @@ export function dedoublonner(concerts: ConcertBrut[]): ConcertBrut[] {
 
       for (let j = i + 1; j < groupe.length; j++) {
         if (traites.has(j)) continue;
-        const sim = similarite(groupe[i]!._artisteNorm, groupe[j]!._artisteNorm);
+        const sim = similarite(
+          groupe[i]!._artisteNorm,
+          groupe[j]!._artisteNorm,
+        );
         if (sim >= SEUIL_SIMILARITE) {
           sousGroupe.push(groupe[j]!);
           traites.add(j);
@@ -153,7 +168,12 @@ export function dedoublonner(concerts: ConcertBrut[]): ConcertBrut[] {
 
     for (const sg of fusionnes) {
       const meilleur = fusionner(sg);
-      const { _artisteNorm: _a, _villeNorm: _v, _salleNorm: _s, ...concert } = meilleur;
+      const {
+        _artisteNorm: _a,
+        _villeNorm: _v,
+        _salleNorm: _s,
+        ...concert
+      } = meilleur;
       resultat.push(concert);
     }
   }

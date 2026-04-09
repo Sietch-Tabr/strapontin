@@ -13,11 +13,15 @@ function extraireDept(ville: string | null): string | null {
 function parseDateBIT(dateStr: string): { date: string; heure: string | null } {
   // Format : "2025-06-15T20:00:00" ou "2025-06-15T00:00:00"
   const [datePart, heurePart] = dateStr.split("T");
-  const heure = heurePart && heurePart !== "00:00:00" ? heurePart.slice(0, 5) : null;
+  const heure =
+    heurePart && heurePart !== "00:00:00" ? heurePart.slice(0, 5) : null;
   return { date: datePart ?? dateStr.slice(0, 10), heure };
 }
 
-function mapEvenement(evt: Record<string, unknown>, artiste: string): ConcertBrut | null {
+function mapEvenement(
+  evt: Record<string, unknown>,
+  artiste: string,
+): ConcertBrut | null {
   try {
     const dateStr = evt["datetime"] as string | undefined;
     if (!dateStr) return null;
@@ -67,11 +71,14 @@ export class BandsintownSource implements SourceConcerts {
     }
 
     if (!res.ok) {
-      logger.error({ status: res.status, artiste: nom }, "erreur HTTP Bandsintown");
+      logger.error(
+        { status: res.status, artiste: nom },
+        "erreur HTTP Bandsintown",
+      );
       return [];
     }
 
-    const data = await res.json() as Record<string, unknown>[];
+    const data = (await res.json()) as Record<string, unknown>[];
 
     if (!Array.isArray(data)) return [];
 
@@ -83,7 +90,10 @@ export class BandsintownSource implements SourceConcerts {
     return concerts;
   }
 
-  async fetchRegion(_depts: string[], _classifs: string[]): Promise<ConcertBrut[]> {
+  async fetchRegion(
+    _depts: string[],
+    _classifs: string[],
+  ): Promise<ConcertBrut[]> {
     // Bandsintown n'expose pas de recherche par région — non supporté
     return [];
   }

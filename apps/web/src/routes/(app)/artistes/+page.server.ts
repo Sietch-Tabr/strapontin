@@ -65,11 +65,15 @@ export const actions: Actions = {
     });
 
     // Déclencher le fetch immédiat pour cet artiste
-    await queue.add(
-      "fetch:artiste",
-      { type: "fetch:artiste", artiste: nom, userId: locals.user!.id },
-      { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
-    ).catch(() => { /* le worker est peut-être arrêté en dev */ });
+    await queue
+      .add(
+        "fetch:artiste",
+        { type: "fetch:artiste", artiste: nom, userId: locals.user!.id },
+        { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+      )
+      .catch(() => {
+        /* le worker est peut-être arrêté en dev */
+      });
 
     return { succes: true };
   },

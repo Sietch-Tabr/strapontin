@@ -11,8 +11,11 @@
 		Ticket,
 		Settings,
 		LogOut,
-		MoreHorizontal
+		MoreHorizontal,
+		ShieldCheck
 	} from '@lucide/svelte';
+
+	let { estAdmin = false }: { estAdmin?: boolean } = $props();
 
 	let drawerOuvert = $state(false);
 
@@ -96,6 +99,17 @@
 						{label}
 					</button>
 				{/each}
+
+				{#if estAdmin}
+					<button
+						onclick={() => naviguer('/admin')}
+						class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground
+							{estActif('/admin') ? 'bg-accent text-accent-foreground' : 'text-foreground'}"
+					>
+						<ShieldCheck size={20} />
+						Admin
+					</button>
+				{/if}
 
 				<div class="my-2 border-t border-border"></div>
 

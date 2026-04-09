@@ -9,7 +9,10 @@ import type { JobData } from "./jobs.js";
 
 const logger = pino({ name: "cron" });
 
-export function creerQueue(connexionRedis: { host: string; port: number }): Queue<JobData> {
+export function creerQueue(connexionRedis: {
+  host: string;
+  port: number;
+}): Queue<JobData> {
   return new Queue<JobData>("concerts", { connection: connexionRedis });
 }
 
@@ -35,7 +38,10 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
 
   // Récupérer tous les départements configurés (tous users confondus)
   const configs = await db
-    .select({ departements: userConfig.departements, userId: userConfig.userId })
+    .select({
+      departements: userConfig.departements,
+      userId: userConfig.userId,
+    })
     .from(userConfig)
     .where(eq(userConfig.filtreDisponibles, true));
 

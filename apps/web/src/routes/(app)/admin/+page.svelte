@@ -1,0 +1,131 @@
+<script lang="ts">
+	import { enhance } from '$app/forms';
+	import { UserPlus, Trash2, ShieldCheck } from '@lucide/svelte';
+	import type { PageData, ActionData } from './$types';
+
+	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	let nomNouvelUser = $state('');
+	let emailNouvelUser = $state('');
+	let creationEnCours = $state(false);
+</script>
+
+<div class="p-6 lg:p-8">
+	<div class="mb-8">
+		<h1 class="text-2xl font-semibold text-foreground">Administration</h1>
+		<p class="mt-1 text-sm text-muted-foreground">Gestion des comptes utilisateurs.</p>
+	</div>
+
+	<div class="max-w-2xl space-y-10">
+
+		<!-- Créer un compte -->
+		<section>
+			<h2 class="mb-4 text-base font-medium text-foreground">Créer un compte</h2>
+
+			{#if form?.succes && form?.motDePasseTemp}
+				<div class="mb-4 rounded-xl border border-green-500/30 bg-green-500/10 p-4">
+					<p class="mb-2 text-sm font-medium text-green-700 dark:text-green-400">
+						Compte créé pour {form.email}.
+					</p>
+					<p class="text-sm text-green-700 dark:text-green-400">
+						Mot de passe temporaire :
+						<code class="rounded bg-green-500/20 px-2 py-0.5 font-mono font-semibold">
+							{form.motDePasseTemp}
+						</code>
+					</p>
+					<p class="mt-1 text-xs text-muted-foreground">
+						Communiquez ce mot de passe à l'utilisateur. Il pourra le modifier dans ses paramètres.
+					</p>
+				</div>
+			{/if}
+
+			{#if form?.erreur}
+				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+					{form.erreur}
+				</p>
+			{/if}
+
+			<form
+				method="POST"
+				action="?/creerCompte"
+				class="flex flex-wrap gap-2"
+				use:enhance={() => {
+					creationEnCours = true;
+					return async ({ update }) => {
+						await update();
+						creationEnCours = false;
+						nomNouvelUser = '';
+						emailNouvelUser = '';
+					};
+				}}
+			>
+				<input
+					type="text"
+					name="nom"
+					bind:value={nomNouvelUser}
+					placeholder="Nom"
+					required
+					class="flex-1 min-w-32 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+				/>
+				<input
+					type="email"
+					name="email"
+					bind:value={emailNouvelUser}
+					placeholder="Email"
+					required
+					class="flex-1 min-w-48 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+				/>
+				<button
+					type="submit"
+					disabled={creationEnCours || !nomNouvelUser.trim() || !emailNouvelUser.trim()}
+					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+				>
+					<UserPlus size={16} />
+					Créer
+				</button>
+			</form>
+		</section>
+
+		<!-- Liste des utilisateurs -->
+		<section>
+			<h2 class="mb-4 text-base font-medium text-foreground">
+				Utilisateurs ({data.utilisateurs.length})
+			</h2>
+
+			<ul class="space-y-2">
+				{#each data.utilisateurs as utilisateur (utilisateur.id)}
+					<li class="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
+						<div class="min-w-0">
+							<div class="flex items-center gap-2">
+								<span class="font-medium text-card-foreground">{utilisateur.name}</span>
+								{#if utilisateur.role === 'admin'}
+									<span class="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+										<ShieldCheck size={11} />
+										admin
+									</span>
+								{/if}
+							</div>
+							<p class="text-sm text-muted-foreground">{utilisateur.email}</p>
+						</div>
+						{#if utilisateur.id !== data.utilisateur?.id}
+							<form method="POST" action="?/supprimerCompte" use:enhance>
+								<input type="hidden" name="userId" value={utilisateur.id} />
+								<button
+									type="submit"
+									onclick={(e) => {
+										if (!confirm(`Supprimer le compte de ${utilisateur.name} ?`)) e.preventDefault();
+									}}
+									class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+									aria-label="Supprimer {utilisateur.name}"
+								>
+									<Trash2 size={16} />
+								</button>
+							</form>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		</section>
+
+	</div>
+</div>

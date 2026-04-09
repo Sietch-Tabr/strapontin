@@ -4,7 +4,7 @@ import { redirect } from "@sveltejs/kit";
 import { building } from "$app/environment";
 import type { Handle } from "@sveltejs/kit";
 
-const ROUTES_PUBLIQUES = ["/login", "/setup"];
+const ROUTES_PUBLIQUES = ["/login", "/setup", "/health"];
 
 export const handle: Handle = async ({ event, resolve }) => {
   const theme = event.cookies.get("theme") ?? "light";

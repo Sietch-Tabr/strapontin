@@ -13,5 +13,5 @@
 		{@render children()}
 	</main>
 
-	<BottomNav />
+	<BottomNav estAdmin={data.utilisateur?.role === 'admin'} />
 </div>

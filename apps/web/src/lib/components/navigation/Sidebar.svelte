@@ -10,10 +10,11 @@
 		CalendarDays,
 		Ticket,
 		Settings,
-		LogOut
+		LogOut,
+		ShieldCheck
 	} from '@lucide/svelte';
 
-	let { utilisateur }: { utilisateur: { name: string } } = $props();
+	let { utilisateur }: { utilisateur: { name: string; role?: string } } = $props();
 
 	const elementsNav = [
 		{ label: 'Accueil', icone: Home, route: '/' },
@@ -56,6 +57,18 @@
 	</nav>
 
 	<div class="border-t border-sidebar-border p-2">
+		{#if utilisateur.role === 'admin'}
+			<a
+				href="/admin"
+				class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
+					{estActif('/admin')
+					? 'bg-sidebar-accent text-sidebar-accent-foreground'
+					: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
+			>
+				<ShieldCheck size={18} />
+				Admin
+			</a>
+		{/if}
 		<a
 			href="/parametres"
 			class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors

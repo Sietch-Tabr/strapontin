@@ -2,7 +2,13 @@
 
 import pino from "pino";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { concerts, userMatches, userArtistes, userSalles, userConfig } from "@strapontin/core/schema";
+import {
+  concerts,
+  userMatches,
+  userArtistes,
+  userSalles,
+  userConfig,
+} from "@strapontin/core/schema";
 import { normaliserTexte } from "@strapontin/core";
 import type { ConcertBrut } from "@strapontin/sources";
 import { db } from "./db.js";
@@ -10,7 +16,9 @@ import { db } from "./db.js";
 const logger = pino({ name: "persister" });
 
 // Upsert des concerts en base — retourne les IDs insérés/mis à jour
-export async function persisterConcerts(liste: ConcertBrut[]): Promise<string[]> {
+export async function persisterConcerts(
+  liste: ConcertBrut[],
+): Promise<string[]> {
   if (liste.length === 0) return [];
 
   const ids: string[] = [];
@@ -137,10 +145,7 @@ export async function recalculerMatches(userIds?: string[]): Promise<void> {
     // Upsert user_matches
     const valeurs = concertIds.map((concertId) => ({ userId, concertId }));
 
-    await db
-      .insert(userMatches)
-      .values(valeurs)
-      .onConflictDoNothing();
+    await db.insert(userMatches).values(valeurs).onConflictDoNothing();
 
     logger.info({ userId, matches: concertIds.length }, "matches recalculés");
   }

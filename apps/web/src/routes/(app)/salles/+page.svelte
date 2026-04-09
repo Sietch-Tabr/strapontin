@@ -5,8 +5,15 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	// Valeur initiale extraite du prop pour éviter le warning state_referenced_locally
 	let termeRecherche = $state<string>(data.recherche);
+
+	// Peut-on ajouter directement le terme de recherche comme nouvelle salle ?
+	const peutAjouterDirectement = $derived(
+		termeRecherche.trim().length >= 2 &&
+		data.resultatsRecherche.length === 0 &&
+		data.recherche.length >= 2 &&
+		!data.sallesSuivies.some((s) => s.salleId.toLowerCase() === data.recherche.toLowerCase())
+	);
 </script>
 
 <div class="p-6 lg:p-8">
@@ -18,12 +25,12 @@
 	</div>
 
 	<!-- Recherche de salle -->
-	<form method="GET" class="mb-6 flex gap-2">
+	<form method="GET" class="mb-3 flex gap-2">
 		<input
 			type="text"
 			name="q"
 			bind:value={termeRecherche}
-			placeholder="Rechercher une salle…"
+			placeholder="Rechercher ou saisir une salle…"
 			minlength="2"
 			autocomplete="off"
 			class="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -37,6 +44,10 @@
 			Rechercher
 		</button>
 	</form>
+
+	<p class="mb-6 text-xs text-muted-foreground">
+		La recherche porte sur les concerts déjà en base. Si une salle n'apparaît pas, vous pouvez l'ajouter directement par nom — elle sera prise en compte dès que des concerts seront disponibles.
+	</p>
 
 	{#if form?.erreur}
 		<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -64,7 +75,6 @@
 							<button
 								type="submit"
 								class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-								aria-label="Suivre {resultat.salle}"
 							>
 								<Plus size={14} />
 								Suivre
@@ -75,9 +85,24 @@
 			</ul>
 		</section>
 	{:else if data.recherche.length >= 2}
-		<p class="mb-8 text-sm text-muted-foreground">
-			Aucune salle trouvée pour « {data.recherche} ».
-		</p>
+		<!-- Aucun résultat en DB → proposer d'ajouter directement -->
+		<div class="mb-8 rounded-xl border border-dashed border-border p-4">
+			<p class="mb-3 text-sm text-muted-foreground">
+				« {data.recherche} » n'est pas encore en base de données.
+			</p>
+			{#if peutAjouterDirectement}
+				<form method="POST" action="?/ajouter" use:enhance>
+					<input type="hidden" name="salleId" value={data.recherche} />
+					<button
+						type="submit"
+						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+					>
+						<Plus size={16} />
+						Ajouter « {data.recherche} » quand même
+					</button>
+				</form>
+			{/if}
+		</div>
 	{/if}
 
 	<!-- Salles suivies -->

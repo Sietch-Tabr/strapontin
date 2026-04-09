@@ -10,14 +10,10 @@ const connexionRedis = {
   port: Number(process.env["REDIS_PORT"] ?? 6379),
 };
 
-const worker = new Worker<JobData>(
-  "concerts",
-  traiterJob,
-  {
-    connection: connexionRedis,
-    concurrency: 2,
-  },
-);
+const worker = new Worker<JobData>("concerts", traiterJob, {
+  connection: connexionRedis,
+  concurrency: 2,
+});
 
 worker.on("ready", () => {
   logger.info("worker démarré — en attente de jobs");
@@ -28,7 +24,10 @@ worker.on("completed", (job) => {
 });
 
 worker.on("failed", (job, err) => {
-  logger.error({ jobId: job?.id, name: job?.name, err: err.message }, "job échoué");
+  logger.error(
+    { jobId: job?.id, name: job?.name, err: err.message },
+    "job échoué",
+  );
 });
 
 worker.on("error", (err) => {
@@ -46,9 +45,12 @@ async function lancerCron(): Promise<void> {
 lancerCron().catch((err) => logger.error({ err }, "erreur cron initial"));
 
 // Puis toutes les 2h
-setInterval(() => {
-  lancerCron().catch((err) => logger.error({ err }, "erreur cron"));
-}, 2 * 60 * 60 * 1000);
+setInterval(
+  () => {
+    lancerCron().catch((err) => logger.error({ err }, "erreur cron"));
+  },
+  2 * 60 * 60 * 1000,
+);
 
 // Arrêt propre
 process.on("SIGTERM", async () => {

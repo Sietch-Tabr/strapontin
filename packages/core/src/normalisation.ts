@@ -4,7 +4,7 @@ export function normaliserTexte(texte: string): string {
   return texte
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")  // supprimer accents
+    .replace(/[\u0300-\u036f]/g, "") // supprimer accents
     .replace(/[''`]/g, " ")
     .replace(/[-–—]/g, " ")
     .replace(/[^a-z0-9\s]/g, " ")
@@ -41,11 +41,8 @@ function levenshtein(a: string, b: string): number {
       if (a[i - 1] === b[j - 1]) {
         dp[i]![j] = dp[i - 1]![j - 1]!;
       } else {
-        dp[i]![j] = 1 + Math.min(
-          dp[i - 1]![j]!,
-          dp[i]![j - 1]!,
-          dp[i - 1]![j - 1]!,
-        );
+        dp[i]![j] =
+          1 + Math.min(dp[i - 1]![j]!, dp[i]![j - 1]!, dp[i - 1]![j - 1]!);
       }
     }
   }

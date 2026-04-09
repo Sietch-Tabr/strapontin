@@ -43,7 +43,11 @@ export const concerts = pgTable(
       .defaultNow(),
   },
   (table) => [
-    unique("uq_concerts_artiste_date_salle").on(table.artisteNorm, table.date, table.salle),
+    unique("uq_concerts_artiste_date_salle").on(
+      table.artisteNorm,
+      table.date,
+      table.salle,
+    ),
     index("idx_concerts_artiste_norm").on(table.artisteNorm),
     index("idx_concerts_date").on(table.date),
     index("idx_concerts_dept").on(table.dept),

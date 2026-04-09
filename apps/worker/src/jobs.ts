@@ -47,18 +47,31 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
       ];
 
       if (resultsTM.status === "rejected") {
-        logger.warn({ err: resultsTM.reason, artiste: data.artiste }, "TM échoué");
+        logger.warn(
+          { err: resultsTM.reason, artiste: data.artiste },
+          "TM échoué",
+        );
       }
       if (resultsBIT.status === "rejected") {
-        logger.warn({ err: resultsBIT.reason, artiste: data.artiste }, "BIT échoué");
+        logger.warn(
+          { err: resultsBIT.reason, artiste: data.artiste },
+          "BIT échoué",
+        );
       }
       if (resultsEventim.status === "rejected") {
-        logger.warn({ err: resultsEventim.reason, artiste: data.artiste }, "Eventim échoué");
+        logger.warn(
+          { err: resultsEventim.reason, artiste: data.artiste },
+          "Eventim échoué",
+        );
       }
 
       const dedoublonnes = dedoublonner(tous);
       logger.info(
-        { artiste: data.artiste, bruts: tous.length, dedoublonnes: dedoublonnes.length },
+        {
+          artiste: data.artiste,
+          bruts: tous.length,
+          dedoublonnes: dedoublonnes.length,
+        },
         "dédoublonnage terminé",
       );
 
@@ -85,7 +98,11 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
       const dedoublonnes = dedoublonner(tous);
       logger.info(
-        { depts: data.depts, bruts: tous.length, dedoublonnes: dedoublonnes.length },
+        {
+          depts: data.depts,
+          bruts: tous.length,
+          dedoublonnes: dedoublonnes.length,
+        },
         "dédoublonnage région terminé",
       );
 

@@ -68,11 +68,15 @@ export const actions: Actions = {
     });
 
     // Recalculer les matches pour cet user (la salle peut déjà avoir des concerts en base)
-    await queue.add(
-      "recalculer:matches",
-      { type: "recalculer:matches", userIds: [locals.user!.id] },
-      { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
-    ).catch(() => { /* le worker est peut-être arrêté en dev */ });
+    await queue
+      .add(
+        "recalculer:matches",
+        { type: "recalculer:matches", userIds: [locals.user!.id] },
+        { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+      )
+      .catch(() => {
+        /* le worker est peut-être arrêté en dev */
+      });
 
     return { succes: true };
   },
