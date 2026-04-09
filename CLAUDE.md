@@ -70,18 +70,18 @@ steps:
     environment:
       SSH_KEY:
         from_secret: ssh_key
-      PROXMOX_HOST:
-        from_secret: proxmox_host
+      LXC_HOST:
+        from_secret: lxc_host
     commands:
       - apk add openssh-client
       - echo "$$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
-      - ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$PROXMOX_HOST "pct exec 113 -- /opt/strapontin/scripts/update.sh"
+      - ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_HOST "/opt/strapontin/scripts/update.sh"
     when:
       - event: push
         branch: main
 ```
 
-LXC 111 (Woodpecker) et LXC 113 (strapontin) sont tous les deux sur VLAN 20 — SSH direct.
+LXC 111 (Woodpecker) et LXC 113 (strapontin) sont tous les deux sur VLAN 20 — SSH direct sans passer par le host Proxmox.
 
 Secrets Woodpecker : `ssh_key` (clé privée dédiée), `lxc_host` = `192.168.20.79`.
 
@@ -127,9 +127,9 @@ scripts/
 ### update.sh — ordre strict
 
 1. `backup.sh` — jamais d'update sans backup préalable
-2. `git pull`
+2. `git fetch origin && git reset --hard origin/main` — jamais `git pull` (évite les conflits si patches serveur)
 3. `pnpm install`
-4. `pnpm build`
+4. `set -a; source .env; set +a && pnpm build` — sourcer `.env` avant build (Better Auth init au démarrage)
 5. `drizzle-kit migrate`
 6. `systemctl restart strapontin-web strapontin-worker`
 7. healthcheck : `curl -f http://localhost:3000/health`
@@ -139,10 +139,12 @@ scripts/
 Le NAS est monté en bind mount dans le LXC sur `/mnt/backup/` — pas de rsync, écriture directe :
 
 ```bash
-pg_dump strapontin | gzip > /mnt/backup/strapontin_$(date +%Y%m%d_%H%M%S).sql.gz
+su - postgres -c "pg_dump strapontin" | gzip > /mnt/backup/strapontin_$(date +%Y%m%d_%H%M%S).sql.gz
 cp /opt/strapontin/.env /mnt/backup/.env.$(date +%Y%m%d)
 find /mnt/backup/ -name "*.sql.gz" -mtime +30 -delete
 ```
+
+Note : `pg_dump` doit être exécuté en tant que `postgres` (peer auth).
 
 Montage NAS dans le LXC :
 
@@ -241,12 +243,26 @@ donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 - **Desktop (≥ 1024px)** : sidebar fixe — Accueil, Mes artistes, Mes salles, Découverte, Quinzaine, Spectacles | Settings en bas
 - **Mobile (< 1024px)** : bottom nav 4 items fixes (Accueil, Artistes, Salles, Découvrir) + "···" → drawer pour Quinzaine, Spectacles, Settings
 
+## Routes implémentées
+
+Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + bottom nav).
+
+| Route | Description |
+|---|---|
+| `/` | Accueil — prochains concerts de l'user (userMatches, LIMIT 20) |
+| `/artistes` | CRUD artistes suivis — ajout par nom + normalisation, suppression |
+| `/salles` | CRUD salles suivies — recherche dans concerts en base (ILIKE), ajout/suppression |
+| `/quinzaine` | Concerts userMatches dans les 15 prochains jours, groupés par date |
+| `/spectacles` | Tous les concerts userMatches à venir, filtres artiste + mois |
+| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept/mois, bouton "Suivre" |
+| `/parametres` | user_config, thème (cookie), nom + mot de passe (Better Auth) |
+| `/setup` | Création premier compte admin (accessible uniquement si 0 users en base) |
+| `/login` | Authentification email/password |
+
 ## Densité d'affichage
 
-Vue switchable sur toutes les pages liste, toggle persisté en `localStorage` :
-
 - **Vue cartes** (défaut, mobile + desktop) — artiste + date + salle, aérée
-- **Vue tableau** (desktop uniquement) — dense, filtrable, proche de l'app CLI
+- **Vue tableau** (desktop uniquement) — `/spectacles` et `/decouverte` affichent un tableau sur `lg:`
 
 ## Schéma PostgreSQL
 
