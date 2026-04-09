@@ -17,8 +17,8 @@ HORODATAGE=$(date +%Y%m%d_%H%M%S)
 
 echo "Sauvegarde en cours — $HORODATAGE"
 
-# Dump PostgreSQL
-pg_dump -U strapontin strapontin | gzip > "$BACKUP_DIR/strapontin_${HORODATAGE}.sql.gz"
+# Dump PostgreSQL (exécuté en tant que postgres pour la peer auth)
+su - postgres -c "pg_dump strapontin" | gzip > "$BACKUP_DIR/strapontin_${HORODATAGE}.sql.gz"
 echo "  dump DB : OK"
 
 # Sauvegarde .env

@@ -91,17 +91,23 @@ Secrets Woodpecker : `ssh_key` (clé privée dédiée), `lxc_host` = `192.168.20
 
    ```bash
    ssh-keygen -t ed25519 -C "woodpecker-strapontin" -f ~/.ssh/woodpecker_strapontin -N ""
-   ssh-copy-id -i ~/.ssh/woodpecker_strapontin.pub root@192.168.1.99
    ```
 
-2. Créer le repo sur Codeberg puis pousser :
+2. Après provisioning du LXC strapontin, autoriser la clé sur le LXC :
+
+   ```bash
+   cat ~/.ssh/woodpecker_strapontin.pub | ssh root@192.168.1.99 \
+     "pct exec 113 -- bash -c 'mkdir -p /root/.ssh && cat >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'"
+   ```
+
+3. Créer le repo sur Codeberg puis pousser :
 
    ```bash
    git remote add origin https://codeberg.org/Kwaite/strapontin.git
    git push -u origin main
    ```
 
-3. Dans Woodpecker (http://LXC-111) :
+4. Dans Woodpecker (http://LXC-111) :
    - Activer le repo `Kwaite/strapontin` (onglet Repositories)
    - Aller dans Settings → Secrets du repo
    - Ajouter le secret `ssh_key` : coller le contenu de `~/.ssh/woodpecker_strapontin` (clé **privée**)
