@@ -2,7 +2,7 @@ import { redirect, fail } from "@sveltejs/kit";
 import { auth } from "$lib/auth";
 import { db } from "$lib/server/db";
 import { users } from "@strapontin/core/schema";
-import { count } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async () => {
@@ -48,10 +48,7 @@ export const actions: Actions = {
     }
 
     // Passer le rôle admin
-    await db
-      .update(users)
-      .set({ role: "admin" })
-      .where((await import("drizzle-orm")).eq(users.email, email));
+    await db.update(users).set({ role: "admin" }).where(eq(users.email, email));
 
     redirect(302, "/login");
   },
