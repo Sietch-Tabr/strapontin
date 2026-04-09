@@ -4,28 +4,24 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const anneeEnCours = new Date().getFullYear();
-
 	function formaterDate(dateStr: string): string {
 		const [annee, mois, jour] = dateStr.split('-').map(Number);
-		const options: Intl.DateTimeFormatOptions = {
+		return new Date(annee, mois - 1, jour).toLocaleDateString('fr-FR', {
 			weekday: 'long',
 			day: 'numeric',
 			month: 'long',
-			...(annee !== anneeEnCours ? { year: 'numeric' } : {})
-		};
-		return new Date(annee, mois - 1, jour).toLocaleDateString('fr-FR', options);
+			year: 'numeric'
+		});
 	}
 
 	function formaterDateCourte(dateStr: string): string {
 		const [annee, mois, jour] = dateStr.split('-').map(Number);
-		const options: Intl.DateTimeFormatOptions = {
+		return new Date(annee, mois - 1, jour).toLocaleDateString('fr-FR', {
 			weekday: 'short',
 			day: 'numeric',
 			month: 'short',
-			...(annee !== anneeEnCours ? { year: 'numeric' } : {})
-		};
-		return new Date(annee, mois - 1, jour).toLocaleDateString('fr-FR', options);
+			year: 'numeric'
+		});
 	}
 
 	const totalConcerts = $derived(
