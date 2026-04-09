@@ -1,0 +1,2 @@
+ALTER TABLE "concerts" ADD CONSTRAINT "uq_concerts_artiste_date_salle" UNIQUE("artiste_norm","date","salle");--> statement-breakpoint
+ALTER TABLE "user_matches" ADD CONSTRAINT "uq_user_matches_user_concert" UNIQUE("user_id","concert_id");

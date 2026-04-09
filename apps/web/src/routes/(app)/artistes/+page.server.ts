@@ -1,4 +1,5 @@
 import { db } from "$lib/server/db";
+import { queue } from "$lib/server/queue";
 import { userArtistes } from "@strapontin/core/schema";
 import { eq, and } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
@@ -62,6 +63,13 @@ export const actions: Actions = {
       artisteNormalise: normalise,
       artisteAffiche: nom,
     });
+
+    // Déclencher le fetch immédiat pour cet artiste
+    await queue.add(
+      "fetch:artiste",
+      { type: "fetch:artiste", artiste: nom, userId: locals.user!.id },
+      { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+    ).catch(() => { /* le worker est peut-être arrêté en dev */ });
 
     return { succes: true };
   },

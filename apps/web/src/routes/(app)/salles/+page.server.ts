@@ -1,4 +1,5 @@
 import { db } from "$lib/server/db";
+import { queue } from "$lib/server/queue";
 import { userSalles, concerts } from "@strapontin/core/schema";
 import { eq, and, ilike, sql } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
@@ -65,6 +66,13 @@ export const actions: Actions = {
       userId: locals.user!.id,
       salleId,
     });
+
+    // Recalculer les matches pour cet user (la salle peut déjà avoir des concerts en base)
+    await queue.add(
+      "recalculer:matches",
+      { type: "recalculer:matches", userIds: [locals.user!.id] },
+      { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+    ).catch(() => { /* le worker est peut-être arrêté en dev */ });
 
     return { succes: true };
   },

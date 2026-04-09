@@ -15,6 +15,13 @@
       "when": 1775713845018,
       "tag": "0001_silent_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775754062959,
+      "tag": "0002_mature_the_professor",
+      "breakpoints": true
     }
   ]
 }

@@ -247,17 +247,17 @@ donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 
 Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + bottom nav).
 
-| Route | Description |
-|---|---|
-| `/` | Accueil — prochains concerts de l'user (userMatches, LIMIT 20) |
-| `/artistes` | CRUD artistes suivis — ajout par nom + normalisation, suppression |
-| `/salles` | CRUD salles suivies — recherche dans concerts en base (ILIKE), ajout/suppression |
-| `/quinzaine` | Concerts userMatches dans les 15 prochains jours, groupés par date |
-| `/spectacles` | Tous les concerts userMatches à venir, filtres artiste + mois |
+| Route         | Description                                                                          |
+| ------------- | ------------------------------------------------------------------------------------ |
+| `/`           | Accueil — prochains concerts de l'user (userMatches, LIMIT 20)                       |
+| `/artistes`   | CRUD artistes suivis — ajout par nom + normalisation, suppression                    |
+| `/salles`     | CRUD salles suivies — recherche dans concerts en base (ILIKE), ajout/suppression     |
+| `/quinzaine`  | Concerts userMatches dans les 15 prochains jours, groupés par date                   |
+| `/spectacles` | Tous les concerts userMatches à venir, filtres artiste + mois                        |
 | `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept/mois, bouton "Suivre" |
-| `/parametres` | user_config, thème (cookie), nom + mot de passe (Better Auth) |
-| `/setup` | Création premier compte admin (accessible uniquement si 0 users en base) |
-| `/login` | Authentification email/password |
+| `/parametres` | user_config, thème (cookie), nom + mot de passe (Better Auth)                        |
+| `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)             |
+| `/login`      | Authentification email/password                                                      |
 
 ## Densité d'affichage
 

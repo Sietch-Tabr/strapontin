@@ -18,9 +18,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   }
 
   if (mois && /^\d{4}-\d{2}$/.test(mois)) {
-    conditions.push(
-      sql`to_char(${concerts.date}, 'YYYY-MM') = ${mois}`,
-    );
+    conditions.push(sql`to_char(${concerts.date}, 'YYYY-MM') = ${mois}`);
   }
 
   const tousLesConcerts = await db

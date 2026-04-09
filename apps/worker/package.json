@@ -7,9 +7,15 @@
     "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
-    "bullmq": "^5.73.1"
+    "@strapontin/core": "workspace:*",
+    "@strapontin/sources": "workspace:*",
+    "bullmq": "^5.73.1",
+    "drizzle-orm": "^0.45.2",
+    "pino": "^9.7.0"
   },
   "devDependencies": {
-    "tsx": "^4.21.0"
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.0.0"
   }
 }
