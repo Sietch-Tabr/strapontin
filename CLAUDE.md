@@ -1,4 +1,4 @@
-# CLAUDE.md — concert-web (strapontin.kwaite.fr)
+# CLAUDE.md — strapontin (strapontin.kwaite.fr)
 
 ## Lancer l'application (développement)
 
@@ -11,7 +11,7 @@ pnpm worker:dev    # BullMQ worker (process séparé)
 ## Architecture — monorepo pnpm workspaces
 
 ```
-concert-web/
+strapontin/
 ├── apps/
 │   ├── web/              ← SvelteKit (UI + API routes)
 │   └── worker/           ← BullMQ worker (fetch + normalisation)
@@ -67,33 +67,46 @@ Pas de déploiement automatique des branches feature.
 steps:
   - name: deploy
     image: alpine
-    secrets: [ssh_key, lxc_host]
+    environment:
+      SSH_KEY:
+        from_secret: ssh_key
+      PROXMOX_HOST:
+        from_secret: proxmox_host
     commands:
       - apk add openssh-client
       - echo "$$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
-      - ssh -i /tmp/key concerts@$$LXC_HOST "/opt/strapontin/scripts/update.sh"
+      - ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$PROXMOX_HOST "pct exec 113 -- /opt/strapontin/scripts/update.sh"
     when:
-      branch: main
+      - event: push
+        branch: main
 ```
 
-Secrets Woodpecker : `ssh_key` (clé privée SSH), `lxc_host` (IP du LXC sur VLAN 20).
+La pipeline SSH dans le host Proxmox puis utilise `pct exec` pour atteindre le LXC —
+Woodpecker (LXC 111, VLAN 10) n'a pas d'accès direct au VLAN 20.
+
+Secrets Woodpecker : `ssh_key` (clé privée dédiée), `proxmox_host` = `192.168.1.99`.
 
 ### Configuration CI/CD (une seule fois)
 
-1. Générer la clé SSH dédiée (en local) :
-   `ssh-keygen -t ed25519 -C "woodpecker-deploy" -f ~/.ssh/woodpecker_concerts -N ""`
+1. Générer la clé SSH dédiée sur le Mac :
+
+   ```bash
+   ssh-keygen -t ed25519 -C "woodpecker-strapontin" -f ~/.ssh/woodpecker_strapontin -N ""
+   ssh-copy-id -i ~/.ssh/woodpecker_strapontin.pub root@192.168.1.99
+   ```
 
 2. Créer le repo sur Codeberg puis pousser :
-   `git remote add origin https://codeberg.org/Kwaite/strapontin.git`
-   `git push -u origin main`
+
+   ```bash
+   git remote add origin https://codeberg.org/Kwaite/strapontin.git
+   git push -u origin main
+   ```
 
 3. Dans Woodpecker (http://LXC-111) :
-   - Activer le repo `Kwaite/strapontin`
-   - Ajouter le secret `ssh_key` (contenu de `~/.ssh/woodpecker_concerts`)
-   - Ajouter le secret `lxc_host` = `192.168.20.79`
-
-4. Après provisioning du LXC, copier la clé publique :
-   `ssh-copy-id -i ~/.ssh/woodpecker_concerts.pub concerts@192.168.20.79`
+   - Activer le repo `Kwaite/strapontin` (onglet Repositories)
+   - Aller dans Settings → Secrets du repo
+   - Ajouter le secret `ssh_key` : coller le contenu de `~/.ssh/woodpecker_strapontin` (clé **privée**)
+   - Ajouter le secret `proxmox_host` : valeur `192.168.1.99`
 
 ## Scripts d'exploitation
 
@@ -113,7 +126,7 @@ scripts/
 3. `pnpm install`
 4. `pnpm build`
 5. `drizzle-kit migrate`
-6. `systemctl restart concerts-web concerts-worker`
+6. `systemctl restart strapontin-web strapontin-worker`
 7. healthcheck : `curl -f http://localhost:3000/health`
 
 ### backup.sh
@@ -121,7 +134,7 @@ scripts/
 Le NAS est monté en bind mount dans le LXC sur `/mnt/backup/` — pas de rsync, écriture directe :
 
 ```bash
-pg_dump concerts | gzip > /mnt/backup/concerts_$(date +%Y%m%d_%H%M%S).sql.gz
+pg_dump strapontin | gzip > /mnt/backup/strapontin_$(date +%Y%m%d_%H%M%S).sql.gz
 cp /opt/strapontin/.env /mnt/backup/.env.$(date +%Y%m%d)
 find /mnt/backup/ -name "*.sql.gz" -mtime +30 -delete
 ```
@@ -130,7 +143,7 @@ Montage NAS dans le LXC :
 
 ```bash
 # Dans provision-lxc.sh (à exécuter depuis le host Proxmox)
-# Prérequis : créer /volume1/backup/concerts/ dans DSM au préalable
+# Prérequis : créer /volume1/backup/Strapontin/ dans DSM au préalable
 pct set $VMID --mp0 /mnt/synology/backup/Strapontin,mp=/mnt/backup
 ```
 
@@ -140,10 +153,9 @@ Cron systemd (`OnCalendar=daily`) sur le LXC — indépendant des mises à jour 
 
 ## Infrastructure (déploiement)
 
-- LXC `concerts` — **192.168.20.79**, VLAN 20, Debian 13, 2 vCPU, 2 Go RAM, 20 Go
-  - VMID : `pvesh get /cluster/nextid` au moment de l'exécution (ne pas hardcoder)
+- LXC `strapontin` — **VMID 113**, **192.168.20.79**, VLAN 20, Debian 13, 2 vCPU, 2 Go RAM, 20 Go
   - Réseau : `--net0 name=eth0,bridge=vmbr0,tag=20,hwaddr=02:00:00:00:00:13,ip=192.168.20.79/24,gw=192.168.20.1`
-- 4 services systemd dans un seul LXC : `postgresql` (18), `redis` (8), `concerts-web`, `concerts-worker`
+- 4 services systemd dans un seul LXC : `postgresql` (18), `redis` (8), `strapontin-web`, `strapontin-worker`
 - Nginx Proxy Manager → `strapontin.kwaite.fr` → `192.168.20.79:3000`
 - Provisioning : `scripts/provision-lxc.sh` (depuis host Proxmox 192.168.1.99)
   - VMID résolu dynamiquement : `VMID=$(pvesh get /cluster/nextid)`
@@ -154,7 +166,7 @@ Cron systemd (`OnCalendar=daily`) sur le LXC — indépendant des mises à jour 
 ```
 TICKETMASTER_API_KEY=
 BANDSINTOWN_APP_ID=
-DATABASE_URL=postgresql://concerts:password@localhost:5432/concerts
+DATABASE_URL=postgresql://strapontin:password@localhost:5432/strapontin
 REDIS_URL=redis://localhost:6379
 BETTER_AUTH_SECRET=
 RESEND_API_KEY=
