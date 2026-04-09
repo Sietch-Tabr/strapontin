@@ -23,10 +23,11 @@ su - strapontin -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519' git -C $APP_DIR f
 echo "[3/6] pnpm install..."
 su - strapontin -c "cd $APP_DIR && pnpm install --frozen-lockfile"
 
-# 4. Build — exécuté en root pour éviter les conflits de permissions sur .svelte-kit/output
-# (la build initiale via deploy.sh crée des fichiers root-owned ; le service systemd
-# n'a besoin que de lire le résultat, pas d'en être propriétaire)
+# 4. Build — nettoyage préalable des dossiers de sortie pour éviter EACCES
+# (Node.js fs.rmSync échoue sur des répertoires root-owned dans certains LXC ;
+# rm -rf en bash root n'a pas ce problème)
 echo "[4/6] build..."
+rm -rf "$APP_DIR/apps/web/build" "$APP_DIR/apps/web/.svelte-kit"
 set -a; source "$APP_DIR/.env"; set +a
 pnpm build
 
