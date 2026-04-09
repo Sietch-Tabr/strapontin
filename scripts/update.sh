@@ -23,10 +23,12 @@ su - strapontin -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519' git -C $APP_DIR f
 echo "[3/6] pnpm install..."
 su - strapontin -c "cd $APP_DIR && pnpm install --frozen-lockfile"
 
-# 4. Build — nettoyer le cache SvelteKit avant (permissions stales après EACCES)
+# 4. Build — exécuté en root pour éviter les conflits de permissions sur .svelte-kit/output
+# (la build initiale via deploy.sh crée des fichiers root-owned ; le service systemd
+# n'a besoin que de lire le résultat, pas d'en être propriétaire)
 echo "[4/6] build..."
-rm -rf "$APP_DIR/apps/web/.svelte-kit"
-su - strapontin -c "set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && pnpm build"
+set -a; source "$APP_DIR/.env"; set +a
+pnpm build
 
 # 5. Migrations DB
 echo "[5/6] migrations..."
