@@ -15,9 +15,9 @@ echo "=== Mise à jour Strapontin ==="
 echo "[1/6] Sauvegarde..."
 "$APP_DIR/scripts/backup.sh"
 
-# 2. Récupérer les dernières modifications
+# 2. Récupérer les dernières modifications (reset dur pour éviter les conflits avec patches locaux)
 echo "[2/6] git pull..."
-su - strapontin -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519' git -C $APP_DIR pull"
+su - strapontin -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519' git -C $APP_DIR fetch origin && git -C $APP_DIR reset --hard origin/main"
 
 # 3. Installer les dépendances
 echo "[3/6] pnpm install..."
@@ -25,7 +25,7 @@ su - strapontin -c "cd $APP_DIR && pnpm install --frozen-lockfile"
 
 # 4. Build
 echo "[4/6] build..."
-su - strapontin -c "cd $APP_DIR && pnpm build"
+su - strapontin -c "set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && pnpm build"
 
 # 5. Migrations DB
 echo "[5/6] migrations..."
