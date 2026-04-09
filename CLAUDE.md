@@ -207,17 +207,33 @@ PUBLIC_BASE_URL=https://strapontin.kwaite.fr
 Paradigme fondamental : **pré-fetch en arrière-plan, jamais d'appel API depuis le browser**.
 Les concerts sont stockés en DB. Le frontend lit uniquement la DB.
 
-Jobs : `fetch:artiste:{nom}`, `fetch:region:{dept}:{classif}`, `fetch:salle:{id}`
-Cron : toutes les 2h pour chaque user actif.
-Déclenchement immédiat si un user modifie ses artistes ou salles.
+### Jobs implémentés
 
-Interface commune pour toutes les sources (packages/sources) :
+| Type                 | Déclenchement             | Description                                                            |
+| -------------------- | ------------------------- | ---------------------------------------------------------------------- |
+| `fetch:artiste`      | Ajout artiste + cron 2h   | Fetch TM + Bandsintown + Eventim par nom artiste                       |
+| `fetch:region`       | Cron 2h                   | Fetch TM + Eventim par département (depuis `user_config.departements`) |
+| `recalculer:matches` | Après fetch + ajout salle | Recalcule `user_matches` pour tous les users                           |
+
+Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
+
+**Déclenchement immédiat** : quand l'user ajoute un artiste depuis `/artistes`, l'action server fait `queue.add("fetch:artiste", ...)` → le worker traite immédiatement (BullMQ, pas un cron). Le cron 2h assure les mises à jour périodiques.
+
+### Jobs à implémenter (Phase 2)
+
+- `fetch:salle` — fetch tous les concerts d'une salle via venueId TM. Requiert `tmVenueId` dans `user_salles` (migration `0003` générée, pas encore appliquée).
+
+### Pièges BullMQ
+
+- **BullMQ v5 interdit les `:` dans les `jobId`** — utiliser `__` comme séparateur (`artiste__nom`, `region__all`, `matches__all`). Les `:` dans le _type de job_ (premier arg de `queue.add`) sont acceptés.
+
+### Interface sources (packages/sources)
 
 ```typescript
 interface SourceConcerts {
-  fetchArtiste(nom: string): Promise<Concert[]>;
-  fetchSalle(id: string): Promise<Concert[]>;
-  fetchRegion(dept: string[], classifs: string[]): Promise<Concert[]>;
+  fetchArtiste(nom: string): Promise<ConcertBrut[]>;
+  fetchRegion(depts: string[], classifs?: string[]): Promise<ConcertBrut[]>;
+  // fetchSalle(venueId: string): Promise<ConcertBrut[]>; // Phase 2
 }
 ```
 

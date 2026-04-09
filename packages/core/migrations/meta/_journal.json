@@ -22,6 +22,13 @@
       "when": 1775754062959,
       "tag": "0002_mature_the_professor",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775761272339,
+      "tag": "0003_yielding_micromacro",
+      "breakpoints": true
     }
   ]
 }

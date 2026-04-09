@@ -163,6 +163,8 @@ export const userSalles = pgTable("user_salles", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   salleId: text("salle_id").notNull(),
+  // ID Ticketmaster de la salle (null si non résolu ou salle saisie librement)
+  tmVenueId: text("tm_venue_id"),
 });
 
 // -------------------------------------------------------------------

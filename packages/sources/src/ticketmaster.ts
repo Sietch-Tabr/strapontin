@@ -1,6 +1,12 @@
 import pino from "pino";
 import type { ConcertBrut, SourceConcerts } from "./types.js";
 
+export interface VenueTM {
+  id: string;
+  nom: string;
+  ville: string | null;
+}
+
 const logger = pino({ name: "source:ticketmaster" });
 
 const BASE_URL = "https://app.ticketmaster.com/discovery/v2";

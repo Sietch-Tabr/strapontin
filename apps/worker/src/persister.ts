@@ -106,6 +106,13 @@ export async function recalculerMatches(userIds?: string[]): Promise<void> {
 
     if (artistes.length === 0 && salles.length === 0) continue;
 
+    // Config user — départements pour filtrer les concerts d'artistes géographiquement
+    const configs = await db
+      .select({ departements: userConfig.departements })
+      .from(userConfig)
+      .where(eq(userConfig.userId, userId));
+    const departements = configs[0]?.departements ?? [];
+
     // Concerts correspondant aux artistes
     const artistesNorms = artistes.map((a) => a.artisteNormalise);
     const salleIds = salles.map((s) => s.salleId);
@@ -113,15 +120,23 @@ export async function recalculerMatches(userIds?: string[]): Promise<void> {
     const concertsCorrespondants: { id: string }[] = [];
 
     if (artistesNorms.length > 0) {
+      // Si l'user a configuré des départements, filtrer géographiquement (cohérent avec la CLI)
+      const conditionsArtiste =
+        departements.length > 0
+          ? and(
+              inArray(concerts.artisteNorm, artistesNorms),
+              sql`${concerts.date} >= ${aujourdhui}`,
+              inArray(concerts.dept, departements),
+            )
+          : and(
+              inArray(concerts.artisteNorm, artistesNorms),
+              sql`${concerts.date} >= ${aujourdhui}`,
+            );
+
       const parArtiste = await db
         .select({ id: concerts.id })
         .from(concerts)
-        .where(
-          and(
-            inArray(concerts.artisteNorm, artistesNorms),
-            sql`${concerts.date} >= ${aujourdhui}`,
-          ),
-        );
+        .where(conditionsArtiste);
       concertsCorrespondants.push(...parArtiste);
     }
 

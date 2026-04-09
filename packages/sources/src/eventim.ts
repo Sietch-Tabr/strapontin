@@ -43,8 +43,11 @@ function mapProduit(produit: Record<string, unknown>): ConcertBrut | null {
     const artiste = produit["name"] as string | undefined;
     if (!artiste) return null;
 
-    const location = liveEnt?.["location"] as Record<string, unknown> | undefined;
-    const salle = (location?.["name"] as string | undefined) ?? "Salle inconnue";
+    const location = liveEnt?.["location"] as
+      | Record<string, unknown>
+      | undefined;
+    const salle =
+      (location?.["name"] as string | undefined) ?? "Salle inconnue";
     const ville = (location?.["city"] as string | undefined) ?? null;
     const cp = location?.["postalCode"] as string | undefined;
     const dept = extraireDept(cp);
