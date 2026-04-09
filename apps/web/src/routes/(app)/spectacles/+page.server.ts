@@ -1,5 +1,5 @@
 import { db } from "$lib/server/db";
-import { userMatches, concerts } from "@strapontin/core/schema";
+import { userMatches, concerts, userConfig } from "@strapontin/core/schema";
 import { eq, gte, and, ilike, isNotNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
@@ -13,10 +13,22 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const classification = url.searchParams.get("classification")?.trim() ?? "";
   const genre = url.searchParams.get("genre")?.trim() ?? "";
 
+  const config = await db
+    .select({ filtreDisponibles: userConfig.filtreDisponibles })
+    .from(userConfig)
+    .where(eq(userConfig.userId, locals.user!.id))
+    .then((rows) => rows[0] ?? null);
+
+  const filtreDisponibles = config?.filtreDisponibles ?? true;
+
   const conditions: SQL[] = [
     eq(userMatches.userId, locals.user!.id),
     gte(concerts.date, aujourdhui),
   ];
+
+  if (filtreDisponibles) {
+    conditions.push(eq(concerts.disponible, true));
+  }
 
   if (recherche) {
     conditions.push(ilike(concerts.artiste, `%${recherche}%`));
