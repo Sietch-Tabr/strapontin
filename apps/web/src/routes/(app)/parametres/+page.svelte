@@ -31,9 +31,13 @@
 		<!-- Thème -->
 		<section>
 			<h2 class="mb-4 text-base font-medium text-foreground">Apparence</h2>
-			<form method="POST" action="?/theme" use:enhance={({ cancel }) => {
-				theme = theme === 'dark' ? 'light' : 'dark';
-				return async ({ update }) => update({ reset: false });
+			<form method="POST" action="?/theme" use:enhance={() => {
+				return async ({ result }) => {
+					if (result.type === 'success') {
+						// Rechargement complet pour appliquer class="dark" sur <html>
+						window.location.reload();
+					}
+				};
 			}}>
 				<button
 					type="submit"
