@@ -18,11 +18,14 @@
 
 	const elementsNav = [
 		{ label: 'Accueil', icone: Home, route: '/' },
-		{ label: 'Mes artistes', icone: Music, route: '/artistes' },
-		{ label: 'Mes salles', icone: Building2, route: '/salles' },
 		{ label: 'Découverte', icone: Compass, route: '/decouverte' },
 		{ label: 'Quinzaine', icone: CalendarDays, route: '/quinzaine' },
 		{ label: 'Spectacles', icone: Ticket, route: '/spectacles' }
+	];
+
+	const elementsConf = [
+		{ label: 'Mes artistes', icone: Music, route: '/artistes' },
+		{ label: 'Mes salles', icone: Building2, route: '/salles' }
 	];
 
 	function estActif(route: string): boolean {
@@ -41,19 +44,38 @@
 		<a href="/" class="text-lg font-semibold text-sidebar-foreground">Strapontin</a>
 	</div>
 
-	<nav class="flex-1 space-y-0.5 p-2 pt-3">
-		{#each elementsNav as { label, icone: Icone, route }}
-			<a
-				href={route}
-				class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
-					{estActif(route)
-					? 'bg-sidebar-accent text-sidebar-accent-foreground'
-					: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
-			>
-				<Icone size={18} />
-				{label}
-			</a>
-		{/each}
+	<nav class="flex-1 p-2 pt-3">
+		<div class="space-y-0.5">
+			{#each elementsNav as { label, icone: Icone, route }}
+				<a
+					href={route}
+					class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
+						{estActif(route)
+						? 'bg-sidebar-accent text-sidebar-accent-foreground'
+						: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
+				>
+					<Icone size={18} />
+					{label}
+				</a>
+			{/each}
+		</div>
+
+		<div class="my-3 border-t border-sidebar-border"></div>
+
+		<div class="space-y-0.5">
+			{#each elementsConf as { label, icone: Icone, route }}
+				<a
+					href={route}
+					class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
+						{estActif(route)
+						? 'bg-sidebar-accent text-sidebar-accent-foreground'
+						: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
+				>
+					<Icone size={18} />
+					{label}
+				</a>
+			{/each}
+		</div>
 	</nav>
 
 	<div class="border-t border-sidebar-border p-2">

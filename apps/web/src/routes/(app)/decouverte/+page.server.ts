@@ -1,30 +1,50 @@
 import { db } from "$lib/server/db";
-import { concerts, userArtistes } from "@strapontin/core/schema";
+import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import { eq, gte, and, ilike, inArray, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-  const aujourdhui = new Date().toISOString().split("T")[0];
+  const aujourdhui = new Date().toISOString().split("T")[0]!;
   const recherche = url.searchParams.get("q")?.trim() ?? "";
-  const dept = url.searchParams.get("dept")?.trim() ?? "";
   const mois = url.searchParams.get("mois")?.trim() ?? "";
 
-  const conditions = [
-    gte(concerts.date, aujourdhui),
-    eq(concerts.disponible, true),
-  ];
+  // Départements de l'user (pour pré-cocher)
+  const configs = await db
+    .select({ departements: userConfig.departements })
+    .from(userConfig)
+    .where(eq(userConfig.userId, locals.user!.id));
+  const userDepts = configs[0]?.departements ?? [];
+
+  // Filtre département : multi-valeur via URL ?dept=33&dept=69
+  // Si aucun param URL, on applique les depts de l'user par défaut
+  const deptsUrl = url.searchParams.getAll("dept").filter((d) => /^\d{2,3}$/.test(d));
+  const deptsActifs = deptsUrl.length > 0 ? deptsUrl : userDepts;
+
+  const conditions: SQL[] = [gte(concerts.date, aujourdhui), eq(concerts.disponible, true)];
 
   if (recherche) {
     conditions.push(ilike(concerts.artiste, `%${recherche}%`));
   }
 
-  if (dept && /^\d{2,3}$/.test(dept)) {
-    conditions.push(eq(concerts.dept, dept));
+  if (deptsActifs.length > 0) {
+    conditions.push(inArray(concerts.dept, deptsActifs));
   }
 
   if (mois && /^\d{4}-\d{2}$/.test(mois)) {
     conditions.push(sql`to_char(${concerts.date}, 'YYYY-MM') = ${mois}`);
   }
+
+  // Tous les départements distincts en base (pour le sélecteur)
+  const tousDepts = await db
+    .selectDistinct({ dept: concerts.dept })
+    .from(concerts)
+    .where(and(gte(concerts.date, aujourdhui!), eq(concerts.disponible, true)))
+    .orderBy(concerts.dept);
+
+  const deptsDisponibles = tousDepts
+    .map((d) => d.dept)
+    .filter((d): d is string => d !== null);
 
   const resultats = await db
     .select({
@@ -44,7 +64,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     .orderBy(concerts.date, concerts.artiste)
     .limit(100);
 
-  // Récupérer les artistes déjà suivis par l'user pour indiquer lesquels sont dans la liste
+  // Artistes déjà suivis pour afficher "Suivi"
   const artistesSuivis = await db
     .select({ artisteNormalise: userArtistes.artisteNormalise })
     .from(userArtistes)
@@ -58,7 +78,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       dejaSuivi: suivis.has(c.artisteNorm),
     })),
     recherche,
-    dept,
     mois,
+    userDepts,
+    deptsActifs,
+    deptsDisponibles,
   };
 };

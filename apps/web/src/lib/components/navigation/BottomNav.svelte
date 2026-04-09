@@ -21,14 +21,14 @@
 
 	const elementsNav = [
 		{ label: 'Accueil', icone: Home, route: '/' },
-		{ label: 'Artistes', icone: Music, route: '/artistes' },
-		{ label: 'Salles', icone: Building2, route: '/salles' },
-		{ label: 'Découvrir', icone: Compass, route: '/decouverte' }
+		{ label: 'Découvrir', icone: Compass, route: '/decouverte' },
+		{ label: 'Quinzaine', icone: CalendarDays, route: '/quinzaine' },
+		{ label: 'Spectacles', icone: Ticket, route: '/spectacles' }
 	];
 
 	const elementsDrawer = [
-		{ label: 'Quinzaine', icone: CalendarDays, route: '/quinzaine' },
-		{ label: 'Spectacles', icone: Ticket, route: '/spectacles' },
+		{ label: 'Mes artistes', icone: Music, route: '/artistes' },
+		{ label: 'Mes salles', icone: Building2, route: '/salles' },
 		{ label: 'Paramètres', icone: Settings, route: '/parametres' }
 	];
 

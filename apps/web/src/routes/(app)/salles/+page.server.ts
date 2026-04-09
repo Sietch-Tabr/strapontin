@@ -8,6 +8,16 @@ import type { PageServerLoad, Actions } from "./$types";
 
 const TM_VENUES_URL = "https://app.ticketmaster.com/discovery/v2/venues.json";
 
+// Normalise un nom de salle pour la déduplication : retire accents, ponctuation et
+// caractères corrompus (??) qui peuvent apparaître selon la source de données.
+function normaliserSalleCle(nom: string): string {
+  return nom
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
 interface ResultatSalle {
   salle: string;
   ville: string | null;
@@ -65,14 +75,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     // Compléter avec Ticketmaster si < 3 résultats
     if (resultatsRecherche.length < 3) {
       const tmResultats = await rechercherSallesTM(recherche);
+      // Utiliser la clé normalisée (sans accents ni ponctuation) pour éviter les doublons
+      // même quand la DB contient des données avec encodage corrompu (ex : "D??fense")
       const sallesDejaPresentes = new Set([
-        ...resultatsRecherche.map((r) => r.salle.toLowerCase()),
-        ...[...sallesDejaAjoutees].map((s) => s.toLowerCase()),
+        ...resultatsRecherche.map((r) => normaliserSalleCle(r.salle)),
+        ...[...sallesDejaAjoutees].map(normaliserSalleCle),
       ]);
       for (const r of tmResultats) {
-        if (!sallesDejaPresentes.has(r.salle.toLowerCase())) {
+        if (!sallesDejaPresentes.has(normaliserSalleCle(r.salle))) {
           resultatsRecherche.push(r);
-          sallesDejaPresentes.add(r.salle.toLowerCase());
+          sallesDejaPresentes.add(normaliserSalleCle(r.salle));
         }
       }
     }

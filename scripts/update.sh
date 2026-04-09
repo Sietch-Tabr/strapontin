@@ -23,8 +23,9 @@ su - strapontin -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519' git -C $APP_DIR f
 echo "[3/6] pnpm install..."
 su - strapontin -c "cd $APP_DIR && pnpm install --frozen-lockfile"
 
-# 4. Build
+# 4. Build — nettoyer le cache SvelteKit avant (permissions stales après EACCES)
 echo "[4/6] build..."
+rm -rf "$APP_DIR/apps/web/.svelte-kit"
 su - strapontin -c "set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && pnpm build"
 
 # 5. Migrations DB

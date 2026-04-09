@@ -6,18 +6,28 @@
 	let { data }: { data: PageData } = $props();
 
 	let recherche = $state(data.recherche);
-	let dept = $state(data.dept);
+	let deptsCoches = $state(new Set(data.deptsActifs));
 	let mois = $state(data.mois);
 
-	// Mois disponibles pour le filtre
+	// Mois disponibles pour le filtre (basé sur les résultats actuels)
 	const moisDisponibles = $derived(
 		[...new Set(data.resultats.map((c) => c.date.slice(0, 7)))].sort()
 	);
 
-	// Départements disponibles pour le filtre
-	const deptsDisponibles = $derived(
-		[...new Set(data.resultats.map((c) => c.dept).filter(Boolean))].sort() as string[]
-	);
+	function toutAfficher() {
+		deptsCoches = new Set();
+	}
+
+	function resetMesDepts() {
+		deptsCoches = new Set(data.userDepts);
+	}
+
+	function toggleDept(dept: string) {
+		const nouveau = new Set(deptsCoches);
+		if (nouveau.has(dept)) nouveau.delete(dept);
+		else nouveau.add(dept);
+		deptsCoches = nouveau;
+	}
 
 	function formaterDate(dateStr: string): string {
 		const [annee, moisNum, jour] = dateStr.split('-').map(Number);
@@ -61,57 +71,92 @@
 	</div>
 
 	<!-- Filtres -->
-	<form method="GET" class="mb-6 flex flex-wrap gap-2">
-		<input
-			type="text"
-			name="q"
-			bind:value={recherche}
-			placeholder="Artiste, salle…"
-			autocomplete="off"
-			class="flex-1 min-w-40 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-		/>
-		<select
-			name="dept"
-			bind:value={dept}
-			class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-		>
-			<option value="">Tous les dép.</option>
-			{#each deptsDisponibles as d (d)}
-				<option value={d}>{d}</option>
-			{/each}
-		</select>
-		<select
-			name="mois"
-			bind:value={mois}
-			class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-		>
-			<option value="">Tous les mois</option>
-			{#each moisDisponibles as m (m)}
-				<option value={m}>{labelMois(m)}</option>
-			{/each}
-		</select>
-		<button
-			type="submit"
-			class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-		>
-			<Search size={16} />
-			Filtrer
-		</button>
-		{#if recherche || dept || mois}
-			<a
-				href="/decouverte"
-				class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+	<form method="GET" class="mb-6 space-y-3">
+		<div class="flex flex-wrap gap-2">
+			<input
+				type="text"
+				name="q"
+				bind:value={recherche}
+				placeholder="Artiste, salle…"
+				autocomplete="off"
+				class="flex-1 min-w-40 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+			/>
+			<select
+				name="mois"
+				bind:value={mois}
+				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			>
-				<X size={16} />
-				Réinitialiser
-			</a>
+				<option value="">Tous les mois</option>
+				{#each moisDisponibles as m (m)}
+					<option value={m}>{labelMois(m)}</option>
+				{/each}
+			</select>
+			<button
+				type="submit"
+				class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+			>
+				<Search size={16} />
+				Filtrer
+			</button>
+			{#if recherche || mois || deptsCoches.size > 0}
+				<a
+					href="/decouverte"
+					class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+				>
+					<X size={16} />
+					Réinitialiser
+				</a>
+			{/if}
+		</div>
+
+		<!-- Filtre départements : coches multiples -->
+		{#if data.deptsDisponibles.length > 0}
+			<div class="rounded-md border border-border bg-background p-3">
+				<div class="mb-2 flex items-center justify-between">
+					<span class="text-xs font-medium text-muted-foreground">Départements</span>
+					<div class="flex gap-2">
+						<button
+							type="button"
+							onclick={toutAfficher}
+							class="text-xs text-muted-foreground transition-colors hover:text-foreground"
+						>
+							Tout afficher
+						</button>
+						{#if data.userDepts.length > 0}
+							<span class="text-xs text-muted-foreground">·</span>
+							<button
+								type="button"
+								onclick={resetMesDepts}
+								class="text-xs text-muted-foreground transition-colors hover:text-foreground"
+							>
+								Mes depts
+							</button>
+						{/if}
+					</div>
+				</div>
+				<div class="flex flex-wrap gap-2">
+					{#each data.deptsDisponibles as d (d)}
+						<label class="flex cursor-pointer items-center gap-1.5">
+							<input
+								type="checkbox"
+								name="dept"
+								value={d}
+								checked={deptsCoches.has(d)}
+								onchange={() => toggleDept(d)}
+								class="rounded border-border accent-foreground"
+							/>
+							<span class="text-xs {data.userDepts.includes(d) ? 'font-medium text-foreground' : 'text-muted-foreground'}">{d}</span>
+						</label>
+					{/each}
+				</div>
+			</div>
 		{/if}
 	</form>
 
 	{#if data.resultats.length === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
 			<Compass size={40} class="mb-4 text-muted-foreground/50" />
-			{#if data.recherche || data.dept || data.mois}
+			{#if data.recherche || data.deptsActifs.length > 0 || data.mois}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun résultat pour ces filtres.</p>
 				<a href="/decouverte" class="mt-4 text-sm text-muted-foreground underline underline-offset-2">
 					Voir tous les concerts
