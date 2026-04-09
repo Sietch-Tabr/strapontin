@@ -1,11 +1,12 @@
 import { db } from "$lib/server/db";
-import { userMatches, concerts } from "@strapontin/core/schema";
+import { userMatches, concerts, userArtistes } from "@strapontin/core/schema";
 import { eq, gte, and } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
   const aujourdhui = new Date().toISOString().split("T")[0];
 
+  // Uniquement les concerts des artistes suivis (pas les salles)
   const prochainsConcerts = await db
     .select({
       id: concerts.id,
@@ -18,6 +19,13 @@ export const load: PageServerLoad = async ({ locals }) => {
     })
     .from(userMatches)
     .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
+    .innerJoin(
+      userArtistes,
+      and(
+        eq(userArtistes.userId, userMatches.userId),
+        eq(userArtistes.artisteNormalise, concerts.artisteNorm),
+      ),
+    )
     .where(
       and(
         eq(userMatches.userId, locals.user!.id),
