@@ -1,7 +1,7 @@
 // Persiste les concerts dédoublonnés en base et met à jour user_matches.
 
 import pino from "pino";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, notInArray, sql } from "drizzle-orm";
 import {
   concerts,
   userMatches,
@@ -55,8 +55,9 @@ export async function persisterConcerts(
           dept: sql`excluded.dept`,
           prixMin: sql`excluded.prix_min`,
           prixMax: sql`excluded.prix_max`,
+          source: sql`excluded.source`,
           url: sql`COALESCE(excluded.url, ${concerts.url})`,
-          updatedAt: new Date(),
+          updatedAt: sql`now()`,
         },
       })
       .returning({ id: concerts.id });
@@ -140,11 +141,25 @@ export async function recalculerMatches(userIds?: string[]): Promise<void> {
     // Dédoublonner les IDs
     const concertIds = [...new Set(concertsCorrespondants.map((c) => c.id))];
 
-    if (concertIds.length === 0) continue;
+    if (concertIds.length === 0) {
+      // Aucun concert correspondant → purger tous les matches de cet user
+      await db.delete(userMatches).where(eq(userMatches.userId, userId));
+      continue;
+    }
 
-    // Upsert user_matches
+    // Supprimer les matches périmés (artiste/salle supprimé, ou concert passé)
+    // notInArray avec liste vide serait un SQL invalide — protégé par le guard ci-dessus
+    await db
+      .delete(userMatches)
+      .where(
+        and(
+          eq(userMatches.userId, userId),
+          notInArray(userMatches.concertId, concertIds),
+        ),
+      );
+
+    // Insérer les nouveaux matches
     const valeurs = concertIds.map((concertId) => ({ userId, concertId }));
-
     await db.insert(userMatches).values(valeurs).onConflictDoNothing();
 
     logger.info({ userId, matches: concertIds.length }, "matches recalculés");

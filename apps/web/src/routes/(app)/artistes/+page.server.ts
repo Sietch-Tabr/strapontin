@@ -39,7 +39,11 @@ async function rechercherMusicBrainz(
     };
     return (data.artists ?? [])
       .filter((a) => (a.score ?? 0) >= 60)
-      .map((a) => ({ nom: a.name, pays: a.country, source: "musicbrainz" as const }));
+      .map((a) => ({
+        nom: a.name,
+        pays: a.country,
+        source: "musicbrainz" as const,
+      }));
   } catch {
     return [];
   }
@@ -56,7 +60,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     .where(eq(userArtistes.userId, locals.user!.id))
     .orderBy(userArtistes.artisteAffiche);
 
-  const recherche = url.searchParams.get("q")?.trim() ?? "";
+  const rechercheRaw = url.searchParams.get("q")?.trim() ?? "";
+  const recherche = rechercheRaw.slice(0, 100);
   let suggestions: SuggestionArtiste[] = [];
 
   if (recherche.length >= 2) {
@@ -68,7 +73,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       .orderBy(sql`lower(${concerts.artiste})`)
       .limit(5);
 
-    const nomsSuivisNormalises = new Set(artistes.map((a) => a.artisteNormalise));
+    const nomsSuivisNormalises = new Set(
+      artistes.map((a) => a.artisteNormalise),
+    );
 
     suggestions = enBase
       .filter((r) => !nomsSuivisNormalises.has(normaliserArtiste(r.artiste)))

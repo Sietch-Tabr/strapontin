@@ -44,7 +44,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     .select({ salleId: userSalles.salleId })
     .from(userSalles)
     .where(eq(userSalles.userId, locals.user!.id))
-    .orderBy(userSalles.salleId);
+    .orderBy(sql`lower(${userSalles.salleId})`);
 
   const sallesDejaAjoutees = new Set(sallesSuivies.map((s) => s.salleId));
   let resultatsRecherche: ResultatSalle[] = [];
@@ -90,8 +90,8 @@ export const actions: Actions = {
     const donnees = await request.formData();
     const salleId = donnees.get("salleId")?.toString().trim() ?? "";
 
-    if (!salleId) {
-      return fail(400, { erreur: "Identifiant de salle manquant." });
+    if (!salleId || salleId.length > 200) {
+      return fail(400, { erreur: "Identifiant de salle invalide." });
     }
 
     const existants = await db

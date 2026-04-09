@@ -2,8 +2,11 @@ import { db } from "$lib/server/db";
 import { auth } from "$lib/auth";
 import { users } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
+
+const FORMAT_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (locals.user?.role !== "admin") {
@@ -38,10 +41,16 @@ export const actions: Actions = {
       return fail(400, { erreur: "Nom et email obligatoires." });
     }
 
-    // Générer un mot de passe temporaire
-    const motDePasseTemp = Array.from({ length: 4 }, () =>
-      Math.random().toString(36).slice(2, 6),
-    ).join("-");
+    if (nom.length > 100) {
+      return fail(400, { erreur: "Nom trop long (100 caractères max)." });
+    }
+
+    if (!FORMAT_EMAIL.test(email)) {
+      return fail(400, { erreur: "Format d'email invalide." });
+    }
+
+    // Mot de passe temporaire cryptographiquement sûr
+    const motDePasseTemp = randomBytes(12).toString("base64url").slice(0, 16);
 
     try {
       await auth.api.signUpEmail({

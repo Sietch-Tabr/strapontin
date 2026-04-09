@@ -20,15 +20,19 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
 
   // Récupérer tous les artistes suivis (groupés par artiste pour éviter les doublons)
   const artistes = await db
-    .selectDistinct({ artisteAffiche: userArtistes.artisteAffiche })
+    .selectDistinct({
+      artisteAffiche: userArtistes.artisteAffiche,
+      artisteNormalise: userArtistes.artisteNormalise,
+    })
     .from(userArtistes);
 
-  for (const { artisteAffiche } of artistes) {
+  for (const { artisteAffiche, artisteNormalise } of artistes) {
     await queue.add(
       "fetch:artiste",
       { type: "fetch:artiste", artiste: artisteAffiche },
       {
-        jobId: `artiste:${artisteAffiche}`,
+        // jobId sur le nom normalisé pour éviter les doublons liés à la casse/accents
+        jobId: `artiste:${artisteNormalise}`,
         removeOnComplete: { count: 10 },
         removeOnFail: { count: 20 },
       },

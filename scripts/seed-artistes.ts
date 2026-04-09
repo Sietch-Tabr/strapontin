@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pkg from "pg";
 const { Pool } = pkg;
 import { userArtistes, users } from "../packages/core/src/schema.js";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -23,7 +23,8 @@ if (!USER_EMAIL) {
   process.exit(1);
 }
 
-const fichier = process.argv[2] ?? resolve(import.meta.dirname, "artistes-seed.txt");
+const fichier =
+  process.argv[2] ?? resolve(import.meta.dirname, "artistes-seed.txt");
 
 function normaliserArtiste(nom: string): string {
   return nom
@@ -63,38 +64,43 @@ async function main() {
 
   console.log(`${artistes.length} artistes à importer depuis ${fichier}`);
 
-  let ajoutes = 0;
-  let ignores = 0;
+  // Récupérer les noms normalisés déjà en base (une seule requête)
+  const existants = await db
+    .select({ artisteNormalise: userArtistes.artisteNormalise })
+    .from(userArtistes)
+    .where(eq(userArtistes.userId, user.id));
 
-  for (const artiste of artistes) {
-    const normalise = normaliserArtiste(artiste);
+  const normalisesExistants = new Set(existants.map((e) => e.artisteNormalise));
 
-    const existants = await db
-      .select({ id: userArtistes.artisteNormalise })
-      .from(userArtistes)
-      .where(
-        and(
-          eq(userArtistes.userId, user.id),
-          eq(userArtistes.artisteNormalise, normalise),
-        ),
-      );
+  // Filtrer les nouveaux artistes
+  const nouveaux = artistes.filter(
+    (a) => !normalisesExistants.has(normaliserArtiste(a)),
+  );
+  const ignores = artistes.length - nouveaux.length;
 
-    if (existants.length > 0) {
-      console.log(`  [ignoré]  ${artiste}`);
-      ignores++;
-      continue;
-    }
-
-    await db.insert(userArtistes).values({
-      userId: user.id,
-      artisteNormalise: normalise,
-      artisteAffiche: artiste,
-    });
-    console.log(`  [ajouté]  ${artiste}`);
-    ajoutes++;
+  if (nouveaux.length === 0) {
+    console.log(`Aucun nouvel artiste à ajouter (${ignores} déjà présents).`);
+    await pool.end();
+    return;
   }
 
-  console.log(`\nTerminé : ${ajoutes} ajoutés, ${ignores} ignorés.`);
+  // Insérer en batch (onConflictDoNothing pour la sécurité)
+  const valeurs = nouveaux.map((artiste) => ({
+    userId: user.id,
+    artisteNormalise: normaliserArtiste(artiste),
+    artisteAffiche: artiste,
+  }));
+
+  await db.insert(userArtistes).values(valeurs).onConflictDoNothing();
+
+  for (const a of nouveaux) {
+    console.log(`  [ajouté]  ${a}`);
+  }
+  if (ignores > 0) {
+    console.log(`  [ignorés] ${ignores} artistes déjà présents`);
+  }
+  console.log(`\nTerminé : ${nouveaux.length} ajoutés, ${ignores} ignorés.`);
+
   await pool.end();
 }
 

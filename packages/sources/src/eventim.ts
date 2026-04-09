@@ -5,23 +5,21 @@ const logger = pino({ name: "source:eventim" });
 
 const BASE_URL =
   "https://public-api.eventim.com/websearch/search/api/exploration";
-const TAILLE_PAGE = 20;
-
-// Classifications Eventim France
-const CLASSIFICATIONS_MUSIQUE = ["music"];
-const CLASSIFICATIONS_SCENE = ["theatre", "dance", "opera", "musical"];
+const WEB_ID = "web__eventim-fr";
+const TAILLE_PAGE = 50;
+const MAX_PAGES = 10;
 
 function extraireDept(codePostal: string | null | undefined): string | null {
   if (!codePostal) return null;
-  if (codePostal.startsWith("97")) return codePostal.slice(0, 3);
-  return codePostal.slice(0, 2);
+  const cp = String(codePostal).trim();
+  if (cp.startsWith("97")) return cp.slice(0, 3);
+  return cp.slice(0, 2) || null;
 }
 
 function parseDateEventim(dateStr: string): {
   date: string;
   heure: string | null;
 } {
-  // Format : "2025-06-15T20:00:00+02:00" ou "2025-06-15"
   const datePart = dateStr.slice(0, 10);
   const tIndex = dateStr.indexOf("T");
   if (tIndex === -1) return { date: datePart, heure: null };
@@ -32,48 +30,50 @@ function parseDateEventim(dateStr: string): {
 
 function mapProduit(produit: Record<string, unknown>): ConcertBrut | null {
   try {
-    const dateStr = (produit["startDate"] ?? produit["start_date"]) as
-      | string
-      | undefined;
+    // Structure : typeAttributes.liveEntertainment.{startDate, location}
+    const liveEnt = (
+      produit["typeAttributes"] as Record<string, unknown> | undefined
+    )?.["liveEntertainment"] as Record<string, unknown> | undefined;
+
+    const dateStr = liveEnt?.["startDate"] as string | undefined;
     if (!dateStr) return null;
 
     const { date, heure } = parseDateEventim(dateStr);
 
-    const attraction = produit["attraction"] as
-      | Record<string, unknown>
-      | undefined;
-    const artiste = (attraction?.["name"] ?? produit["name"]) as
-      | string
-      | undefined;
+    const artiste = produit["name"] as string | undefined;
     if (!artiste) return null;
 
-    const venue = produit["venue"] as Record<string, unknown> | undefined;
-    const salle = (venue?.["name"] as string | undefined) ?? "Salle inconnue";
-    const ville = (venue?.["city"] as string | undefined) ?? null;
-    const cp = (venue?.["postalCode"] ?? venue?.["postal_code"]) as
-      | string
-      | undefined;
+    const location = liveEnt?.["location"] as Record<string, unknown> | undefined;
+    const salle = (location?.["name"] as string | undefined) ?? "Salle inconnue";
+    const ville = (location?.["city"] as string | undefined) ?? null;
+    const cp = location?.["postalCode"] as string | undefined;
     const dept = extraireDept(cp);
 
-    const priceFrom = produit["priceFrom"] as number | null | undefined;
-    const priceTo = produit["priceTo"] as number | null | undefined;
+    const priceRange = liveEnt?.["priceRange"] as
+      | Record<string, unknown>
+      | undefined;
+    const prixMin = (priceRange?.["min"] as number | undefined) ?? null;
+    const prixMax = (priceRange?.["max"] as number | undefined) ?? null;
 
-    const productUrl = produit["url"] as string | undefined;
-    const url = productUrl
-      ? productUrl.startsWith("http")
-        ? productUrl
-        : `https://www.eventim.fr${productUrl}`
-      : null;
+    // URL : préférer le lien direct sinon reconstruire depuis url.domain + url.path
+    const urlObj = produit["url"] as Record<string, unknown> | undefined;
+    const lienDirect = produit["link"] as string | undefined;
+    let url: string | null = null;
+    if (lienDirect?.startsWith("http")) {
+      url = lienDirect;
+    } else if (urlObj?.["domain"] && urlObj?.["path"]) {
+      url = `${urlObj["domain"]}${urlObj["path"]}`;
+    }
 
     return {
-      artiste: artiste as string,
+      artiste,
       date,
       heure,
       salle,
       ville,
       dept,
-      prixMin: priceFrom ?? null,
-      prixMax: priceTo ?? null,
+      prixMin,
+      prixMax,
       url,
       source: "eventim",
     };
@@ -83,60 +83,104 @@ function mapProduit(produit: Record<string, unknown>): ConcertBrut | null {
   }
 }
 
-async function rechercherAttraction(terme: string): Promise<string | null> {
-  const url = `${BASE_URL}/v1/attractions?search_term=${encodeURIComponent(terme)}&language=fr&country=FR&size=1`;
+async function rechercherAttractionId(terme: string): Promise<string | null> {
+  const params = new URLSearchParams({
+    webId: WEB_ID,
+    language: "fr",
+    search_term: terme,
+    top: "5",
+  });
+
+  const url = `${BASE_URL}/v1/attractions?${params.toString()}`;
   const res = await fetch(url, {
     headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    logger.warn({ status: res.status, terme }, "Eventim attractions erreur");
+    return null;
+  }
 
   const data = (await res.json()) as Record<string, unknown>;
   const attractions = data["attractions"] as
     | Record<string, unknown>[]
     | undefined;
-  const id = attractions?.[0]?.["attractionId"] ?? attractions?.[0]?.["id"];
+  if (!attractions?.length) return null;
+
+  // Chercher d'abord une correspondance exacte (insensible à la casse)
+  const termeLower = terme.toLowerCase().trim();
+  const exact = attractions.find(
+    (a) => (a["name"] as string)?.toLowerCase().trim() === termeLower,
+  );
+  const choisi = exact ?? attractions[0];
+  const id = choisi?.["attractionId"] ?? choisi?.["id"];
   return id ? String(id) : null;
 }
 
 async function fetchProduitsParAttraction(
   attractionId: string,
 ): Promise<ConcertBrut[]> {
-  const params = new URLSearchParams({
-    attraction_ids: attractionId,
-    language: "fr",
-    country: "FR",
-    size: String(TAILLE_PAGE),
-    sort: "DateAsc",
-  });
+  const aujourd_hui = new Date().toISOString().split("T")[0]!;
+  const dateFin = new Date();
+  dateFin.setMonth(dateFin.getMonth() + 24);
+  const dateFinStr = dateFin.toISOString().split("T")[0]!;
 
-  const url = `${BASE_URL}/v1/products?${params.toString()}`;
-  const res = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
-  });
+  const concerts: ConcertBrut[] = [];
 
-  if (!res.ok) {
-    logger.error({ status: res.status }, "erreur HTTP Eventim products");
-    return [];
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    if (page > 1) await new Promise((r) => setTimeout(r, 200));
+
+    const params = new URLSearchParams({
+      webId: WEB_ID,
+      language: "fr",
+      attraction_ids: attractionId,
+      date_from: aujourd_hui,
+      date_to: dateFinStr,
+      sort: "DateAsc",
+      top: String(TAILLE_PAGE),
+      page: String(page),
+    });
+
+    const url = `${BASE_URL}/v1/products?${params.toString()}`;
+    const res = await fetch(url, {
+      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
+    });
+
+    if (!res.ok) {
+      logger.error({ status: res.status }, "erreur HTTP Eventim products");
+      break;
+    }
+
+    const data = (await res.json()) as Record<string, unknown>;
+    const produits = data["products"] as Record<string, unknown>[] | undefined;
+    if (!produits?.length) break;
+
+    concerts.push(
+      ...produits.map(mapProduit).filter((c): c is ConcertBrut => c !== null),
+    );
+
+    // Arrêter si on a récupéré tous les résultats
+    const total = (data["totalResults"] as number | undefined) ?? 0;
+    if (concerts.length >= total) break;
   }
 
-  const data = (await res.json()) as Record<string, unknown>;
-  const produits = data["products"] as Record<string, unknown>[] | undefined;
-  if (!produits) return [];
-
-  return produits.map(mapProduit).filter((c): c is ConcertBrut => c !== null);
+  return concerts;
 }
 
 async function fetchProduitsParRegion(
   dept: string,
   classifications: string[],
 ): Promise<ConcertBrut[]> {
+  const aujourd_hui = new Date().toISOString().split("T")[0]!;
+
   const params = new URLSearchParams({
+    webId: WEB_ID,
     language: "fr",
     country: "FR",
-    size: String(TAILLE_PAGE),
-    sort: "DateAsc",
     query: dept,
+    date_from: aujourd_hui,
+    sort: "DateAsc",
+    top: String(TAILLE_PAGE),
   });
 
   for (const c of classifications) {
@@ -162,7 +206,7 @@ async function fetchProduitsParRegion(
 
 export class EventimSource implements SourceConcerts {
   async fetchArtiste(nom: string): Promise<ConcertBrut[]> {
-    const attractionId = await rechercherAttraction(nom);
+    const attractionId = await rechercherAttractionId(nom);
     if (!attractionId) {
       logger.info({ artiste: nom }, "Eventim: artiste non trouvé");
       return [];
@@ -178,7 +222,7 @@ export class EventimSource implements SourceConcerts {
 
   async fetchRegion(
     depts: string[],
-    classifs: string[] = CLASSIFICATIONS_MUSIQUE,
+    classifs: string[] = ["music"],
   ): Promise<ConcertBrut[]> {
     const tous: ConcertBrut[] = [];
 
