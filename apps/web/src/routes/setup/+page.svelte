@@ -1,0 +1,82 @@
+<script lang="ts">
+	import { enhance } from '$app/forms';
+	import type { ActionData } from './$types';
+
+	let { form }: { form: ActionData } = $props();
+
+	let chargement = $state(false);
+</script>
+
+<svelte:head>
+	<title>Initialisation — Strapontin</title>
+</svelte:head>
+
+<div class="flex min-h-screen items-center justify-center bg-background">
+	<div class="w-full max-w-sm space-y-6 p-8">
+		<div class="space-y-1 text-center">
+			<h1 class="text-2xl font-semibold tracking-tight">Bienvenue sur Strapontin</h1>
+			<p class="text-sm text-muted-foreground">Créez le premier compte administrateur</p>
+		</div>
+
+		<form
+			method="POST"
+			use:enhance={() => {
+				chargement = true;
+				return async ({ update }) => {
+					chargement = false;
+					await update();
+				};
+			}}
+			class="space-y-4"
+		>
+			<div class="space-y-2">
+				<label for="nom" class="text-sm font-medium">Nom</label>
+				<input
+					id="nom"
+					name="nom"
+					type="text"
+					required
+					autocomplete="name"
+					class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+			</div>
+
+			<div class="space-y-2">
+				<label for="email" class="text-sm font-medium">Email</label>
+				<input
+					id="email"
+					name="email"
+					type="email"
+					required
+					autocomplete="email"
+					class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+			</div>
+
+			<div class="space-y-2">
+				<label for="motDePasse" class="text-sm font-medium">Mot de passe</label>
+				<input
+					id="motDePasse"
+					name="motDePasse"
+					type="password"
+					required
+					minlength="8"
+					autocomplete="new-password"
+					class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+			</div>
+
+			{#if form?.erreur}
+				<p class="text-sm text-destructive">{form.erreur}</p>
+			{/if}
+
+			<button
+				type="submit"
+				disabled={chargement}
+				class="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+			>
+				{chargement ? 'Création…' : 'Créer le compte admin'}
+			</button>
+		</form>
+	</div>
+</div>

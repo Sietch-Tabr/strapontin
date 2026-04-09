@@ -51,16 +51,82 @@ export const concerts = pgTable(
 
 // -------------------------------------------------------------------
 // users
+// Table principale des utilisateurs — colonnes requises par Better Auth
+// + champ additionnel role (user | admin).
 // -------------------------------------------------------------------
 
 export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  image: text("image"),
   role: text("role").notNull().default("user"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// -------------------------------------------------------------------
+// sessions
+// Sessions Better Auth.
+// -------------------------------------------------------------------
+
+export const sessions = pgTable("sessions", {
+  id: text("id").primaryKey(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  token: text("token").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+});
+
+// -------------------------------------------------------------------
+// accounts
+// Comptes d'authentification Better Auth (stocke le hash du mot de passe).
+// -------------------------------------------------------------------
+
+export const accounts = pgTable("accounts", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull(),
+  providerId: text("provider_id").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  idToken: text("id_token"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at", {
+    withTimezone: true,
+  }),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+    withTimezone: true,
+  }),
+  scope: text("scope"),
+  password: text("password"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+});
+
+// -------------------------------------------------------------------
+// verifications
+// Tokens de vérification Better Auth (email, mot de passe oublié…).
+// -------------------------------------------------------------------
+
+export const verifications = pgTable("verifications", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 // -------------------------------------------------------------------
@@ -70,7 +136,7 @@ export const users = pgTable("users", {
 export const userArtistes = pgTable(
   "user_artistes",
   {
-    userId: uuid("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     artisteNormalise: text("artiste_normalise").notNull(),
@@ -87,7 +153,7 @@ export const userArtistes = pgTable(
 // -------------------------------------------------------------------
 
 export const userSalles = pgTable("user_salles", {
-  userId: uuid("user_id")
+  userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   salleId: text("salle_id").notNull(),
@@ -98,7 +164,7 @@ export const userSalles = pgTable("user_salles", {
 // -------------------------------------------------------------------
 
 export const userConfig = pgTable("user_config", {
-  userId: uuid("user_id")
+  userId: text("user_id")
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   departements: text("departements").array().notNull().default([]),
@@ -120,7 +186,7 @@ export const userConfig = pgTable("user_config", {
 export const userMatches = pgTable(
   "user_matches",
   {
-    userId: uuid("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     concertId: uuid("concert_id")

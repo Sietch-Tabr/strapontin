@@ -81,10 +81,9 @@ steps:
         branch: main
 ```
 
-La pipeline SSH dans le host Proxmox puis utilise `pct exec` pour atteindre le LXC —
-Woodpecker (LXC 111, VLAN 10) n'a pas d'accès direct au VLAN 20.
+LXC 111 (Woodpecker) et LXC 113 (strapontin) sont tous les deux sur VLAN 20 — SSH direct.
 
-Secrets Woodpecker : `ssh_key` (clé privée dédiée), `proxmox_host` = `192.168.1.99`.
+Secrets Woodpecker : `ssh_key` (clé privée dédiée), `lxc_host` = `192.168.20.79`.
 
 ### Configuration CI/CD (une seule fois)
 
@@ -106,7 +105,7 @@ Secrets Woodpecker : `ssh_key` (clé privée dédiée), `proxmox_host` = `192.16
    - Activer le repo `Kwaite/strapontin` (onglet Repositories)
    - Aller dans Settings → Secrets du repo
    - Ajouter le secret `ssh_key` : coller le contenu de `~/.ssh/woodpecker_strapontin` (clé **privée**)
-   - Ajouter le secret `proxmox_host` : valeur `192.168.1.99`
+   - Ajouter le secret `lxc_host` : valeur `192.168.20.79`
 
 ## Scripts d'exploitation
 
@@ -243,6 +242,36 @@ Vue switchable sur toutes les pages liste, toggle persisté en `localStorage` :
 - **Vue cartes** (défaut, mobile + desktop) — artiste + date + salle, aérée
 - **Vue tableau** (desktop uniquement) — dense, filtrable, proche de l'app CLI
 
+## Schéma PostgreSQL
+
+Migrations dans `packages/core/migrations/` — générées par `pnpm --filter @strapontin/core db:generate`, appliquées par `db:migrate`.
+
+### Tables Better Auth (gérées par la lib)
+
+| Table           | Rôle                                                            |
+| --------------- | --------------------------------------------------------------- |
+| `users`         | Utilisateurs — colonnes Better Auth + `role` (user\|admin)      |
+| `sessions`      | Sessions actives                                                |
+| `accounts`      | Comptes d'auth (stocke le hash du mot de passe côté credential) |
+| `verifications` | Tokens de vérification email / reset password                   |
+
+`users.id` est de type `text` (Better Auth génère ses propres IDs, pas UUID).
+
+### Tables applicatives
+
+| Table           | Rôle                                                     |
+| --------------- | -------------------------------------------------------- |
+| `concerts`      | Source de vérité concerts (toutes sources, dédoublonnés) |
+| `user_artistes` | Artistes suivis par user                                 |
+| `user_salles`   | Salles suivies par user                                  |
+| `user_config`   | Préférences par user (départements, rayon, filtres…)     |
+| `user_matches`  | Index concerts ↔ users (calculé par le worker)           |
+| `fetch_jobs`    | Historique et planning des jobs BullMQ                   |
+
+### Authentification — premier utilisateur
+
+Pas de page d'inscription publique. Premier accès via `/setup` (accessible uniquement si aucun utilisateur en base — redirige vers `/login` sinon). Crée automatiquement un compte `role=admin`.
+
 ## Conventions
 
 - TypeScript strict, pas de `any`
@@ -251,3 +280,7 @@ Vue switchable sur toutes les pages liste, toggle persisté en `localStorage` :
 - Migrations Drizzle dans `packages/core/migrations/`
 - Logging : pino, lazy `%s` (pas de template literals dans les appels logger)
 - Pas de `console.log` en production
+
+## Points à éclaircir
+
+- **Stratégie de déploiement** : évaluer si Woodpecker + SSH est justifié, ou si une release Codeberg + webhook (ou SSH manuel depuis le Mac) est plus simple. Woodpecker ajoute de la complexité (réseau inter-VLAN, secrets, maintenance) pour un gain limité sur un projet personnel.

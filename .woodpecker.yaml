@@ -4,12 +4,12 @@ steps:
     environment:
       SSH_KEY:
         from_secret: ssh_key
-      PROXMOX_HOST:
-        from_secret: proxmox_host
+      LXC_HOST:
+        from_secret: lxc_host
     commands:
       - apk add openssh-client
       - echo "$$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
-      - ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$PROXMOX_HOST "pct exec 113 -- /opt/strapontin/scripts/update.sh"
+      - ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_HOST "/opt/strapontin/scripts/update.sh"
     when:
       - event: push
         branch: main
