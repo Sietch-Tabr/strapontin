@@ -28,6 +28,12 @@ export async function persisterConcerts(
   for (let i = 0; i < liste.length; i += TAILLE_LOT) {
     const lot = liste.slice(i, i + TAILLE_LOT);
 
+    const STATUTS_INDISPONIBLES = new Set([
+      "cancelled",
+      "postponed",
+      "rescheduled",
+    ]);
+
     const valeurs = lot.map((c) => ({
       artiste: c.artiste,
       artisteNorm: normaliserTexte(c.artiste),
@@ -42,6 +48,7 @@ export async function persisterConcerts(
       source: c.source,
       classification: c.classification,
       genre: c.genre,
+      disponible: c.statut !== null ? !STATUTS_INDISPONIBLES.has(c.statut) : true,
     }));
 
     const inseres = await db
@@ -61,6 +68,7 @@ export async function persisterConcerts(
           url: sql`COALESCE(excluded.url, ${concerts.url})`,
           classification: sql`COALESCE(excluded.classification, ${concerts.classification})`,
           genre: sql`COALESCE(excluded.genre, ${concerts.genre})`,
+          disponible: sql`excluded.disponible`,
           updatedAt: sql`now()`,
         },
       })

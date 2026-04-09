@@ -59,6 +59,9 @@
 								Tournée · {groupe.concerts.length} dates
 							</span>
 						{/if}
+						{#if groupe.estNew}
+							<span class="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">NEW</span>
+						{/if}
 					</div>
 
 					<!-- Liste des dates — lien billetterie sur chaque ligne -->
@@ -67,9 +70,19 @@
 							<div class="flex items-center justify-between px-4 py-3">
 								<div class="min-w-0">
 									{#if groupe.estTournee}
-										<p class="text-sm font-medium text-foreground">{formaterDateCourte(concert.date)}</p>
+										<p class="text-sm font-medium text-foreground">
+											{formaterDateCourte(concert.date)}
+											{#if concert.estNew}
+												<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">NEW</span>
+											{/if}
+										</p>
 									{:else}
-										<p class="text-sm text-muted-foreground">{formaterDate(concert.date)}</p>
+										<p class="text-sm text-muted-foreground">
+											{formaterDate(concert.date)}
+											{#if concert.estNew}
+												<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">NEW</span>
+											{/if}
+										</p>
 									{/if}
 									<p class="mt-0.5 text-xs text-muted-foreground truncate">
 										{concert.salle}{concert.ville ? ` · ${concert.ville}` : ''}

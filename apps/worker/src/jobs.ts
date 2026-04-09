@@ -2,10 +2,18 @@
 
 import pino from "pino";
 import type { Job } from "bullmq";
+import type { ConcertBrut } from "@strapontin/sources";
 import { dedoublonner } from "@strapontin/core";
+import { userArtistes } from "@strapontin/core/schema";
+import { db } from "./db.js";
 import { ticketmaster, bandsintown, eventim } from "./sources.js";
 import { persisterConcerts, recalculerMatches } from "./persister.js";
-import { redis, CLE_QUOTA_TM } from "./redis.js";
+import {
+  redis,
+  CLE_QUOTA_TM,
+  cleAttractionId,
+  TTL_ATTRACTION_ID_S,
+} from "./redis.js";
 
 const logger = pino({ name: "jobs" });
 
@@ -20,6 +28,10 @@ export interface JobFetchArtiste {
   type: "fetch:artiste";
   artiste: string;
   userId?: string;
+}
+
+export interface JobFetchArtistesBatch {
+  type: "fetch:artistes:batch";
 }
 
 export interface JobFetchRegion {
@@ -41,6 +53,7 @@ export interface JobRecalculerMatches {
 
 export type JobData =
   | JobFetchArtiste
+  | JobFetchArtistesBatch
   | JobFetchRegion
   | JobFetchSalle
   | JobRecalculerMatches;
@@ -100,6 +113,108 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
       if (data.userId) {
         await recalculerMatches([data.userId]);
       }
+      break;
+    }
+
+    case "fetch:artistes:batch": {
+      logger.info("fetch:artistes:batch démarré");
+
+      // Charger tous les artistes distincts depuis la DB
+      const rows = await db
+        .selectDistinct({
+          artisteAffiche: userArtistes.artisteAffiche,
+          artisteNormalise: userArtistes.artisteNormalise,
+        })
+        .from(userArtistes);
+
+      if (rows.length === 0) break;
+
+      // Résoudre les attraction IDs (Redis cache → TM si absent)
+      const idsParNorm = new Map<string, string>();
+      const sansId: { nom: string; norm: string }[] = [];
+
+      for (const { artisteAffiche, artisteNormalise } of rows) {
+        const cached = await redis
+          .get(cleAttractionId(artisteNormalise))
+          .catch(() => null);
+        if (cached) {
+          idsParNorm.set(artisteNormalise, cached);
+        } else {
+          sansId.push({ nom: artisteAffiche, norm: artisteNormalise });
+        }
+      }
+
+      // Résoudre les IDs manquants via /attractions
+      for (const { nom, norm } of sansId) {
+        const id = await ticketmaster.rechercherAttractionId(nom);
+        if (id) {
+          idsParNorm.set(norm, id);
+          await redis
+            .setex(cleAttractionId(norm), TTL_ATTRACTION_ID_S, id)
+            .catch(() => {});
+        }
+        await new Promise((r) => setTimeout(r, 250));
+      }
+
+      // Fetch TM par lots de 20 attractionIds
+      const TAILLE_LOT = 20;
+      const tousIds = [...idsParNorm.values()];
+      const concertsTM: ConcertBrut[] = [];
+      for (let i = 0; i < tousIds.length; i += TAILLE_LOT) {
+        const lot = tousIds.slice(i, i + TAILLE_LOT);
+        const resultats = await ticketmaster.fetchArtistesBatch(lot);
+        concertsTM.push(...resultats);
+        if (i + TAILLE_LOT < tousIds.length) {
+          await new Promise((r) => setTimeout(r, 250));
+        }
+      }
+
+      // Fallback : artistes sans ID TM → recherche par keyword
+      const nomsAvecId = new Set(
+        rows
+          .filter((r) => idsParNorm.has(r.artisteNormalise))
+          .map((r) => r.artisteNormalise),
+      );
+      const artistes_sans_tm = rows.filter(
+        (r) => !nomsAvecId.has(r.artisteNormalise),
+      );
+      for (const { artisteAffiche } of artistes_sans_tm) {
+        const resultats = await ticketmaster.fetchArtiste(artisteAffiche);
+        concertsTM.push(...resultats);
+        await new Promise((r) => setTimeout(r, 250));
+      }
+
+      await sauvegarderQuotaTM();
+
+      // Bandsintown et Eventim : appels parallèles par artiste
+      const nomsArtistes = rows.map((r) => r.artisteAffiche);
+      const [bitResults, eventimResults] = await Promise.all([
+        Promise.allSettled(
+          nomsArtistes.map((nom) => bandsintown.fetchArtiste(nom)),
+        ),
+        Promise.allSettled(
+          nomsArtistes.map((nom) => eventim.fetchArtiste(nom)),
+        ),
+      ]);
+
+      const tous = [
+        ...concertsTM,
+        ...bitResults
+          .filter((r) => r.status === "fulfilled")
+          .flatMap((r) => (r as PromiseFulfilledResult<ConcertBrut[]>).value),
+        ...eventimResults
+          .filter((r) => r.status === "fulfilled")
+          .flatMap((r) => (r as PromiseFulfilledResult<ConcertBrut[]>).value),
+      ];
+
+      const dedoublonnes = dedoublonner(tous);
+      logger.info(
+        { bruts: tous.length, dedoublonnes: dedoublonnes.length },
+        "fetch:artistes:batch terminé",
+      );
+
+      await persisterConcerts(dedoublonnes);
+      await recalculerMatches();
       break;
     }
 

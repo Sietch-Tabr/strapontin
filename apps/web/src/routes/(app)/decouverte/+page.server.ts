@@ -1,6 +1,6 @@
 import { db } from "$lib/server/db";
 import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
-import { eq, gte, and, ilike, inArray, sql } from "drizzle-orm";
+import { eq, gte, and, ilike, inArray, isNotNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 
@@ -8,6 +8,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0]!;
   const recherche = url.searchParams.get("q")?.trim() ?? "";
   const mois = url.searchParams.get("mois")?.trim() ?? "";
+  const genre = url.searchParams.get("genre")?.trim() ?? "";
 
   // Départements de l'user (pour pré-cocher)
   const configs = await db
@@ -40,6 +41,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     conditions.push(sql`to_char(${concerts.date}, 'YYYY-MM') = ${mois}`);
   }
 
+  if (genre) {
+    conditions.push(ilike(concerts.genre, genre));
+  }
+
   // Tous les départements distincts en base (pour le sélecteur)
   const tousDepts = await db
     .selectDistinct({ dept: concerts.dept })
@@ -50,6 +55,22 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const deptsDisponibles = tousDepts
     .map((d) => d.dept)
     .filter((d): d is string => d !== null);
+
+  const tousGenres = await db
+    .selectDistinct({ genre: concerts.genre })
+    .from(concerts)
+    .where(
+      and(
+        gte(concerts.date, aujourdhui),
+        eq(concerts.disponible, true),
+        isNotNull(concerts.genre),
+      ),
+    )
+    .orderBy(concerts.genre);
+
+  const genresDisponibles = tousGenres
+    .map((g) => g.genre)
+    .filter((g): g is string => g !== null);
 
   const resultats = await db
     .select({
@@ -84,8 +105,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     })),
     recherche,
     mois,
+    genre,
     userDepts,
     deptsActifs,
     deptsDisponibles,
+    genresDisponibles,
   };
 };

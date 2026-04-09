@@ -87,7 +87,12 @@
 									</span>
 								{/if}
 								<div class="min-w-0 flex-1">
-									<p class="truncate font-medium text-card-foreground">{concert.artiste}</p>
+									<p class="truncate font-medium text-card-foreground">
+										{concert.artiste}
+										{#if concert.estNew}
+											<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">NEW</span>
+										{/if}
+									</p>
 									<p class="truncate text-sm text-muted-foreground">
 										{concert.salle}{concert.ville ? ` · ${concert.ville}` : ''}
 									</p>

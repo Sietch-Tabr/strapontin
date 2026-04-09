@@ -12,6 +12,7 @@
     "@strapontin/sources": "workspace:*",
     "bullmq": "^5.73.1",
     "drizzle-orm": "^0.45.2",
+    "ioredis": "^5.10.1",
     "pino": "^9.7.0"
   },
   "devDependencies": {

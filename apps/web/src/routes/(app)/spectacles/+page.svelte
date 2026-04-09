@@ -1,12 +1,14 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Ticket, Search, X } from '@lucide/svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	let recherche = $state<string>(data.recherche);
-	let mois = $state<string>(data.mois);
-	let classification = $state<string>(data.classification);
+	let recherche = $state(untrack(() => data.recherche));
+	let mois = $state(untrack(() => data.mois));
+	let classification = $state(untrack(() => data.classification));
+	let genre = $state(untrack(() => data.genre));
 
 	function formaterDate(dateStr: string): string {
 		const [annee, moisNum, jour] = dateStr.split('-').map(Number);
@@ -82,6 +84,18 @@
 			<option value="music">Musique</option>
 			<option value="theatre">Théâtre / Opéra</option>
 		</select>
+		{#if data.genresDisponibles.length > 0}
+			<select
+				name="genre"
+				bind:value={genre}
+				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+			>
+				<option value="">Tous les genres</option>
+				{#each data.genresDisponibles as g (g)}
+					<option value={g}>{g}</option>
+				{/each}
+			</select>
+		{/if}
 		<button
 			type="submit"
 			class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
@@ -89,7 +103,7 @@
 			<Search size={16} />
 			Filtrer
 		</button>
-		{#if recherche || mois || classification}
+		{#if recherche || mois || classification || genre}
 			<a
 				href="/spectacles"
 				class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -133,7 +147,12 @@
 				<tbody class="divide-y divide-border">
 					{#each data.tousLesConcerts as concert (concert.id)}
 						<tr class="transition-colors hover:bg-muted/30">
-							<td class="px-4 py-3 font-medium text-foreground">{concert.artiste}</td>
+							<td class="px-4 py-3 font-medium text-foreground">
+								{concert.artiste}
+								{#if concert.estNew}
+									<span class="ml-1.5 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">NEW</span>
+								{/if}
+							</td>
 							<td class="px-4 py-3 text-muted-foreground">{formaterDate(concert.date)}</td>
 							<td class="px-4 py-3 tabular-nums text-muted-foreground">{formaterHeure(concert.heure)}</td>
 							<td class="px-4 py-3 text-muted-foreground">{concert.salle ?? '—'}</td>
@@ -163,7 +182,12 @@
 				<div class="rounded-xl border border-border bg-card px-4 py-3">
 					<div class="flex items-start justify-between gap-2">
 						<div class="min-w-0">
-							<p class="truncate font-medium text-card-foreground">{concert.artiste}</p>
+							<p class="truncate font-medium text-card-foreground">
+								{concert.artiste}
+								{#if concert.estNew}
+									<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">NEW</span>
+								{/if}
+							</p>
 							<p class="mt-0.5 text-sm text-muted-foreground">{formaterDate(concert.date)}{concert.heure ? ` · ${formaterHeure(concert.heure)}` : ''}</p>
 							<p class="mt-0.5 text-sm text-muted-foreground">
 								{concert.salle}{concert.ville ? ` · ${concert.ville}` : ''}

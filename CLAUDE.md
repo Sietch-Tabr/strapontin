@@ -209,12 +209,12 @@ Les concerts sont stockés en DB. Le frontend lit uniquement la DB.
 
 ### Jobs implémentés
 
-| Type                 | Déclenchement             | Description                                                            |
-| -------------------- | ------------------------- | ---------------------------------------------------------------------- |
-| `fetch:artiste`      | Ajout artiste + cron 2h   | Fetch TM + Bandsintown + Eventim par nom artiste                       |
-| `fetch:region`       | Cron 2h                   | Fetch TM + Eventim par département (depuis `user_config.departements`) |
-| `fetch:salle`        | Ajout salle + cron 2h     | Fetch TM par `venueId` (stocké dans `user_salles.tmVenueId`)           |
-| `recalculer:matches` | Après fetch               | Recalcule `user_matches` pour tous les users                           |
+| Type                 | Déclenchement           | Description                                                            |
+| -------------------- | ----------------------- | ---------------------------------------------------------------------- |
+| `fetch:artiste`      | Ajout artiste + cron 2h | Fetch TM + Bandsintown + Eventim par nom artiste                       |
+| `fetch:region`       | Cron 2h                 | Fetch TM + Eventim par département (depuis `user_config.departements`) |
+| `fetch:salle`        | Ajout salle + cron 2h   | Fetch TM par `venueId` (stocké dans `user_salles.tmVenueId`)           |
+| `recalculer:matches` | Après fetch             | Recalcule `user_matches` pour tous les users                           |
 
 Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
@@ -271,19 +271,19 @@ donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 
 Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + bottom nav).
 
-| Route         | Description                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------ |
-| `/`           | Accueil — prochains concerts de l'user (userMatches, LIMIT 20)                             |
-| `/artistes`   | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer             |
-| `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre |
-| `/quinzaine`  | Concerts userMatches dans les 15 prochains jours, groupés par date                         |
-| `/spectacles` | Tous les concerts userMatches à venir, filtres artiste + mois                              |
-| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept/mois, bouton "Suivre"       |
-| `/parametres` | user_config (depts, rayon, horizon), thème (cookie), nom + mot de passe (Better Auth)      |
-| `/admin`      | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin |
-| `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)                   |
-| `/login`      | Authentification email/password                                                            |
-| `/health`     | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth     |
+| Route         | Description                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------------ |
+| `/`           | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées |
+| `/artistes`   | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                   |
+| `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre       |
+| `/quinzaine`  | Concerts userMatches dans les 15 prochains jours, groupés par date                               |
+| `/spectacles` | Tous les concerts userMatches à venir, filtres artiste + mois + classification                   |
+| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept/mois/genre, bouton "Suivre"       |
+| `/parametres` | user_config (depts, rayon, horizon), thème (cookie), nom + mot de passe (Better Auth)            |
+| `/admin`      | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin       |
+| `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)                         |
+| `/login`      | Authentification email/password                                                                  |
+| `/health`     | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth           |
 
 ## Affichage — tournées
 
@@ -311,14 +311,14 @@ Migrations dans `packages/core/migrations/` — générées par `pnpm --filter @
 
 ### Tables applicatives
 
-| Table           | Rôle                                                     |
-| --------------- | -------------------------------------------------------- |
+| Table           | Rôle                                                                                         |
+| --------------- | -------------------------------------------------------------------------------------------- |
 | `concerts`      | Source de vérité concerts — `classification` (music/theatre) + `genre` (Rock/Pop…) depuis TM |
-| `user_artistes` | Artistes suivis par user                                                                      |
-| `user_salles`   | Salles suivies par user — `tmVenueId` (ID Ticketmaster, nullable)                             |
-| `user_config`   | Préférences par user (départements, rayon, filtres…)     |
-| `user_matches`  | Index concerts ↔ users (calculé par le worker)           |
-| `fetch_jobs`    | Historique et planning des jobs BullMQ                   |
+| `user_artistes` | Artistes suivis par user                                                                     |
+| `user_salles`   | Salles suivies par user — `tmVenueId` (ID Ticketmaster, nullable)                            |
+| `user_config`   | Préférences par user (départements, rayon, filtres…)                                         |
+| `user_matches`  | Index concerts ↔ users (calculé par le worker)                                               |
+| `fetch_jobs`    | Historique et planning des jobs BullMQ                                                       |
 
 ### Authentification — premier utilisateur
 

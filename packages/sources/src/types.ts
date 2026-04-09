@@ -13,6 +13,7 @@ export interface ConcertBrut {
   source: string; // "ticketmaster" | "bandsintown" | "eventim"
   classification: string | null; // "music" | "theatre" | null (depuis TM)
   genre: string | null; // "Rock" | "Pop" | "Jazz" | null (depuis TM)
+  statut: string | null; // "onsale" | "offsale" | "cancelled" | "postponed" | "rescheduled" | null
 }
 
 export interface SourceConcerts {

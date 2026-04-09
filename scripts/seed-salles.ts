@@ -73,7 +73,9 @@ async function main() {
   const ignorees = SALLES_A_IMPORTER.length - nouvelles.length;
 
   if (nouvelles.length === 0) {
-    console.log(`Aucune nouvelle salle à ajouter (${ignorees} déjà présentes).`);
+    console.log(
+      `Aucune nouvelle salle à ajouter (${ignorees} déjà présentes).`,
+    );
     await sql.end();
     return;
   }

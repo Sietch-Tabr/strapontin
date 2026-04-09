@@ -51,6 +51,7 @@ function mapEvenement(
       source: "bandsintown",
       classification: null,
       genre: null,
+      statut: null,
     };
   } catch (err) {
     logger.warn({ err }, "erreur parsing événement Bandsintown");

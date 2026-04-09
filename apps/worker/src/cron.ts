@@ -20,21 +20,14 @@ export function creerQueue(connexionRedis: {
 export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
   logger.info("planification des jobs utilisateurs");
 
-  // Récupérer tous les artistes suivis (groupés par artiste pour éviter les doublons)
-  const artistes = await db
-    .selectDistinct({
-      artisteAffiche: userArtistes.artisteAffiche,
-      artisteNormalise: userArtistes.artisteNormalise,
-    })
-    .from(userArtistes);
-
-  for (const { artisteAffiche, artisteNormalise } of artistes) {
+  // Un seul job batch pour tous les artistes — évite N requêtes TM individuelles
+  const nbArtistes = await db.$count(userArtistes);
+  if (nbArtistes > 0) {
     await queue.add(
-      "fetch:artiste",
-      { type: "fetch:artiste", artiste: artisteAffiche },
+      "fetch:artistes:batch",
+      { type: "fetch:artistes:batch" },
       {
-        // jobId sur le nom normalisé — BullMQ v5 interdit ":", utiliser "__"
-        jobId: `artiste__${artisteNormalise}`,
+        jobId: "artistes__batch",
         removeOnComplete: { count: 10 },
         removeOnFail: { count: 20 },
       },
@@ -100,7 +93,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
 
   logger.info(
     {
-      artistes: artistes.length,
+      artistes: nbArtistes,
       depts: tousLesDepts.size,
       salles: sallesAvecVenueId.length,
     },

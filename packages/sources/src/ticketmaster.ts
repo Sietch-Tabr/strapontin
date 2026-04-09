@@ -114,6 +114,12 @@ function mapEvenement(evt: Record<string, unknown>): ConcertBrut | null {
 
     const url = (evt["url"] as string | undefined) ?? null;
 
+    const datesData = evt["dates"] as Record<string, unknown> | undefined;
+    const statut =
+      (datesData?.["status"] as Record<string, string> | undefined)?.[
+        "code"
+      ] ?? null;
+
     const classificationsData = evt["classifications"] as
       | Record<string, unknown>[]
       | undefined;
@@ -146,6 +152,7 @@ function mapEvenement(evt: Record<string, unknown>): ConcertBrut | null {
       source: "ticketmaster",
       classification,
       genre,
+      statut,
     };
   } catch (err) {
     logger.warn({ err }, "erreur parsing événement TM");
@@ -165,15 +172,14 @@ async function fetchPage(
   const res = await fetch(url);
 
   // Extraire le quota depuis les headers TM (présents même sur les erreurs)
-  const quota: QuotaTM | null =
-    res.headers.has("Rate-Limit-Available")
-      ? {
-          dispo: parseInt(res.headers.get("Rate-Limit-Available") ?? "0"),
-          total: parseInt(res.headers.get("Rate-Limit") ?? "0"),
-          reset: parseInt(res.headers.get("Rate-Limit-Reset") ?? "0"),
-          misAJour: new Date().toISOString(),
-        }
-      : null;
+  const quota: QuotaTM | null = res.headers.has("Rate-Limit-Available")
+    ? {
+        dispo: parseInt(res.headers.get("Rate-Limit-Available") ?? "0"),
+        total: parseInt(res.headers.get("Rate-Limit") ?? "0"),
+        reset: parseInt(res.headers.get("Rate-Limit-Reset") ?? "0"),
+        misAJour: new Date().toISOString(),
+      }
+    : null;
 
   if (!res.ok) {
     logger.error({ status: res.status, url }, "erreur HTTP Ticketmaster");
@@ -227,6 +233,41 @@ export class TicketmasterSource implements SourceConcerts {
     const { events, total, quota } = await fetchPage(params, this.apiKey);
     if (quota) this._dernierQuota = quota;
     logger.info({ venueId, total }, "TM fetchSalle");
+    return events;
+  }
+
+  async rechercherAttractionId(nom: string): Promise<string | null> {
+    const params = new URLSearchParams({
+      keyword: nom,
+      locale: "*",
+      size: "1",
+      apikey: this.apiKey,
+    });
+    const url = `${BASE_URL}/attractions.json?${params.toString()}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = (await res.json()) as Record<string, unknown>;
+      const embedded = data["_embedded"] as Record<string, unknown> | undefined;
+      const attractions = embedded?.["attractions"] as
+        | Record<string, unknown>[]
+        | undefined;
+      return (attractions?.[0]?.["id"] as string) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async fetchArtistesBatch(attractionIds: string[]): Promise<ConcertBrut[]> {
+    if (attractionIds.length === 0) return [];
+    const params = new URLSearchParams({
+      attractionId: attractionIds.join(","),
+      size: String(TAILLE_PAGE),
+      sort: "date,asc",
+    });
+    const { events, quota } = await fetchPage(params, this.apiKey);
+    if (quota) this._dernierQuota = quota;
+    logger.info({ ids: attractionIds.length }, "TM fetchArtistesBatch");
     return events;
   }
 

@@ -1,13 +1,15 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { Compass, Search, X, Check } from '@lucide/svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	let recherche = $state(data.recherche);
-	let deptsCoches = $state(new Set(data.deptsActifs));
-	let mois = $state(data.mois);
+	let recherche = $state(untrack(() => data.recherche));
+	let deptsCoches = $state(untrack(() => new Set(data.deptsActifs)));
+	let mois = $state(untrack(() => data.mois));
+	let genre = $state(untrack(() => data.genre));
 
 	// Mois disponibles pour le filtre (basé sur les résultats actuels)
 	const moisDisponibles = $derived(
@@ -91,6 +93,18 @@
 					<option value={m}>{labelMois(m)}</option>
 				{/each}
 			</select>
+			{#if data.genresDisponibles.length > 0}
+				<select
+					name="genre"
+					bind:value={genre}
+					class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+				>
+					<option value="">Tous les genres</option>
+					{#each data.genresDisponibles as g (g)}
+						<option value={g}>{g}</option>
+					{/each}
+				</select>
+			{/if}
 			<button
 				type="submit"
 				class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
@@ -98,7 +112,7 @@
 				<Search size={16} />
 				Filtrer
 			</button>
-			{#if recherche || mois || deptsCoches.size > 0}
+			{#if recherche || mois || genre || deptsCoches.size > 0}
 				<a
 					href="/decouverte"
 					class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -156,7 +170,7 @@
 	{#if data.resultats.length === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
 			<Compass size={40} class="mb-4 text-muted-foreground/50" />
-			{#if data.recherche || data.deptsActifs.length > 0 || data.mois}
+			{#if data.recherche || data.deptsActifs.length > 0 || data.mois || data.genre}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun résultat pour ces filtres.</p>
 				<a href="/decouverte" class="mt-4 text-sm text-muted-foreground underline underline-offset-2">
 					Voir tous les concerts

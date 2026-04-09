@@ -81,6 +81,7 @@ function mapProduit(produit: Record<string, unknown>): ConcertBrut | null {
       source: "eventim",
       classification: null,
       genre: null,
+      statut: null,
     };
   } catch (err) {
     logger.warn({ err }, "erreur parsing produit Eventim");
