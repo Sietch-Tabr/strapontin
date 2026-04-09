@@ -279,7 +279,7 @@ Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + 
 | `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                      |
 | `/quinzaine`  | **À fusionner dans /spectacles** — chip "15 prochains jours"                                                    |
 | `/spectacles` | Concerts userMatches à venir, filtres : chip quinzaine, chips catégorie multi, chips genre multi, artiste, mois |
-| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept (chips auto-submit)/mois/genre, bouton "Suivre" |
+| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept (chips auto-submit)/mois/genre, bouton "Suivre"  |
 | `/parametres` | user_config (depts, rayon, filtreDisponibles), thème (cookie), nom + mot de passe (Better Auth)                 |
 | `/admin`      | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin                      |
 | `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)                                        |

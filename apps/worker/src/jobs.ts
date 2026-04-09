@@ -130,7 +130,6 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
       if (rows.length === 0) break;
 
-
       // Résoudre les attraction IDs (Redis cache → TM si absent)
       const idsParNorm = new Map<string, string>();
       const sansId: { nom: string; norm: string }[] = [];

@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { untrack, tick } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { Compass, Search, X, Check } from '@lucide/svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
+	let formulaire: HTMLFormElement;
 	let recherche = $state(untrack(() => data.recherche));
 	let deptsCoches = $state(untrack(() => new Set(data.deptsActifs)));
 	let mois = $state(untrack(() => data.mois));
@@ -16,19 +17,25 @@
 		[...new Set(data.resultats.map((c) => c.date.slice(0, 7)))].sort()
 	);
 
-	function toutAfficher() {
+	async function toutAfficher() {
 		deptsCoches = new Set();
+		await tick();
+		formulaire.requestSubmit();
 	}
 
-	function resetMesDepts() {
+	async function resetMesDepts() {
 		deptsCoches = new Set(data.userDepts);
+		await tick();
+		formulaire.requestSubmit();
 	}
 
-	function toggleDept(dept: string) {
+	async function toggleDept(dept: string) {
 		const nouveau = new Set(deptsCoches);
 		if (nouveau.has(dept)) nouveau.delete(dept);
 		else nouveau.add(dept);
 		deptsCoches = nouveau;
+		await tick();
+		formulaire.requestSubmit();
 	}
 
 	function formaterDate(dateStr: string): string {
@@ -73,7 +80,7 @@
 	</div>
 
 	<!-- Filtres -->
-	<form method="GET" class="mb-6 space-y-3">
+	<form bind:this={formulaire} method="GET" class="mb-6 space-y-3">
 		<div class="flex flex-wrap gap-2">
 			<input
 				type="text"

@@ -48,7 +48,8 @@ export async function persisterConcerts(
       source: c.source,
       classification: c.classification,
       genre: c.genre,
-      disponible: c.statut !== null ? !STATUTS_INDISPONIBLES.has(c.statut) : true,
+      disponible:
+        c.statut !== null ? !STATUTS_INDISPONIBLES.has(c.statut) : true,
     }));
 
     const inseres = await db
