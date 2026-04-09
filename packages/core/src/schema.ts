@@ -34,6 +34,8 @@ export const concerts = pgTable(
     prixMax: numeric("prix_max", { precision: 8, scale: 2 }),
     url: text("url"),
     source: text("source").notNull(),
+    classification: text("classification"), // "music" | "theatre" | null (depuis TM)
+    genre: text("genre"), // "Rock" | "Pop" | "Jazz" | null (depuis TM)
     disponible: boolean("disponible").notNull().default(true),
     firstSeen: timestamp("first_seen", { withTimezone: true })
       .notNull()

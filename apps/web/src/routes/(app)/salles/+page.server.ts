@@ -21,6 +21,7 @@ function normaliserSalleCle(nom: string): string {
 interface ResultatSalle {
   salle: string;
   ville: string | null;
+  tmVenueId: string | null;
   source: "base" | "ticketmaster";
 }
 
@@ -34,12 +35,13 @@ async function rechercherSallesTM(terme: string): Promise<ResultatSalle[]> {
     if (!resp.ok) return [];
     const data = (await resp.json()) as {
       _embedded?: {
-        venues?: { name: string; city?: { name: string } }[];
+        venues?: { id: string; name: string; city?: { name: string } }[];
       };
     };
     return (data._embedded?.venues ?? []).map((v) => ({
       salle: v.name,
       ville: v.city?.name ?? null,
+      tmVenueId: v.id ?? null,
       source: "ticketmaster" as const,
     }));
   } catch {
@@ -70,7 +72,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
     resultatsRecherche = enBase
       .filter((r) => !sallesDejaAjoutees.has(r.salle))
-      .map((r) => ({ ...r, source: "base" as const }));
+      .map((r) => ({ ...r, tmVenueId: null, source: "base" as const }));
 
     // Compléter avec Ticketmaster si < 3 résultats
     if (resultatsRecherche.length < 3) {
@@ -101,6 +103,7 @@ export const actions: Actions = {
   ajouter: async ({ request, locals }) => {
     const donnees = await request.formData();
     const salleId = donnees.get("salleId")?.toString().trim() ?? "";
+    const tmVenueId = donnees.get("tmVenueId")?.toString().trim() || null;
 
     if (!salleId || salleId.length > 200) {
       return fail(400, { erreur: "Identifiant de salle invalide." });
@@ -123,17 +126,31 @@ export const actions: Actions = {
     await db.insert(userSalles).values({
       userId: locals.user!.id,
       salleId,
+      tmVenueId,
     });
 
-    await queue
-      .add(
-        "recalculer:matches",
-        { type: "recalculer:matches", userIds: [locals.user!.id] },
-        { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
-      )
-      .catch(() => {
-        /* le worker est peut-être arrêté en dev */
-      });
+    if (tmVenueId) {
+      // Déclencher fetch:salle immédiatement si on a l'ID Ticketmaster
+      await queue
+        .add(
+          "fetch:salle",
+          { type: "fetch:salle", venueId: tmVenueId, userId: locals.user!.id },
+          { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+        )
+        .catch(() => {
+          /* le worker est peut-être arrêté en dev */
+        });
+    } else {
+      await queue
+        .add(
+          "recalculer:matches",
+          { type: "recalculer:matches", userIds: [locals.user!.id] },
+          { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+        )
+        .catch(() => {
+          /* le worker est peut-être arrêté en dev */
+        });
+    }
 
     return { succes: true };
   },

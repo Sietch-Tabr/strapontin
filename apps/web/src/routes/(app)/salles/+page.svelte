@@ -72,6 +72,9 @@
 						</div>
 						<form method="POST" action="?/ajouter" use:enhance>
 							<input type="hidden" name="salleId" value={resultat.salle} />
+							{#if resultat.tmVenueId}
+								<input type="hidden" name="tmVenueId" value={resultat.tmVenueId} />
+							{/if}
 							<button
 								type="submit"
 								class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"

@@ -40,6 +40,8 @@ export async function persisterConcerts(
       prixMax: c.prixMax !== null ? String(c.prixMax) : null,
       url: c.url,
       source: c.source,
+      classification: c.classification,
+      genre: c.genre,
     }));
 
     const inseres = await db
@@ -57,6 +59,8 @@ export async function persisterConcerts(
           prixMax: sql`excluded.prix_max`,
           source: sql`excluded.source`,
           url: sql`COALESCE(excluded.url, ${concerts.url})`,
+          classification: sql`COALESCE(excluded.classification, ${concerts.classification})`,
+          genre: sql`COALESCE(excluded.genre, ${concerts.genre})`,
           updatedAt: sql`now()`,
         },
       })

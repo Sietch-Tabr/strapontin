@@ -3,7 +3,8 @@
 
 import pino from "pino";
 import { Queue } from "bullmq";
-import { userArtistes, userConfig } from "@strapontin/core/schema";
+import { isNotNull } from "drizzle-orm";
+import { userArtistes, userConfig, userSalles } from "@strapontin/core/schema";
 import { db } from "./db.js";
 import type { JobData } from "./jobs.js";
 
@@ -66,6 +67,25 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     );
   }
 
+  // Récupérer toutes les salles avec tmVenueId (pour fetch:salle)
+  const sallesAvecVenueId = await db
+    .selectDistinct({ tmVenueId: userSalles.tmVenueId })
+    .from(userSalles)
+    .where(isNotNull(userSalles.tmVenueId));
+
+  for (const { tmVenueId } of sallesAvecVenueId) {
+    if (!tmVenueId) continue;
+    await queue.add(
+      "fetch:salle",
+      { type: "fetch:salle", venueId: tmVenueId },
+      {
+        jobId: `salle__${tmVenueId}`,
+        removeOnComplete: { count: 10 },
+        removeOnFail: { count: 20 },
+      },
+    );
+  }
+
   // Recalculer les matches après les fetches
   await queue.add(
     "recalculer:matches",
@@ -79,7 +99,11 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
   );
 
   logger.info(
-    { artistes: artistes.length, depts: tousLesDepts.size },
+    {
+      artistes: artistes.length,
+      depts: tousLesDepts.size,
+      salles: sallesAvecVenueId.length,
+    },
     "jobs planifiés",
   );
 }

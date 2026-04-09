@@ -213,27 +213,24 @@ Les concerts sont stockés en DB. Le frontend lit uniquement la DB.
 | -------------------- | ------------------------- | ---------------------------------------------------------------------- |
 | `fetch:artiste`      | Ajout artiste + cron 2h   | Fetch TM + Bandsintown + Eventim par nom artiste                       |
 | `fetch:region`       | Cron 2h                   | Fetch TM + Eventim par département (depuis `user_config.departements`) |
-| `recalculer:matches` | Après fetch + ajout salle | Recalcule `user_matches` pour tous les users                           |
+| `fetch:salle`        | Ajout salle + cron 2h     | Fetch TM par `venueId` (stocké dans `user_salles.tmVenueId`)           |
+| `recalculer:matches` | Après fetch               | Recalcule `user_matches` pour tous les users                           |
 
 Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
-**Déclenchement immédiat** : quand l'user ajoute un artiste depuis `/artistes`, l'action server fait `queue.add("fetch:artiste", ...)` → le worker traite immédiatement (BullMQ, pas un cron). Le cron 2h assure les mises à jour périodiques.
-
-### Jobs à implémenter (Phase 2)
-
-- `fetch:salle` — fetch tous les concerts d'une salle via venueId TM. Requiert `tmVenueId` dans `user_salles` (migration `0003` générée, pas encore appliquée).
+**Déclenchement immédiat** : quand l'user ajoute un artiste depuis `/artistes`, l'action server fait `queue.add("fetch:artiste", ...)`. Quand l'user ajoute une salle avec `tmVenueId`, `queue.add("fetch:salle", ...)` est déclenché immédiatement. Le cron 2h assure les mises à jour périodiques.
 
 ### Pièges BullMQ
 
-- **BullMQ v5 interdit les `:` dans les `jobId`** — utiliser `__` comme séparateur (`artiste__nom`, `region__all`, `matches__all`). Les `:` dans le _type de job_ (premier arg de `queue.add`) sont acceptés.
+- **BullMQ v5 interdit les `:` dans les `jobId`** — utiliser `__` comme séparateur (`artiste__nom`, `region__all`, `salle__venueId`, `matches__all`). Les `:` dans le _type de job_ (premier arg de `queue.add`) sont acceptés.
 
 ### Interface sources (packages/sources)
 
 ```typescript
 interface SourceConcerts {
   fetchArtiste(nom: string): Promise<ConcertBrut[]>;
-  fetchRegion(depts: string[], classifs?: string[]): Promise<ConcertBrut[]>;
-  // fetchSalle(venueId: string): Promise<ConcertBrut[]>; // Phase 2
+  fetchRegion(depts: string[], classifs: string[]): Promise<ConcertBrut[]>;
+  fetchSalle?(venueId: string): Promise<ConcertBrut[]>; // optionnel — TM uniquement
 }
 ```
 
@@ -288,6 +285,10 @@ Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + 
 | `/login`      | Authentification email/password                                                            |
 | `/health`     | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth     |
 
+## Affichage — tournées
+
+Sur `/` (accueil), les concerts sont regroupés par artiste. Si un artiste a ≥ 2 concerts à venir, un badge "Tournée · N dates" s'affiche. Chaque ligne de concert a son propre lien "Billets" (si `url` disponible). Pas de nouvelle table — logique purement UI dans `+page.server.ts`.
+
 ## Densité d'affichage
 
 - **Vue cartes** (défaut, mobile + desktop) — artiste + date + salle, aérée
@@ -312,9 +313,9 @@ Migrations dans `packages/core/migrations/` — générées par `pnpm --filter @
 
 | Table           | Rôle                                                     |
 | --------------- | -------------------------------------------------------- |
-| `concerts`      | Source de vérité concerts (toutes sources, dédoublonnés) |
-| `user_artistes` | Artistes suivis par user                                 |
-| `user_salles`   | Salles suivies par user                                  |
+| `concerts`      | Source de vérité concerts — `classification` (music/theatre) + `genre` (Rock/Pop…) depuis TM |
+| `user_artistes` | Artistes suivis par user                                                                      |
+| `user_salles`   | Salles suivies par user — `tmVenueId` (ID Ticketmaster, nullable)                             |
 | `user_config`   | Préférences par user (départements, rayon, filtres…)     |
 | `user_matches`  | Index concerts ↔ users (calculé par le worker)           |
 | `fetch_jobs`    | Historique et planning des jobs BullMQ                   |

@@ -11,39 +11,29 @@
 		return new Date(annee, mois - 1, jour).toLocaleDateString('fr-FR', optionsDate);
 	}
 
-	let vueTableau = $state(false);
-
-	$effect(() => {
-		const sauvegarde = localStorage.getItem('vue-accueil');
-		if (sauvegarde === 'tableau') vueTableau = true;
-	});
-
-	function basculerVue() {
-		vueTableau = !vueTableau;
-		localStorage.setItem('vue-accueil', vueTableau ? 'tableau' : 'cartes');
+	function formaterDateCourte(dateStr: string): string {
+		const [annee, mois, jour] = dateStr.split('-').map(Number);
+		return new Date(annee, mois - 1, jour).toLocaleDateString('fr-FR', {
+			weekday: 'short',
+			day: 'numeric',
+			month: 'short'
+		});
 	}
+
+	const totalConcerts = $derived(
+		data.artistesGroupes.reduce((acc, g) => acc + g.concerts.length, 0)
+	);
 </script>
 
 <div class="p-6 lg:p-8">
-	<div class="mb-8 flex items-center justify-between">
-		<div>
-			<h1 class="text-2xl font-semibold text-foreground">
-				Bonjour, {data.utilisateur?.name}
-			</h1>
-			<p class="mt-1 text-sm text-muted-foreground">Vos prochains concerts</p>
-		</div>
-
-		{#if data.prochainsConcerts.length > 0}
-			<button
-				onclick={basculerVue}
-				class="hidden rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground lg:block"
-			>
-				{vueTableau ? 'Vue cartes' : 'Vue tableau'}
-			</button>
-		{/if}
+	<div class="mb-8">
+		<h1 class="text-2xl font-semibold text-foreground">
+			Bonjour, {data.utilisateur?.name}
+		</h1>
+		<p class="mt-1 text-sm text-muted-foreground">Vos prochains concerts</p>
 	</div>
 
-	{#if data.prochainsConcerts.length === 0}
+	{#if totalConcerts === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
 			<Music size={40} class="mb-4 text-muted-foreground/50" />
 			<p class="mb-1 text-base font-medium text-foreground">Aucun concert pour l'instant.</p>
@@ -57,56 +47,47 @@
 				Ajouter des artistes
 			</a>
 		</div>
-	{:else if vueTableau}
-		<div class="hidden overflow-hidden rounded-xl border border-border lg:block">
-			<table class="w-full text-sm">
-				<thead class="border-b border-border bg-muted/40">
-					<tr>
-						<th class="px-4 py-3 text-left font-medium text-muted-foreground">Artiste</th>
-						<th class="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
-						<th class="px-4 py-3 text-left font-medium text-muted-foreground">Salle</th>
-						<th class="px-4 py-3 text-left font-medium text-muted-foreground">Ville</th>
-					</tr>
-				</thead>
-				<tbody class="divide-y divide-border">
-					{#each data.prochainsConcerts as concert (concert.id)}
-						<tr class="transition-colors hover:bg-muted/30">
-							<td class="px-4 py-3 font-medium text-foreground">{concert.artiste}</td>
-							<td class="px-4 py-3 text-muted-foreground">{formaterDate(concert.date)}</td>
-							<td class="px-4 py-3 text-muted-foreground">{concert.salle ?? '—'}</td>
-							<td class="px-4 py-3 text-muted-foreground">{concert.ville ?? '—'}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-		<!-- fallback cartes sur mobile même si toggle tableau actif -->
-		<div class="grid gap-3 lg:hidden sm:grid-cols-2">
-			{#each data.prochainsConcerts as concert (concert.id)}
-				<div class="rounded-xl border border-border bg-card p-4">
-					<p class="font-semibold text-card-foreground">{concert.artiste}</p>
-					<p class="mt-1 text-sm text-muted-foreground">{formaterDate(concert.date)}</p>
-					{#if concert.salle}
-						<p class="mt-0.5 text-sm text-muted-foreground">{concert.salle}</p>
-					{/if}
-					{#if concert.ville}
-						<p class="mt-0.5 text-xs text-muted-foreground/70">{concert.ville}</p>
-					{/if}
-				</div>
-			{/each}
-		</div>
 	{:else}
-		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-			{#each data.prochainsConcerts as concert (concert.id)}
-				<div class="rounded-xl border border-border bg-card p-4 transition-colors hover:bg-card/80">
-					<p class="font-semibold text-card-foreground">{concert.artiste}</p>
-					<p class="mt-1 text-sm text-muted-foreground">{formaterDate(concert.date)}</p>
-					{#if concert.salle}
-						<p class="mt-0.5 text-sm text-muted-foreground">{concert.salle}</p>
-					{/if}
-					{#if concert.ville}
-						<p class="mt-0.5 text-xs text-muted-foreground/70">{concert.ville}</p>
-					{/if}
+		<div class="space-y-6">
+			{#each data.artistesGroupes as groupe (groupe.artiste)}
+				<div class="rounded-xl border border-border bg-card overflow-hidden">
+					<!-- En-tête artiste -->
+					<div class="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/20">
+						<p class="font-semibold text-card-foreground">{groupe.artiste}</p>
+						{#if groupe.estTournee}
+							<span class="rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-medium text-foreground">
+								Tournée · {groupe.concerts.length} dates
+							</span>
+						{/if}
+					</div>
+
+					<!-- Liste des dates — lien billetterie sur chaque ligne -->
+					<div class="divide-y divide-border/50">
+						{#each groupe.concerts as concert (concert.id)}
+							<div class="flex items-center justify-between px-4 py-3">
+								<div class="min-w-0">
+									{#if groupe.estTournee}
+										<p class="text-sm font-medium text-foreground">{formaterDateCourte(concert.date)}</p>
+									{:else}
+										<p class="text-sm text-muted-foreground">{formaterDate(concert.date)}</p>
+									{/if}
+									<p class="mt-0.5 text-xs text-muted-foreground truncate">
+										{concert.salle}{concert.ville ? ` · ${concert.ville}` : ''}
+									</p>
+								</div>
+								{#if concert.url}
+									<a
+										href={concert.url}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="ml-3 shrink-0 rounded-md border border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+									>
+										Billets
+									</a>
+								{/if}
+							</div>
+						{/each}
+					</div>
 				</div>
 			{/each}
 		</div>

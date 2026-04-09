@@ -107,6 +107,25 @@ function mapEvenement(evt: Record<string, unknown>): ConcertBrut | null {
 
     const url = (evt["url"] as string | undefined) ?? null;
 
+    const classificationsData = evt["classifications"] as
+      | Record<string, unknown>[]
+      | undefined;
+    const segmentNom =
+      (
+        classificationsData?.[0]?.["segment"] as
+          | Record<string, string>
+          | undefined
+      )?.["name"]?.toLowerCase() ?? null;
+    // Normaliser "arts & theatre" → "theatre"
+    const classification =
+      segmentNom === "arts & theatre" ? "theatre" : segmentNom;
+    const genre =
+      (
+        classificationsData?.[0]?.["genre"] as
+          | Record<string, string>
+          | undefined
+      )?.["name"] ?? null;
+
     return {
       artiste,
       date,
@@ -118,6 +137,8 @@ function mapEvenement(evt: Record<string, unknown>): ConcertBrut | null {
       prixMax: prixMax !== null ? Number(prixMax) : null,
       url,
       source: "ticketmaster",
+      classification,
+      genre,
     };
   } catch (err) {
     logger.warn({ err }, "erreur parsing événement TM");
@@ -168,6 +189,18 @@ export class TicketmasterSource implements SourceConcerts {
 
     const { events, total } = await fetchPage(params, this.apiKey);
     logger.info({ artiste: nom, total }, "TM fetchArtiste");
+    return events;
+  }
+
+  async fetchSalle(venueId: string): Promise<ConcertBrut[]> {
+    const params = new URLSearchParams({
+      venueId,
+      size: String(TAILLE_PAGE),
+      sort: "date,asc",
+    });
+
+    const { events, total } = await fetchPage(params, this.apiKey);
+    logger.info({ venueId, total }, "TM fetchSalle");
     return events;
   }
 

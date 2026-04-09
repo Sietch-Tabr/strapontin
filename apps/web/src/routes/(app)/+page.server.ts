@@ -25,7 +25,32 @@ export const load: PageServerLoad = async ({ locals }) => {
       ),
     )
     .orderBy(concerts.date)
-    .limit(20);
+    .limit(50);
 
-  return { prochainsConcerts };
+  // Regrouper par artiste pour détecter les tournées (≥ 2 concerts)
+  const groupesMap = new Map<
+    string,
+    {
+      id: string;
+      artiste: string;
+      date: string;
+      heure: string | null;
+      salle: string;
+      ville: string | null;
+      url: string | null;
+    }[]
+  >();
+  for (const concert of prochainsConcerts) {
+    const liste = groupesMap.get(concert.artiste) ?? [];
+    liste.push(concert);
+    groupesMap.set(concert.artiste, liste);
+  }
+
+  const artistesGroupes = [...groupesMap.entries()].map(([artiste, dates]) => ({
+    artiste,
+    estTournee: dates.length >= 2,
+    concerts: dates,
+  }));
+
+  return { artistesGroupes };
 };

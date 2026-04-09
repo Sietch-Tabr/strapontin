@@ -49,6 +49,8 @@ function mapEvenement(
       prixMax: null,
       url,
       source: "bandsintown",
+      classification: null,
+      genre: null,
     };
   } catch (err) {
     logger.warn({ err }, "erreur parsing événement Bandsintown");

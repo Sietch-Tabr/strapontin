@@ -6,6 +6,7 @@
 
 	let recherche = $state<string>(data.recherche);
 	let mois = $state<string>(data.mois);
+	let classification = $state<string>(data.classification);
 
 	function formaterDate(dateStr: string): string {
 		const [annee, moisNum, jour] = dateStr.split('-').map(Number);
@@ -72,6 +73,15 @@
 				<option value={m}>{labelMois(m)}</option>
 			{/each}
 		</select>
+		<select
+			name="classification"
+			bind:value={classification}
+			class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+		>
+			<option value="">Toutes catégories</option>
+			<option value="music">Musique</option>
+			<option value="theatre">Théâtre / Opéra</option>
+		</select>
 		<button
 			type="submit"
 			class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
@@ -79,7 +89,7 @@
 			<Search size={16} />
 			Filtrer
 		</button>
-		{#if recherche || mois}
+		{#if recherche || mois || classification}
 			<a
 				href="/spectacles"
 				class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"

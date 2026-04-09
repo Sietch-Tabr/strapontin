@@ -79,6 +79,8 @@ function mapProduit(produit: Record<string, unknown>): ConcertBrut | null {
       prixMax,
       url,
       source: "eventim",
+      classification: null,
+      genre: null,
     };
   } catch (err) {
     logger.warn({ err }, "erreur parsing produit Eventim");

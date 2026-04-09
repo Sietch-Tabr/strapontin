@@ -18,10 +18,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   // Filtre département : multi-valeur via URL ?dept=33&dept=69
   // Si aucun param URL, on applique les depts de l'user par défaut
-  const deptsUrl = url.searchParams.getAll("dept").filter((d) => /^\d{2,3}$/.test(d));
+  const deptsUrl = url.searchParams
+    .getAll("dept")
+    .filter((d) => /^\d{2,3}$/.test(d));
   const deptsActifs = deptsUrl.length > 0 ? deptsUrl : userDepts;
 
-  const conditions: SQL[] = [gte(concerts.date, aujourdhui), eq(concerts.disponible, true)];
+  const conditions: SQL[] = [
+    gte(concerts.date, aujourdhui),
+    eq(concerts.disponible, true),
+  ];
 
   if (recherche) {
     conditions.push(ilike(concerts.artiste, `%${recherche}%`));

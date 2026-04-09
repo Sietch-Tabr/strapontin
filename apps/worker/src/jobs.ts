@@ -20,12 +20,22 @@ export interface JobFetchRegion {
   userId?: string;
 }
 
+export interface JobFetchSalle {
+  type: "fetch:salle";
+  venueId: string;
+  userId?: string;
+}
+
 export interface JobRecalculerMatches {
   type: "recalculer:matches";
   userIds?: string[];
 }
 
-export type JobData = JobFetchArtiste | JobFetchRegion | JobRecalculerMatches;
+export type JobData =
+  | JobFetchArtiste
+  | JobFetchRegion
+  | JobFetchSalle
+  | JobRecalculerMatches;
 
 export async function traiterJob(job: Job<JobData>): Promise<void> {
   const { data } = job;
@@ -106,6 +116,24 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         "dédoublonnage région terminé",
       );
 
+      await persisterConcerts(dedoublonnes);
+
+      if (data.userId) {
+        await recalculerMatches([data.userId]);
+      }
+      break;
+    }
+
+    case "fetch:salle": {
+      logger.info({ venueId: data.venueId }, "fetch:salle démarré");
+
+      const concertsSalle = await ticketmaster.fetchSalle!(data.venueId);
+      logger.info(
+        { venueId: data.venueId, total: concertsSalle.length },
+        "TM fetchSalle terminé",
+      );
+
+      const dedoublonnes = dedoublonner(concertsSalle);
       await persisterConcerts(dedoublonnes);
 
       if (data.userId) {

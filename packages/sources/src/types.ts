@@ -11,9 +11,12 @@ export interface ConcertBrut {
   prixMax: number | null;
   url: string | null;
   source: string; // "ticketmaster" | "bandsintown" | "eventim"
+  classification: string | null; // "music" | "theatre" | null (depuis TM)
+  genre: string | null; // "Rock" | "Pop" | "Jazz" | null (depuis TM)
 }
 
 export interface SourceConcerts {
   fetchArtiste(nom: string): Promise<ConcertBrut[]>;
   fetchRegion(depts: string[], classifs: string[]): Promise<ConcertBrut[]>;
+  fetchSalle?(venueId: string): Promise<ConcertBrut[]>;
 }
