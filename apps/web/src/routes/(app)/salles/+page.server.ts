@@ -1,9 +1,41 @@
 import { db } from "$lib/server/db";
 import { queue } from "$lib/server/queue";
 import { userSalles, concerts } from "@strapontin/core/schema";
-import { eq, and, ilike, sql } from "drizzle-orm";
+import { eq, and, ilike } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
+import { TICKETMASTER_API_KEY } from "$env/static/private";
 import type { PageServerLoad, Actions } from "./$types";
+
+const TM_VENUES_URL = "https://app.ticketmaster.com/discovery/v2/venues.json";
+
+interface ResultatSalle {
+  salle: string;
+  ville: string | null;
+  source: "base" | "ticketmaster";
+}
+
+async function rechercherSallesTM(terme: string): Promise<ResultatSalle[]> {
+  if (!TICKETMASTER_API_KEY) return [];
+  try {
+    const url =
+      `${TM_VENUES_URL}?keyword=${encodeURIComponent(terme)}` +
+      `&countryCode=FR&size=6&apikey=${TICKETMASTER_API_KEY}`;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    if (!resp.ok) return [];
+    const data = (await resp.json()) as {
+      _embedded?: {
+        venues?: { name: string; city?: { name: string } }[];
+      };
+    };
+    return (data._embedded?.venues ?? []).map((v) => ({
+      salle: v.name,
+      ville: v.city?.name ?? null,
+      source: "ticketmaster" as const,
+    }));
+  } catch {
+    return [];
+  }
+}
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const recherche = url.searchParams.get("q")?.trim() ?? "";
@@ -14,27 +46,41 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     .where(eq(userSalles.userId, locals.user!.id))
     .orderBy(userSalles.salleId);
 
-  let resultatsRecherche: { salle: string; ville: string | null }[] = [];
+  const sallesDejaAjoutees = new Set(sallesSuivies.map((s) => s.salleId));
+  let resultatsRecherche: ResultatSalle[] = [];
 
   if (recherche.length >= 2) {
-    resultatsRecherche = await db
-      .selectDistinct({
-        salle: concerts.salle,
-        ville: concerts.ville,
-      })
+    // Chercher d'abord dans les concerts en base
+    const enBase = await db
+      .selectDistinct({ salle: concerts.salle, ville: concerts.ville })
       .from(concerts)
       .where(ilike(concerts.salle, `%${recherche}%`))
       .orderBy(concerts.salle)
-      .limit(20);
-  }
+      .limit(10);
 
-  const sallesDejaAjoutees = new Set(sallesSuivies.map((s) => s.salleId));
+    resultatsRecherche = enBase
+      .filter((r) => !sallesDejaAjoutees.has(r.salle))
+      .map((r) => ({ ...r, source: "base" as const }));
+
+    // Compléter avec Ticketmaster si < 3 résultats
+    if (resultatsRecherche.length < 3) {
+      const tmResultats = await rechercherSallesTM(recherche);
+      const sallesDejaPresentes = new Set([
+        ...resultatsRecherche.map((r) => r.salle.toLowerCase()),
+        ...[...sallesDejaAjoutees].map((s) => s.toLowerCase()),
+      ]);
+      for (const r of tmResultats) {
+        if (!sallesDejaPresentes.has(r.salle.toLowerCase())) {
+          resultatsRecherche.push(r);
+          sallesDejaPresentes.add(r.salle.toLowerCase());
+        }
+      }
+    }
+  }
 
   return {
     sallesSuivies,
-    resultatsRecherche: resultatsRecherche.filter(
-      (r) => !sallesDejaAjoutees.has(r.salle),
-    ),
+    resultatsRecherche,
     recherche,
   };
 };
@@ -67,7 +113,6 @@ export const actions: Actions = {
       salleId,
     });
 
-    // Recalculer les matches pour cet user (la salle peut déjà avoir des concerts en base)
     await queue
       .add(
         "recalculer:matches",

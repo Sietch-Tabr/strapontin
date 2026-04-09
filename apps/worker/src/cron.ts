@@ -2,7 +2,6 @@
 
 import pino from "pino";
 import { Queue } from "bullmq";
-import { eq } from "drizzle-orm";
 import { userArtistes, userSalles, userConfig } from "@strapontin/core/schema";
 import { db } from "./db.js";
 import type { JobData } from "./jobs.js";
@@ -37,18 +36,16 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
   }
 
   // Récupérer tous les départements configurés (tous users confondus)
+  // Note : on ne filtre PAS sur filtreDisponibles — c'est un filtre d'affichage,
+  // pas un critère pour savoir si l'user veut des concerts de sa région.
   const configs = await db
-    .select({
-      departements: userConfig.departements,
-      userId: userConfig.userId,
-    })
-    .from(userConfig)
-    .where(eq(userConfig.filtreDisponibles, true));
+    .select({ departements: userConfig.departements })
+    .from(userConfig);
 
   const tousLesDepts = new Set<string>();
   for (const config of configs) {
     for (const dept of config.departements) {
-      tousLesDepts.add(dept);
+      if (dept.trim()) tousLesDepts.add(dept.trim());
     }
   }
 

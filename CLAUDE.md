@@ -117,11 +117,22 @@ Secrets Woodpecker : `ssh_key` (clé privée dédiée), `lxc_host` = `192.168.20
 
 ```
 scripts/
-├── provision-lxc.sh   # création + provisioning LXC depuis host Proxmox (idempotent)
-│                      #   pct create, réseau VLAN 20, apt, PostgreSQL, Redis, systemd, bind mount NAS
-├── deploy.sh          # premier déploiement : clone → build → migrations → services
-├── backup.sh          # pg_dump + .env → /mnt/backup/ (NAS monté en bind mount), purge 30j
-└── update.sh          # backup → pull → install → build → migrate → restart → healthcheck
+├── provision-lxc.sh     # création + provisioning LXC depuis host Proxmox (idempotent)
+│                        #   pct create, réseau VLAN 20, apt, PostgreSQL, Redis, systemd, bind mount NAS
+├── deploy.sh            # premier déploiement : clone → build → migrations → services
+├── backup.sh            # pg_dump + .env → /mnt/backup/ (NAS monté en bind mount), purge 30j
+├── update.sh            # backup → pull → install → build → migrate → restart → healthcheck
+├── seed-artistes.ts     # importe une liste d'artistes pour un user (tsx scripts/seed-artistes.ts)
+└── artistes-seed.txt    # liste d'artistes par défaut (un par ligne, # = commentaire)
+```
+
+### seed-artistes.ts — usage
+
+```bash
+# Sur le LXC prod, après avoir sourcé .env :
+DATABASE_URL=... USER_EMAIL=kwaite@example.com tsx scripts/seed-artistes.ts
+# Avec un fichier custom :
+DATABASE_URL=... USER_EMAIL=... tsx scripts/seed-artistes.ts /chemin/vers/artistes.txt
 ```
 
 ### update.sh — ordre strict
@@ -247,17 +258,19 @@ donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 
 Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + bottom nav).
 
-| Route         | Description                                                                          |
-| ------------- | ------------------------------------------------------------------------------------ |
-| `/`           | Accueil — prochains concerts de l'user (userMatches, LIMIT 20)                       |
-| `/artistes`   | CRUD artistes suivis — ajout par nom + normalisation, suppression                    |
-| `/salles`     | CRUD salles suivies — recherche dans concerts en base (ILIKE), ajout/suppression     |
-| `/quinzaine`  | Concerts userMatches dans les 15 prochains jours, groupés par date                   |
-| `/spectacles` | Tous les concerts userMatches à venir, filtres artiste + mois                        |
-| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept/mois, bouton "Suivre" |
-| `/parametres` | user_config, thème (cookie), nom + mot de passe (Better Auth)                        |
-| `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)             |
-| `/login`      | Authentification email/password                                                      |
+| Route         | Description                                                                                        |
+| ------------- | -------------------------------------------------------------------------------------------------- |
+| `/`           | Accueil — prochains concerts de l'user (userMatches, LIMIT 20)                                     |
+| `/artistes`   | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                     |
+| `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre         |
+| `/quinzaine`  | Concerts userMatches dans les 15 prochains jours, groupés par date                                 |
+| `/spectacles` | Tous les concerts userMatches à venir, filtres artiste + mois                                      |
+| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept/mois, bouton "Suivre"               |
+| `/parametres` | user_config (depts, rayon, horizon), thème (cookie), nom + mot de passe (Better Auth)              |
+| `/admin`      | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin         |
+| `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)                           |
+| `/login`      | Authentification email/password                                                                     |
+| `/health`     | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth             |
 
 ## Densité d'affichage
 

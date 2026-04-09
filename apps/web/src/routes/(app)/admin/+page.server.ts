@@ -39,9 +39,8 @@ export const actions: Actions = {
     }
 
     // Générer un mot de passe temporaire
-    const motDePasseTemp = Array.from(
-      { length: 4 },
-      () => Math.random().toString(36).slice(2, 6),
+    const motDePasseTemp = Array.from({ length: 4 }, () =>
+      Math.random().toString(36).slice(2, 6),
     ).join("-");
 
     try {
@@ -49,7 +48,9 @@ export const actions: Actions = {
         body: { name: nom, email, password: motDePasseTemp },
       });
     } catch {
-      return fail(400, { erreur: "Impossible de créer le compte. Email déjà utilisé ?" });
+      return fail(400, {
+        erreur: "Impossible de créer le compte. Email déjà utilisé ?",
+      });
     }
 
     return { succes: true, motDePasseTemp, email };
