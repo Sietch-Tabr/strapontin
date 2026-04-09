@@ -2,9 +2,8 @@
 // Usage : DATABASE_URL=... USER_EMAIL=... tsx scripts/seed-artistes.ts [fichier]
 // Le fichier par défaut est scripts/artistes-seed.txt (un artiste par ligne).
 
-import { drizzle } from "drizzle-orm/node-postgres";
-import pkg from "pg";
-const { Pool } = pkg;
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { userArtistes, users } from "../packages/core/src/schema.js";
 import { eq } from "drizzle-orm";
 import { readFileSync } from "fs";
@@ -19,7 +18,7 @@ if (!DATABASE_URL) {
 }
 
 if (!USER_EMAIL) {
-  console.error("USER_EMAIL manquant — ex: USER_EMAIL=kwaite@example.com");
+  console.error("USER_EMAIL manquant — ex: USER_EMAIL=kwaite@hotmail.fr");
   process.exit(1);
 }
 
@@ -36,11 +35,10 @@ function normaliserArtiste(nom: string): string {
     .trim();
 }
 
-const pool = new Pool({ connectionString: DATABASE_URL });
-const db = drizzle(pool);
+const sql = postgres(DATABASE_URL!);
+const db = drizzle(sql);
 
 async function main() {
-  // Trouver l'utilisateur
   const usersFound = await db
     .select({ id: users.id, name: users.name })
     .from(users)
@@ -55,7 +53,6 @@ async function main() {
   const user = usersFound[0];
   console.log(`Utilisateur : ${user.name} (${user.id})`);
 
-  // Lire la liste d'artistes
   const contenu = readFileSync(fichier, "utf-8");
   const artistes = contenu
     .split("\n")
@@ -64,7 +61,6 @@ async function main() {
 
   console.log(`${artistes.length} artistes à importer depuis ${fichier}`);
 
-  // Récupérer les noms normalisés déjà en base (une seule requête)
   const existants = await db
     .select({ artisteNormalise: userArtistes.artisteNormalise })
     .from(userArtistes)
@@ -72,7 +68,6 @@ async function main() {
 
   const normalisesExistants = new Set(existants.map((e) => e.artisteNormalise));
 
-  // Filtrer les nouveaux artistes
   const nouveaux = artistes.filter(
     (a) => !normalisesExistants.has(normaliserArtiste(a)),
   );
@@ -80,11 +75,10 @@ async function main() {
 
   if (nouveaux.length === 0) {
     console.log(`Aucun nouvel artiste à ajouter (${ignores} déjà présents).`);
-    await pool.end();
+    await sql.end();
     return;
   }
 
-  // Insérer en batch (onConflictDoNothing pour la sécurité)
   const valeurs = nouveaux.map((artiste) => ({
     userId: user.id,
     artisteNormalise: normaliserArtiste(artiste),
@@ -101,7 +95,7 @@ async function main() {
   }
   console.log(`\nTerminé : ${nouveaux.length} ajoutés, ${ignores} ignorés.`);
 
-  await pool.end();
+  await sql.end();
 }
 
 main().catch((err) => {
