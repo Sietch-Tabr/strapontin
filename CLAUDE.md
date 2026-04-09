@@ -264,22 +264,23 @@ donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 
 ## Navigation
 
-- **Desktop (≥ 1024px)** : sidebar fixe — Accueil, Mes artistes, Mes salles, Découverte, Quinzaine, Spectacles | Settings en bas
-- **Mobile (< 1024px)** : bottom nav 4 items fixes (Accueil, Artistes, Salles, Découvrir) + "···" → drawer pour Quinzaine, Spectacles, Settings
+- **Desktop (≥ 1024px)** : sidebar fixe — Accueil, Mes artistes, Mes salles, Découverte, Spectacles | Settings en bas
+- **Mobile (< 1024px)** : bottom nav 4 items fixes (Accueil, Artistes, Salles, Découvrir) + "···" → drawer pour Spectacles, Settings
+- **À venir** : /quinzaine fusionné dans /spectacles (chip "15 prochains jours")
 
 ## Routes implémentées
 
 Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + bottom nav).
 
-| Route         | Description                                                                                      |
-| ------------- | ------------------------------------------------------------------------------------------------ |
-| `/`           | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées |
-| `/artistes`   | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                   |
-| `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre       |
-| `/quinzaine`  | Concerts userMatches dans les 15 prochains jours, groupés par date                               |
-| `/spectacles` | Tous les concerts userMatches à venir, filtres artiste + mois + classification                   |
-| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept/mois/genre, bouton "Suivre"       |
-| `/parametres` | user_config (depts, rayon, horizon), thème (cookie), nom + mot de passe (Better Auth)            |
+| Route         | Description                                                                                                          |
+| ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `/`           | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                     |
+| `/artistes`   | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                       |
+| `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                           |
+| `/quinzaine`  | **À fusionner dans /spectacles** — chip "15 prochains jours"                                                         |
+| `/spectacles` | Concerts userMatches à venir, filtres : chip quinzaine, chips catégorie multi, chips genre multi, artiste, mois      |
+| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept (chips)/mois/genre, bouton "Suivre"                   |
+| `/parametres` | user_config (depts, rayon, filtreDisponibles), thème (cookie), nom + mot de passe (Better Auth)                      |
 | `/admin`      | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin       |
 | `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)                         |
 | `/login`      | Authentification email/password                                                                  |
