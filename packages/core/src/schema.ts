@@ -180,7 +180,6 @@ export const userConfig = pgTable("user_config", {
   departements: text("departements").array().notNull().default([]),
   rayonKm: integer("rayon_km").notNull().default(50),
   filtreDisponibles: boolean("filtre_disponibles").notNull().default(true),
-  searchPeriodMonths: integer("search_period_months").notNull().default(6),
   notificationsEmail: boolean("notifications_email").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

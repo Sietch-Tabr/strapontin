@@ -32,14 +32,6 @@ export const actions: Actions = {
       Math.max(0, parseInt(donnees.get("rayonKm")?.toString() ?? "50") || 50),
     );
 
-    const searchPeriodMonths = Math.min(
-      24,
-      Math.max(
-        1,
-        parseInt(donnees.get("searchPeriodMonths")?.toString() ?? "6") || 6,
-      ),
-    );
-
     const filtreDisponibles =
       donnees.get("filtreDisponibles") === "on" ||
       donnees.get("filtreDisponibles") === "true";
@@ -54,7 +46,6 @@ export const actions: Actions = {
         userId: locals.user!.id,
         departements: depts,
         rayonKm,
-        searchPeriodMonths,
         filtreDisponibles,
         notificationsEmail,
       })
@@ -63,7 +54,6 @@ export const actions: Actions = {
         set: {
           departements: depts,
           rayonKm,
-          searchPeriodMonths,
           filtreDisponibles,
           notificationsEmail,
           updatedAt: new Date(),

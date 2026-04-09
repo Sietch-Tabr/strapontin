@@ -10,7 +10,6 @@
 
 	let departements = $state<string>(config?.departements?.join(', ') ?? '');
 	let rayonKm = $state<number>(config?.rayonKm ?? 50);
-	let searchPeriodMonths = $state<number>(config?.searchPeriodMonths ?? 6);
 	let filtreDisponibles = $state<boolean>(config?.filtreDisponibles ?? true);
 	let notificationsEmail = $state<boolean>(config?.notificationsEmail ?? false);
 
@@ -114,26 +113,6 @@
 					<div class="flex justify-between text-xs text-muted-foreground">
 						<span>0 km</span>
 						<span>500 km</span>
-					</div>
-				</div>
-
-				<div>
-					<label for="searchPeriodMonths" class="mb-1.5 block text-sm font-medium text-foreground">
-						Horizon de recherche ({searchPeriodMonths} mois)
-					</label>
-					<input
-						id="searchPeriodMonths"
-						type="range"
-						name="searchPeriodMonths"
-						bind:value={searchPeriodMonths}
-						min="1"
-						max="24"
-						step="1"
-						class="w-full accent-foreground"
-					/>
-					<div class="flex justify-between text-xs text-muted-foreground">
-						<span>1 mois</span>
-						<span>24 mois</span>
 					</div>
 				</div>
 

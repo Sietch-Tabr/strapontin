@@ -41,7 +41,6 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     .select({
       departements: userConfig.departements,
       rayonKm: userConfig.rayonKm,
-      searchPeriodMonths: userConfig.searchPeriodMonths,
     })
     .from(userConfig);
 
@@ -52,9 +51,8 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     }
   }
 
-  // Valeurs maximales parmi tous les users pour couvrir les préférences de chacun
+  // Rayon maximal parmi tous les users pour couvrir les préférences de chacun
   const maxRayonKm = Math.max(...configs.map((c) => c.rayonKm ?? 50), 50);
-  const maxMois = Math.max(...configs.map((c) => c.searchPeriodMonths ?? 6), 6);
 
   if (tousLesDepts.size > 0) {
     await queue.add(
@@ -63,7 +61,6 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
         type: "fetch:region",
         depts: [...tousLesDepts],
         rayonKm: maxRayonKm,
-        mois: maxMois,
       },
       {
         jobId: "region__all",
