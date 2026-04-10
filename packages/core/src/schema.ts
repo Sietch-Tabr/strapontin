@@ -28,6 +28,7 @@ export const concerts = pgTable(
     date: date("date").notNull(),
     heure: time("heure"),
     salle: text("salle").notNull(),
+    salleNorm: text("salle_norm").notNull(),
     ville: text("ville"),
     dept: varchar("dept", { length: 3 }),
     prixMin: numeric("prix_min", { precision: 8, scale: 2 }),
@@ -48,7 +49,7 @@ export const concerts = pgTable(
     unique("uq_concerts_artiste_date_salle").on(
       table.artisteNorm,
       table.date,
-      table.salle,
+      table.salleNorm,
     ),
     index("idx_concerts_artiste_norm").on(table.artisteNorm),
     index("idx_concerts_date").on(table.date),

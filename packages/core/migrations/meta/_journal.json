@@ -50,6 +50,13 @@
       "when": 1775807080927,
       "tag": "0006_ancient_jack_power",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775853374331,
+      "tag": "0007_chunky_meteorite",
+      "breakpoints": true
     }
   ]
 }

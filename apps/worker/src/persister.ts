@@ -40,6 +40,7 @@ export async function persisterConcerts(
       date: c.date,
       heure: c.heure,
       salle: c.salle,
+      salleNorm: normaliserTexte(c.salle),
       ville: c.ville,
       dept: c.dept,
       prixMin: c.prixMin !== null ? String(c.prixMin) : null,
@@ -58,7 +59,7 @@ export async function persisterConcerts(
       .onConflictDoUpdate({
         // Conflict sur (artiste_norm, date, salle) — à défaut d'une contrainte unique,
         // on met à jour les champs variables si la source est plus récente
-        target: [concerts.artisteNorm, concerts.date, concerts.salle],
+        target: [concerts.artisteNorm, concerts.date, concerts.salleNorm],
         set: {
           heure: sql`excluded.heure`,
           ville: sql`excluded.ville`,
