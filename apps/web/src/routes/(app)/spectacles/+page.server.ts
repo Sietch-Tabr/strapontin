@@ -1,6 +1,6 @@
 import { db } from "$lib/server/db";
 import { userMatches, concerts, userConfig } from "@strapontin/core/schema";
-import { eq, gte, and, ilike, isNotNull, sql } from "drizzle-orm";
+import { eq, gte, lte, and, ilike, isNotNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 
@@ -8,10 +8,14 @@ const SEUIL_NEW_MS = 7 * 24 * 3600 * 1000;
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0];
+  const dans15Jours = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
   const recherche = url.searchParams.get("q")?.trim() ?? "";
   const mois = url.searchParams.get("mois")?.trim() ?? "";
   const classification = url.searchParams.get("classification")?.trim() ?? "";
   const genre = url.searchParams.get("genre")?.trim() ?? "";
+  const quinzaine = url.searchParams.get("quinzaine") === "1";
 
   const config = await db
     .select({ filtreDisponibles: userConfig.filtreDisponibles })
@@ -25,6 +29,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     eq(userMatches.userId, locals.user!.id),
     gte(concerts.date, aujourdhui),
   ];
+
+  if (quinzaine) {
+    conditions.push(lte(concerts.date, dans15Jours));
+  }
 
   if (filtreDisponibles) {
     conditions.push(eq(concerts.disponible, true));
@@ -94,6 +102,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     mois,
     classification,
     genre,
+    quinzaine,
     genresDisponibles,
   };
 };

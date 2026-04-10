@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { Ticket, Search, X } from '@lucide/svelte';
 	import type { PageData } from './$types';
 
@@ -9,6 +10,16 @@
 	let mois = $state(untrack(() => data.mois));
 	let classification = $state(untrack(() => data.classification));
 	let genre = $state(untrack(() => data.genre));
+
+	async function toggleQuinzaine() {
+		const params = new URLSearchParams();
+		if (recherche) params.set('q', recherche);
+		if (mois) params.set('mois', mois);
+		if (classification) params.set('classification', classification);
+		if (genre) params.set('genre', genre);
+		if (!data.quinzaine) params.set('quinzaine', '1');
+		await goto(`/spectacles?${params}`, { replaceState: true });
+	}
 
 	function formaterDate(dateStr: string): string {
 		const [annee, moisNum, jour] = dateStr.split('-').map(Number);
@@ -56,7 +67,22 @@
 	</div>
 
 	<!-- Filtres -->
-	<form method="GET" class="mb-6 flex flex-wrap gap-2">
+	<form method="GET" class="mb-6 space-y-3">
+		<!-- Chip quinzaine -->
+		<div class="flex flex-wrap gap-1.5">
+			<button
+				type="button"
+				onclick={toggleQuinzaine}
+				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+					{data.quinzaine
+						? 'border-foreground bg-foreground text-background'
+						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+			>
+				15 prochains jours
+			</button>
+		</div>
+
+		<div class="flex flex-wrap gap-2">
 		<input
 			type="text"
 			name="q"
@@ -112,12 +138,13 @@
 				Réinitialiser
 			</a>
 		{/if}
+		</div>
 	</form>
 
 	{#if data.tousLesConcerts.length === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
 			<Ticket size={40} class="mb-4 text-muted-foreground/50" />
-			{#if data.recherche || data.mois}
+			{#if data.recherche || data.mois || data.quinzaine}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun résultat pour ces filtres.</p>
 				<a href="/spectacles" class="mt-4 text-sm text-muted-foreground underline underline-offset-2">
 					Voir tous les spectacles

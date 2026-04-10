@@ -7,7 +7,6 @@
 		Music,
 		Building2,
 		Compass,
-		CalendarDays,
 		Ticket,
 		Settings,
 		LogOut,
@@ -19,7 +18,6 @@
 	const elementsNav = [
 		{ label: 'Accueil', icone: Home, route: '/' },
 		{ label: 'Découverte', icone: Compass, route: '/decouverte' },
-		{ label: 'Quinzaine', icone: CalendarDays, route: '/quinzaine' },
 		{ label: 'Spectacles', icone: Ticket, route: '/spectacles' }
 	];
 

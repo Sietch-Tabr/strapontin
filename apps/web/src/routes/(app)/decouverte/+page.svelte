@@ -11,37 +11,35 @@
 	let mois = $state(untrack(() => data.mois));
 	let genre = $state(untrack(() => data.genre));
 
-	const deptsCoches = $derived(new Set(data.deptsActifs));
-
 	// Mois disponibles pour le filtre (basé sur les résultats actuels)
 	const moisDisponibles = $derived(
 		[...new Set(data.resultats.map((c) => c.date.slice(0, 7)))].sort()
 	);
 
-	async function soumettreDepts(depts: Set<string>) {
+	async function naviguerDepts(depts: Set<string>) {
 		const params = new URLSearchParams();
 		if (recherche) params.set('q', recherche);
 		if (mois) params.set('mois', mois);
 		if (genre) params.set('genre', genre);
-		// Marqueur : l'user a interagi avec le filtre dept (distingue "vide voulu" de "première visite")
+		// dept_filtre distingue "première visite (depts user par défaut)" de "sélection explicite (vide = tout)"
 		params.set('dept_filtre', '1');
 		for (const d of depts) params.append('dept', d);
 		await goto(`/decouverte?${params}`, { replaceState: true });
 	}
 
 	async function toutAfficher() {
-		await soumettreDepts(new Set());
+		await naviguerDepts(new Set());
 	}
 
 	async function resetMesDepts() {
-		await soumettreDepts(new Set(data.userDepts));
+		await naviguerDepts(new Set(data.userDepts));
 	}
 
 	async function toggleDept(dept: string) {
-		const nouveau = new Set(deptsCoches);
-		if (nouveau.has(dept)) nouveau.delete(dept);
-		else nouveau.add(dept);
-		await soumettreDepts(nouveau);
+		const actuels = new Set(data.deptsActifs);
+		if (actuels.has(dept)) actuels.delete(dept);
+		else actuels.add(dept);
+		await naviguerDepts(actuels);
 	}
 
 	function formaterDate(dateStr: string): string {
@@ -144,7 +142,7 @@
 						type="button"
 						onclick={() => toggleDept(d)}
 						class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
-							{deptsCoches.has(d)
+							{data.deptsActifs.includes(d)
 								? 'border-foreground bg-foreground text-background'
 								: data.userDepts.includes(d)
 									? 'border-foreground/40 bg-transparent text-foreground hover:border-foreground'
@@ -153,7 +151,7 @@
 						{d}
 					</button>
 				{/each}
-				{#if data.userDepts.length > 0 && deptsCoches.size !== data.userDepts.length}
+				{#if data.userDepts.length > 0 && data.deptsActifs.length !== data.userDepts.length}
 					<button
 						type="button"
 						onclick={resetMesDepts}
@@ -162,7 +160,7 @@
 						Mes depts
 					</button>
 				{/if}
-				{#if deptsCoches.size > 0}
+				{#if data.deptsActifs.length > 0}
 					<button
 						type="button"
 						onclick={toutAfficher}
