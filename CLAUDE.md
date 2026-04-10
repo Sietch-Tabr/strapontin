@@ -209,14 +209,14 @@ Les concerts sont stockés en DB. Le frontend lit uniquement la DB.
 
 ### Jobs implémentés
 
-| Type                 | Déclenchement              | Description                                                                                      |
-| -------------------- | -------------------------- | ------------------------------------------------------------------------------------------------ |
-| `fetch:artiste`      | Ajout artiste + cron 2h    | Fetch TM + Bandsintown + Eventim par nom artiste                                                 |
-| `fetch:artistes:batch` | Cron 2h                  | Fetch TM en lots de 20 attractionIds pour tous les artistes suivis                               |
-| `fetch:region`       | Cron 2h + action manuelle  | Fetch TM + Eventim par département. Écrit timestamp Redis `strapontin:region:fetched:{dept}`     |
-| `fetch:salle`        | Ajout salle + cron 2h      | Fetch TM par `venueId` (stocké dans `user_salles.tmVenueId`)                                     |
-| `recalculer:matches` | Après fetch                | Recalcule `user_matches` pour tous les users (artistes + salles, filtre géo si depts configurés) |
-| `purger:concerts`    | Cron quotidien (minuit)    | Supprime les concerts dont la date est passée depuis > 7 jours                                   |
+| Type                   | Déclenchement             | Description                                                                                      |
+| ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------ |
+| `fetch:artiste`        | Ajout artiste + cron 2h   | Fetch TM + Bandsintown + Eventim par nom artiste                                                 |
+| `fetch:artistes:batch` | Cron 2h                   | Fetch TM en lots de 20 attractionIds pour tous les artistes suivis                               |
+| `fetch:region`         | Cron 2h + action manuelle | Fetch TM + Eventim par département. Écrit timestamp Redis `strapontin:region:fetched:{dept}`     |
+| `fetch:salle`          | Ajout salle + cron 2h     | Fetch TM par `venueId` (stocké dans `user_salles.tmVenueId`)                                     |
+| `recalculer:matches`   | Après fetch               | Recalcule `user_matches` pour tous les users (artistes + salles, filtre géo si depts configurés) |
+| `purger:concerts`      | Cron quotidien (minuit)   | Supprime les concerts dont la date est passée depuis > 7 jours                                   |
 
 Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
@@ -224,11 +224,11 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
 ### Redis — clés applicatives
 
-| Clé | Valeur | TTL | Usage |
-| --- | ------ | --- | ----- |
-| `strapontin:tm:quota` | JSON `{dispo, total, reset, misAJour}` | — | Quota TM affiché en /admin |
-| `strapontin:tm:attraction:{artisteNorm}` | attractionId TM | 7 jours | Cache batching attractions |
-| `strapontin:region:fetched:{dept}` | ISO timestamp | 8 jours | Bannière découverte — last fetch par dept |
+| Clé                                      | Valeur                                 | TTL     | Usage                                     |
+| ---------------------------------------- | -------------------------------------- | ------- | ----------------------------------------- |
+| `strapontin:tm:quota`                    | JSON `{dispo, total, reset, misAJour}` | —       | Quota TM affiché en /admin                |
+| `strapontin:tm:attraction:{artisteNorm}` | attractionId TM                        | 7 jours | Cache batching attractions                |
+| `strapontin:region:fetched:{dept}`       | ISO timestamp                          | 8 jours | Bannière découverte — last fetch par dept |
 
 ### Pièges BullMQ
 
@@ -281,18 +281,19 @@ donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 
 Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + bottom nav).
 
-| Route         | Description                                                                                                                 |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `/`           | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                            |
-| `/artistes`   | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                              |
-| `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                  |
-| `/spectacles` | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours. Filtres : classification, genre, artiste, mois, budget. |
-| `/decouverte` | Tous les concerts en base. Chips dept (pré-cochés depuis prefs, pré-chargés via fetch:region), catégories, genres. Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs. |
-| `/parametres` | user_config (depts, rayon, filtreDisponibles), thème (cookie), nom + mot de passe (Better Auth)                             |
-| `/admin`      | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin                                  |
-| `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)                                                    |
-| `/login`      | Authentification email/password                                                                                             |
-| `/health`     | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                      |
+| Route         | Description                                                                                                                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`           | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                                                                                                                                            |
+| `/artistes`   | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                                                                                                                                              |
+| `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                                                                                                                                  |
+| `/spectacles` | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours / tri (Par date · Nouveautés). Filtres : classification, genre, artiste, mois, budget.                         |
+| `/decouverte` | Tous les concerts en base. Chips dept, catégories, genres, tri (Par date · Nouveautés). Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs.                            |
+| `/parametres` | user_config (depts, rayon, filtreDisponibles), thème, nom + mot de passe. Export JSON (artistes + salles + config). Import JSON avec mode fusionner / écraser, checkbox config opt-in, fetch déclenché post-import.                         |
+| `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json` (artistes, salles, config). Protégé par session.                                                                                                                          |
+| `/admin`      | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin                                                                                                                                                  |
+| `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)                                                                                                                                                                    |
+| `/login`      | Authentification email/password                                                                                                                                                                                                             |
+| `/health`     | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                                                                                                                                      |
 
 ## Affichage — tournées
 
@@ -342,13 +343,25 @@ Pas de page d'inscription publique. Premier accès via `/setup` (accessible uniq
 - Logging : pino, lazy `%s` (pas de template literals dans les appels logger)
 - Pas de `console.log` en production
 
+## Export / Import préférences
+
+Format JSON : `{ version, exporteAt, artistes, salles, config }`.
+
+- **Export** : `GET /api/preferences` → téléchargement direct
+- **Import** (`/parametres`) :
+  - **Fusionner** : union artistes/salles + union depts (config) — ne supprime rien
+  - **Écraser** : remplace tout (artistes, salles, et config si cochée)
+  - Checkbox opt-in "Importer la configuration" (depts, rayon, filtres)
+  - Toutes les opérations DB dans une transaction → rollback complet en cas d'erreur
+  - Post-import : `fetch:artistes:batch` + `fetch:salle` par salle + `fetch:region` si nouveaux depts
+
 ## Roadmap — ce qui reste à faire
 
-| Priorité | Item |
-| -------- | ---- |
+| Priorité | Item                                                                               |
+| -------- | ---------------------------------------------------------------------------------- |
 | Phase 2  | Notifications email (Resend) — `notificationsEmail` en DB, rien envoyé côté worker |
-| Phase 2  | Shotgun.live — Playwright + API interne JSON |
-| Phase 3  | Dice.fm — scraping Playwright |
+| Phase 2  | Shotgun.live — Playwright + API interne JSON                                       |
+| Phase 3  | Dice.fm — scraping Playwright                                                      |
 
 ## Points à éclaircir
 

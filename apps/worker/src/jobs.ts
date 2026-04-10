@@ -259,7 +259,12 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
       await Promise.all(
         data.depts.map((dept) =>
           redis
-            .set(cleRegionFetchee(dept), new Date().toISOString(), "EX", TTL_REGION_FETCHEE_S)
+            .set(
+              cleRegionFetchee(dept),
+              new Date().toISOString(),
+              "EX",
+              TTL_REGION_FETCHEE_S,
+            )
             .catch(() => {}),
         ),
       );

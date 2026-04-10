@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Sun, Moon, Save, KeyRound, User } from '@lucide/svelte';
+	import { Sun, Moon, Save, KeyRound, User, Download, Upload } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -19,6 +19,8 @@
 	let enregistrementConfig = $state(false);
 	let enregistrementCompte = $state(false);
 	let enregistrementMdp = $state(false);
+	let importEnCours = $state(false);
+	let modeImport = $state<'merger' | 'ecraser'>('merger');
 </script>
 
 <div class="p-6 lg:p-8">
@@ -277,6 +279,128 @@
 					{enregistrementMdp ? 'Modification…' : 'Modifier le mot de passe'}
 				</button>
 			</form>
+		</section>
+
+		<!-- Export / Import préférences -->
+		<section>
+			<h2 class="mb-4 text-base font-medium text-foreground">Export / Import</h2>
+			<p class="mb-4 text-sm text-muted-foreground">
+				Exportez vos artistes et salles suivis (JSON), ou importez un fichier existant.
+			</p>
+
+			<!-- Export -->
+			<div class="mb-6">
+				<h3 class="mb-2 text-sm font-medium text-foreground">Exporter mes préférences</h3>
+				<a
+					href="/api/preferences"
+					download
+					class="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+				>
+					<Download size={16} />
+					Télécharger le fichier JSON
+				</a>
+			</div>
+
+			<!-- Import -->
+			<div>
+				<h3 class="mb-2 text-sm font-medium text-foreground">Importer des préférences</h3>
+
+				{#if form?.succes === 'import'}
+					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+						{form.message}
+					</p>
+				{/if}
+				{#if form?.erreur && form?.section === 'import'}
+					<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+						{form.erreur}
+					</p>
+				{/if}
+
+				<form
+					method="POST"
+					action="?/importerPreferences"
+					enctype="multipart/form-data"
+					class="space-y-4"
+					use:enhance={() => {
+						importEnCours = true;
+						return async ({ update }) => {
+							await update({ reset: true });
+							importEnCours = false;
+						};
+					}}
+				>
+					<div>
+						<label for="fichier-import" class="mb-1.5 block text-sm font-medium text-foreground">
+							Fichier JSON
+						</label>
+						<input
+							id="fichier-import"
+							type="file"
+							name="fichier"
+							accept=".json,application/json"
+							required
+							class="block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs file:font-medium file:text-foreground"
+						/>
+					</div>
+
+					<div class="flex items-start gap-2.5">
+						<input
+							id="importer-config"
+							type="checkbox"
+							name="importerConfig"
+							class="mt-0.5 h-4 w-4 rounded border-border accent-foreground"
+						/>
+						<label for="importer-config" class="text-sm text-foreground">
+							<span class="font-medium">Importer également la configuration</span>
+							<span class="text-muted-foreground"> — départements, rayon, filtres</span>
+						</label>
+					</div>
+
+					<div class="space-y-2">
+						<p class="text-sm font-medium text-foreground">Gestion des doublons</p>
+						<label class="flex items-start gap-2.5 cursor-pointer">
+							<input
+								type="radio"
+								name="mode"
+								value="merger"
+								bind:group={modeImport}
+								class="mt-0.5 accent-foreground"
+							/>
+							<span class="text-sm text-foreground">
+								<span class="font-medium">Fusionner</span>
+								<span class="text-muted-foreground"> — ajoute les artistes et salles absents, conserve l'existant</span>
+							</span>
+						</label>
+						<label class="flex items-start gap-2.5 cursor-pointer">
+							<input
+								type="radio"
+								name="mode"
+								value="ecraser"
+								bind:group={modeImport}
+								class="mt-0.5 accent-foreground"
+							/>
+							<span class="text-sm text-foreground">
+								<span class="font-medium">Écraser</span>
+								<span class="text-muted-foreground"> — remplace toutes vos préférences par celles du fichier</span>
+							</span>
+						</label>
+						{#if modeImport === 'ecraser'}
+							<p class="rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-300">
+								Attention : vos artistes et salles actuels seront supprimés avant l'import.
+							</p>
+						{/if}
+					</div>
+
+					<button
+						type="submit"
+						disabled={importEnCours}
+						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+					>
+						<Upload size={16} />
+						{importEnCours ? 'Import en cours…' : 'Importer'}
+					</button>
+				</form>
+			</div>
 		</section>
 
 	</div>

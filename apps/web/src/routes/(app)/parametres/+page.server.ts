@@ -1,9 +1,27 @@
 import { db } from "$lib/server/db";
 import { auth } from "$lib/auth";
-import { userConfig } from "@strapontin/core/schema";
+import { userConfig, userArtistes, userSalles } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
+import { queue } from "$lib/server/queue";
 import type { PageServerLoad, Actions } from "./$types";
+
+interface ArtisteExporte {
+  nom: string;
+  normalise: string;
+}
+
+interface SalleExportee {
+  salleId: string;
+  tmVenueId: string | null;
+}
+
+interface ConfigExportee {
+  departements?: string[];
+  rayonKm?: number;
+  filtreDisponibles?: boolean;
+  notificationsEmail?: boolean;
+}
 
 export const load: PageServerLoad = async ({ locals, cookies }) => {
   const config = await db
@@ -146,5 +164,288 @@ export const actions: Actions = {
     }
 
     return { succes: "motDePasse" };
+  },
+
+  importerPreferences: async ({ request, locals }) => {
+    const donnees = await request.formData();
+    const fichier = donnees.get("fichier");
+    const mode =
+      donnees.get("mode")?.toString() === "ecraser" ? "ecraser" : "merger";
+    const importerConfig = donnees.get("importerConfig") === "on";
+
+    if (!fichier || typeof fichier === "string" || fichier.size === 0) {
+      return fail(400, {
+        erreur: "Aucun fichier sélectionné.",
+        section: "import",
+      });
+    }
+
+    // Lecture et validation JSON
+    let contenu: unknown;
+    try {
+      contenu = JSON.parse(await fichier.text());
+    } catch {
+      return fail(400, { erreur: "Fichier JSON invalide.", section: "import" });
+    }
+
+    if (
+      typeof contenu !== "object" ||
+      contenu === null ||
+      !Array.isArray((contenu as Record<string, unknown>).artistes) ||
+      !Array.isArray((contenu as Record<string, unknown>).salles)
+    ) {
+      return fail(400, {
+        erreur: "Format non reconnu (artistes et salles attendus).",
+        section: "import",
+      });
+    }
+
+    const donneesParsees = contenu as {
+      artistes: ArtisteExporte[];
+      salles: SalleExportee[];
+      config?: ConfigExportee;
+    };
+
+    const artistesValides = donneesParsees.artistes.filter(
+      (a) =>
+        typeof a.nom === "string" &&
+        typeof a.normalise === "string" &&
+        a.nom.trim(),
+    );
+    const sallesValides = donneesParsees.salles.filter(
+      (s) => typeof s.salleId === "string" && s.salleId.trim(),
+    );
+
+    const userId = locals.user!.id;
+    let sallesInsereesAvecVenueId: SalleExportee[] = [];
+    let deptsNouveaux: string[] = [];
+
+    try {
+      if (mode === "ecraser") {
+        // Transaction : suppression + réinsertion atomiques
+        await db.transaction(async (tx) => {
+          await tx.delete(userArtistes).where(eq(userArtistes.userId, userId));
+          await tx.delete(userSalles).where(eq(userSalles.userId, userId));
+
+          if (artistesValides.length > 0) {
+            await tx.insert(userArtistes).values(
+              artistesValides.map((a) => ({
+                userId,
+                artisteAffiche: a.nom.trim(),
+                artisteNormalise: a.normalise.trim(),
+              })),
+            );
+          }
+          if (sallesValides.length > 0) {
+            await tx.insert(userSalles).values(
+              sallesValides.map((s) => ({
+                userId,
+                salleId: s.salleId.trim(),
+                tmVenueId: s.tmVenueId ?? null,
+              })),
+            );
+          }
+
+          if (importerConfig && donneesParsees.config) {
+            const cfg = donneesParsees.config;
+            const depts = (cfg.departements ?? [])
+              .map((d) => String(d).trim())
+              .filter((d) => /^\d{2,3}$/.test(d));
+            const rayon =
+              typeof cfg.rayonKm === "number"
+                ? Math.min(500, Math.max(0, cfg.rayonKm))
+                : 50;
+
+            // Récupérer les depts existants pour détecter les nouveaux
+            const configActuelle = await tx
+              .select({ departements: userConfig.departements })
+              .from(userConfig)
+              .where(eq(userConfig.userId, userId))
+              .then((rows) => rows[0] ?? null);
+            const deptsExistants = new Set(configActuelle?.departements ?? []);
+            deptsNouveaux = depts.filter((d) => !deptsExistants.has(d));
+
+            await tx
+              .insert(userConfig)
+              .values({
+                userId,
+                departements: depts,
+                rayonKm: rayon,
+                filtreDisponibles: cfg.filtreDisponibles ?? true,
+                notificationsEmail: cfg.notificationsEmail ?? false,
+              })
+              .onConflictDoUpdate({
+                target: userConfig.userId,
+                set: {
+                  departements: depts,
+                  rayonKm: rayon,
+                  filtreDisponibles: cfg.filtreDisponibles ?? true,
+                  notificationsEmail: cfg.notificationsEmail ?? false,
+                  updatedAt: new Date(),
+                },
+              });
+          }
+        });
+
+        sallesInsereesAvecVenueId = sallesValides.filter((s) => s.tmVenueId);
+      } else {
+        // Merger : lire les existants, insérer uniquement les absents
+        const [artistesExistants, sallesExistantes] = await Promise.all([
+          db
+            .select({ artisteNormalise: userArtistes.artisteNormalise })
+            .from(userArtistes)
+            .where(eq(userArtistes.userId, userId)),
+          db
+            .select({ salleId: userSalles.salleId })
+            .from(userSalles)
+            .where(eq(userSalles.userId, userId)),
+        ]);
+
+        const normsExistants = new Set(
+          artistesExistants.map((a) => a.artisteNormalise),
+        );
+        const sallesExistantesIds = new Set(
+          sallesExistantes.map((s) => s.salleId),
+        );
+
+        const artistesNouveaux = artistesValides.filter(
+          (a) => !normsExistants.has(a.normalise.trim()),
+        );
+        const sallesNouvelles = sallesValides.filter(
+          (s) => !sallesExistantesIds.has(s.salleId.trim()),
+        );
+
+        await db.transaction(async (tx) => {
+          if (artistesNouveaux.length > 0) {
+            await tx.insert(userArtistes).values(
+              artistesNouveaux.map((a) => ({
+                userId,
+                artisteAffiche: a.nom.trim(),
+                artisteNormalise: a.normalise.trim(),
+              })),
+            );
+          }
+          if (sallesNouvelles.length > 0) {
+            await tx.insert(userSalles).values(
+              sallesNouvelles.map((s) => ({
+                userId,
+                salleId: s.salleId.trim(),
+                tmVenueId: s.tmVenueId ?? null,
+              })),
+            );
+          }
+
+          if (importerConfig && donneesParsees.config) {
+            const cfg = donneesParsees.config;
+            const depts = (cfg.departements ?? [])
+              .map((d) => String(d).trim())
+              .filter((d) => /^\d{2,3}$/.test(d));
+            const rayon =
+              typeof cfg.rayonKm === "number"
+                ? Math.min(500, Math.max(0, cfg.rayonKm))
+                : 50;
+
+            const configActuelle = await tx
+              .select({ departements: userConfig.departements })
+              .from(userConfig)
+              .where(eq(userConfig.userId, userId))
+              .then((rows) => rows[0] ?? null);
+            const deptsExistants = new Set(configActuelle?.departements ?? []);
+            // En mode merger, on fusionne les depts (union)
+            const tousLesDepts = [
+              ...new Set([...deptsExistants, ...depts]),
+            ].sort();
+            deptsNouveaux = depts.filter((d) => !deptsExistants.has(d));
+
+            await tx
+              .insert(userConfig)
+              .values({
+                userId,
+                departements: tousLesDepts,
+                rayonKm: rayon,
+                filtreDisponibles: cfg.filtreDisponibles ?? true,
+                notificationsEmail: cfg.notificationsEmail ?? false,
+              })
+              .onConflictDoUpdate({
+                target: userConfig.userId,
+                set: {
+                  departements: tousLesDepts,
+                  rayonKm: rayon,
+                  filtreDisponibles: cfg.filtreDisponibles ?? true,
+                  notificationsEmail: cfg.notificationsEmail ?? false,
+                  updatedAt: new Date(),
+                },
+              });
+          }
+        });
+
+        sallesInsereesAvecVenueId = sallesNouvelles.filter((s) => s.tmVenueId);
+      }
+    } catch {
+      return fail(500, {
+        erreur:
+          "Une erreur est survenue lors de l'import. Aucune donnée n'a été modifiée.",
+        section: "import",
+      });
+    }
+
+    // Fetch post-import — en dehors de la transaction (erreurs tolérées)
+    await queue
+      .add(
+        "fetch:artistes:batch",
+        { type: "fetch:artistes:batch" },
+        {
+          jobId: "artistes__batch",
+          removeOnComplete: { count: 10 },
+          removeOnFail: { count: 20 },
+        },
+      )
+      .catch(() => {
+        /* worker arrêté en dev */
+      });
+
+    for (const salle of sallesInsereesAvecVenueId) {
+      if (!salle.tmVenueId) continue;
+      await queue
+        .add(
+          "fetch:salle",
+          { type: "fetch:salle", venueId: salle.tmVenueId, userId },
+          {
+            jobId: `salle__${salle.tmVenueId}`,
+            removeOnComplete: { count: 10 },
+            removeOnFail: { count: 20 },
+          },
+        )
+        .catch(() => {
+          /* worker arrêté en dev */
+        });
+    }
+
+    if (deptsNouveaux.length > 0) {
+      await queue
+        .add(
+          "fetch:region",
+          { type: "fetch:region", depts: deptsNouveaux, userId },
+          {
+            jobId: `region__manuel__${deptsNouveaux.sort().join("_")}`,
+            removeOnComplete: { count: 10 },
+            removeOnFail: { count: 20 },
+          },
+        )
+        .catch(() => {
+          /* worker arrêté en dev */
+        });
+    }
+
+    const nbArtistes = artistesValides.length;
+    const nbSalles = sallesValides.length;
+
+    return {
+      succes: "import" as const,
+      message:
+        mode === "ecraser"
+          ? `Import terminé : ${nbArtistes} artiste${nbArtistes !== 1 ? "s" : ""} et ${nbSalles} salle${nbSalles !== 1 ? "s" : ""} importés. Mise à jour en cours…`
+          : `Fusion terminée. Mise à jour en cours…`,
+    };
   },
 };

@@ -43,11 +43,15 @@
 		deptsFiltre?: boolean;
 		classifications?: string[];
 		genres?: string[];
+		tri?: string;
 	} = {}): string {
 		const params = new URLSearchParams();
 		if (recherche) params.set('q', recherche);
 		if (mois) params.set('mois', mois);
 		if (budget) params.set('budget', budget);
+
+		const newTri = options.tri ?? data.tri;
+		if (newTri === 'nouveaute') params.set('tri', 'nouveaute');
 
 		const newDeptsFiltre = options.deptsFiltre ?? data.deptFiltre;
 		if (newDeptsFiltre) params.set('dept_filtre', '1');
@@ -125,6 +129,9 @@
 	<!-- Filtres texte/mois via formulaire GET classique -->
 	<form method="GET" class="mb-4 space-y-3">
 		<!-- Inputs cachés pour préserver l'état des chips lors du submit -->
+		{#if data.tri === 'nouveaute'}
+			<input type="hidden" name="tri" value="nouveaute" />
+		{/if}
 		{#if data.deptFiltre}
 			<input type="hidden" name="dept_filtre" value="1" />
 		{/if}
@@ -269,6 +276,33 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- Chip tri -->
+	<div class="mb-6 border-t border-border pt-3">
+		<p class="mb-1.5 text-xs font-medium text-muted-foreground">Tri</p>
+		<div class="flex flex-wrap items-center gap-1.5">
+			<a
+				href={construireUrl({ tri: 'date' })}
+				data-sveltekit-replacestate
+				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+					{data.tri === 'date'
+						? 'border-foreground bg-foreground text-background'
+						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+			>
+				Par date
+			</a>
+			<a
+				href={construireUrl({ tri: 'nouveaute' })}
+				data-sveltekit-replacestate
+				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+					{data.tri === 'nouveaute'
+						? 'border-foreground bg-foreground text-background'
+						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+			>
+				Nouveautés
+			</a>
+		</div>
+	</div>
 
 	<!-- Bannière : depts actifs hors préférences → données potentiellement incomplètes -->
 	{#if deptsASignaler.length > 0}

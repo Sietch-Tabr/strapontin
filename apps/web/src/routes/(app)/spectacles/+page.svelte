@@ -16,6 +16,7 @@
 		quinzaine?: boolean;
 		sourceArtistes?: boolean;
 		sourceSalles?: boolean;
+		tri?: string;
 	} = {}): string {
 		const params = new URLSearchParams();
 		if (recherche) params.set('q', recherche);
@@ -32,6 +33,9 @@
 		// N'écrire les params source que si la sélection est partielle
 		if (artistes && !salles) params.set('source', 'artistes');
 		if (salles && !artistes) params.set('source', 'salles');
+
+		const newTri = options.tri ?? data.tri;
+		if (newTri === 'nouveaute') params.set('tri', 'nouveaute');
 
 		return `/spectacles?${params}`;
 	}
@@ -128,11 +132,39 @@
 		</a>
 	</div>
 
+	<!-- Chip tri -->
+	<div class="mb-3 border-t border-border pt-3">
+		<p class="mb-1.5 text-xs font-medium text-muted-foreground">Tri</p>
+		<div class="flex flex-wrap items-center gap-1.5">
+			<a
+				href={construireUrl({ tri: 'date' })}
+				data-sveltekit-replacestate
+				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+					{data.tri === 'date'
+						? 'border-foreground bg-foreground text-background'
+						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+			>
+				Par date
+			</a>
+			<a
+				href={construireUrl({ tri: 'nouveaute' })}
+				data-sveltekit-replacestate
+				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+					{data.tri === 'nouveaute'
+						? 'border-foreground bg-foreground text-background'
+						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+			>
+				Nouveautés
+			</a>
+		</div>
+	</div>
+
 	<!-- Filtres texte -->
 	<form method="GET" class="mb-6 space-y-3">
 		{#if data.quinzaine}<input type="hidden" name="quinzaine" value="1" />{/if}
 		{#if data.sourceArtistes && !data.sourceSalles}<input type="hidden" name="source" value="artistes" />{/if}
 		{#if data.sourceSalles && !data.sourceArtistes}<input type="hidden" name="source" value="salles" />{/if}
+		{#if data.tri === 'nouveaute'}<input type="hidden" name="tri" value="nouveaute" />{/if}
 
 		<div class="flex flex-wrap gap-2">
 			<input

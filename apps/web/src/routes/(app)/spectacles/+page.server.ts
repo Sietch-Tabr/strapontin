@@ -6,7 +6,18 @@ import {
   userArtistes,
   userSalles,
 } from "@strapontin/core/schema";
-import { eq, gte, lte, and, ilike, isNotNull, sql, inArray } from "drizzle-orm";
+import {
+  eq,
+  gte,
+  lte,
+  and,
+  ilike,
+  isNotNull,
+  sql,
+  inArray,
+  desc,
+  asc,
+} from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 
@@ -22,12 +33,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const classification = url.searchParams.get("classification")?.trim() ?? "";
   const genre = url.searchParams.get("genre")?.trim() ?? "";
   const quinzaine = url.searchParams.get("quinzaine") === "1";
+  const tri =
+    url.searchParams.get("tri") === "nouveaute" ? "nouveaute" : "date";
   const budgetStr = url.searchParams.get("budget")?.trim() ?? "";
-  const budget = budgetStr && /^\d+$/.test(budgetStr) ? parseInt(budgetStr) : null;
+  const budget =
+    budgetStr && /^\d+$/.test(budgetStr) ? parseInt(budgetStr) : null;
 
   // Sources actives : "artistes" et/ou "salles" — par défaut les deux
   const sourcesUrl = url.searchParams.getAll("source");
-  const sourceArtistes = sourcesUrl.length === 0 || sourcesUrl.includes("artistes");
+  const sourceArtistes =
+    sourcesUrl.length === 0 || sourcesUrl.includes("artistes");
   const sourceSalles = sourcesUrl.length === 0 || sourcesUrl.includes("salles");
 
   const config = await db
@@ -107,7 +122,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     .from(userMatches)
     .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
     .where(and(...conditions))
-    .orderBy(concerts.date, concerts.artiste)
+    .orderBy(
+      ...(tri === "nouveaute"
+        ? [desc(concerts.firstSeen), asc(concerts.date)]
+        : [asc(concerts.date), asc(concerts.artiste)]),
+    )
     .limit(200);
 
   const seuilNew = new Date(Date.now() - SEUIL_NEW_MS);
@@ -139,6 +158,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     classification,
     genre,
     quinzaine,
+    tri,
     budget: budgetStr,
     sourceArtistes,
     sourceSalles,

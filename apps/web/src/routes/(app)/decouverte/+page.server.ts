@@ -1,9 +1,25 @@
 import { db } from "$lib/server/db";
 import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
-import { eq, gte, lte, and, ilike, inArray, isNotNull, sql } from "drizzle-orm";
+import {
+  eq,
+  gte,
+  lte,
+  and,
+  ilike,
+  inArray,
+  isNotNull,
+  sql,
+  desc,
+  asc,
+} from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { queue } from "$lib/server/queue";
-import { redis, cleRegionFetchee, TTL_REGION_FETCHEE_S, SEUIL_STALENESS_MS } from "$lib/server/redis";
+import {
+  redis,
+  cleRegionFetchee,
+  TTL_REGION_FETCHEE_S,
+  SEUIL_STALENESS_MS,
+} from "$lib/server/redis";
 import { fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -14,6 +30,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const budgetStr = url.searchParams.get("budget")?.trim() ?? "";
   const budget =
     budgetStr && /^\d+$/.test(budgetStr) ? parseInt(budgetStr) : null;
+  const tri =
+    url.searchParams.get("tri") === "nouveaute" ? "nouveaute" : "date";
 
   // Filtre multi-valeur via URL ?genre=Rock&genre=Pop
   const genres = url.searchParams.getAll("genre");
@@ -114,10 +132,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       dept: concerts.dept,
       url: concerts.url,
       prixMin: concerts.prixMin,
+      firstSeen: concerts.firstSeen,
     })
     .from(concerts)
     .where(and(...conditions))
-    .orderBy(concerts.date, concerts.artiste)
+    .orderBy(
+      ...(tri === "nouveaute"
+        ? [desc(concerts.firstSeen), asc(concerts.date)]
+        : [asc(concerts.date), asc(concerts.artiste)]),
+    )
     .limit(100);
 
   const artistesSuivis = await db
@@ -129,11 +152,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   // Depts actifs hors préférences — lire le timestamp du dernier fetch depuis Redis
   const deptsHorsPrefs = deptsActifs.filter((d) => !userDepts.includes(d));
-  const timestampsFetch = deptsHorsPrefs.length > 0
-    ? await Promise.all(
-        deptsHorsPrefs.map((d) => redis.get(cleRegionFetchee(d)).catch(() => null)),
-      )
-    : [];
+  const timestampsFetch =
+    deptsHorsPrefs.length > 0
+      ? await Promise.all(
+          deptsHorsPrefs.map((d) =>
+            redis.get(cleRegionFetchee(d)).catch(() => null),
+          ),
+        )
+      : [];
 
   // deptsInfo : pour chaque dept hors prefs, son statut fetch
   const deptsInfo = deptsHorsPrefs.map((dept, i) => {
@@ -154,6 +180,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     recherche,
     mois,
     budget: budgetStr,
+    tri,
     genres,
     classifications,
     userDepts,
@@ -189,12 +216,18 @@ export const actions: Actions = {
           removeOnFail: { count: 20 },
         },
       )
-      .catch(() => { /* worker arrêté en dev */ });
+      .catch(() => {
+        /* worker arrêté en dev */
+      });
 
     // Timestamp immédiat — le job est en queue, données bientôt à jour
     const now = new Date().toISOString();
     await Promise.all(
-      depts.map((d) => redis.set(cleRegionFetchee(d), now, "EX", TTL_REGION_FETCHEE_S).catch(() => {})),
+      depts.map((d) =>
+        redis
+          .set(cleRegionFetchee(d), now, "EX", TTL_REGION_FETCHEE_S)
+          .catch(() => {}),
+      ),
     );
 
     return {
@@ -240,11 +273,17 @@ export const actions: Actions = {
           removeOnFail: { count: 20 },
         },
       )
-      .catch(() => { /* worker arrêté en dev */ });
+      .catch(() => {
+        /* worker arrêté en dev */
+      });
 
     const now = new Date().toISOString();
     await Promise.all(
-      depts.map((d) => redis.set(cleRegionFetchee(d), now, "EX", TTL_REGION_FETCHEE_S).catch(() => {})),
+      depts.map((d) =>
+        redis
+          .set(cleRegionFetchee(d), now, "EX", TTL_REGION_FETCHEE_S)
+          .catch(() => {}),
+      ),
     );
 
     return {

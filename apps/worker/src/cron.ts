@@ -103,7 +103,11 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
 
   // Purge des concerts passés — planifiée une fois par jour (idempotent via jobId fixe)
   const maintenant = new Date();
-  const debutJour = new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate());
+  const debutJour = new Date(
+    maintenant.getFullYear(),
+    maintenant.getMonth(),
+    maintenant.getDate(),
+  );
   const prochainDebutJour = new Date(debutJour.getTime() + 24 * 60 * 60 * 1000);
   const delaiPurge = prochainDebutJour.getTime() - maintenant.getTime();
 
