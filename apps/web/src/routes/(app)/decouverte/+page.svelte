@@ -8,14 +8,10 @@
 	let { data }: { data: PageData } = $props();
 
 	let recherche = $state(untrack(() => data.recherche));
-	let deptsCoches = $state(new Set<string>());
 	let mois = $state(untrack(() => data.mois));
 	let genre = $state(untrack(() => data.genre));
 
-	// Resynchronise les chips avec les données serveur après chaque navigation
-	$effect(() => {
-		deptsCoches = new Set(data.deptsActifs);
-	});
+	const deptsCoches = $derived(new Set(data.deptsActifs));
 
 	// Mois disponibles pour le filtre (basé sur les résultats actuels)
 	const moisDisponibles = $derived(
