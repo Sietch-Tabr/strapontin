@@ -50,16 +50,23 @@ pnpm worker:dev # BullMQ worker (process séparé)
 - Le dev server est accessible depuis le réseau via WireGuard (`http://192.168.100.3:3000`)
   pour tester sur mobile ou valider le SSR sans déployer
 
-### Déploiement
+### Workflow Git
 
 ```
-feature/xxx  →  pnpm dev (Mac)  →  validation locale / WireGuard si besoin
+git checkout -b feature/nom-court
      ↓
-  merge PR   →  push main       →  Woodpecker → update.sh sur LXC prod
+  pnpm dev (Mac)  →  validation locale / WireGuard si besoin
+     ↓
+  git push feature/nom-court  →  Woodpecker ignore (branches feature)
+     ↓
+  PR feature/xxx → main  →  review + merge
+     ↓
+  push main  →  Woodpecker → update.sh sur LXC prod
 ```
 
-Push sur `main` uniquement → déclenche le pipeline CI.
-Pas de déploiement automatique des branches feature.
+- **Toujours travailler sur une branche feature** — jamais de commit direct sur `main`
+- Woodpecker déploie **uniquement** sur push `main`
+- Nommage : `feature/`, `fix/`, `chore/`
 
 ### Pipeline Woodpecker (.woodpecker.yaml)
 
@@ -281,19 +288,19 @@ donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 
 Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + bottom nav).
 
-| Route         | Description                                                                                                                                                                                                                                 |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`           | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                                                                                                                                            |
-| `/artistes`   | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                                                                                                                                              |
-| `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                                                                                                                                  |
-| `/spectacles` | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours / tri (Par date · Nouveautés). Filtres : classification, genre, artiste, mois, budget.                         |
-| `/decouverte` | Tous les concerts en base. Chips dept, catégories, genres, tri (Par date · Nouveautés). Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs.                            |
-| `/parametres` | user_config (depts, rayon, filtreDisponibles), thème, nom + mot de passe. Export JSON (artistes + salles + config). Import JSON avec mode fusionner / écraser, checkbox config opt-in, fetch déclenché post-import.                         |
-| `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json` (artistes, salles, config). Protégé par session.                                                                                                                          |
-| `/admin`      | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin                                                                                                                                                  |
-| `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)                                                                                                                                                                    |
-| `/login`      | Authentification email/password                                                                                                                                                                                                             |
-| `/health`     | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                                                                                                                                      |
+| Route              | Description                                                                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                                                                                                                    |
+| `/artistes`        | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                                                                                                                      |
+| `/salles`          | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                                                                                                          |
+| `/spectacles`      | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours / tri (Par date · Nouveautés). Filtres : classification, genre, artiste, mois, budget. |
+| `/decouverte`      | Tous les concerts en base. Chips dept, catégories, genres, tri (Par date · Nouveautés). Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs.    |
+| `/parametres`      | user_config (depts, rayon, filtreDisponibles), thème, nom + mot de passe. Export JSON (artistes + salles + config). Import JSON avec mode fusionner / écraser, checkbox config opt-in, fetch déclenché post-import. |
+| `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json` (artistes, salles, config). Protégé par session.                                                                                                        |
+| `/admin`           | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin                                                                                                                          |
+| `/setup`           | Création premier compte admin (accessible uniquement si 0 users en base)                                                                                                                                            |
+| `/login`           | Authentification email/password                                                                                                                                                                                     |
+| `/health`          | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                                                                                                              |
 
 ## Affichage — tournées
 
