@@ -6,8 +6,6 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	let messageAction = $state(form?.message ?? '');
-	$effect(() => { if (form?.message) messageAction = form.message; });
 
 	// État local uniquement pour les champs texte/select du formulaire
 	let recherche = $state(untrack(() => data.recherche));
@@ -274,11 +272,11 @@
 						</p>
 					</div>
 				</div>
-				{#if messageAction}
-					<p class="text-xs font-medium text-blue-700 dark:text-blue-300">{messageAction}</p>
+				{#if form?.message}
+					<p class="text-xs font-medium text-blue-700 dark:text-blue-300">{form.message}</p>
 				{:else}
 					<div class="flex shrink-0 flex-wrap gap-2">
-						<form method="POST" action="?/fetcherRegion" use:enhance={() => () => {}}>
+						<form method="POST" action="?/fetcherRegion" use:enhance>
 							{#each data.deptsHorsListe as d}
 								<input type="hidden" name="dept" value={d} />
 							{/each}
@@ -290,7 +288,7 @@
 								Actualiser maintenant
 							</button>
 						</form>
-						<form method="POST" action="?/ajouterDepts" use:enhance={() => () => {}}>
+						<form method="POST" action="?/ajouterDepts" use:enhance>
 							{#each data.deptsHorsListe as d}
 								<input type="hidden" name="dept" value={d} />
 							{/each}
