@@ -4,7 +4,8 @@ import pino from "pino";
 import type { Job } from "bullmq";
 import type { ConcertBrut } from "@strapontin/sources";
 import { dedoublonner } from "@strapontin/core";
-import { userArtistes, userConfig } from "@strapontin/core/schema";
+import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
+import { lt } from "drizzle-orm";
 import { db } from "./db.js";
 import { ticketmaster, bandsintown, eventim } from "./sources.js";
 import { persisterConcerts, recalculerMatches } from "./persister.js";
@@ -13,6 +14,8 @@ import {
   CLE_QUOTA_TM,
   cleAttractionId,
   TTL_ATTRACTION_ID_S,
+  cleRegionFetchee,
+  TTL_REGION_FETCHEE_S,
 } from "./redis.js";
 
 const logger = pino({ name: "jobs" });
@@ -52,12 +55,17 @@ export interface JobRecalculerMatches {
   userIds?: string[];
 }
 
+export interface JobPurgerConcerts {
+  type: "purger:concerts";
+}
+
 export type JobData =
   | JobFetchArtiste
   | JobFetchArtistesBatch
   | JobFetchRegion
   | JobFetchSalle
-  | JobRecalculerMatches;
+  | JobRecalculerMatches
+  | JobPurgerConcerts;
 
 export async function traiterJob(job: Job<JobData>): Promise<void> {
   const { data } = job;
@@ -247,6 +255,15 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
       await persisterConcerts(dedoublonnes);
 
+      // Enregistrer le timestamp du fetch pour chaque dept (bannière découverte)
+      await Promise.all(
+        data.depts.map((dept) =>
+          redis
+            .set(cleRegionFetchee(dept), new Date().toISOString(), "EX", TTL_REGION_FETCHEE_S)
+            .catch(() => {}),
+        ),
+      );
+
       if (data.userId) {
         await recalculerMatches([data.userId]);
       }
@@ -276,6 +293,23 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     case "recalculer:matches": {
       logger.info({ userIds: data.userIds }, "recalculer:matches démarré");
       await recalculerMatches(data.userIds);
+      break;
+    }
+
+    case "purger:concerts": {
+      // Supprimer les concerts dont la date est passée depuis plus de 7 jours
+      const limite = new Date();
+      limite.setDate(limite.getDate() - 7);
+      const dateLimite = limite.toISOString().split("T")[0]!;
+
+      const resultat = await db
+        .delete(concerts)
+        .where(lt(concerts.date, dateLimite));
+
+      logger.info(
+        { dateLimite, supprimes: resultat.rowCount ?? 0 },
+        "purger:concerts terminé",
+      );
       break;
     }
 

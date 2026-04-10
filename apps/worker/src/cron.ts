@@ -101,6 +101,23 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     },
   );
 
+  // Purge des concerts passés — planifiée une fois par jour (idempotent via jobId fixe)
+  const maintenant = new Date();
+  const debutJour = new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate());
+  const prochainDebutJour = new Date(debutJour.getTime() + 24 * 60 * 60 * 1000);
+  const delaiPurge = prochainDebutJour.getTime() - maintenant.getTime();
+
+  await queue.add(
+    "purger:concerts",
+    { type: "purger:concerts" },
+    {
+      jobId: `purge__${debutJour.toISOString().split("T")[0]}`,
+      delay: delaiPurge,
+      removeOnComplete: { count: 3 },
+      removeOnFail: { count: 5 },
+    },
+  );
+
   logger.info(
     {
       artistes: nbArtistes,

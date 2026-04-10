@@ -6,11 +6,19 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	// Depts pour lesquels un fetch a déjà été lancé — bannière masquée côté client
+	// Depts pour lesquels un fetch vient d'être lancé dans cette session — bannière masquée
 	let deptsActualises = $state(new Set<string>());
 	const deptsASignaler = $derived(
 		data.deptsHorsListe.filter((d) => !deptsActualises.has(d))
 	);
+
+	function formaterAnciennete(isoStr: string | null): string {
+		if (!isoStr) return 'jamais synchronisé';
+		const ageMin = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60000);
+		if (ageMin < 60) return `mis à jour il y a ${ageMin} min`;
+		const ageH = Math.floor(ageMin / 60);
+		return `mis à jour il y a ${ageH}h`;
+	}
 
 	// État local uniquement pour les champs texte/select du formulaire
 	let recherche = $state(untrack(() => data.recherche));
@@ -270,10 +278,13 @@
 					<Info size={16} class="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
 					<div>
 						<p class="text-sm font-medium text-blue-900 dark:text-blue-200">
-							Données peut-être incomplètes pour {deptsASignaler.join(', ')}
+							{deptsASignaler.join(', ')} — hors de vos préférences
 						</p>
 						<p class="mt-0.5 text-xs text-blue-700 dark:text-blue-400">
-							Ces départements ne font pas partie de vos préférences — les concerts n'y sont pas pré-chargés.
+							{#each deptsASignaler as dept}
+								{@const info = data.deptsInfo.find((d) => d.dept === dept)}
+								{dept} : {formaterAnciennete(info?.fetcheAt ?? null)}{deptsASignaler.indexOf(dept) < deptsASignaler.length - 1 ? ' · ' : ''}
+							{/each}
 						</p>
 					</div>
 				</div>

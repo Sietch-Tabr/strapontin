@@ -13,3 +13,8 @@ export const CLE_QUOTA_TM = "strapontin:tm:quota";
 export const TTL_ATTRACTION_ID_S = 7 * 24 * 3600;
 export const cleAttractionId = (artisteNorm: string): string =>
   `strapontin:tm:attraction:${artisteNorm}`;
+
+// Timestamp du dernier fetch:region par dept — TTL 8 jours
+export const TTL_REGION_FETCHEE_S = 8 * 24 * 60 * 60;
+export const cleRegionFetchee = (dept: string): string =>
+  `strapontin:region:fetched:${dept}`;

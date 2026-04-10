@@ -3,6 +3,7 @@ import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import { eq, gte, lte, and, ilike, inArray, isNotNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { queue } from "$lib/server/queue";
+import { redis, cleRegionFetchee, TTL_REGION_FETCHEE_S, SEUIL_STALENESS_MS } from "$lib/server/redis";
 import { fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -126,8 +127,24 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   const suivis = new Set(artistesSuivis.map((a) => a.artisteNormalise));
 
-  // Depts actifs qui ne sont pas dans les préférences user → données potentiellement incomplètes
-  const deptsHorsListe = deptsActifs.filter((d) => !userDepts.includes(d));
+  // Depts actifs hors préférences — lire le timestamp du dernier fetch depuis Redis
+  const deptsHorsPrefs = deptsActifs.filter((d) => !userDepts.includes(d));
+  const timestampsFetch = deptsHorsPrefs.length > 0
+    ? await Promise.all(
+        deptsHorsPrefs.map((d) => redis.get(cleRegionFetchee(d)).catch(() => null)),
+      )
+    : [];
+
+  // deptsInfo : pour chaque dept hors prefs, son statut fetch
+  const deptsInfo = deptsHorsPrefs.map((dept, i) => {
+    const ts = timestampsFetch[i];
+    if (!ts) return { dept, fetcheAt: null, stale: true };
+    const age = Date.now() - new Date(ts).getTime();
+    return { dept, fetcheAt: ts, stale: age > SEUIL_STALENESS_MS };
+  });
+
+  // Bannière uniquement pour les depts jamais fetchés ou stales (> 2h)
+  const deptsHorsListe = deptsInfo.filter((d) => d.stale).map((d) => d.dept);
 
   return {
     resultats: resultats.map((c) => ({
@@ -142,6 +159,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     userDepts,
     deptsActifs,
     deptsHorsListe,
+    deptsInfo,
     deptFiltre,
     deptsDisponibles,
     genresDisponibles,
@@ -153,25 +171,47 @@ export const actions: Actions = {
   // Déclenche un fetch:region immédiat pour les depts sélectionnés, sans modifier les préférences
   fetcherRegion: async ({ locals, request }) => {
     const formData = await request.formData();
-    const depts = formData.getAll("dept").map(String).filter((d) => /^\d{2,3}$/.test(d));
-    if (depts.length === 0) return fail(400, { message: "Aucun département sélectionné" });
+    const depts = formData
+      .getAll("dept")
+      .map(String)
+      .filter((d) => /^\d{2,3}$/.test(d));
+    if (depts.length === 0)
+      return fail(400, { message: "Aucun département sélectionné" });
 
+    const deptsALancer = [...depts].sort();
     await queue
       .add(
         "fetch:region",
-        { type: "fetch:region", depts, userId: locals.user!.id },
-        { jobId: `region__manuel__${depts.sort().join("_")}`, removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+        { type: "fetch:region", depts: deptsALancer, userId: locals.user!.id },
+        {
+          jobId: `region__manuel__${deptsALancer.join("_")}`,
+          removeOnComplete: { count: 10 },
+          removeOnFail: { count: 20 },
+        },
       )
       .catch(() => { /* worker arrêté en dev */ });
 
-    return { success: true, message: `Actualisation lancée pour ${depts.join(", ")}` };
+    // Timestamp immédiat — le job est en queue, données bientôt à jour
+    const now = new Date().toISOString();
+    await Promise.all(
+      depts.map((d) => redis.set(cleRegionFetchee(d), now, "EX", TTL_REGION_FETCHEE_S).catch(() => {})),
+    );
+
+    return {
+      success: true,
+      message: `Actualisation lancée pour ${depts.join(", ")}`,
+    };
   },
 
   // Ajoute les depts hors liste aux préférences user ET déclenche un fetch:region
   ajouterDepts: async ({ locals, request }) => {
     const formData = await request.formData();
-    const depts = formData.getAll("dept").map(String).filter((d) => /^\d{2,3}$/.test(d));
-    if (depts.length === 0) return fail(400, { message: "Aucun département sélectionné" });
+    const depts = formData
+      .getAll("dept")
+      .map(String)
+      .filter((d) => /^\d{2,3}$/.test(d));
+    if (depts.length === 0)
+      return fail(400, { message: "Aucun département sélectionné" });
 
     const configs = await db
       .select({ departements: userConfig.departements })
@@ -189,14 +229,27 @@ export const actions: Actions = {
         set: { departements: nouveaux, updatedAt: new Date() },
       });
 
+    const deptsALancer = [...depts].sort();
     await queue
       .add(
         "fetch:region",
-        { type: "fetch:region", depts, userId: locals.user!.id },
-        { jobId: `region__manuel__${depts.sort().join("_")}`, removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+        { type: "fetch:region", depts: deptsALancer, userId: locals.user!.id },
+        {
+          jobId: `region__manuel__${deptsALancer.join("_")}`,
+          removeOnComplete: { count: 10 },
+          removeOnFail: { count: 20 },
+        },
       )
       .catch(() => { /* worker arrêté en dev */ });
 
-    return { success: true, message: `${depts.join(", ")} ajouté${depts.length > 1 ? 's' : ''} à vos préférences` };
+    const now = new Date().toISOString();
+    await Promise.all(
+      depts.map((d) => redis.set(cleRegionFetchee(d), now, "EX", TTL_REGION_FETCHEE_S).catch(() => {})),
+    );
+
+    return {
+      success: true,
+      message: `${depts.join(", ")} ajouté${depts.length > 1 ? "s" : ""} à vos préférences`,
+    };
   },
 };
