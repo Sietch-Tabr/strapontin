@@ -30,12 +30,24 @@ function enrichir(concert: ConcertBrut): ConcertAvecNormes {
 }
 
 // Choisit le meilleur représentant parmi les doublons (favorise celui avec le plus d'infos)
+// À score égal, préfère le nom avec des diacritiques (ex. "Julien Doré" > "Julien Dore")
 function fusionner(concerts: ConcertAvecNormes[]): ConcertAvecNormes {
   return concerts.reduce((meilleur, candidat) => {
     const scoreM = scoreCompletude(meilleur);
     const scoreC = scoreCompletude(candidat);
-    return scoreC > scoreM ? candidat : meilleur;
+    if (scoreC > scoreM) return candidat;
+    if (scoreC === scoreM) {
+      return scoreNomRiche(candidat.artiste) > scoreNomRiche(meilleur.artiste)
+        ? candidat
+        : meilleur;
+    }
+    return meilleur;
   });
+}
+
+// Compte les caractères non-ASCII dans un nom (accents, cédilles, etc.)
+function scoreNomRiche(nom: string): number {
+  return [...nom].filter((c) => c.codePointAt(0)! > 127).length;
 }
 
 function scoreCompletude(c: ConcertAvecNormes): number {

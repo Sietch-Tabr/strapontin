@@ -57,10 +57,10 @@ export async function persisterConcerts(
       .insert(concerts)
       .values(valeurs)
       .onConflictDoUpdate({
-        // Conflict sur (artiste_norm, date, salle) — à défaut d'une contrainte unique,
-        // on met à jour les champs variables si la source est plus récente
         target: [concerts.artisteNorm, concerts.date, concerts.salleNorm],
         set: {
+          // Préférer le nom avec diacritiques (ex. "Julien Doré" > "Julien Dore")
+          artiste: sql`CASE WHEN unaccent(excluded.artiste) != excluded.artiste THEN excluded.artiste ELSE ${concerts.artiste} END`,
           heure: sql`excluded.heure`,
           ville: sql`excluded.ville`,
           dept: sql`excluded.dept`,
