@@ -60,7 +60,7 @@
 
 <div class="p-6 lg:p-8">
 	<div class="mb-8">
-		<h1 class="text-2xl font-semibold text-foreground">Spectacles</h1>
+		<h1 class="text-2xl font-semibold text-foreground">Mes spectacles</h1>
 		<p class="mt-1 text-sm text-muted-foreground">
 			{data.tousLesConcerts.length} concert{data.tousLesConcerts.length !== 1 ? 's' : ''} à venir
 		</p>

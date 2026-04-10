@@ -17,8 +17,8 @@
 
 	const elementsNav = [
 		{ label: 'Accueil', icone: Home, route: '/' },
-		{ label: 'Découverte', icone: Compass, route: '/decouverte' },
-		{ label: 'Spectacles', icone: Ticket, route: '/spectacles' }
+		{ label: 'Mes spectacles', icone: Ticket, route: '/spectacles' },
+		{ label: 'Découverte', icone: Compass, route: '/decouverte' }
 	];
 
 	const elementsConf = [

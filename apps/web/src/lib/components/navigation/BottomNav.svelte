@@ -20,8 +20,8 @@
 
 	const elementsNav = [
 		{ label: 'Accueil', icone: Home, route: '/' },
-		{ label: 'Découvrir', icone: Compass, route: '/decouverte' },
-		{ label: 'Spectacles', icone: Ticket, route: '/spectacles' }
+		{ label: 'Spectacles', icone: Ticket, route: '/spectacles' },
+		{ label: 'Découvrir', icone: Compass, route: '/decouverte' }
 	];
 
 	const elementsDrawer = [
