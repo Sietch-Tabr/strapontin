@@ -1,6 +1,6 @@
 import { db } from "$lib/server/db";
 import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
-import { eq, gte, and, ilike, inArray, isNotNull, sql } from "drizzle-orm";
+import { eq, gte, lte, and, ilike, inArray, isNotNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 
@@ -8,6 +8,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0]!;
   const recherche = url.searchParams.get("q")?.trim() ?? "";
   const mois = url.searchParams.get("mois")?.trim() ?? "";
+  const budgetStr = url.searchParams.get("budget")?.trim() ?? "";
+  const budget = budgetStr && /^\d+$/.test(budgetStr) ? parseInt(budgetStr) : null;
 
   // Filtre multi-valeur via URL ?genre=Rock&genre=Pop
   const genres = url.searchParams.getAll("genre");
@@ -50,6 +52,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   if (classifications.length > 0) {
     conditions.push(inArray(concerts.classification, classifications));
   }
+  if (budget !== null) {
+    conditions.push(lte(concerts.prixMin, String(budget)));
+  }
 
   const [tousDepts, tousGenres, tousClassifications] = await Promise.all([
     db
@@ -83,7 +88,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   const deptsDisponibles = tousDepts
     .map((d) => d.dept?.trim())
-    .filter((d): d is string => d !== null && d !== '');
+    .filter((d): d is string => d !== null && d !== "");
 
   const genresDisponibles = tousGenres
     .map((g) => g.genre)
@@ -125,6 +130,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     })),
     recherche,
     mois,
+    budget: budgetStr,
     genres,
     classifications,
     userDepts,

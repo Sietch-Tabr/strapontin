@@ -9,6 +9,7 @@
 	// État local uniquement pour les champs texte/select du formulaire
 	let recherche = $state(untrack(() => data.recherche));
 	let mois = $state(untrack(() => data.mois));
+	let budget = $state(untrack(() => data.budget));
 
 	const moisDisponibles = $derived(
 		[...new Set(data.resultats.map((c) => c.date.slice(0, 7)))].sort()
@@ -32,6 +33,7 @@
 		const params = new URLSearchParams();
 		if (recherche) params.set('q', recherche);
 		if (mois) params.set('mois', mois);
+		if (budget) params.set('budget', budget);
 
 		const newDeptsFiltre = options.deptsFiltre ?? data.deptFiltre;
 		if (newDeptsFiltre) params.set('dept_filtre', '1');
@@ -141,6 +143,17 @@
 					<option value={m}>{labelMois(m)}</option>
 				{/each}
 			</select>
+			<select
+				name="budget"
+				bind:value={budget}
+				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+			>
+				<option value="">Tous les prix</option>
+				<option value="30">≤ 30 €</option>
+				<option value="50">≤ 50 €</option>
+				<option value="80">≤ 80 €</option>
+				<option value="100">≤ 100 €</option>
+			</select>
 			<button
 				type="submit"
 				class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
@@ -148,7 +161,7 @@
 				<Search size={16} />
 				Filtrer
 			</button>
-			{#if recherche || mois || data.deptFiltre || data.classifications.length > 0 || data.genres.length > 0}
+			{#if recherche || mois || budget || data.deptFiltre || data.classifications.length > 0 || data.genres.length > 0}
 				<a
 					href="/decouverte"
 					class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"

@@ -10,15 +10,30 @@
 	let mois = $state(untrack(() => data.mois));
 	let classification = $state(untrack(() => data.classification));
 	let genre = $state(untrack(() => data.genre));
+	let budget = $state(untrack(() => data.budget));
 
-	async function toggleQuinzaine() {
+	function construireUrl(options: {
+		quinzaine?: boolean;
+		sourceArtistes?: boolean;
+		sourceSalles?: boolean;
+	} = {}): string {
 		const params = new URLSearchParams();
 		if (recherche) params.set('q', recherche);
 		if (mois) params.set('mois', mois);
 		if (classification) params.set('classification', classification);
 		if (genre) params.set('genre', genre);
-		if (!data.quinzaine) params.set('quinzaine', '1');
-		await goto(`/spectacles?${params}`, { replaceState: true });
+		if (budget) params.set('budget', budget);
+
+		const q = options.quinzaine ?? data.quinzaine;
+		if (q) params.set('quinzaine', '1');
+
+		const artistes = options.sourceArtistes ?? data.sourceArtistes;
+		const salles = options.sourceSalles ?? data.sourceSalles;
+		// N'écrire les params source que si la sélection est partielle
+		if (artistes && !salles) params.set('source', 'artistes');
+		if (salles && !artistes) params.set('source', 'salles');
+
+		return `/spectacles?${params}`;
 	}
 
 	function formaterDate(dateStr: string): string {
@@ -44,7 +59,6 @@
 		return `${pMin} €`;
 	}
 
-	// Mois disponibles pour le filtre (générés à partir des résultats)
 	const moisDisponibles = $derived(
 		[...new Set(data.tousLesConcerts.map((c) => c.date.slice(0, 7)))].sort()
 	);
@@ -56,6 +70,20 @@
 			year: 'numeric'
 		});
 	}
+
+	const aFiltres = $derived(
+		recherche || mois || classification || genre || budget || data.quinzaine
+	);
+
+	function urlToggleSource(cible: 'artistes' | 'salles'): string {
+		let artistes = data.sourceArtistes;
+		let salles = data.sourceSalles;
+		if (cible === 'artistes') artistes = !artistes;
+		else salles = !salles;
+		// Empêcher que les deux soient désactivés
+		if (!artistes && !salles) { artistes = true; salles = true; }
+		return construireUrl({ sourceArtistes: artistes, sourceSalles: salles });
+	}
 </script>
 
 <div class="p-6 lg:p-8">
@@ -66,85 +94,120 @@
 		</p>
 	</div>
 
-	<!-- Filtres -->
+	<!-- Chips source + quinzaine -->
+	<div class="mb-3 flex flex-wrap gap-1.5">
+		<a
+			href={urlToggleSource('artistes')}
+			data-sveltekit-replacestate
+			class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+				{data.sourceArtistes
+					? 'border-foreground bg-foreground text-background'
+					: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+		>
+			Mes artistes
+		</a>
+		<a
+			href={urlToggleSource('salles')}
+			data-sveltekit-replacestate
+			class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+				{data.sourceSalles
+					? 'border-foreground bg-foreground text-background'
+					: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+		>
+			Mes salles
+		</a>
+		<a
+			href={construireUrl({ quinzaine: !data.quinzaine })}
+			data-sveltekit-replacestate
+			class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+				{data.quinzaine
+					? 'border-foreground bg-foreground text-background'
+					: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+		>
+			15 prochains jours
+		</a>
+	</div>
+
+	<!-- Filtres texte -->
 	<form method="GET" class="mb-6 space-y-3">
-		<!-- Chip quinzaine -->
-		<div class="flex flex-wrap gap-1.5">
-			<button
-				type="button"
-				onclick={toggleQuinzaine}
-				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
-					{data.quinzaine
-						? 'border-foreground bg-foreground text-background'
-						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
-			>
-				15 prochains jours
-			</button>
-		</div>
+		{#if data.quinzaine}<input type="hidden" name="quinzaine" value="1" />{/if}
+		{#if data.sourceArtistes && !data.sourceSalles}<input type="hidden" name="source" value="artistes" />{/if}
+		{#if data.sourceSalles && !data.sourceArtistes}<input type="hidden" name="source" value="salles" />{/if}
 
 		<div class="flex flex-wrap gap-2">
-		<input
-			type="text"
-			name="q"
-			bind:value={recherche}
-			placeholder="Rechercher un artiste…"
-			autocomplete="off"
-			class="flex-1 min-w-40 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-		/>
-		<select
-			name="mois"
-			bind:value={mois}
-			class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-		>
-			<option value="">Tous les mois</option>
-			{#each moisDisponibles as m (m)}
-				<option value={m}>{labelMois(m)}</option>
-			{/each}
-		</select>
-		<select
-			name="classification"
-			bind:value={classification}
-			class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-		>
-			<option value="">Toutes catégories</option>
-			<option value="music">Musique</option>
-			<option value="theatre">Théâtre / Opéra</option>
-		</select>
-		{#if data.genresDisponibles.length > 0}
+			<input
+				type="text"
+				name="q"
+				bind:value={recherche}
+				placeholder="Rechercher un artiste…"
+				autocomplete="off"
+				class="flex-1 min-w-40 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+			/>
 			<select
-				name="genre"
-				bind:value={genre}
+				name="mois"
+				bind:value={mois}
 				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			>
-				<option value="">Tous les genres</option>
-				{#each data.genresDisponibles as g (g)}
-					<option value={g}>{g}</option>
+				<option value="">Tous les mois</option>
+				{#each moisDisponibles as m (m)}
+					<option value={m}>{labelMois(m)}</option>
 				{/each}
 			</select>
-		{/if}
-		<button
-			type="submit"
-			class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-		>
-			<Search size={16} />
-			Filtrer
-		</button>
-		{#if recherche || mois || classification || genre}
-			<a
-				href="/spectacles"
-				class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+			<select
+				name="classification"
+				bind:value={classification}
+				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			>
-				<X size={16} />
-				Réinitialiser
-			</a>
-		{/if}
+				<option value="">Toutes catégories</option>
+				<option value="music">Musique</option>
+				<option value="theatre">Théâtre / Opéra</option>
+			</select>
+			{#if data.genresDisponibles.length > 0}
+				<select
+					name="genre"
+					bind:value={genre}
+					class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+				>
+					<option value="">Tous les genres</option>
+					{#each data.genresDisponibles as g (g)}
+						<option value={g}>{g}</option>
+					{/each}
+				</select>
+			{/if}
+			<select
+				name="budget"
+				bind:value={budget}
+				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+			>
+				<option value="">Tous les prix</option>
+				<option value="30">≤ 30 €</option>
+				<option value="50">≤ 50 €</option>
+				<option value="80">≤ 80 €</option>
+				<option value="100">≤ 100 €</option>
+			</select>
+			<button
+				type="submit"
+				class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+			>
+				<Search size={16} />
+				Filtrer
+			</button>
+			{#if aFiltres}
+				<a
+					href="/spectacles"
+					class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+				>
+					<X size={16} />
+					Réinitialiser
+				</a>
+			{/if}
 		</div>
 	</form>
 
 	{#if data.tousLesConcerts.length === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
 			<Ticket size={40} class="mb-4 text-muted-foreground/50" />
-			{#if data.recherche || data.mois || data.quinzaine}
+			{#if data.recherche || data.mois || data.quinzaine || data.budget}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun résultat pour ces filtres.</p>
 				<a href="/spectacles" class="mt-4 text-sm text-muted-foreground underline underline-offset-2">
 					Voir tous les spectacles
