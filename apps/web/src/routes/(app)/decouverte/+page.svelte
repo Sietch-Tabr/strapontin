@@ -6,6 +6,11 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
+	// Depts pour lesquels un fetch a déjà été lancé — bannière masquée côté client
+	let deptsActualises = $state(new Set<string>());
+	const deptsASignaler = $derived(
+		data.deptsHorsListe.filter((d) => !deptsActualises.has(d))
+	);
 
 	// État local uniquement pour les champs texte/select du formulaire
 	let recherche = $state(untrack(() => data.recherche));
@@ -258,50 +263,53 @@
 	{/if}
 
 	<!-- Bannière : depts actifs hors préférences → données potentiellement incomplètes -->
-	{#if data.deptsHorsListe.length > 0}
+	{#if deptsASignaler.length > 0}
 		<div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-950/40">
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div class="flex items-start gap-2.5">
 					<Info size={16} class="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
 					<div>
 						<p class="text-sm font-medium text-blue-900 dark:text-blue-200">
-							Données peut-être incomplètes pour {data.deptsHorsListe.join(', ')}
+							Données peut-être incomplètes pour {deptsASignaler.join(', ')}
 						</p>
 						<p class="mt-0.5 text-xs text-blue-700 dark:text-blue-400">
 							Ces départements ne font pas partie de vos préférences — les concerts n'y sont pas pré-chargés.
 						</p>
 					</div>
 				</div>
-				{#if form?.message}
-					<p class="text-xs font-medium text-blue-700 dark:text-blue-300">{form.message}</p>
-				{:else}
-					<div class="flex shrink-0 flex-wrap gap-2">
-						<form method="POST" action="?/fetcherRegion" use:enhance>
-							{#each data.deptsHorsListe as d}
-								<input type="hidden" name="dept" value={d} />
-							{/each}
-							<button
-								type="submit"
-								class="flex items-center gap-1.5 rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:bg-transparent dark:text-blue-300 dark:hover:bg-blue-900/40"
-							>
-								<RefreshCw size={12} />
-								Actualiser maintenant
-							</button>
-						</form>
-						<form method="POST" action="?/ajouterDepts" use:enhance>
-							{#each data.deptsHorsListe as d}
-								<input type="hidden" name="dept" value={d} />
-							{/each}
-							<button
-								type="submit"
-								class="flex items-center gap-1.5 rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:bg-transparent dark:text-blue-300 dark:hover:bg-blue-900/40"
-							>
-								<Plus size={12} />
-								Ajouter à mes préférences
-							</button>
-						</form>
-					</div>
-				{/if}
+				<div class="flex shrink-0 flex-wrap gap-2">
+					<form
+						method="POST"
+						action="?/fetcherRegion"
+						use:enhance={() => async ({ update }) => {
+							deptsActualises = new Set([...deptsActualises, ...deptsASignaler]);
+							await update({ reset: false });
+						}}
+					>
+						{#each deptsASignaler as d}
+							<input type="hidden" name="dept" value={d} />
+						{/each}
+						<button
+							type="submit"
+							class="flex items-center gap-1.5 rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:bg-transparent dark:text-blue-300 dark:hover:bg-blue-900/40"
+						>
+							<RefreshCw size={12} />
+							Actualiser maintenant
+						</button>
+					</form>
+					<form method="POST" action="?/ajouterDepts" use:enhance>
+						{#each deptsASignaler as d}
+							<input type="hidden" name="dept" value={d} />
+						{/each}
+						<button
+							type="submit"
+							class="flex items-center gap-1.5 rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:bg-transparent dark:text-blue-300 dark:hover:bg-blue-900/40"
+						>
+							<Plus size={12} />
+							Ajouter à mes préférences
+						</button>
+					</form>
+				</div>
 			</div>
 		</div>
 	{/if}
