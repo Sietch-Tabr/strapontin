@@ -1,45 +1,69 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import { Compass, Search, X, Check } from '@lucide/svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
+	// État local uniquement pour les champs texte/select du formulaire
 	let recherche = $state(untrack(() => data.recherche));
 	let mois = $state(untrack(() => data.mois));
-	let genre = $state(untrack(() => data.genre));
 
-	// Mois disponibles pour le filtre (basé sur les résultats actuels)
 	const moisDisponibles = $derived(
 		[...new Set(data.resultats.map((c) => c.date.slice(0, 7)))].sort()
 	);
 
-	async function naviguerDepts(depts: Set<string>) {
+	const LABELS_CLASSIFICATION: Record<string, string> = {
+		music: 'Musique',
+		theatre: 'Théâtre',
+		opera: 'Opéra',
+		musical: 'Musical'
+	};
+
+	// Construit une URL /decouverte avec tous les filtres actifs.
+	// Les chips utilisent des <a href> — navigation SvelteKit garantie.
+	function construireUrl(options: {
+		depts?: string[];
+		deptsFiltre?: boolean;
+		classifications?: string[];
+		genres?: string[];
+	} = {}): string {
 		const params = new URLSearchParams();
 		if (recherche) params.set('q', recherche);
 		if (mois) params.set('mois', mois);
-		if (genre) params.set('genre', genre);
-		// dept_filtre distingue "première visite (depts user par défaut)" de "sélection explicite (vide = tout)"
-		params.set('dept_filtre', '1');
-		for (const d of depts) params.append('dept', d);
-		await goto(`/decouverte?${params}`, { replaceState: true });
+
+		const newDeptsFiltre = options.deptsFiltre ?? data.deptFiltre;
+		if (newDeptsFiltre) params.set('dept_filtre', '1');
+		for (const d of (options.depts ?? data.deptsActifs)) params.append('dept', d);
+		for (const c of (options.classifications ?? data.classifications)) params.append('classification', c);
+		for (const g of (options.genres ?? data.genres)) params.append('genre', g);
+
+		return `/decouverte?${params}`;
 	}
 
-	async function toutAfficher() {
-		await naviguerDepts(new Set());
+	function urlToggleDept(dept: string): string {
+		const actif = data.deptsActifs.includes(dept);
+		const depts = actif
+			? data.deptsActifs.filter((d) => d !== dept)
+			: [...data.deptsActifs, dept];
+		return construireUrl({ depts, deptsFiltre: true });
 	}
 
-	async function resetMesDepts() {
-		await naviguerDepts(new Set(data.userDepts));
+	function urlToggleClassification(classif: string): string {
+		const actif = data.classifications.includes(classif);
+		const classifications = actif
+			? data.classifications.filter((c) => c !== classif)
+			: [...data.classifications, classif];
+		return construireUrl({ classifications });
 	}
 
-	async function toggleDept(dept: string) {
-		const actuels = new Set(data.deptsActifs);
-		if (actuels.has(dept)) actuels.delete(dept);
-		else actuels.add(dept);
-		await naviguerDepts(actuels);
+	function urlToggleGenre(genre: string): string {
+		const actif = data.genres.includes(genre);
+		const genres = actif
+			? data.genres.filter((g) => g !== genre)
+			: [...data.genres, genre];
+		return construireUrl({ genres });
 	}
 
 	function formaterDate(dateStr: string): string {
@@ -60,7 +84,6 @@
 		});
 	}
 
-	// Artistes ajoutés localement (optimistic UI)
 	let artistesAjoutes = $state(new Set<string>());
 
 	function marquerAjoute(artisteNorm: string) {
@@ -83,8 +106,22 @@
 		</p>
 	</div>
 
-	<!-- Filtres -->
-	<form method="GET" class="mb-6 space-y-3">
+	<!-- Filtres texte/mois via formulaire GET classique -->
+	<form method="GET" class="mb-4 space-y-3">
+		<!-- Inputs cachés pour préserver l'état des chips lors du submit -->
+		{#if data.deptFiltre}
+			<input type="hidden" name="dept_filtre" value="1" />
+		{/if}
+		{#each data.deptsActifs as d}
+			<input type="hidden" name="dept" value={d} />
+		{/each}
+		{#each data.classifications as c}
+			<input type="hidden" name="classification" value={c} />
+		{/each}
+		{#each data.genres as g}
+			<input type="hidden" name="genre" value={g} />
+		{/each}
+
 		<div class="flex flex-wrap gap-2">
 			<input
 				type="text"
@@ -104,18 +141,6 @@
 					<option value={m}>{labelMois(m)}</option>
 				{/each}
 			</select>
-			{#if data.genresDisponibles.length > 0}
-				<select
-					name="genre"
-					bind:value={genre}
-					class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-				>
-					<option value="">Tous les genres</option>
-					{#each data.genresDisponibles as g (g)}
-						<option value={g}>{g}</option>
-					{/each}
-				</select>
-			{/if}
 			<button
 				type="submit"
 				class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
@@ -123,7 +148,7 @@
 				<Search size={16} />
 				Filtrer
 			</button>
-			{#if recherche || mois || genre || data.deptsActifs.length > 0}
+			{#if recherche || mois || data.deptFiltre || data.classifications.length > 0 || data.genres.length > 0}
 				<a
 					href="/decouverte"
 					class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -133,50 +158,86 @@
 				</a>
 			{/if}
 		</div>
-
-		<!-- Filtre départements : chips cliquables -->
-		{#if data.deptsDisponibles.length > 0}
-			<div class="flex flex-wrap items-center gap-1.5">
-				{#each data.deptsDisponibles as d (d)}
-					<button
-						type="button"
-						onclick={() => toggleDept(d)}
-						class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
-							{data.deptsActifs.includes(d)
-								? 'border-foreground bg-foreground text-background'
-								: data.userDepts.includes(d)
-									? 'border-foreground/40 bg-transparent text-foreground hover:border-foreground'
-									: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
-					>
-						{d}
-					</button>
-				{/each}
-				{#if data.userDepts.length > 0 && data.deptsActifs.length !== data.userDepts.length}
-					<button
-						type="button"
-						onclick={resetMesDepts}
-						class="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-					>
-						Mes depts
-					</button>
-				{/if}
-				{#if data.deptsActifs.length > 0}
-					<button
-						type="button"
-						onclick={toutAfficher}
-						class="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-					>
-						Tout
-					</button>
-				{/if}
-			</div>
-		{/if}
 	</form>
+
+	<!-- Chips : départements -->
+	{#if data.deptsDisponibles.length > 0}
+		<div class="mb-2 flex flex-wrap items-center gap-1.5">
+			{#each data.deptsDisponibles as d (d)}
+				<a
+					href={urlToggleDept(d)}
+					data-sveltekit-replacestate
+					class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+						{data.deptsActifs.includes(d)
+							? 'border-foreground bg-foreground text-background'
+							: data.userDepts.includes(d)
+								? 'border-foreground/40 bg-transparent text-foreground hover:border-foreground'
+								: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+				>
+					{d}
+				</a>
+			{/each}
+			{#if data.userDepts.length > 0 && data.deptsActifs.length !== data.userDepts.length}
+				<a
+					href={construireUrl({ depts: data.userDepts, deptsFiltre: true })}
+					data-sveltekit-replacestate
+					class="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+				>
+					Mes depts
+				</a>
+			{/if}
+			{#if data.deptFiltre && data.deptsActifs.length > 0}
+				<a
+					href={construireUrl({ depts: [], deptsFiltre: true })}
+					data-sveltekit-replacestate
+					class="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+				>
+					Tout
+				</a>
+			{/if}
+		</div>
+	{/if}
+
+	<!-- Chips : catégories -->
+	{#if data.classificationsDisponibles.length > 0}
+		<div class="mb-2 flex flex-wrap items-center gap-1.5">
+			{#each data.classificationsDisponibles as c (c)}
+				<a
+					href={urlToggleClassification(c)}
+					data-sveltekit-replacestate
+					class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+						{data.classifications.includes(c)
+							? 'border-foreground bg-foreground text-background'
+							: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+				>
+					{LABELS_CLASSIFICATION[c] ?? c}
+				</a>
+			{/each}
+		</div>
+	{/if}
+
+	<!-- Chips : genres -->
+	{#if data.genresDisponibles.length > 0}
+		<div class="mb-6 flex flex-wrap items-center gap-1.5">
+			{#each data.genresDisponibles as g (g)}
+				<a
+					href={urlToggleGenre(g)}
+					data-sveltekit-replacestate
+					class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+						{data.genres.includes(g)
+							? 'border-foreground bg-foreground text-background'
+							: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+				>
+					{g}
+				</a>
+			{/each}
+		</div>
+	{/if}
 
 	{#if data.resultats.length === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
 			<Compass size={40} class="mb-4 text-muted-foreground/50" />
-			{#if data.recherche || data.deptsActifs.length > 0 || data.mois || data.genre}
+			{#if data.recherche || data.deptsActifs.length > 0 || data.mois || data.genres.length > 0 || data.classifications.length > 0}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun résultat pour ces filtres.</p>
 				<a href="/decouverte" class="mt-4 text-sm text-muted-foreground underline underline-offset-2">
 					Voir tous les concerts
