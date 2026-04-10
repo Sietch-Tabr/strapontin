@@ -2,14 +2,17 @@ import { db } from "$lib/server/db";
 import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import { eq, gte, lte, and, ilike, inArray, isNotNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
-import type { PageServerLoad } from "./$types";
+import { queue } from "$lib/server/queue";
+import { fail } from "@sveltejs/kit";
+import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0]!;
   const recherche = url.searchParams.get("q")?.trim() ?? "";
   const mois = url.searchParams.get("mois")?.trim() ?? "";
   const budgetStr = url.searchParams.get("budget")?.trim() ?? "";
-  const budget = budgetStr && /^\d+$/.test(budgetStr) ? parseInt(budgetStr) : null;
+  const budget =
+    budgetStr && /^\d+$/.test(budgetStr) ? parseInt(budgetStr) : null;
 
   // Filtre multi-valeur via URL ?genre=Rock&genre=Pop
   const genres = url.searchParams.getAll("genre");
@@ -123,6 +126,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   const suivis = new Set(artistesSuivis.map((a) => a.artisteNormalise));
 
+  // Depts actifs qui ne sont pas dans les préférences user → données potentiellement incomplètes
+  const deptsHorsListe = deptsActifs.filter((d) => !userDepts.includes(d));
+
   return {
     resultats: resultats.map((c) => ({
       ...c,
@@ -135,9 +141,62 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     classifications,
     userDepts,
     deptsActifs,
+    deptsHorsListe,
     deptFiltre,
     deptsDisponibles,
     genresDisponibles,
     classificationsDisponibles,
   };
+};
+
+export const actions: Actions = {
+  // Déclenche un fetch:region immédiat pour les depts sélectionnés, sans modifier les préférences
+  fetcherRegion: async ({ locals, request }) => {
+    const formData = await request.formData();
+    const depts = formData.getAll("dept").map(String).filter((d) => /^\d{2,3}$/.test(d));
+    if (depts.length === 0) return fail(400, { message: "Aucun département sélectionné" });
+
+    await queue
+      .add(
+        "fetch:region",
+        { type: "fetch:region", depts, userId: locals.user!.id },
+        { jobId: `region__manuel__${depts.sort().join("_")}`, removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+      )
+      .catch(() => { /* worker arrêté en dev */ });
+
+    return { success: true, message: `Actualisation lancée pour ${depts.join(", ")}` };
+  },
+
+  // Ajoute les depts hors liste aux préférences user ET déclenche un fetch:region
+  ajouterDepts: async ({ locals, request }) => {
+    const formData = await request.formData();
+    const depts = formData.getAll("dept").map(String).filter((d) => /^\d{2,3}$/.test(d));
+    if (depts.length === 0) return fail(400, { message: "Aucun département sélectionné" });
+
+    const configs = await db
+      .select({ departements: userConfig.departements })
+      .from(userConfig)
+      .where(eq(userConfig.userId, locals.user!.id));
+
+    const existants = configs[0]?.departements ?? [];
+    const nouveaux = [...new Set([...existants, ...depts])].sort();
+
+    await db
+      .insert(userConfig)
+      .values({ userId: locals.user!.id, departements: nouveaux })
+      .onConflictDoUpdate({
+        target: userConfig.userId,
+        set: { departements: nouveaux, updatedAt: new Date() },
+      });
+
+    await queue
+      .add(
+        "fetch:region",
+        { type: "fetch:region", depts, userId: locals.user!.id },
+        { jobId: `region__manuel__${depts.sort().join("_")}`, removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+      )
+      .catch(() => { /* worker arrêté en dev */ });
+
+    return { success: true, message: `${depts.join(", ")} ajouté${depts.length > 1 ? 's' : ''} à vos préférences` };
+  },
 };
