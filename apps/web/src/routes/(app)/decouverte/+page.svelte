@@ -123,7 +123,7 @@
 				<Search size={16} />
 				Filtrer
 			</button>
-			{#if recherche || mois || genre || deptsCoches.size > 0}
+			{#if recherche || mois || genre || data.deptsActifs.length > 0}
 				<a
 					href="/decouverte"
 					class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
