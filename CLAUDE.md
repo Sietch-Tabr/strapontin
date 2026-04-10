@@ -63,9 +63,16 @@ tea issue create -r Kwaite/strapontin
 
 # Créer une PR
 tea pr create -r Kwaite/strapontin
+
+# Jalons et labels
+tea milestones -r Kwaite/strapontin -o json
+tea labels -r Kwaite/strapontin -o json
 ```
 
 `tea issue view N` n'affiche pas `body` par défaut — toujours passer `-f "index,title,body"`.
+
+Jalons définis : **v 1.0**, **v 1.1**, **v 1.2**.
+Labels utiles en solo : `bug`, `enhancement`, `question`.
 
 ### Workflow Git
 
