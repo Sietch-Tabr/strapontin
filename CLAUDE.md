@@ -50,6 +50,23 @@ pnpm worker:dev # BullMQ worker (process séparé)
 - Le dev server est accessible depuis le réseau via WireGuard (`http://192.168.100.3:3000`)
   pour tester sur mobile ou valider le SSR sans déployer
 
+### Gestion des issues (Codeberg)
+
+CLI : `tea` (pas `gh` — Codeberg est Gitea, incompatible avec `gh`).
+
+```bash
+# Lister les issues avec leur contenu
+tea issues -r Kwaite/strapontin -f "index,title,body,comments" -o json
+
+# Créer une issue
+tea issue create -r Kwaite/strapontin
+
+# Créer une PR
+tea pr create -r Kwaite/strapontin
+```
+
+`tea issue view N` n'affiche pas `body` par défaut — toujours passer `-f "index,title,body"`.
+
 ### Workflow Git
 
 ```
