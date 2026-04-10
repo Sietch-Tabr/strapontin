@@ -272,18 +272,18 @@ donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 
 Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + bottom nav).
 
-| Route         | Description                                                                                                     |
-| ------------- | --------------------------------------------------------------------------------------------------------------- |
-| `/`           | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                |
-| `/artistes`   | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                  |
-| `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                      |
+| Route         | Description                                                                                                                 |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `/`           | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                            |
+| `/artistes`   | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                              |
+| `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                  |
 | `/spectacles` | Concerts userMatches à venir — chip "15 prochains jours" (auto-submit goto), filtres : classification, genre, artiste, mois |
-| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept (chips auto-submit)/mois/genre, bouton "Suivre"  |
-| `/parametres` | user_config (depts, rayon, filtreDisponibles), thème (cookie), nom + mot de passe (Better Auth)                 |
-| `/admin`      | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin                      |
-| `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)                                        |
-| `/login`      | Authentification email/password                                                                                 |
-| `/health`     | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                          |
+| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept (chips auto-submit)/mois/genre, bouton "Suivre"              |
+| `/parametres` | user_config (depts, rayon, filtreDisponibles), thème (cookie), nom + mot de passe (Better Auth)                             |
+| `/admin`      | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin                                  |
+| `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)                                                    |
+| `/login`      | Authentification email/password                                                                                             |
+| `/health`     | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                      |
 
 ## Affichage — tournées
 

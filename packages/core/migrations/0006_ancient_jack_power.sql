@@ -1,0 +1,1 @@
+ALTER TABLE "concerts" ALTER COLUMN "dept" SET DATA TYPE varchar(3);

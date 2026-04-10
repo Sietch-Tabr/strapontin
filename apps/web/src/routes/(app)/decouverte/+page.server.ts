@@ -26,6 +26,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const deptFiltre = url.searchParams.has("dept_filtre");
   const deptsUrl = url.searchParams
     .getAll("dept")
+    .map((d) => d.trim())
     .filter((d) => /^\d{2,3}$/.test(d));
   const deptsActifs = deptFiltre ? deptsUrl : userDepts;
 
@@ -81,8 +82,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   ]);
 
   const deptsDisponibles = tousDepts
-    .map((d) => d.dept)
-    .filter((d): d is string => d !== null);
+    .map((d) => d.dept?.trim())
+    .filter((d): d is string => d !== null && d !== '');
 
   const genresDisponibles = tousGenres
     .map((g) => g.genre)

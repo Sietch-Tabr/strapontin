@@ -162,75 +162,84 @@
 
 	<!-- Chips : départements -->
 	{#if data.deptsDisponibles.length > 0}
-		<div class="mb-2 flex flex-wrap items-center gap-1.5">
-			{#each data.deptsDisponibles as d (d)}
-				<a
-					href={urlToggleDept(d)}
-					data-sveltekit-replacestate
-					class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
-						{data.deptsActifs.includes(d)
-							? 'border-foreground bg-foreground text-background'
-							: data.userDepts.includes(d)
-								? 'border-foreground/40 bg-transparent text-foreground hover:border-foreground'
-								: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
-				>
-					{d}
-				</a>
-			{/each}
-			{#if data.userDepts.length > 0 && data.deptsActifs.length !== data.userDepts.length}
-				<a
-					href={construireUrl({ depts: data.userDepts, deptsFiltre: true })}
-					data-sveltekit-replacestate
-					class="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-				>
-					Mes depts
-				</a>
-			{/if}
-			{#if data.deptFiltre && data.deptsActifs.length > 0}
-				<a
-					href={construireUrl({ depts: [], deptsFiltre: true })}
-					data-sveltekit-replacestate
-					class="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-				>
-					Tout
-				</a>
-			{/if}
+		<div class="mb-3 border-t border-border pt-3">
+			<p class="mb-1.5 text-xs font-medium text-muted-foreground">Départements</p>
+			<div class="flex flex-wrap items-center gap-1.5">
+				{#each data.deptsDisponibles as d (d)}
+					<a
+						href={urlToggleDept(d)}
+						data-sveltekit-replacestate
+						class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+							{data.deptsActifs.includes(d)
+								? 'border-foreground bg-foreground text-background'
+								: data.userDepts.includes(d)
+									? 'border-foreground/40 bg-transparent text-foreground hover:border-foreground'
+									: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+					>
+						{d}
+					</a>
+				{/each}
+				{#if data.userDepts.length > 0 && data.deptsActifs.length !== data.userDepts.length}
+					<a
+						href={construireUrl({ depts: data.userDepts, deptsFiltre: true })}
+						data-sveltekit-replacestate
+						class="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+					>
+						Mes depts
+					</a>
+				{/if}
+				{#if data.deptFiltre && data.deptsActifs.length > 0}
+					<a
+						href={construireUrl({ depts: [], deptsFiltre: true })}
+						data-sveltekit-replacestate
+						class="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+					>
+						Tout
+					</a>
+				{/if}
+			</div>
 		</div>
 	{/if}
 
 	<!-- Chips : catégories -->
 	{#if data.classificationsDisponibles.length > 0}
-		<div class="mb-2 flex flex-wrap items-center gap-1.5">
-			{#each data.classificationsDisponibles as c (c)}
-				<a
-					href={urlToggleClassification(c)}
-					data-sveltekit-replacestate
-					class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
-						{data.classifications.includes(c)
-							? 'border-foreground bg-foreground text-background'
-							: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
-				>
-					{LABELS_CLASSIFICATION[c] ?? c}
-				</a>
-			{/each}
+		<div class="mb-3 border-t border-border pt-3">
+			<p class="mb-1.5 text-xs font-medium text-muted-foreground">Catégories</p>
+			<div class="flex flex-wrap items-center gap-1.5">
+				{#each data.classificationsDisponibles as c (c)}
+					<a
+						href={urlToggleClassification(c)}
+						data-sveltekit-replacestate
+						class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+							{data.classifications.includes(c)
+								? 'border-foreground bg-foreground text-background'
+								: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+					>
+						{LABELS_CLASSIFICATION[c] ?? c}
+					</a>
+				{/each}
+			</div>
 		</div>
 	{/if}
 
 	<!-- Chips : genres -->
 	{#if data.genresDisponibles.length > 0}
-		<div class="mb-6 flex flex-wrap items-center gap-1.5">
-			{#each data.genresDisponibles as g (g)}
-				<a
-					href={urlToggleGenre(g)}
-					data-sveltekit-replacestate
-					class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
-						{data.genres.includes(g)
-							? 'border-foreground bg-foreground text-background'
-							: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
-				>
-					{g}
-				</a>
-			{/each}
+		<div class="mb-6 border-t border-border pt-3">
+			<p class="mb-1.5 text-xs font-medium text-muted-foreground">Genres</p>
+			<div class="flex flex-wrap items-center gap-1.5">
+				{#each data.genresDisponibles as g (g)}
+					<a
+						href={urlToggleGenre(g)}
+						data-sveltekit-replacestate
+						class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+							{data.genres.includes(g)
+								? 'border-foreground bg-foreground text-background'
+								: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+					>
+						{g}
+					</a>
+				{/each}
+			</div>
 		</div>
 	{/if}
 

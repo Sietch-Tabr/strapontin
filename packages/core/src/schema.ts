@@ -1,6 +1,5 @@
 import {
   boolean,
-  char,
   date,
   index,
   integer,
@@ -12,6 +11,7 @@ import {
   timestamp,
   unique,
   uuid,
+  varchar,
 } from "drizzle-orm/pg-core";
 
 // -------------------------------------------------------------------
@@ -29,7 +29,7 @@ export const concerts = pgTable(
     heure: time("heure"),
     salle: text("salle").notNull(),
     ville: text("ville"),
-    dept: char("dept", { length: 3 }),
+    dept: varchar("dept", { length: 3 }),
     prixMin: numeric("prix_min", { precision: 8, scale: 2 }),
     prixMax: numeric("prix_max", { precision: 8, scale: 2 }),
     url: text("url"),
