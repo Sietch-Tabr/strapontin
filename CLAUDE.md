@@ -209,20 +209,30 @@ Les concerts sont stockés en DB. Le frontend lit uniquement la DB.
 
 ### Jobs implémentés
 
-| Type                 | Déclenchement           | Description                                                            |
-| -------------------- | ----------------------- | ---------------------------------------------------------------------- |
-| `fetch:artiste`      | Ajout artiste + cron 2h | Fetch TM + Bandsintown + Eventim par nom artiste                       |
-| `fetch:region`       | Cron 2h                 | Fetch TM + Eventim par département (depuis `user_config.departements`) |
-| `fetch:salle`        | Ajout salle + cron 2h   | Fetch TM par `venueId` (stocké dans `user_salles.tmVenueId`)           |
-| `recalculer:matches` | Après fetch             | Recalcule `user_matches` pour tous les users                           |
+| Type                 | Déclenchement              | Description                                                                                      |
+| -------------------- | -------------------------- | ------------------------------------------------------------------------------------------------ |
+| `fetch:artiste`      | Ajout artiste + cron 2h    | Fetch TM + Bandsintown + Eventim par nom artiste                                                 |
+| `fetch:artistes:batch` | Cron 2h                  | Fetch TM en lots de 20 attractionIds pour tous les artistes suivis                               |
+| `fetch:region`       | Cron 2h + action manuelle  | Fetch TM + Eventim par département. Écrit timestamp Redis `strapontin:region:fetched:{dept}`     |
+| `fetch:salle`        | Ajout salle + cron 2h      | Fetch TM par `venueId` (stocké dans `user_salles.tmVenueId`)                                     |
+| `recalculer:matches` | Après fetch                | Recalcule `user_matches` pour tous les users (artistes + salles, filtre géo si depts configurés) |
+| `purger:concerts`    | Cron quotidien (minuit)    | Supprime les concerts dont la date est passée depuis > 7 jours                                   |
 
 Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
 **Déclenchement immédiat** : quand l'user ajoute un artiste depuis `/artistes`, l'action server fait `queue.add("fetch:artiste", ...)`. Quand l'user ajoute une salle avec `tmVenueId`, `queue.add("fetch:salle", ...)` est déclenché immédiatement. Le cron 2h assure les mises à jour périodiques.
 
+### Redis — clés applicatives
+
+| Clé | Valeur | TTL | Usage |
+| --- | ------ | --- | ----- |
+| `strapontin:tm:quota` | JSON `{dispo, total, reset, misAJour}` | — | Quota TM affiché en /admin |
+| `strapontin:tm:attraction:{artisteNorm}` | attractionId TM | 7 jours | Cache batching attractions |
+| `strapontin:region:fetched:{dept}` | ISO timestamp | 8 jours | Bannière découverte — last fetch par dept |
+
 ### Pièges BullMQ
 
-- **BullMQ v5 interdit les `:` dans les `jobId`** — utiliser `__` comme séparateur (`artiste__nom`, `region__all`, `salle__venueId`, `matches__all`). Les `:` dans le _type de job_ (premier arg de `queue.add`) sont acceptés.
+- **BullMQ v5 interdit les `:` dans les `jobId`** — utiliser `__` comme séparateur (`artiste__norm`, `artistes__batch`, `region__all`, `salle__venueId`, `matches__all`, `purge__YYYY-MM-DD`). Les `:` dans le _type de job_ (premier arg de `queue.add`) sont acceptés.
 
 ### Interface sources (packages/sources)
 
@@ -264,9 +274,8 @@ donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 
 ## Navigation
 
-- **Desktop (≥ 1024px)** : sidebar fixe — Accueil, Mes artistes, Mes salles, Découverte, Spectacles | Settings en bas
-- **Mobile (< 1024px)** : bottom nav 4 items fixes (Accueil, Artistes, Salles, Découvrir) + "···" → drawer pour Spectacles, Settings
-- **À venir** : /quinzaine fusionné dans /spectacles (chip "15 prochains jours")
+- **Desktop (≥ 1024px)** : sidebar fixe — Accueil, **Mes spectacles**, **Découverte**, Mes artistes, Mes salles | Settings en bas
+- **Mobile (< 1024px)** : bottom nav 3 items fixes (Accueil, **Mes spectacles**, **Découvrir**) + "···" → drawer pour Artistes, Salles, Settings
 
 ## Routes implémentées
 
@@ -277,8 +286,8 @@ Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + 
 | `/`           | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                            |
 | `/artistes`   | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                              |
 | `/salles`     | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                  |
-| `/spectacles` | Concerts userMatches à venir — chip "15 prochains jours" (auto-submit goto), filtres : classification, genre, artiste, mois |
-| `/decouverte` | Tous les concerts en base (non filtrés par user), filtres dept (chips auto-submit)/mois/genre, bouton "Suivre"              |
+| `/spectacles` | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours. Filtres : classification, genre, artiste, mois, budget. |
+| `/decouverte` | Tous les concerts en base. Chips dept (pré-cochés depuis prefs, pré-chargés via fetch:region), catégories, genres. Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs. |
 | `/parametres` | user_config (depts, rayon, filtreDisponibles), thème (cookie), nom + mot de passe (Better Auth)                             |
 | `/admin`      | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin                                  |
 | `/setup`      | Création premier compte admin (accessible uniquement si 0 users en base)                                                    |
@@ -332,6 +341,14 @@ Pas de page d'inscription publique. Premier accès via `/setup` (accessible uniq
 - Migrations Drizzle dans `packages/core/migrations/`
 - Logging : pino, lazy `%s` (pas de template literals dans les appels logger)
 - Pas de `console.log` en production
+
+## Roadmap — ce qui reste à faire
+
+| Priorité | Item |
+| -------- | ---- |
+| Phase 2  | Notifications email (Resend) — `notificationsEmail` en DB, rien envoyé côté worker |
+| Phase 2  | Shotgun.live — Playwright + API interne JSON |
+| Phase 3  | Dice.fm — scraping Playwright |
 
 ## Points à éclaircir
 
