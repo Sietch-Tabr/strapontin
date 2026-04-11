@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { toast } from 'svelte-sonner';
 	import { Music, X, Plus, Search } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 
@@ -62,7 +63,11 @@
 								<p class="text-xs text-muted-foreground">{suggestion.pays}</p>
 							{/if}
 						</div>
-						<form method="POST" action="?/ajouter" use:enhance>
+						<form method="POST" action="?/ajouter" use:enhance={() => async ({ result, update }) => {
+								if (result.type === 'success') toast.success('Artiste ajouté');
+								else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+								await update();
+							}}>
 							<input type="hidden" name="nom" value={suggestion.nom} />
 							<button
 								type="submit"
@@ -111,7 +116,11 @@
 				{#each data.artistes as artiste (artiste.artisteNormalise)}
 					<li class="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
 						<span class="font-medium text-card-foreground">{artiste.artisteAffiche}</span>
-						<form method="POST" action="?/supprimer" use:enhance>
+						<form method="POST" action="?/supprimer" use:enhance={() => async ({ result, update }) => {
+								if (result.type === 'success') toast.success('Artiste supprimé');
+								else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+								await update();
+							}}>
 							<input type="hidden" name="artisteNormalise" value={artiste.artisteNormalise} />
 							<button
 								type="submit"
