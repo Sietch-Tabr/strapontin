@@ -1,20 +1,28 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { Sun, Moon, Save, KeyRound, User, Download, Upload } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
+	import ComboboxDepts from '$lib/components/ui/combobox-depts.svelte';
+	import { TOUS_LES_DEPTS } from '$lib/constantes/depts';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	// Valeurs extraites une fois à l'init — intentionnel (formulaire local)
-	const { config, theme: themeInitial, utilisateur } = data;
+	let deptsSelectionnes = $state<string[]>(untrack(() => data.config?.departements ?? []));
+	let rayonKm = $state<number>(untrack(() => data.config?.rayonKm ?? 50));
+	let filtreDisponibles = $state<boolean>(untrack(() => data.config?.filtreDisponibles ?? true));
+	let notificationsEmail = $state<boolean>(untrack(() => data.config?.notificationsEmail ?? false));
+	let nom = $state<string>(untrack(() => data.utilisateur?.name ?? ''));
+	let theme = $state<string>(untrack(() => data.theme));
 
-	let departements = $state<string>(config?.departements?.join(', ') ?? '');
-	let rayonKm = $state<number>(config?.rayonKm ?? 50);
-	let filtreDisponibles = $state<boolean>(config?.filtreDisponibles ?? true);
-	let notificationsEmail = $state<boolean>(config?.notificationsEmail ?? false);
-
-	let nom = $state<string>(utilisateur?.name ?? '');
-	let theme = $state<string>(themeInitial);
+	// Resynchronisation après une action serveur (import, enregistrement)
+	$effect(() => {
+		deptsSelectionnes = data.config?.departements ?? [];
+		rayonKm = data.config?.rayonKm ?? 50;
+		filtreDisponibles = data.config?.filtreDisponibles ?? true;
+		notificationsEmail = data.config?.notificationsEmail ?? false;
+		nom = data.utilisateur?.name ?? '';
+	});
 
 	let enregistrementConfig = $state(false);
 	let enregistrementCompte = $state(false);
@@ -84,18 +92,15 @@
 				}}
 			>
 				<div>
-					<label for="departements" class="mb-1.5 block text-sm font-medium text-foreground">
-						Départements
-					</label>
-					<input
-						id="departements"
-						type="text"
-						name="departements"
-						bind:value={departements}
-						placeholder="75, 92, 93, 94…"
-						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+					<p class="mb-1.5 text-sm font-medium text-foreground">Départements</p>
+					<input type="hidden" name="departements" value={deptsSelectionnes.join(', ')} />
+					<ComboboxDepts
+						depts={TOUS_LES_DEPTS}
+						actifs={deptsSelectionnes}
+						onChange={(actifs) => {
+							deptsSelectionnes = actifs;
+						}}
 					/>
-					<p class="mt-1 text-xs text-muted-foreground">Codes séparés par des virgules.</p>
 				</div>
 
 				<div>

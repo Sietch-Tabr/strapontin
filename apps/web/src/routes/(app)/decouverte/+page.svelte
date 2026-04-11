@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import ComboboxDepts from '$lib/components/ui/combobox-depts.svelte';
 	import { Compass, Search, X, Check, Info, RefreshCw, Plus, Loader } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 
@@ -223,25 +224,17 @@
 		</div>
 	</form>
 
-	<!-- Chips : départements -->
+	<!-- Combobox : départements -->
 	{#if data.deptsDisponibles.length > 0}
 		<div class="mb-3 border-t border-border pt-3">
 			<p class="mb-1.5 text-xs font-medium text-muted-foreground">Départements</p>
 			<div class="flex flex-wrap items-center gap-1.5">
-				{#each data.deptsDisponibles as d (d)}
-					<a
-						href={urlToggleDept(d)}
-						data-sveltekit-replacestate
-						class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
-							{data.deptsActifs.includes(d)
-								? 'border-foreground bg-foreground text-background'
-								: data.userDepts.includes(d)
-									? 'border-foreground/40 bg-transparent text-foreground hover:border-foreground'
-									: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
-					>
-						{d}
-					</a>
-				{/each}
+				<ComboboxDepts
+					depts={data.deptsDisponibles}
+					actifs={data.deptsActifs}
+					onChange={(nouveauxActifs) =>
+						goto(construireUrl({ depts: nouveauxActifs, deptsFiltre: true }))}
+				/>
 				{#if data.userDepts.length > 0 && data.deptsActifs.length !== data.userDepts.length}
 					<a
 						href={construireUrl({ depts: data.userDepts, deptsFiltre: true })}
