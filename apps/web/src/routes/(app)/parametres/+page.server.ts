@@ -6,6 +6,17 @@ import { fail } from "@sveltejs/kit";
 import { queue } from "$lib/server/queue";
 import type { PageServerLoad, Actions } from "./$types";
 
+// Normalise un code département saisi par l'utilisateur.
+// Accepte les formats standards (ex. "75", "971") et la Corse en codes
+// administratifs (2A/2B), qu'on ramène à "20" car TM et Eventim dérivent
+// le département depuis le code postal (20xxx → "20").
+function normaliserDept(d: string): string | null {
+  const valeur = d.trim().toUpperCase();
+  if (/^2[AB]$/.test(valeur)) return "20";
+  if (/^\d{2,3}$/.test(valeur)) return valeur;
+  return null;
+}
+
 interface ArtisteExporte {
   nom: string;
   normalise: string;
@@ -42,8 +53,8 @@ export const actions: Actions = {
 
     const depts = (donnees.get("departements")?.toString() ?? "")
       .split(",")
-      .map((d) => d.trim())
-      .filter((d) => /^\d{2,3}$/.test(d));
+      .map((d) => normaliserDept(d))
+      .filter((d): d is string => d !== null);
 
     const rayonKm = Math.min(
       500,
@@ -249,8 +260,8 @@ export const actions: Actions = {
           if (importerConfig && donneesParsees.config) {
             const cfg = donneesParsees.config;
             const depts = (cfg.departements ?? [])
-              .map((d) => String(d).trim())
-              .filter((d) => /^\d{2,3}$/.test(d));
+              .map((d) => normaliserDept(String(d)))
+              .filter((d): d is string => d !== null);
             const rayon =
               typeof cfg.rayonKm === "number"
                 ? Math.min(500, Math.max(0, cfg.rayonKm))
@@ -338,8 +349,8 @@ export const actions: Actions = {
           if (importerConfig && donneesParsees.config) {
             const cfg = donneesParsees.config;
             const depts = (cfg.departements ?? [])
-              .map((d) => String(d).trim())
-              .filter((d) => /^\d{2,3}$/.test(d));
+              .map((d) => normaliserDept(String(d)))
+              .filter((d): d is string => d !== null);
             const rayon =
               typeof cfg.rayonKm === "number"
                 ? Math.min(500, Math.max(0, cfg.rayonKm))
