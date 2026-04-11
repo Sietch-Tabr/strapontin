@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { toast } from 'svelte-sonner';
 	import { Building2, X, Search, Plus } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 
@@ -70,7 +71,11 @@
 								<p class="text-xs text-muted-foreground">{resultat.ville}</p>
 							{/if}
 						</div>
-						<form method="POST" action="?/ajouter" use:enhance>
+						<form method="POST" action="?/ajouter" use:enhance={() => async ({ result, update }) => {
+								if (result.type === 'success') toast.success('Salle ajoutée');
+								else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+								await update();
+							}}>
 							<input type="hidden" name="salleId" value={resultat.salle} />
 							{#if resultat.tmVenueId}
 								<input type="hidden" name="tmVenueId" value={resultat.tmVenueId} />
@@ -124,7 +129,11 @@
 				{#each data.sallesSuivies as salle (salle.salleId)}
 					<li class="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
 						<span class="font-medium text-card-foreground">{salle.salleId}</span>
-						<form method="POST" action="?/supprimer" use:enhance>
+						<form method="POST" action="?/supprimer" use:enhance={() => async ({ result, update }) => {
+								if (result.type === 'success') toast.success('Salle supprimée');
+								else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+								await update();
+							}}>
 							<input type="hidden" name="salleId" value={salle.salleId} />
 							<button
 								type="submit"

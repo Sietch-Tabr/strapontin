@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
+	import { toast } from 'svelte-sonner';
 	import { Sun, Moon, Save, KeyRound, User, Download, Upload } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 	import ComboboxDepts from '$lib/components/ui/combobox-depts.svelte';
@@ -85,7 +86,9 @@
 				class="space-y-4"
 				use:enhance={() => {
 					enregistrementConfig = true;
-					return async ({ update }) => {
+					return async ({ result, update }) => {
+						if (result.type === 'success') toast.success('Configuration enregistrée');
+						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
 						await update({ reset: false });
 						enregistrementConfig = false;
 					};
@@ -181,7 +184,9 @@
 				class="space-y-4"
 				use:enhance={() => {
 					enregistrementCompte = true;
-					return async ({ update }) => {
+					return async ({ result, update }) => {
+						if (result.type === 'success') toast.success('Nom mis à jour');
+						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
 						await update({ reset: false });
 						enregistrementCompte = false;
 					};
@@ -229,7 +234,9 @@
 
 			<form method="POST" action="?/motDePasse" class="space-y-4" use:enhance={() => {
 				enregistrementMdp = true;
-				return async ({ update }) => {
+				return async ({ result, update }) => {
+					if (result.type === 'success') toast.success('Mot de passe modifié. Les autres sessions ont été révoquées.');
+					else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
 					await update();
 					enregistrementMdp = false;
 				};
@@ -328,7 +335,9 @@
 					class="space-y-4"
 					use:enhance={() => {
 						importEnCours = true;
-						return async ({ update }) => {
+						return async ({ result, update }) => {
+							if (result.type === 'success') toast.success((result.data?.message as string | undefined) ?? 'Import réussi');
+							else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
 							await update({ reset: true });
 							importEnCours = false;
 						};
