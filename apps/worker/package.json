@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "node --env-file-if-exists=../../.env --env-file-if-exists=../../.env.local --import=tsx/esm --watch src/index.ts",
     "build": "tsc --outDir dist --declaration false"
   },
   "dependencies": {
