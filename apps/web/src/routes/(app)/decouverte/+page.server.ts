@@ -233,6 +233,7 @@ export const actions: Actions = {
     return {
       success: true,
       message: `Actualisation lancée pour ${depts.join(", ")}`,
+      jobId: `region__manuel__${deptsALancer.join("_")}`,
     };
   },
 
@@ -289,6 +290,7 @@ export const actions: Actions = {
     return {
       success: true,
       message: `${depts.join(", ")} ajouté${depts.length > 1 ? "s" : ""} à vos préférences`,
+      jobId: `region__manuel__${deptsALancer.join("_")}`,
     };
   },
 };
