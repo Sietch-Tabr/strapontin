@@ -10,7 +10,9 @@
   },
   "scripts": {
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@strapontin/sources": "workspace:*",
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.10",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "vitest": "^3.2.0"
   }
 }
