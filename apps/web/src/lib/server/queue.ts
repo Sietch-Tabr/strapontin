@@ -15,6 +15,6 @@ function parserRedisUrl(url: string): { host: string; port: number } {
   }
 }
 
-const connexion = parserRedisUrl(REDIS_URL);
+export const connexionRedis = parserRedisUrl(REDIS_URL);
 
-export const queue = new Queue("concerts", { connection: connexion });
+export const queue = new Queue("concerts", { connection: connexionRedis });
