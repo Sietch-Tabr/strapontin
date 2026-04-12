@@ -7,8 +7,6 @@ import { randomBytes } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
-const FORMAT_IDENTIFIANT = /^[a-z0-9_]+$/;
-
 interface QuotaTM {
   dispo: number;
   total: number;
@@ -30,6 +28,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       email: users.email,
       role: users.role,
       username: users.username,
+      mustChangeCredentials: users.mustChangeCredentials,
       createdAt: users.createdAt,
     })
     .from(users)
@@ -48,56 +47,45 @@ export const actions: Actions = {
     }
 
     const donnees = await request.formData();
-    const nom = donnees.get("nom")?.toString().trim() ?? "";
-    const identifiant =
-      donnees.get("identifiant")?.toString().trim().toLowerCase() ?? "";
     const email = donnees.get("email")?.toString().trim() ?? "";
 
-    if (!nom || !identifiant || !email) {
-      return fail(400, { erreur: "Nom, identifiant et email obligatoires." });
-    }
-
-    if (nom.length > 100) {
-      return fail(400, { erreur: "Nom trop long (100 caractères max)." });
-    }
-
-    if (identifiant.length < 3 || identifiant.length > 30) {
-      return fail(400, {
-        erreur: "L'identifiant doit contenir entre 3 et 30 caractères.",
-      });
-    }
-
-    if (!FORMAT_IDENTIFIANT.test(identifiant)) {
-      return fail(400, {
-        erreur:
-          "L'identifiant ne peut contenir que des lettres, chiffres et underscores.",
-      });
+    if (!email) {
+      return fail(400, { erreur: "L'email est obligatoire." });
     }
 
     if (!FORMAT_EMAIL.test(email)) {
       return fail(400, { erreur: "Format d'email invalide." });
     }
 
+    // Nom initial = préfixe de l'email
+    const nomInitial = email.split("@")[0].slice(0, 100);
+
+    // Username temporaire unique : u_ + 8 chars aléatoires
+    const usernameTemp = "u_" + randomBytes(6).toString("base64url").slice(0, 8);
+
     // Mot de passe temporaire cryptographiquement sûr
     const motDePasseTemp = randomBytes(12).toString("base64url").slice(0, 16);
 
     try {
       await auth.api.signUpEmail({
-        body: { name: nom, email, password: motDePasseTemp },
+        body: { name: nomInitial, email, password: motDePasseTemp },
       });
     } catch {
       return fail(400, {
-        erreur:
-          "Impossible de créer le compte. Email ou identifiant déjà utilisé ?",
+        erreur: "Impossible de créer le compte. Email déjà utilisé ?",
       });
     }
 
     await db
       .update(users)
-      .set({ username: identifiant, displayUsername: identifiant })
+      .set({
+        username: usernameTemp,
+        displayUsername: usernameTemp,
+        mustChangeCredentials: true,
+      })
       .where(eq(users.email, email));
 
-    return { succes: true, motDePasseTemp, email, identifiant };
+    return { succes: true, motDePasseTemp, email, identifiant: usernameTemp };
   },
 
   supprimerCompte: async ({ request, locals }) => {

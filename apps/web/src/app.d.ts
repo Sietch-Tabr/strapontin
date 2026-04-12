@@ -10,6 +10,7 @@ declare global {
         | (import("better-auth").User & {
             role: string;
             username?: string | null;
+            mustChangeCredentials: boolean;
           })
         | null;
     }

@@ -48,9 +48,9 @@ export const actions: Actions = {
       });
     }
 
-    if (motDePasse.length < 8) {
+    if (motDePasse.length < 12) {
       return fail(400, {
-        erreur: "Le mot de passe doit contenir au moins 8 caractères.",
+        erreur: "Le mot de passe doit contenir au moins 12 caractères.",
       });
     }
 
