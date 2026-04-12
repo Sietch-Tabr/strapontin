@@ -7,6 +7,8 @@ import { randomBytes } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
+const FORMAT_IDENTIFIANT = /^[a-z0-9_]+$/;
+
 interface QuotaTM {
   dispo: number;
   total: number;
@@ -27,6 +29,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       name: users.name,
       email: users.email,
       role: users.role,
+      username: users.username,
       createdAt: users.createdAt,
     })
     .from(users)
@@ -46,14 +49,29 @@ export const actions: Actions = {
 
     const donnees = await request.formData();
     const nom = donnees.get("nom")?.toString().trim() ?? "";
+    const identifiant =
+      donnees.get("identifiant")?.toString().trim().toLowerCase() ?? "";
     const email = donnees.get("email")?.toString().trim() ?? "";
 
-    if (!nom || !email) {
-      return fail(400, { erreur: "Nom et email obligatoires." });
+    if (!nom || !identifiant || !email) {
+      return fail(400, { erreur: "Nom, identifiant et email obligatoires." });
     }
 
     if (nom.length > 100) {
       return fail(400, { erreur: "Nom trop long (100 caractères max)." });
+    }
+
+    if (identifiant.length < 3 || identifiant.length > 30) {
+      return fail(400, {
+        erreur: "L'identifiant doit contenir entre 3 et 30 caractères.",
+      });
+    }
+
+    if (!FORMAT_IDENTIFIANT.test(identifiant)) {
+      return fail(400, {
+        erreur:
+          "L'identifiant ne peut contenir que des lettres, chiffres et underscores.",
+      });
     }
 
     if (!FORMAT_EMAIL.test(email)) {
@@ -69,11 +87,17 @@ export const actions: Actions = {
       });
     } catch {
       return fail(400, {
-        erreur: "Impossible de créer le compte. Email déjà utilisé ?",
+        erreur:
+          "Impossible de créer le compte. Email ou identifiant déjà utilisé ?",
       });
     }
 
-    return { succes: true, motDePasseTemp, email };
+    await db
+      .update(users)
+      .set({ username: identifiant, displayUsername: identifiant })
+      .where(eq(users.email, email));
+
+    return { succes: true, motDePasseTemp, email, identifiant };
   },
 
   supprimerCompte: async ({ request, locals }) => {

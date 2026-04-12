@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { username } from "better-auth/plugins";
 import { PUBLIC_BASE_URL } from "$env/static/public";
 import { db } from "$lib/server/db";
 import * as schema from "@strapontin/core/schema";
@@ -18,6 +19,12 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  plugins: [
+    username({
+      minUsernameLength: 3,
+      maxUsernameLength: 30,
+    }),
+  ],
   user: {
     additionalFields: {
       role: {

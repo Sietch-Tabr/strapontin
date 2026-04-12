@@ -14,6 +14,7 @@
 	let filtreDisponibles = $state<boolean>(untrack(() => data.config?.filtreDisponibles ?? true));
 	let notificationsEmail = $state<boolean>(untrack(() => data.config?.notificationsEmail ?? false));
 	let nom = $state<string>(untrack(() => data.utilisateur?.name ?? ''));
+	let identifiant = $state<string>(untrack(() => (data.utilisateur as { username?: string | null } & typeof data.utilisateur)?.username ?? ''));
 	let theme = $state<string>(untrack(() => data.theme));
 
 	// Resynchronisation après une action serveur (import, enregistrement)
@@ -23,10 +24,12 @@
 		filtreDisponibles = data.config?.filtreDisponibles ?? true;
 		notificationsEmail = data.config?.notificationsEmail ?? false;
 		nom = data.utilisateur?.name ?? '';
+		identifiant = (data.utilisateur as { username?: string | null } & typeof data.utilisateur)?.username ?? '';
 	});
 
 	let enregistrementConfig = $state(false);
 	let enregistrementCompte = $state(false);
+	let enregistrementIdentifiant = $state(false);
 	let enregistrementMdp = $state(false);
 	let importEnCours = $state(false);
 	let modeImport = $state<'merger' | 'ecraser'>('merger');
@@ -213,6 +216,64 @@
 				>
 					<User size={16} />
 					{enregistrementCompte ? 'Mise à jour…' : 'Mettre à jour'}
+				</button>
+			</form>
+		</section>
+
+		<!-- Identifiant de connexion -->
+		<section>
+			<h2 class="mb-4 text-base font-medium text-foreground">Identifiant de connexion</h2>
+
+			{#if form?.succes === 'identifiant'}
+				<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+					Identifiant mis à jour.
+				</p>
+			{/if}
+			{#if form?.erreur && form?.section === 'identifiant'}
+				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+					{form.erreur}
+				</p>
+			{/if}
+
+			<form
+				method="POST"
+				action="?/identifiant"
+				class="space-y-4"
+				use:enhance={() => {
+					enregistrementIdentifiant = true;
+					return async ({ result, update }) => {
+						if (result.type === 'success') toast.success('Identifiant mis à jour');
+						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+						await update({ reset: false });
+						enregistrementIdentifiant = false;
+					};
+				}}
+			>
+				<div>
+					<label for="identifiant" class="mb-1.5 block text-sm font-medium text-foreground">
+						Identifiant
+					</label>
+					<input
+						id="identifiant"
+						type="text"
+						name="identifiant"
+						bind:value={identifiant}
+						minlength="3"
+						maxlength="30"
+						pattern="[a-zA-Z0-9_]+"
+						autocomplete="username"
+						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+					/>
+					<p class="mt-1 text-xs text-muted-foreground">3 à 30 caractères, lettres, chiffres et _ uniquement. Insensible à la casse.</p>
+				</div>
+
+				<button
+					type="submit"
+					disabled={enregistrementIdentifiant}
+					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+				>
+					<User size={16} />
+					{enregistrementIdentifiant ? 'Mise à jour…' : 'Mettre à jour'}
 				</button>
 			</form>
 		</section>
