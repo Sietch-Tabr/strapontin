@@ -11,7 +11,16 @@ const config = {
       filename.split(/[/\\]/).includes("node_modules") ? undefined : true,
   },
   kit: {
-    adapter: adapter(),
+    adapter: adapter({
+      // better-auth contient des annotations @__NO_SIDE_EFFECTS__ que Rollup
+      // ne sait pas interpréter à certaines positions — on les ignore silencieusement.
+      rollupOptions: {
+        onwarn(warning, warn) {
+          if (warning.code === "INVALID_ANNOTATION") return;
+          warn(warning);
+        },
+      },
+    }),
     env: {
       dir: resolve(__dirname, "../.."),
     },
