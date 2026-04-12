@@ -1,10 +1,17 @@
 import { db } from "$lib/server/db";
 import { auth } from "$lib/auth";
-import { userConfig, userArtistes, userSalles } from "@strapontin/core/schema";
+import {
+  userConfig,
+  userArtistes,
+  userSalles,
+  users,
+} from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import { queue } from "$lib/server/queue";
 import type { PageServerLoad, Actions } from "./$types";
+
+const FORMAT_IDENTIFIANT = /^[a-z0-9_]+$/;
 
 // Normalise un code département saisi par l'utilisateur.
 // Accepte les formats standards (ex. "75", "971") et la Corse en codes
@@ -128,6 +135,58 @@ export const actions: Actions = {
     });
 
     return { succes: "compte" };
+  },
+
+  identifiant: async ({ request, locals }) => {
+    const donnees = await request.formData();
+    const identifiant =
+      donnees.get("identifiant")?.toString().trim().toLowerCase() ?? "";
+
+    if (!identifiant) {
+      return fail(400, {
+        erreur: "L'identifiant ne peut pas être vide.",
+        section: "identifiant",
+      });
+    }
+
+    if (identifiant.length < 3 || identifiant.length > 30) {
+      return fail(400, {
+        erreur: "L'identifiant doit contenir entre 3 et 30 caractères.",
+        section: "identifiant",
+      });
+    }
+
+    if (!FORMAT_IDENTIFIANT.test(identifiant)) {
+      return fail(400, {
+        erreur:
+          "L'identifiant ne peut contenir que des lettres, chiffres et underscores.",
+        section: "identifiant",
+      });
+    }
+
+    const existant = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.username, identifiant))
+      .then((rows) => rows[0] ?? null);
+
+    if (existant && existant.id !== locals.user!.id) {
+      return fail(400, {
+        erreur: "Cet identifiant est déjà utilisé.",
+        section: "identifiant",
+      });
+    }
+
+    await db
+      .update(users)
+      .set({
+        username: identifiant,
+        displayUsername: identifiant,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, locals.user!.id));
+
+    return { succes: "identifiant" };
   },
 
   motDePasse: async ({ request }) => {

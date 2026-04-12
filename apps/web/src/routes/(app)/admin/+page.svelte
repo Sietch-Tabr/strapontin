@@ -6,6 +6,7 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let nomNouvelUser = $state('');
+	let identifiantNouvelUser = $state('');
 	let emailNouvelUser = $state('');
 	let creationEnCours = $state(false);
 
@@ -72,7 +73,7 @@
 			{#if form?.succes && form?.motDePasseTemp}
 				<div class="mb-4 rounded-xl border border-green-500/30 bg-green-500/10 p-4">
 					<p class="mb-2 text-sm font-medium text-green-700 dark:text-green-400">
-						Compte créé pour {form.email}.
+						Compte créé — identifiant : <strong>{form.identifiant}</strong>, email : {form.email}
 					</p>
 					<p class="text-sm text-green-700 dark:text-green-400">
 						Mot de passe temporaire :
@@ -81,7 +82,7 @@
 						</code>
 					</p>
 					<p class="mt-1 text-xs text-muted-foreground">
-						Communiquez ce mot de passe à l'utilisateur. Il pourra le modifier dans ses paramètres.
+						Communiquez ces informations à l'utilisateur. Il pourra modifier son mot de passe dans ses paramètres.
 					</p>
 				</div>
 			{/if}
@@ -102,6 +103,7 @@
 						await update();
 						creationEnCours = false;
 						nomNouvelUser = '';
+						identifiantNouvelUser = '';
 						emailNouvelUser = '';
 					};
 				}}
@@ -110,8 +112,20 @@
 					type="text"
 					name="nom"
 					bind:value={nomNouvelUser}
-					placeholder="Nom"
+					placeholder="Nom d'affichage"
 					required
+					class="flex-1 min-w-32 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+				/>
+				<input
+					type="text"
+					name="identifiant"
+					bind:value={identifiantNouvelUser}
+					placeholder="Identifiant"
+					required
+					minlength="3"
+					maxlength="30"
+					pattern="[a-zA-Z0-9_]+"
+					autocomplete="off"
 					class="flex-1 min-w-32 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 				/>
 				<input
@@ -124,7 +138,7 @@
 				/>
 				<button
 					type="submit"
-					disabled={creationEnCours || !nomNouvelUser.trim() || !emailNouvelUser.trim()}
+					disabled={creationEnCours || !nomNouvelUser.trim() || !identifiantNouvelUser.trim() || !emailNouvelUser.trim()}
 					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
 				>
 					<UserPlus size={16} />
@@ -145,6 +159,9 @@
 						<div class="min-w-0">
 							<div class="flex items-center gap-2">
 								<span class="font-medium text-card-foreground">{utilisateur.name}</span>
+								{#if utilisateur.username}
+									<span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground font-mono">@{utilisateur.username}</span>
+								{/if}
 								{#if utilisateur.role === 'admin'}
 									<span class="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
 										<ShieldCheck size={11} />

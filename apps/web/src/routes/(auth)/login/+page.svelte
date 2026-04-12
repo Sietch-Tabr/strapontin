@@ -2,7 +2,7 @@
 	import { signIn } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
 
-	let email = $state('');
+	let identifiant = $state('');
 	let motDePasse = $state('');
 	let erreur = $state('');
 	let chargement = $state(false);
@@ -12,10 +12,10 @@
 		chargement = true;
 		erreur = '';
 
-		const resultat = await signIn.email({ email, password: motDePasse });
+		const resultat = await signIn.username({ username: identifiant, password: motDePasse });
 
 		if (resultat.error) {
-			erreur = 'Email ou mot de passe incorrect.';
+			erreur = 'Identifiant ou mot de passe incorrect.';
 			chargement = false;
 		} else {
 			goto('/');
@@ -32,13 +32,13 @@
 
 		<form onsubmit={connexion} class="space-y-4">
 			<div class="space-y-2">
-				<label for="email" class="text-sm font-medium">Email</label>
+				<label for="identifiant" class="text-sm font-medium">Identifiant</label>
 				<input
-					id="email"
-					type="email"
-					bind:value={email}
+					id="identifiant"
+					type="text"
+					bind:value={identifiant}
 					required
-					autocomplete="email"
+					autocomplete="username"
 					class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				/>
 			</div>

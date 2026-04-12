@@ -26,11 +26,26 @@ export const actions: Actions = {
 
     const donnees = await request.formData();
     const nom = donnees.get("nom")?.toString().trim() ?? "";
+    const identifiant =
+      donnees.get("identifiant")?.toString().trim().toLowerCase() ?? "";
     const email = donnees.get("email")?.toString().trim() ?? "";
     const motDePasse = donnees.get("motDePasse")?.toString() ?? "";
 
-    if (!nom || !email || !motDePasse) {
+    if (!nom || !identifiant || !email || !motDePasse) {
       return fail(400, { erreur: "Tous les champs sont obligatoires." });
+    }
+
+    if (identifiant.length < 3 || identifiant.length > 30) {
+      return fail(400, {
+        erreur: "L'identifiant doit contenir entre 3 et 30 caractères.",
+      });
+    }
+
+    if (!/^[a-z0-9_]+$/.test(identifiant)) {
+      return fail(400, {
+        erreur:
+          "L'identifiant ne peut contenir que des lettres, chiffres et underscores.",
+      });
     }
 
     if (motDePasse.length < 8) {
@@ -47,8 +62,15 @@ export const actions: Actions = {
       return fail(400, { erreur: "Impossible de créer le compte." });
     }
 
-    // Passer le rôle admin
-    await db.update(users).set({ role: "admin" }).where(eq(users.email, email));
+    // Passer le rôle admin et définir le username
+    await db
+      .update(users)
+      .set({
+        role: "admin",
+        username: identifiant,
+        displayUsername: identifiant,
+      })
+      .where(eq(users.email, email));
 
     redirect(302, "/login");
   },

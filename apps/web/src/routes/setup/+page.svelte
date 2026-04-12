@@ -30,7 +30,7 @@
 			class="space-y-4"
 		>
 			<div class="space-y-2">
-				<label for="nom" class="text-sm font-medium">Nom</label>
+				<label for="nom" class="text-sm font-medium">Nom d'affichage</label>
 				<input
 					id="nom"
 					name="nom"
@@ -42,7 +42,23 @@
 			</div>
 
 			<div class="space-y-2">
-				<label for="email" class="text-sm font-medium">Email</label>
+				<label for="identifiant" class="text-sm font-medium">Identifiant de connexion</label>
+				<input
+					id="identifiant"
+					name="identifiant"
+					type="text"
+					required
+					minlength="3"
+					maxlength="30"
+					pattern="[a-zA-Z0-9_]+"
+					autocomplete="username"
+					class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+				<p class="text-xs text-muted-foreground">3 à 30 caractères, lettres, chiffres et _ uniquement. Insensible à la casse.</p>
+			</div>
+
+			<div class="space-y-2">
+				<label for="email" class="text-sm font-medium">Email (pour la récupération de compte)</label>
 				<input
 					id="email"
 					name="email"
