@@ -32,7 +32,7 @@ strapontin/
 - **SvelteKit** + TypeScript — frontend SSR + API routes
 - **Drizzle ORM** + PostgreSQL 18 — données persistantes
 - **BullMQ** + Redis 8 — jobs background (fetch concerts toutes les 2h)
-- **Better-Auth** — auth email/password, invite-only
+- **Better-Auth** — auth username/password, invite-only (plugin `username` activé)
 - **Resend** — notifications email (tier gratuit 3 000/mois)
 - **pnpm workspaces** — monorepo sans Turborepo
 
@@ -61,8 +61,14 @@ tea issues -r Kwaite/strapontin -f "index,title,body,comments" -o json
 # Créer une issue
 tea issue create -r Kwaite/strapontin
 
-# Créer une PR
-tea pr create -r Kwaite/strapontin
+# Créer une PR (toujours mettre Closes #N dans le corps, pas seulement le titre)
+tea pr create -r Kwaite/strapontin --title "..." --description "$(cat <<'EOF'
+Closes #N
+
+## Résumé
+...
+EOF
+)"
 
 # Jalons et labels
 tea milestones -r Kwaite/strapontin -o json
@@ -277,9 +283,15 @@ interface SourceConcerts {
 
 ## Authentification
 
-Better-Auth, email/password uniquement. Invite-only : admin crée le compte
-→ user reçoit lien "définir mon mot de passe". Pas de page d'inscription publique.
+Better-Auth, username/password. Invite-only : admin crée le compte (nom + identifiant + email)
+→ communique le mot de passe temporaire généré. Pas de page d'inscription publique.
+Login par **identifiant** (insensible à la casse, normalisé en minuscules). L'email sert
+uniquement à la récupération de compte (reset mot de passe — v 1.2).
 Rôles : `user` | `admin`.
+
+Plugin `username` de Better-Auth : colonnes `username` + `display_username` sur `users`.
+Annotation `@__NO_SIDE_EFFECTS__` de better-auth strippée dans `vite.config.ts` via plugin
+`renderChunk` pour éviter une erreur Rollup dans l'étape adapter-node.
 
 ## Dédoublonnage inter-sources (packages/core)
 
@@ -323,7 +335,7 @@ Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + 
 | `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json` (artistes, salles, config). Protégé par session.                                                                                                        |
 | `/admin`           | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin                                                                                                                          |
 | `/setup`           | Création premier compte admin (accessible uniquement si 0 users en base)                                                                                                                                            |
-| `/login`           | Authentification email/password                                                                                                                                                                                     |
+| `/login`           | Authentification username/password (identifiant insensible à la casse)                                                                                                                                              |
 | `/health`          | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                                                                                                              |
 
 ## Affichage — tournées
@@ -343,7 +355,7 @@ Migrations dans `packages/core/migrations/` — générées par `pnpm --filter @
 
 | Table           | Rôle                                                            |
 | --------------- | --------------------------------------------------------------- |
-| `users`         | Utilisateurs — colonnes Better Auth + `role` (user\|admin)      |
+| `users`         | Utilisateurs — colonnes Better Auth + `role` (user\|admin) + `username` + `display_username` |
 | `sessions`      | Sessions actives                                                |
 | `accounts`      | Comptes d'auth (stocke le hash du mot de passe côté credential) |
 | `verifications` | Tokens de vérification email / reset password                   |
@@ -363,7 +375,7 @@ Migrations dans `packages/core/migrations/` — générées par `pnpm --filter @
 
 ### Authentification — premier utilisateur
 
-Pas de page d'inscription publique. Premier accès via `/setup` (accessible uniquement si aucun utilisateur en base — redirige vers `/login` sinon). Crée automatiquement un compte `role=admin`.
+Pas de page d'inscription publique. Premier accès via `/setup` (accessible uniquement si aucun utilisateur en base — redirige vers `/login` sinon). Crée automatiquement un compte `role=admin`. Saisie obligatoire : nom d'affichage, identifiant (username), email, mot de passe.
 
 ## Conventions
 
