@@ -5,8 +5,6 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	let nomNouvelUser = $state('');
-	let identifiantNouvelUser = $state('');
 	let emailNouvelUser = $state('');
 	let creationEnCours = $state(false);
 
@@ -73,16 +71,22 @@
 			{#if form?.succes && form?.motDePasseTemp}
 				<div class="mb-4 rounded-xl border border-green-500/30 bg-green-500/10 p-4">
 					<p class="mb-2 text-sm font-medium text-green-700 dark:text-green-400">
-						Compte créé — identifiant : <strong>{form.identifiant}</strong>, email : {form.email}
+						Compte créé pour <strong>{form.email}</strong>
 					</p>
 					<p class="text-sm text-green-700 dark:text-green-400">
+						Identifiant temporaire :
+						<code class="rounded bg-green-500/20 px-2 py-0.5 font-mono font-semibold">
+							{form.identifiant}
+						</code>
+					</p>
+					<p class="mt-1 text-sm text-green-700 dark:text-green-400">
 						Mot de passe temporaire :
 						<code class="rounded bg-green-500/20 px-2 py-0.5 font-mono font-semibold">
 							{form.motDePasseTemp}
 						</code>
 					</p>
-					<p class="mt-1 text-xs text-muted-foreground">
-						Communiquez ces informations à l'utilisateur. Il pourra modifier son mot de passe dans ses paramètres.
+					<p class="mt-2 text-xs text-muted-foreground">
+						Communiquez ces identifiants à l'utilisateur. À la première connexion, il choisira son propre identifiant et mot de passe.
 					</p>
 				</div>
 			{/if}
@@ -102,47 +106,25 @@
 					return async ({ update }) => {
 						await update();
 						creationEnCours = false;
-						nomNouvelUser = '';
-						identifiantNouvelUser = '';
 						emailNouvelUser = '';
 					};
 				}}
 			>
 				<input
-					type="text"
-					name="nom"
-					bind:value={nomNouvelUser}
-					placeholder="Nom d'affichage"
-					required
-					class="flex-1 min-w-32 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-				/>
-				<input
-					type="text"
-					name="identifiant"
-					bind:value={identifiantNouvelUser}
-					placeholder="Identifiant"
-					required
-					minlength="3"
-					maxlength="30"
-					pattern="[a-zA-Z0-9_]+"
-					autocomplete="off"
-					class="flex-1 min-w-32 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-				/>
-				<input
 					type="email"
 					name="email"
 					bind:value={emailNouvelUser}
-					placeholder="Email"
+					placeholder="Email de l'utilisateur"
 					required
-					class="flex-1 min-w-48 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+					class="flex-1 min-w-64 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 				/>
 				<button
 					type="submit"
-					disabled={creationEnCours || !nomNouvelUser.trim() || !identifiantNouvelUser.trim() || !emailNouvelUser.trim()}
+					disabled={creationEnCours || !emailNouvelUser.trim()}
 					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
 				>
 					<UserPlus size={16} />
-					Créer
+					Inviter
 				</button>
 			</form>
 		</section>
@@ -166,6 +148,11 @@
 									<span class="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
 										<ShieldCheck size={11} />
 										admin
+									</span>
+								{/if}
+								{#if utilisateur.mustChangeCredentials}
+									<span class="rounded-full bg-yellow-500/15 px-2 py-0.5 text-xs text-yellow-700 dark:text-yellow-400">
+										premier login en attente
 									</span>
 								{/if}
 							</div>

@@ -283,13 +283,23 @@ interface SourceConcerts {
 
 ## Authentification
 
-Better-Auth, username/password. Invite-only : admin crée le compte (nom + identifiant + email)
-→ communique le mot de passe temporaire généré. Pas de page d'inscription publique.
+Better-Auth, username/password. Invite-only : admin crée le compte en saisissant uniquement
+l'**email**. Le système génère un username temporaire (`u_` + 8 chars aléatoires) et un mot
+de passe temporaire (16 chars base64url). L'admin communique ces identifiants à l'utilisateur.
+
+À la première connexion, `must_change_credentials = true` → redirection automatique vers
+`/first-login` (dans `hooks.server.ts`). L'utilisateur y choisit son nom, identifiant et un
+nouveau mot de passe (12 caractères minimum). Le flag passe à `false` après validation.
+
 Login par **identifiant** (insensible à la casse, normalisé en minuscules). L'email sert
 uniquement à la récupération de compte (reset mot de passe — v 1.2).
 Rôles : `user` | `admin`.
 
+**Politique mot de passe** : 12 caractères minimum (NIST SP 800-63B, longueur seule).
+S'applique à `/setup`, `/parametres` (changePassword) et `/first-login`.
+
 Plugin `username` de Better-Auth : colonnes `username` + `display_username` sur `users`.
+Colonne `must_change_credentials` (boolean, default false) : flag premier login.
 Annotation `@__NO_SIDE_EFFECTS__` de better-auth strippée dans `vite.config.ts` via plugin
 `renderChunk` pour éviter une erreur Rollup dans l'étape adapter-node.
 
@@ -333,9 +343,10 @@ Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + 
 | `/decouverte`      | Tous les concerts en base. Chips dept, catégories, genres, tri (Par date · Nouveautés). Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs.    |
 | `/parametres`      | user_config (depts, rayon, filtreDisponibles), thème, nom + mot de passe. Export JSON (artistes + salles + config). Import JSON avec mode fusionner / écraser, checkbox config opt-in, fetch déclenché post-import. |
 | `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json` (artistes, salles, config). Protégé par session.                                                                                                        |
-| `/admin`           | Création de comptes (mot de passe temporaire généré) + liste + suppression — réservé admin                                                                                                                          |
+| `/admin`           | Invitation (email seul) + liste des comptes + suppression — réservé admin. Badge "premier login en attente" si `must_change_credentials = true`.                                                                    |
 | `/setup`           | Création premier compte admin (accessible uniquement si 0 users en base)                                                                                                                                            |
 | `/login`           | Authentification username/password (identifiant insensible à la casse)                                                                                                                                              |
+| `/first-login`     | Première connexion — choix du nom, identifiant et nouveau mot de passe. Redirigé automatiquement si `must_change_credentials = true`.                                                                               |
 | `/health`          | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                                                                                                              |
 
 ## Affichage — tournées
@@ -353,12 +364,12 @@ Migrations dans `packages/core/migrations/` — générées par `pnpm --filter @
 
 ### Tables Better Auth (gérées par la lib)
 
-| Table           | Rôle                                                            |
-| --------------- | --------------------------------------------------------------- |
-| `users`         | Utilisateurs — colonnes Better Auth + `role` (user\|admin) + `username` + `display_username` |
-| `sessions`      | Sessions actives                                                |
-| `accounts`      | Comptes d'auth (stocke le hash du mot de passe côté credential) |
-| `verifications` | Tokens de vérification email / reset password                   |
+| Table           | Rôle                                                                                         |
+| --------------- | -------------------------------------------------------------------------------------------- |
+| `users`         | Utilisateurs — colonnes Better Auth + `role` (user\|admin) + `username` + `display_username` + `must_change_credentials` |
+| `sessions`      | Sessions actives                                                                             |
+| `accounts`      | Comptes d'auth (stocke le hash du mot de passe côté credential)                              |
+| `verifications` | Tokens de vérification email / reset password                                                |
 
 `users.id` est de type `text` (Better Auth génère ses propres IDs, pas UUID).
 

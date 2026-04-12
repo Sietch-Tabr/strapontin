@@ -203,9 +203,9 @@ export const actions: Actions = {
       });
     }
 
-    if (nouveau.length < 8) {
+    if (nouveau.length < 12) {
       return fail(400, {
-        erreur: "Le nouveau mot de passe doit contenir au moins 8 caractères.",
+        erreur: "Le nouveau mot de passe doit contenir au moins 12 caractères.",
         section: "motDePasse",
       });
     }

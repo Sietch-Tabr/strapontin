@@ -54,6 +54,14 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.session = session.session;
   event.locals.user = session.user;
 
+  // Première connexion : forcer le choix des identifiants
+  if (
+    session.user.mustChangeCredentials &&
+    event.url.pathname !== "/first-login"
+  ) {
+    redirect(302, "/first-login");
+  }
+
   return svelteKitHandler({
     event,
     resolve: (event) =>

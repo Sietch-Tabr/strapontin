@@ -64,6 +64,13 @@
       "when": 1776029684149,
       "tag": "0008_adorable_shatterstar",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776031552918,
+      "tag": "0009_blue_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

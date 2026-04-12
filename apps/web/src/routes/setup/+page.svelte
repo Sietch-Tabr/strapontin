@@ -76,8 +76,9 @@
 					name="motDePasse"
 					type="password"
 					required
-					minlength="8"
+					minlength="12"
 					autocomplete="new-password"
+					placeholder="12 caractères minimum"
 					class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				/>
 			</div>
