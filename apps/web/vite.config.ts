@@ -10,10 +10,11 @@ import { resolve } from "path";
 function stripBetterAuthAnnotations() {
   return {
     name: "strip-better-auth-no-side-effects",
-    transform(code: string, id: string) {
-      if (id.includes("better-auth") && code.includes("@__NO_SIDE_EFFECTS__")) {
+    renderChunk(code: string) {
+      if (code.includes("@__NO_SIDE_EFFECTS__")) {
         return { code: code.replace(/@__NO_SIDE_EFFECTS__/g, ""), map: null };
       }
+      return null;
     },
   };
 }
