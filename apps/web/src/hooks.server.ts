@@ -2,11 +2,29 @@ import { auth } from "$lib/auth";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 import { redirect } from "@sveltejs/kit";
 import { building } from "$app/environment";
+import { sequence } from "@sveltejs/kit/hooks";
 import type { Handle } from "@sveltejs/kit";
 
 const ROUTES_PUBLIQUES = ["/login", "/setup", "/health"];
 
-export const handle: Handle = async ({ event, resolve }) => {
+const securiser: Handle = async ({ event, resolve }) => {
+  const reponse = await resolve(event);
+  reponse.headers.set("X-Content-Type-Options", "nosniff");
+  reponse.headers.set("X-Frame-Options", "DENY");
+  reponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  reponse.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=()"
+  );
+  reponse.headers.set(
+    "Strict-Transport-Security",
+    "max-age=31536000; includeSubDomains"
+  );
+  reponse.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return reponse;
+};
+
+const gererAuth: Handle = async ({ event, resolve }) => {
   const theme = event.cookies.get("theme") ?? "light";
   event.locals.theme = theme;
 
@@ -73,3 +91,5 @@ export const handle: Handle = async ({ event, resolve }) => {
     building,
   });
 };
+
+export const handle: Handle = sequence(securiser, gererAuth);
