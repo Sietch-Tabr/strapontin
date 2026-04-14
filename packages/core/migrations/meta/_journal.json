@@ -71,6 +71,13 @@
       "when": 1776031552918,
       "tag": "0009_blue_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776191116135,
+      "tag": "0010_gifted_nemesis",
+      "breakpoints": true
     }
   ]
 }
