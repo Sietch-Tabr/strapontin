@@ -20,6 +20,41 @@ import {
 
 const logger = pino({ name: "jobs" });
 
+// Seuils de protection quota TM (resets toutes les 24h)
+const SEUIL_QUOTA_WARN = 200;
+const SEUIL_QUOTA_ABORT = 10;
+
+// Vérifie le quota TM stocké en Redis. Retourne false si le job doit être annulé.
+async function verifierQuotaTM(nomJob: string): Promise<boolean> {
+  const quotaJson = await redis
+    .get(CLE_QUOTA_TM)
+    .catch((err) => {
+      logger.warn({ err }, "redis: échec lecture quota TM");
+      return null;
+    });
+
+  if (!quotaJson) return true; // pas de quota connu → continuer
+
+  const quota = JSON.parse(quotaJson) as { dispo: number; total: number };
+
+  if (quota.dispo < SEUIL_QUOTA_ABORT) {
+    logger.error(
+      { dispo: quota.dispo, total: quota.total, job: nomJob },
+      "quota TM épuisé — job annulé",
+    );
+    return false;
+  }
+
+  if (quota.dispo < SEUIL_QUOTA_WARN) {
+    logger.warn(
+      { dispo: quota.dispo, total: quota.total, job: nomJob },
+      "quota TM faible",
+    );
+  }
+
+  return true;
+}
+
 async function sauvegarderQuotaTM(): Promise<void> {
   const quota = ticketmaster.obtenirQuota();
   if (quota) {
@@ -130,6 +165,8 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     case "fetch:artistes:batch": {
       logger.info("fetch:artistes:batch démarré");
 
+      if (!(await verifierQuotaTM("fetch:artistes:batch"))) break;
+
       // Charger tous les artistes distincts depuis la DB
       const rows = await db
         .selectDistinct({
@@ -239,6 +276,8 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
     case "fetch:region": {
       logger.info({ depts: data.depts }, "fetch:region démarré");
+
+      if (!(await verifierQuotaTM("fetch:region"))) break;
 
       const rayonKmRegion = data.rayonKm ?? 50;
       const [resultsTM, resultsEventim] = await Promise.allSettled([
