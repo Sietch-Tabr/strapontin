@@ -465,18 +465,17 @@ Format JSON : `{ version, exporteAt, artistes, salles, config }`.
 
 ### v0.90 — revue globale (jalon actif)
 
-| # | Item |
-|---|---|
+| #   | Item                                                                  |
+| --- | --------------------------------------------------------------------- |
 | #41 | Erreurs silencieuses : logger les échecs Redis et les cas catch vides |
-| #38 | Bug : rowCount undefined dans purger:concerts |
-| #25 | Analyse des logs de prod avant la v1 |
-| #24 | Configuration du conteneur Proxmox |
-| #18 | Revue de code |
-| #16 | Audit UI/UX |
-| #14 | Test de sécurité |
-| #10 | RGPD |
-| #9 | Création d'une page d'aide et d'infos |
-| #6 | Optimiser les appels aux API externes |
+| #25 | Analyse des logs de prod avant la v1                                  |
+| #24 | Configuration du conteneur Proxmox                                    |
+| #18 | Revue de code                                                         |
+| #16 | Audit UI/UX                                                           |
+| #14 | Test de sécurité                                                      |
+| #10 | RGPD                                                                  |
+| #9  | Création d'une page d'aide et d'infos                                 |
+| #6  | Optimiser les appels aux API externes                                 |
 
 ### Phase 2 (post-v1.0)
 
