@@ -1,1 +1,0 @@
-ALTER TABLE "users" ADD COLUMN "must_change_credentials" boolean DEFAULT false NOT NULL;

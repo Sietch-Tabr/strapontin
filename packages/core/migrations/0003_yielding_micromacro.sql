@@ -1,1 +1,0 @@
-ALTER TABLE "user_salles" ADD COLUMN "tm_venue_id" text;

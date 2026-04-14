@@ -5,78 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1775676458028,
-      "tag": "0000_minor_screwball",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1775713845018,
-      "tag": "0001_silent_nekra",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1775754062959,
-      "tag": "0002_mature_the_professor",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1775761272339,
-      "tag": "0003_yielding_micromacro",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1775765927533,
-      "tag": "0004_medical_thunderball",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1775770995553,
-      "tag": "0005_parallel_king_cobra",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1775807080927,
-      "tag": "0006_ancient_jack_power",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1775853374331,
-      "tag": "0007_chunky_meteorite",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1776029684149,
-      "tag": "0008_adorable_shatterstar",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1776031552918,
-      "tag": "0009_blue_squirrel_girl",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1776191116135,
-      "tag": "0010_gifted_nemesis",
+      "when": 1776191819903,
+      "tag": "0000_friendly_thunderbolt_ross",
       "breakpoints": true
     }
   ]

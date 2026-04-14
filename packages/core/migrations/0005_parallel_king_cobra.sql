@@ -1,1 +1,0 @@
-ALTER TABLE "user_config" DROP COLUMN "search_period_months";
