@@ -12,6 +12,10 @@ const logger = pino({ name: "source:ticketmaster" });
 const BASE_URL = "https://app.ticketmaster.com/discovery/v2";
 const CLASSIFICATIONS = ["music", "theatre", "opera", "musical"];
 const TAILLE_PAGE = 20;
+// Taille maximale autorisée par TM pour les appels groupés (région, batch artistes)
+const TAILLE_PAGE_REGION = 200;
+// Protection quota : ne jamais dépasser 5 pages par appel (max 1 000 concerts)
+const NB_PAGES_MAX = 5;
 
 export interface QuotaTM {
   dispo: number;
@@ -260,6 +264,35 @@ async function fetchPage(
   return { events, total, quota };
 }
 
+// Récupère toutes les pages d'un appel TM jusqu'à NB_PAGES_MAX.
+// Utiliser uniquement pour les appels groupés (région, batch) où le volume peut dépasser TAILLE_PAGE.
+async function fetchToutesPages(
+  params: URLSearchParams,
+  apiKey: string,
+): Promise<{ events: ConcertBrut[]; quota: QuotaTM | null }> {
+  const tousLesEvents: ConcertBrut[] = [];
+  let quota: QuotaTM | null = null;
+  let totalElements = 0;
+
+  for (let numPage = 0; numPage < NB_PAGES_MAX; numPage++) {
+    const paramsPage = new URLSearchParams(params);
+    paramsPage.set("page", String(numPage));
+
+    const { events, total, quota: q } = await fetchPage(paramsPage, apiKey);
+    if (q) quota = q;
+    if (numPage === 0) totalElements = total;
+    tousLesEvents.push(...events);
+
+    // Arrêter si la page est vide ou si on a tout récupéré
+    if (events.length === 0 || tousLesEvents.length >= totalElements) break;
+
+    // Respecter le rate limit TM (5 req/s) entre les pages
+    await new Promise((r) => setTimeout(r, 250));
+  }
+
+  return { events: tousLesEvents, quota };
+}
+
 export class TicketmasterSource implements SourceConcerts {
   private _dernierQuota: QuotaTM | null = null;
 
@@ -322,12 +355,12 @@ export class TicketmasterSource implements SourceConcerts {
     if (attractionIds.length === 0) return [];
     const params = new URLSearchParams({
       attractionId: attractionIds.join(","),
-      size: String(TAILLE_PAGE),
+      size: String(TAILLE_PAGE_REGION),
       sort: "date,asc",
     });
-    const { events, quota } = await fetchPage(params, this.apiKey);
+    const { events, quota } = await fetchToutesPages(params, this.apiKey);
     if (quota) this._dernierQuota = quota;
-    logger.info({ ids: attractionIds.length }, "TM fetchArtistesBatch");
+    logger.info({ ids: attractionIds.length, total: events.length }, "TM fetchArtistesBatch");
     return events;
   }
 
@@ -350,11 +383,11 @@ export class TicketmasterSource implements SourceConcerts {
         radius: String(rayonKm),
         unit: "km",
         classificationName: classifs.join(","),
-        size: String(TAILLE_PAGE),
+        size: String(TAILLE_PAGE_REGION),
         sort: "date,asc",
       });
 
-      const { events, quota } = await fetchPage(params, this.apiKey);
+      const { events, quota } = await fetchToutesPages(params, this.apiKey);
       if (quota) this._dernierQuota = quota;
       tous.push(...events);
 
