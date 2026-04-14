@@ -23,7 +23,9 @@ const logger = pino({ name: "jobs" });
 async function sauvegarderQuotaTM(): Promise<void> {
   const quota = ticketmaster.obtenirQuota();
   if (quota) {
-    await redis.set(CLE_QUOTA_TM, JSON.stringify(quota)).catch(() => {});
+    await redis
+      .set(CLE_QUOTA_TM, JSON.stringify(quota))
+      .catch((err) => logger.warn({ err }, "redis: échec écriture quota TM"));
   }
 }
 
@@ -145,7 +147,10 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
       for (const { artisteAffiche, artisteNormalise } of rows) {
         const cached = await redis
           .get(cleAttractionId(artisteNormalise))
-          .catch(() => null);
+          .catch((err) => {
+            logger.warn({ err }, "redis: échec lecture attraction ID");
+            return null;
+          });
         if (cached) {
           idsParNorm.set(artisteNormalise, cached);
         } else {
@@ -160,7 +165,12 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
           idsParNorm.set(norm, id);
           await redis
             .setex(cleAttractionId(norm), TTL_ATTRACTION_ID_S, id)
-            .catch(() => {});
+            .catch((err) =>
+              logger.warn(
+                { err, artisteNorm: norm },
+                "redis: échec écriture attraction ID",
+              ),
+            );
         }
         await new Promise((r) => setTimeout(r, 250));
       }
@@ -265,7 +275,12 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
               "EX",
               TTL_REGION_FETCHEE_S,
             )
-            .catch(() => {}),
+            .catch((err) =>
+              logger.warn(
+                { err, dept },
+                "redis: échec écriture timestamp région",
+              ),
+            ),
         ),
       );
 
