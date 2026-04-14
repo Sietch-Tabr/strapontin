@@ -156,8 +156,24 @@ pct exec "$VMID" -- bash -c "
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
         curl git gnupg2 ca-certificates lsb-release build-essential \
         unattended-upgrades
-    printf 'APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";\n' \
+    # Activer les mises à jour de sécurité automatiques quotidiennes
+    printf 'APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";\nAPT::Periodic::AutocleanInterval \"7\";\n' \
         > /etc/apt/apt.conf.d/20auto-upgrades
+    # Limiter aux patches de sécurité uniquement — PostgreSQL et Redis exclus
+    # (leurs montées de version majeures sont gérées manuellement via system-update.sh)
+    cat > /etc/apt/apt.conf.d/51strapontin-upgrades << 'APT_CONF'
+Unattended-Upgrade::Allowed-Origins {
+    \"\${distro_id}:\${distro_codename}-security\";
+};
+Unattended-Upgrade::Package-Blacklist {
+    \"postgresql-*\";
+    \"redis\";
+    \"redis-server\";
+    \"nodejs\";
+};
+Unattended-Upgrade::Automatic-Reboot \"false\";
+Unattended-Upgrade::AutoFixInterruptedDpkg \"true\";
+APT_CONF
 "
 
 # Node 22 (NodeSource)
