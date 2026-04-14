@@ -6,7 +6,8 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	let termeRecherche = $state<string>(data.recherche);
+	let termeRecherche = $state(data.recherche);
+	$effect(() => { termeRecherche = data.recherche; });
 </script>
 
 <div class="p-6 lg:p-8">
