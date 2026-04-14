@@ -33,7 +33,7 @@ pnpm build
 
 # 5. Migrations DB
 echo "[5/6] migrations..."
-su - strapontin -c "set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && pnpm --filter @strapontin/core db:migrate"
+su - strapontin -c "set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && NO_COLOR=1 pnpm --filter @strapontin/core db:migrate"
 
 # 6. Redémarrage des services
 echo "[6/6] redémarrage..."

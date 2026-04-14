@@ -1,6 +1,18 @@
 steps:
+  - name: typecheck
+    image: node:22-alpine
+    commands:
+      - corepack enable
+      - pnpm install --frozen-lockfile
+      - pnpm --filter @strapontin/web run check
+      - pnpm --filter @strapontin/worker exec tsc --noEmit
+    when:
+      - event: push
+        branch: main
+
   - name: deploy
     image: alpine
+    depends_on: [typecheck]
     environment:
       SSH_KEY:
         from_secret: ssh_key
