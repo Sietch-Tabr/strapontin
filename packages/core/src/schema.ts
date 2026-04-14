@@ -1,11 +1,14 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   index,
   integer,
   jsonb,
   numeric,
   pgTable,
+  primaryKey,
   text,
   time,
   timestamp,
@@ -35,8 +38,8 @@ export const concerts = pgTable(
     prixMax: numeric("prix_max", { precision: 8, scale: 2 }),
     url: text("url"),
     source: text("source").notNull(),
-    classification: text("classification"), // "music" | "theatre" | null (depuis TM)
-    genre: text("genre"), // "Rock" | "Pop" | "Jazz" | null (depuis TM)
+    classification: text("classification"),
+    genre: text("genre"),
     disponible: boolean("disponible").notNull().default(true),
     firstSeen: timestamp("first_seen", { withTimezone: true })
       .notNull()
@@ -55,6 +58,10 @@ export const concerts = pgTable(
     index("idx_concerts_date").on(table.date),
     index("idx_concerts_dept").on(table.dept),
     index("idx_concerts_disponible").on(table.disponible),
+    check(
+      "chk_concerts_source",
+      sql`${table.source} IN ('ticketmaster', 'eventim', 'bandsintown')`,
+    ),
   ],
 );
 
@@ -64,25 +71,29 @@ export const concerts = pgTable(
 // + champ additionnel role (user | admin).
 // -------------------------------------------------------------------
 
-export const users = pgTable("users", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").notNull().default(false),
-  image: text("image"),
-  role: text("role").notNull().default("user"),
-  username: text("username").unique(),
-  displayUsername: text("display_username"),
-  mustChangeCredentials: boolean("must_change_credentials")
-    .notNull()
-    .default(false),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    emailVerified: boolean("email_verified").notNull().default(false),
+    image: text("image"),
+    role: text("role").notNull().default("user"),
+    username: text("username").unique(),
+    displayUsername: text("display_username"),
+    mustChangeCredentials: boolean("must_change_credentials")
+      .notNull()
+      .default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [check("chk_users_role", sql`${table.role} IN ('user', 'admin')`)],
+);
 
 // -------------------------------------------------------------------
 // sessions
@@ -159,21 +170,31 @@ export const userArtistes = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [index("idx_user_artistes_norm").on(table.artisteNormalise)],
+  (table) => [
+    unique("uq_user_artistes_user_artiste").on(
+      table.userId,
+      table.artisteNormalise,
+    ),
+    index("idx_user_artistes_norm").on(table.artisteNormalise),
+  ],
 );
 
 // -------------------------------------------------------------------
 // user_salles
 // -------------------------------------------------------------------
 
-export const userSalles = pgTable("user_salles", {
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  salleId: text("salle_id").notNull(),
-  // ID Ticketmaster de la salle (null si non résolu ou salle saisie librement)
-  tmVenueId: text("tm_venue_id"),
-});
+export const userSalles = pgTable(
+  "user_salles",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    salleId: text("salle_id").notNull(),
+    // ID Ticketmaster de la salle (null si non résolu ou salle saisie librement)
+    tmVenueId: text("tm_venue_id"),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.salleId] })],
+);
 
 // -------------------------------------------------------------------
 // user_config
@@ -213,7 +234,10 @@ export const userMatches = pgTable(
   (table) => [
     unique("uq_user_matches_user_concert").on(table.userId, table.concertId),
     index("idx_user_matches_user").on(table.userId),
-    index("idx_user_matches_nouveaux").on(table.userId),
+    // Index partiel : accélère la récupération des concerts non encore vus
+    index("idx_user_matches_non_vus")
+      .on(table.userId)
+      .where(sql`${table.vuLe} IS NULL`),
   ],
 );
 
@@ -240,5 +264,9 @@ export const fetchJobs = pgTable(
   (table) => [
     index("idx_fetch_jobs_next_run").on(table.nextRun),
     index("idx_fetch_jobs_status").on(table.status),
+    check(
+      "chk_fetch_jobs_status",
+      sql`${table.status} IN ('pending', 'running', 'done', 'error')`,
+    ),
   ],
 );
