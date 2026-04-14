@@ -177,6 +177,7 @@ scripts/
 ├── deploy.sh            # premier déploiement : clone → build → migrations → services
 ├── backup.sh            # pg_dump + .env → /mnt/backup/ (NAS monté en bind mount), purge 30j
 ├── update.sh            # backup → pull → install → build → migrate → restart → healthcheck
+├── system-update.sh     # mise à jour OS du LXC (depuis host Proxmox) : snapshot → apt → healthcheck
 ├── seed-artistes.ts     # importe une liste d'artistes pour un user (tsx scripts/seed-artistes.ts)
 └── artistes-seed.txt    # liste d'artistes par défaut (un par ligne, # = commentaire)
 ```
@@ -199,6 +200,37 @@ DATABASE_URL=... USER_EMAIL=... tsx scripts/seed-artistes.ts /chemin/vers/artist
 5. `drizzle-kit migrate`
 6. `systemctl restart strapontin-web strapontin-worker`
 7. healthcheck : `curl -f http://localhost:3000/health`
+
+### system-update.sh — mise à jour OS du LXC
+
+À exécuter depuis le **host Proxmox** (pas depuis le LXC ni le Mac) :
+
+```bash
+# Copier ou exécuter depuis le host Proxmox
+bash /opt/strapontin/scripts/system-update.sh
+# ou en SSH depuis le Mac :
+ssh root@192.168.1.99 "bash -s" < scripts/system-update.sh
+```
+
+Ordre : snapshot Proxmox → `apt upgrade` → vérification des 4 services → healthcheck `/health`.
+En cas d'échec : `pct rollback 113 pre-sysupdate-YYYYMMDD`.
+
+**Ne pas intégrer dans `update.sh`** (déployé par Woodpecker) — un `apt upgrade` intempestif
+risque de casser PostgreSQL ou Redis en plein déploiement applicatif.
+
+**Suivi des versions** :
+
+```bash
+# Dépendances npm — tous workspaces
+pnpm outdated -r
+
+# Paquets système obsolètes sur le LXC
+ssh root@192.168.20.79 "apt list --upgradable 2>/dev/null"
+```
+
+PostgreSQL et Redis sont blacklistés dans `unattended-upgrades` (fichier
+`/etc/apt/apt.conf.d/51strapontin-upgrades`) — leurs montées de version majeures
+sont gérées manuellement avec snapshot préalable.
 
 ### backup.sh
 
@@ -384,25 +416,25 @@ Les nouvelles migrations (post-v1) seront numérotées à partir de `0001`.
 
 ### Tables Better Auth (gérées par la lib)
 
-| Table           | Rôle                                                                                         |
-| --------------- | -------------------------------------------------------------------------------------------- |
+| Table           | Rôle                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `users`         | Utilisateurs — colonnes Better Auth + `role` (user\|admin) + `username` + `display_username` + `must_change_credentials` |
-| `sessions`      | Sessions actives                                                                             |
-| `accounts`      | Comptes d'auth (stocke le hash du mot de passe côté credential)                              |
-| `verifications` | Tokens de vérification email / reset password                                                |
+| `sessions`      | Sessions actives                                                                                                         |
+| `accounts`      | Comptes d'auth (stocke le hash du mot de passe côté credential)                                                          |
+| `verifications` | Tokens de vérification email / reset password                                                                            |
 
 `users.id` est de type `text` (Better Auth génère ses propres IDs, pas UUID).
 
 ### Tables applicatives
 
-| Table           | Rôle                                                                                         |
-| --------------- | -------------------------------------------------------------------------------------------- |
+| Table           | Rôle                                                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `concerts`      | Source de vérité concerts — `classification` (valeurs TM France en français : `musique`, `arts et théâtre`…) + `genre` (Rock/Pop…). CHECK sur `source`. |
-| `user_artistes` | Artistes suivis par user — UNIQUE `(user_id, artiste_normalise)`                             |
-| `user_salles`   | Salles suivies par user — PK composite `(user_id, salle_id)`, `tmVenueId` nullable           |
-| `user_config`   | Préférences par user (départements, rayon, filtres…)                                         |
-| `user_matches`  | Index concerts ↔ users (calculé par le worker)                                               |
-| `fetch_jobs`    | Historique et planning des jobs BullMQ                                                       |
+| `user_artistes` | Artistes suivis par user — UNIQUE `(user_id, artiste_normalise)`                                                                                        |
+| `user_salles`   | Salles suivies par user — PK composite `(user_id, salle_id)`, `tmVenueId` nullable                                                                      |
+| `user_config`   | Préférences par user (départements, rayon, filtres…)                                                                                                    |
+| `user_matches`  | Index concerts ↔ users (calculé par le worker)                                                                                                          |
+| `fetch_jobs`    | Historique et planning des jobs BullMQ                                                                                                                  |
 
 ### Authentification — premier utilisateur
 
