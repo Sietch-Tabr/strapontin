@@ -74,7 +74,7 @@ export class BandsintownSource implements SourceConcerts {
     }
 
     if (!res.ok) {
-      logger.error(
+      logger.warn(
         { status: res.status, artiste: nom },
         "erreur HTTP Bandsintown",
       );
