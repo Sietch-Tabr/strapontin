@@ -461,14 +461,27 @@ Format JSON : `{ version, exporteAt, artistes, salles, config }`.
   - Toutes les opérations DB dans une transaction → rollback complet en cas d'erreur
   - Post-import : `fetch:artistes:batch` + `fetch:salle` par salle + `fetch:region` si nouveaux depts
 
-## Roadmap — ce qui reste à faire
+## Roadmap — jalons
+
+### v0.90 — revue globale (jalon actif)
+
+| # | Item |
+|---|---|
+| #41 | Erreurs silencieuses : logger les échecs Redis et les cas catch vides |
+| #38 | Bug : rowCount undefined dans purger:concerts |
+| #25 | Analyse des logs de prod avant la v1 |
+| #24 | Configuration du conteneur Proxmox |
+| #18 | Revue de code |
+| #16 | Audit UI/UX |
+| #14 | Test de sécurité |
+| #10 | RGPD |
+| #9 | Création d'une page d'aide et d'infos |
+| #6 | Optimiser les appels aux API externes |
+
+### Phase 2 (post-v1.0)
 
 | Priorité | Item                                                                               |
 | -------- | ---------------------------------------------------------------------------------- |
 | Phase 2  | Notifications email (Resend) — `notificationsEmail` en DB, rien envoyé côté worker |
 | Phase 2  | Shotgun.live — Playwright + API interne JSON                                       |
 | Phase 3  | Dice.fm — scraping Playwright                                                      |
-
-## Points à éclaircir
-
-- **Stratégie de déploiement** : évaluer si Woodpecker + SSH est justifié, ou si une release Codeberg + webhook (ou SSH manuel depuis le Mac) est plus simple. Woodpecker ajoute de la complexité (réseau inter-VLAN, secrets, maintenance) pour un gain limité sur un projet personnel.
