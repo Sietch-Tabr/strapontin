@@ -378,7 +378,9 @@ Sur `/` (accueil), les concerts sont regroupés par artiste. Si un artiste a ≥
 
 ## Schéma PostgreSQL
 
-Migrations dans `packages/core/migrations/` — générées par `pnpm --filter @strapontin/core db:generate`, appliquées par `db:migrate`.
+Migration initiale unique `0000_friendly_thunderbolt_ross.sql` dans `packages/core/migrations/` — reflète le schéma complet de la v1. Générée par `pnpm --filter @strapontin/core db:generate`, appliquée par `db:migrate`.
+
+Les nouvelles migrations (post-v1) seront numérotées à partir de `0001`.
 
 ### Tables Better Auth (gérées par la lib)
 
@@ -395,9 +397,9 @@ Migrations dans `packages/core/migrations/` — générées par `pnpm --filter @
 
 | Table           | Rôle                                                                                         |
 | --------------- | -------------------------------------------------------------------------------------------- |
-| `concerts`      | Source de vérité concerts — `classification` (music/theatre) + `genre` (Rock/Pop…) depuis TM |
-| `user_artistes` | Artistes suivis par user                                                                     |
-| `user_salles`   | Salles suivies par user — `tmVenueId` (ID Ticketmaster, nullable)                            |
+| `concerts`      | Source de vérité concerts — `classification` (valeurs TM France en français : `musique`, `arts et théâtre`…) + `genre` (Rock/Pop…). CHECK sur `source`. |
+| `user_artistes` | Artistes suivis par user — UNIQUE `(user_id, artiste_normalise)`                             |
+| `user_salles`   | Salles suivies par user — PK composite `(user_id, salle_id)`, `tmVenueId` nullable           |
 | `user_config`   | Préférences par user (départements, rayon, filtres…)                                         |
 | `user_matches`  | Index concerts ↔ users (calculé par le worker)                                               |
 | `fetch_jobs`    | Historique et planning des jobs BullMQ                                                       |
