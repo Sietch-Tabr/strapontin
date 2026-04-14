@@ -299,8 +299,8 @@ Les concerts sont stockés en DB. Le frontend lit uniquement la DB.
 | Type                   | Déclenchement             | Description                                                                                      |
 | ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------ |
 | `fetch:artiste`        | Ajout artiste + cron 2h   | Fetch TM + Bandsintown + Eventim par nom artiste                                                 |
-| `fetch:artistes:batch` | Cron 2h                   | Fetch TM en lots de 20 attractionIds pour tous les artistes suivis                               |
-| `fetch:region`         | Cron 2h + action manuelle | Fetch TM + Eventim par département. Écrit timestamp Redis `strapontin:region:fetched:{dept}`     |
+| `fetch:artistes:batch` | Cron 2h                   | Fetch TM en lots de 20 attractionIds — 200 concerts/lot, paginé jusqu'à 1 000 concerts           |
+| `fetch:region`         | Cron 2h + action manuelle | Fetch TM + Eventim par département — 200 concerts/dept, paginé. Timestamp Redis par dept         |
 | `fetch:salle`          | Ajout salle + cron 2h     | Fetch TM par `venueId` (stocké dans `user_salles.tmVenueId`)                                     |
 | `recalculer:matches`   | Après fetch               | Recalcule `user_matches` pour tous les users (artistes + salles, filtre géo si depts configurés) |
 | `purger:concerts`      | Cron quotidien (minuit)   | Supprime les concerts dont la date est passée depuis > 7 jours                                   |
@@ -320,6 +320,19 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 ### Pièges BullMQ
 
 - **BullMQ v5 interdit les `:` dans les `jobId`** — utiliser `__` comme séparateur (`artiste__norm`, `artistes__batch`, `region__all`, `salle__venueId`, `matches__all`, `purge__YYYY-MM-DD`). Les `:` dans le _type de job_ (premier arg de `queue.add`) sont acceptés.
+
+### Pagination TM (`packages/sources/src/ticketmaster.ts`)
+
+- `TAILLE_PAGE = 20` pour `fetchArtiste` et `fetchSalle` (1 artiste/salle, rarement > 20 concerts FR)
+- `TAILLE_PAGE_REGION = 200` (max TM) pour `fetchArtistesBatch` et `fetchRegion`
+- `NB_PAGES_MAX = 5` — protection quota : max 1 000 concerts par appel
+- `fetchToutesPages()` : boucle de pagination avec délai 250ms entre pages
+
+### Guard quota TM (`apps/worker/src/jobs.ts`)
+
+`verifierQuotaTM(nomJob)` appelée en début de `fetch:artistes:batch` et `fetch:region` :
+- `dispo < 200` → `warn` (quota faible)
+- `dispo < 10` → `error` + job annulé (break)
 
 ### Interface sources (packages/sources)
 
