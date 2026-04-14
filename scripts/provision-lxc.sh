@@ -276,6 +276,7 @@ EnvironmentFile=/opt/strapontin/.env
 ExecStart=/usr/bin/node /opt/strapontin/apps/web/build/index.js
 Restart=on-failure
 RestartSec=5
+TimeoutStopSec=10
 LimitNOFILE=65536
 
 [Install]
@@ -295,6 +296,7 @@ EnvironmentFile=/opt/strapontin/.env
 ExecStart=/opt/strapontin/apps/worker/node_modules/.bin/tsx /opt/strapontin/apps/worker/src/index.ts
 Restart=on-failure
 RestartSec=5
+TimeoutStopSec=10
 LimitNOFILE=65536
 
 [Install]

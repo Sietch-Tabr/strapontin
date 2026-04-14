@@ -16,7 +16,7 @@
 </script>
 
 <div class="flex h-screen bg-background">
-	<Sidebar utilisateur={data.utilisateur} />
+	<Sidebar utilisateur={data.utilisateur!} />
 
 	<main bind:this={conteneurPrincipal} class="flex-1 overflow-auto pb-16 lg:pb-0">
 		{@render children()}
