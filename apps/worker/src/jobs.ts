@@ -309,10 +309,11 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
       const resultat = await db
         .delete(concerts)
-        .where(lt(concerts.date, dateLimite));
+        .where(lt(concerts.date, dateLimite))
+        .returning({ id: concerts.id });
 
       logger.info(
-        { dateLimite, supprimes: resultat.rowCount ?? 0 },
+        { dateLimite, supprimes: resultat.length },
         "purger:concerts terminé",
       );
       break;

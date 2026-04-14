@@ -6,7 +6,8 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	let termeRecherche = $state<string>(data.recherche);
+	let termeRecherche = $state(data.recherche);
+	$effect(() => { termeRecherche = data.recherche; });
 
 	// Peut-on ajouter directement le terme de recherche comme nouvelle salle ?
 	const peutAjouterDirectement = $derived(
