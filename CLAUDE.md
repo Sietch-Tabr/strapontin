@@ -100,10 +100,28 @@ git checkout -b feature/nom-court
 
 ### Pipeline Woodpecker (.woodpecker.yaml)
 
+Deux steps sur push `main` : `typecheck` puis `deploy` (`depends_on: [typecheck]`).
+
+- **`typecheck`** (`node:22-alpine`) : crée un `.env` stub, exécute `svelte-check` sur web et `tsc --noEmit` sur worker. Bloque le deploy en cas d'erreur TypeScript.
+- **`deploy`** (`alpine`) : SSH vers le LXC prod, exécute `update.sh`.
+
 ```yaml
 steps:
+  - name: typecheck
+    image: node:22-alpine
+    commands:
+      - corepack enable
+      - pnpm install --frozen-lockfile
+      - printf 'DATABASE_URL=x\nBETTER_AUTH_SECRET=x\nTICKETMASTER_API_KEY=x\nBANDSINTOWN_APP_ID=x\nRESEND_API_KEY=x\nREDIS_URL=x\nPUBLIC_BASE_URL=http://localhost\n' > .env
+      - pnpm --filter @strapontin/web run check
+      - pnpm --filter @strapontin/worker exec tsc --noEmit
+    when:
+      - event: push
+        branch: main
+
   - name: deploy
     image: alpine
+    depends_on: [typecheck]
     environment:
       SSH_KEY:
         from_secret: ssh_key
@@ -118,7 +136,7 @@ steps:
         branch: main
 ```
 
-LXC 111 (Woodpecker) et LXC 113 (strapontin) sont tous les deux sur VLAN 20 — SSH direct sans passer par le host Proxmox.
+LXC 111 (Woodpecker, `192.168.20.88`) et LXC 113 (strapontin, `192.168.20.79`) sont tous les deux sur VLAN 20 — SSH direct sans passer par le host Proxmox.
 
 Secrets Woodpecker : `ssh_key` (clé privée dédiée), `lxc_host` = `192.168.20.79`.
 
