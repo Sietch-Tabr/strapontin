@@ -61,6 +61,8 @@ export async function persisterConcerts(
         set: {
           // Préférer le nom avec diacritiques (ex. "Julien Doré" > "Julien Dore")
           artiste: sql`CASE WHEN unaccent(excluded.artiste) != excluded.artiste THEN excluded.artiste ELSE ${concerts.artiste} END`,
+          // Préférer la casse mixte sur le tout-majuscule (ex. "Accor Arena" > "ACCOR ARENA")
+          salle: sql`CASE WHEN upper(excluded.salle) != excluded.salle THEN excluded.salle ELSE ${concerts.salle} END`,
           heure: sql`excluded.heure`,
           ville: sql`excluded.ville`,
           dept: sql`excluded.dept`,
