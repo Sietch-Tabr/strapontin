@@ -103,6 +103,7 @@
 		<div class="mt-1 flex items-center justify-between rounded-md px-3 py-2">
 			<span class="truncate text-sm text-sidebar-foreground">{utilisateur.name}</span>
 			<button
+				type="button"
 				onclick={seDeconnecter}
 				class="text-sidebar-foreground/60 transition-colors hover:text-sidebar-foreground"
 				aria-label="Se déconnecter"
