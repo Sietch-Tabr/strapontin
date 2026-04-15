@@ -1,6 +1,7 @@
 import { db } from "$lib/server/db";
 import { queue } from "$lib/server/queue";
 import { userSalles, concerts } from "@strapontin/core/schema";
+import { levenshtein } from "@strapontin/core";
 import { eq, and, ilike, sql } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import { TICKETMASTER_API_KEY } from "$env/static/private";
@@ -16,26 +17,6 @@ function normaliserSalleCle(nom: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]/g, "");
-}
-
-// Calcule la distance de Levenshtein entre deux chaînes.
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  const ligne = Array.from({ length: n + 1 }, (_, j) => j);
-  for (let i = 1; i <= m; i++) {
-    let prev = ligne[0];
-    ligne[0] = i;
-    for (let j = 1; j <= n; j++) {
-      const tmp = ligne[j];
-      ligne[j] =
-        a[i - 1] === b[j - 1]
-          ? prev
-          : 1 + Math.min(prev, ligne[j - 1], ligne[j]);
-      prev = tmp;
-    }
-  }
-  return ligne[n];
 }
 
 // Retourne true si deux noms de salle désignent le même lieu, en tolérant jusqu'à

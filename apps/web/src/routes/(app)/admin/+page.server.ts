@@ -2,17 +2,11 @@ import { db } from "$lib/server/db";
 import { redis, CLE_QUOTA_TM } from "$lib/server/redis";
 import { auth } from "$lib/auth";
 import { users } from "@strapontin/core/schema";
+import type { QuotaTM } from "@strapontin/sources";
 import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
-
-interface QuotaTM {
-  dispo: number;
-  total: number;
-  reset: number;
-  misAJour: string;
-}
 
 const FORMAT_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

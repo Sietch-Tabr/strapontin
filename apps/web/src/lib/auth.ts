@@ -37,4 +37,15 @@ export const auth = betterAuth({
       },
     },
   },
+  rateLimit: {
+    enabled: true,
+    window: 10,
+    max: 100,
+    customRules: {
+      "/sign-in/username": {
+        window: 900,
+        max: 5,
+      },
+    },
+  },
 });

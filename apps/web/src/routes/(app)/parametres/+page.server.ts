@@ -250,6 +250,13 @@ export const actions: Actions = {
       });
     }
 
+    if (fichier.size > 1_000_000) {
+      return fail(400, {
+        erreur: "Fichier trop volumineux (1 Mo maximum).",
+        section: "import",
+      });
+    }
+
     // Lecture et validation JSON
     let contenu: unknown;
     try {

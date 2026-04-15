@@ -21,6 +21,10 @@ const securiser: Handle = async ({ event, resolve }) => {
     "max-age=31536000; includeSubDomains"
   );
   reponse.headers.set("X-Robots-Tag", "noindex, nofollow");
+  reponse.headers.set(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'"
+  );
   return reponse;
 };
 

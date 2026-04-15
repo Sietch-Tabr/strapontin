@@ -29,7 +29,7 @@ export function similarite(a: string, b: string): number {
   return 1 - distance / longueur;
 }
 
-function levenshtein(a: string, b: string): number {
+export function levenshtein(a: string, b: string): number {
   const m = a.length;
   const n = b.length;
   const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
