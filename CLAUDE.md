@@ -390,12 +390,13 @@ TM retourne parfois des événements sans `_embedded.attractions` (tableau absen
 
 1. `_embedded.attractions[0].name` (nom canonique, toujours préféré)
 2. `artisteFallback` passé par l'appelant — `fetchArtiste(nom)` passe le mot-clé de recherche
-3. Partie avant le premier ` - ` du titre de l'événement (heuristique pour les appels sans contexte artiste)
+3. Partie avant le premier `-` du titre de l'événement (heuristique pour les appels sans contexte artiste)
 
 ### Persistance — upsert `persisterConcerts`
 
 Clé de conflit : `(artiste_norm, date, salle_norm)`.
 En cas de conflit, les champs mis à jour suivent ces préférences :
+
 - `artiste` : version avec diacritiques préférée (`unaccent(excluded.artiste) != excluded.artiste`)
 - `salle` : casse mixte préférée sur tout-majuscule (`upper(excluded.salle) != excluded.salle`)
 

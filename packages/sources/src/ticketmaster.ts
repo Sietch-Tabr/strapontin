@@ -294,7 +294,11 @@ async function fetchToutesPages(
     const paramsPage = new URLSearchParams(params);
     paramsPage.set("page", String(numPage));
 
-    const { events, total, quota: q } = await fetchPage(paramsPage, apiKey, artisteFallback);
+    const {
+      events,
+      total,
+      quota: q,
+    } = await fetchPage(paramsPage, apiKey, artisteFallback);
     if (q) quota = q;
     if (numPage === 0) totalElements = total;
     tousLesEvents.push(...events);
@@ -376,7 +380,10 @@ export class TicketmasterSource implements SourceConcerts {
     });
     const { events, quota } = await fetchToutesPages(params, this.apiKey);
     if (quota) this._dernierQuota = quota;
-    logger.info({ ids: attractionIds.length, total: events.length }, "TM fetchArtistesBatch");
+    logger.info(
+      { ids: attractionIds.length, total: events.length },
+      "TM fetchArtistesBatch",
+    );
     return events;
   }
 
