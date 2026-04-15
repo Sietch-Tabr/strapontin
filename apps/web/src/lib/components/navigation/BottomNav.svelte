@@ -35,6 +35,10 @@
 		return page.url.pathname.startsWith(route);
 	}
 
+	function plusEstActif(): boolean {
+		return elementsDrawer.some(({ route }) => page.url.pathname.startsWith(route));
+	}
+
 	function naviguer(route: string) {
 		drawerOuvert = false;
 		goto(route);
@@ -61,8 +65,10 @@
 		{/each}
 
 		<button
+			type="button"
 			onclick={() => (drawerOuvert = true)}
-			class="flex flex-1 flex-col items-center gap-1 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+			class="flex flex-1 flex-col items-center gap-1 py-2 text-xs font-medium transition-colors
+				{plusEstActif() ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}"
 		>
 			<MoreHorizontal size={22} />
 			Plus
@@ -78,6 +84,7 @@
 		aria-label="Menu supplémentaire"
 	>
 		<button
+			type="button"
 			class="absolute inset-0 bg-black/50"
 			onclick={() => (drawerOuvert = false)}
 			aria-label="Fermer le menu"
@@ -89,6 +96,7 @@
 			<div class="space-y-1">
 				{#each elementsDrawer as { label, icone: Icone, route }}
 					<button
+						type="button"
 						onclick={() => naviguer(route)}
 						class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground
 							{estActif(route) ? 'bg-accent text-accent-foreground' : 'text-foreground'}"
@@ -100,6 +108,7 @@
 
 				{#if estAdmin}
 					<button
+						type="button"
 						onclick={() => naviguer('/admin')}
 						class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground
 							{estActif('/admin') ? 'bg-accent text-accent-foreground' : 'text-foreground'}"
@@ -112,6 +121,7 @@
 				<div class="my-2 border-t border-border"></div>
 
 				<button
+					type="button"
 					onclick={seDeconnecter}
 					class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
 				>

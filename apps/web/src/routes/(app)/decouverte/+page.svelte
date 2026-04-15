@@ -413,6 +413,7 @@
 				</div>
 				{#if etatFetch === 'termine' || etatFetch === 'erreur'}
 					<button
+						type="button"
 						onclick={actualiserDonnees}
 						class="shrink-0 flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors
 							{etatFetch === 'termine'
