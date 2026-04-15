@@ -7,6 +7,7 @@
 
 	let emailNouvelUser = $state('');
 	let creationEnCours = $state(false);
+	let confirmationSupprimer = $state<string | null>(null);
 
 	function formaterReset(timestampMs: number): string {
 		if (!timestampMs) return '—';
@@ -163,19 +164,39 @@
 							<p class="text-sm text-muted-foreground">{utilisateur.email}</p>
 						</div>
 						{#if utilisateur.id !== data.utilisateur?.id}
-							<form method="POST" action="?/supprimerCompte" use:enhance>
-								<input type="hidden" name="userId" value={utilisateur.id} />
+							{#if confirmationSupprimer === utilisateur.id}
+								<div class="flex items-center gap-2">
+									<span class="text-xs text-destructive">Supprimer ?</span>
+									<form method="POST" action="?/supprimerCompte" use:enhance={() => async ({ update }) => {
+										confirmationSupprimer = null;
+										await update();
+									}}>
+										<input type="hidden" name="userId" value={utilisateur.id} />
+										<button
+											type="submit"
+											class="rounded-md px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+										>
+											Confirmer
+										</button>
+									</form>
+									<button
+										type="button"
+										onclick={() => (confirmationSupprimer = null)}
+										class="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
+									>
+										Annuler
+									</button>
+								</div>
+							{:else}
 								<button
-									type="submit"
-									onclick={(e) => {
-										if (!confirm(`Supprimer le compte de ${utilisateur.name} ?`)) e.preventDefault();
-									}}
+									type="button"
+									onclick={() => (confirmationSupprimer = utilisateur.id)}
 									class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
 									aria-label="Supprimer {utilisateur.name}"
 								>
 									<Trash2 size={16} />
 								</button>
-							</form>
+							{/if}
 						{/if}
 					</li>
 				{/each}
