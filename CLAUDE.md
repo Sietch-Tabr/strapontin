@@ -416,9 +416,11 @@ Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`,
   - Pas de dépendance à mettre à jour : le code est dans le repo
 - **Tailwind CSS v4** — configuration via `@theme` dans le CSS (plus de `tailwind.config.js`)
 - **Typographie** : Geist ou Inter (à valider à l'œil au démarrage)
-- **Thème** : clair + sombre, sobre dans les deux cas
+- **Thème** : `auto` (système), `clair`, `sombre` — sobre dans les deux cas
   - Mode sombre via CSS custom properties + `class="dark"` sur `<html>`
-  - Persisté en cookie (lu côté serveur SvelteKit → pas de FOUC)
+  - Persisté en DB (`user_config.theme`) + cookie (1 an) → synchronisé entre appareils, pas de FOUC
+  - `auto` : script inline `<head>` détecte `prefers-color-scheme` côté client
+  - Résolution : cookie en priorité ; si absent → lecture DB + pose cookie automatique (`hooks.server.ts`)
 - **Palette** : neutres (gris, blanc/noir) + une couleur accent unique (à définir Phase 0)
 
 ## Navigation

@@ -2,7 +2,7 @@
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
-	import { Sun, Moon, Save, KeyRound, User, Download, Upload } from '@lucide/svelte';
+	import { Sun, Moon, Monitor, Save, KeyRound, User, Download, Upload } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 	import ComboboxDepts from '$lib/components/ui/combobox-depts.svelte';
 	import { TOUS_LES_DEPTS } from '$lib/constantes/depts';
@@ -49,27 +49,33 @@
 		<!-- Thème -->
 		<section>
 			<h2 class="mb-4 text-base font-medium text-foreground">Apparence</h2>
-			<form method="POST" action="?/theme" use:enhance={() => {
-				return async ({ result }) => {
-					if (result.type === 'success') {
-						// Rechargement complet pour appliquer class="dark" sur <html>
-						window.location.reload();
-					}
-				};
-			}}>
-				<button
-					type="submit"
-					class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-				>
-					{#if theme === 'dark'}
-						<Moon size={18} />
-						Mode sombre actif — passer en clair
-					{:else}
-						<Sun size={18} />
-						Mode clair actif — passer en sombre
-					{/if}
-				</button>
-			</form>
+			<div class="flex gap-2">
+				{#each [
+					{ valeur: 'auto', Icone: Monitor, label: 'Automatique' },
+					{ valeur: 'clair', Icone: Sun, label: 'Clair' },
+					{ valeur: 'sombre', Icone: Moon, label: 'Sombre' },
+				] as option (option.valeur)}
+					<form method="POST" action="?/theme" use:enhance={() => {
+						return async ({ result }) => {
+							if (result.type === 'success') {
+								// Rechargement complet pour appliquer class="dark" sur <html>
+								window.location.reload();
+							}
+						};
+					}}>
+						<input type="hidden" name="valeur" value={option.valeur} />
+						<button
+							type="submit"
+							class="flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === option.valeur
+								? 'border-foreground bg-foreground text-background'
+								: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
+						>
+							<option.Icone size={16} />
+							{option.label}
+						</button>
+					</form>
+				{/each}
+			</div>
 		</section>
 
 		<!-- Préférences de recherche -->

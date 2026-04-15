@@ -4,7 +4,7 @@ declare global {
   namespace App {
     // interface Error {}
     interface Locals {
-      theme: string;
+      theme: "auto" | "clair" | "sombre";
       session: import("better-auth").Session | null;
       user:
         | (import("better-auth").User & {
