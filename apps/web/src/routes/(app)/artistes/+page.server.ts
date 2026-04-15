@@ -1,22 +1,13 @@
 import { db } from "$lib/server/db";
 import { queue } from "$lib/server/queue";
 import { userArtistes, concerts } from "@strapontin/core/schema";
+import { normaliserTexte } from "@strapontin/core";
 import { eq, and, ilike, sql } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
 const MUSICBRAINZ_URL = "https://musicbrainz.org/ws/2/artist";
 const USER_AGENT = "Strapontin/1.0 (strapontin.kwaite.fr)";
-
-function normaliserArtiste(nom: string): string {
-  return nom
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 interface SuggestionArtiste {
   nom: string;
@@ -78,20 +69,20 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     );
 
     suggestions = enBase
-      .filter((r) => !nomsSuivisNormalises.has(normaliserArtiste(r.artiste)))
+      .filter((r) => !nomsSuivisNormalises.has(normaliserTexte(r.artiste)))
       .map((r) => ({ nom: r.artiste, source: "base" as const }));
 
     // Compléter avec MusicBrainz si < 3 résultats
     if (suggestions.length < 3) {
       const mbResultats = await rechercherMusicBrainz(recherche);
       const nomsDejaPresents = new Set([
-        ...suggestions.map((s) => normaliserArtiste(s.nom)),
+        ...suggestions.map((s) => normaliserTexte(s.nom)),
         ...nomsSuivisNormalises,
       ]);
       for (const r of mbResultats) {
-        if (!nomsDejaPresents.has(normaliserArtiste(r.nom))) {
+        if (!nomsDejaPresents.has(normaliserTexte(r.nom))) {
           suggestions.push(r);
-          nomsDejaPresents.add(normaliserArtiste(r.nom));
+          nomsDejaPresents.add(normaliserTexte(r.nom));
         }
       }
     }
@@ -113,7 +104,7 @@ export const actions: Actions = {
       return fail(400, { erreur: "Nom trop long (200 caractères max)." });
     }
 
-    const normalise = normaliserArtiste(nom);
+    const normalise = normaliserTexte(nom);
 
     const existants = await db
       .select({ artisteNormalise: userArtistes.artisteNormalise })

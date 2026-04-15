@@ -6,4 +6,5 @@ export {
   normaliserTexte,
   normaliserVille,
   similarite,
+  levenshtein,
 } from "./normalisation.js";

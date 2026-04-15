@@ -231,10 +231,10 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
           .filter((r) => idsParNorm.has(r.artisteNormalise))
           .map((r) => r.artisteNormalise),
       );
-      const artistes_sans_tm = rows.filter(
+      const artistesSansTm = rows.filter(
         (r) => !nomsAvecId.has(r.artisteNormalise),
       );
-      for (const { artisteAffiche } of artistes_sans_tm) {
+      for (const { artisteAffiche } of artistesSansTm) {
         const resultats = await ticketmaster.fetchArtiste(artisteAffiche);
         concertsTM.push(...resultats);
         await new Promise((r) => setTimeout(r, 250));

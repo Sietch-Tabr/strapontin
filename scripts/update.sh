@@ -41,7 +41,7 @@ systemctl restart strapontin-web strapontin-worker
 
 # Healthcheck — retries sur 30s
 RETRIES=10
-until curl -sf http://localhost:3000 > /dev/null 2>&1 || [ "$RETRIES" -eq 0 ]; do
+until curl -sf http://localhost:3000/health > /dev/null 2>&1 || [ "$RETRIES" -eq 0 ]; do
     sleep 3
     RETRIES=$((RETRIES - 1))
 done

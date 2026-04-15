@@ -15,6 +15,12 @@ import { db } from "./db.js";
 
 const logger = pino({ name: "persister" });
 
+const STATUTS_INDISPONIBLES = new Set([
+  "cancelled",
+  "postponed",
+  "rescheduled",
+]);
+
 // Upsert des concerts en base — retourne les IDs insérés/mis à jour
 export async function persisterConcerts(
   liste: ConcertBrut[],
@@ -27,12 +33,6 @@ export async function persisterConcerts(
   const TAILLE_LOT = 50;
   for (let i = 0; i < liste.length; i += TAILLE_LOT) {
     const lot = liste.slice(i, i + TAILLE_LOT);
-
-    const STATUTS_INDISPONIBLES = new Set([
-      "cancelled",
-      "postponed",
-      "rescheduled",
-    ]);
 
     const valeurs = lot.map((c) => ({
       artiste: c.artiste,
