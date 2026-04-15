@@ -139,7 +139,15 @@ function parseDateTM(
   return { date, heure: heureStr.slice(0, 5) };
 }
 
-function mapEvenement(evt: Record<string, unknown>): ConcertBrut | null {
+// artisteFallback : nom canonique connu à l'avance (ex. mot-clé de fetchArtiste).
+// Évite d'utiliser le titre de l'événement TM ("Hoshi - Bonjour Docteur Tour")
+// comme nom d'artiste quand _embedded.attractions est absent ou vide.
+// Sans fallback, on extrait la partie avant le premier " - " du titre,
+// ce qui couvre la convention TM la plus fréquente.
+function mapEvenement(
+  evt: Record<string, unknown>,
+  artisteFallback?: string,
+): ConcertBrut | null {
   try {
     const dates = evt["dates"] as Record<string, unknown>;
     const start = dates?.["start"] as Record<string, unknown>;
@@ -155,9 +163,15 @@ function mapEvenement(evt: Record<string, unknown>): ConcertBrut | null {
     const attractions = embedded?.["attractions"] as
       | Record<string, unknown>[]
       | undefined;
+    const nomAttractionPrincipal = attractions?.[0]?.["name"] as
+      | string
+      | undefined;
+    const nomEvenement = evt["name"] as string;
     const artiste =
-      (attractions?.[0]?.["name"] as string | undefined) ??
-      (evt["name"] as string);
+      nomAttractionPrincipal ??
+      artisteFallback ??
+      nomEvenement.split(/\s+-\s+/)[0]?.trim() ??
+      nomEvenement;
     if (!artiste) return null;
 
     const venues = embedded?.["venues"] as
@@ -226,6 +240,7 @@ function mapEvenement(evt: Record<string, unknown>): ConcertBrut | null {
 async function fetchPage(
   params: URLSearchParams,
   apiKey: string,
+  artisteFallback?: string,
 ): Promise<{ events: ConcertBrut[]; total: number; quota: QuotaTM | null }> {
   params.set("apikey", apiKey);
   params.set("locale", "fr");
@@ -259,7 +274,7 @@ async function fetchPage(
   if (!evts) return { events: [], total, quota };
 
   const events = evts
-    .map(mapEvenement)
+    .map((evt) => mapEvenement(evt, artisteFallback))
     .filter((e): e is ConcertBrut => e !== null);
   return { events, total, quota };
 }
@@ -269,6 +284,7 @@ async function fetchPage(
 async function fetchToutesPages(
   params: URLSearchParams,
   apiKey: string,
+  artisteFallback?: string,
 ): Promise<{ events: ConcertBrut[]; quota: QuotaTM | null }> {
   const tousLesEvents: ConcertBrut[] = [];
   let quota: QuotaTM | null = null;
@@ -278,7 +294,7 @@ async function fetchToutesPages(
     const paramsPage = new URLSearchParams(params);
     paramsPage.set("page", String(numPage));
 
-    const { events, total, quota: q } = await fetchPage(paramsPage, apiKey);
+    const { events, total, quota: q } = await fetchPage(paramsPage, apiKey, artisteFallback);
     if (q) quota = q;
     if (numPage === 0) totalElements = total;
     tousLesEvents.push(...events);
@@ -310,7 +326,7 @@ export class TicketmasterSource implements SourceConcerts {
       sort: "date,asc",
     });
 
-    const { events, total, quota } = await fetchPage(params, this.apiKey);
+    const { events, total, quota } = await fetchPage(params, this.apiKey, nom);
     if (quota) this._dernierQuota = quota;
     logger.info({ artiste: nom, total }, "TM fetchArtiste");
     return events;
