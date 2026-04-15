@@ -361,6 +361,11 @@ Rôles : `user` | `admin`.
 **Politique mot de passe** : 12 caractères minimum (NIST SP 800-63B, longueur seule).
 S'applique à `/setup`, `/parametres` (changePassword) et `/first-login`.
 
+**Rate limiting login** : activé via `rateLimit` natif Better Auth dans `apps/web/src/lib/auth.ts` :
+- Route `/sign-in/username` : 5 tentatives max / 15 minutes (fenêtre 900s)
+- Toutes les autres routes auth : 100 requêtes / 10 secondes (limite souple globale)
+- Storage : mémoire (suffisant pour instance unique)
+
 Plugin `username` de Better-Auth : colonnes `username` + `display_username` sur `users`.
 Colonne `must_change_credentials` (boolean, default false) : flag premier login.
 Annotation `@__NO_SIDE_EFFECTS__` de better-auth strippée dans `vite.config.ts` via plugin
@@ -375,6 +380,9 @@ Portage de `src/merge.py` du projet CLI. Deux passes :
 
 Index secondaire `(date, salle_normalisee)` en fallback pour les salles où TM et Eventim
 donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
+
+Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`, `levenshtein`
+(distance brute — utile quand un seuil proportionnel à la longueur est préférable à `similarite`).
 
 ## UI / Design system
 
