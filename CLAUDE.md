@@ -430,21 +430,21 @@ Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`,
 
 Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + bottom nav).
 
-| Route              | Description                                                                                                                                                                                                         |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                                                                                                                    |
-| `/artistes`        | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                                                                                                                      |
-| `/salles`          | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                                                                                                          |
-| `/spectacles`      | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours / tri (Par date · Nouveautés). Filtres : classification, genre, artiste, mois, budget. |
-| `/decouverte`      | Tous les concerts en base. Chips dept, catégories, genres, tri (Par date · Nouveautés). Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs.    |
+| Route              | Description                                                                                                                                                                                                                                           |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                                                                                                                                                      |
+| `/artistes`        | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                                                                                                                                                        |
+| `/salles`          | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                                                                                                                                            |
+| `/spectacles`      | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours / tri (Par date · Nouveautés). Filtres : classification, genre, artiste, mois, budget.                                   |
+| `/decouverte`      | Tous les concerts en base. Chips dept, catégories, genres, tri (Par date · Nouveautés). Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs.                                      |
 | `/parametres`      | user_config (depts, rayon, filtreDisponibles), thème, nom + mot de passe. Export JSON (artistes + salles + config). Import JSON avec mode fusionner / écraser, checkbox config opt-in, fetch déclenché post-import. Lien vers `/aide` en bas de page. |
-| `/aide`            | Page statique : guide d'utilisation, RGPD (Règlement Général sur la Protection des Données), licence MIT.                                                                                                             |
-| `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json` (artistes, salles, config). Protégé par session.                                                                                                        |
-| `/admin`           | Invitation (email seul) + liste des comptes + suppression — réservé admin. Badge "premier login en attente" si `must_change_credentials = true`.                                                                    |
-| `/setup`           | Création premier compte admin (accessible uniquement si 0 users en base)                                                                                                                                            |
-| `/login`           | Authentification username/password (identifiant insensible à la casse)                                                                                                                                              |
-| `/first-login`     | Première connexion — choix du nom, identifiant et nouveau mot de passe. Redirigé automatiquement si `must_change_credentials = true`.                                                                               |
-| `/health`          | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                                                                                                              |
+| `/aide`            | Page statique : guide d'utilisation, RGPD (Règlement Général sur la Protection des Données), licence MIT.                                                                                                                                             |
+| `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json` (artistes, salles, config). Protégé par session.                                                                                                                                          |
+| `/admin`           | Invitation (email seul) + liste des comptes + suppression — réservé admin. Badge "premier login en attente" si `must_change_credentials = true`.                                                                                                      |
+| `/setup`           | Création premier compte admin (accessible uniquement si 0 users en base)                                                                                                                                                                              |
+| `/login`           | Authentification username/password (identifiant insensible à la casse)                                                                                                                                                                                |
+| `/first-login`     | Première connexion — choix du nom, identifiant et nouveau mot de passe. Redirigé automatiquement si `must_change_credentials = true`.                                                                                                                 |
+| `/health`          | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                                                                                                                                                |
 
 ## Affichage — tournées
 
@@ -495,6 +495,7 @@ Pas de page d'inscription publique. Premier accès via `/setup` (accessible uniq
 - Migrations Drizzle dans `packages/core/migrations/`
 - Logging : pino, lazy `%s` (pas de template literals dans les appels logger)
 - Pas de `console.log` en production
+- **`<button>` hors formulaire** : toujours `type="button"` — sans ça, le défaut HTML est `submit`, ce qui peut déclencher la soumission d'un formulaire parent sur mobile
 
 ## Export / Import préférences
 
@@ -512,17 +513,17 @@ Format JSON : `{ version, exporteAt, artistes, salles, config }`.
 
 ### v0.90 — revue globale (jalon actif)
 
-| #   | Item                                                                  |
-| --- | --------------------------------------------------------------------- |
-| #41 | Erreurs silencieuses : logger les échecs Redis et les cas catch vides |
-| #25 | Analyse des logs de prod avant la v1                                  |
-| #24 | Configuration du conteneur Proxmox                                    |
-| #18 | Revue de code                                                         |
-| #16 | Audit UI/UX                                                           |
-| #14 | Test de sécurité                                                      |
-| ~~#10~~ | ~~RGPD~~ — inclus dans #9, fermé                              |
-| ~~#9~~  | ~~Création d'une page d'aide et d'infos~~ — route `/aide` créée |
-| #6  | Optimiser les appels aux API externes                                 |
+| #       | Item                                                                  |
+| ------- | --------------------------------------------------------------------- |
+| #41     | Erreurs silencieuses : logger les échecs Redis et les cas catch vides |
+| #25     | Analyse des logs de prod avant la v1                                  |
+| #24     | Configuration du conteneur Proxmox                                    |
+| #18     | Revue de code                                                         |
+| #16     | Audit UI/UX                                                           |
+| #14     | Test de sécurité                                                      |
+| ~~#10~~ | ~~RGPD~~ — inclus dans #9, fermé                                      |
+| ~~#9~~  | ~~Création d'une page d'aide et d'infos~~ — route `/aide` créée       |
+| #6      | Optimiser les appels aux API externes                                 |
 
 ### Phase 2 (post-v1.0)
 
