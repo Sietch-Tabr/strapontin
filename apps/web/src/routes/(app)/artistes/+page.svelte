@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
 	import { Music, X, Plus, Search } from '@lucide/svelte';
@@ -9,6 +9,8 @@
 
 	let termeRecherche = $state(untrack(() => data.recherche));
 	$effect(() => { termeRecherche = data.recherche; });
+
+	let titreArtistes = $state<HTMLHeadingElement | undefined>(undefined);
 </script>
 
 <div class="p-6 lg:p-8">
@@ -113,7 +115,7 @@
 		</div>
 	{:else}
 		<section>
-			<h2 class="mb-3 text-sm font-medium text-muted-foreground">Artistes suivis</h2>
+			<h2 bind:this={titreArtistes} tabindex="-1" class="mb-3 text-sm font-medium text-muted-foreground">Artistes suivis</h2>
 			<ul class="space-y-2">
 				{#each data.artistes as artiste (artiste.artisteNormalise)}
 					<li class="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
@@ -122,6 +124,8 @@
 								if (result.type === 'success') toast.success('Artiste supprimé');
 								else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
 								await update();
+								await tick();
+								if (result.type === 'success') titreArtistes?.focus();
 							}}>
 							<input type="hidden" name="artisteNormalise" value={artiste.artisteNormalise} />
 							<button
