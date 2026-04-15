@@ -50,7 +50,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 
   return {
     config,
-    theme: cookies.get("theme") ?? "light",
+    theme: (cookies.get("theme") ?? "auto") as "auto" | "clair" | "sombre",
   };
 };
 
@@ -99,16 +99,31 @@ export const actions: Actions = {
     return { succes: "config" };
   },
 
-  theme: async ({ cookies }) => {
-    const actuel = cookies.get("theme") ?? "light";
-    const nouveau = actuel === "dark" ? "light" : "dark";
-    cookies.set("theme", nouveau, {
+  theme: async ({ request, cookies, locals }) => {
+    const donnees = await request.formData();
+    const valeur = donnees.get("valeur")?.toString();
+
+    if (!["auto", "clair", "sombre"].includes(valeur ?? "")) {
+      return fail(400, { erreur: "Valeur de thème invalide.", section: "theme" });
+    }
+
+    const theme = valeur as "auto" | "clair" | "sombre";
+    cookies.set("theme", theme, {
       path: "/",
       maxAge: 60 * 60 * 24 * 365,
       httpOnly: false,
       sameSite: "lax",
     });
-    return { succes: "theme", theme: nouveau };
+
+    await db
+      .insert(userConfig)
+      .values({ userId: locals.user!.id, theme })
+      .onConflictDoUpdate({
+        target: userConfig.userId,
+        set: { theme, updatedAt: new Date() },
+      });
+
+    return { succes: "theme", theme };
   },
 
   compte: async ({ request, locals }) => {

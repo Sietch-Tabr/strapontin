@@ -1,0 +1,2 @@
+ALTER TABLE "user_config" ADD COLUMN "theme" text DEFAULT 'auto' NOT NULL;--> statement-breakpoint
+ALTER TABLE "user_config" ADD CONSTRAINT "chk_user_config_theme" CHECK ("user_config"."theme" IN ('auto', 'clair', 'sombre'));

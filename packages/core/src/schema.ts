@@ -200,18 +200,29 @@ export const userSalles = pgTable(
 // user_config
 // -------------------------------------------------------------------
 
-export const userConfig = pgTable("user_config", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => users.id, { onDelete: "cascade" }),
-  departements: text("departements").array().notNull().default([]),
-  rayonKm: integer("rayon_km").notNull().default(50),
-  filtreDisponibles: boolean("filtre_disponibles").notNull().default(true),
-  notificationsEmail: boolean("notifications_email").notNull().default(false),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const userConfig = pgTable(
+  "user_config",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    departements: text("departements").array().notNull().default([]),
+    rayonKm: integer("rayon_km").notNull().default(50),
+    filtreDisponibles: boolean("filtre_disponibles").notNull().default(true),
+    notificationsEmail: boolean("notifications_email").notNull().default(false),
+    // Préférence de thème : 'auto' suit les préférences système, 'clair'/'sombre' forcent le thème
+    theme: text("theme").notNull().default("auto"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "chk_user_config_theme",
+      sql`${table.theme} IN ('auto', 'clair', 'sombre')`,
+    ),
+  ],
+);
 
 // -------------------------------------------------------------------
 // user_matches
