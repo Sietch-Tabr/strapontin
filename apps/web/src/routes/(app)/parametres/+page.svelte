@@ -479,5 +479,15 @@
 			</div>
 		</section>
 
+		<!-- Aide et informations légales -->
+		<div class="border-t border-border pt-6">
+			<a
+				href="/aide"
+				class="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+			>
+				Aide, données personnelles et licence
+			</a>
+		</div>
+
 	</div>
 </div>

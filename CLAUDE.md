@@ -437,7 +437,8 @@ Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + 
 | `/salles`          | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                                                                                                          |
 | `/spectacles`      | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours / tri (Par date · Nouveautés). Filtres : classification, genre, artiste, mois, budget. |
 | `/decouverte`      | Tous les concerts en base. Chips dept, catégories, genres, tri (Par date · Nouveautés). Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs.    |
-| `/parametres`      | user_config (depts, rayon, filtreDisponibles), thème, nom + mot de passe. Export JSON (artistes + salles + config). Import JSON avec mode fusionner / écraser, checkbox config opt-in, fetch déclenché post-import. |
+| `/parametres`      | user_config (depts, rayon, filtreDisponibles), thème, nom + mot de passe. Export JSON (artistes + salles + config). Import JSON avec mode fusionner / écraser, checkbox config opt-in, fetch déclenché post-import. Lien vers `/aide` en bas de page. |
+| `/aide`            | Page statique : guide d'utilisation, RGPD (Règlement Général sur la Protection des Données), licence MIT.                                                                                                             |
 | `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json` (artistes, salles, config). Protégé par session.                                                                                                        |
 | `/admin`           | Invitation (email seul) + liste des comptes + suppression — réservé admin. Badge "premier login en attente" si `must_change_credentials = true`.                                                                    |
 | `/setup`           | Création premier compte admin (accessible uniquement si 0 users en base)                                                                                                                                            |
@@ -519,8 +520,8 @@ Format JSON : `{ version, exporteAt, artistes, salles, config }`.
 | #18 | Revue de code                                                         |
 | #16 | Audit UI/UX                                                           |
 | #14 | Test de sécurité                                                      |
-| #10 | RGPD                                                                  |
-| #9  | Création d'une page d'aide et d'infos                                 |
+| ~~#10~~ | ~~RGPD~~ — inclus dans #9, fermé                              |
+| ~~#9~~  | ~~Création d'une page d'aide et d'infos~~ — route `/aide` créée |
 | #6  | Optimiser les appels aux API externes                                 |
 
 ### Phase 2 (post-v1.0)
