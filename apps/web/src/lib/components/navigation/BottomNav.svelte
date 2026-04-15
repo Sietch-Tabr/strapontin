@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { page } from '$app/state';
 	import { signOut } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
@@ -17,6 +18,35 @@
 	let { estAdmin = false }: { estAdmin?: boolean } = $props();
 
 	let drawerOuvert = $state(false);
+	let boutonPlus = $state<HTMLButtonElement | undefined>(undefined);
+	let conteneurDrawer = $state<HTMLDivElement | undefined>(undefined);
+
+	$effect(() => {
+		if (drawerOuvert) {
+			tick().then(() => {
+				const premier = conteneurDrawer?.querySelector<HTMLElement>('button,a,[tabindex]');
+				premier?.focus();
+			});
+		} else {
+			boutonPlus?.focus();
+		}
+	});
+
+	function piegerFocus(e: KeyboardEvent) {
+		if (e.key !== 'Tab' || !conteneurDrawer) return;
+		const focusables = Array.from(
+			conteneurDrawer.querySelectorAll<HTMLElement>('button,a,[tabindex]')
+		).filter((el) => !el.hasAttribute('disabled'));
+		const premier = focusables[0];
+		const dernier = focusables[focusables.length - 1];
+		if (e.shiftKey && document.activeElement === premier) {
+			e.preventDefault();
+			dernier.focus();
+		} else if (!e.shiftKey && document.activeElement === dernier) {
+			e.preventDefault();
+			premier.focus();
+		}
+	}
 
 	const elementsNav = [
 		{ label: 'Accueil', icone: Home, route: '/' },
@@ -66,7 +96,10 @@
 
 		<button
 			type="button"
+			bind:this={boutonPlus}
 			onclick={() => (drawerOuvert = true)}
+			aria-expanded={drawerOuvert}
+			aria-controls="drawer-menu"
 			class="flex flex-1 flex-col items-center gap-1 py-2 text-xs font-medium cursor-pointer transition-colors
 				{plusEstActif() ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}"
 		>
@@ -78,10 +111,13 @@
 
 {#if drawerOuvert}
 	<div
+		id="drawer-menu"
 		class="fixed inset-0 z-50 lg:hidden"
 		role="dialog"
 		aria-modal="true"
 		aria-label="Menu supplémentaire"
+		tabindex="-1"
+		onkeydown={piegerFocus}
 	>
 		<button
 			type="button"
@@ -90,7 +126,7 @@
 			aria-label="Fermer le menu"
 		></button>
 
-		<div class="absolute bottom-0 left-0 right-0 rounded-t-xl bg-background p-4 pb-8 shadow-xl">
+		<div bind:this={conteneurDrawer} class="absolute bottom-0 left-0 right-0 rounded-t-xl bg-background p-4 pb-8 shadow-xl">
 			<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-muted"></div>
 
 			<div class="space-y-1">

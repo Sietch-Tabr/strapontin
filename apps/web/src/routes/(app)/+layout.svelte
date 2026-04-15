@@ -16,9 +16,16 @@
 </script>
 
 <div class="flex h-screen bg-background">
+	<a
+		href="#contenu-principal"
+		class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:left-4 focus:top-4 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:ring-2 focus:ring-ring"
+	>
+		Aller au contenu principal
+	</a>
+
 	<Sidebar utilisateur={data.utilisateur!} />
 
-	<main bind:this={conteneurPrincipal} class="flex-1 overflow-auto pb-16 lg:pb-0">
+	<main id="contenu-principal" bind:this={conteneurPrincipal} class="flex-1 overflow-auto pb-16 lg:pb-0">
 		{@render children()}
 	</main>
 
