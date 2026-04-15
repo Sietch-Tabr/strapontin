@@ -21,7 +21,7 @@
 	const elementsNav = [
 		{ label: 'Accueil', icone: Home, route: '/' },
 		{ label: 'Spectacles', icone: Ticket, route: '/spectacles' },
-		{ label: 'Découvrir', icone: Compass, route: '/decouverte' }
+		{ label: 'Découverte', icone: Compass, route: '/decouverte' }
 	];
 
 	const elementsDrawer = [

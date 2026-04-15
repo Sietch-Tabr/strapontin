@@ -35,6 +35,10 @@
 	let modeImport = $state<'merger' | 'ecraser'>('merger');
 </script>
 
+<svelte:head>
+	<title>Paramètres — Strapontin</title>
+</svelte:head>
+
 <div class="p-6 lg:p-8">
 	<div class="mb-8">
 		<h1 class="text-2xl font-semibold text-foreground">Paramètres</h1>

@@ -2,6 +2,10 @@
 	import { BookOpen, Shield, Scale } from '@lucide/svelte';
 </script>
 
+<svelte:head>
+	<title>Aide — Strapontin</title>
+</svelte:head>
+
 <div class="p-6 lg:p-8">
 	<div class="mb-8">
 		<h1 class="text-2xl font-semibold text-foreground">Aide et informations</h1>
@@ -12,7 +16,7 @@
 		<!-- Guide d'utilisation -->
 		<section>
 			<div class="mb-4 flex items-center gap-2 text-foreground">
-				<BookOpen size={20} />
+				<BookOpen size={20} aria-hidden="true" />
 				<h2 class="text-base font-medium">Guide d'utilisation</h2>
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
@@ -66,7 +70,7 @@
 		<!-- RGPD -->
 		<section>
 			<div class="mb-4 flex items-center gap-2 text-foreground">
-				<Shield size={20} />
+				<Shield size={20} aria-hidden="true" />
 				<h2 class="text-base font-medium">RGPD — Données personnelles</h2>
 			</div>
 			<p class="mb-4 text-xs text-muted-foreground">
@@ -117,7 +121,7 @@
 		<!-- Licence -->
 		<section>
 			<div class="mb-4 flex items-center gap-2 text-foreground">
-				<Scale size={20} />
+				<Scale size={20} aria-hidden="true" />
 				<h2 class="text-base font-medium">Licence</h2>
 			</div>
 			<div class="space-y-3 text-sm text-muted-foreground">

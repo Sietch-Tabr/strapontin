@@ -29,12 +29,14 @@
 	);
 </script>
 
+<svelte:head>
+	<title>Accueil — Strapontin</title>
+</svelte:head>
+
 <div class="p-6 lg:p-8">
 	<div class="mb-8">
-		<h1 class="text-2xl font-semibold text-foreground">
-			Bonjour, {data.utilisateur?.name}
-		</h1>
-		<p class="mt-1 text-sm text-muted-foreground">Vos prochains concerts</p>
+		<p class="text-sm text-muted-foreground">Bonjour, {data.utilisateur?.name}</p>
+		<h1 class="text-2xl font-semibold text-foreground">Mes prochains concerts</h1>
 	</div>
 
 	{#if totalConcerts === 0}
@@ -64,7 +66,7 @@
 							</span>
 						{/if}
 						{#if groupe.estNew}
-							<span class="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">NEW</span>
+							<span class="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">Nouveau</span>
 						{/if}
 					</div>
 
@@ -77,14 +79,14 @@
 										<p class="text-sm font-medium text-foreground">
 											{formaterDateCourte(concert.date)}
 											{#if concert.estNew}
-												<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">NEW</span>
+												<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">Nouveau</span>
 											{/if}
 										</p>
 									{:else}
 										<p class="text-sm text-muted-foreground">
 											{formaterDate(concert.date)}
 											{#if concert.estNew}
-												<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">NEW</span>
+												<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">Nouveau</span>
 											{/if}
 										</p>
 									{/if}

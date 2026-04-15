@@ -11,6 +11,10 @@
 	$effect(() => { termeRecherche = data.recherche; });
 </script>
 
+<svelte:head>
+	<title>Mes artistes — Strapontin</title>
+</svelte:head>
+
 <div class="p-6 lg:p-8">
 	<div class="mb-8">
 		<h1 class="text-2xl font-semibold text-foreground">Mes artistes</h1>
@@ -21,7 +25,9 @@
 
 	<!-- Recherche d'artiste -->
 	<form method="GET" class="mb-3 flex gap-2">
+		<label for="q-artiste" class="sr-only">Rechercher un artiste</label>
 		<input
+			id="q-artiste"
 			type="text"
 			name="q"
 			bind:value={termeRecherche}

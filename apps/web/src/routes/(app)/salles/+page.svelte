@@ -19,6 +19,10 @@
 	);
 </script>
 
+<svelte:head>
+	<title>Mes salles — Strapontin</title>
+</svelte:head>
+
 <div class="p-6 lg:p-8">
 	<div class="mb-8">
 		<h1 class="text-2xl font-semibold text-foreground">Mes salles</h1>
@@ -29,7 +33,9 @@
 
 	<!-- Recherche de salle -->
 	<form method="GET" class="mb-3 flex gap-2">
+		<label for="q-salle" class="sr-only">Rechercher une salle</label>
 		<input
+			id="q-salle"
 			type="text"
 			name="q"
 			bind:value={termeRecherche}
