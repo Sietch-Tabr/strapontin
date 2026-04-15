@@ -383,6 +383,28 @@ Portage de `src/merge.py` du projet CLI. Deux passes :
 Index secondaire `(date, salle_normalisee)` en fallback pour les salles où TM et Eventim
 donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 
+### Particularité TM — nom d'artiste vs titre d'événement
+
+TM retourne parfois des événements sans `_embedded.attractions` (tableau absent ou vide).
+`mapEvenement()` résout le nom d'artiste dans l'ordre de priorité suivant :
+
+1. `_embedded.attractions[0].name` (nom canonique, toujours préféré)
+2. `artisteFallback` passé par l'appelant — `fetchArtiste(nom)` passe le mot-clé de recherche
+3. Partie avant le premier ` - ` du titre de l'événement (heuristique pour les appels sans contexte artiste)
+
+### Persistance — upsert `persisterConcerts`
+
+Clé de conflit : `(artiste_norm, date, salle_norm)`.
+En cas de conflit, les champs mis à jour suivent ces préférences :
+- `artiste` : version avec diacritiques préférée (`unaccent(excluded.artiste) != excluded.artiste`)
+- `salle` : casse mixte préférée sur tout-majuscule (`upper(excluded.salle) != excluded.salle`)
+
+### `recalculer:matches` — matching salle
+
+Le matching des salles suivies utilise `concerts.salle_norm` (et non `concerts.salle`) pour
+être insensible à la casse — TM retourne le même lieu en tout-majuscule ou casse mixte
+selon le type d'appel.
+
 Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`, `levenshtein`
 (distance brute — utile quand un seuil proportionnel à la longueur est préférable à `similarite`).
 
