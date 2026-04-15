@@ -56,7 +56,7 @@
 			</div>
 
 			{#if erreur}
-				<p class="text-sm text-destructive">{erreur}</p>
+				<p role="alert" class="text-sm text-destructive">{erreur}</p>
 			{/if}
 
 			<button

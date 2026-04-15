@@ -18,6 +18,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Administration — Strapontin</title>
+</svelte:head>
+
 <div class="p-6 lg:p-8">
 	<div class="mb-8">
 		<h1 class="text-2xl font-semibold text-foreground">Administration</h1>
@@ -29,7 +33,7 @@
 		<!-- Quota Ticketmaster -->
 		<section>
 			<h2 class="mb-4 text-base font-medium text-foreground flex items-center gap-2">
-				<Zap size={16} class="text-muted-foreground" />
+				<Zap size={16} class="text-muted-foreground" aria-hidden="true" />
 				Quota Ticketmaster API
 			</h2>
 

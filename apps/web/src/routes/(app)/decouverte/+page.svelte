@@ -148,6 +148,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Découverte — Strapontin</title>
+</svelte:head>
+
 <div class="p-6 lg:p-8">
 	<div class="mb-8">
 		<h1 class="text-2xl font-semibold text-foreground">Découverte</h1>
@@ -176,7 +180,9 @@
 		{/each}
 
 		<div class="flex flex-wrap gap-2">
+			<label for="q-decouverte" class="sr-only">Rechercher un artiste ou une salle</label>
 			<input
+				id="q-decouverte"
 				type="text"
 				name="q"
 				bind:value={recherche}
@@ -184,7 +190,9 @@
 				autocomplete="off"
 				class="flex-1 min-w-40 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			/>
+			<label for="mois-decouverte" class="sr-only">Filtrer par mois</label>
 			<select
+				id="mois-decouverte"
 				name="mois"
 				bind:value={mois}
 				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -194,7 +202,9 @@
 					<option value={m}>{labelMois(m)}</option>
 				{/each}
 			</select>
+			<label for="budget-decouverte" class="sr-only">Filtrer par budget</label>
 			<select
+				id="budget-decouverte"
 				name="budget"
 				bind:value={budget}
 				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -266,6 +276,7 @@
 					<a
 						href={urlToggleClassification(c)}
 						data-sveltekit-replacestate
+						aria-current={data.classifications.includes(c) ? 'true' : undefined}
 						class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
 							{data.classifications.includes(c)
 								? 'border-foreground bg-foreground text-background'
@@ -287,6 +298,7 @@
 					<a
 						href={urlToggleGenre(g)}
 						data-sveltekit-replacestate
+						aria-current={data.genres.includes(g) ? 'true' : undefined}
 						class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
 							{data.genres.includes(g)
 								? 'border-foreground bg-foreground text-background'
@@ -306,6 +318,7 @@
 			<a
 				href={construireUrl({ tri: 'date' })}
 				data-sveltekit-replacestate
+				aria-current={data.tri === 'date' ? 'true' : undefined}
 				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
 					{data.tri === 'date'
 						? 'border-foreground bg-foreground text-background'
@@ -316,6 +329,7 @@
 			<a
 				href={construireUrl({ tri: 'nouveaute' })}
 				data-sveltekit-replacestate
+				aria-current={data.tri === 'nouveaute' ? 'true' : undefined}
 				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
 					{data.tri === 'nouveaute'
 						? 'border-foreground bg-foreground text-background'
@@ -447,6 +461,7 @@
 		<!-- Vue tableau desktop -->
 		<div class="hidden overflow-hidden rounded-xl border border-border lg:block">
 			<table class="w-full text-sm">
+				<caption class="sr-only">Liste des concerts</caption>
 				<thead class="border-b border-border bg-muted/40">
 					<tr>
 						<th class="px-4 py-3 text-left font-medium text-muted-foreground">Artiste</th>
