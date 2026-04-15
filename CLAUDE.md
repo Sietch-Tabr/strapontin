@@ -331,6 +331,7 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 ### Guard quota TM (`apps/worker/src/jobs.ts`)
 
 `verifierQuotaTM(nomJob)` appelée en début de `fetch:artistes:batch` et `fetch:region` :
+
 - `dispo < 200` → `warn` (quota faible)
 - `dispo < 10` → `error` + job annulé (break)
 
@@ -362,6 +363,7 @@ Rôles : `user` | `admin`.
 S'applique à `/setup`, `/parametres` (changePassword) et `/first-login`.
 
 **Rate limiting login** : activé via `rateLimit` natif Better Auth dans `apps/web/src/lib/auth.ts` :
+
 - Route `/sign-in/username` : 5 tentatives max / 15 minutes (fenêtre 900s)
 - Toutes les autres routes auth : 100 requêtes / 10 secondes (limite souple globale)
 - Storage : mémoire (suffisant pour instance unique)
