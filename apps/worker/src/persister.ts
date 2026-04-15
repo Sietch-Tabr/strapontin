@@ -155,12 +155,13 @@ export async function recalculerMatches(userIds?: string[]): Promise<void> {
     }
 
     if (salleIds.length > 0) {
+      const salleNorms = salleIds.map((id) => normaliserTexte(id));
       const parSalle = await db
         .select({ id: concerts.id })
         .from(concerts)
         .where(
           and(
-            inArray(concerts.salle, salleIds),
+            inArray(concerts.salleNorm, salleNorms),
             sql`${concerts.date} >= ${aujourdhui}`,
           ),
         );
