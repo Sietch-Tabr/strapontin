@@ -3,9 +3,10 @@ import {
   userMatches,
   concerts,
   userArtistes,
+  userSalles,
   userConfig,
 } from "@strapontin/core/schema";
-import { eq, gte, and } from "drizzle-orm";
+import { eq, gte, and, count } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 
@@ -88,5 +89,15 @@ export const load: PageServerLoad = async ({ locals }) => {
     })),
   }));
 
-  return { artistesGroupes };
+  const [{ valeur: nbArtistes }] = await db
+    .select({ valeur: count() })
+    .from(userArtistes)
+    .where(eq(userArtistes.userId, locals.user!.id));
+
+  const [{ valeur: nbSalles }] = await db
+    .select({ valeur: count() })
+    .from(userSalles)
+    .where(eq(userSalles.userId, locals.user!.id));
+
+  return { artistesGroupes, nbArtistes, nbSalles };
 };

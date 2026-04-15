@@ -42,16 +42,31 @@
 	{#if totalConcerts === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
 			<Music size={40} class="mb-4 text-muted-foreground/50" />
-			<p class="mb-1 text-base font-medium text-foreground">Aucun concert pour l'instant.</p>
-			<p class="mb-6 text-sm text-muted-foreground">
-				Ajoutez des artistes ou des salles pour voir vos prochains spectacles.
-			</p>
-			<a
-				href="/artistes"
-				class="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
-			>
-				Ajouter des artistes
-			</a>
+			{#if data.nbArtistes === 0 && data.nbSalles === 0}
+				<p class="mb-1 text-base font-medium text-foreground">Bienvenue sur Strapontin !</p>
+				<p class="mb-6 text-sm text-muted-foreground">
+					Ajoutez des artistes ou des salles pour découvrir vos prochains concerts.
+				</p>
+				<div class="flex gap-3">
+					<a
+						href="/artistes"
+						class="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+					>
+						Ajouter des artistes
+					</a>
+					<a
+						href="/salles"
+						class="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+					>
+						Ajouter des salles
+					</a>
+				</div>
+			{:else}
+				<p class="mb-1 text-base font-medium text-foreground">Aucun concert pour l'instant.</p>
+				<p class="text-sm text-muted-foreground">
+					Vos artistes et salles sont suivis — les concerts apparaîtront au prochain rafraîchissement.
+				</p>
+			{/if}
 		</div>
 	{:else}
 		<div class="space-y-4 max-w-2xl">
