@@ -30,6 +30,7 @@ export const GET: RequestHandler = async ({ locals }) => {
         rayonKm: userConfig.rayonKm,
         filtreDisponibles: userConfig.filtreDisponibles,
         notificationsEmail: userConfig.notificationsEmail,
+        theme: userConfig.theme,
       })
       .from(userConfig)
       .where(eq(userConfig.userId, locals.user.id)),

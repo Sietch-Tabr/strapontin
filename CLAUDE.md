@@ -502,6 +502,7 @@ Pas de page d'inscription publique. Premier accès via `/setup` (accessible uniq
 ## Export / Import préférences
 
 Format JSON : `{ version, exporteAt, artistes, salles, config }`.
+`config` inclut : `departements`, `rayonKm`, `filtreDisponibles`, `notificationsEmail`, `theme`.
 
 - **Export** : `GET /api/preferences` → téléchargement direct
 - **Import** (`/parametres`) :
