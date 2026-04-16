@@ -62,7 +62,7 @@ async function rechercherSallesTM(terme: string): Promise<ResultatSalle[]> {
 }
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-  const recherche = url.searchParams.get("q")?.trim() ?? "";
+  const recherche = (url.searchParams.get("q")?.trim() ?? "").slice(0, 100);
 
   const sallesSuivies = await db
     .select({ salleId: userSalles.salleId })

@@ -25,7 +25,7 @@ import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0]!;
-  const recherche = url.searchParams.get("q")?.trim() ?? "";
+  const recherche = (url.searchParams.get("q")?.trim() ?? "").slice(0, 100);
   const mois = url.searchParams.get("mois")?.trim() ?? "";
   const budgetStr = url.searchParams.get("budget")?.trim() ?? "";
   const budget =
@@ -33,10 +33,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const tri =
     url.searchParams.get("tri") === "nouveaute" ? "nouveaute" : "date";
 
-  // Filtre multi-valeur via URL ?genre=Rock&genre=Pop
-  const genres = url.searchParams.getAll("genre");
-  // Filtre multi-valeur via URL ?classification=music&classification=theatre
-  const classifications = url.searchParams.getAll("classification");
+  // Filtre multi-valeur via URL ?genre=Rock&genre=Pop (limité à 20 valeurs)
+  const genres = url.searchParams.getAll("genre").slice(0, 20);
+  // Filtre multi-valeur via URL ?classification=music&classification=theatre (limité à 20 valeurs)
+  const classifications = url.searchParams.getAll("classification").slice(0, 20);
 
   // Départements de l'user (pour pré-cocher)
   const configs = await db
