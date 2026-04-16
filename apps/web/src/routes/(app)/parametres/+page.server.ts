@@ -113,6 +113,7 @@ export const actions: Actions = {
       path: "/",
       maxAge: 60 * 60 * 24 * 365,
       httpOnly: false,
+      secure: true,
       sameSite: "lax",
     });
 
@@ -303,10 +304,16 @@ export const actions: Actions = {
       (a) =>
         typeof a.nom === "string" &&
         typeof a.normalise === "string" &&
-        a.nom.trim(),
+        a.nom.trim() &&
+        a.nom.length <= 200 &&
+        a.normalise.length <= 200,
     );
     const sallesValides = donneesParsees.salles.filter(
-      (s) => typeof s.salleId === "string" && s.salleId.trim(),
+      (s) =>
+        typeof s.salleId === "string" &&
+        s.salleId.trim() &&
+        s.salleId.length <= 200 &&
+        (!s.tmVenueId || /^[A-Za-z0-9]{1,30}$/.test(s.tmVenueId)),
     );
 
     const userId = locals.user!.id;

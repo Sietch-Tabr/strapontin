@@ -28,10 +28,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const dans15Jours = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
-  const recherche = url.searchParams.get("q")?.trim() ?? "";
+  const recherche = (url.searchParams.get("q")?.trim() ?? "").slice(0, 100);
   const mois = url.searchParams.get("mois")?.trim() ?? "";
   const classification = url.searchParams.get("classification")?.trim() ?? "";
-  const genre = url.searchParams.get("genre")?.trim() ?? "";
+  const genre = (url.searchParams.get("genre")?.trim() ?? "").slice(0, 50);
   const quinzaine = url.searchParams.get("quinzaine") === "1";
   const tri =
     url.searchParams.get("tri") === "nouveaute" ? "nouveaute" : "date";

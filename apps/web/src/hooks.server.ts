@@ -116,6 +116,7 @@ const gererAuth: Handle = async ({ event, resolve }) => {
       path: "/",
       maxAge: 60 * 60 * 24 * 365,
       httpOnly: false,
+      secure: true,
       sameSite: "lax",
     });
   }
