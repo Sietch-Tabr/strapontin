@@ -355,6 +355,10 @@ pct set "$VMID" --protection 1
 echo "[8] Activation des services..."
 pct exec "$VMID" -- bash -c "
     systemctl daemon-reload
+    # Dans un LXC Proxmox, systemd-networkd ne gère pas le réseau (Proxmox s'en charge
+    # côté host). On masque le service pour éviter les timeouts répétés dans les logs
+    # lors des opérations apt.
+    systemctl mask systemd-networkd-wait-online.service
     systemctl enable postgresql redis-server
     systemctl enable strapontin-web strapontin-worker
     systemctl enable strapontin-backup.timer
