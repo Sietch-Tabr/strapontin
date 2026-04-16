@@ -20,14 +20,16 @@
 	let drawerOuvert = $state(false);
 	let boutonPlus = $state<HTMLButtonElement | undefined>(undefined);
 	let conteneurDrawer = $state<HTMLDivElement | undefined>(undefined);
+	let drawerEstDejaOuvert = false;
 
 	$effect(() => {
 		if (drawerOuvert) {
+			drawerEstDejaOuvert = true;
 			tick().then(() => {
 				const premier = conteneurDrawer?.querySelector<HTMLElement>('button,a,[tabindex]');
 				premier?.focus();
 			});
-		} else {
+		} else if (drawerEstDejaOuvert) {
 			boutonPlus?.focus();
 		}
 	});
