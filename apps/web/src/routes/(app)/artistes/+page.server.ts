@@ -2,7 +2,7 @@ import { db } from "$lib/server/db";
 import { queue } from "$lib/server/queue";
 import { userArtistes, concerts } from "@strapontin/core/schema";
 import { normaliserTexte } from "@strapontin/core";
-import { eq, and, ilike, sql } from "drizzle-orm";
+import { eq, and, ilike, sql, count } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -118,6 +118,15 @@ export const actions: Actions = {
 
     if (existants.length > 0) {
       return fail(409, { erreur: "Cet artiste est déjà dans votre liste." });
+    }
+
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(userArtistes)
+      .where(eq(userArtistes.userId, locals.user!.id));
+
+    if (total >= 500) {
+      return fail(400, { erreur: "Limite de 500 artistes atteinte." });
     }
 
     await db.insert(userArtistes).values({

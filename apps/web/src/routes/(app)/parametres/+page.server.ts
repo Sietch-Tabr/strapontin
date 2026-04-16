@@ -316,6 +316,20 @@ export const actions: Actions = {
         (!s.tmVenueId || /^[A-Za-z0-9]{1,30}$/.test(s.tmVenueId)),
     );
 
+    if (artistesValides.length > 500) {
+      return fail(400, {
+        erreur: "Le fichier contient trop d'artistes (500 maximum).",
+        section: "import",
+      });
+    }
+
+    if (sallesValides.length > 200) {
+      return fail(400, {
+        erreur: "Le fichier contient trop de salles (200 maximum).",
+        section: "import",
+      });
+    }
+
     const userId = locals.user!.id;
     let sallesInsereesAvecVenueId: SalleExportee[] = [];
     let deptsNouveaux: string[] = [];
