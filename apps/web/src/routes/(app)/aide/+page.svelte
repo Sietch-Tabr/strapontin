@@ -61,7 +61,9 @@
 					<p class="mb-1 font-medium text-foreground">Paramètres</p>
 					<p>
 						Configurez vos départements de recherche, votre rayon et activez le filtre des billets
-						indisponibles. Exportez et importez vos préférences au format JSON.
+						indisponibles. Choisissez le thème d'affichage (Automatique suit les préférences de votre
+						système, Clair ou Sombre sont fixes) — ce choix se synchronise sur tous vos appareils.
+						Exportez et importez vos préférences au format JSON.
 					</p>
 				</div>
 			</div>

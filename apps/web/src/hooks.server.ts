@@ -10,6 +10,20 @@ import { eq } from "drizzle-orm";
 
 const ROUTES_PUBLIQUES = ["/login", "/setup", "/health"];
 
+const THEMES_VALIDES = new Set(["auto", "clair", "sombre"]);
+
+// Normalise les anciennes valeurs de cookie ("dark"/"light") vers le nouveau format.
+// Retourne null si la valeur est absente ou inconnue → déclenchera la lecture en DB.
+function normaliserTheme(
+  valeur: string | undefined,
+): "auto" | "clair" | "sombre" | null {
+  if (!valeur) return null;
+  if (THEMES_VALIDES.has(valeur)) return valeur as "auto" | "clair" | "sombre";
+  if (valeur === "dark") return "sombre";
+  if (valeur === "light") return "clair";
+  return null;
+}
+
 const securiser: Handle = async ({ event, resolve }) => {
   const reponse = await resolve(event);
   reponse.headers.set("X-Content-Type-Options", "nosniff");
@@ -34,8 +48,8 @@ const securiser: Handle = async ({ event, resolve }) => {
 const gererAuth: Handle = async ({ event, resolve }) => {
   // Routes de l'API Better Auth : thème depuis le cookie uniquement
   if (event.url.pathname.startsWith("/api/auth")) {
-    const theme = event.cookies.get("theme") ?? "auto";
-    event.locals.theme = theme as "auto" | "clair" | "sombre";
+    const theme = normaliserTheme(event.cookies.get("theme")) ?? "auto";
+    event.locals.theme = theme;
     return svelteKitHandler({
       event,
       resolve: (event) =>
@@ -52,8 +66,8 @@ const gererAuth: Handle = async ({ event, resolve }) => {
 
   // Routes publiques : thème depuis le cookie uniquement
   if (ROUTES_PUBLIQUES.includes(event.url.pathname)) {
-    const theme = event.cookies.get("theme") ?? "auto";
-    event.locals.theme = theme as "auto" | "clair" | "sombre";
+    const theme = normaliserTheme(event.cookies.get("theme")) ?? "auto";
+    event.locals.theme = theme;
     return svelteKitHandler({
       event,
       resolve: (event) =>
@@ -88,16 +102,16 @@ const gererAuth: Handle = async ({ event, resolve }) => {
     redirect(302, "/first-login");
   }
 
-  // Résoudre le thème : cookie en priorité.
-  // Si absent (nouvel appareil), lire la préférence en DB et poser le cookie.
-  let theme = event.cookies.get("theme") as "auto" | "clair" | "sombre" | undefined;
+  // Résoudre le thème : cookie en priorité (normalisé pour compat anciens cookies).
+  // Si absent ou invalide (nouvel appareil), lire la préférence en DB et poser le cookie.
+  let theme = normaliserTheme(event.cookies.get("theme"));
   if (!theme) {
     const config = await db
       .select({ theme: userConfig.theme })
       .from(userConfig)
       .where(eq(userConfig.userId, session.user.id))
       .then((rows) => rows[0] ?? null);
-    theme = (config?.theme as "auto" | "clair" | "sombre" | undefined) ?? "auto";
+    theme = normaliserTheme(config?.theme) ?? "auto";
     event.cookies.set("theme", theme, {
       path: "/",
       maxAge: 60 * 60 * 24 * 365,
