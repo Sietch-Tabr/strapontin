@@ -9,7 +9,7 @@ import {
   userSalles,
   userConfig,
 } from "@strapontin/core/schema";
-import { normaliserTexte } from "@strapontin/core";
+import { normaliserTexte, similarite } from "@strapontin/core";
 import type { ConcertBrut } from "@strapontin/sources";
 import { db } from "./db.js";
 
@@ -20,6 +20,80 @@ const STATUTS_INDISPONIBLES = new Set([
   "postponed",
   "rescheduled",
 ]);
+
+const SEUIL_SIMILARITE_SALLE = 0.5;
+const LONGUEUR_MIN_CONTAINMENT = 4;
+
+function estDoublonSalle(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (similarite(a, b) >= SEUIL_SIMILARITE_SALLE) return true;
+  const court = a.length <= b.length ? a : b;
+  const long = a.length <= b.length ? b : a;
+  return court.length >= LONGUEUR_MIN_CONTAINMENT && long.includes(court);
+}
+
+type ValeurConcert = {
+  artiste: string;
+  artisteNorm: string;
+  date: string;
+  heure: string | null;
+  salle: string;
+  salleNorm: string;
+  ville: string | null;
+  dept: string | null;
+  prixMin: string | null;
+  prixMax: string | null;
+  url: string | null;
+  source: string;
+  classification: string | null;
+  genre: string | null;
+  disponible: boolean;
+};
+
+// Réécrit salleNorm des concerts entrants pour qu'ils correspondent à un existant en base
+// quand la salle est sémantiquement la même mais nommée différemment selon la source.
+// On réécrit uniquement salleNorm (clé de conflit), pas salle, afin que la règle
+// de préférence casse-mixte de l'upsert puisse choisir le meilleur nom d'affichage.
+async function reconcilierSalles(
+  lot: ValeurConcert[],
+): Promise<ValeurConcert[]> {
+  const artistesNorms = [...new Set(lot.map((c) => c.artisteNorm))];
+
+  const existants = await db
+    .select({
+      artisteNorm: concerts.artisteNorm,
+      date: concerts.date,
+      salleNorm: concerts.salleNorm,
+    })
+    .from(concerts)
+    .where(inArray(concerts.artisteNorm, artistesNorms));
+
+  const indexExistants = new Map<string, string[]>();
+  for (const e of existants) {
+    const cle = `${e.artisteNorm}|${e.date}`;
+    const groupe = indexExistants.get(cle) ?? [];
+    groupe.push(e.salleNorm);
+    indexExistants.set(cle, groupe);
+  }
+
+  return lot.map((concert) => {
+    const cle = `${concert.artisteNorm}|${concert.date}`;
+    const sallesExistantes = indexExistants.get(cle);
+    if (!sallesExistantes) return concert;
+
+    for (const salleNormExistante of sallesExistantes) {
+      if (salleNormExistante === concert.salleNorm) return concert;
+      if (estDoublonSalle(concert.salleNorm, salleNormExistante)) {
+        logger.debug(
+          { entrant: concert.salleNorm, existant: salleNormExistante },
+          "doublon salle inter-jobs réconcilié",
+        );
+        return { ...concert, salleNorm: salleNormExistante };
+      }
+    }
+    return concert;
+  });
+}
 
 // Upsert des concerts en base — retourne les IDs insérés/mis à jour
 export async function persisterConcerts(
@@ -34,7 +108,7 @@ export async function persisterConcerts(
   for (let i = 0; i < liste.length; i += TAILLE_LOT) {
     const lot = liste.slice(i, i + TAILLE_LOT);
 
-    const valeurs = lot.map((c) => ({
+    const valeursBrutes: ValeurConcert[] = lot.map((c) => ({
       artiste: c.artiste,
       artisteNorm: normaliserTexte(c.artiste),
       date: c.date,
@@ -52,6 +126,8 @@ export async function persisterConcerts(
       disponible:
         c.statut !== null ? !STATUTS_INDISPONIBLES.has(c.statut) : true,
     }));
+
+    const valeurs = await reconcilierSalles(valeursBrutes);
 
     const inseres = await db
       .insert(concerts)
