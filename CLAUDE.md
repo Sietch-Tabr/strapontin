@@ -410,6 +410,11 @@ TM retourne parfois des événements sans `_embedded.attractions` (tableau absen
 
 ### Persistance — upsert `persisterConcerts`
 
+Avant chaque lot, `reconcilierSalles()` interroge la base sur les `(artiste_norm, date)` du lot
+et réécrit `salle_norm` des concerts entrants dont la salle est sémantiquement identique à un
+existant (similarité ≥ 0.5 **ou** containment, longueur ≥ 4). Seul `salle_norm` est réécrit ;
+`salle` (libellé) est conservé pour que la règle casse-mixte de l'upsert s'applique normalement.
+
 Clé de conflit : `(artiste_norm, date, salle_norm)`.
 En cas de conflit, les champs mis à jour suivent ces préférences :
 
