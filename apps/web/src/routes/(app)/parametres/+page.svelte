@@ -49,32 +49,53 @@
 		<!-- Thème -->
 		<section>
 			<h2 class="mb-4 text-base font-medium text-foreground">Apparence</h2>
-			<div class="flex gap-2">
-				{#each [
-					{ valeur: 'auto', Icone: Monitor, label: 'Automatique' },
-					{ valeur: 'clair', Icone: Sun, label: 'Clair' },
-					{ valeur: 'sombre', Icone: Moon, label: 'Sombre' },
-				] as option (option.valeur)}
-					<form method="POST" action="?/theme" use:enhance={() => {
-						return async ({ result }) => {
-							if (result.type === 'success') {
-								// Rechargement complet pour appliquer class="dark" sur <html>
-								window.location.reload();
-							}
-						};
-					}}>
-						<input type="hidden" name="valeur" value={option.valeur} />
-						<button
-							type="submit"
-							class="flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === option.valeur
-								? 'border-foreground bg-foreground text-background'
-								: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
-						>
-							<option.Icone size={16} />
-							{option.label}
-						</button>
-					</form>
-				{/each}
+			<div class="space-y-2">
+				<!-- Automatique — pleine largeur -->
+				<form method="POST" action="?/theme" use:enhance={() => {
+					return async ({ result }) => {
+						if (result.type === 'success') {
+							// Rechargement complet pour appliquer class="dark" sur <html>
+							window.location.reload();
+						}
+					};
+				}}>
+					<input type="hidden" name="valeur" value="auto" />
+					<button
+						type="submit"
+						class="flex w-full items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === 'auto'
+							? 'border-foreground bg-foreground text-background'
+							: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
+					>
+						<Monitor size={16} />
+						Automatique
+					</button>
+				</form>
+				<!-- Clair et Sombre côte à côte -->
+				<div class="flex gap-2">
+					{#each [
+						{ valeur: 'clair', Icone: Sun, label: 'Clair' },
+						{ valeur: 'sombre', Icone: Moon, label: 'Sombre' },
+					] as option (option.valeur)}
+						<form class="flex-1" method="POST" action="?/theme" use:enhance={() => {
+							return async ({ result }) => {
+								if (result.type === 'success') {
+									window.location.reload();
+								}
+							};
+						}}>
+							<input type="hidden" name="valeur" value={option.valeur} />
+							<button
+								type="submit"
+								class="flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === option.valeur
+									? 'border-foreground bg-foreground text-background'
+									: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
+							>
+								<option.Icone size={16} />
+								{option.label}
+							</button>
+						</form>
+					{/each}
+				</div>
 			</div>
 		</section>
 
