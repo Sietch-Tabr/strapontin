@@ -368,6 +368,17 @@ S'applique à `/setup`, `/parametres` (changePassword) et `/first-login`.
 - Toutes les autres routes auth : 100 requêtes / 10 secondes (limite souple globale)
 - Storage : mémoire (suffisant pour instance unique)
 
+**Validation des entrées** :
+
+- Paramètre de recherche `q` : 100 chars max (`.slice(0, 100)`) dans toutes les routes ILIKE
+- Filtre `genre` dans `/spectacles` : 50 chars max
+- Tableaux `genres[]`, `classifications[]` dans `/decouverte` : 20 valeurs max
+- Import préférences : `nom`, `normalise`, `salleId` bornés à 200 chars ; `tmVenueId` validé via regex `^[A-Za-z0-9]{1,30}$`
+
+**Cap par utilisateur** : 500 artistes max, 200 salles max (vérifié à l'ajout et à l'import).
+
+**Cookie `theme`** : `httpOnly: false` (lu par JS pour le mode `auto`), `secure: true`, `sameSite: "lax"`.
+
 Plugin `username` de Better-Auth : colonnes `username` + `display_username` sur `users`.
 Colonne `must_change_credentials` (boolean, default false) : flag premier login.
 Annotation `@__NO_SIDE_EFFECTS__` de better-auth strippée dans `vite.config.ts` via plugin
@@ -461,7 +472,7 @@ Sur `/` (accueil), les concerts sont regroupés par artiste. Si un artiste a ≥
 
 Migration initiale unique `0000_friendly_thunderbolt_ross.sql` dans `packages/core/migrations/` — reflète le schéma complet de la v1. Générée par `pnpm --filter @strapontin/core db:generate`, appliquée par `db:migrate`.
 
-Les nouvelles migrations (post-v1) seront numérotées à partir de `0001`.
+Les nouvelles migrations sont numérotées séquentiellement. Migration actuelle : `0001_optimal_nightmare.sql` (ajout `user_config.theme`). Squash `0000` + `0001` prévu avant v1.0 (issue #88).
 
 ### Tables Better Auth (gérées par la lib)
 
@@ -481,7 +492,7 @@ Les nouvelles migrations (post-v1) seront numérotées à partir de `0001`.
 | `concerts`      | Source de vérité concerts — `classification` (valeurs TM France en français : `musique`, `arts et théâtre`…) + `genre` (Rock/Pop…). CHECK sur `source`. |
 | `user_artistes` | Artistes suivis par user — UNIQUE `(user_id, artiste_normalise)`                                                                                        |
 | `user_salles`   | Salles suivies par user — PK composite `(user_id, salle_id)`, `tmVenueId` nullable                                                                      |
-| `user_config`   | Préférences par user (départements, rayon, filtres…)                                                                                                    |
+| `user_config`   | Préférences par user (départements, rayon, filtres, thème)                                                                                              |
 | `user_matches`  | Index concerts ↔ users (calculé par le worker)                                                                                                          |
 | `fetch_jobs`    | Historique et planning des jobs BullMQ                                                                                                                  |
 
@@ -508,7 +519,7 @@ Format JSON : `{ version, exporteAt, artistes, salles, config }`.
 - **Import** (`/parametres`) :
   - **Fusionner** : union artistes/salles + union depts (config) — ne supprime rien
   - **Écraser** : remplace tout (artistes, salles, et config si cochée)
-  - Checkbox opt-in "Importer la configuration" (depts, rayon, filtres)
+  - Checkbox opt-in "Importer la configuration" (depts, rayon, filtres, thème)
   - Toutes les opérations DB dans une transaction → rollback complet en cas d'erreur
   - Post-import : `fetch:artistes:batch` + `fetch:salle` par salle + `fetch:region` si nouveaux depts
 
@@ -521,12 +532,22 @@ Format JSON : `{ version, exporteAt, artistes, salles, config }`.
 | #41     | Erreurs silencieuses : logger les échecs Redis et les cas catch vides |
 | #25     | Analyse des logs de prod avant la v1                                  |
 | #24     | Configuration du conteneur Proxmox                                    |
-| #18     | Revue de code                                                         |
-| #16     | Audit UI/UX                                                           |
+| ~~#18~~ | ~~Revue de code~~ — fermé                                             |
+| ~~#16~~ | ~~Audit UI/UX~~ — fermé                                               |
 | #14     | Test de sécurité                                                      |
 | ~~#10~~ | ~~RGPD~~ — inclus dans #9, fermé                                      |
 | ~~#9~~  | ~~Création d'une page d'aide et d'infos~~ — route `/aide` créée       |
 | #6      | Optimiser les appels aux API externes                                 |
+
+### v1.0 — livraison initiale
+
+| #   | Item                                         |
+| --- | -------------------------------------------- |
+| #88 | Squash des migrations `0000` + `0001` en une |
+| #11 | Documentation                                |
+| #13 | Backups automatiques                         |
+| #15 | Paramètres avancés                           |
+| #2  | ~~Préférences persistées~~ — fermé           |
 
 ### Phase 2 (post-v1.0)
 
