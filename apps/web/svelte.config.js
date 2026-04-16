@@ -11,6 +11,16 @@ const config = {
       filename.split(/[/\\]/).includes("node_modules") ? undefined : true,
   },
   kit: {
+    csp: {
+      mode: "nonce",
+      directives: {
+        "default-src": ["'self'"],
+        "script-src": ["'self'"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "img-src": ["'self'", "data:"],
+        "frame-ancestors": ["'none'"],
+      },
+    },
     adapter: adapter({
       // better-auth contient des annotations @__NO_SIDE_EFFECTS__ que Rollup
       // ne sait pas interpréter à certaines positions — on les ignore silencieusement.

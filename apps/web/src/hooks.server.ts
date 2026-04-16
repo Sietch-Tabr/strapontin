@@ -31,17 +31,13 @@ const securiser: Handle = async ({ event, resolve }) => {
   reponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   reponse.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()"
+    "camera=(), microphone=(), geolocation=()",
   );
   reponse.headers.set(
     "Strict-Transport-Security",
-    "max-age=31536000; includeSubDomains"
+    "max-age=31536000; includeSubDomains",
   );
   reponse.headers.set("X-Robots-Tag", "noindex, nofollow");
-  reponse.headers.set(
-    "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'"
-  );
   return reponse;
 };
 
