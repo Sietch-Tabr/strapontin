@@ -39,6 +39,7 @@ interface ConfigExportee {
   rayonKm?: number;
   filtreDisponibles?: boolean;
   notificationsEmail?: boolean;
+  theme?: string;
 }
 
 export const load: PageServerLoad = async ({ locals, cookies }) => {
@@ -251,7 +252,7 @@ export const actions: Actions = {
     return { succes: "motDePasse" };
   },
 
-  importerPreferences: async ({ request, locals }) => {
+  importerPreferences: async ({ request, locals, cookies }) => {
     const donnees = await request.formData();
     const fichier = donnees.get("fichier");
     const mode =
@@ -357,6 +358,12 @@ export const actions: Actions = {
             const deptsExistants = new Set(configActuelle?.departements ?? []);
             deptsNouveaux = depts.filter((d) => !deptsExistants.has(d));
 
+            const themeImporte = ["auto", "clair", "sombre"].includes(
+              cfg.theme ?? "",
+            )
+              ? (cfg.theme as "auto" | "clair" | "sombre")
+              : undefined;
+
             await tx
               .insert(userConfig)
               .values({
@@ -365,6 +372,7 @@ export const actions: Actions = {
                 rayonKm: rayon,
                 filtreDisponibles: cfg.filtreDisponibles ?? true,
                 notificationsEmail: cfg.notificationsEmail ?? false,
+                ...(themeImporte ? { theme: themeImporte } : {}),
               })
               .onConflictDoUpdate({
                 target: userConfig.userId,
@@ -373,9 +381,19 @@ export const actions: Actions = {
                   rayonKm: rayon,
                   filtreDisponibles: cfg.filtreDisponibles ?? true,
                   notificationsEmail: cfg.notificationsEmail ?? false,
+                  ...(themeImporte ? { theme: themeImporte } : {}),
                   updatedAt: new Date(),
                 },
               });
+
+            if (themeImporte) {
+              cookies.set("theme", themeImporte, {
+                path: "/",
+                maxAge: 60 * 60 * 24 * 365,
+                httpOnly: false,
+                sameSite: "lax",
+              });
+            }
           }
         });
 
@@ -449,6 +467,12 @@ export const actions: Actions = {
             ].sort();
             deptsNouveaux = depts.filter((d) => !deptsExistants.has(d));
 
+            const themeImporte = ["auto", "clair", "sombre"].includes(
+              cfg.theme ?? "",
+            )
+              ? (cfg.theme as "auto" | "clair" | "sombre")
+              : undefined;
+
             await tx
               .insert(userConfig)
               .values({
@@ -457,6 +481,7 @@ export const actions: Actions = {
                 rayonKm: rayon,
                 filtreDisponibles: cfg.filtreDisponibles ?? true,
                 notificationsEmail: cfg.notificationsEmail ?? false,
+                ...(themeImporte ? { theme: themeImporte } : {}),
               })
               .onConflictDoUpdate({
                 target: userConfig.userId,
@@ -465,9 +490,19 @@ export const actions: Actions = {
                   rayonKm: rayon,
                   filtreDisponibles: cfg.filtreDisponibles ?? true,
                   notificationsEmail: cfg.notificationsEmail ?? false,
+                  ...(themeImporte ? { theme: themeImporte } : {}),
                   updatedAt: new Date(),
                 },
               });
+
+            if (themeImporte) {
+              cookies.set("theme", themeImporte, {
+                path: "/",
+                maxAge: 60 * 60 * 24 * 365,
+                httpOnly: false,
+                sameSite: "lax",
+              });
+            }
           }
         });
 
