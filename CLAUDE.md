@@ -309,6 +309,11 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
 **Déclenchement immédiat** : quand l'user ajoute un artiste depuis `/artistes`, l'action server fait `queue.add("fetch:artiste", ...)`. Quand l'user ajoute une salle avec `tmVenueId`, `queue.add("fetch:salle", ...)` est déclenché immédiatement. Le cron 2h assure les mises à jour périodiques.
 
+### Redis — configuration
+
+- `maxmemory 128mb` + `maxmemory-policy allkeys-lru` — configuré dans `/etc/redis/redis.conf` via `provision-lxc.sh`
+- Pas de réplication, instance unique — le `maxmemory` borne la consommation si les clés sans TTL grossissent
+
 ### Redis — clés applicatives
 
 | Clé                                      | Valeur                                 | TTL     | Usage                                     |

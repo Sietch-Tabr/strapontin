@@ -84,7 +84,6 @@ pct create "$VMID" "$TEMPLATE_PATH" \
     --rootfs "$DISK_STORAGE:$DISK" \
     --net0 "name=eth0,bridge=$BRIDGE,tag=$VLAN_TAG,hwaddr=$MAC,ip=$IP,gw=$GW" \
     --unprivileged 1 \
-    --features "nesting=1" \
     --ostype debian \
     --onboot 1 \
     --start 0
@@ -205,6 +204,12 @@ pct exec "$VMID" -- bash -c "
     echo \"deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb \${CODENAME} main\" > /etc/apt/sources.list.d/redis.list
     apt-get update
     DEBIAN_FRONTEND=noninteractive apt-get install -y redis
+"
+
+echo "[5] Configuration Redis (maxmemory + policy)..."
+pct exec "$VMID" -- bash -c "
+    sed -i 's/^# maxmemory <bytes>/maxmemory 128mb/' /etc/redis/redis.conf
+    sed -i 's/^# maxmemory-policy noeviction/maxmemory-policy allkeys-lru/' /etc/redis/redis.conf
 "
 
 # ---------------------------------------------------------------
