@@ -31,8 +31,11 @@ function enrichir(concert: ConcertBrut): ConcertAvecNormes {
 
 // Choisit le meilleur représentant parmi les doublons (favorise celui avec le plus d'infos)
 // À score égal, préfère le nom avec des diacritiques (ex. "Julien Doré" > "Julien Dore")
+// La salle est choisie indépendamment : meilleur nom parmi tous les candidats du groupe
+// (diacritiques > casse mixte > tout-majuscule) — Eventim fournit souvent la casse correcte
+// là où TM Events retourne tout-majuscule.
 function fusionner(concerts: ConcertAvecNormes[]): ConcertAvecNormes {
-  return concerts.reduce((meilleur, candidat) => {
+  const gagnant = concerts.reduce((meilleur, candidat) => {
     const scoreM = scoreCompletude(meilleur);
     const scoreC = scoreCompletude(candidat);
     if (scoreC > scoreM) return candidat;
@@ -43,6 +46,14 @@ function fusionner(concerts: ConcertAvecNormes[]): ConcertAvecNormes {
     }
     return meilleur;
   });
+
+  const meilleureSalle = concerts.reduce((meilleure, candidat) => {
+    const scoreM = scoreNomRiche(meilleure) * 2 + (meilleure !== meilleure.toUpperCase() ? 1 : 0);
+    const scoreC = scoreNomRiche(candidat.salle) * 2 + (candidat.salle !== candidat.salle.toUpperCase() ? 1 : 0);
+    return scoreC > scoreM ? candidat.salle : meilleure;
+  }, gagnant.salle);
+
+  return { ...gagnant, salle: meilleureSalle };
 }
 
 // Compte les caractères non-ASCII dans un nom (accents, cédilles, etc.)
