@@ -516,8 +516,9 @@ Pas de page d'inscription publique. Premier accès via `/setup` (accessible uniq
 - Noms de variables en français (cohérence avec le projet CLI)
 - Commentaires en français
 - Migrations Drizzle dans `packages/core/migrations/`
-- Logging : pino, lazy `%s` (pas de template literals dans les appels logger)
+- Logging : pino 10, lazy `%s` (pas de template literals dans les appels logger)
 - Pas de `console.log` en production
+- **tsconfig des packages Node** (worker, sources) : inclure `"types": ["node"]` — requis depuis TypeScript 6 (plus d'inclusion automatique de `@types/node`)
 - **`<button>` hors formulaire** : toujours `type="button"` — sans ça, le défaut HTML est `submit`, ce qui peut déclencher la soumission d'un formulaire parent sur mobile
 
 ## Export / Import préférences
@@ -553,11 +554,12 @@ Format JSON : `{ version, exporteAt, artistes, salles, config }`.
 
 | #   | Item                                         |
 | --- | -------------------------------------------- |
-| #88 | Squash des migrations `0000` + `0001` en une |
-| #11 | Documentation                                |
-| #13 | Backups automatiques                         |
-| #15 | Paramètres avancés                           |
-| #2  | ~~Préférences persistées~~ — fermé           |
+| #88       | Squash des migrations `0000` + `0001` en une                                   |
+| #11       | Documentation                                                                  |
+| #13       | Backups automatiques                                                           |
+| #15       | Paramètres avancés                                                             |
+| ~~#94~~   | ~~Mise à jour stack (pino 10, TS 6, vitest 4, patches)~~ — fait               |
+| #2        | ~~Préférences persistées~~ — fermé                                             |
 
 ### Phase 2 (post-v1.0)
 
