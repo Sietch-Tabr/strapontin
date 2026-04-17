@@ -326,6 +326,12 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
 - **BullMQ v5 interdit les `:` dans les `jobId`** — utiliser `__` comme séparateur (`artiste__norm`, `artistes__batch`, `region__all`, `salle__venueId`, `matches__all`, `purge__YYYY-MM-DD`). Les `:` dans le _type de job_ (premier arg de `queue.add`) sont acceptés.
 
+### Centroïdes des départements (`CENTRES_DEPT`)
+
+Table statique dans `packages/sources/src/ticketmaster.ts` : latitude/longitude du centroïde de chaque département métropolitain (01–95 + `"20"` pour la Corse entière). Utilisée comme point d'ancrage pour `fetchRegion` (radius TM).
+
+Générée une seule fois par `scripts/generer-centres-dept.ts` (moyenne des centres de communes via `geo.api.gouv.fr`). La Corse est agrégée : `"20"` = moyenne de 2A + 2B. Statique dans le code — ne pas relancer sauf nouveau découpage territorial.
+
 ### Pagination TM (`packages/sources/src/ticketmaster.ts`)
 
 - `TAILLE_PAGE = 20` pour `fetchArtiste` et `fetchSalle` (1 artiste/salle, rarement > 20 concerts FR)
@@ -462,28 +468,29 @@ Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`,
 
 ## Navigation
 
-- **Desktop (≥ 1024px)** : sidebar fixe — Accueil, **Mes spectacles**, **Découverte**, Mes artistes, Mes salles | Settings en bas
-- **Mobile (< 1024px)** : bottom nav 3 items fixes (Accueil, **Mes spectacles**, **Découvrir**) + "···" → drawer pour Artistes, Salles, Settings
+- **Desktop (≥ 1024px)** : sidebar fixe — Accueil, **Mes spectacles**, **Découverte**, Mes artistes, Mes salles | [Admin,] Nouveautés, Aide, Paramètres en bas
+- **Mobile (< 1024px)** : bottom nav 3 items fixes (Accueil, **Mes spectacles**, **Découvrir**) + "···" → drawer pour Artistes, Salles, Nouveautés, Aide, Paramètres
 
 ## Routes implémentées
 
 Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + bottom nav).
 
-| Route              | Description                                                                                                                                                                                                                                           |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                                                                                                                                                      |
-| `/artistes`        | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                                                                                                                                                        |
-| `/salles`          | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                                                                                                                                            |
-| `/spectacles`      | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours / tri (Par date · Nouveautés). Filtres : classification, genre, artiste, mois, budget.                                   |
-| `/decouverte`      | Tous les concerts en base. Chips dept, catégories, genres, tri (Par date · Nouveautés). Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs.                                      |
-| `/parametres`      | user_config (depts, rayon, filtreDisponibles), thème, nom + mot de passe. Export JSON (artistes + salles + config). Import JSON avec mode fusionner / écraser, checkbox config opt-in, fetch déclenché post-import. Lien vers `/aide` en bas de page. |
-| `/aide`            | Page statique : guide d'utilisation, RGPD (Règlement Général sur la Protection des Données), licence MIT.                                                                                                                                             |
-| `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json` (artistes, salles, config). Protégé par session.                                                                                                                                          |
-| `/admin`           | Invitation (email seul) + liste des comptes + suppression — réservé admin. Badge "premier login en attente" si `must_change_credentials = true`.                                                                                                      |
-| `/setup`           | Création premier compte admin (accessible uniquement si 0 users en base)                                                                                                                                                                              |
-| `/login`           | Authentification username/password (identifiant insensible à la casse)                                                                                                                                                                                |
-| `/first-login`     | Première connexion — choix du nom, identifiant et nouveau mot de passe. Redirigé automatiquement si `must_change_credentials = true`.                                                                                                                 |
-| `/health`          | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                                                                                                                                                |
+| Route              | Description                                                                                                                                                                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/`                | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées                                                                                                                                                                   |
+| `/artistes`        | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                                                                                                                                                                     |
+| `/salles`          | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                                                                                                                                                         |
+| `/spectacles`      | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours / tri (Par date · Nouveautés). Filtres : classification, genre, artiste, mois, budget.                                                |
+| `/decouverte`      | Tous les concerts en base. Chips dept, catégories, genres, tri (Par date · Nouveautés). Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs.                                                   |
+| `/parametres`      | 4 sections (cards) : Mon compte (nom, identifiant, mot de passe), Recherche de concerts (depts, rayon, filtreDisponibles, notificationsEmail), Apparence (thème), Export / Import (JSON fusionner / écraser, checkbox config opt-in, fetch déclenché post-import). |
+| `/aide`            | Page statique : guide d'utilisation, RGPD (Règlement Général sur la Protection des Données), licence MIT. Accessible depuis la sidebar desktop et le drawer mobile. Lien vers `/changelog` en bas de page.                                                         |
+| `/changelog`       | Page statique : liste des nouveautés par version. Accessible depuis la sidebar desktop, le drawer mobile "···" et `/aide`.                                                                                                                                         |
+| `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json` (artistes, salles, config). Protégé par session.                                                                                                                                                       |
+| `/admin`           | Invitation (email seul) + liste des comptes + suppression — réservé admin. Badge "premier login en attente" si `must_change_credentials = true`.                                                                                                                   |
+| `/setup`           | Création premier compte admin (accessible uniquement si 0 users en base)                                                                                                                                                                                           |
+| `/login`           | Authentification username/password (identifiant insensible à la casse)                                                                                                                                                                                             |
+| `/first-login`     | Première connexion — choix du nom, identifiant et nouveau mot de passe. Redirigé automatiquement si `must_change_credentials = true`.                                                                                                                              |
+| `/health`          | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                                                                                                                                                             |
 
 ## Affichage — tournées
 
