@@ -4,9 +4,16 @@ import { redirect } from "@sveltejs/kit";
 import { building } from "$app/environment";
 import { sequence } from "@sveltejs/kit/hooks";
 import type { Handle } from "@sveltejs/kit";
-import { db } from "$lib/server/db";
+import { db, fermerDb } from "$lib/server/db";
 import { userConfig } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
+
+if (!building) {
+  process.on("sveltekit:shutdown", async () => {
+    await fermerDb();
+    process.exit(0);
+  });
+}
 
 const ROUTES_PUBLIQUES = ["/login", "/setup", "/health"];
 
