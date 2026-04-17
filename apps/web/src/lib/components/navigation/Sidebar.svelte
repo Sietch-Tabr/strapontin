@@ -10,7 +10,8 @@
 		Ticket,
 		Settings,
 		LogOut,
-		ShieldCheck
+		ShieldCheck,
+		History
 	} from '@lucide/svelte';
 
 	let { utilisateur }: { utilisateur: { name: string; role?: string } } = $props();
@@ -89,6 +90,16 @@
 				Admin
 			</a>
 		{/if}
+		<a
+			href="/changelog"
+			class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
+				{estActif('/changelog')
+				? 'bg-sidebar-accent text-sidebar-accent-foreground'
+				: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
+		>
+			<History size={18} />
+			Nouveautés
+		</a>
 		<a
 			href="/parametres"
 			class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors

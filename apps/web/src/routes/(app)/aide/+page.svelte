@@ -155,5 +155,11 @@ SOFTWARE.</pre>
 			</div>
 		</section>
 
+		<p class="text-sm text-muted-foreground">
+			<a href="/changelog" class="underline underline-offset-4 hover:text-foreground">
+				Voir les nouveautés →
+			</a>
+		</p>
+
 	</div>
 </div>
