@@ -12,7 +12,8 @@
 		Settings,
 		LogOut,
 		MoreHorizontal,
-		ShieldCheck
+		ShieldCheck,
+		History
 	} from '@lucide/svelte';
 
 	let { estAdmin = false }: { estAdmin?: boolean } = $props();
@@ -59,6 +60,7 @@
 	const elementsDrawer = [
 		{ label: 'Mes artistes', icone: Music, route: '/artistes' },
 		{ label: 'Mes salles', icone: Building2, route: '/salles' },
+		{ label: 'Nouveautés', icone: History, route: '/changelog' },
 		{ label: 'Paramètres', icone: Settings, route: '/parametres' }
 	];
 
