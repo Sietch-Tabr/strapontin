@@ -399,6 +399,20 @@ Portage de `src/merge.py` du projet CLI. Deux passes :
 Index secondaire `(date, salle_normalisee)` en fallback pour les salles où TM et Eventim
 donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 
+### Particularité TM — casse des noms de salles
+
+L'API TM Events retourne les noms de salles en TOUT MAJUSCULE pour les événements France
+(`"ACCOR ARENA"`, `"LE BATACLAN"`). L'API TM Venues retourne les mêmes lieux en casse mixte
+(`"Accor Arena"`, `"Le Bataclan"`).
+
+`fetchSalle(venueId)` corrige ce problème à la source : avant de fetcher les événements,
+il appelle `GET /venues/{venueId}` pour obtenir le nom canonique et l'injecte dans tous les
+concerts retournés. Ce surcoût est d'un appel par salle, exécuté uniquement lors du job
+`fetch:salle` (ajout d'une salle suivie + cron 2h).
+
+Pour les concerts entrés avant ce correctif ou issus d'autres jobs (`fetch:artiste`,
+`fetch:region`), utiliser `scripts/corriger-noms-salles.ts` (one-shot).
+
 ### Particularité TM — nom d'artiste vs titre d'événement
 
 TM retourne parfois des événements sans `_embedded.attractions` (tableau absent ou vide).
@@ -426,6 +440,16 @@ En cas de conflit, les champs mis à jour suivent ces préférences :
 Le matching des salles suivies utilise `concerts.salle_norm` (et non `concerts.salle`) pour
 être insensible à la casse — TM retourne le même lieu en tout-majuscule ou casse mixte
 selon le type d'appel.
+
+### Script de rattrapage — noms de salles (`scripts/corriger-noms-salles.ts`)
+
+Corrige les `concerts.salle` tout-majuscule pour les salles ayant un `tmVenueId` dans
+`user_salles`. Appelle `/venues/{id}` pour chaque salle connue et met à jour uniquement
+les entrées où `upper(salle) = salle`.
+
+```bash
+DATABASE_URL=... TICKETMASTER_API_KEY=... tsx scripts/corriger-noms-salles.ts
+```
 
 Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`, `levenshtein`
 (distance brute — utile quand un seuil proportionnel à la longueur est préférable à `similarite`).
@@ -552,14 +576,14 @@ Format JSON : `{ version, exporteAt, artistes, salles, config }`.
 
 ### v1.0 — livraison initiale
 
-| #   | Item                                         |
-| --- | -------------------------------------------- |
-| #88       | Squash des migrations `0000` + `0001` en une                                   |
-| #11       | Documentation                                                                  |
-| #13       | Backups automatiques                                                           |
-| #15       | Paramètres avancés                                                             |
-| ~~#94~~   | ~~Mise à jour stack (pino 10, TS 6, vitest 4, patches)~~ — fait               |
-| #2        | ~~Préférences persistées~~ — fermé                                             |
+| #       | Item                                                            |
+| ------- | --------------------------------------------------------------- |
+| #88     | Squash des migrations `0000` + `0001` en une                    |
+| #11     | Documentation                                                   |
+| #13     | Backups automatiques                                            |
+| #15     | Paramètres avancés                                              |
+| ~~#94~~ | ~~Mise à jour stack (pino 10, TS 6, vitest 4, patches)~~ — fait |
+| #2      | ~~Préférences persistées~~ — fermé                              |
 
 ### Phase 2 (post-v1.0)
 
