@@ -267,7 +267,10 @@ Cron systemd (`OnCalendar=daily`) sur le LXC — indépendant des mises à jour 
 - LXC `strapontin` — **VMID 113**, **192.168.20.79**, VLAN 20, Debian 13, 2 vCPU, 2 Go RAM, 20 Go
   - Réseau : `--net0 name=eth0,bridge=vmbr0,tag=20,hwaddr=02:00:00:00:00:13,ip=192.168.20.79/24,gw=192.168.20.1`
 - 4 services systemd dans un seul LXC : `postgresql` (18), `redis` (8), `strapontin-web`, `strapontin-worker`
-- Nginx Proxy Manager → `strapontin.kwaite.fr` → `192.168.20.79:3000`
+- Nginx Proxy Manager (LXC 100) → `strapontin.kwaite.fr` → `192.168.20.79:3000`
+  - Proxy host 26 — WebSocket off, Block Exploits off, SSL forcé, HTTP/2
+  - `advanced_config` : headers sécurité + `location /` custom (sans headers WebSocket)
+  - Piège : coller du contenu avec `\n` littéraux casse le conf silencieusement → voir wiki Déploiement
 - Provisioning : `scripts/provision-lxc.sh` (depuis host Proxmox 192.168.1.99)
   - VMID résolu dynamiquement : `VMID=$(pvesh get /cluster/nextid)`
 - Variables : `.env` sur le serveur (non commité), `.env.example` versionné
