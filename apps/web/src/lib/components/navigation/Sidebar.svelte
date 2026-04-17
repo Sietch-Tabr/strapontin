@@ -92,14 +92,14 @@
 			</a>
 		{/if}
 		<a
-			href="/changelog"
+			href="/parametres"
 			class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
-				{estActif('/changelog')
+				{estActif('/parametres')
 				? 'bg-sidebar-accent text-sidebar-accent-foreground'
 				: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
 		>
-			<History size={18} />
-			Nouveautés
+			<Settings size={18} />
+			Paramètres
 		</a>
 		<a
 			href="/aide"
@@ -112,14 +112,14 @@
 			Aide
 		</a>
 		<a
-			href="/parametres"
+			href="/changelog"
 			class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
-				{estActif('/parametres')
+				{estActif('/changelog')
 				? 'bg-sidebar-accent text-sidebar-accent-foreground'
 				: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
 		>
-			<Settings size={18} />
-			Paramètres
+			<History size={18} />
+			Nouveautés
 		</a>
 
 		<div class="mt-1 flex items-center justify-between rounded-md px-3 py-2">

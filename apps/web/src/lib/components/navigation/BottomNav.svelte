@@ -61,9 +61,9 @@
 	const elementsDrawer = [
 		{ label: 'Mes artistes', icone: Music, route: '/artistes' },
 		{ label: 'Mes salles', icone: Building2, route: '/salles' },
-		{ label: 'Nouveautés', icone: History, route: '/changelog' },
+		{ label: 'Paramètres', icone: Settings, route: '/parametres' },
 		{ label: 'Aide', icone: HelpCircle, route: '/aide' },
-		{ label: 'Paramètres', icone: Settings, route: '/parametres' }
+		{ label: 'Nouveautés', icone: History, route: '/changelog' }
 	];
 
 	function estActif(route: string): boolean {

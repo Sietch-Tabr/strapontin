@@ -46,6 +46,154 @@
 
 	<div class="max-w-xl space-y-6">
 
+		<!-- Recherche de concerts -->
+		<section class="rounded-lg border border-border bg-card p-6">
+			<h2 class="mb-6 text-base font-semibold text-foreground">Recherche de concerts</h2>
+
+			{#if form?.succes === 'config'}
+				<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+					Préférences enregistrées.
+				</p>
+			{/if}
+			{#if form?.erreur && form?.section === 'config'}
+				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+					{form.erreur}
+				</p>
+			{/if}
+
+			<form
+				method="POST"
+				action="?/config"
+				class="space-y-4"
+				use:enhance={() => {
+					enregistrementConfig = true;
+					return async ({ result, update }) => {
+						if (result.type === 'success') toast.success('Configuration enregistrée');
+						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+						await update({ reset: false });
+						enregistrementConfig = false;
+					};
+				}}
+			>
+				<div>
+					<p class="mb-1.5 text-sm font-medium text-foreground">Départements</p>
+					<input type="hidden" name="departements" value={deptsSelectionnes.join(', ')} />
+					<ComboboxDepts
+						depts={TOUS_LES_DEPTS}
+						actifs={deptsSelectionnes}
+						onChange={(actifs) => {
+							deptsSelectionnes = actifs;
+						}}
+					/>
+				</div>
+
+				<div>
+					<label for="rayonKm" class="mb-1.5 block text-sm font-medium text-foreground">
+						Rayon ({rayonKm} km)
+					</label>
+					<input
+						id="rayonKm"
+						type="range"
+						name="rayonKm"
+						bind:value={rayonKm}
+						min="0"
+						max="500"
+						step="10"
+						class="w-full accent-foreground"
+					/>
+					<div class="flex justify-between text-xs text-muted-foreground">
+						<span>0 km</span>
+						<span>500 km</span>
+					</div>
+				</div>
+
+				<div class="flex items-center gap-3">
+					<input
+						id="filtreDisponibles"
+						type="checkbox"
+						name="filtreDisponibles"
+						bind:checked={filtreDisponibles}
+						class="h-4 w-4 rounded border-border accent-foreground"
+					/>
+					<label for="filtreDisponibles" class="text-sm text-foreground">
+						Masquer les concerts dont les billets ne sont plus disponibles
+					</label>
+				</div>
+
+				<div class="flex items-center gap-3">
+					<input
+						id="notificationsEmail"
+						type="checkbox"
+						name="notificationsEmail"
+						bind:checked={notificationsEmail}
+						class="h-4 w-4 rounded border-border accent-foreground"
+					/>
+					<label for="notificationsEmail" class="text-sm text-foreground">
+						Recevoir les alertes par email
+					</label>
+				</div>
+
+				<button
+					type="submit"
+					disabled={enregistrementConfig}
+					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+				>
+					<Save size={16} />
+					{enregistrementConfig ? 'Enregistrement…' : 'Enregistrer'}
+				</button>
+			</form>
+		</section>
+
+		<!-- Apparence -->
+		<section class="rounded-lg border border-border bg-card p-6">
+			<h2 class="mb-6 text-base font-semibold text-foreground">Apparence</h2>
+			<div class="space-y-2">
+				<form method="POST" action="?/theme" use:enhance={() => {
+					return async ({ result }) => {
+						if (result.type === 'success') {
+							window.location.reload();
+						}
+					};
+				}}>
+					<input type="hidden" name="valeur" value="auto" />
+					<button
+						type="submit"
+						class="flex w-full items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === 'auto'
+							? 'border-foreground bg-foreground text-background'
+							: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
+					>
+						<Monitor size={16} />
+						Automatique
+					</button>
+				</form>
+				<div class="flex gap-2">
+					{#each [
+						{ valeur: 'clair', Icone: Sun, label: 'Clair' },
+						{ valeur: 'sombre', Icone: Moon, label: 'Sombre' },
+					] as option (option.valeur)}
+						<form class="flex-1" method="POST" action="?/theme" use:enhance={() => {
+							return async ({ result }) => {
+								if (result.type === 'success') {
+									window.location.reload();
+								}
+							};
+						}}>
+							<input type="hidden" name="valeur" value={option.valeur} />
+							<button
+								type="submit"
+								class="flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === option.valeur
+									? 'border-foreground bg-foreground text-background'
+									: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
+							>
+								<option.Icone size={16} />
+								{option.label}
+							</button>
+						</form>
+					{/each}
+				</div>
+			</div>
+		</section>
+
 		<!-- Mon compte -->
 		<section class="rounded-lg border border-border bg-card p-6">
 			<h2 class="mb-6 text-base font-semibold text-foreground">Mon compte</h2>
@@ -231,154 +379,6 @@
 						{enregistrementMdp ? 'Modification…' : 'Modifier le mot de passe'}
 					</button>
 				</form>
-			</div>
-		</section>
-
-		<!-- Recherche de concerts -->
-		<section class="rounded-lg border border-border bg-card p-6">
-			<h2 class="mb-6 text-base font-semibold text-foreground">Recherche de concerts</h2>
-
-			{#if form?.succes === 'config'}
-				<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-					Préférences enregistrées.
-				</p>
-			{/if}
-			{#if form?.erreur && form?.section === 'config'}
-				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-					{form.erreur}
-				</p>
-			{/if}
-
-			<form
-				method="POST"
-				action="?/config"
-				class="space-y-4"
-				use:enhance={() => {
-					enregistrementConfig = true;
-					return async ({ result, update }) => {
-						if (result.type === 'success') toast.success('Configuration enregistrée');
-						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
-						await update({ reset: false });
-						enregistrementConfig = false;
-					};
-				}}
-			>
-				<div>
-					<p class="mb-1.5 text-sm font-medium text-foreground">Départements</p>
-					<input type="hidden" name="departements" value={deptsSelectionnes.join(', ')} />
-					<ComboboxDepts
-						depts={TOUS_LES_DEPTS}
-						actifs={deptsSelectionnes}
-						onChange={(actifs) => {
-							deptsSelectionnes = actifs;
-						}}
-					/>
-				</div>
-
-				<div>
-					<label for="rayonKm" class="mb-1.5 block text-sm font-medium text-foreground">
-						Rayon ({rayonKm} km)
-					</label>
-					<input
-						id="rayonKm"
-						type="range"
-						name="rayonKm"
-						bind:value={rayonKm}
-						min="0"
-						max="500"
-						step="10"
-						class="w-full accent-foreground"
-					/>
-					<div class="flex justify-between text-xs text-muted-foreground">
-						<span>0 km</span>
-						<span>500 km</span>
-					</div>
-				</div>
-
-				<div class="flex items-center gap-3">
-					<input
-						id="filtreDisponibles"
-						type="checkbox"
-						name="filtreDisponibles"
-						bind:checked={filtreDisponibles}
-						class="h-4 w-4 rounded border-border accent-foreground"
-					/>
-					<label for="filtreDisponibles" class="text-sm text-foreground">
-						Masquer les concerts dont les billets ne sont plus disponibles
-					</label>
-				</div>
-
-				<div class="flex items-center gap-3">
-					<input
-						id="notificationsEmail"
-						type="checkbox"
-						name="notificationsEmail"
-						bind:checked={notificationsEmail}
-						class="h-4 w-4 rounded border-border accent-foreground"
-					/>
-					<label for="notificationsEmail" class="text-sm text-foreground">
-						Recevoir les alertes par email
-					</label>
-				</div>
-
-				<button
-					type="submit"
-					disabled={enregistrementConfig}
-					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
-				>
-					<Save size={16} />
-					{enregistrementConfig ? 'Enregistrement…' : 'Enregistrer'}
-				</button>
-			</form>
-		</section>
-
-		<!-- Apparence -->
-		<section class="rounded-lg border border-border bg-card p-6">
-			<h2 class="mb-6 text-base font-semibold text-foreground">Apparence</h2>
-			<div class="space-y-2">
-				<form method="POST" action="?/theme" use:enhance={() => {
-					return async ({ result }) => {
-						if (result.type === 'success') {
-							window.location.reload();
-						}
-					};
-				}}>
-					<input type="hidden" name="valeur" value="auto" />
-					<button
-						type="submit"
-						class="flex w-full items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === 'auto'
-							? 'border-foreground bg-foreground text-background'
-							: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
-					>
-						<Monitor size={16} />
-						Automatique
-					</button>
-				</form>
-				<div class="flex gap-2">
-					{#each [
-						{ valeur: 'clair', Icone: Sun, label: 'Clair' },
-						{ valeur: 'sombre', Icone: Moon, label: 'Sombre' },
-					] as option (option.valeur)}
-						<form class="flex-1" method="POST" action="?/theme" use:enhance={() => {
-							return async ({ result }) => {
-								if (result.type === 'success') {
-									window.location.reload();
-								}
-							};
-						}}>
-							<input type="hidden" name="valeur" value={option.valeur} />
-							<button
-								type="submit"
-								class="flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === option.valeur
-									? 'border-foreground bg-foreground text-background'
-									: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
-							>
-								<option.Icone size={16} />
-								{option.label}
-							</button>
-						</form>
-					{/each}
-				</div>
 			</div>
 		</section>
 
