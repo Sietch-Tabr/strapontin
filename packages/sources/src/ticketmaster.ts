@@ -336,26 +336,7 @@ export class TicketmasterSource implements SourceConcerts {
     return events;
   }
 
-  // Retourne le nom canonique (casse mixte) d'une salle depuis l'API Venues TM.
-  // L'API Events retourne les noms en TOUT MAJUSCULE pour les salles FR — l'API
-  // Venues retourne la casse correcte (ex. "Accor Arena" vs "ACCOR ARENA").
-  private async obtenirNomSalle(venueId: string): Promise<string | null> {
-    const url =
-      `${BASE_URL}/venues/${encodeURIComponent(venueId)}.json` +
-      `?apikey=${this.apiKey}&locale=fr`;
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      const data = (await res.json()) as Record<string, unknown>;
-      return (data["name"] as string | undefined) ?? null;
-    } catch {
-      return null;
-    }
-  }
-
   async fetchSalle(venueId: string): Promise<ConcertBrut[]> {
-    const nomCanonique = await this.obtenirNomSalle(venueId);
-
     const params = new URLSearchParams({
       venueId,
       size: String(TAILLE_PAGE),
@@ -364,10 +345,8 @@ export class TicketmasterSource implements SourceConcerts {
 
     const { events, total, quota } = await fetchPage(params, this.apiKey);
     if (quota) this._dernierQuota = quota;
-    logger.info({ venueId, total, nomCanonique }, "TM fetchSalle");
-
-    if (!nomCanonique) return events;
-    return events.map((e) => ({ ...e, salle: nomCanonique }));
+    logger.info({ venueId, total }, "TM fetchSalle");
+    return events;
   }
 
   async rechercherAttractionId(nom: string): Promise<string | null> {
