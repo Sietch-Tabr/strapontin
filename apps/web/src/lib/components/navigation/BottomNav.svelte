@@ -13,7 +13,8 @@
 		LogOut,
 		MoreHorizontal,
 		ShieldCheck,
-		History
+		History,
+		HelpCircle
 	} from '@lucide/svelte';
 
 	let { estAdmin = false }: { estAdmin?: boolean } = $props();
@@ -61,6 +62,7 @@
 		{ label: 'Mes artistes', icone: Music, route: '/artistes' },
 		{ label: 'Mes salles', icone: Building2, route: '/salles' },
 		{ label: 'Nouveautés', icone: History, route: '/changelog' },
+		{ label: 'Aide', icone: HelpCircle, route: '/aide' },
 		{ label: 'Paramètres', icone: Settings, route: '/parametres' }
 	];
 

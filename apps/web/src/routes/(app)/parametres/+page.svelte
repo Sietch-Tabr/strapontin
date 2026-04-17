@@ -44,64 +44,199 @@
 		<h1 class="text-2xl font-semibold text-foreground">Paramètres</h1>
 	</div>
 
-	<div class="max-w-xl space-y-10">
+	<div class="max-w-xl space-y-6">
 
-		<!-- Thème -->
-		<section>
-			<h2 class="mb-4 text-base font-medium text-foreground">Apparence</h2>
-			<div class="space-y-2">
-				<!-- Automatique — pleine largeur -->
-				<form method="POST" action="?/theme" use:enhance={() => {
-					return async ({ result }) => {
-						if (result.type === 'success') {
-							// Rechargement complet pour appliquer class="dark" sur <html>
-							window.location.reload();
-						}
-					};
-				}}>
-					<input type="hidden" name="valeur" value="auto" />
+		<!-- Mon compte -->
+		<section class="rounded-lg border border-border bg-card p-6">
+			<h2 class="mb-6 text-base font-semibold text-foreground">Mon compte</h2>
+
+			<!-- Nom d'affichage -->
+			<div>
+				<h3 class="mb-4 text-sm font-medium text-muted-foreground">Nom d'affichage</h3>
+
+				{#if form?.succes === 'compte'}
+					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+						Nom mis à jour.
+					</p>
+				{/if}
+				{#if form?.erreur && form?.section === 'compte'}
+					<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+						{form.erreur}
+					</p>
+				{/if}
+
+				<form
+					method="POST"
+					action="?/compte"
+					class="space-y-4"
+					use:enhance={() => {
+						enregistrementCompte = true;
+						return async ({ result, update }) => {
+							if (result.type === 'success') toast.success('Nom mis à jour');
+							else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+							await update({ reset: false });
+							enregistrementCompte = false;
+						};
+					}}
+				>
+					<input
+						id="nom"
+						type="text"
+						name="nom"
+						bind:value={nom}
+						maxlength="100"
+						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+					/>
 					<button
 						type="submit"
-						class="flex w-full items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === 'auto'
-							? 'border-foreground bg-foreground text-background'
-							: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
+						disabled={enregistrementCompte}
+						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
 					>
-						<Monitor size={16} />
-						Automatique
+						<User size={16} />
+						{enregistrementCompte ? 'Mise à jour…' : 'Mettre à jour'}
 					</button>
 				</form>
-				<!-- Clair et Sombre côte à côte -->
-				<div class="flex gap-2">
-					{#each [
-						{ valeur: 'clair', Icone: Sun, label: 'Clair' },
-						{ valeur: 'sombre', Icone: Moon, label: 'Sombre' },
-					] as option (option.valeur)}
-						<form class="flex-1" method="POST" action="?/theme" use:enhance={() => {
-							return async ({ result }) => {
-								if (result.type === 'success') {
-									window.location.reload();
-								}
-							};
-						}}>
-							<input type="hidden" name="valeur" value={option.valeur} />
-							<button
-								type="submit"
-								class="flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === option.valeur
-									? 'border-foreground bg-foreground text-background'
-									: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
-							>
-								<option.Icone size={16} />
-								{option.label}
-							</button>
-						</form>
-					{/each}
-				</div>
+			</div>
+
+			<hr class="my-6 border-border" />
+
+			<!-- Identifiant -->
+			<div>
+				<h3 class="mb-4 text-sm font-medium text-muted-foreground">Identifiant de connexion</h3>
+
+				{#if form?.succes === 'identifiant'}
+					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+						Identifiant mis à jour.
+					</p>
+				{/if}
+				{#if form?.erreur && form?.section === 'identifiant'}
+					<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+						{form.erreur}
+					</p>
+				{/if}
+
+				<form
+					method="POST"
+					action="?/identifiant"
+					class="space-y-4"
+					use:enhance={() => {
+						enregistrementIdentifiant = true;
+						return async ({ result, update }) => {
+							if (result.type === 'success') toast.success('Identifiant mis à jour');
+							else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+							await update({ reset: false });
+							enregistrementIdentifiant = false;
+						};
+					}}
+				>
+					<div>
+						<input
+							id="identifiant"
+							type="text"
+							name="identifiant"
+							bind:value={identifiant}
+							minlength="3"
+							maxlength="30"
+							pattern="[a-zA-Z0-9_]+"
+							autocomplete="username"
+							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+						/>
+						<p class="mt-1 text-xs text-muted-foreground">3 à 30 caractères, lettres, chiffres et _ uniquement. Insensible à la casse.</p>
+					</div>
+					<button
+						type="submit"
+						disabled={enregistrementIdentifiant}
+						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+					>
+						<User size={16} />
+						{enregistrementIdentifiant ? 'Mise à jour…' : 'Mettre à jour'}
+					</button>
+				</form>
+			</div>
+
+			<hr class="my-6 border-border" />
+
+			<!-- Mot de passe -->
+			<div>
+				<h3 class="mb-4 text-sm font-medium text-muted-foreground">Mot de passe</h3>
+
+				{#if form?.succes === 'motDePasse'}
+					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+						Mot de passe modifié. Les autres sessions ont été révoquées.
+					</p>
+				{/if}
+				{#if form?.erreur && form?.section === 'motDePasse'}
+					<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+						{form.erreur}
+					</p>
+				{/if}
+
+				<form method="POST" action="?/motDePasse" class="space-y-4" use:enhance={() => {
+					enregistrementMdp = true;
+					return async ({ result, update }) => {
+						if (result.type === 'success') toast.success('Mot de passe modifié. Les autres sessions ont été révoquées.');
+						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+						await update();
+						enregistrementMdp = false;
+					};
+				}}>
+					<div>
+						<label for="motDePasseActuel" class="mb-1.5 block text-sm font-medium text-foreground">
+							Mot de passe actuel
+						</label>
+						<input
+							id="motDePasseActuel"
+							type="password"
+							name="motDePasseActuel"
+							autocomplete="current-password"
+							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+						/>
+					</div>
+
+					<div>
+						<label for="motDePasseNouveau" class="mb-1.5 block text-sm font-medium text-foreground">
+							Nouveau mot de passe
+						</label>
+						<input
+							id="motDePasseNouveau"
+							type="password"
+							name="motDePasseNouveau"
+							minlength="12"
+							placeholder="12 caractères minimum"
+							autocomplete="new-password"
+							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+						/>
+					</div>
+
+					<div>
+						<label for="motDePasseConfirmation" class="mb-1.5 block text-sm font-medium text-foreground">
+							Confirmer le nouveau mot de passe
+						</label>
+						<input
+							id="motDePasseConfirmation"
+							type="password"
+							name="motDePasseConfirmation"
+							minlength="12"
+							autocomplete="new-password"
+							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+						/>
+					</div>
+
+					<button
+						type="submit"
+						disabled={enregistrementMdp}
+						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+					>
+						<KeyRound size={16} />
+						{enregistrementMdp ? 'Modification…' : 'Modifier le mot de passe'}
+					</button>
+				</form>
 			</div>
 		</section>
 
-		<!-- Préférences de recherche -->
-		<section>
-			<h2 class="mb-4 text-base font-medium text-foreground">Recherche de concerts</h2>
+		<!-- Recherche de concerts -->
+		<section class="rounded-lg border border-border bg-card p-6">
+			<h2 class="mb-6 text-base font-semibold text-foreground">Recherche de concerts</h2>
 
 			{#if form?.succes === 'config'}
 				<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
@@ -197,205 +332,66 @@
 			</form>
 		</section>
 
-		<!-- Compte -->
-		<section>
-			<h2 class="mb-4 text-base font-medium text-foreground">Mon compte</h2>
-
-			{#if form?.succes === 'compte'}
-				<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-					Nom mis à jour.
-				</p>
-			{/if}
-			{#if form?.erreur && form?.section === 'compte'}
-				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-					{form.erreur}
-				</p>
-			{/if}
-
-			<form
-				method="POST"
-				action="?/compte"
-				class="space-y-4"
-				use:enhance={() => {
-					enregistrementCompte = true;
-					return async ({ result, update }) => {
-						if (result.type === 'success') toast.success('Nom mis à jour');
-						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
-						await update({ reset: false });
-						enregistrementCompte = false;
+		<!-- Apparence -->
+		<section class="rounded-lg border border-border bg-card p-6">
+			<h2 class="mb-6 text-base font-semibold text-foreground">Apparence</h2>
+			<div class="space-y-2">
+				<form method="POST" action="?/theme" use:enhance={() => {
+					return async ({ result }) => {
+						if (result.type === 'success') {
+							window.location.reload();
+						}
 					};
-				}}
-			>
-				<div>
-					<label for="nom" class="mb-1.5 block text-sm font-medium text-foreground">
-						Nom d'affichage
-					</label>
-					<input
-						id="nom"
-						type="text"
-						name="nom"
-						bind:value={nom}
-						maxlength="100"
-						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-					/>
+				}}>
+					<input type="hidden" name="valeur" value="auto" />
+					<button
+						type="submit"
+						class="flex w-full items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === 'auto'
+							? 'border-foreground bg-foreground text-background'
+							: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
+					>
+						<Monitor size={16} />
+						Automatique
+					</button>
+				</form>
+				<div class="flex gap-2">
+					{#each [
+						{ valeur: 'clair', Icone: Sun, label: 'Clair' },
+						{ valeur: 'sombre', Icone: Moon, label: 'Sombre' },
+					] as option (option.valeur)}
+						<form class="flex-1" method="POST" action="?/theme" use:enhance={() => {
+							return async ({ result }) => {
+								if (result.type === 'success') {
+									window.location.reload();
+								}
+							};
+						}}>
+							<input type="hidden" name="valeur" value={option.valeur} />
+							<button
+								type="submit"
+								class="flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors {theme === option.valeur
+									? 'border-foreground bg-foreground text-background'
+									: 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'}"
+							>
+								<option.Icone size={16} />
+								{option.label}
+							</button>
+						</form>
+					{/each}
 				</div>
-
-				<button
-					type="submit"
-					disabled={enregistrementCompte}
-					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
-				>
-					<User size={16} />
-					{enregistrementCompte ? 'Mise à jour…' : 'Mettre à jour'}
-				</button>
-			</form>
+			</div>
 		</section>
 
-		<!-- Identifiant de connexion -->
-		<section>
-			<h2 class="mb-4 text-base font-medium text-foreground">Identifiant de connexion</h2>
-
-			{#if form?.succes === 'identifiant'}
-				<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-					Identifiant mis à jour.
-				</p>
-			{/if}
-			{#if form?.erreur && form?.section === 'identifiant'}
-				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-					{form.erreur}
-				</p>
-			{/if}
-
-			<form
-				method="POST"
-				action="?/identifiant"
-				class="space-y-4"
-				use:enhance={() => {
-					enregistrementIdentifiant = true;
-					return async ({ result, update }) => {
-						if (result.type === 'success') toast.success('Identifiant mis à jour');
-						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
-						await update({ reset: false });
-						enregistrementIdentifiant = false;
-					};
-				}}
-			>
-				<div>
-					<label for="identifiant" class="mb-1.5 block text-sm font-medium text-foreground">
-						Identifiant
-					</label>
-					<input
-						id="identifiant"
-						type="text"
-						name="identifiant"
-						bind:value={identifiant}
-						minlength="3"
-						maxlength="30"
-						pattern="[a-zA-Z0-9_]+"
-						autocomplete="username"
-						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-					/>
-					<p class="mt-1 text-xs text-muted-foreground">3 à 30 caractères, lettres, chiffres et _ uniquement. Insensible à la casse.</p>
-				</div>
-
-				<button
-					type="submit"
-					disabled={enregistrementIdentifiant}
-					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
-				>
-					<User size={16} />
-					{enregistrementIdentifiant ? 'Mise à jour…' : 'Mettre à jour'}
-				</button>
-			</form>
-		</section>
-
-		<!-- Mot de passe -->
-		<section>
-			<h2 class="mb-4 text-base font-medium text-foreground">Mot de passe</h2>
-
-			{#if form?.succes === 'motDePasse'}
-				<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-					Mot de passe modifié. Les autres sessions ont été révoquées.
-				</p>
-			{/if}
-			{#if form?.erreur && form?.section === 'motDePasse'}
-				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-					{form.erreur}
-				</p>
-			{/if}
-
-			<form method="POST" action="?/motDePasse" class="space-y-4" use:enhance={() => {
-				enregistrementMdp = true;
-				return async ({ result, update }) => {
-					if (result.type === 'success') toast.success('Mot de passe modifié. Les autres sessions ont été révoquées.');
-					else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
-					await update();
-					enregistrementMdp = false;
-				};
-			}}>
-				<div>
-					<label for="motDePasseActuel" class="mb-1.5 block text-sm font-medium text-foreground">
-						Mot de passe actuel
-					</label>
-					<input
-						id="motDePasseActuel"
-						type="password"
-						name="motDePasseActuel"
-						autocomplete="current-password"
-						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-					/>
-				</div>
-
-				<div>
-					<label for="motDePasseNouveau" class="mb-1.5 block text-sm font-medium text-foreground">
-						Nouveau mot de passe
-					</label>
-					<input
-						id="motDePasseNouveau"
-						type="password"
-						name="motDePasseNouveau"
-						minlength="12"
-						placeholder="12 caractères minimum"
-						autocomplete="new-password"
-						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-					/>
-				</div>
-
-				<div>
-					<label for="motDePasseConfirmation" class="mb-1.5 block text-sm font-medium text-foreground">
-						Confirmer le nouveau mot de passe
-					</label>
-					<input
-						id="motDePasseConfirmation"
-						type="password"
-						name="motDePasseConfirmation"
-						minlength="12"
-						autocomplete="new-password"
-						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-					/>
-				</div>
-
-				<button
-					type="submit"
-					disabled={enregistrementMdp}
-					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
-				>
-					<KeyRound size={16} />
-					{enregistrementMdp ? 'Modification…' : 'Modifier le mot de passe'}
-				</button>
-			</form>
-		</section>
-
-		<!-- Export / Import préférences -->
-		<section>
-			<h2 class="mb-4 text-base font-medium text-foreground">Export / Import</h2>
-			<p class="mb-4 text-sm text-muted-foreground">
+		<!-- Export / Import -->
+		<section class="rounded-lg border border-border bg-card p-6">
+			<h2 class="mb-2 text-base font-semibold text-foreground">Export / Import</h2>
+			<p class="mb-6 text-sm text-muted-foreground">
 				Exportez vos artistes et salles suivis (JSON), ou importez un fichier existant.
 			</p>
 
 			<!-- Export -->
 			<div class="mb-6">
-				<h3 class="mb-2 text-sm font-medium text-foreground">Exporter mes préférences</h3>
+				<h3 class="mb-3 text-sm font-medium text-muted-foreground">Exporter mes préférences</h3>
 				<a
 					href="/api/preferences"
 					download
@@ -406,9 +402,11 @@
 				</a>
 			</div>
 
+			<hr class="mb-6 border-border" />
+
 			<!-- Import -->
 			<div>
-				<h3 class="mb-2 text-sm font-medium text-foreground">Importer des préférences</h3>
+				<h3 class="mb-3 text-sm font-medium text-muted-foreground">Importer des préférences</h3>
 
 				{#if form?.succes === 'import'}
 					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
@@ -465,7 +463,7 @@
 
 					<div class="space-y-2">
 						<p class="text-sm font-medium text-foreground">Gestion des doublons</p>
-						<label class="flex items-start gap-2.5 cursor-pointer">
+						<label class="flex cursor-pointer items-start gap-2.5">
 							<input
 								type="radio"
 								name="mode"
@@ -478,7 +476,7 @@
 								<span class="text-muted-foreground"> — ajoute les artistes et salles absents, conserve l'existant</span>
 							</span>
 						</label>
-						<label class="flex items-start gap-2.5 cursor-pointer">
+						<label class="flex cursor-pointer items-start gap-2.5">
 							<input
 								type="radio"
 								name="mode"
@@ -509,16 +507,6 @@
 				</form>
 			</div>
 		</section>
-
-		<!-- Aide et informations légales -->
-		<div class="border-t border-border pt-6">
-			<a
-				href="/aide"
-				class="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-			>
-				Aide, données personnelles et licence
-			</a>
-		</div>
 
 	</div>
 </div>

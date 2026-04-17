@@ -21,6 +21,22 @@
 			<div class="space-y-6 text-sm text-muted-foreground">
 
 				<div>
+					<p class="mb-1 font-medium text-foreground">Navigation — accès direct à l'aide</p>
+					<p>
+						La page d'aide (guide, RGPD, licence) est désormais accessible directement depuis la
+						barre latérale (desktop) et le menu "···" (mobile), sans passer par les paramètres.
+					</p>
+				</div>
+
+				<div>
+					<p class="mb-1 font-medium text-foreground">Paramètres reorganisés</p>
+					<p>
+						La page Paramètres est désormais organisée en quatre sections distinctes : Mon compte,
+						Recherche de concerts, Apparence, et Export / Import.
+					</p>
+				</div>
+
+				<div>
 					<p class="mb-1 font-medium text-foreground">Thème sombre et mode automatique</p>
 					<p>
 						L'application s'adapte désormais à votre préférence système (clair, sombre, ou
