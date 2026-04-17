@@ -536,6 +536,7 @@ Pas de page d'inscription publique. Premier accès via `/setup` (accessible uniq
 - Pas de `console.log` en production
 - **tsconfig des packages Node** (worker, sources) : inclure `"types": ["node"]` — requis depuis TypeScript 6 (plus d'inclusion automatique de `@types/node`)
 - **`<button>` hors formulaire** : toujours `type="button"` — sans ça, le défaut HTML est `submit`, ce qui peut déclencher la soumission d'un formulaire parent sur mobile
+- **Tests** : vitest dans `packages/core`, `packages/sources`, `apps/worker` — `pnpm -r test` pour tout lancer. Les tests worker mockent `../db.js` (pas de PostgreSQL requis). Nommage : `<fonction>_<scenario>_<attendu>` en français.
 
 ## Export / Import préférences
 
@@ -568,14 +569,14 @@ Format JSON : `{ version, exporteAt, artistes, salles, config }`.
 
 ### v1.0 — livraison initiale
 
-| #   | Item                                         |
-| --- | -------------------------------------------- |
-| #88       | Squash des migrations `0000` + `0001` en une                                   |
-| #11       | Documentation                                                                  |
-| #13       | Backups automatiques                                                           |
-| #15       | Paramètres avancés                                                             |
-| ~~#94~~   | ~~Mise à jour stack (pino 10, TS 6, vitest 4, patches)~~ — fait               |
-| #2        | ~~Préférences persistées~~ — fermé                                             |
+| #       | Item                                                            |
+| ------- | --------------------------------------------------------------- |
+| #88     | Squash des migrations `0000` + `0001` en une                    |
+| #11     | Documentation                                                   |
+| #13     | Backups automatiques                                            |
+| #15     | Paramètres avancés                                              |
+| ~~#94~~ | ~~Mise à jour stack (pino 10, TS 6, vitest 4, patches)~~ — fait |
+| #2      | ~~Préférences persistées~~ — fermé                              |
 
 ### Phase 2 (post-v1.0)
 

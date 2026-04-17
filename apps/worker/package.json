@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "node --env-file-if-exists=../../.env --env-file-if-exists=../../.env.local --import=tsx/esm --watch src/index.ts",
-    "build": "tsc --outDir dist --declaration false"
+    "build": "tsc --outDir dist --declaration false",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@strapontin/core": "workspace:*",
@@ -18,6 +20,7 @@
   "devDependencies": {
     "@types/node": "^25.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.0"
+    "typescript": "^6.0.0",
+    "vitest": "^4.0.0"
   }
 }

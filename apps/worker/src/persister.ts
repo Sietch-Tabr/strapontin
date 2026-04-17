@@ -24,7 +24,7 @@ const STATUTS_INDISPONIBLES = new Set([
 const SEUIL_SIMILARITE_SALLE = 0.5;
 const LONGUEUR_MIN_CONTAINMENT = 4;
 
-function estDoublonSalle(a: string, b: string): boolean {
+export function estDoublonSalle(a: string, b: string): boolean {
   if (a === b) return true;
   if (similarite(a, b) >= SEUIL_SIMILARITE_SALLE) return true;
   const court = a.length <= b.length ? a : b;

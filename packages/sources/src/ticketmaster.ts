@@ -125,8 +125,21 @@ const CENTRES_DEPT: Record<string, { lat: number; lng: number }> = {
 };
 
 const ARTICLES_FR = new Set([
-  "de", "du", "des", "d'", "le", "la", "les", "l'",
-  "en", "au", "aux", "et", "à", "sur", "sous",
+  "de",
+  "du",
+  "des",
+  "d'",
+  "le",
+  "la",
+  "les",
+  "l'",
+  "en",
+  "au",
+  "aux",
+  "et",
+  "à",
+  "sur",
+  "sous",
 ]);
 
 // Convertit un nom tout-majuscule en title case français.
@@ -150,13 +163,13 @@ function normaliserCasse(nom: string): string {
     .join("");
 }
 
-function extraireDept(codePostal: string | undefined): string | null {
+export function extraireDept(codePostal: string | undefined): string | null {
   if (!codePostal) return null;
   if (codePostal.startsWith("97")) return codePostal.slice(0, 3);
   return codePostal.slice(0, 2);
 }
 
-function parseDateTM(
+export function parseDateTM(
   dateStr: string,
   heureStr: string | undefined,
 ): { date: string; heure: string | null } {
@@ -170,7 +183,7 @@ function parseDateTM(
 // comme nom d'artiste quand _embedded.attractions est absent ou vide.
 // Sans fallback, on extrait la partie avant le premier " - " du titre,
 // ce qui couvre la convention TM la plus fréquente.
-function mapEvenement(
+export function mapEvenement(
   evt: Record<string, unknown>,
   artisteFallback?: string,
 ): ConcertBrut | null {
