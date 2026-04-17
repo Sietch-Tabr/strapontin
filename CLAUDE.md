@@ -399,6 +399,22 @@ Portage de `src/merge.py` du projet CLI. Deux passes :
 Index secondaire `(date, salle_normalisee)` en fallback pour les salles où TM et Eventim
 donnent des villes différentes (Stade de France, Arkea Arena, LDLC Arena).
 
+### Particularité TM — casse des noms de salles
+
+L'API TM Events (et Venues) retourne les noms de salles en TOUT MAJUSCULE pour les événements
+France. Deux couches corrigent ce problème :
+
+**Couche 1 — déduplication** (`packages/core/src/deduplication.ts`, `fusionner`) : quand TM
+et Eventim couvrent le même concert, `salle` est choisie indépendamment du gagnant global —
+la valeur avec le plus de diacritiques ou en casse mixte est préférée. Eventim retourne les
+noms avec accents et casse correcte.
+
+**Couche 2 — source TM** (`packages/sources/src/ticketmaster.ts`, `normaliserCasse`) : pour
+les concerts présents uniquement chez TM, `mapEvenement()` applique un title-case français
+sur les noms tout-majuscule. Les articles courants (de, du, le, la, les, l', d', en, au,
+aux…) restent en minuscules sauf en début de chaîne. Les accents ne sont pas restaurés
+(information perdue dans le tout-majuscule).
+
 ### Particularité TM — nom d'artiste vs titre d'événement
 
 TM retourne parfois des événements sans `_embedded.attractions` (tableau absent ou vide).

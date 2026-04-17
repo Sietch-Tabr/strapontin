@@ -124,6 +124,32 @@ const CENTRES_DEPT: Record<string, { lat: number; lng: number }> = {
   "95": { lat: 49.05, lng: 2.08 },
 };
 
+const ARTICLES_FR = new Set([
+  "de", "du", "des", "d'", "le", "la", "les", "l'",
+  "en", "au", "aux", "et", "à", "sur", "sous",
+]);
+
+// Convertit un nom tout-majuscule en title case français.
+// Les articles courants restent en minuscules sauf en début de chaîne.
+// N'est appliqué que si la chaîne est entièrement en majuscules.
+function normaliserCasse(nom: string): string {
+  if (nom !== nom.toUpperCase()) return nom;
+  const mots = nom.split(/(\s+|-)/);
+  let debutPhrase = true;
+  return mots
+    .map((mot) => {
+      if (/^\s+$/.test(mot) || mot === "-") {
+        debutPhrase = mot === "-";
+        return mot;
+      }
+      const bas = mot.toLowerCase();
+      if (!debutPhrase && ARTICLES_FR.has(bas)) return bas;
+      debutPhrase = false;
+      return bas.charAt(0).toUpperCase() + bas.slice(1);
+    })
+    .join("");
+}
+
 function extraireDept(codePostal: string | undefined): string | null {
   if (!codePostal) return null;
   if (codePostal.startsWith("97")) return codePostal.slice(0, 3);
@@ -178,7 +204,9 @@ function mapEvenement(
       | Record<string, unknown>[]
       | undefined;
     const venue = venues?.[0];
-    const salle = (venue?.["name"] as string | undefined) ?? "Salle inconnue";
+    const salle = normaliserCasse(
+      (venue?.["name"] as string | undefined) ?? "Salle inconnue",
+    );
     const ville =
       (venue?.["city"] as Record<string, string> | undefined)?.["name"] ?? null;
     const cp = venue?.["postalCode"] as string | undefined;
