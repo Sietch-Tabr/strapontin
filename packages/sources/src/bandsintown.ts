@@ -10,7 +10,10 @@ function extraireDept(ville: string | null): string | null {
   return null;
 }
 
-function parseDateBIT(dateStr: string): { date: string; heure: string | null } {
+export function parseDateBIT(dateStr: string): {
+  date: string;
+  heure: string | null;
+} {
   // Format : "2025-06-15T20:00:00" ou "2025-06-15T00:00:00"
   const [datePart, heurePart] = dateStr.split("T");
   const heure =
@@ -18,7 +21,7 @@ function parseDateBIT(dateStr: string): { date: string; heure: string | null } {
   return { date: datePart ?? dateStr.slice(0, 10), heure };
 }
 
-function mapEvenement(
+export function mapEvenement(
   evt: Record<string, unknown>,
   artiste: string,
 ): ConcertBrut | null {

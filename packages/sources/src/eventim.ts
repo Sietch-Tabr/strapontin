@@ -9,14 +9,16 @@ const WEB_ID = "web__eventim-fr";
 const TAILLE_PAGE = 50;
 const MAX_PAGES = 10;
 
-function extraireDept(codePostal: string | null | undefined): string | null {
+export function extraireDept(
+  codePostal: string | null | undefined,
+): string | null {
   if (!codePostal) return null;
   const cp = String(codePostal).trim();
   if (cp.startsWith("97")) return cp.slice(0, 3);
   return cp.slice(0, 2) || null;
 }
 
-function parseDateEventim(dateStr: string): {
+export function parseDateEventim(dateStr: string): {
   date: string;
   heure: string | null;
 } {
@@ -28,7 +30,9 @@ function parseDateEventim(dateStr: string): {
   return { date: datePart, heure };
 }
 
-function mapProduit(produit: Record<string, unknown>): ConcertBrut | null {
+export function mapProduit(
+  produit: Record<string, unknown>,
+): ConcertBrut | null {
   try {
     // Structure : typeAttributes.liveEntertainment.{startDate, location}
     const liveEnt = (
