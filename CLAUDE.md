@@ -194,12 +194,18 @@ DATABASE_URL=... USER_EMAIL=... tsx scripts/seed-artistes.ts /chemin/vers/artist
 ### update.sh — ordre strict
 
 1. `backup.sh` — jamais d'update sans backup préalable
-2. `git fetch origin && git reset --hard origin/main` — jamais `git pull` (évite les conflits si patches serveur)
+2. `git fetch origin && git reset --hard origin/main` — jamais `git pull` (évite les conflits si patches serveur) ; mémorise `PREV_COMMIT` avant le reset
 3. `pnpm install`
 4. `set -a; source .env; set +a && pnpm build` — sourcer `.env` avant build (Better Auth init au démarrage)
 5. `drizzle-kit migrate`
 6. `systemctl restart strapontin-web strapontin-worker`
-7. healthcheck : `curl -f http://localhost:3000/health`
+7. healthcheck : `curl -f http://localhost:3000/health` (10 retries × 3s)
+
+Si le healthcheck expire, rollback automatique : `git reset --hard $PREV_COMMIT` → rebuild → restart. Log `ERREUR CRITIQUE` si le rollback lui-même échoue.
+
+### Page de maintenance
+
+`scripts/maintenance.html` — page statique à configurer dans Nginx Proxy Manager (Settings → Custom Error Pages → 502/503/504). S'affiche automatiquement quand le backend est injoignable. Aucun service supplémentaire sur le LXC.
 
 ### system-update.sh — mise à jour OS du LXC
 

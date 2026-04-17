@@ -17,7 +17,18 @@ echo "[1/6] Sauvegarde..."
 
 # 2. Récupérer les dernières modifications (reset dur pour éviter les conflits avec patches locaux)
 echo "[2/6] git pull..."
+COMMIT_PRECEDENT=$(su - strapontin -c "git -C $APP_DIR rev-parse HEAD")
 su - strapontin -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519' git -C $APP_DIR fetch origin && git -C $APP_DIR reset --hard origin/main"
+
+rollback() {
+    echo "=== ROLLBACK vers $COMMIT_PRECEDENT ===" >&2
+    su - strapontin -c "git -C $APP_DIR reset --hard $COMMIT_PRECEDENT"
+    rm -rf "$APP_DIR/apps/web/build" "$APP_DIR/apps/web/.svelte-kit"
+    set -a; source "$APP_DIR/.env"; set +a
+    pnpm build
+    systemctl restart strapontin-web strapontin-worker
+    echo "=== Rollback terminé — version précédente restaurée ===" >&2
+}
 
 # 3. Installer les dépendances
 echo "[3/6] pnpm install..."
@@ -46,8 +57,10 @@ until curl -sf http://localhost:3000/health > /dev/null 2>&1 || [ "$RETRIES" -eq
     RETRIES=$((RETRIES - 1))
 done
 if [ "$RETRIES" -eq 0 ]; then
-    echo "ERREUR : le serveur ne répond pas sur le port 3000" >&2
+    echo "ERREUR : le serveur ne répond pas après le redémarrage" >&2
     systemctl status strapontin-web --no-pager >&2
+    rollback || echo "ERREUR CRITIQUE : le rollback a également échoué — intervention manuelle requise" >&2
     exit 1
 fi
+
 echo "=== Mise à jour réussie ==="
