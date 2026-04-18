@@ -272,6 +272,7 @@ Cron systemd (`OnCalendar=daily`) sur le LXC — indépendant des mises à jour 
   - `advanced_config` : headers sécurité + `location /` custom (sans headers WebSocket)
   - Piège : coller du contenu avec `\n` littéraux casse le conf silencieusement → voir wiki Déploiement
 - Provisioning : `scripts/provision-lxc.sh` (depuis host Proxmox 192.168.1.99)
+  - Pré-requis : copier les scripts vers le host (`ssh mkdir -p /opt/strapontin/scripts` + `scp scripts/provision-lxc.sh scripts/deploy.sh root@192.168.1.99:/opt/strapontin/scripts/`)
   - VMID résolu dynamiquement : `VMID=$(pvesh get /cluster/nextid)`
 - Variables : `.env` sur le serveur (non commité), `.env.example` versionné
 
