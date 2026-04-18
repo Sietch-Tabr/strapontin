@@ -6,14 +6,7 @@
       "idx": 0,
       "version": "7",
       "when": 1776191819903,
-      "tag": "0000_friendly_thunderbolt_ross",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1776289564601,
-      "tag": "0001_optimal_nightmare",
+      "tag": "0000_initial",
       "breakpoints": true
     }
   ]

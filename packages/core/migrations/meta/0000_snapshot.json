@@ -1,5 +1,5 @@
 {
-  "id": "935a9182-79c7-47b9-a722-f7aab98df48a",
+  "id": "078765e3-7e0d-42c7-9057-872d0e98e740",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -614,6 +614,13 @@
           "notNull": true,
           "default": false
         },
+        "theme": {
+          "name": "theme",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'auto'"
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp with time zone",
@@ -641,7 +648,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "chk_user_config_theme": {
+          "name": "chk_user_config_theme",
+          "value": "\"user_config\".\"theme\" IN ('auto', 'clair', 'sombre')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.user_matches": {
