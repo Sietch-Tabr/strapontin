@@ -573,35 +573,22 @@ Format JSON : `{ version, exporteAt, artistes, salles, config }`.
 
 ## Roadmap — jalons
 
-### v0.90 — revue globale (jalon actif)
+### v1.0 — livré (2026-04-18)
 
-| #       | Item                                                                  |
-| ------- | --------------------------------------------------------------------- |
-| #41     | Erreurs silencieuses : logger les échecs Redis et les cas catch vides |
-| #25     | Analyse des logs de prod avant la v1                                  |
-| #24     | Configuration du conteneur Proxmox                                    |
-| ~~#18~~ | ~~Revue de code~~ — fermé                                             |
-| ~~#16~~ | ~~Audit UI/UX~~ — fermé                                               |
-| #14     | Test de sécurité                                                      |
-| ~~#10~~ | ~~RGPD~~ — inclus dans #9, fermé                                      |
-| ~~#9~~  | ~~Création d'une page d'aide et d'infos~~ — route `/aide` créée       |
-| #6      | Optimiser les appels aux API externes                                 |
+Première version publique. Release taguée sur Codeberg, déploiement prod validé de bout en bout.
 
-### v1.0 — livraison initiale
+### v1.1 — jalon actif
 
-| #       | Item                                                            |
-| ------- | --------------------------------------------------------------- |
-| #88     | Squash des migrations `0000` + `0001` en une                    |
-| #11     | Documentation                                                   |
-| #13     | Backups automatiques                                            |
-| #15     | Paramètres avancés                                              |
-| ~~#94~~ | ~~Mise à jour stack (pino 10, TS 6, vitest 4, patches)~~ — fait |
-| #2      | ~~Préférences persistées~~ — fermé                              |
+| #    | Item                                          |
+| ---- | --------------------------------------------- |
+| #65  | Bandsintown 401 — désactiver ou remplacer      |
+| #37  | Doublons inter-jobs                           |
+| #115 | LXC de développement dédié                   |
 
-### Phase 2 (post-v1.0)
+### v1.2 (post-v1.1)
 
 | Priorité | Item                                                                               |
 | -------- | ---------------------------------------------------------------------------------- |
-| Phase 2  | Notifications email (Resend) — `notificationsEmail` en DB, rien envoyé côté worker |
-| Phase 2  | Shotgun.live — Playwright + API interne JSON                                       |
+| v1.2     | Notifications email (Resend) — `notificationsEmail` en DB, rien envoyé côté worker |
+| v1.2     | Shotgun.live — Playwright + API interne JSON                                       |
 | Phase 3  | Dice.fm — scraping Playwright                                                      |
