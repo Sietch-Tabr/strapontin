@@ -40,7 +40,7 @@ su - strapontin -c "set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && pnpm --
 
 # Build
 echo "Build..."
-su - strapontin -c "cd $APP_DIR && pnpm build"
+su - strapontin -c "set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && pnpm build"
 
 # Démarrer les services
 echo "Démarrage des services..."
