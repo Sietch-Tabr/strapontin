@@ -84,6 +84,7 @@ pct create "$VMID" "$TEMPLATE_PATH" \
     --rootfs "$DISK_STORAGE:$DISK" \
     --net0 "name=eth0,bridge=$BRIDGE,tag=$VLAN_TAG,hwaddr=$MAC,ip=$IP,gw=$GW" \
     --unprivileged 1 \
+    --features nesting=1 \
     --ostype debian \
     --onboot 1 \
     --start 0
