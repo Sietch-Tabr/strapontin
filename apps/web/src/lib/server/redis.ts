@@ -16,3 +16,14 @@ export function cleRegionFetchee(dept: string): string {
 export const TTL_REGION_FETCHEE_S = 8 * 24 * 60 * 60; // 8 jours en secondes
 // Seuil en ms au-delà duquel les données d'un dept hors prefs sont considérées stales
 export const SEUIL_STALENESS_MS = 2 * 60 * 60 * 1000; // 2h
+
+// Stats des jobs cron — lecture par la page admin
+export interface StatsJobRedis {
+  statut: "running" | "done" | "error";
+  debutRun: string;
+  finRun?: string;
+  durationMs?: number;
+  erreur?: string;
+}
+export const cleStatsJob = (typeJob: string): string =>
+  `strapontin:job:stats:${typeJob}`;

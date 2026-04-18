@@ -18,3 +18,15 @@ export const cleAttractionId = (artisteNorm: string): string =>
 export const TTL_REGION_FETCHEE_S = 8 * 24 * 60 * 60;
 export const cleRegionFetchee = (dept: string): string =>
   `strapontin:region:fetched:${dept}`;
+
+// Stats des jobs cron (statut, horodatages, durée, erreur) — TTL 48h
+export interface StatsJobRedis {
+  statut: "running" | "done" | "error";
+  debutRun: string;
+  finRun?: string;
+  durationMs?: number;
+  erreur?: string;
+}
+export const TTL_STATS_JOB_S = 48 * 3600;
+export const cleStatsJob = (typeJob: string): string =>
+  `strapontin:job:stats:${typeJob}`;
