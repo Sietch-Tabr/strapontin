@@ -325,11 +325,13 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
 ### Redis — clés applicatives
 
-| Clé                                      | Valeur                                 | TTL     | Usage                                     |
-| ---------------------------------------- | -------------------------------------- | ------- | ----------------------------------------- |
-| `strapontin:tm:quota`                    | JSON `{dispo, total, reset, misAJour}` | —       | Quota TM affiché en /admin                |
-| `strapontin:tm:attraction:{artisteNorm}` | attractionId TM                        | 7 jours | Cache batching attractions                |
-| `strapontin:region:fetched:{dept}`       | ISO timestamp                          | 8 jours | Bannière découverte — last fetch par dept |
+| Clé                                      | Valeur                                                              | TTL     | Usage                                        |
+| ---------------------------------------- | ------------------------------------------------------------------- | ------- | -------------------------------------------- |
+| `strapontin:tm:quota`                    | JSON `{dispo, total, reset, misAJour}`                              | —       | Quota TM affiché en /admin                   |
+| `strapontin:tm:attraction:{artisteNorm}` | attractionId TM                                                     | 7 jours | Cache batching attractions                   |
+| `strapontin:region:fetched:{dept}`       | ISO timestamp                                                       | 8 jours | Bannière découverte — last fetch par dept    |
+| `strapontin:job:stats:artistes-batch`    | JSON `{statut, debutRun, finRun?, durationMs?, erreur?}`            | 48h     | Stats du dernier fetch:artistes:batch        |
+| `strapontin:job:stats:region`            | JSON `{statut, debutRun, finRun?, durationMs?, erreur?}`            | 48h     | Stats du dernier fetch:region                |
 
 ### Pièges BullMQ
 
