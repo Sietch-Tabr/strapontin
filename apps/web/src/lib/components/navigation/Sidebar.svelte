@@ -101,6 +101,7 @@
 			<Settings size={18} />
 			Paramètres
 		</a>
+		<div class="my-1 border-t border-sidebar-border"></div>
 		<a
 			href="/aide"
 			class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
