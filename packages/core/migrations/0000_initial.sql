@@ -136,3 +136,6 @@ CREATE INDEX "idx_fetch_jobs_status" ON "fetch_jobs" USING btree ("status");--> 
 CREATE INDEX "idx_user_artistes_norm" ON "user_artistes" USING btree ("artiste_normalise");--> statement-breakpoint
 CREATE INDEX "idx_user_matches_user" ON "user_matches" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "idx_user_matches_non_vus" ON "user_matches" USING btree ("user_id") WHERE "user_matches"."vu_le" IS NULL;
+--> statement-breakpoint
+ALTER TABLE "user_config" ADD COLUMN "theme" text DEFAULT 'auto' NOT NULL;--> statement-breakpoint
+ALTER TABLE "user_config" ADD CONSTRAINT "chk_user_config_theme" CHECK ("user_config"."theme" IN ('auto', 'clair', 'sombre'));

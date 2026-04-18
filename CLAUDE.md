@@ -325,13 +325,13 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
 ### Redis — clés applicatives
 
-| Clé                                      | Valeur                                                              | TTL     | Usage                                        |
-| ---------------------------------------- | ------------------------------------------------------------------- | ------- | -------------------------------------------- |
-| `strapontin:tm:quota`                    | JSON `{dispo, total, reset, misAJour}`                              | —       | Quota TM affiché en /admin                   |
-| `strapontin:tm:attraction:{artisteNorm}` | attractionId TM                                                     | 7 jours | Cache batching attractions                   |
-| `strapontin:region:fetched:{dept}`       | ISO timestamp                                                       | 8 jours | Bannière découverte — last fetch par dept    |
-| `strapontin:job:stats:artistes-batch`    | JSON `{statut, debutRun, finRun?, durationMs?, erreur?}`            | 48h     | Stats du dernier fetch:artistes:batch        |
-| `strapontin:job:stats:region`            | JSON `{statut, debutRun, finRun?, durationMs?, erreur?}`            | 48h     | Stats du dernier fetch:region                |
+| Clé                                      | Valeur                                                   | TTL     | Usage                                     |
+| ---------------------------------------- | -------------------------------------------------------- | ------- | ----------------------------------------- |
+| `strapontin:tm:quota`                    | JSON `{dispo, total, reset, misAJour}`                   | —       | Quota TM affiché en /admin                |
+| `strapontin:tm:attraction:{artisteNorm}` | attractionId TM                                          | 7 jours | Cache batching attractions                |
+| `strapontin:region:fetched:{dept}`       | ISO timestamp                                            | 8 jours | Bannière découverte — last fetch par dept |
+| `strapontin:job:stats:artistes-batch`    | JSON `{statut, debutRun, finRun?, durationMs?, erreur?}` | 48h     | Stats du dernier fetch:artistes:batch     |
+| `strapontin:job:stats:region`            | JSON `{statut, debutRun, finRun?, durationMs?, erreur?}` | 48h     | Stats du dernier fetch:region             |
 
 ### Pièges BullMQ
 
@@ -514,9 +514,9 @@ Sur `/` (accueil), les concerts sont regroupés par artiste. Si un artiste a ≥
 
 ## Schéma PostgreSQL
 
-Migration initiale unique `0000_friendly_thunderbolt_ross.sql` dans `packages/core/migrations/` — reflète le schéma complet de la v1. Générée par `pnpm --filter @strapontin/core db:generate`, appliquée par `db:migrate`.
+Migration initiale unique `0000_initial.sql` dans `packages/core/migrations/` — reflète le schéma complet de la v1 (tables + colonne `theme`). Générée par `pnpm --filter @strapontin/core db:generate`, appliquée par `db:migrate`.
 
-Les nouvelles migrations sont numérotées séquentiellement. Migration actuelle : `0001_optimal_nightmare.sql` (ajout `user_config.theme`). Squash `0000` + `0001` prévu avant v1.0 (issue #88).
+Les nouvelles migrations sont numérotées séquentiellement à partir de `0001`.
 
 ### Tables Better Auth (gérées par la lib)
 
