@@ -1,5 +1,5 @@
 import { db } from "$lib/server/db";
-import { redis, CLE_QUOTA_TM } from "$lib/server/redis";
+import { redis, CLE_QUOTA_TM, cleStatsJob, type StatsJobRedis } from "$lib/server/redis";
 import { auth } from "$lib/auth";
 import { users } from "@strapontin/core/schema";
 import type { QuotaTM } from "@strapontin/sources";
@@ -31,7 +31,21 @@ export const load: PageServerLoad = async ({ locals }) => {
   const quotaJson = await redis.get(CLE_QUOTA_TM).catch(() => null);
   const quotaTM: QuotaTM | null = quotaJson ? JSON.parse(quotaJson) : null;
 
-  return { utilisateurs: tousLesUsers, quotaTM };
+  const [statsArtistesBatchJson, statsRegionJson] = await Promise.all([
+    redis.get(cleStatsJob("artistes-batch")).catch(() => null),
+    redis.get(cleStatsJob("region")).catch(() => null),
+  ]);
+
+  const statsJobs = {
+    arristesBatch: statsArtistesBatchJson
+      ? (JSON.parse(statsArtistesBatchJson) as StatsJobRedis)
+      : null,
+    region: statsRegionJson
+      ? (JSON.parse(statsRegionJson) as StatsJobRedis)
+      : null,
+  };
+
+  return { utilisateurs: tousLesUsers, quotaTM, statsJobs };
 };
 
 export const actions: Actions = {

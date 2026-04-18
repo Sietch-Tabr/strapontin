@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { UserPlus, Trash2, ShieldCheck, Zap } from '@lucide/svelte';
+	import { UserPlus, Trash2, ShieldCheck, Zap, RefreshCw, Loader2 } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -16,6 +16,45 @@
 
 	function formaterMisAJour(iso: string): string {
 		return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+	}
+
+	function formaterDateRelative(iso: string): string {
+		const date = new Date(iso);
+		const maintenant = new Date();
+		const diffMs = maintenant.getTime() - date.getTime();
+		const diffMin = Math.floor(diffMs / 60_000);
+
+		if (diffMin < 1) return "à l'instant";
+		if (diffMin < 60) return `il y a ${diffMin} min`;
+
+		const diffH = Math.floor(diffMin / 60);
+		const heure = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+		if (diffH < 24) return `aujourd'hui à ${heure}`;
+
+		const diffJ = Math.floor(diffH / 24);
+		if (diffJ === 1) return `hier à ${heure}`;
+		return `il y a ${diffJ} jours`;
+	}
+
+	function formaterDuree(ms: number): string {
+		if (ms < 1000) return `${ms} ms`;
+		const s = Math.floor(ms / 1000);
+		if (s < 60) return `${s} s`;
+		const min = Math.floor(s / 60);
+		const reste = s % 60;
+		return reste > 0 ? `${min} min ${reste} s` : `${min} min`;
+	}
+
+	function formaterProchaineRun(finRunIso: string): string {
+		const prochaine = new Date(new Date(finRunIso).getTime() + 2 * 60 * 60 * 1000);
+		const diffMs = prochaine.getTime() - Date.now();
+		if (diffMs <= 0) return 'imminent';
+		const diffMin = Math.floor(diffMs / 60_000);
+		if (diffMin < 60) return `dans ${diffMin} min`;
+		const diffH = Math.floor(diffMin / 60);
+		const resteMin = diffMin % 60;
+		return resteMin > 0 ? `dans ${diffH} h ${resteMin} min` : `dans ${diffH} h`;
 	}
 </script>
 
@@ -61,12 +100,68 @@
 						<span>Remise à zéro vers {formaterReset(data.quotaTM.reset)}</span>
 						<span>Mis à jour {formaterMisAJour(data.quotaTM.misAJour)}</span>
 					</div>
+					{#if data.quotaTM.dispo < 10}
+						<p class="mt-3 text-xs font-medium text-red-600 dark:text-red-400">
+							Quota épuisé — les fetches artistes et région sont suspendus jusqu'à la remise à zéro.
+						</p>
+					{:else if data.quotaTM.dispo < 200}
+						<p class="mt-3 text-xs text-yellow-600 dark:text-yellow-400">
+							Quota faible — certains fetches peuvent être interrompus.
+						</p>
+					{/if}
 				</div>
 			{:else}
 				<div class="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
 					Aucune donnée — quota disponible après le prochain fetch Ticketmaster.
 				</div>
 			{/if}
+		</section>
+
+		<!-- Actualisations -->
+		<section>
+			<h2 class="mb-4 text-base font-medium text-foreground flex items-center gap-2">
+				<RefreshCw size={16} class="text-muted-foreground" aria-hidden="true" />
+				Actualisations
+			</h2>
+
+			<div class="rounded-xl border border-border bg-card divide-y divide-border">
+				{#each [
+					{ label: 'Artistes suivis', stats: data.statsJobs.arristesBatch },
+					{ label: 'Concerts par région', stats: data.statsJobs.region },
+				] as { label, stats }}
+					<div class="px-4 py-3 flex items-start justify-between gap-4">
+						<div class="min-w-0">
+							<p class="text-sm font-medium text-foreground">{label}</p>
+							{#if stats}
+								<p class="text-xs text-muted-foreground mt-0.5">
+									{#if stats.statut === 'running'}
+										Démarré {formaterDateRelative(stats.debutRun)}
+									{:else if stats.finRun}
+										Dernière exécution : {formaterDateRelative(stats.finRun)}{stats.durationMs ? ` · ${formaterDuree(stats.durationMs)}` : ''}
+									{/if}
+									{#if stats.statut === 'error' && stats.erreur}
+										<span class="block text-destructive">{stats.erreur}</span>
+									{/if}
+								</p>
+							{:else}
+								<p class="text-xs text-muted-foreground mt-0.5">Pas encore exécuté</p>
+							{/if}
+						</div>
+						<div class="shrink-0 flex items-center gap-2 mt-0.5">
+							{#if stats?.statut === 'running'}
+								<span class="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+									<Loader2 size={12} class="animate-spin" />
+									En cours
+								</span>
+							{:else if stats?.statut === 'error'}
+								<span class="text-xs font-medium text-destructive">Erreur</span>
+							{:else if stats?.finRun}
+								<span class="text-xs text-muted-foreground">{formaterProchaineRun(stats.finRun)}</span>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
 		</section>
 
 		<!-- Créer un compte -->
