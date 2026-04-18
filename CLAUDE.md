@@ -514,9 +514,9 @@ Sur `/` (accueil), les concerts sont regroupés par artiste. Si un artiste a ≥
 
 ## Schéma PostgreSQL
 
-Migration initiale unique `0000_friendly_thunderbolt_ross.sql` dans `packages/core/migrations/` — reflète le schéma complet de la v1. Générée par `pnpm --filter @strapontin/core db:generate`, appliquée par `db:migrate`.
+Migration initiale unique `0000_initial.sql` dans `packages/core/migrations/` — reflète le schéma complet de la v1 (tables + colonne `theme`). Générée par `pnpm --filter @strapontin/core db:generate`, appliquée par `db:migrate`.
 
-Les nouvelles migrations sont numérotées séquentiellement. Migration actuelle : `0001_optimal_nightmare.sql` (ajout `user_config.theme`). Squash `0000` + `0001` prévu avant v1.0 (issue #88).
+Les nouvelles migrations sont numérotées séquentiellement à partir de `0001`.
 
 ### Tables Better Auth (gérées par la lib)
 
