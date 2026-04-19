@@ -75,7 +75,9 @@
 	}
 
 	function plusEstActif(): boolean {
-		return elementsDrawer.some(({ route }) => page.url.pathname.startsWith(route));
+		return [...elementsDrawerPrincipal, ...elementsDrawerConfig].some(({ route }) =>
+			page.url.pathname.startsWith(route)
+		);
 	}
 
 	function naviguer(route: string) {
