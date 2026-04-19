@@ -295,6 +295,7 @@ REDIS_URL=redis://localhost:6379
 BETTER_AUTH_SECRET=
 RESEND_API_KEY=
 PUBLIC_BASE_URL=https://strapontin.kwaite.fr
+CONTACT_EMAIL=strapontin@kwaite.fr
 ```
 
 ## Sources de données
@@ -448,8 +449,11 @@ tous les noms d'artistes après déduplication, le worker appelle MusicBrainz (`
 score ≥ 90) puis Deezer en fallback. Le cache Redis absorbe le coût — un nom absent du cache
 déclenche un appel API, les suivants sont servis depuis Redis. Délai 1,1 s entre requêtes MB
 (rate limit). Résultats mis en cache Redis `strapontin:nom:canonique:{type}:{norm}` (TTL 7j).
-Appelée dans `resoudreArtistesConcerts()` après `dedoublonner()`, avant `persisterConcerts()`,
-dans les jobs `fetch:artiste`, `fetch:artistes:batch` et `fetch:region`.
+Timeout réseau 8 s (`AbortController`). Résultat Deezer validé par similitude brute ≥ 0.7 (pas
+de score natif, contrairement à MB). Résultats toujours mis en cache Redis même si le nom n'a
+pas changé (évite les appels répétés à chaque cron). Appelée dans `resoudreArtistesConcerts()`
+après `dedoublonner()`, avant `persisterConcerts()`, dans les jobs `fetch:artiste`,
+`fetch:artistes:batch`, `fetch:region` et `fetch:salle`.
 
 ### Particularité TM — nom d'artiste vs titre d'événement
 
