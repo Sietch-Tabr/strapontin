@@ -329,11 +329,12 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
 | Clé                                      | Valeur                                                   | TTL     | Usage                                     |
 | ---------------------------------------- | -------------------------------------------------------- | ------- | ----------------------------------------- |
-| `strapontin:tm:quota`                    | JSON `{dispo, total, reset, misAJour}`                   | —       | Quota TM affiché en /admin                |
-| `strapontin:tm:attraction:{artisteNorm}` | attractionId TM                                          | 7 jours | Cache batching attractions                |
-| `strapontin:region:fetched:{dept}`       | ISO timestamp                                            | 8 jours | Bannière découverte — last fetch par dept |
-| `strapontin:job:stats:artistes-batch`    | JSON `{statut, debutRun, finRun?, durationMs?, erreur?}` | 48h     | Stats du dernier fetch:artistes:batch     |
-| `strapontin:job:stats:region`            | JSON `{statut, debutRun, finRun?, durationMs?, erreur?}` | 48h     | Stats du dernier fetch:region             |
+| `strapontin:tm:quota`                        | JSON `{dispo, total, reset, misAJour}`                   | —       | Quota TM affiché en /admin                       |
+| `strapontin:tm:attraction:{artisteNorm}`     | attractionId TM                                          | 7 jours | Cache batching attractions                       |
+| `strapontin:region:fetched:{dept}`           | ISO timestamp                                            | 8 jours | Bannière découverte — last fetch par dept         |
+| `strapontin:job:stats:artistes-batch`        | JSON `{statut, debutRun, finRun?, durationMs?, erreur?}` | 48h     | Stats du dernier fetch:artistes:batch            |
+| `strapontin:job:stats:region`                | JSON `{statut, debutRun, finRun?, durationMs?, erreur?}` | 48h     | Stats du dernier fetch:region                    |
+| `strapontin:nom:canonique:{type}:{norm}`     | nom résolu (string)                                      | 7 jours | Cache resolver MB/Deezer — `type` = artiste/salle |
 
 ### Pièges BullMQ
 
@@ -424,15 +425,23 @@ L'API TM Events (et Venues) retourne les noms de salles en TOUT MAJUSCULE pour l
 France. Deux couches corrigent ce problème :
 
 **Couche 1 — déduplication** (`packages/core/src/deduplication.ts`, `fusionner`) : quand TM
-et Eventim couvrent le même concert, `salle` est choisie indépendamment du gagnant global —
-la valeur avec le plus de diacritiques ou en casse mixte est préférée. Eventim retourne les
-noms avec accents et casse correcte.
+et Eventim couvrent le même concert, `salle` **et** `artiste` sont choisies indépendamment
+du gagnant global — la valeur avec le plus de diacritiques est préférée dans les deux cas.
+Eventim retourne les noms avec accents et casse correcte.
 
 **Couche 2 — source TM** (`packages/sources/src/ticketmaster.ts`, `normaliserCasse`) : pour
 les concerts présents uniquement chez TM, `mapEvenement()` applique un title-case français
 sur les noms tout-majuscule. Les articles courants (de, du, le, la, les, l', d', en, au,
 aux…) restent en minuscules sauf en début de chaîne. Les accents ne sont pas restaurés
 (information perdue dans le tout-majuscule).
+
+**Couche 3 — resolver** (`packages/sources/src/resolver.ts`, `resoudreNomCanonique`) : pour
+les noms d'artistes encore tout-majuscule après déduplication (concerts couverts uniquement
+par TM), le worker appelle MusicBrainz (`/ws/2/artist/`, score ≥ 90) puis Deezer en fallback.
+Délai 1,1 s entre requêtes MB (rate limit). Résultats mis en cache Redis
+`strapontin:nom:canonique:{type}:{norm}` (TTL 7j). Appelée dans `resoudreArtistesConcerts()`
+après `dedoublonner()`, avant `persisterConcerts()`, dans les jobs `fetch:artiste`,
+`fetch:artistes:batch` et `fetch:region`.
 
 ### Particularité TM — nom d'artiste vs titre d'événement
 
@@ -579,11 +588,11 @@ Première version publique. Release taguée sur Codeberg, déploiement prod vali
 
 ### v1.1 — jalon actif
 
-| #    | Item                                          |
-| ---- | --------------------------------------------- |
-| #65  | Bandsintown 401 — désactiver ou remplacer      |
-| #37  | Doublons inter-jobs                           |
-| #115 | LXC de développement dédié                   |
+| #    | Item                                      |
+| ---- | ----------------------------------------- |
+| #65  | Bandsintown 401 — désactiver ou remplacer |
+| #37  | Doublons inter-jobs                       |
+| #115 | LXC de développement dédié                |
 
 ### v1.2 (post-v1.1)
 
