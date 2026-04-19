@@ -31,13 +31,7 @@ const logger = pino({ name: "jobs" });
 async function resoudreArtistesConcerts(
   concerts: ConcertBrut[],
 ): Promise<ConcertBrut[]> {
-  const nomsAResoudre = [
-    ...new Set(
-      concerts
-        .map((c) => c.artiste)
-        .filter((nom) => nom === nom.toUpperCase() && nom.length > 1),
-    ),
-  ];
+  const nomsAResoudre = [...new Set(concerts.map((c) => c.artiste))];
 
   if (nomsAResoudre.length === 0) return concerts;
 
