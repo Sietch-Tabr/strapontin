@@ -74,12 +74,10 @@ const SEUIL_QUOTA_ABORT = 10;
 
 // Vérifie le quota TM stocké en Redis. Retourne false si le job doit être annulé.
 async function verifierQuotaTM(nomJob: string): Promise<boolean> {
-  const quotaJson = await redis
-    .get(CLE_QUOTA_TM)
-    .catch((err) => {
-      logger.warn({ err }, "redis: échec lecture quota TM");
-      return null;
-    });
+  const quotaJson = await redis.get(CLE_QUOTA_TM).catch((err) => {
+    logger.warn({ err }, "redis: échec lecture quota TM");
+    return null;
+  });
 
   if (!quotaJson) return true; // pas de quota connu → continuer
 
@@ -105,10 +103,15 @@ async function verifierQuotaTM(nomJob: string): Promise<boolean> {
 
 async function demarrerStatsJob(cleType: string): Promise<Date> {
   const debut = new Date();
-  const stats: StatsJobRedis = { statut: "running", debutRun: debut.toISOString() };
+  const stats: StatsJobRedis = {
+    statut: "running",
+    debutRun: debut.toISOString(),
+  };
   await redis
     .setex(cleStatsJob(cleType), TTL_STATS_JOB_S, JSON.stringify(stats))
-    .catch((err) => logger.warn({ err }, `redis: échec écriture stats job ${cleType}`));
+    .catch((err) =>
+      logger.warn({ err }, `redis: échec écriture stats job ${cleType}`),
+    );
   return debut;
 }
 
@@ -122,10 +125,16 @@ async function terminerStatsJob(cleType: string, debut: Date): Promise<void> {
   };
   await redis
     .setex(cleStatsJob(cleType), TTL_STATS_JOB_S, JSON.stringify(stats))
-    .catch((err) => logger.warn({ err }, `redis: échec écriture stats job ${cleType}`));
+    .catch((err) =>
+      logger.warn({ err }, `redis: échec écriture stats job ${cleType}`),
+    );
 }
 
-async function echouerStatsJob(cleType: string, debut: Date, err: unknown): Promise<void> {
+async function echouerStatsJob(
+  cleType: string,
+  debut: Date,
+  err: unknown,
+): Promise<void> {
   const stats: StatsJobRedis = {
     statut: "error",
     debutRun: debut.toISOString(),
@@ -134,7 +143,9 @@ async function echouerStatsJob(cleType: string, debut: Date, err: unknown): Prom
   };
   await redis
     .setex(cleStatsJob(cleType), TTL_STATS_JOB_S, JSON.stringify(stats))
-    .catch((e) => logger.warn({ e }, `redis: échec écriture erreur stats job ${cleType}`));
+    .catch((e) =>
+      logger.warn({ e }, `redis: échec écriture erreur stats job ${cleType}`),
+    );
 }
 
 async function sauvegarderQuotaTM(): Promise<void> {
@@ -385,7 +396,9 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
         const tous = [
           ...(resultsTM.status === "fulfilled" ? resultsTM.value : []),
-          ...(resultsEventim.status === "fulfilled" ? resultsEventim.value : []),
+          ...(resultsEventim.status === "fulfilled"
+            ? resultsEventim.value
+            : []),
         ];
 
         await sauvegarderQuotaTM();

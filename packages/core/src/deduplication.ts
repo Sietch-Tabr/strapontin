@@ -48,8 +48,12 @@ function fusionner(concerts: ConcertAvecNormes[]): ConcertAvecNormes {
   });
 
   const meilleureSalle = concerts.reduce((meilleure, candidat) => {
-    const scoreM = scoreNomRiche(meilleure) * 2 + (meilleure !== meilleure.toUpperCase() ? 1 : 0);
-    const scoreC = scoreNomRiche(candidat.salle) * 2 + (candidat.salle !== candidat.salle.toUpperCase() ? 1 : 0);
+    const scoreM =
+      scoreNomRiche(meilleure) * 2 +
+      (meilleure !== meilleure.toUpperCase() ? 1 : 0);
+    const scoreC =
+      scoreNomRiche(candidat.salle) * 2 +
+      (candidat.salle !== candidat.salle.toUpperCase() ? 1 : 0);
     return scoreC > scoreM ? candidat.salle : meilleure;
   }, gagnant.salle);
 
