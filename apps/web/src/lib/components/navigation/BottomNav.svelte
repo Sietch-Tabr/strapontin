@@ -58,9 +58,12 @@
 		{ label: 'Découverte', icone: Compass, route: '/decouverte' }
 	];
 
-	const elementsDrawer = [
+	const elementsDrawerPrincipal = [
 		{ label: 'Mes artistes', icone: Music, route: '/artistes' },
-		{ label: 'Mes salles', icone: Building2, route: '/salles' },
+		{ label: 'Mes salles', icone: Building2, route: '/salles' }
+	];
+
+	const elementsDrawerConfig = [
 		{ label: 'Paramètres', icone: Settings, route: '/parametres' },
 		{ label: 'Aide', icone: HelpCircle, route: '/aide' },
 		{ label: 'Nouveautés', icone: History, route: '/changelog' }
@@ -136,7 +139,7 @@
 			<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-muted"></div>
 
 			<div class="space-y-1">
-				{#each elementsDrawer as { label, icone: Icone, route }}
+				{#each elementsDrawerPrincipal as { label, icone: Icone, route }}
 					<button
 						type="button"
 						onclick={() => naviguer(route)}
@@ -147,6 +150,8 @@
 						{label}
 					</button>
 				{/each}
+
+				<div class="my-2 border-t border-border"></div>
 
 				{#if estAdmin}
 					<button
@@ -159,6 +164,18 @@
 						Admin
 					</button>
 				{/if}
+
+				{#each elementsDrawerConfig as { label, icone: Icone, route }}
+					<button
+						type="button"
+						onclick={() => naviguer(route)}
+						class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground
+							{estActif(route) ? 'bg-accent text-accent-foreground' : 'text-foreground'}"
+					>
+						<Icone size={20} />
+						{label}
+					</button>
+				{/each}
 
 				<div class="my-2 border-t border-border"></div>
 
