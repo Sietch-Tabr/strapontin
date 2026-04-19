@@ -290,7 +290,6 @@ Cron systemd (`OnCalendar=daily`) sur le LXC — indépendant des mises à jour 
 
 ```
 TICKETMASTER_API_KEY=
-BANDSINTOWN_APP_ID=
 DATABASE_URL=postgresql://strapontin:password@localhost:5432/strapontin
 REDIS_URL=redis://localhost:6379
 BETTER_AUTH_SECRET=
@@ -303,10 +302,10 @@ PUBLIC_BASE_URL=https://strapontin.kwaite.fr
 | Source                    | Méthode                                                                              | Priorité  |
 | ------------------------- | ------------------------------------------------------------------------------------ | --------- |
 | Ticketmaster Discovery v2 | API officielle (clé .env)                                                            | Core      |
-| Bandsintown               | API gratuite (app_id .env)                                                           | Core      |
 | Eventim France            | API publique reverse-engineered                                                      | Core      |
 | Dice.fm                   | Scraping Playwright                                                                  | Phase 3   |
 | Shotgun.live              | Playwright + API interne JSON (Vercel bot protection contournée via session browser) | Phase 2   |
+| Bandsintown               | API gratuite (app_id .env) — HTTP 401 depuis 2026-04-10, free tier inaccessible     | Abandonné |
 | Fnac Spectacles           | Bloqué (Cloudflare JS challenge, timeout même Playwright)                            | Abandonné |
 
 ## Pattern workers (BullMQ)
