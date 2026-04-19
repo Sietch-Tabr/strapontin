@@ -3,7 +3,8 @@
 import pino from "pino";
 import type { Job } from "bullmq";
 import type { ConcertBrut } from "@strapontin/sources";
-import { dedoublonner } from "@strapontin/core";
+import { resoudreNomCanonique } from "@strapontin/sources";
+import { dedoublonner, normaliserTexte } from "@strapontin/core";
 import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import { lt } from "drizzle-orm";
 import { db } from "./db.js";
@@ -13,6 +14,8 @@ import {
   redis,
   CLE_QUOTA_TM,
   cleAttractionId,
+  cleNomCanonique,
+  TTL_NOM_CANONIQUE_S,
   TTL_ATTRACTION_ID_S,
   cleRegionFetchee,
   TTL_REGION_FETCHEE_S,
@@ -22,6 +25,48 @@ import {
 } from "./redis.js";
 
 const logger = pino({ name: "jobs" });
+
+// Résout les noms d'artistes tout-majuscule via MusicBrainz / Deezer avec cache Redis.
+// Appelée après dédoublonnage, avant persistance.
+async function resoudreArtistesConcerts(
+  concerts: ConcertBrut[],
+): Promise<ConcertBrut[]> {
+  const nomsAResoudre = [
+    ...new Set(
+      concerts
+        .map((c) => c.artiste)
+        .filter((nom) => nom === nom.toUpperCase() && nom.length > 1),
+    ),
+  ];
+
+  if (nomsAResoudre.length === 0) return concerts;
+
+  const tableauResolution = new Map<string, string>();
+  for (const nom of nomsAResoudre) {
+    const norm = normaliserTexte(nom);
+    const cle = cleNomCanonique("artiste", norm);
+    const cache = await redis.get(cle).catch(() => null);
+    if (cache) {
+      tableauResolution.set(nom, cache);
+      continue;
+    }
+    const resolu = await resoudreNomCanonique("artiste", nom);
+    if (resolu !== nom) {
+      await redis
+        .setex(cle, TTL_NOM_CANONIQUE_S, resolu)
+        .catch((err) =>
+          logger.warn({ err, nom }, "redis: échec écriture nom canonique"),
+        );
+    }
+    tableauResolution.set(nom, resolu);
+  }
+
+  return concerts.map((c) =>
+    tableauResolution.has(c.artiste)
+      ? { ...c, artiste: tableauResolution.get(c.artiste)! }
+      : c,
+  );
+}
 
 // Seuils de protection quota TM (resets toutes les 24h)
 const SEUIL_QUOTA_WARN = 200;
@@ -181,7 +226,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
       await sauvegarderQuotaTM();
 
-      const dedoublonnes = dedoublonner(tous);
+      const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
       logger.info(
         {
           artiste: data.artiste,
@@ -307,7 +352,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
             .flatMap((r) => (r as PromiseFulfilledResult<ConcertBrut[]>).value),
         ];
 
-        const dedoublonnes = dedoublonner(tous);
+        const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
         logger.info(
           { bruts: tous.length, dedoublonnes: dedoublonnes.length },
           "fetch:artistes:batch terminé",
@@ -345,7 +390,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
         await sauvegarderQuotaTM();
 
-        const dedoublonnes = dedoublonner(tous);
+        const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
         logger.info(
           {
             depts: data.depts,

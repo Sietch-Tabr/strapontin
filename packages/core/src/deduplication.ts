@@ -53,7 +53,15 @@ function fusionner(concerts: ConcertAvecNormes[]): ConcertAvecNormes {
     return scoreC > scoreM ? candidat.salle : meilleure;
   }, gagnant.salle);
 
-  return { ...gagnant, salle: meilleureSalle };
+  const meilleurArtiste = concerts.reduce(
+    (meilleur, candidat) =>
+      scoreNomRiche(candidat.artiste) > scoreNomRiche(meilleur)
+        ? candidat.artiste
+        : meilleur,
+    gagnant.artiste,
+  );
+
+  return { ...gagnant, salle: meilleureSalle, artiste: meilleurArtiste };
 }
 
 // Compte les caractères non-ASCII dans un nom (accents, cédilles, etc.)
