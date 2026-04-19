@@ -8,7 +8,7 @@ import { dedoublonner, normaliserTexte } from "@strapontin/core";
 import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import { lt } from "drizzle-orm";
 import { db } from "./db.js";
-import { ticketmaster, bandsintown, eventim } from "./sources.js";
+import { ticketmaster, eventim } from "./sources.js";
 import { persisterConcerts, recalculerMatches } from "./persister.js";
 import {
   redis,
@@ -204,15 +204,13 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     case "fetch:artiste": {
       logger.info({ artiste: data.artiste }, "fetch:artiste démarré");
 
-      const [resultsTM, resultsBIT, resultsEventim] = await Promise.allSettled([
+      const [resultsTM, resultsEventim] = await Promise.allSettled([
         ticketmaster.fetchArtiste(data.artiste),
-        bandsintown.fetchArtiste(data.artiste),
         eventim.fetchArtiste(data.artiste),
       ]);
 
       const tous = [
         ...(resultsTM.status === "fulfilled" ? resultsTM.value : []),
-        ...(resultsBIT.status === "fulfilled" ? resultsBIT.value : []),
         ...(resultsEventim.status === "fulfilled" ? resultsEventim.value : []),
       ];
 
@@ -220,12 +218,6 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         logger.warn(
           { err: resultsTM.reason, artiste: data.artiste },
           "TM échoué",
-        );
-      }
-      if (resultsBIT.status === "rejected") {
-        logger.warn(
-          { err: resultsBIT.reason, artiste: data.artiste },
-          "BIT échoué",
         );
       }
       if (resultsEventim.status === "rejected") {
@@ -342,22 +334,14 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
         await sauvegarderQuotaTM();
 
-        // Bandsintown et Eventim : appels parallèles par artiste
+        // Eventim : appels parallèles par artiste
         const nomsArtistes = rows.map((r) => r.artisteAffiche);
-        const [bitResults, eventimResults] = await Promise.all([
-          Promise.allSettled(
-            nomsArtistes.map((nom) => bandsintown.fetchArtiste(nom)),
-          ),
-          Promise.allSettled(
-            nomsArtistes.map((nom) => eventim.fetchArtiste(nom)),
-          ),
-        ]);
+        const eventimResults = await Promise.allSettled(
+          nomsArtistes.map((nom) => eventim.fetchArtiste(nom)),
+        );
 
         const tous = [
           ...concertsTM,
-          ...bitResults
-            .filter((r) => r.status === "fulfilled")
-            .flatMap((r) => (r as PromiseFulfilledResult<ConcertBrut[]>).value),
           ...eventimResults
             .filter((r) => r.status === "fulfilled")
             .flatMap((r) => (r as PromiseFulfilledResult<ConcertBrut[]>).value),
