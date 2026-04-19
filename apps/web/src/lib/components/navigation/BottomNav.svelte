@@ -41,8 +41,9 @@
 		const focusables = Array.from(
 			conteneurDrawer.querySelectorAll<HTMLElement>('button,a,[tabindex]')
 		).filter((el) => !el.hasAttribute('disabled'));
-		const premier = focusables[0];
-		const dernier = focusables[focusables.length - 1];
+		if (focusables.length === 0) return;
+		const premier = focusables[0]!;
+		const dernier = focusables[focusables.length - 1]!;
 		if (e.shiftKey && document.activeElement === premier) {
 			e.preventDefault();
 			dernier.focus();

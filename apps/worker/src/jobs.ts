@@ -45,13 +45,12 @@ async function resoudreArtistesConcerts(
       continue;
     }
     const resolu = await resoudreNomCanonique("artiste", nom);
-    if (resolu !== nom) {
-      await redis
-        .setex(cle, TTL_NOM_CANONIQUE_S, resolu)
-        .catch((err) =>
-          logger.warn({ err, nom }, "redis: échec écriture nom canonique"),
-        );
-    }
+    // Cacher même si le nom n'a pas changé — évite les appels MB/Deezer répétés à chaque cron
+    await redis
+      .setex(cle, TTL_NOM_CANONIQUE_S, resolu)
+      .catch((err) =>
+        logger.warn({ err, nom }, "redis: échec écriture nom canonique"),
+      );
     tableauResolution.set(nom, resolu);
   }
 
@@ -75,7 +74,13 @@ async function verifierQuotaTM(nomJob: string): Promise<boolean> {
 
   if (!quotaJson) return true; // pas de quota connu → continuer
 
-  const quota = JSON.parse(quotaJson) as { dispo: number; total: number };
+  let quota: { dispo: number; total: number };
+  try {
+    quota = JSON.parse(quotaJson) as { dispo: number; total: number };
+  } catch {
+    logger.warn("redis: quota TM malformé — ignoré");
+    return true;
+  }
 
   if (quota.dispo < SEUIL_QUOTA_ABORT) {
     logger.error(
@@ -427,7 +432,11 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     case "fetch:salle": {
       logger.info({ venueId: data.venueId }, "fetch:salle démarré");
 
-      const concertsSalle = await ticketmaster.fetchSalle!(data.venueId);
+      if (!ticketmaster.fetchSalle) {
+        logger.error("fetchSalle non disponible sur la source TM");
+        break;
+      }
+      const concertsSalle = await ticketmaster.fetchSalle(data.venueId);
       logger.info(
         { venueId: data.venueId, total: concertsSalle.length },
         "TM fetchSalle terminé",
@@ -435,7 +444,9 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
       await sauvegarderQuotaTM();
 
-      const dedoublonnes = dedoublonner(concertsSalle);
+      const dedoublonnes = await resoudreArtistesConcerts(
+        dedoublonner(concertsSalle),
+      );
       await persisterConcerts(dedoublonnes);
 
       if (data.userId) {
