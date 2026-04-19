@@ -155,6 +155,15 @@ Secrets Woodpecker : `ssh_key` (clé privée dédiée), `lxc_host` = `192.168.20
      "pct exec 113 -- bash -c 'mkdir -p /root/.ssh && cat >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'"
    ```
 
+   **Piège post-reinstallation** : le LXC recréé n'a pas de `authorized_keys`. Si `~/.ssh/woodpecker_strapontin.pub` n'est plus disponible sur le Mac, la clé publique est aussi dans `/root/.ssh/authorized_keys` sur Proxmox (commentaire `woodpecker-strapontin`) :
+
+   ```bash
+   ssh root@192.168.1.99 "
+     PUBKEY=\$(grep woodpecker-strapontin /root/.ssh/authorized_keys)
+     pct exec 113 -- bash -c \"mkdir -p /root/.ssh && echo '\$PUBKEY' >> /root/.ssh/authorized_keys && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys\"
+   "
+   ```
+
 3. Créer le repo sur Codeberg puis pousser :
 
    ```bash
