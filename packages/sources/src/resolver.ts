@@ -4,8 +4,7 @@
 
 const MUSICBRAINZ_BASE = "https://musicbrainz.org/ws/2";
 const DEEZER_BASE = "https://api.deezer.com";
-const CONTACT_EMAIL =
-  process.env["CONTACT_EMAIL"] ?? "kwaite@hotmail.fr";
+const CONTACT_EMAIL = process.env["CONTACT_EMAIL"] ?? "noreply@example.com";
 const USER_AGENT = `Strapontin/1.0 (${CONTACT_EMAIL})`;
 const DELAI_MB_MS = 1100;
 // Timeout réseau pour MB et Deezer — évite le blocage si la source ne répond pas
@@ -25,10 +24,7 @@ function attendreMB(): Promise<void> {
   return new Promise((r) => setTimeout(r, DELAI_MB_MS));
 }
 
-function fetchAvecTimeout(
-  url: string,
-  init?: RequestInit,
-): Promise<Response> {
+function fetchAvecTimeout(url: string, init?: RequestInit): Promise<Response> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_FETCH_MS);
   return fetch(url, { ...init, signal: ctrl.signal }).finally(() =>
@@ -87,7 +83,10 @@ async function rechercherDeezerArtiste(nom: string): Promise<string | null> {
     const resultat = data.data?.[0]?.name ?? null;
     if (!resultat) return null;
     // Valider la pertinence du résultat Deezer (contrairement à MB, pas de score natif)
-    if (similitudeBrute(nom.toLowerCase(), resultat.toLowerCase()) < SEUIL_CONFIANCE_DEEZER) {
+    if (
+      similitudeBrute(nom.toLowerCase(), resultat.toLowerCase()) <
+      SEUIL_CONFIANCE_DEEZER
+    ) {
       return null;
     }
     return resultat;
