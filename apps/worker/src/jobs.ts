@@ -3,7 +3,8 @@
 import pino from "pino";
 import type { Job } from "bullmq";
 import type { ConcertBrut } from "@strapontin/sources";
-import { dedoublonner } from "@strapontin/core";
+import { resoudreNomCanonique } from "@strapontin/sources";
+import { dedoublonner, normaliserTexte } from "@strapontin/core";
 import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import { lt } from "drizzle-orm";
 import { db } from "./db.js";
@@ -13,6 +14,8 @@ import {
   redis,
   CLE_QUOTA_TM,
   cleAttractionId,
+  cleNomCanonique,
+  TTL_NOM_CANONIQUE_S,
   TTL_ATTRACTION_ID_S,
   cleRegionFetchee,
   TTL_REGION_FETCHEE_S,
@@ -23,18 +26,58 @@ import {
 
 const logger = pino({ name: "jobs" });
 
+// Résout les noms d'artistes tout-majuscule via MusicBrainz / Deezer avec cache Redis.
+// Appelée après dédoublonnage, avant persistance.
+async function resoudreArtistesConcerts(
+  concerts: ConcertBrut[],
+): Promise<ConcertBrut[]> {
+  const nomsAResoudre = [
+    ...new Set(
+      concerts
+        .map((c) => c.artiste)
+        .filter((nom) => nom === nom.toUpperCase() && nom.length > 1),
+    ),
+  ];
+
+  if (nomsAResoudre.length === 0) return concerts;
+
+  const tableauResolution = new Map<string, string>();
+  for (const nom of nomsAResoudre) {
+    const norm = normaliserTexte(nom);
+    const cle = cleNomCanonique("artiste", norm);
+    const cache = await redis.get(cle).catch(() => null);
+    if (cache) {
+      tableauResolution.set(nom, cache);
+      continue;
+    }
+    const resolu = await resoudreNomCanonique("artiste", nom);
+    if (resolu !== nom) {
+      await redis
+        .setex(cle, TTL_NOM_CANONIQUE_S, resolu)
+        .catch((err) =>
+          logger.warn({ err, nom }, "redis: échec écriture nom canonique"),
+        );
+    }
+    tableauResolution.set(nom, resolu);
+  }
+
+  return concerts.map((c) =>
+    tableauResolution.has(c.artiste)
+      ? { ...c, artiste: tableauResolution.get(c.artiste)! }
+      : c,
+  );
+}
+
 // Seuils de protection quota TM (resets toutes les 24h)
 const SEUIL_QUOTA_WARN = 200;
 const SEUIL_QUOTA_ABORT = 10;
 
 // Vérifie le quota TM stocké en Redis. Retourne false si le job doit être annulé.
 async function verifierQuotaTM(nomJob: string): Promise<boolean> {
-  const quotaJson = await redis
-    .get(CLE_QUOTA_TM)
-    .catch((err) => {
-      logger.warn({ err }, "redis: échec lecture quota TM");
-      return null;
-    });
+  const quotaJson = await redis.get(CLE_QUOTA_TM).catch((err) => {
+    logger.warn({ err }, "redis: échec lecture quota TM");
+    return null;
+  });
 
   if (!quotaJson) return true; // pas de quota connu → continuer
 
@@ -60,10 +103,15 @@ async function verifierQuotaTM(nomJob: string): Promise<boolean> {
 
 async function demarrerStatsJob(cleType: string): Promise<Date> {
   const debut = new Date();
-  const stats: StatsJobRedis = { statut: "running", debutRun: debut.toISOString() };
+  const stats: StatsJobRedis = {
+    statut: "running",
+    debutRun: debut.toISOString(),
+  };
   await redis
     .setex(cleStatsJob(cleType), TTL_STATS_JOB_S, JSON.stringify(stats))
-    .catch((err) => logger.warn({ err }, `redis: échec écriture stats job ${cleType}`));
+    .catch((err) =>
+      logger.warn({ err }, `redis: échec écriture stats job ${cleType}`),
+    );
   return debut;
 }
 
@@ -77,10 +125,16 @@ async function terminerStatsJob(cleType: string, debut: Date): Promise<void> {
   };
   await redis
     .setex(cleStatsJob(cleType), TTL_STATS_JOB_S, JSON.stringify(stats))
-    .catch((err) => logger.warn({ err }, `redis: échec écriture stats job ${cleType}`));
+    .catch((err) =>
+      logger.warn({ err }, `redis: échec écriture stats job ${cleType}`),
+    );
 }
 
-async function echouerStatsJob(cleType: string, debut: Date, err: unknown): Promise<void> {
+async function echouerStatsJob(
+  cleType: string,
+  debut: Date,
+  err: unknown,
+): Promise<void> {
   const stats: StatsJobRedis = {
     statut: "error",
     debutRun: debut.toISOString(),
@@ -89,7 +143,9 @@ async function echouerStatsJob(cleType: string, debut: Date, err: unknown): Prom
   };
   await redis
     .setex(cleStatsJob(cleType), TTL_STATS_JOB_S, JSON.stringify(stats))
-    .catch((e) => logger.warn({ e }, `redis: échec écriture erreur stats job ${cleType}`));
+    .catch((e) =>
+      logger.warn({ e }, `redis: échec écriture erreur stats job ${cleType}`),
+    );
 }
 
 async function sauvegarderQuotaTM(): Promise<void> {
@@ -181,7 +237,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
       await sauvegarderQuotaTM();
 
-      const dedoublonnes = dedoublonner(tous);
+      const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
       logger.info(
         {
           artiste: data.artiste,
@@ -307,7 +363,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
             .flatMap((r) => (r as PromiseFulfilledResult<ConcertBrut[]>).value),
         ];
 
-        const dedoublonnes = dedoublonner(tous);
+        const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
         logger.info(
           { bruts: tous.length, dedoublonnes: dedoublonnes.length },
           "fetch:artistes:batch terminé",
@@ -340,12 +396,14 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
         const tous = [
           ...(resultsTM.status === "fulfilled" ? resultsTM.value : []),
-          ...(resultsEventim.status === "fulfilled" ? resultsEventim.value : []),
+          ...(resultsEventim.status === "fulfilled"
+            ? resultsEventim.value
+            : []),
         ];
 
         await sauvegarderQuotaTM();
 
-        const dedoublonnes = dedoublonner(tous);
+        const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
         logger.info(
           {
             depts: data.depts,

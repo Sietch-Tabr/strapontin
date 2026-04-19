@@ -48,12 +48,24 @@ function fusionner(concerts: ConcertAvecNormes[]): ConcertAvecNormes {
   });
 
   const meilleureSalle = concerts.reduce((meilleure, candidat) => {
-    const scoreM = scoreNomRiche(meilleure) * 2 + (meilleure !== meilleure.toUpperCase() ? 1 : 0);
-    const scoreC = scoreNomRiche(candidat.salle) * 2 + (candidat.salle !== candidat.salle.toUpperCase() ? 1 : 0);
+    const scoreM =
+      scoreNomRiche(meilleure) * 2 +
+      (meilleure !== meilleure.toUpperCase() ? 1 : 0);
+    const scoreC =
+      scoreNomRiche(candidat.salle) * 2 +
+      (candidat.salle !== candidat.salle.toUpperCase() ? 1 : 0);
     return scoreC > scoreM ? candidat.salle : meilleure;
   }, gagnant.salle);
 
-  return { ...gagnant, salle: meilleureSalle };
+  const meilleurArtiste = concerts.reduce(
+    (meilleur, candidat) =>
+      scoreNomRiche(candidat.artiste) > scoreNomRiche(meilleur)
+        ? candidat.artiste
+        : meilleur,
+    gagnant.artiste,
+  );
+
+  return { ...gagnant, salle: meilleureSalle, artiste: meilleurArtiste };
 }
 
 // Compte les caractères non-ASCII dans un nom (accents, cédilles, etc.)
