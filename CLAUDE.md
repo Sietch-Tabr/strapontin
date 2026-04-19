@@ -305,7 +305,7 @@ PUBLIC_BASE_URL=https://strapontin.kwaite.fr
 | Eventim France            | API publique reverse-engineered                                                      | Core      |
 | Dice.fm                   | Scraping Playwright                                                                  | Phase 3   |
 | Shotgun.live              | Playwright + API interne JSON (Vercel bot protection contournée via session browser) | Phase 2   |
-| Bandsintown               | API gratuite (app_id .env) — HTTP 401 depuis 2026-04-10, free tier inaccessible     | Abandonné |
+| Bandsintown               | API gratuite (app_id .env) — HTTP 401 depuis 2026-04-10, free tier inaccessible      | Abandonné |
 | Fnac Spectacles           | Bloqué (Cloudflare JS challenge, timeout même Playwright)                            | Abandonné |
 
 ## Pattern workers (BullMQ)
@@ -444,12 +444,12 @@ aux…) restent en minuscules sauf en début de chaîne. Les accents ne sont pas
 (information perdue dans le tout-majuscule).
 
 **Couche 3 — resolver** (`packages/sources/src/resolver.ts`, `resoudreNomCanonique`) : pour
-les noms d'artistes encore tout-majuscule après déduplication (concerts couverts uniquement
-par TM), le worker appelle MusicBrainz (`/ws/2/artist/`, score ≥ 90) puis Deezer en fallback.
-Délai 1,1 s entre requêtes MB (rate limit). Résultats mis en cache Redis
-`strapontin:nom:canonique:{type}:{norm}` (TTL 7j). Appelée dans `resoudreArtistesConcerts()`
-après `dedoublonner()`, avant `persisterConcerts()`, dans les jobs `fetch:artiste`,
-`fetch:artistes:batch` et `fetch:region`.
+tous les noms d'artistes après déduplication, le worker appelle MusicBrainz (`/ws/2/artist/`,
+score ≥ 90) puis Deezer en fallback. Le cache Redis absorbe le coût — un nom absent du cache
+déclenche un appel API, les suivants sont servis depuis Redis. Délai 1,1 s entre requêtes MB
+(rate limit). Résultats mis en cache Redis `strapontin:nom:canonique:{type}:{norm}` (TTL 7j).
+Appelée dans `resoudreArtistesConcerts()` après `dedoublonner()`, avant `persisterConcerts()`,
+dans les jobs `fetch:artiste`, `fetch:artistes:batch` et `fetch:region`.
 
 ### Particularité TM — nom d'artiste vs titre d'événement
 
