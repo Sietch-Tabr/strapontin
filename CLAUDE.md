@@ -348,6 +348,7 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 ### Pièges BullMQ
 
 - **BullMQ v5 interdit les `:` dans les `jobId`** — utiliser `__` comme séparateur (`artiste__norm`, `artistes__batch`, `region__all`, `salle__venueId`, `matches__all`, `purge__YYYY-MM-DD`). Les `:` dans le _type de job_ (premier arg de `queue.add`) sont acceptés.
+- **`removeOnFail: { count: N }` bloque le re-queuing des jobs à `jobId` fixe** — quand un job échoue avec cette option, sa clé Redis persiste. Tout appel ultérieur à `queue.add` avec le même `jobId` retourne silencieusement le job échoué sans en créer un nouveau. Utiliser `removeOnFail: true` pour les jobs cron à `jobId` fixe (`artistes__batch`, `region__all`, `matches__all`, `purge__*`).
 
 ### Centroïdes des départements (`CENTRES_DEPT`)
 

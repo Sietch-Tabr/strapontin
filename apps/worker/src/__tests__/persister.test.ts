@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("../db.js", () => ({ db: {} }));
 
-import { estDoublonSalle } from "../persister.js";
+import { estDoublonSalle, deduplicerParCleConflit } from "../persister.js";
+import type { ConcertBrut } from "@strapontin/sources";
 
 describe("estDoublonSalle", () => {
   it("retourne_true_si_chaines_identiques", () => {
@@ -41,5 +42,79 @@ describe("estDoublonSalle", () => {
 
   it("accor_arena_vs_tout_majuscule_est_doublon_via_similarite", () => {
     expect(estDoublonSalle("accor arena", "ACCOR ARENA")).toBe(false);
+  });
+});
+
+function concert(
+  artiste: string,
+  date: string,
+  salle: string,
+  source: string = "ticketmaster",
+): ConcertBrut {
+  return {
+    artiste,
+    date,
+    heure: "20:00",
+    salle,
+    ville: "Paris",
+    dept: "75",
+    prixMin: null,
+    prixMax: null,
+    url: null,
+    source,
+    classification: "musique",
+    genre: "Pop",
+    statut: null,
+  };
+}
+
+describe("deduplicerParCleConflit", () => {
+  it("deduplicer_concerts_identiques_meme_source_retourne_un_seul", () => {
+    const liste = [
+      concert("Mika", "2026-06-01", "Accor Arena"),
+      concert("Mika", "2026-06-01", "Accor Arena"),
+    ];
+    expect(deduplicerParCleConflit(liste)).toHaveLength(1);
+  });
+
+  it("deduplicer_resolver_cree_doublon_conserve_version_avec_diacritiques", () => {
+    // "MIKA" (TM tout-majuscule résolu) et "Mika" (Eventim) — même clé après normaliserTexte
+    const liste = [
+      concert("MIKA", "2026-06-01", "Accor Arena", "ticketmaster"),
+      concert("Mika", "2026-06-01", "Accor Arena", "eventim"),
+    ];
+    const resultat = deduplicerParCleConflit(liste);
+    expect(resultat).toHaveLength(1);
+    expect(resultat[0]!.artiste).toBe("Mika");
+  });
+
+  it("deduplicer_salle_avec_accent_et_sans_accent_meme_cle_conserve_accents", () => {
+    const liste = [
+      concert("Amel Bent", "2026-05-10", "Zenith de Dijon", "ticketmaster"),
+      concert("Amel Bent", "2026-05-10", "Zénith de Dijon", "eventim"),
+    ];
+    const resultat = deduplicerParCleConflit(liste);
+    expect(resultat).toHaveLength(1);
+    expect(resultat[0]!.salle).toBe("Zénith de Dijon");
+  });
+
+  it("deduplicer_concerts_dates_differentes_conserve_les_deux", () => {
+    const liste = [
+      concert("Mika", "2026-06-01", "Accor Arena"),
+      concert("Mika", "2026-06-02", "Accor Arena"),
+    ];
+    expect(deduplicerParCleConflit(liste)).toHaveLength(2);
+  });
+
+  it("deduplicer_artistes_differents_conserve_les_deux", () => {
+    const liste = [
+      concert("Mika", "2026-06-01", "Accor Arena"),
+      concert("Coldplay", "2026-06-01", "Accor Arena"),
+    ];
+    expect(deduplicerParCleConflit(liste)).toHaveLength(2);
+  });
+
+  it("deduplicer_liste_vide_retourne_vide", () => {
+    expect(deduplicerParCleConflit([])).toHaveLength(0);
   });
 });
