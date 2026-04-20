@@ -173,6 +173,17 @@ describe("mapEvenement — Ticketmaster", () => {
     expect(resultat?.salle).toBe("Accor Arena");
   });
 
+  it("normalise_nom_salle_avec_apostrophe_capitalise_apres_apostrophe", () => {
+    const evt = evenementTMRaw({
+      _embedded: {
+        venues: [
+          { name: "L'OLYMPIA", city: { name: "Paris" }, postalCode: "75009" },
+        ],
+      },
+    });
+    expect(mapEvenement(evt)?.salle).toBe("L'Olympia");
+  });
+
   it("retourne_null_si_date_absente", () => {
     const evt = evenementTMRaw({ dates: { start: {} } });
     expect(mapEvenement(evt)).toBeNull();

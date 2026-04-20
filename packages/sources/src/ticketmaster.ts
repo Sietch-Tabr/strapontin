@@ -158,7 +158,10 @@ function normaliserCasse(nom: string): string {
       const bas = mot.toLowerCase();
       if (!debutPhrase && ARTICLES_FR.has(bas)) return bas;
       debutPhrase = false;
-      return bas.charAt(0).toUpperCase() + bas.slice(1);
+      return bas.replace(
+        /(^|['''])([a-z])/g,
+        (_, sep, c) => sep + c.toUpperCase(),
+      );
     })
     .join("");
 }
