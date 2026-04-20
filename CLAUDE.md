@@ -441,8 +441,9 @@ Eventim retourne les noms avec accents et casse correcte.
 **Couche 2 — source TM** (`packages/sources/src/ticketmaster.ts`, `normaliserCasse`) : pour
 les concerts présents uniquement chez TM, `mapEvenement()` applique un title-case français
 sur les noms tout-majuscule. Les articles courants (de, du, le, la, les, l', d', en, au,
-aux…) restent en minuscules sauf en début de chaîne. Les accents ne sont pas restaurés
-(information perdue dans le tout-majuscule).
+aux…) restent en minuscules sauf en début de chaîne. La lettre suivant une apostrophe
+(droite `'` ou typographique `'`) est également capitalisée (`L'OLYMPIA` → `L'Olympia`).
+Les accents ne sont pas restaurés (information perdue dans le tout-majuscule).
 
 **Couche 3 — resolver** (`packages/sources/src/resolver.ts`, `resoudreNomCanonique`) : pour
 tous les noms d'artistes après déduplication, le worker appelle MusicBrainz (`/ws/2/artist/`,
