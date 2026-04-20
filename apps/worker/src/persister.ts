@@ -95,18 +95,46 @@ async function reconcilierSalles(
   });
 }
 
+// Dédoublonne par clé de conflit (artiste_norm, date, salle_norm) avant l'upsert.
+// Le resolver canonicalise les noms après dedoublonner(), pouvant créer des doublons
+// que PostgreSQL rejette avec "ON CONFLICT DO UPDATE command cannot affect row a second time".
+// En cas de doublon, on conserve la version avec le plus de diacritiques.
+// Score de qualité d'un concert pour le choix en cas de doublon.
+// Cohérent avec les règles de l'upsert SQL (unaccent / upper).
+function scoreQualite(c: ConcertBrut): number {
+  const artisteDiacr = c.artiste.normalize("NFD").length - c.artiste.length;
+  const salleDiacr = c.salle.normalize("NFD").length - c.salle.length;
+  const artisteCasseMixte = c.artiste !== c.artiste.toUpperCase() ? 1 : 0;
+  const salleCasseMixte = c.salle !== c.salle.toUpperCase() ? 1 : 0;
+  return artisteDiacr * 10 + artisteCasseMixte * 5 + salleDiacr + salleCasseMixte;
+}
+
+export function deduplicerParCleConflit(liste: ConcertBrut[]): ConcertBrut[] {
+  const parCle = new Map<string, ConcertBrut>();
+  for (const c of liste) {
+    const cle = `${normaliserTexte(c.artiste)}|${c.date}|${normaliserTexte(c.salle)}`;
+    const existant = parCle.get(cle);
+    if (!existant || scoreQualite(c) > scoreQualite(existant)) {
+      parCle.set(cle, c);
+    }
+  }
+  return [...parCle.values()];
+}
+
 // Upsert des concerts en base — retourne les IDs insérés/mis à jour
 export async function persisterConcerts(
   liste: ConcertBrut[],
 ): Promise<string[]> {
   if (liste.length === 0) return [];
 
+  const listeFiltree = deduplicerParCleConflit(liste);
+
   const ids: string[] = [];
 
   // Insérer par lots de 50
   const TAILLE_LOT = 50;
-  for (let i = 0; i < liste.length; i += TAILLE_LOT) {
-    const lot = liste.slice(i, i + TAILLE_LOT);
+  for (let i = 0; i < listeFiltree.length; i += TAILLE_LOT) {
+    const lot = listeFiltree.slice(i, i + TAILLE_LOT);
 
     const valeursBrutes: ValeurConcert[] = lot.map((c) => ({
       artiste: c.artiste,
