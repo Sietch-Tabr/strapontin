@@ -12,8 +12,8 @@
     {
       "idx": 1,
       "version": "7",
-      "when": 1745337600000,
-      "tag": "0001_frequence_notifications",
+      "when": 1776807197588,
+      "tag": "0001_frequence-notifications",
       "breakpoints": true
     }
   ]
