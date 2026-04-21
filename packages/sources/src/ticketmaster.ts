@@ -209,12 +209,19 @@ export function mapEvenement(
       | string
       | undefined;
     const nomEvenement = evt["name"] as string;
-    const artiste =
-      nomAttractionPrincipal ??
-      artisteFallback ??
-      nomEvenement.split(/\s+-\s+/)[0]?.trim() ??
-      nomEvenement;
-    if (!artiste) return null;
+    let artiste: string;
+    if (nomAttractionPrincipal) {
+      artiste = nomAttractionPrincipal;
+    } else if (artisteFallback) {
+      // Faux positif TM : keyword search trop large, titre sans rapport avec l'artiste cherché
+      if (!nomEvenement.toLowerCase().includes(artisteFallback.toLowerCase())) {
+        return null;
+      }
+      artiste = artisteFallback;
+    } else {
+      // Sans fallback (fetch:region, fetchArtistesBatch) : sans attraction, le nom est inconnu
+      return null;
+    }
 
     const venues = embedded?.["venues"] as
       | Record<string, unknown>[]
