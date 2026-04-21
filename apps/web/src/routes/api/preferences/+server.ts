@@ -29,7 +29,7 @@ export const GET: RequestHandler = async ({ locals }) => {
         departements: userConfig.departements,
         rayonKm: userConfig.rayonKm,
         filtreDisponibles: userConfig.filtreDisponibles,
-        notificationsEmail: userConfig.notificationsEmail,
+        frequenceNotifications: userConfig.frequenceNotifications,
         theme: userConfig.theme,
       })
       .from(userConfig)

@@ -16,6 +16,26 @@
 		<section>
 			<div class="mb-4 flex items-center gap-2 text-foreground">
 				<History size={20} aria-hidden="true" />
+				<h2 class="text-base font-medium">v 1.2 — Avril 2026</h2>
+			</div>
+			<div class="space-y-4 text-sm text-muted-foreground">
+				<div>
+					<p class="mb-1 font-medium text-foreground">Notifications email</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Notifications concerts : recevez un email lorsque de nouveaux concerts correspondent à vos préférences. Trois fréquences au choix dans Paramètres : désactivées, après chaque mise à jour (toutes les 2h), ou récapitulatif quotidien à 8h.</li>
+						<li>Email d'invitation automatique lors de la création de compte par l'admin.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Mot de passe oublié</p>
+					<p>Réinitialisez votre mot de passe depuis la page de connexion sans passer par l'admin.</p>
+				</div>
+			</div>
+		</section>
+
+		<section>
+			<div class="mb-4 flex items-center gap-2 text-foreground">
+				<History size={20} aria-hidden="true" />
 				<h2 class="text-base font-medium">v 1.0 — Avril 2026</h2>
 			</div>
 			<div class="space-y-6 text-sm text-muted-foreground">

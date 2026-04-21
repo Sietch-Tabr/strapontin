@@ -1,17 +1,19 @@
 // Persiste les concerts dédoublonnés en base et met à jour user_matches.
 
 import pino from "pino";
-import { eq, and, inArray, notInArray, sql } from "drizzle-orm";
+import { eq, and, inArray, notInArray, isNull, sql } from "drizzle-orm";
 import {
   concerts,
   userMatches,
   userArtistes,
   userSalles,
   userConfig,
+  users,
 } from "@strapontin/core/schema";
 import { normaliserTexte, similarite } from "@strapontin/core";
 import type { ConcertBrut } from "@strapontin/sources";
 import { db } from "./db.js";
+import { envoyerDigestConcerts } from "./email.js";
 
 const logger = pino({ name: "persister" });
 
@@ -312,4 +314,93 @@ export async function recalculerMatches(userIds?: string[]): Promise<void> {
 
     logger.info({ userId, matches: concertIds.length }, "matches recalculés");
   }
+
+  // Notifier les users en mode temps_reel après recalcul
+  await notifierUsersTempsReel(usersARecalculer);
+}
+
+// Envoie un digest aux users configurés en 'temps_reel' pour les matches non encore notifiés.
+// Appelée après recalculerMatches — ne couvre pas les users en mode 'quotidien'.
+export async function notifierUsersTempsReel(userIds: string[]): Promise<void> {
+  if (userIds.length === 0) return;
+
+  for (const userId of userIds) {
+    const config = await db
+      .select({
+        frequenceNotifications: userConfig.frequenceNotifications,
+      })
+      .from(userConfig)
+      .where(eq(userConfig.userId, userId))
+      .then((rows) => rows[0] ?? null);
+
+    if (config?.frequenceNotifications !== "temps_reel") continue;
+
+    const userRow = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, userId))
+      .then((rows) => rows[0] ?? null);
+
+    if (!userRow) continue;
+
+    await envoyerDigestPourUser(userId, userRow.email);
+  }
+}
+
+// Envoie un digest aux users configurés en 'quotidien' pour les matches non encore notifiés.
+// Appelée par le job notifier:digest planifié chaque matin.
+export async function notifierUsersQuotidien(): Promise<void> {
+  const usersQuotidien = await db
+    .select({ userId: userConfig.userId })
+    .from(userConfig)
+    .where(eq(userConfig.frequenceNotifications, "quotidien"));
+
+  for (const { userId } of usersQuotidien) {
+    const userRow = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, userId))
+      .then((rows) => rows[0] ?? null);
+
+    if (!userRow) continue;
+
+    await envoyerDigestPourUser(userId, userRow.email);
+  }
+}
+
+async function envoyerDigestPourUser(userId: string, email: string): Promise<void> {
+  const nouveauxMatches = await db
+    .select({
+      concertId: userMatches.concertId,
+      artiste: concerts.artiste,
+      date: concerts.date,
+      salle: concerts.salle,
+      ville: concerts.ville,
+      url: concerts.url,
+    })
+    .from(userMatches)
+    .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
+    .where(and(eq(userMatches.userId, userId), isNull(userMatches.notifieLe)));
+
+  if (nouveauxMatches.length === 0) return;
+
+  await envoyerDigestConcerts({
+    email,
+    concerts: nouveauxMatches.map((m) => ({
+      artiste: m.artiste,
+      date: m.date,
+      salle: m.salle,
+      ville: m.ville,
+      url: m.url,
+    })),
+  });
+
+  // Marquer comme notifiés
+  const concertIds = nouveauxMatches.map((m) => m.concertId);
+  await db
+    .update(userMatches)
+    .set({ notifieLe: new Date() })
+    .where(
+      and(eq(userMatches.userId, userId), inArray(userMatches.concertId, concertIds)),
+    );
 }

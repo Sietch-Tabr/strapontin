@@ -66,6 +66,24 @@
 						Exportez et importez vos préférences au format JSON.
 					</p>
 				</div>
+
+				<div>
+					<p class="mb-1 font-medium text-foreground">Notifications email</p>
+					<p>
+						Recevez un email lorsque de nouveaux concerts correspondent à vos préférences (artistes
+						ou salles suivis). Trois options disponibles dans Paramètres → Notifications : désactivées,
+						après chaque mise à jour (toutes les 2 heures), ou en récapitulatif quotidien à 8h.
+						Opt-in — désactivées par défaut.
+					</p>
+				</div>
+
+				<div>
+					<p class="mb-1 font-medium text-foreground">Mot de passe oublié</p>
+					<p>
+						Depuis la page de connexion, cliquez sur « Mot de passe oublié ? » et saisissez votre
+						adresse email. Un lien valable 1 heure vous sera envoyé.
+					</p>
+				</div>
 			</div>
 		</section>
 

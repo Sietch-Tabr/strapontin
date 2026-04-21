@@ -101,22 +101,43 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     },
   );
 
-  // Purge des concerts passés — planifiée une fois par jour (idempotent via jobId fixe)
   const maintenant = new Date();
   const debutJour = new Date(
     maintenant.getFullYear(),
     maintenant.getMonth(),
     maintenant.getDate(),
   );
-  const prochainDebutJour = new Date(debutJour.getTime() + 24 * 60 * 60 * 1000);
-  const delaiPurge = prochainDebutJour.getTime() - maintenant.getTime();
+  const tag = debutJour.toISOString().split("T")[0]!;
+
+  // Purge des concerts passés — une fois par jour à minuit
+  const prochainMinuit = new Date(debutJour.getTime() + 24 * 60 * 60 * 1000);
+  const delaiPurge = prochainMinuit.getTime() - maintenant.getTime();
 
   await queue.add(
     "purger:concerts",
     { type: "purger:concerts" },
     {
-      jobId: `purge__${debutJour.toISOString().split("T")[0]}`,
+      jobId: `purge__${tag}`,
       delay: delaiPurge,
+      removeOnComplete: { count: 3 },
+      removeOnFail: true,
+    },
+  );
+
+  // Digest quotidien — 8h du matin (heure locale serveur)
+  const prochainDigest = new Date(debutJour.getTime() + 8 * 60 * 60 * 1000);
+  if (prochainDigest <= maintenant) {
+    // 8h déjà passée aujourd'hui → planifier pour demain 8h
+    prochainDigest.setDate(prochainDigest.getDate() + 1);
+  }
+  const delaiDigest = prochainDigest.getTime() - maintenant.getTime();
+
+  await queue.add(
+    "notifier:digest",
+    { type: "notifier:digest" },
+    {
+      jobId: `digest__${tag}`,
+      delay: delaiDigest,
       removeOnComplete: { count: 3 },
       removeOnFail: true,
     },

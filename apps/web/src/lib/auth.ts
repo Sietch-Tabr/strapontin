@@ -4,6 +4,7 @@ import { username } from "better-auth/plugins";
 import { PUBLIC_BASE_URL } from "$env/static/public";
 import { db } from "$lib/server/db";
 import * as schema from "@strapontin/core/schema";
+import { envoyerResetMotDePasse } from "$lib/server/email";
 
 export const auth = betterAuth({
   baseURL: PUBLIC_BASE_URL,
@@ -18,6 +19,9 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    sendResetPassword: async ({ user, url }) => {
+      await envoyerResetMotDePasse({ email: user.email, lienReset: url });
+    },
   },
   plugins: [
     username({

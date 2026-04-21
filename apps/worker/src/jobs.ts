@@ -9,7 +9,7 @@ import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import { lt } from "drizzle-orm";
 import { db } from "./db.js";
 import { ticketmaster, eventim } from "./sources.js";
-import { persisterConcerts, recalculerMatches } from "./persister.js";
+import { persisterConcerts, recalculerMatches, notifierUsersQuotidien } from "./persister.js";
 import {
   redis,
   CLE_QUOTA_TM,
@@ -188,13 +188,18 @@ export interface JobPurgerConcerts {
   type: "purger:concerts";
 }
 
+export interface JobNotifierDigest {
+  type: "notifier:digest";
+}
+
 export type JobData =
   | JobFetchArtiste
   | JobFetchArtistesBatch
   | JobFetchRegion
   | JobFetchSalle
   | JobRecalculerMatches
-  | JobPurgerConcerts;
+  | JobPurgerConcerts
+  | JobNotifierDigest;
 
 export async function traiterJob(job: Job<JobData>): Promise<void> {
   const { data } = job;
@@ -476,6 +481,13 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         { dateLimite, supprimes: resultat.length },
         "purger:concerts terminé",
       );
+      break;
+    }
+
+    case "notifier:digest": {
+      logger.info("notifier:digest démarré");
+      await notifierUsersQuotidien();
+      logger.info("notifier:digest terminé");
       break;
     }
 

@@ -2,7 +2,7 @@
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
-	import { Sun, Moon, Monitor, Save, KeyRound, User, Download, Upload } from '@lucide/svelte';
+	import { Sun, Moon, Monitor, Save, KeyRound, User, Download, Upload, Bell } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 	import ComboboxDepts from '$lib/components/ui/combobox-depts.svelte';
 	import { TOUS_LES_DEPTS } from '$lib/constantes/depts';
@@ -12,7 +12,7 @@
 	let deptsSelectionnes = $state<string[]>(untrack(() => data.config?.departements ?? []));
 	let rayonKm = $state<number>(untrack(() => data.config?.rayonKm ?? 50));
 	let filtreDisponibles = $state<boolean>(untrack(() => data.config?.filtreDisponibles ?? true));
-	let notificationsEmail = $state<boolean>(untrack(() => data.config?.notificationsEmail ?? false));
+	let frequenceNotifications = $state<string>(untrack(() => data.config?.frequenceNotifications ?? 'jamais'));
 	let nom = $state<string>(untrack(() => data.utilisateur?.name ?? ''));
 	let identifiant = $state<string>(untrack(() => (data.utilisateur as { username?: string | null } & typeof data.utilisateur)?.username ?? ''));
 	let theme = $state<string>(untrack(() => data.theme));
@@ -22,12 +22,13 @@
 		deptsSelectionnes = data.config?.departements ?? [];
 		rayonKm = data.config?.rayonKm ?? 50;
 		filtreDisponibles = data.config?.filtreDisponibles ?? true;
-		notificationsEmail = data.config?.notificationsEmail ?? false;
+		frequenceNotifications = data.config?.frequenceNotifications ?? 'jamais';
 		nom = data.utilisateur?.name ?? '';
 		identifiant = (data.utilisateur as { username?: string | null } & typeof data.utilisateur)?.username ?? '';
 	});
 
 	let enregistrementConfig = $state(false);
+	let enregistrementNotifications = $state(false);
 	let enregistrementCompte = $state(false);
 	let enregistrementIdentifiant = $state(false);
 	let enregistrementMdp = $state(false);
@@ -120,19 +121,6 @@
 					</label>
 				</div>
 
-				<div class="flex items-center gap-3">
-					<input
-						id="notificationsEmail"
-						type="checkbox"
-						name="notificationsEmail"
-						bind:checked={notificationsEmail}
-						class="h-4 w-4 rounded border-border accent-foreground"
-					/>
-					<label for="notificationsEmail" class="text-sm text-foreground">
-						Recevoir les alertes par email
-					</label>
-				</div>
-
 				<button
 					type="submit"
 					disabled={enregistrementConfig}
@@ -140,6 +128,72 @@
 				>
 					<Save size={16} />
 					{enregistrementConfig ? 'Enregistrement…' : 'Enregistrer'}
+				</button>
+			</form>
+		</section>
+
+		<!-- Notifications -->
+		<section class="rounded-lg border border-border bg-card p-6">
+			<div class="mb-6 flex items-center gap-2">
+				<Bell size={18} class="text-foreground" aria-hidden="true" />
+				<h2 class="text-base font-semibold text-foreground">Notifications</h2>
+			</div>
+
+			{#if form?.succes === 'notifications'}
+				<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+					Préférences de notification enregistrées.
+				</p>
+			{/if}
+			{#if form?.erreur && form?.section === 'notifications'}
+				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+					{form.erreur}
+				</p>
+			{/if}
+
+			<form
+				method="POST"
+				action="?/notifications"
+				class="space-y-4"
+				use:enhance={() => {
+					enregistrementNotifications = true;
+					return async ({ result, update }) => {
+						if (result.type === 'success') toast.success('Notifications enregistrées');
+						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+						await update({ reset: false });
+						enregistrementNotifications = false;
+					};
+				}}
+			>
+				<p class="text-sm text-muted-foreground">
+					Recevez un email lorsque de nouveaux concerts correspondent à vos préférences.
+				</p>
+
+				<div class="space-y-2">
+					{#each [
+						{ valeur: 'jamais', label: 'Désactivées' },
+						{ valeur: 'temps_reel', label: 'Après chaque mise à jour (toutes les 2h)' },
+						{ valeur: 'quotidien', label: 'Un récapitulatif quotidien (8h)' },
+					] as option (option.valeur)}
+						<label class="flex cursor-pointer items-center gap-3 rounded-md border border-border p-3 transition-colors hover:bg-accent {frequenceNotifications === option.valeur ? 'border-foreground bg-accent' : ''}">
+							<input
+								type="radio"
+								name="frequenceNotifications"
+								value={option.valeur}
+								bind:group={frequenceNotifications}
+								class="accent-foreground"
+							/>
+							<span class="text-sm text-foreground">{option.label}</span>
+						</label>
+					{/each}
+				</div>
+
+				<button
+					type="submit"
+					disabled={enregistrementNotifications}
+					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+				>
+					<Save size={16} />
+					{enregistrementNotifications ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</form>
 		</section>
