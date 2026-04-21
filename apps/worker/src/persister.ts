@@ -95,27 +95,39 @@ async function reconcilierSalles(
   });
 }
 
-// Dédoublonne par clé de conflit (artiste_norm, date, salle_norm) avant l'upsert.
-// Le resolver canonicalise les noms après dedoublonner(), pouvant créer des doublons
-// que PostgreSQL rejette avec "ON CONFLICT DO UPDATE command cannot affect row a second time".
-// En cas de doublon, on conserve la version avec le plus de diacritiques.
-// Score de qualité d'un concert pour le choix en cas de doublon.
-// Cohérent avec les règles de l'upsert SQL (unaccent / upper).
-function scoreQualite(c: ConcertBrut): number {
-  const artisteDiacr = c.artiste.normalize("NFD").length - c.artiste.length;
-  const salleDiacr = c.salle.normalize("NFD").length - c.salle.length;
-  const artisteCasseMixte = c.artiste !== c.artiste.toUpperCase() ? 1 : 0;
-  const salleCasseMixte = c.salle !== c.salle.toUpperCase() ? 1 : 0;
+// Score de qualité commun — diacritiques et casse mixte préférés, cohérent avec l'upsert SQL.
+function scoreArtisteSalle(artiste: string, salle: string): number {
+  const artisteDiacr = artiste.normalize("NFD").length - artiste.length;
+  const salleDiacr = salle.normalize("NFD").length - salle.length;
+  const artisteCasseMixte = artiste !== artiste.toUpperCase() ? 1 : 0;
+  const salleCasseMixte = salle !== salle.toUpperCase() ? 1 : 0;
   return artisteDiacr * 10 + artisteCasseMixte * 5 + salleDiacr + salleCasseMixte;
 }
 
+// Dédoublonne par clé de conflit (artiste_norm, date, salle_norm) avant l'upsert.
+// Le resolver canonicalise les noms après dedoublonner(), pouvant créer des doublons
+// que PostgreSQL rejette avec "ON CONFLICT DO UPDATE command cannot affect row a second time".
 export function deduplicerParCleConflit(liste: ConcertBrut[]): ConcertBrut[] {
   const parCle = new Map<string, ConcertBrut>();
   for (const c of liste) {
     const cle = `${normaliserTexte(c.artiste)}|${c.date}|${normaliserTexte(c.salle)}`;
     const existant = parCle.get(cle);
-    if (!existant || scoreQualite(c) > scoreQualite(existant)) {
+    if (!existant || scoreArtisteSalle(c.artiste, c.salle) > scoreArtisteSalle(existant.artiste, existant.salle)) {
       parCle.set(cle, c);
+    }
+  }
+  return [...parCle.values()];
+}
+
+// Deuxième passe après reconcilierSalles : les réécritures de salleNorm peuvent créer
+// de nouveaux doublons intra-lot (ex. deux salles réconciliées vers la même clé).
+function deduplicerLotReconcilie(lot: ValeurConcert[]): ValeurConcert[] {
+  const parCle = new Map<string, ValeurConcert>();
+  for (const v of lot) {
+    const cle = `${v.artisteNorm}|${v.date}|${v.salleNorm}`;
+    const existant = parCle.get(cle);
+    if (!existant || scoreArtisteSalle(v.artiste, v.salle) > scoreArtisteSalle(existant.artiste, existant.salle)) {
+      parCle.set(cle, v);
     }
   }
   return [...parCle.values()];
@@ -155,7 +167,7 @@ export async function persisterConcerts(
         c.statut !== null ? !STATUTS_INDISPONIBLES.has(c.statut) : true,
     }));
 
-    const valeurs = await reconcilierSalles(valeursBrutes);
+    const valeurs = deduplicerLotReconcilie(await reconcilierSalles(valeursBrutes));
 
     const inseres = await db
       .insert(concerts)
