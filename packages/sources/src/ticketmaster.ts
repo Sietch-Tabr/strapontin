@@ -181,11 +181,10 @@ export function parseDateTM(
   return { date, heure: heureStr.slice(0, 5) };
 }
 
-// artisteFallback : nom canonique connu à l'avance (ex. mot-clé de fetchArtiste).
-// Évite d'utiliser le titre de l'événement TM ("Hoshi - Bonjour Docteur Tour")
-// comme nom d'artiste quand _embedded.attractions est absent ou vide.
-// Sans fallback, on extrait la partie avant le premier " - " du titre,
-// ce qui couvre la convention TM la plus fréquente.
+// artisteFallback : nom de l'artiste cherché (mot-clé de fetchArtiste).
+// Utilisé quand _embedded.attractions est absent, à condition que le titre
+// contienne le nom — sinon l'événement est rejeté (faux positif keyword TM).
+// Sans fallback (fetch:region, fetchArtistesBatch) : null si pas d'attraction.
 export function mapEvenement(
   evt: Record<string, unknown>,
   artisteFallback?: string,
@@ -209,12 +208,19 @@ export function mapEvenement(
       | string
       | undefined;
     const nomEvenement = evt["name"] as string;
-    const artiste =
-      nomAttractionPrincipal ??
-      artisteFallback ??
-      nomEvenement.split(/\s+-\s+/)[0]?.trim() ??
-      nomEvenement;
-    if (!artiste) return null;
+    let artiste: string;
+    if (nomAttractionPrincipal) {
+      artiste = nomAttractionPrincipal;
+    } else if (artisteFallback) {
+      // Faux positif TM : keyword search trop large, titre sans rapport avec l'artiste cherché
+      if (!nomEvenement.toLowerCase().includes(artisteFallback.toLowerCase())) {
+        return null;
+      }
+      artiste = artisteFallback;
+    } else {
+      // Sans fallback (fetch:region, fetchArtistesBatch) : sans attraction, le nom est inconnu
+      return null;
+    }
 
     const venues = embedded?.["venues"] as
       | Record<string, unknown>[]

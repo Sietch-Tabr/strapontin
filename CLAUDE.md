@@ -463,8 +463,8 @@ TM retourne parfois des événements sans `_embedded.attractions` (tableau absen
 `mapEvenement()` résout le nom d'artiste dans l'ordre de priorité suivant :
 
 1. `_embedded.attractions[0].name` (nom canonique, toujours préféré)
-2. `artisteFallback` passé par l'appelant — `fetchArtiste(nom)` passe le mot-clé de recherche
-3. Partie avant le premier `-` du titre de l'événement (heuristique pour les appels sans contexte artiste)
+2. `artisteFallback` passé par l'appelant (`fetchArtiste(nom)`) — seulement si le titre contient le nom (insensible à la casse), sinon `null` (faux positif TM rejeté)
+3. Sans attraction ni fallback (fetch:region, fetchArtistesBatch) → `null` ; l'heuristique `split(" - ")` a été supprimée (produisait des faux artistes en base)
 
 ### Persistance — upsert `persisterConcerts`
 

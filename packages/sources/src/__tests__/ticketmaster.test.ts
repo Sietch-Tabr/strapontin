@@ -150,7 +150,7 @@ describe("mapEvenement — Ticketmaster", () => {
     expect(resultat?.artiste).toBe("Julien Clerc");
   });
 
-  it("extrait_artiste_depuis_nom_evenement_si_pas_de_fallback", () => {
+  it("retourne_null_si_pas_d_attraction_ni_de_fallback", () => {
     const evt = evenementTMRaw({
       name: "Radiohead - OK Computer Tour",
       _embedded: {
@@ -164,8 +164,7 @@ describe("mapEvenement — Ticketmaster", () => {
         ],
       },
     });
-    const resultat = mapEvenement(evt);
-    expect(resultat?.artiste).toBe("Radiohead");
+    expect(mapEvenement(evt)).toBeNull();
   });
 
   it("normalise_nom_salle_tout_majuscule_en_title_case", () => {
@@ -176,12 +175,47 @@ describe("mapEvenement — Ticketmaster", () => {
   it("normalise_nom_salle_avec_apostrophe_capitalise_apres_apostrophe", () => {
     const evt = evenementTMRaw({
       _embedded: {
+        attractions: [{ name: "Julien Clerc" }],
         venues: [
           { name: "L'OLYMPIA", city: { name: "Paris" }, postalCode: "75009" },
         ],
       },
     });
     expect(mapEvenement(evt)?.salle).toBe("L'Olympia");
+  });
+
+  it("rejette_faux_positif_artisteFallback_titre_sans_rapport", () => {
+    const evt = evenementTMRaw({
+      name: "Déjeuner pour 2 personnes Tour Eiffel",
+      _embedded: {
+        attractions: [],
+        venues: [
+          {
+            name: "Madame Brasserie",
+            city: { name: "Paris" },
+            postalCode: "75007",
+          },
+        ],
+      },
+    });
+    expect(mapEvenement(evt, "2 Unlimited")).toBeNull();
+  });
+
+  it("accepte_artisteFallback_si_titre_contient_artiste", () => {
+    const evt = evenementTMRaw({
+      name: "2 Unlimited - Greatest Hits Tour",
+      _embedded: {
+        attractions: [],
+        venues: [
+          {
+            name: "Zénith Paris",
+            city: { name: "Paris" },
+            postalCode: "75019",
+          },
+        ],
+      },
+    });
+    expect(mapEvenement(evt, "2 Unlimited")?.artiste).toBe("2 Unlimited");
   });
 
   it("retourne_null_si_date_absente", () => {
