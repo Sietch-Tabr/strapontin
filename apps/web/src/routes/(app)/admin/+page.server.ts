@@ -6,6 +6,7 @@ import type { QuotaTM } from "@strapontin/sources";
 import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
+import { envoyerInvitation } from "$lib/server/email";
 import type { PageServerLoad, Actions } from "./$types";
 
 const FORMAT_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -92,6 +93,12 @@ export const actions: Actions = {
         mustChangeCredentials: true,
       })
       .where(eq(users.email, email));
+
+    await envoyerInvitation({
+      email,
+      identifiant: usernameTemp,
+      motDePasse: motDePasseTemp,
+    });
 
     return { succes: true, motDePasseTemp, email, identifiant: usernameTemp };
   },

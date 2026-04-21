@@ -38,7 +38,7 @@ interface ConfigExportee {
   departements?: string[];
   rayonKm?: number;
   filtreDisponibles?: boolean;
-  notificationsEmail?: boolean;
+  frequenceNotifications?: string;
   theme?: string;
 }
 
@@ -73,10 +73,6 @@ export const actions: Actions = {
       donnees.get("filtreDisponibles") === "on" ||
       donnees.get("filtreDisponibles") === "true";
 
-    const notificationsEmail =
-      donnees.get("notificationsEmail") === "on" ||
-      donnees.get("notificationsEmail") === "true";
-
     await db
       .insert(userConfig)
       .values({
@@ -84,7 +80,6 @@ export const actions: Actions = {
         departements: depts,
         rayonKm,
         filtreDisponibles,
-        notificationsEmail,
       })
       .onConflictDoUpdate({
         target: userConfig.userId,
@@ -92,12 +87,34 @@ export const actions: Actions = {
           departements: depts,
           rayonKm,
           filtreDisponibles,
-          notificationsEmail,
           updatedAt: new Date(),
         },
       });
 
     return { succes: "config" };
+  },
+
+  notifications: async ({ request, locals }) => {
+    const donnees = await request.formData();
+    const valeur = donnees.get("frequenceNotifications")?.toString();
+    const valeurs = ["jamais", "temps_reel", "quotidien"] as const;
+    type FrequenceNotifications = (typeof valeurs)[number];
+
+    if (!valeurs.includes(valeur as FrequenceNotifications)) {
+      return fail(400, { erreur: "Valeur invalide.", section: "notifications" });
+    }
+
+    const frequenceNotifications = valeur as FrequenceNotifications;
+
+    await db
+      .insert(userConfig)
+      .values({ userId: locals.user!.id, frequenceNotifications })
+      .onConflictDoUpdate({
+        target: userConfig.userId,
+        set: { frequenceNotifications, updatedAt: new Date() },
+      });
+
+    return { succes: "notifications" };
   },
 
   theme: async ({ request, cookies, locals }) => {
@@ -392,7 +409,7 @@ export const actions: Actions = {
                 departements: depts,
                 rayonKm: rayon,
                 filtreDisponibles: cfg.filtreDisponibles ?? true,
-                notificationsEmail: cfg.notificationsEmail ?? false,
+                frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
                 ...(themeImporte ? { theme: themeImporte } : {}),
               })
               .onConflictDoUpdate({
@@ -401,7 +418,7 @@ export const actions: Actions = {
                   departements: depts,
                   rayonKm: rayon,
                   filtreDisponibles: cfg.filtreDisponibles ?? true,
-                  notificationsEmail: cfg.notificationsEmail ?? false,
+                  frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
                   ...(themeImporte ? { theme: themeImporte } : {}),
                   updatedAt: new Date(),
                 },
@@ -501,7 +518,7 @@ export const actions: Actions = {
                 departements: tousLesDepts,
                 rayonKm: rayon,
                 filtreDisponibles: cfg.filtreDisponibles ?? true,
-                notificationsEmail: cfg.notificationsEmail ?? false,
+                frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
                 ...(themeImporte ? { theme: themeImporte } : {}),
               })
               .onConflictDoUpdate({
@@ -510,7 +527,7 @@ export const actions: Actions = {
                   departements: tousLesDepts,
                   rayonKm: rayon,
                   filtreDisponibles: cfg.filtreDisponibles ?? true,
-                  notificationsEmail: cfg.notificationsEmail ?? false,
+                  frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
                   ...(themeImporte ? { theme: themeImporte } : {}),
                   updatedAt: new Date(),
                 },

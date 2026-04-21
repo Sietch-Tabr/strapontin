@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { signIn } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 
 	let identifiant = $state('');
 	let motDePasse = $state('');
 	let erreur = $state('');
 	let chargement = $state(false);
+
+	const resetOk = $derived($page.url.searchParams.get('reset') === 'ok');
 
 	async function connexion(e: SubmitEvent) {
 		e.preventDefault();
@@ -30,6 +33,12 @@
 			<p class="text-sm text-muted-foreground">Connectez-vous pour accéder à vos concerts</p>
 		</div>
 
+		{#if resetOk}
+			<p class="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+				Mot de passe mis à jour. Vous pouvez vous connecter.
+			</p>
+		{/if}
+
 		<form onsubmit={connexion} class="space-y-4">
 			<div class="space-y-2">
 				<label for="identifiant" class="text-sm font-medium">Identifiant</label>
@@ -44,7 +53,12 @@
 			</div>
 
 			<div class="space-y-2">
-				<label for="mot-de-passe" class="text-sm font-medium">Mot de passe</label>
+				<div class="flex items-center justify-between">
+					<label for="mot-de-passe" class="text-sm font-medium">Mot de passe</label>
+					<a href="/forgot-password" class="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">
+						Mot de passe oublié ?
+					</a>
+				</div>
 				<input
 					id="mot-de-passe"
 					type="password"

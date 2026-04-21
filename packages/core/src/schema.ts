@@ -209,7 +209,10 @@ export const userConfig = pgTable(
     departements: text("departements").array().notNull().default([]),
     rayonKm: integer("rayon_km").notNull().default(50),
     filtreDisponibles: boolean("filtre_disponibles").notNull().default(true),
-    notificationsEmail: boolean("notifications_email").notNull().default(false),
+    frequenceNotifications: text("frequence_notifications")
+      .notNull()
+      .default("jamais")
+      .$type<"jamais" | "temps_reel" | "quotidien">(),
     // Préférence de thème : 'auto' suit les préférences système, 'clair'/'sombre' forcent le thème
     theme: text("theme").notNull().default("auto"),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -220,6 +223,10 @@ export const userConfig = pgTable(
     check(
       "chk_user_config_theme",
       sql`${table.theme} IN ('auto', 'clair', 'sombre')`,
+    ),
+    check(
+      "chk_frequence_notifications",
+      sql`${table.frequenceNotifications} IN ('jamais', 'temps_reel', 'quotidien')`,
     ),
   ],
 );
