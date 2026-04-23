@@ -143,7 +143,7 @@ export const actions: Actions = {
       return fail(404, { erreur: "Utilisateur introuvable." });
     }
 
-    await auth.api.forgetPassword({
+    await auth.api.requestPasswordReset({
       body: { email: cible.email, redirectTo: `${PUBLIC_BASE_URL}/reset-password` },
     });
 
