@@ -8,6 +8,7 @@
 	import { TOUS_LES_DEPTS } from '$lib/constantes/depts';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+	let resendDisponible = $derived(data.resendDisponible);
 
 	let deptsSelectionnes = $state<string[]>(untrack(() => data.config?.departements ?? []));
 	let rayonKm = $state<number>(untrack(() => data.config?.rayonKm ?? 50));
@@ -164,6 +165,7 @@
 					};
 				}}
 			>
+				{#if resendDisponible}
 				<p class="text-sm text-muted-foreground">
 					Recevez un email lorsque de nouveaux concerts correspondent à vos préférences.
 				</p>
@@ -195,6 +197,11 @@
 					<Save size={16} />
 					{enregistrementNotifications ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
+			{:else}
+				<p class="text-sm text-muted-foreground">
+					Les notifications email ne sont pas disponibles sur cette instance (service email non configuré).
+				</p>
+			{/if}
 			</form>
 		</section>
 

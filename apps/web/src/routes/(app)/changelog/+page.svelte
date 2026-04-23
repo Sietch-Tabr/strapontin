@@ -20,6 +20,10 @@
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
 				<div>
+					<p class="mb-1 font-medium text-foreground">Signalement et suggestions</p>
+					<p>Un formulaire de contact est disponible dans Aide pour signaler un bug, proposer une amélioration ou poser une question directement depuis l'application.</p>
+				</div>
+				<div>
 					<p class="mb-1 font-medium text-foreground">Notifications email</p>
 					<ul class="list-inside list-disc space-y-1">
 						<li>Notifications concerts : recevez un email lorsque de nouveaux concerts correspondent à vos préférences. Trois fréquences au choix dans Paramètres : désactivées, après chaque mise à jour (toutes les 2h), ou récapitulatif quotidien à 8h.</li>

@@ -10,6 +10,8 @@ const logger = pino({ name: "email" });
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
+export const resendDisponible = !!RESEND_API_KEY;
+
 const EXPEDITEUR = "Strapontin <noreply@strapontin.kwaite.fr>";
 const REPLY_TO = "admin@strapontin.kwaite.fr";
 
@@ -117,5 +119,53 @@ ${piedHtml()}`;
     logger.error({ err: error, email: params.email }, "échec envoi reset MDP");
   } else {
     logger.info({ email: params.email }, "email reset MDP envoyé");
+  }
+}
+
+export async function envoyerSignalement(params: {
+  type: string;
+  message: string;
+  expediteurEmail: string;
+  expediteurNom: string;
+}): Promise<void> {
+  if (!resend) {
+    logger.warn("RESEND_API_KEY absent — signalement non envoyé");
+    return;
+  }
+
+  const types: Record<string, string> = {
+    bug: "Bug",
+    suggestion: "Amélioration",
+    question: "Question",
+  };
+  const typeLabel = types[params.type] ?? params.type;
+
+  const corps = `${enTeteHtml(`Signalement — ${typeLabel}`)}
+<h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px">Signalement — ${typeLabel}</h2>
+<table style="border-collapse:collapse;width:100%;margin-bottom:24px">
+  <tr>
+    <td style="padding:8px 0;color:#888;font-size:14px;width:130px">Utilisateur</td>
+    <td style="padding:8px 0;font-size:14px;color:#111">${params.expediteurNom}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#888;font-size:14px">Email</td>
+    <td style="padding:8px 0;font-size:14px;color:#111">${params.expediteurEmail}</td>
+  </tr>
+</table>
+<p style="color:#555;font-size:14px;white-space:pre-wrap;border-left:3px solid #e5e5e5;padding-left:12px;margin:0">${params.message}</p>
+${piedHtml()}`;
+
+  const { error } = await resend.emails.send({
+    from: EXPEDITEUR,
+    replyTo: params.expediteurEmail,
+    to: REPLY_TO,
+    subject: `[Strapontin] Signalement — ${typeLabel} — ${params.expediteurNom}`,
+    html: corps,
+  });
+
+  if (error) {
+    logger.error({ err: error }, "échec envoi signalement");
+  } else {
+    logger.info({ expediteur: params.expediteurEmail }, "signalement envoyé");
   }
 }
