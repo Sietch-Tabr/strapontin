@@ -15,6 +15,7 @@
 	let filtreDisponibles = $state<boolean>(untrack(() => data.config?.filtreDisponibles ?? true));
 	let frequenceNotifications = $state<string>(untrack(() => data.config?.frequenceNotifications ?? 'jamais'));
 	let nom = $state<string>(untrack(() => data.utilisateur?.name ?? ''));
+	let email = $state<string>(untrack(() => data.utilisateur?.email ?? ''));
 	let identifiant = $state<string>(untrack(() => (data.utilisateur as { username?: string | null } & typeof data.utilisateur)?.username ?? ''));
 	let theme = $state<string>(untrack(() => data.theme));
 
@@ -25,16 +26,19 @@
 		filtreDisponibles = data.config?.filtreDisponibles ?? true;
 		frequenceNotifications = data.config?.frequenceNotifications ?? 'jamais';
 		nom = data.utilisateur?.name ?? '';
+		email = data.utilisateur?.email ?? '';
 		identifiant = (data.utilisateur as { username?: string | null } & typeof data.utilisateur)?.username ?? '';
 	});
 
 	let enregistrementConfig = $state(false);
 	let enregistrementNotifications = $state(false);
 	let enregistrementCompte = $state(false);
+	let enregistrementEmail = $state(false);
 	let enregistrementIdentifiant = $state(false);
 	let enregistrementMdp = $state(false);
 	let importEnCours = $state(false);
 	let modeImport = $state<'merger' | 'ecraser'>('merger');
+	let confirmationSuppression = $state(false);
 </script>
 
 <svelte:head>
@@ -365,6 +369,58 @@
 
 			<hr class="my-6 border-border" />
 
+			<!-- Email -->
+			<div>
+				<h3 class="mb-4 text-sm font-medium text-muted-foreground">Adresse email</h3>
+				<p class="mb-3 text-xs text-muted-foreground">Utilisée pour les notifications et la réinitialisation du mot de passe.</p>
+
+				{#if form?.succes === 'email'}
+					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+						Adresse email mise à jour.
+					</p>
+				{/if}
+				{#if form?.erreur && form?.section === 'email'}
+					<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+						{form.erreur}
+					</p>
+				{/if}
+
+				<form
+					method="POST"
+					action="?/email"
+					class="space-y-4"
+					use:enhance={() => {
+						enregistrementEmail = true;
+						return async ({ result, update }) => {
+							if (result.type === 'success') toast.success('Adresse email mise à jour');
+							else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+							await update({ reset: false });
+							enregistrementEmail = false;
+						};
+					}}
+				>
+					<input
+						id="email"
+						type="email"
+						name="email"
+						bind:value={email}
+						maxlength="254"
+						autocomplete="email"
+						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+					/>
+					<button
+						type="submit"
+						disabled={enregistrementEmail}
+						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+					>
+						<User size={16} />
+						{enregistrementEmail ? 'Mise à jour…' : 'Mettre à jour'}
+					</button>
+				</form>
+			</div>
+
+			<hr class="my-6 border-border" />
+
 			<!-- Mot de passe -->
 			<div>
 				<h3 class="mb-4 text-sm font-medium text-muted-foreground">Mot de passe</h3>
@@ -567,6 +623,45 @@
 					</button>
 				</form>
 			</div>
+		</section>
+
+		<!-- Zone de danger -->
+		<section class="rounded-lg border border-destructive/30 bg-card p-6">
+			<h2 class="mb-2 text-base font-semibold text-destructive">Zone de danger</h2>
+			<p class="mb-4 text-sm text-muted-foreground">
+				La suppression de votre compte est définitive et irréversible. Toutes vos données (artistes, salles, préférences) seront effacées.
+			</p>
+
+			{#if !confirmationSuppression}
+				<button
+					type="button"
+					onclick={() => (confirmationSuppression = true)}
+					class="rounded-md border border-destructive/50 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+				>
+					Supprimer mon compte
+				</button>
+			{:else}
+				<div class="space-y-3">
+					<p class="text-sm font-medium text-destructive">
+						Cette action est irréversible. Êtes-vous sûr ?
+					</p>
+					<form method="POST" action="?/supprimerCompte" class="flex gap-2">
+						<button
+							type="submit"
+							class="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-destructive/90"
+						>
+							Oui, supprimer définitivement
+						</button>
+						<button
+							type="button"
+							onclick={() => (confirmationSuppression = false)}
+							class="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
+						>
+							Annuler
+						</button>
+					</form>
+				</div>
+			{/if}
 		</section>
 
 	</div>

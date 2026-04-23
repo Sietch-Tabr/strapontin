@@ -7,7 +7,7 @@ import {
   users,
 } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
-import { fail } from "@sveltejs/kit";
+import { fail, redirect } from "@sveltejs/kit";
 import { queue } from "$lib/server/queue";
 import { resendDisponible } from "$lib/server/email";
 import type { PageServerLoad, Actions } from "./$types";
@@ -223,6 +223,50 @@ export const actions: Actions = {
       .where(eq(users.id, locals.user!.id));
 
     return { succes: "identifiant" };
+  },
+
+  email: async ({ request, locals }) => {
+    const donnees = await request.formData();
+    const email = donnees.get("email")?.toString().trim().toLowerCase() ?? "";
+
+    if (!email) {
+      return fail(400, { erreur: "L'adresse email ne peut pas être vide.", section: "email" });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return fail(400, { erreur: "Format d'email invalide.", section: "email" });
+    }
+
+    if (email.length > 254) {
+      return fail(400, { erreur: "Adresse email trop longue.", section: "email" });
+    }
+
+    const existant = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, email))
+      .then((rows) => rows[0] ?? null);
+
+    if (existant && existant.id !== locals.user!.id) {
+      return fail(400, { erreur: "Cette adresse email est déjà utilisée.", section: "email" });
+    }
+
+    await db
+      .update(users)
+      .set({ email, updatedAt: new Date() })
+      .where(eq(users.id, locals.user!.id));
+
+    return { succes: "email" };
+  },
+
+  supprimerCompte: async ({ locals, cookies }) => {
+    const userId = locals.user!.id;
+
+    await db.delete(users).where(eq(users.id, userId));
+
+    cookies.delete("theme", { path: "/" });
+
+    redirect(302, "/login");
   },
 
   motDePasse: async ({ request }) => {

@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import { envoyerInvitation } from "$lib/server/email";
+import { PUBLIC_BASE_URL } from "$env/static/public";
 import type { PageServerLoad, Actions } from "./$types";
 
 const FORMAT_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -118,5 +119,67 @@ export const actions: Actions = {
     await db.delete(users).where(eq(users.id, userId));
 
     return { succes: true };
+  },
+
+  reinitialiserMdp: async ({ request, locals }) => {
+    if (locals.user?.role !== "admin") {
+      return fail(403, { erreur: "Accès refusé." });
+    }
+
+    const donnees = await request.formData();
+    const userId = donnees.get("userId")?.toString() ?? "";
+
+    if (!userId || userId === locals.user.id) {
+      return fail(400, { erreur: "Impossible de réinitialiser ce compte." });
+    }
+
+    const cible = await db
+      .select({ id: users.id, email: users.email, name: users.name })
+      .from(users)
+      .where(eq(users.id, userId))
+      .then((rows) => rows[0] ?? null);
+
+    if (!cible) {
+      return fail(404, { erreur: "Utilisateur introuvable." });
+    }
+
+    await auth.api.forgetPassword({
+      body: { email: cible.email, redirectTo: `${PUBLIC_BASE_URL}/reset-password` },
+    });
+
+    return { succes: true, action: "reinitialiserMdp", email: cible.email };
+  },
+
+  modifierCompte: async ({ request, locals }) => {
+    if (locals.user?.role !== "admin") {
+      return fail(403, { erreur: "Accès refusé." });
+    }
+
+    const donnees = await request.formData();
+    const userId = donnees.get("userId")?.toString() ?? "";
+    const nom = donnees.get("nom")?.toString().trim() ?? "";
+    const email = donnees.get("email")?.toString().trim().toLowerCase() ?? "";
+
+    if (!userId) {
+      return fail(400, { erreur: "Utilisateur invalide." });
+    }
+
+    if (nom && nom.length > 100) {
+      return fail(400, { erreur: "Nom trop long (100 caractères max)." });
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return fail(400, { erreur: "Format d'email invalide." });
+    }
+
+    const mise: Partial<{ name: string; email: string; updatedAt: Date }> = {
+      updatedAt: new Date(),
+    };
+    if (nom) mise.name = nom;
+    if (email) mise.email = email;
+
+    await db.update(users).set(mise).where(eq(users.id, userId));
+
+    return { succes: true, action: "modifierCompte" };
   },
 };

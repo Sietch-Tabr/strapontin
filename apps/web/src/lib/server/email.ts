@@ -2,7 +2,7 @@
 // Si RESEND_API_KEY est absent, toutes les fonctions retournent silencieusement sans erreur.
 
 import { Resend } from "resend";
-import { RESEND_API_KEY } from "$env/static/private";
+import { RESEND_API_KEY, CONTACT_EMAIL } from "$env/static/private";
 import { PUBLIC_BASE_URL } from "$env/static/public";
 import pino from "pino";
 
@@ -13,7 +13,7 @@ const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 export const resendDisponible = !!RESEND_API_KEY;
 
 const EXPEDITEUR = "Strapontin <noreply@strapontin.kwaite.fr>";
-const REPLY_TO = "admin@strapontin.kwaite.fr";
+const REPLY_TO = CONTACT_EMAIL || "admin@strapontin.kwaite.fr";
 
 function enTeteHtml(titre: string): string {
   return `<!DOCTYPE html>

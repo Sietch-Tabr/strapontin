@@ -20,6 +20,20 @@
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
 				<div>
+					<p class="mb-1 font-medium text-foreground">Gestion du compte</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Modification de l'adresse email depuis Paramètres → Mon compte.</li>
+						<li>Suppression du compte depuis Paramètres → Zone de danger (RGPD art. 17).</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Administration</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Modification du nom et de l'email d'un utilisateur depuis la page Admin.</li>
+						<li>Réinitialisation du mot de passe par l'admin : envoi d'un lien de reset à l'utilisateur.</li>
+					</ul>
+				</div>
+				<div>
 					<p class="mb-1 font-medium text-foreground">Signalement et suggestions</p>
 					<p>Un formulaire de contact est disponible dans Aide pour signaler un bug, proposer une amélioration ou poser une question directement depuis l'application.</p>
 				</div>
