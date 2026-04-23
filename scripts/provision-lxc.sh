@@ -126,10 +126,12 @@ pct exec "$VMID" -- bash -c "
 
 echo "[5] Autologin root sur la console Proxmox..."
 pct exec "$VMID" -- bash -c "
-    mkdir -p /etc/systemd/system/getty@tty1.service.d
-    printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin root --noclear %%I linux\n' \
-        > /etc/systemd/system/getty@tty1.service.d/autologin.conf
+    GETTY_OVERRIDE=/etc/systemd/system/container-getty@1.service.d/override.conf
+    mkdir -p \"\$(dirname \"\$GETTY_OVERRIDE\")\"
+    printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin root --noclear --keep-baud tty%%I 115200,38400,9600 \$TERM\n' \
+        > \"\$GETTY_OVERRIDE\"
     systemctl daemon-reload
+    systemctl restart container-getty@1.service
 "
 
 echo "[5] Paramètre réseau net.core.somaxconn dans le LXC..."
