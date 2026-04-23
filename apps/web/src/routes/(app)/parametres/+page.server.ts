@@ -9,6 +9,7 @@ import {
 import { eq } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import { queue } from "$lib/server/queue";
+import { resendDisponible } from "$lib/server/email";
 import type { PageServerLoad, Actions } from "./$types";
 
 const FORMAT_IDENTIFIANT = /^[a-z0-9_]+$/;
@@ -52,6 +53,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
   return {
     config,
     theme: (cookies.get("theme") ?? "auto") as "auto" | "clair" | "sombre",
+    resendDisponible,
   };
 };
 

@@ -1,5 +1,21 @@
 <script lang="ts">
-	import { BookOpen, Shield, Scale } from '@lucide/svelte';
+	import { BookOpen, Shield, Scale, MessageSquare } from '@lucide/svelte';
+	import { enhance } from '$app/forms';
+	import { toast } from 'svelte-sonner';
+	import type { PageData, ActionData } from './$types';
+
+	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	let typeSignalement = $state('bug');
+	let messageSignalement = $state('');
+	let envoi = $state(false);
+
+	$effect(() => {
+		if (form?.succes) {
+			messageSignalement = '';
+			typeSignalement = 'bug';
+		}
+	});
 </script>
 
 <svelte:head>
@@ -171,6 +187,88 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.</pre>
 			</div>
+		</section>
+
+		<!-- Signaler un problème -->
+		<section>
+			<div class="mb-4 flex items-center gap-2 text-foreground">
+				<MessageSquare size={20} aria-hidden="true" />
+				<h2 class="text-base font-medium">Signaler un problème ou une suggestion</h2>
+			</div>
+
+			{#if data.resendDisponible}
+				{#if form?.succes}
+					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+						Votre message a été envoyé. Merci !
+					</p>
+				{/if}
+				{#if form?.erreur}
+					<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+						{form.erreur}
+					</p>
+				{/if}
+
+				<form
+					method="POST"
+					action="?/signalerBug"
+					class="space-y-4"
+					use:enhance={() => {
+						envoi = true;
+						return async ({ result, update }) => {
+							if (result.type === 'success') toast.success('Message envoyé');
+							else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+							await update();
+							envoi = false;
+						};
+					}}
+				>
+					<div>
+						<label for="type-signalement" class="mb-1.5 block text-sm font-medium text-foreground">
+							Type
+						</label>
+						<select
+							id="type-signalement"
+							name="type"
+							bind:value={typeSignalement}
+							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+						>
+							<option value="bug">Bug</option>
+							<option value="suggestion">Amélioration</option>
+							<option value="question">Question</option>
+						</select>
+					</div>
+
+					<div>
+						<label for="message-signalement" class="mb-1.5 block text-sm font-medium text-foreground">
+							Message <span class="text-muted-foreground">(2000 caractères max)</span>
+						</label>
+						<textarea
+							id="message-signalement"
+							name="message"
+							bind:value={messageSignalement}
+							rows={5}
+							maxlength={2000}
+							placeholder="Décrivez le problème ou votre suggestion…"
+							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+						></textarea>
+					</div>
+
+					<button
+						type="submit"
+						disabled={envoi || !messageSignalement.trim()}
+						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+					>
+						{envoi ? 'Envoi…' : 'Envoyer'}
+					</button>
+				</form>
+			{:else}
+				<p class="text-sm text-muted-foreground">
+					Pour signaler un problème ou proposer une amélioration, écrivez à
+					<a href="mailto:admin@strapontin.kwaite.fr" class="underline underline-offset-4 hover:text-foreground">
+						admin@strapontin.kwaite.fr
+					</a>.
+				</p>
+			{/if}
 		</section>
 
 		<p class="text-sm text-muted-foreground">

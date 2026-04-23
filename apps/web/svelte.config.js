@@ -18,6 +18,7 @@ const config = {
         "script-src": ["'self'"],
         "style-src": ["'self'", "'unsafe-inline'"],
         "img-src": ["'self'", "data:"],
+        "worker-src": ["'self'"],
         "frame-ancestors": ["'none'"],
       },
     },

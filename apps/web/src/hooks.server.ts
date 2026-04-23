@@ -1,12 +1,13 @@
 import { auth } from "$lib/auth";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 import { redirect } from "@sveltejs/kit";
-import { building } from "$app/environment";
+import { building, dev } from "$app/environment";
 import { sequence } from "@sveltejs/kit/hooks";
 import type { Handle } from "@sveltejs/kit";
 import { db, fermerDb } from "$lib/server/db";
 import { userConfig } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
+import { PUBLIC_BASE_URL } from "$env/static/public";
 
 if (!building) {
   process.on("sveltekit:shutdown", async () => {
@@ -16,6 +17,17 @@ if (!building) {
 }
 
 const ROUTES_PUBLIQUES = ["/login", "/setup", "/health"];
+
+const hoteAttendu = new URL(PUBLIC_BASE_URL).host;
+
+const bloquerAccesDirectIP: Handle = async ({ event, resolve }) => {
+  if (dev) return resolve(event);
+  const hote = event.request.headers.get("host");
+  if (hote && hote !== hoteAttendu) {
+    return new Response("Accès non autorisé", { status: 403 });
+  }
+  return resolve(event);
+};
 
 const THEMES_VALIDES = new Set(["auto", "clair", "sombre"]);
 
@@ -139,4 +151,4 @@ const gererAuth: Handle = async ({ event, resolve }) => {
   });
 };
 
-export const handle: Handle = sequence(securiser, gererAuth);
+export const handle: Handle = sequence(bloquerAccesDirectIP, securiser, gererAuth);
