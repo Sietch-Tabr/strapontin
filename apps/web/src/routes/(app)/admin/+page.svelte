@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { UserPlus, Trash2, ShieldCheck, Zap, RefreshCw, Loader2 } from '@lucide/svelte';
+	import { UserPlus, Trash2, ShieldCheck, Zap, RefreshCw, Loader2, Pencil, KeyRound } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -8,6 +8,10 @@
 	let emailNouvelUser = $state('');
 	let creationEnCours = $state(false);
 	let confirmationSupprimer = $state<string | null>(null);
+	let confirmationReset = $state<string | null>(null);
+	let modificationId = $state<string | null>(null);
+	let nomModification = $state('');
+	let emailModification = $state('');
 
 	function formaterReset(timestampMs: number): string {
 		if (!timestampMs) return '—';
@@ -235,63 +239,140 @@
 				Utilisateurs ({data.utilisateurs.length})
 			</h2>
 
+			{#if form?.action === 'reinitialiserMdp' && form?.succes}
+				<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+					Email de réinitialisation envoyé à <strong>{form.email}</strong>.
+				</p>
+			{/if}
+			{#if form?.action === 'modifierCompte' && form?.succes}
+				<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+					Compte mis à jour.
+				</p>
+			{/if}
+
 			<ul class="space-y-2">
 				{#each data.utilisateurs as utilisateur (utilisateur.id)}
-					<li class="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
-						<div class="min-w-0">
-							<div class="flex items-center gap-2">
-								<span class="font-medium text-card-foreground">{utilisateur.name}</span>
-								{#if utilisateur.username}
-									<span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground font-mono">@{utilisateur.username}</span>
-								{/if}
-								{#if utilisateur.role === 'admin'}
-									<span class="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-										<ShieldCheck size={11} />
-										admin
-									</span>
-								{/if}
-								{#if utilisateur.mustChangeCredentials}
-									<span class="rounded-full bg-yellow-500/15 px-2 py-0.5 text-xs text-yellow-700 dark:text-yellow-400">
-										premier login en attente
-									</span>
-								{/if}
+					<li class="rounded-xl border border-border bg-card">
+						<div class="flex items-center justify-between px-4 py-3">
+							<div class="min-w-0">
+								<div class="flex items-center gap-2 flex-wrap">
+									<span class="font-medium text-card-foreground">{utilisateur.name}</span>
+									{#if utilisateur.username}
+										<span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground font-mono">@{utilisateur.username}</span>
+									{/if}
+									{#if utilisateur.role === 'admin'}
+										<span class="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+											<ShieldCheck size={11} />
+											admin
+										</span>
+									{/if}
+									{#if utilisateur.mustChangeCredentials}
+										<span class="rounded-full bg-yellow-500/15 px-2 py-0.5 text-xs text-yellow-700 dark:text-yellow-400">
+											premier login en attente
+										</span>
+									{/if}
+								</div>
+								<p class="text-sm text-muted-foreground">{utilisateur.email}</p>
 							</div>
-							<p class="text-sm text-muted-foreground">{utilisateur.email}</p>
-						</div>
-						{#if utilisateur.id !== data.utilisateur?.id}
-							{#if confirmationSupprimer === utilisateur.id}
-								<div class="flex items-center gap-2">
-									<span class="text-xs text-destructive">Supprimer ?</span>
-									<form method="POST" action="?/supprimerCompte" use:enhance={() => async ({ update }) => {
-										confirmationSupprimer = null;
-										await update();
-									}}>
-										<input type="hidden" name="userId" value={utilisateur.id} />
-										<button
-											type="submit"
-											class="rounded-md px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
-										>
-											Confirmer
+							{#if utilisateur.id !== data.utilisateur?.id}
+								<div class="flex items-center gap-1 shrink-0">
+									{#if confirmationSupprimer === utilisateur.id}
+										<span class="text-xs text-destructive mr-1">Supprimer ?</span>
+										<form method="POST" action="?/supprimerCompte" use:enhance={() => async ({ update }) => {
+											confirmationSupprimer = null;
+											await update();
+										}}>
+											<input type="hidden" name="userId" value={utilisateur.id} />
+											<button type="submit" class="rounded-md px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10">
+												Confirmer
+											</button>
+										</form>
+										<button type="button" onclick={() => (confirmationSupprimer = null)}
+											class="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent">
+											Annuler
 										</button>
-									</form>
-									<button
-										type="button"
-										onclick={() => (confirmationSupprimer = null)}
-										class="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
-									>
+									{:else if confirmationReset === utilisateur.id}
+										<span class="text-xs text-muted-foreground mr-1">Envoyer lien reset ?</span>
+										<form method="POST" action="?/reinitialiserMdp" use:enhance={() => async ({ update }) => {
+											confirmationReset = null;
+											await update();
+										}}>
+											<input type="hidden" name="userId" value={utilisateur.id} />
+											<button type="submit" class="rounded-md px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent">
+												Confirmer
+											</button>
+										</form>
+										<button type="button" onclick={() => (confirmationReset = null)}
+											class="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent">
+											Annuler
+										</button>
+									{:else}
+										<button type="button"
+											onclick={() => { modificationId = utilisateur.id; nomModification = utilisateur.name; emailModification = utilisateur.email; }}
+											class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent"
+											aria-label="Modifier {utilisateur.name}">
+											<Pencil size={15} />
+										</button>
+										<button type="button"
+											onclick={() => (confirmationReset = utilisateur.id)}
+											class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent"
+											aria-label="Réinitialiser le mot de passe de {utilisateur.name}">
+											<KeyRound size={15} />
+										</button>
+										<button type="button"
+											onclick={() => (confirmationSupprimer = utilisateur.id)}
+											class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+											aria-label="Supprimer {utilisateur.name}">
+											<Trash2 size={15} />
+										</button>
+									{/if}
+								</div>
+							{/if}
+						</div>
+
+						{#if modificationId === utilisateur.id}
+							<form method="POST" action="?/modifierCompte"
+								class="border-t border-border px-4 py-3 space-y-3"
+								use:enhance={() => async ({ update }) => {
+									modificationId = null;
+									await update();
+								}}
+							>
+								<input type="hidden" name="userId" value={utilisateur.id} />
+								<div class="flex gap-2 flex-wrap">
+									<div class="flex-1 min-w-40">
+										<label class="mb-1 block text-xs text-muted-foreground" for="nom-{utilisateur.id}">Nom</label>
+										<input
+											id="nom-{utilisateur.id}"
+											type="text"
+											name="nom"
+											bind:value={nomModification}
+											maxlength={100}
+											class="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+										/>
+									</div>
+									<div class="flex-1 min-w-40">
+										<label class="mb-1 block text-xs text-muted-foreground" for="email-{utilisateur.id}">Email</label>
+										<input
+											id="email-{utilisateur.id}"
+											type="email"
+											name="email"
+											bind:value={emailModification}
+											class="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+										/>
+									</div>
+								</div>
+								<div class="flex gap-2">
+									<button type="submit"
+										class="rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-colors hover:bg-foreground/90">
+										Enregistrer
+									</button>
+									<button type="button" onclick={() => (modificationId = null)}
+										class="rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent">
 										Annuler
 									</button>
 								</div>
-							{:else}
-								<button
-									type="button"
-									onclick={() => (confirmationSupprimer = utilisateur.id)}
-									class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-									aria-label="Supprimer {utilisateur.name}"
-								>
-									<Trash2 size={16} />
-								</button>
-							{/if}
+							</form>
 						{/if}
 					</li>
 				{/each}

@@ -10,6 +10,12 @@
 	let messageSignalement = $state('');
 	let envoi = $state(false);
 
+	const CANEVAS: Record<string, string> = {
+		bug: 'Décrivez le problème\n\nÉtapes pour reproduire :\n1. \n2. \n\nComportement attendu :\n\nComportement observé :',
+		suggestion: 'Décrivez votre suggestion\n\nContexte (pourquoi c\'est utile) :\n\nComportement souhaité :',
+		question: 'Votre question',
+	};
+
 	$effect(() => {
 		if (form?.succes) {
 			messageSignalement = '';
@@ -230,6 +236,7 @@ SOFTWARE.</pre>
 							id="type-signalement"
 							name="type"
 							bind:value={typeSignalement}
+							onchange={() => { messageSignalement = ''; }}
 							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
 						>
 							<option value="bug">Bug</option>
@@ -246,9 +253,9 @@ SOFTWARE.</pre>
 							id="message-signalement"
 							name="message"
 							bind:value={messageSignalement}
-							rows={5}
+							rows={8}
 							maxlength={2000}
-							placeholder="Décrivez le problème ou votre suggestion…"
+							placeholder={CANEVAS[typeSignalement]}
 							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
 						></textarea>
 					</div>
