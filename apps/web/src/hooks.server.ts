@@ -7,7 +7,6 @@ import type { Handle } from "@sveltejs/kit";
 import { db, fermerDb } from "$lib/server/db";
 import { userConfig } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
-import { PUBLIC_BASE_URL } from "$env/static/public";
 
 if (!building) {
   process.on("sveltekit:shutdown", async () => {
@@ -18,12 +17,14 @@ if (!building) {
 
 const ROUTES_PUBLIQUES = ["/login", "/setup", "/health"];
 
-const hoteAttendu = new URL(PUBLIC_BASE_URL).host;
+// Bloque les accès directs par adresse IP (ex. http://192.168.20.79:3000)
+// qui contournent Nginx Proxy Manager. Autorise localhost (healthcheck) et tout nom de domaine.
+const estAdresseIP = (hote: string) => /^[\d.]+(?::\d+)?$/.test(hote);
 
 const bloquerAccesDirectIP: Handle = async ({ event, resolve }) => {
   if (dev) return resolve(event);
-  const hote = event.request.headers.get("host");
-  if (hote && hote !== hoteAttendu) {
+  const hote = event.request.headers.get("host") ?? "";
+  if (estAdresseIP(hote)) {
     return new Response("Accès non autorisé", { status: 403 });
   }
   return resolve(event);
