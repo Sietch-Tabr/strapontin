@@ -389,6 +389,14 @@ Table `app_config` : clé API et autres variables configurables depuis l'IHM adm
 
 **Clés gérées** : `TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`.
 
+`CONTACT_EMAIL` et `PUBLIC_BASE_URL` sont affichées en clair dans `/admin` ; les autres restent masquées.
+
+**Validation à la saisie** (action `sauvegarderConfig`) :
+- `PUBLIC_BASE_URL` : format URL valide + `https://` + résolution DNS du domaine (bloquant)
+- `RESEND_API_KEY` : format `re_` + appel test `GET api.resend.com/domains` (HTTP 401 = clé invalide)
+- `TICKETMASTER_API_KEY` : format alphanumérique 16–64 chars + appel test Discovery API (HTTP 401 = clé invalide)
+- Timeout 5 s sur les appels API — en cas d'indisponibilité du service externe, la sauvegarde passe quand même
+
 ⚠️ Ne jamais changer les clés VAPID sans supprimer les abonnements push existants (`DELETE FROM push_abonnements`) — les anciens endpoints deviennent invalides.
 
 **Pattern lecture** :
@@ -521,7 +529,7 @@ Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`,
 - **Palette** : neutres (gris, blanc/noir) + une couleur accent unique (à définir Phase 0)
 - **PWA** : `static/manifest.json` (name, icons, display: standalone, theme_color: #ffffff). Icônes : `icon-192.png` et `icon-512.png` générées depuis `favicon.png` (1024×1024). `<link rel="manifest">` + `<meta name="theme-color">` dans `app.html`.
 - **Service Worker** : `apps/web/src/service-worker.ts` — géré automatiquement par SvelteKit. Cache les assets statiques. Gère les événements `push` (notifications Web Push) et `notificationclick` (ouvre `/spectacles`).
-- **Notifications push** : opt-in dans `/parametres` → section "Notifications push". Clés VAPID stockées dans `app_config`. Génération : `node scripts/generer-vapid.mjs`. Envoi dans `apps/worker/src/push.ts` → `envoyerPushDigest()`. Table DB : `push_abonnements`. Nettoyage auto des abonnements révoqués (codes 404/410).
+- **Notifications push** : opt-in dans `/parametres` → section "Notifications push". Clés VAPID stockées dans `app_config` — générées via bouton **Générer** dans `/admin` → Configuration (ou `node scripts/generer-vapid.mjs` en ligne de commande). Envoi dans `apps/worker/src/push.ts` → `envoyerPushDigest()`. Table DB : `push_abonnements`. Nettoyage auto des abonnements révoqués (codes 404/410).
 
 ## Navigation
 
