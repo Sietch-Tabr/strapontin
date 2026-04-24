@@ -424,7 +424,7 @@ async function envoyerDigestPourUser(userId: string, email: string): Promise<voi
     })
     .from(userMatches)
     .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
-    .where(and(eq(userMatches.userId, userId), isNull(userMatches.notifieLe), filtreConcerts));
+    .where(and(eq(userMatches.userId, userId), isNull(userMatches.notifieLe), isNull(userMatches.masqueLe), filtreConcerts));
 
   if (nouveauxMatches.length === 0) return;
 

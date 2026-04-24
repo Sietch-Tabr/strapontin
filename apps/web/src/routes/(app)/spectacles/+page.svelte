@@ -2,6 +2,7 @@
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Ticket, Search, X } from '@lucide/svelte';
+	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -137,6 +138,17 @@
 		>
 			15 prochains jours
 		</a>
+		<a
+			href={data.afficherMasques ? '/spectacles' : '/spectacles?masques=1'}
+			data-sveltekit-replacestate
+			aria-current={data.afficherMasques ? 'true' : undefined}
+			class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+				{data.afficherMasques
+					? 'border-foreground bg-foreground text-background'
+					: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+		>
+			Masqués
+		</a>
 	</div>
 
 	<!-- Chip tri -->
@@ -258,7 +270,9 @@
 	{#if data.tousLesConcerts.length === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
 			<Ticket size={40} class="mb-4 text-muted-foreground/50" />
-			{#if data.recherche || data.mois || data.quinzaine || data.budget}
+			{#if data.afficherMasques}
+				<p class="mb-1 text-base font-medium text-foreground">Aucun concert masqué.</p>
+			{:else if data.recherche || data.mois || data.quinzaine || data.budget}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun résultat pour ces filtres.</p>
 				<a href="/spectacles" class="mt-4 text-sm text-muted-foreground underline underline-offset-2">
 					Voir tous les spectacles
@@ -301,16 +315,29 @@
 							<td class="px-4 py-3 text-muted-foreground">{concert.ville ?? '—'}</td>
 							<td class="px-4 py-3 text-muted-foreground">{formaterPrix(concert.prixMin, concert.prixMax)}</td>
 							<td class="px-4 py-3">
-								{#if concert.url}
-									<a
-										href={concert.url}
-										target="_blank"
-										rel="noopener noreferrer"
-										class="rounded-md border border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-									>
-										Billets
-									</a>
-								{/if}
+								<div class="flex items-center gap-2">
+									{#if concert.url && !data.afficherMasques}
+										<a
+											href={concert.url}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="rounded-md border border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+										>
+											Billets
+										</a>
+									{/if}
+									{#if data.afficherMasques}
+										<form method="POST" action="?/demasquer" use:enhance>
+											<input type="hidden" name="concertId" value={concert.id} />
+											<button
+												type="submit"
+												class="rounded-md border border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+											>
+												Réafficher
+											</button>
+										</form>
+									{/if}
+								</div>
 							</td>
 						</tr>
 					{/each}
@@ -338,16 +365,29 @@
 								<p class="mt-0.5 text-xs text-muted-foreground">{formaterPrix(concert.prixMin, concert.prixMax)}</p>
 							{/if}
 						</div>
-						{#if concert.url}
-							<a
-								href={concert.url}
-								target="_blank"
-								rel="noopener noreferrer"
-								class="shrink-0 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
-							>
-								Billets
-							</a>
-						{/if}
+						<div class="flex shrink-0 items-center gap-2">
+							{#if concert.url && !data.afficherMasques}
+								<a
+									href={concert.url}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
+								>
+									Billets
+								</a>
+							{/if}
+							{#if data.afficherMasques}
+								<form method="POST" action="?/demasquer" use:enhance>
+									<input type="hidden" name="concertId" value={concert.id} />
+									<button
+										type="submit"
+										class="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
+									>
+										Réafficher
+									</button>
+								</form>
+							{/if}
+						</div>
 					</div>
 				</div>
 			{/each}

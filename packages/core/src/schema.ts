@@ -250,6 +250,7 @@ export const userMatches = pgTable(
       .references(() => concerts.id, { onDelete: "cascade" }),
     notifieLe: timestamp("notifie_le", { withTimezone: true }),
     vuLe: timestamp("vu_le", { withTimezone: true }),
+    masqueLe: timestamp("masque_le", { withTimezone: true }),
   },
   (table) => [
     unique("uq_user_matches_user_concert").on(table.userId, table.concertId),

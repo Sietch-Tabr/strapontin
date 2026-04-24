@@ -41,8 +41,7 @@
 
 <aside class="hidden w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
 	<div class="flex h-14 items-center border-b border-sidebar-border px-4">
-		<a href="/" class="flex items-center gap-2 text-lg font-semibold text-sidebar-foreground">
-			<img src="/favicon.png" alt="" class="h-7 w-7 rounded-sm object-cover" aria-hidden="true" />
+		<a href="/" class="text-lg font-semibold text-sidebar-foreground">
 			Strapontin
 		</a>
 	</div>

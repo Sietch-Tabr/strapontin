@@ -20,8 +20,12 @@
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
 				<div>
+					<p class="mb-1 font-medium text-foreground">Masquer un concert</p>
+					<p>Un bouton "Masquer" est disponible sur chaque concert de l'Accueil. Le concert disparaît de la page d'accueil mais reste visible dans Mes spectacles. Pour le réafficher, utilisez le chip "Masqués" dans Mes spectacles puis cliquez sur "Réafficher".</p>
+				</div>
+				<div>
 					<p class="mb-1 font-medium text-foreground">Logo et favicon</p>
-					<p>L'application dispose désormais de son logo et de sa favicône, visibles dans l'onglet du navigateur, la barre latérale et les pages de connexion.</p>
+					<p>L'application dispose désormais de son logo et de sa favicône, visibles dans l'onglet du navigateur et les pages de connexion.</p>
 				</div>
 				<div>
 					<p class="mb-1 font-medium text-foreground">Gestion du compte</p>
