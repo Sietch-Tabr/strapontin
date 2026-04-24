@@ -30,6 +30,8 @@ export const GET: RequestHandler = async ({ locals }) => {
         rayonKm: userConfig.rayonKm,
         filtreDisponibles: userConfig.filtreDisponibles,
         frequenceNotifications: userConfig.frequenceNotifications,
+        notifArtistes: userConfig.notifArtistes,
+        notifSalles: userConfig.notifSalles,
         theme: userConfig.theme,
       })
       .from(userConfig)

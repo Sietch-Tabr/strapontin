@@ -15,6 +15,13 @@
       "when": 1776807197588,
       "tag": "0001_frequence-notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1745525000000,
+      "tag": "0002_notif-preferences",
+      "breakpoints": true
     }
   ]
 }

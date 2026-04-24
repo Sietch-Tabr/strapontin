@@ -40,6 +40,8 @@ interface ConfigExportee {
   rayonKm?: number;
   filtreDisponibles?: boolean;
   frequenceNotifications?: string;
+  notifArtistes?: boolean;
+  notifSalles?: boolean;
   theme?: string;
 }
 
@@ -107,13 +109,15 @@ export const actions: Actions = {
     }
 
     const frequenceNotifications = valeur as FrequenceNotifications;
+    const notifArtistes = donnees.get("notifArtistes") === "on";
+    const notifSalles = donnees.get("notifSalles") === "on";
 
     await db
       .insert(userConfig)
-      .values({ userId: locals.user!.id, frequenceNotifications })
+      .values({ userId: locals.user!.id, frequenceNotifications, notifArtistes, notifSalles })
       .onConflictDoUpdate({
         target: userConfig.userId,
-        set: { frequenceNotifications, updatedAt: new Date() },
+        set: { frequenceNotifications, notifArtistes, notifSalles, updatedAt: new Date() },
       });
 
     return { succes: "notifications" };
@@ -448,6 +452,9 @@ export const actions: Actions = {
               ? (cfg.theme as "auto" | "clair" | "sombre")
               : undefined;
 
+            const notifArtistesImporte = cfg.notifArtistes !== undefined ? Boolean(cfg.notifArtistes) : undefined;
+            const notifSallesImporte = cfg.notifSalles !== undefined ? Boolean(cfg.notifSalles) : undefined;
+
             await tx
               .insert(userConfig)
               .values({
@@ -456,6 +463,8 @@ export const actions: Actions = {
                 rayonKm: rayon,
                 filtreDisponibles: cfg.filtreDisponibles ?? true,
                 frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
+                ...(notifArtistesImporte !== undefined ? { notifArtistes: notifArtistesImporte } : {}),
+                ...(notifSallesImporte !== undefined ? { notifSalles: notifSallesImporte } : {}),
                 ...(themeImporte ? { theme: themeImporte } : {}),
               })
               .onConflictDoUpdate({
@@ -465,6 +474,8 @@ export const actions: Actions = {
                   rayonKm: rayon,
                   filtreDisponibles: cfg.filtreDisponibles ?? true,
                   frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
+                  ...(notifArtistesImporte !== undefined ? { notifArtistes: notifArtistesImporte } : {}),
+                  ...(notifSallesImporte !== undefined ? { notifSalles: notifSallesImporte } : {}),
                   ...(themeImporte ? { theme: themeImporte } : {}),
                   updatedAt: new Date(),
                 },
@@ -557,6 +568,9 @@ export const actions: Actions = {
               ? (cfg.theme as "auto" | "clair" | "sombre")
               : undefined;
 
+            const notifArtistesImporte2 = cfg.notifArtistes !== undefined ? Boolean(cfg.notifArtistes) : undefined;
+            const notifSallesImporte2 = cfg.notifSalles !== undefined ? Boolean(cfg.notifSalles) : undefined;
+
             await tx
               .insert(userConfig)
               .values({
@@ -565,6 +579,8 @@ export const actions: Actions = {
                 rayonKm: rayon,
                 filtreDisponibles: cfg.filtreDisponibles ?? true,
                 frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
+                ...(notifArtistesImporte2 !== undefined ? { notifArtistes: notifArtistesImporte2 } : {}),
+                ...(notifSallesImporte2 !== undefined ? { notifSalles: notifSallesImporte2 } : {}),
                 ...(themeImporte ? { theme: themeImporte } : {}),
               })
               .onConflictDoUpdate({
@@ -574,6 +590,8 @@ export const actions: Actions = {
                   rayonKm: rayon,
                   filtreDisponibles: cfg.filtreDisponibles ?? true,
                   frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
+                  ...(notifArtistesImporte2 !== undefined ? { notifArtistes: notifArtistesImporte2 } : {}),
+                  ...(notifSallesImporte2 !== undefined ? { notifSalles: notifSallesImporte2 } : {}),
                   ...(themeImporte ? { theme: themeImporte } : {}),
                   updatedAt: new Date(),
                 },

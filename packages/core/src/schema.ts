@@ -213,6 +213,8 @@ export const userConfig = pgTable(
       .notNull()
       .default("jamais")
       .$type<"jamais" | "temps_reel" | "quotidien">(),
+    notifArtistes: boolean("notif_artistes").notNull().default(true),
+    notifSalles: boolean("notif_salles").notNull().default(false),
     // Préférence de thème : 'auto' suit les préférences système, 'clair'/'sombre' forcent le thème
     theme: text("theme").notNull().default("auto"),
     updatedAt: timestamp("updated_at", { withTimezone: true })

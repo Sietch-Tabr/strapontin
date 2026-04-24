@@ -1,7 +1,7 @@
 // Persiste les concerts dédoublonnés en base et met à jour user_matches.
 
 import pino from "pino";
-import { eq, and, inArray, notInArray, isNull, sql } from "drizzle-orm";
+import { eq, and, inArray, notInArray, isNull, or, sql } from "drizzle-orm";
 import {
   concerts,
   userMatches,
@@ -369,6 +369,50 @@ export async function notifierUsersQuotidien(): Promise<void> {
 }
 
 async function envoyerDigestPourUser(userId: string, email: string): Promise<void> {
+  const prefs = await db
+    .select({
+      notifArtistes: userConfig.notifArtistes,
+      notifSalles: userConfig.notifSalles,
+    })
+    .from(userConfig)
+    .where(eq(userConfig.userId, userId))
+    .then((rows) => rows[0] ?? { notifArtistes: true, notifSalles: false });
+
+  if (!prefs.notifArtistes && !prefs.notifSalles) return;
+
+  const conditionsFiltrage: ReturnType<typeof eq>[] = [];
+
+  if (prefs.notifArtistes) {
+    const artisteNorms = await db
+      .select({ artisteNormalise: userArtistes.artisteNormalise })
+      .from(userArtistes)
+      .where(eq(userArtistes.userId, userId));
+    if (artisteNorms.length > 0) {
+      conditionsFiltrage.push(
+        inArray(concerts.artisteNorm, artisteNorms.map((a) => a.artisteNormalise)),
+      );
+    }
+  }
+
+  if (prefs.notifSalles) {
+    const salles = await db
+      .select({ salleId: userSalles.salleId })
+      .from(userSalles)
+      .where(eq(userSalles.userId, userId));
+    if (salles.length > 0) {
+      conditionsFiltrage.push(
+        inArray(concerts.salleNorm, salles.map((s) => normaliserTexte(s.salleId))),
+      );
+    }
+  }
+
+  if (conditionsFiltrage.length === 0) return;
+
+  const filtreConcerts =
+    conditionsFiltrage.length === 1
+      ? conditionsFiltrage[0]!
+      : or(...conditionsFiltrage)!;
+
   const nouveauxMatches = await db
     .select({
       concertId: userMatches.concertId,
@@ -380,7 +424,7 @@ async function envoyerDigestPourUser(userId: string, email: string): Promise<voi
     })
     .from(userMatches)
     .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
-    .where(and(eq(userMatches.userId, userId), isNull(userMatches.notifieLe)));
+    .where(and(eq(userMatches.userId, userId), isNull(userMatches.notifieLe), filtreConcerts));
 
   if (nouveauxMatches.length === 0) return;
 
