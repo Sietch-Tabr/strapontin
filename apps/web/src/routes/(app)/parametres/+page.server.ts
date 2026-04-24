@@ -707,7 +707,7 @@ export const actions: Actions = {
         { type: "fetch:artistes:batch" },
         {
           jobId: "artistes__batch",
-          removeOnComplete: { count: 10 },
+          removeOnComplete: true,
           removeOnFail: { count: 20 },
         },
       )
@@ -723,7 +723,7 @@ export const actions: Actions = {
           { type: "fetch:salle", venueId: salle.tmVenueId, userId },
           {
             jobId: `salle__${salle.tmVenueId}`,
-            removeOnComplete: { count: 10 },
+            removeOnComplete: true,
             removeOnFail: { count: 20 },
           },
         )
@@ -739,7 +739,7 @@ export const actions: Actions = {
           { type: "fetch:region", depts: deptsNouveaux, userId },
           {
             jobId: `region__manuel__${deptsNouveaux.sort().join("_")}`,
-            removeOnComplete: { count: 10 },
+            removeOnComplete: true,
             removeOnFail: { count: 20 },
           },
         )

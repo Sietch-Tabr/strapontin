@@ -212,7 +212,7 @@ export const actions: Actions = {
         { type: "fetch:region", depts: deptsALancer, userId: locals.user!.id },
         {
           jobId: `region__manuel__${deptsALancer.join("_")}`,
-          removeOnComplete: { count: 10 },
+          removeOnComplete: true,
           removeOnFail: { count: 20 },
         },
       )
@@ -270,7 +270,7 @@ export const actions: Actions = {
         { type: "fetch:region", depts: deptsALancer, userId: locals.user!.id },
         {
           jobId: `region__manuel__${deptsALancer.join("_")}`,
-          removeOnComplete: { count: 10 },
+          removeOnComplete: true,
           removeOnFail: { count: 20 },
         },
       )
