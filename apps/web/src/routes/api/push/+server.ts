@@ -1,6 +1,6 @@
 import { db } from "$lib/server/db";
 import { pushAbonnements } from "@strapontin/core/schema";
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { error, json } from "@sveltejs/kit";
 import { lireConfig } from "$lib/server/config";
 import type { RequestHandler } from "./$types";
@@ -31,6 +31,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   const { endpoint, keys } = corps;
   if (!endpoint || !keys?.p256dh || !keys?.auth) {
     throw error(400, "Abonnement incomplet");
+  }
+  if (
+    endpoint.length > 2048 ||
+    keys.p256dh.length > 256 ||
+    keys.auth.length > 256
+  ) {
+    throw error(400, "Données d'abonnement invalides");
+  }
+
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(pushAbonnements)
+    .where(eq(pushAbonnements.userId, locals.user.id));
+  if (total >= 10) {
+    throw error(429, "Trop d'abonnements push pour cet utilisateur");
   }
 
   await db

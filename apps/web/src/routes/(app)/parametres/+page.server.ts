@@ -105,7 +105,10 @@ export const actions: Actions = {
     type FrequenceNotifications = (typeof valeurs)[number];
 
     if (!valeurs.includes(valeur as FrequenceNotifications)) {
-      return fail(400, { erreur: "Valeur invalide.", section: "notifications" });
+      return fail(400, {
+        erreur: "Valeur invalide.",
+        section: "notifications",
+      });
     }
 
     const frequenceNotifications = valeur as FrequenceNotifications;
@@ -114,10 +117,20 @@ export const actions: Actions = {
 
     await db
       .insert(userConfig)
-      .values({ userId: locals.user!.id, frequenceNotifications, notifArtistes, notifSalles })
+      .values({
+        userId: locals.user!.id,
+        frequenceNotifications,
+        notifArtistes,
+        notifSalles,
+      })
       .onConflictDoUpdate({
         target: userConfig.userId,
-        set: { frequenceNotifications, notifArtistes, notifSalles, updatedAt: new Date() },
+        set: {
+          frequenceNotifications,
+          notifArtistes,
+          notifSalles,
+          updatedAt: new Date(),
+        },
       });
 
     return { succes: "notifications" };
@@ -128,7 +141,10 @@ export const actions: Actions = {
     const valeur = donnees.get("valeur")?.toString();
 
     if (!["auto", "clair", "sombre"].includes(valeur ?? "")) {
-      return fail(400, { erreur: "Valeur de thème invalide.", section: "theme" });
+      return fail(400, {
+        erreur: "Valeur de thème invalide.",
+        section: "theme",
+      });
     }
 
     const theme = valeur as "auto" | "clair" | "sombre";
@@ -234,15 +250,24 @@ export const actions: Actions = {
     const email = donnees.get("email")?.toString().trim().toLowerCase() ?? "";
 
     if (!email) {
-      return fail(400, { erreur: "L'adresse email ne peut pas être vide.", section: "email" });
+      return fail(400, {
+        erreur: "L'adresse email ne peut pas être vide.",
+        section: "email",
+      });
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return fail(400, { erreur: "Format d'email invalide.", section: "email" });
+      return fail(400, {
+        erreur: "Format d'email invalide.",
+        section: "email",
+      });
     }
 
     if (email.length > 254) {
-      return fail(400, { erreur: "Adresse email trop longue.", section: "email" });
+      return fail(400, {
+        erreur: "Adresse email trop longue.",
+        section: "email",
+      });
     }
 
     const existant = await db
@@ -252,7 +277,10 @@ export const actions: Actions = {
       .then((rows) => rows[0] ?? null);
 
     if (existant && existant.id !== locals.user!.id) {
-      return fail(400, { erreur: "Cette adresse email est déjà utilisée.", section: "email" });
+      return fail(400, {
+        erreur: "Cette adresse email est déjà utilisée.",
+        section: "email",
+      });
     }
 
     await db
@@ -452,8 +480,14 @@ export const actions: Actions = {
               ? (cfg.theme as "auto" | "clair" | "sombre")
               : undefined;
 
-            const notifArtistesImporte = cfg.notifArtistes !== undefined ? Boolean(cfg.notifArtistes) : undefined;
-            const notifSallesImporte = cfg.notifSalles !== undefined ? Boolean(cfg.notifSalles) : undefined;
+            const notifArtistesImporte =
+              cfg.notifArtistes !== undefined
+                ? Boolean(cfg.notifArtistes)
+                : undefined;
+            const notifSallesImporte =
+              cfg.notifSalles !== undefined
+                ? Boolean(cfg.notifSalles)
+                : undefined;
 
             await tx
               .insert(userConfig)
@@ -462,9 +496,19 @@ export const actions: Actions = {
                 departements: depts,
                 rayonKm: rayon,
                 filtreDisponibles: cfg.filtreDisponibles ?? true,
-                frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
-                ...(notifArtistesImporte !== undefined ? { notifArtistes: notifArtistesImporte } : {}),
-                ...(notifSallesImporte !== undefined ? { notifSalles: notifSallesImporte } : {}),
+                frequenceNotifications: ([
+                  "jamais",
+                  "temps_reel",
+                  "quotidien",
+                ].includes(cfg.frequenceNotifications ?? "")
+                  ? cfg.frequenceNotifications
+                  : "jamais") as "jamais" | "temps_reel" | "quotidien",
+                ...(notifArtistesImporte !== undefined
+                  ? { notifArtistes: notifArtistesImporte }
+                  : {}),
+                ...(notifSallesImporte !== undefined
+                  ? { notifSalles: notifSallesImporte }
+                  : {}),
                 ...(themeImporte ? { theme: themeImporte } : {}),
               })
               .onConflictDoUpdate({
@@ -473,9 +517,19 @@ export const actions: Actions = {
                   departements: depts,
                   rayonKm: rayon,
                   filtreDisponibles: cfg.filtreDisponibles ?? true,
-                  frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
-                  ...(notifArtistesImporte !== undefined ? { notifArtistes: notifArtistesImporte } : {}),
-                  ...(notifSallesImporte !== undefined ? { notifSalles: notifSallesImporte } : {}),
+                  frequenceNotifications: ([
+                    "jamais",
+                    "temps_reel",
+                    "quotidien",
+                  ].includes(cfg.frequenceNotifications ?? "")
+                    ? cfg.frequenceNotifications
+                    : "jamais") as "jamais" | "temps_reel" | "quotidien",
+                  ...(notifArtistesImporte !== undefined
+                    ? { notifArtistes: notifArtistesImporte }
+                    : {}),
+                  ...(notifSallesImporte !== undefined
+                    ? { notifSalles: notifSallesImporte }
+                    : {}),
                   ...(themeImporte ? { theme: themeImporte } : {}),
                   updatedAt: new Date(),
                 },
@@ -486,6 +540,7 @@ export const actions: Actions = {
                 path: "/",
                 maxAge: 60 * 60 * 24 * 365,
                 httpOnly: false,
+                secure: true,
                 sameSite: "lax",
               });
             }
@@ -568,8 +623,14 @@ export const actions: Actions = {
               ? (cfg.theme as "auto" | "clair" | "sombre")
               : undefined;
 
-            const notifArtistesImporte2 = cfg.notifArtistes !== undefined ? Boolean(cfg.notifArtistes) : undefined;
-            const notifSallesImporte2 = cfg.notifSalles !== undefined ? Boolean(cfg.notifSalles) : undefined;
+            const notifArtistesImporte2 =
+              cfg.notifArtistes !== undefined
+                ? Boolean(cfg.notifArtistes)
+                : undefined;
+            const notifSallesImporte2 =
+              cfg.notifSalles !== undefined
+                ? Boolean(cfg.notifSalles)
+                : undefined;
 
             await tx
               .insert(userConfig)
@@ -578,9 +639,19 @@ export const actions: Actions = {
                 departements: tousLesDepts,
                 rayonKm: rayon,
                 filtreDisponibles: cfg.filtreDisponibles ?? true,
-                frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
-                ...(notifArtistesImporte2 !== undefined ? { notifArtistes: notifArtistesImporte2 } : {}),
-                ...(notifSallesImporte2 !== undefined ? { notifSalles: notifSallesImporte2 } : {}),
+                frequenceNotifications: ([
+                  "jamais",
+                  "temps_reel",
+                  "quotidien",
+                ].includes(cfg.frequenceNotifications ?? "")
+                  ? cfg.frequenceNotifications
+                  : "jamais") as "jamais" | "temps_reel" | "quotidien",
+                ...(notifArtistesImporte2 !== undefined
+                  ? { notifArtistes: notifArtistesImporte2 }
+                  : {}),
+                ...(notifSallesImporte2 !== undefined
+                  ? { notifSalles: notifSallesImporte2 }
+                  : {}),
                 ...(themeImporte ? { theme: themeImporte } : {}),
               })
               .onConflictDoUpdate({
@@ -589,9 +660,19 @@ export const actions: Actions = {
                   departements: tousLesDepts,
                   rayonKm: rayon,
                   filtreDisponibles: cfg.filtreDisponibles ?? true,
-                  frequenceNotifications: (["jamais", "temps_reel", "quotidien"].includes(cfg.frequenceNotifications ?? "") ? cfg.frequenceNotifications : "jamais") as "jamais" | "temps_reel" | "quotidien",
-                  ...(notifArtistesImporte2 !== undefined ? { notifArtistes: notifArtistesImporte2 } : {}),
-                  ...(notifSallesImporte2 !== undefined ? { notifSalles: notifSallesImporte2 } : {}),
+                  frequenceNotifications: ([
+                    "jamais",
+                    "temps_reel",
+                    "quotidien",
+                  ].includes(cfg.frequenceNotifications ?? "")
+                    ? cfg.frequenceNotifications
+                    : "jamais") as "jamais" | "temps_reel" | "quotidien",
+                  ...(notifArtistesImporte2 !== undefined
+                    ? { notifArtistes: notifArtistesImporte2 }
+                    : {}),
+                  ...(notifSallesImporte2 !== undefined
+                    ? { notifSalles: notifSallesImporte2 }
+                    : {}),
                   ...(themeImporte ? { theme: themeImporte } : {}),
                   updatedAt: new Date(),
                 },
@@ -602,6 +683,7 @@ export const actions: Actions = {
                 path: "/",
                 maxAge: 60 * 60 * 24 * 365,
                 httpOnly: false,
+                secure: true,
                 sameSite: "lax",
               });
             }

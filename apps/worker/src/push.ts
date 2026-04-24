@@ -18,7 +18,10 @@ async function obtenirClesVapid(): Promise<{
 } | null> {
   const maintenant = Date.now();
   if (cacheVapid && maintenant < cacheVapid.expireA) {
-    return { publicKey: cacheVapid.publicKey, privateKey: cacheVapid.privateKey };
+    return {
+      publicKey: cacheVapid.publicKey,
+      privateKey: cacheVapid.privateKey,
+    };
   }
 
   const [publicKey, privateKey] = await Promise.all([
@@ -29,8 +32,8 @@ async function obtenirClesVapid(): Promise<{
   if (!publicKey || !privateKey) return null;
 
   cacheVapid = {
-    publicKey: publicKey ?? process.env["VAPID_PUBLIC_KEY"] ?? "",
-    privateKey: privateKey ?? process.env["VAPID_PRIVATE_KEY"] ?? "",
+    publicKey,
+    privateKey,
     expireA: maintenant + 5 * 60 * 1000,
   };
   return { publicKey: cacheVapid.publicKey, privateKey: cacheVapid.privateKey };
@@ -115,9 +118,15 @@ export async function envoyerPushDigest(
             .delete(pushAbonnements)
             .where(eq(pushAbonnements.id, ab.id))
             .catch(() => null);
-          logger.info({ userId, endpoint: ab.endpoint }, "abonnement push révoqué, supprimé");
+          logger.info(
+            { userId, endpoint: ab.endpoint },
+            "abonnement push révoqué, supprimé",
+          );
         } else {
-          logger.warn({ err, userId, endpoint: ab.endpoint }, "push: échec envoi");
+          logger.warn(
+            { err, userId, endpoint: ab.endpoint },
+            "push: échec envoi",
+          );
         }
       }
     }),

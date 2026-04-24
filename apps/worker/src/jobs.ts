@@ -9,7 +9,11 @@ import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import { lt } from "drizzle-orm";
 import { db } from "./db.js";
 import { obtenirTicketmaster, eventim } from "./sources.js";
-import { persisterConcerts, recalculerMatches, notifierUsersQuotidien } from "./persister.js";
+import {
+  persisterConcerts,
+  recalculerMatches,
+  notifierUsersQuotidien,
+} from "./persister.js";
 import {
   redis,
   CLE_QUOTA_TM,
@@ -25,6 +29,28 @@ import {
 } from "./redis.js";
 
 const logger = pino({ name: "jobs" });
+
+async function limiterConcurrence<T>(
+  taches: (() => Promise<T>)[],
+  max: number,
+): Promise<PromiseSettledResult<T>[]> {
+  const resultats: PromiseSettledResult<T>[] = new Array(taches.length);
+  let index = 0;
+  async function travailleur() {
+    while (index < taches.length) {
+      const i = index++;
+      try {
+        resultats[i] = { status: "fulfilled", value: await taches[i]!() };
+      } catch (raison) {
+        resultats[i] = { status: "rejected", reason: raison };
+      }
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(max, taches.length) }, travailleur),
+  );
+  return resultats;
+}
 
 // Résout les noms d'artistes tout-majuscule via MusicBrainz / Deezer avec cache Redis.
 // Appelée après dédoublonnage, avant persistance.
@@ -340,10 +366,11 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
         await sauvegarderQuotaTM(tmBatch);
 
-        // Eventim : appels parallèles par artiste
+        // Eventim : concurrence limitée à 5 pour éviter le bannissement IP
         const nomsArtistes = rows.map((r) => r.artisteAffiche);
-        const eventimResults = await Promise.allSettled(
-          nomsArtistes.map((nom) => eventim.fetchArtiste(nom)),
+        const eventimResults = await limiterConcurrence(
+          nomsArtistes.map((nom) => () => eventim.fetchArtiste(nom)),
+          5,
         );
 
         const tous = [
