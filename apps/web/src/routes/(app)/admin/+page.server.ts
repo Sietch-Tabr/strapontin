@@ -1,13 +1,22 @@
 import { db } from "$lib/server/db";
-import { redis, CLE_QUOTA_TM, cleStatsJob, type StatsJobRedis } from "$lib/server/redis";
+import {
+  redis,
+  CLE_QUOTA_TM,
+  cleStatsJob,
+  type StatsJobRedis,
+} from "$lib/server/redis";
 import { auth } from "$lib/auth";
 import { users } from "@strapontin/core/schema";
 import type { QuotaTM } from "@strapontin/sources";
 import { eq } from "drizzle-orm";
-import { randomBytes } from "crypto";
+import { randomBytes, createECDH } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import { envoyerInvitation } from "$lib/server/email";
-import { lireConfigsPresentes, sauvegarderConfig } from "$lib/server/config";
+import {
+  lireConfig,
+  lireConfigsPresentes,
+  sauvegarderConfig,
+} from "$lib/server/config";
 import { PUBLIC_BASE_URL } from "$env/static/public";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -59,10 +68,16 @@ export const load: PageServerLoad = async ({ locals }) => {
     "VAPID_PRIVATE_KEY",
   ] as const;
 
-  const configStatuts = CLES_CONFIG.map((cle) => ({
-    cle,
-    presente: configsPresentes.has(cle),
-  }));
+  const CLES_EN_CLAIR = new Set(["CONTACT_EMAIL", "PUBLIC_BASE_URL"]);
+
+  const configStatuts = await Promise.all(
+    CLES_CONFIG.map(async (cle) => ({
+      cle,
+      presente: configsPresentes.has(cle),
+      valeur: CLES_EN_CLAIR.has(cle) ? await lireConfig(cle) : null,
+      secret: !CLES_EN_CLAIR.has(cle),
+    })),
+  );
 
   return { utilisateurs: tousLesUsers, quotaTM, statsJobs, configStatuts };
 };
@@ -88,7 +103,8 @@ export const actions: Actions = {
     const nomInitial = email.split("@")[0].slice(0, 100);
 
     // Username temporaire unique : u_ + 8 chars aléatoires
-    const usernameTemp = "u_" + randomBytes(6).toString("base64url").slice(0, 8);
+    const usernameTemp =
+      "u_" + randomBytes(6).toString("base64url").slice(0, 8);
 
     // Mot de passe temporaire cryptographiquement sûr
     const motDePasseTemp = randomBytes(12).toString("base64url").slice(0, 16);
@@ -161,7 +177,10 @@ export const actions: Actions = {
     }
 
     await auth.api.requestPasswordReset({
-      body: { email: cible.email, redirectTo: `${PUBLIC_BASE_URL}/reset-password` },
+      body: {
+        email: cible.email,
+        redirectTo: `${PUBLIC_BASE_URL}/reset-password`,
+      },
     });
 
     return { succes: true, action: "reinitialiserMdp", email: cible.email };
@@ -189,9 +208,109 @@ export const actions: Actions = {
       return fail(400, { erreur: "Clé de configuration invalide." });
     }
 
+    if (valeur) {
+      if (cle === "PUBLIC_BASE_URL") {
+        let url: URL;
+        try {
+          url = new URL(valeur);
+        } catch {
+          return fail(400, {
+            erreur: "Format d'URL invalide.",
+            action: "sauvegarderConfig",
+            cle,
+          });
+        }
+        if (url.protocol !== "https:") {
+          return fail(400, {
+            erreur: "L'URL doit commencer par https://",
+            action: "sauvegarderConfig",
+            cle,
+          });
+        }
+        try {
+          const { lookup } = await import("dns/promises");
+          await lookup(url.hostname);
+        } catch {
+          return fail(400, {
+            erreur: "Le domaine est introuvable (échec de résolution DNS).",
+            action: "sauvegarderConfig",
+            cle,
+          });
+        }
+      }
+
+      if (cle === "RESEND_API_KEY") {
+        if (!/^re_[A-Za-z0-9_-]{10,}$/.test(valeur)) {
+          return fail(400, {
+            erreur:
+              "La clé Resend doit commencer par re_ suivi de caractères alphanumériques.",
+            action: "sauvegarderConfig",
+            cle,
+          });
+        }
+        try {
+          const rep = await fetch("https://api.resend.com/domains", {
+            headers: { Authorization: `Bearer ${valeur}` },
+            signal: AbortSignal.timeout(5000),
+          });
+          if (rep.status === 401) {
+            return fail(400, {
+              erreur: "Clé Resend invalide (accès refusé par l'API).",
+              action: "sauvegarderConfig",
+              cle,
+            });
+          }
+        } catch {
+          // Timeout ou erreur réseau — ne pas bloquer la sauvegarde
+        }
+      }
+
+      if (cle === "TICKETMASTER_API_KEY") {
+        if (!/^[A-Za-z0-9]{16,64}$/.test(valeur)) {
+          return fail(400, {
+            erreur:
+              "Format de clé Ticketmaster invalide (16 à 64 caractères alphanumériques).",
+            action: "sauvegarderConfig",
+            cle,
+          });
+        }
+        try {
+          const rep = await fetch(
+            `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${encodeURIComponent(valeur)}&size=1`,
+            { signal: AbortSignal.timeout(5000) },
+          );
+          if (rep.status === 401) {
+            return fail(400, {
+              erreur: "Clé Ticketmaster invalide (accès refusé par l'API).",
+              action: "sauvegarderConfig",
+              cle,
+            });
+          }
+        } catch {
+          // Timeout ou erreur réseau — ne pas bloquer la sauvegarde
+        }
+      }
+    }
+
     await sauvegarderConfig(cle, valeur);
 
     return { succes: true, action: "sauvegarderConfig", cle };
+  },
+
+  genererVapid: async ({ locals }) => {
+    if (locals.user?.role !== "admin") {
+      return fail(403, { erreur: "Accès refusé." });
+    }
+
+    const ecdh = createECDH("prime256v1");
+    ecdh.generateKeys();
+
+    await Promise.all([
+      sauvegarderConfig("VAPID_PUBLIC_KEY", ecdh.getPublicKey("base64url")),
+      sauvegarderConfig("VAPID_PRIVATE_KEY", ecdh.getPrivateKey("base64url")),
+    ]);
+
+    return { succes: true, action: "genererVapid" };
   },
 
   modifierCompte: async ({ request, locals }) => {

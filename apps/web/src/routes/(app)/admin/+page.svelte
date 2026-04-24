@@ -16,6 +16,23 @@
 	let configEditionCle = $state<string | null>(null);
 	let configValeur = $state('');
 
+	const donneesBrutes = $derived(form as Record<string, unknown> | null);
+	const erreurConfigCle = $derived(
+		donneesBrutes?.['action'] === 'sauvegarderConfig' && typeof donneesBrutes?.['erreur'] === 'string' && typeof donneesBrutes?.['cle'] === 'string'
+			? donneesBrutes['cle'] as string
+			: null,
+	);
+	const erreurConfigMessage = $derived(
+		donneesBrutes?.['action'] === 'sauvegarderConfig' && typeof donneesBrutes?.['erreur'] === 'string'
+			? donneesBrutes['erreur'] as string
+			: null,
+	);
+	const erreurGlobale = $derived(
+		donneesBrutes?.['action'] !== 'sauvegarderConfig' && typeof donneesBrutes?.['erreur'] === 'string'
+			? donneesBrutes['erreur'] as string
+			: null,
+	);
+
 	function formaterReset(timestampMs: number): string {
 		if (!timestampMs) return '—';
 		return new Date(timestampMs).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -183,6 +200,11 @@
 					Clé <strong>{form.cle}</strong> mise à jour.
 				</p>
 			{/if}
+			{#if form?.action === 'genererVapid' && form?.succes}
+				<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+					Clés VAPID générées et enregistrées.
+				</p>
+			{/if}
 
 			<div class="rounded-xl border border-border bg-card divide-y divide-border">
 				{#each data.configStatuts as config (config.cle)}
@@ -191,23 +213,37 @@
 							<div class="min-w-0">
 								<p class="text-sm font-mono font-medium text-foreground">{config.cle}</p>
 								<p class="text-xs text-muted-foreground mt-0.5">
-									{#if config.presente}
+									{#if config.valeur}
+										<span class="font-mono">{config.valeur}</span>
+									{:else if config.presente}
 										<span class="text-green-600 dark:text-green-400">Configurée en base</span>
 									{:else}
 										<span>Non configurée — utilise la variable d'environnement</span>
 									{/if}
 								</p>
 							</div>
-							<button
-								type="button"
-								onclick={() => {
-									configEditionCle = configEditionCle === config.cle ? null : config.cle;
-									configValeur = '';
-								}}
-								class="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
-							>
-								{configEditionCle === config.cle ? 'Annuler' : 'Modifier'}
-							</button>
+							<div class="flex shrink-0 items-center gap-1">
+								{#if config.cle === 'VAPID_PUBLIC_KEY'}
+									<form method="POST" action="?/genererVapid" use:enhance>
+										<button
+											type="submit"
+											class="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
+										>
+											Générer
+										</button>
+									</form>
+								{/if}
+								<button
+									type="button"
+									onclick={() => {
+										configEditionCle = configEditionCle === config.cle ? null : config.cle;
+										configValeur = '';
+									}}
+									class="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
+								>
+									{configEditionCle === config.cle ? 'Annuler' : 'Modifier'}
+								</button>
+							</div>
 						</div>
 
 						{#if configEditionCle === config.cle}
@@ -215,20 +251,27 @@
 								method="POST"
 								action="?/sauvegarderConfig"
 								class="border-t border-border px-4 py-3 space-y-3"
-								use:enhance={() => async ({ update }) => {
-									configEditionCle = null;
-									configValeur = '';
+								use:enhance={() => async ({ result, update }) => {
+									if (result.type !== 'failure') {
+										configEditionCle = null;
+										configValeur = '';
+									}
 									await update();
 								}}
 							>
 								<input type="hidden" name="cle" value={config.cle} />
+								{#if erreurConfigCle === config.cle && erreurConfigMessage}
+									<p class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+										{erreurConfigMessage}
+									</p>
+								{/if}
 								<div>
 									<label class="mb-1 block text-xs text-muted-foreground" for="val-{config.cle}">
 										Nouvelle valeur (laisser vide pour supprimer)
 									</label>
 									<input
 										id="val-{config.cle}"
-										type="password"
+										type={config.secret ? 'password' : 'text'}
 										name="valeur"
 										bind:value={configValeur}
 										autocomplete="off"
@@ -287,9 +330,9 @@
 				</div>
 			{/if}
 
-			{#if form?.erreur}
+			{#if erreurGlobale}
 				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-					{form.erreur}
+					{erreurGlobale}
 				</p>
 			{/if}
 
