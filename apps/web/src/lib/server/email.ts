@@ -8,6 +8,15 @@ import pino from "pino";
 
 const logger = pino({ name: "email" });
 
+function echapperHtml(texte: string): string {
+  return texte
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 export const resendDisponible = !!RESEND_API_KEY;
@@ -145,14 +154,14 @@ export async function envoyerSignalement(params: {
 <table style="border-collapse:collapse;width:100%;margin-bottom:24px">
   <tr>
     <td style="padding:8px 0;color:#888;font-size:14px;width:130px">Utilisateur</td>
-    <td style="padding:8px 0;font-size:14px;color:#111">${params.expediteurNom}</td>
+    <td style="padding:8px 0;font-size:14px;color:#111">${echapperHtml(params.expediteurNom)}</td>
   </tr>
   <tr>
     <td style="padding:8px 0;color:#888;font-size:14px">Email</td>
-    <td style="padding:8px 0;font-size:14px;color:#111">${params.expediteurEmail}</td>
+    <td style="padding:8px 0;font-size:14px;color:#111">${echapperHtml(params.expediteurEmail)}</td>
   </tr>
 </table>
-<p style="color:#555;font-size:14px;white-space:pre-wrap;border-left:3px solid #e5e5e5;padding-left:12px;margin:0">${params.message}</p>
+<p style="color:#555;font-size:14px;white-space:pre-wrap;border-left:3px solid #e5e5e5;padding-left:12px;margin:0">${echapperHtml(params.message)}</p>
 ${piedHtml()}`;
 
   const { error } = await resend.emails.send({

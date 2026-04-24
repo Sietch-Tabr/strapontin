@@ -385,6 +385,7 @@ interface SourceConcerts {
 Table `app_config` : clé API et autres variables configurables depuis l'IHM admin (`/admin`), chiffrées en base. Prend le dessus sur les variables d'environnement.
 
 **Chiffrement** : AES-256-GCM. Clé de 32 bytes dérivée de `BETTER_AUTH_SECRET` via `scryptSync` (salt fixe `strapontin-app-config`).
+⚠️ `BETTER_AUTH_SECRET` est obligatoire au démarrage — le serveur refuse de démarrer si la variable est absente (fail-fast dans `config.ts` des deux apps).
 ⚠️ Si `BETTER_AUTH_SECRET` change en production, toutes les valeurs en base deviennent illisibles — vider la table `app_config` et les re-saisir depuis l'IHM.
 
 **Clés gérées** : `TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`.
@@ -529,7 +530,7 @@ Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`,
 - **Palette** : neutres (gris, blanc/noir) + une couleur accent unique (à définir Phase 0)
 - **PWA** : `static/manifest.json` (name, icons, display: standalone, theme_color: #ffffff). Icônes : `icon-192.png` et `icon-512.png` générées depuis `favicon.png` (1024×1024). `<link rel="manifest">` + `<meta name="theme-color">` dans `app.html`.
 - **Service Worker** : `apps/web/src/service-worker.ts` — géré automatiquement par SvelteKit. Cache les assets statiques. Gère les événements `push` (notifications Web Push) et `notificationclick` (ouvre `/spectacles`).
-- **Notifications push** : opt-in dans `/parametres` → section "Notifications push". Clés VAPID stockées dans `app_config` — générées via bouton **Générer** dans `/admin` → Configuration (ou `node scripts/generer-vapid.mjs` en ligne de commande). Envoi dans `apps/worker/src/push.ts` → `envoyerPushDigest()`. Table DB : `push_abonnements`. Nettoyage auto des abonnements révoqués (codes 404/410).
+- **Notifications push** : opt-in dans `/parametres` → section "Notifications push". Clés VAPID stockées dans `app_config` — générées via bouton **Générer** dans `/admin` → Configuration (ou `node scripts/generer-vapid.mjs` en ligne de commande). Envoi dans `apps/worker/src/push.ts` → `envoyerPushDigest()`. Table DB : `push_abonnements`. Nettoyage auto des abonnements révoqués (codes 404/410). Cap : 10 abonnements max par utilisateur (HTTP 429 au-delà). Validation : endpoint ≤ 2 048 chars, p256dh/auth ≤ 256 chars. GET `/api/push` est intentionnellement public (le service worker doit récupérer la clé VAPID publique sans session).
 
 ## Navigation
 

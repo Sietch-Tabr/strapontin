@@ -433,7 +433,7 @@
 
 			<!-- Nom d'affichage -->
 			<div>
-				<h3 class="mb-4 text-sm font-medium text-muted-foreground">Nom d'affichage</h3>
+				<h3 id="titre-nom" class="mb-4 text-sm font-medium text-muted-foreground">Nom d'affichage</h3>
 
 				{#if form?.succes === 'compte'}
 					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
@@ -466,6 +466,7 @@
 						name="nom"
 						bind:value={nom}
 						maxlength="100"
+						aria-labelledby="titre-nom"
 						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 					/>
 					<button
@@ -483,7 +484,7 @@
 
 			<!-- Identifiant -->
 			<div>
-				<h3 class="mb-4 text-sm font-medium text-muted-foreground">Identifiant de connexion</h3>
+				<h3 id="titre-identifiant" class="mb-4 text-sm font-medium text-muted-foreground">Identifiant de connexion</h3>
 
 				{#if form?.succes === 'identifiant'}
 					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
@@ -520,6 +521,7 @@
 							maxlength="30"
 							pattern="[a-zA-Z0-9_]+"
 							autocomplete="username"
+							aria-labelledby="titre-identifiant"
 							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 						/>
 						<p class="mt-1 text-xs text-muted-foreground">3 à 30 caractères, lettres, chiffres et _ uniquement. Insensible à la casse.</p>
@@ -539,7 +541,7 @@
 
 			<!-- Email -->
 			<div>
-				<h3 class="mb-4 text-sm font-medium text-muted-foreground">Adresse email</h3>
+				<h3 id="titre-email" class="mb-4 text-sm font-medium text-muted-foreground">Adresse email</h3>
 				<p class="mb-3 text-xs text-muted-foreground">Utilisée pour les notifications et la réinitialisation du mot de passe.</p>
 
 				{#if form?.succes === 'email'}
@@ -574,6 +576,7 @@
 						bind:value={email}
 						maxlength="254"
 						autocomplete="email"
+						aria-labelledby="titre-email"
 						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 					/>
 					<button
