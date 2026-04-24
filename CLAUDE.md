@@ -521,7 +521,7 @@ Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`,
 - **Palette** : neutres (gris, blanc/noir) + une couleur accent unique (à définir Phase 0)
 - **PWA** : `static/manifest.json` (name, icons, display: standalone, theme_color: #ffffff). Icônes : `icon-192.png` et `icon-512.png` générées depuis `favicon.png` (1024×1024). `<link rel="manifest">` + `<meta name="theme-color">` dans `app.html`.
 - **Service Worker** : `apps/web/src/service-worker.ts` — géré automatiquement par SvelteKit. Cache les assets statiques. Gère les événements `push` (notifications Web Push) et `notificationclick` (ouvre `/spectacles`).
-- **Notifications push** : opt-in dans `/parametres` → section "Notifications push". Clés VAPID stockées dans `app_config`. Génération : `pnpm exec tsx scripts/generer-vapid.ts`. Envoi dans `apps/worker/src/push.ts` → `envoyerPushDigest()`. Table DB : `push_abonnements`. Nettoyage auto des abonnements révoqués (codes 404/410).
+- **Notifications push** : opt-in dans `/parametres` → section "Notifications push". Clés VAPID stockées dans `app_config`. Génération : `node scripts/generer-vapid.mjs`. Envoi dans `apps/worker/src/push.ts` → `envoyerPushDigest()`. Table DB : `push_abonnements`. Nettoyage auto des abonnements révoqués (codes 404/410).
 
 ## Navigation
 
