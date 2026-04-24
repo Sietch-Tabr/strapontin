@@ -31,14 +31,15 @@ rollback() {
 }
 
 # 3. Installer les dépendances
+# Nettoyage préalable de .svelte-kit : svelte-kit sync (script prepare de pnpm install)
+# échouerait avec EACCES si le répertoire appartient à root suite au build précédent
 echo "[3/6] pnpm install..."
+rm -rf "$APP_DIR/apps/web/.svelte-kit"
 su - strapontin -c "cd $APP_DIR && pnpm install --frozen-lockfile"
 
-# 4. Build — nettoyage préalable des dossiers de sortie pour éviter EACCES
-# (Node.js fs.rmSync échoue sur des répertoires root-owned dans certains LXC ;
-# rm -rf en bash root n'a pas ce problème)
+# 4. Build — nettoyage préalable du dossier de sortie pour éviter EACCES
 echo "[4/6] build..."
-rm -rf "$APP_DIR/apps/web/build" "$APP_DIR/apps/web/.svelte-kit"
+rm -rf "$APP_DIR/apps/web/build"
 set -a; source "$APP_DIR/.env"; set +a
 pnpm build
 
