@@ -4,5 +4,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    env: {
+      BETTER_AUTH_SECRET: "secret-test-vitest",
+    },
   },
 });
