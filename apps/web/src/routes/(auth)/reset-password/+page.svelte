@@ -13,9 +13,12 @@
 
 <div class="flex min-h-screen items-center justify-center bg-background">
 	<div class="w-full max-w-sm space-y-6 p-8">
-		<div class="space-y-1 text-center">
-			<h1 class="text-2xl font-semibold tracking-tight">Nouveau mot de passe</h1>
-			<p class="text-sm text-muted-foreground">Choisissez un mot de passe d'au moins 12 caractères.</p>
+		<div class="space-y-3 text-center">
+			<img src="/logo.png" alt="Strapontin" class="mx-auto h-24 w-24 rounded-2xl object-cover" />
+			<div class="space-y-1">
+				<h1 class="text-2xl font-semibold tracking-tight">Nouveau mot de passe</h1>
+				<p class="text-sm text-muted-foreground">Choisissez un mot de passe d'au moins 12 caractères.</p>
+			</div>
 		</div>
 
 		<form

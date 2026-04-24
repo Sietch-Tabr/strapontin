@@ -20,6 +20,10 @@
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
 				<div>
+					<p class="mb-1 font-medium text-foreground">Logo et favicon</p>
+					<p>L'application dispose désormais de son logo et de sa favicône, visibles dans l'onglet du navigateur, la barre latérale et les pages de connexion.</p>
+				</div>
+				<div>
 					<p class="mb-1 font-medium text-foreground">Gestion du compte</p>
 					<ul class="list-inside list-disc space-y-1">
 						<li>Modification de l'adresse email depuis Paramètres → Mon compte.</li>

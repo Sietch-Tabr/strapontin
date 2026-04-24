@@ -28,9 +28,12 @@
 
 <div class="flex min-h-screen items-center justify-center bg-background">
 	<div class="w-full max-w-sm space-y-6 p-8">
-		<div class="space-y-1 text-center">
-			<h1 class="text-2xl font-semibold tracking-tight">Strapontin</h1>
-			<p class="text-sm text-muted-foreground">Connectez-vous pour accéder à vos concerts</p>
+		<div class="space-y-3 text-center">
+			<img src="/logo.png" alt="Strapontin" class="mx-auto h-24 w-24 rounded-2xl object-cover" />
+			<div class="space-y-1">
+				<h1 class="text-2xl font-semibold tracking-tight">Strapontin</h1>
+				<p class="text-sm text-muted-foreground">Connectez-vous pour accéder à vos concerts</p>
+			</div>
 		</div>
 
 		{#if resetOk}
