@@ -210,15 +210,9 @@ export const actions: Actions = {
 
     if (valeur) {
       if (cle === "PUBLIC_BASE_URL") {
+        let url: URL;
         try {
-          const url = new URL(valeur);
-          if (url.protocol !== "https:") {
-            return fail(400, {
-              erreur: "L'URL doit commencer par https://",
-              action: "sauvegarderConfig",
-              cle,
-            });
-          }
+          url = new URL(valeur);
         } catch {
           return fail(400, {
             erreur: "Format d'URL invalide.",
@@ -226,22 +220,75 @@ export const actions: Actions = {
             cle,
           });
         }
+        if (url.protocol !== "https:") {
+          return fail(400, {
+            erreur: "L'URL doit commencer par https://",
+            action: "sauvegarderConfig",
+            cle,
+          });
+        }
+        try {
+          const { lookup } = await import("dns/promises");
+          await lookup(url.hostname);
+        } catch {
+          return fail(400, {
+            erreur: "Le domaine est introuvable (échec de résolution DNS).",
+            action: "sauvegarderConfig",
+            cle,
+          });
+        }
       }
 
-      if (cle === "RESEND_API_KEY" && !/^re_[A-Za-z0-9_-]{10,}$/.test(valeur)) {
-        return fail(400, {
-          erreur: "La clé Resend doit commencer par re_ suivi de caractères alphanumériques.",
-          action: "sauvegarderConfig",
-          cle,
-        });
+      if (cle === "RESEND_API_KEY") {
+        if (!/^re_[A-Za-z0-9_-]{10,}$/.test(valeur)) {
+          return fail(400, {
+            erreur:
+              "La clé Resend doit commencer par re_ suivi de caractères alphanumériques.",
+            action: "sauvegarderConfig",
+            cle,
+          });
+        }
+        try {
+          const rep = await fetch("https://api.resend.com/domains", {
+            headers: { Authorization: `Bearer ${valeur}` },
+            signal: AbortSignal.timeout(5000),
+          });
+          if (rep.status === 401) {
+            return fail(400, {
+              erreur: "Clé Resend invalide (accès refusé par l'API).",
+              action: "sauvegarderConfig",
+              cle,
+            });
+          }
+        } catch {
+          // Timeout ou erreur réseau — ne pas bloquer la sauvegarde
+        }
       }
 
-      if (cle === "TICKETMASTER_API_KEY" && !/^[A-Za-z0-9]{16,64}$/.test(valeur)) {
-        return fail(400, {
-          erreur: "Format de clé Ticketmaster invalide (16 à 64 caractères alphanumériques).",
-          action: "sauvegarderConfig",
-          cle,
-        });
+      if (cle === "TICKETMASTER_API_KEY") {
+        if (!/^[A-Za-z0-9]{16,64}$/.test(valeur)) {
+          return fail(400, {
+            erreur:
+              "Format de clé Ticketmaster invalide (16 à 64 caractères alphanumériques).",
+            action: "sauvegarderConfig",
+            cle,
+          });
+        }
+        try {
+          const rep = await fetch(
+            `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${encodeURIComponent(valeur)}&size=1`,
+            { signal: AbortSignal.timeout(5000) },
+          );
+          if (rep.status === 401) {
+            return fail(400, {
+              erreur: "Clé Ticketmaster invalide (accès refusé par l'API).",
+              action: "sauvegarderConfig",
+              cle,
+            });
+          }
+        } catch {
+          // Timeout ou erreur réseau — ne pas bloquer la sauvegarde
+        }
       }
     }
 
