@@ -12,7 +12,11 @@ import { eq } from "drizzle-orm";
 import { randomBytes, createECDH } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import { envoyerInvitation } from "$lib/server/email";
-import { lireConfig, lireConfigsPresentes, sauvegarderConfig } from "$lib/server/config";
+import {
+  lireConfig,
+  lireConfigsPresentes,
+  sauvegarderConfig,
+} from "$lib/server/config";
 import { PUBLIC_BASE_URL } from "$env/static/public";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -202,6 +206,43 @@ export const actions: Actions = {
 
     if (!CLES_AUTORISEES.has(cle)) {
       return fail(400, { erreur: "Clé de configuration invalide." });
+    }
+
+    if (valeur) {
+      if (cle === "PUBLIC_BASE_URL") {
+        try {
+          const url = new URL(valeur);
+          if (url.protocol !== "https:") {
+            return fail(400, {
+              erreur: "L'URL doit commencer par https://",
+              action: "sauvegarderConfig",
+              cle,
+            });
+          }
+        } catch {
+          return fail(400, {
+            erreur: "Format d'URL invalide.",
+            action: "sauvegarderConfig",
+            cle,
+          });
+        }
+      }
+
+      if (cle === "RESEND_API_KEY" && !/^re_[A-Za-z0-9_-]{10,}$/.test(valeur)) {
+        return fail(400, {
+          erreur: "La clé Resend doit commencer par re_ suivi de caractères alphanumériques.",
+          action: "sauvegarderConfig",
+          cle,
+        });
+      }
+
+      if (cle === "TICKETMASTER_API_KEY" && !/^[A-Za-z0-9]{16,64}$/.test(valeur)) {
+        return fail(400, {
+          erreur: "Format de clé Ticketmaster invalide (16 à 64 caractères alphanumériques).",
+          action: "sauvegarderConfig",
+          cle,
+        });
+      }
     }
 
     await sauvegarderConfig(cle, valeur);

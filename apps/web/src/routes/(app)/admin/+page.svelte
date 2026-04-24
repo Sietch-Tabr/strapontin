@@ -16,6 +16,23 @@
 	let configEditionCle = $state<string | null>(null);
 	let configValeur = $state('');
 
+	const donneesBrutes = $derived(form as Record<string, unknown> | null);
+	const erreurConfigCle = $derived(
+		donneesBrutes?.['action'] === 'sauvegarderConfig' && typeof donneesBrutes?.['erreur'] === 'string' && typeof donneesBrutes?.['cle'] === 'string'
+			? donneesBrutes['cle'] as string
+			: null,
+	);
+	const erreurConfigMessage = $derived(
+		donneesBrutes?.['action'] === 'sauvegarderConfig' && typeof donneesBrutes?.['erreur'] === 'string'
+			? donneesBrutes['erreur'] as string
+			: null,
+	);
+	const erreurGlobale = $derived(
+		donneesBrutes?.['action'] !== 'sauvegarderConfig' && typeof donneesBrutes?.['erreur'] === 'string'
+			? donneesBrutes['erreur'] as string
+			: null,
+	);
+
 	function formaterReset(timestampMs: number): string {
 		if (!timestampMs) return '—';
 		return new Date(timestampMs).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -234,13 +251,20 @@
 								method="POST"
 								action="?/sauvegarderConfig"
 								class="border-t border-border px-4 py-3 space-y-3"
-								use:enhance={() => async ({ update }) => {
-									configEditionCle = null;
-									configValeur = '';
+								use:enhance={() => async ({ result, update }) => {
+									if (result.type !== 'failure') {
+										configEditionCle = null;
+										configValeur = '';
+									}
 									await update();
 								}}
 							>
 								<input type="hidden" name="cle" value={config.cle} />
+								{#if erreurConfigCle === config.cle && erreurConfigMessage}
+									<p class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+										{erreurConfigMessage}
+									</p>
+								{/if}
 								<div>
 									<label class="mb-1 block text-xs text-muted-foreground" for="val-{config.cle}">
 										Nouvelle valeur (laisser vide pour supprimer)
@@ -306,9 +330,9 @@
 				</div>
 			{/if}
 
-			{#if form?.erreur}
+			{#if erreurGlobale}
 				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-					{form.erreur}
+					{erreurGlobale}
 				</p>
 			{/if}
 
