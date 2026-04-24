@@ -105,77 +105,20 @@ Deux steps sur push `main` : `typecheck` puis `deploy` (`depends_on: [typecheck]
 - **`typecheck`** (`node:22-alpine`) : crée un `.env` stub, exécute `svelte-check` sur web et `tsc --noEmit` sur worker. Bloque le deploy en cas d'erreur TypeScript.
 - **`deploy`** (`alpine`) : SSH vers le LXC prod, exécute `update.sh`.
 
-```yaml
-steps:
-  - name: typecheck
-    image: node:22-alpine
-    commands:
-      - corepack enable
-      - pnpm install --frozen-lockfile
-      - printf 'DATABASE_URL=x\nBETTER_AUTH_SECRET=x\nTICKETMASTER_API_KEY=x\nBANDSINTOWN_APP_ID=x\nRESEND_API_KEY=x\nREDIS_URL=x\nPUBLIC_BASE_URL=http://localhost\n' > .env
-      - pnpm --filter @strapontin/web run check
-      - pnpm --filter @strapontin/worker exec tsc --noEmit
-    when:
-      - event: push
-        branch: main
-
-  - name: deploy
-    image: alpine
-    depends_on: [typecheck]
-    environment:
-      SSH_KEY:
-        from_secret: ssh_key
-      LXC_HOST:
-        from_secret: lxc_host
-    commands:
-      - apk add openssh-client
-      - echo "$$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
-      - ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_HOST "/opt/strapontin/scripts/update.sh"
-    when:
-      - event: push
-        branch: main
-```
-
-LXC 111 (Woodpecker, `192.168.20.88`) et LXC 113 (strapontin, `192.168.20.79`) sont tous les deux sur VLAN 20 — SSH direct sans passer par le host Proxmox.
-
-Secrets Woodpecker : `ssh_key` (clé privée dédiée), `lxc_host` = `192.168.20.79`.
+Voir `.woodpecker.yaml` pour le YAML complet. Secrets : `ssh_key` (clé privée), `lxc_host` = `192.168.20.79`. LXC 111 (Woodpecker) et LXC 113 (strapontin) sur VLAN 20 — SSH direct.
 
 ### Configuration CI/CD (une seule fois)
 
-1. Générer la clé SSH dédiée sur le Mac :
+Clé SSH : `ssh-keygen -t ed25519 -C "woodpecker-strapontin" -f ~/.ssh/woodpecker_strapontin -N ""`
 
-   ```bash
-   ssh-keygen -t ed25519 -C "woodpecker-strapontin" -f ~/.ssh/woodpecker_strapontin -N ""
-   ```
+**Piège post-reinstallation** : le LXC recréé n'a pas de `authorized_keys`. La clé publique est aussi dans `/root/.ssh/authorized_keys` sur Proxmox (commentaire `woodpecker-strapontin`) :
 
-2. Après provisioning du LXC strapontin, autoriser la clé sur le LXC :
-
-   ```bash
-   cat ~/.ssh/woodpecker_strapontin.pub | ssh root@192.168.1.99 \
-     "pct exec 113 -- bash -c 'mkdir -p /root/.ssh && cat >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'"
-   ```
-
-   **Piège post-reinstallation** : le LXC recréé n'a pas de `authorized_keys`. Si `~/.ssh/woodpecker_strapontin.pub` n'est plus disponible sur le Mac, la clé publique est aussi dans `/root/.ssh/authorized_keys` sur Proxmox (commentaire `woodpecker-strapontin`) :
-
-   ```bash
-   ssh root@192.168.1.99 "
-     PUBKEY=\$(grep woodpecker-strapontin /root/.ssh/authorized_keys)
-     pct exec 113 -- bash -c \"mkdir -p /root/.ssh && echo '\$PUBKEY' >> /root/.ssh/authorized_keys && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys\"
-   "
-   ```
-
-3. Créer le repo sur Codeberg puis pousser :
-
-   ```bash
-   git remote add origin https://codeberg.org/Kwaite/strapontin.git
-   git push -u origin main
-   ```
-
-4. Dans Woodpecker (http://LXC-111) :
-   - Activer le repo `Kwaite/strapontin` (onglet Repositories)
-   - Aller dans Settings → Secrets du repo
-   - Ajouter le secret `ssh_key` : coller le contenu de `~/.ssh/woodpecker_strapontin` (clé **privée**)
-   - Ajouter le secret `lxc_host` : valeur `192.168.20.79`
+```bash
+ssh root@192.168.1.99 "
+  PUBKEY=\$(grep woodpecker-strapontin /root/.ssh/authorized_keys)
+  pct exec 113 -- bash -c \"mkdir -p /root/.ssh && echo '\$PUBKEY' >> /root/.ssh/authorized_keys && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys\"
+"
+```
 
 ## Scripts d'exploitation
 
@@ -189,15 +132,6 @@ scripts/
 ├── system-update.sh     # mise à jour OS du LXC (depuis host Proxmox) : snapshot → apt → healthcheck
 ├── seed-artistes.ts     # importe une liste d'artistes pour un user (tsx scripts/seed-artistes.ts)
 └── artistes-seed.txt    # liste d'artistes par défaut (un par ligne, # = commentaire)
-```
-
-### seed-artistes.ts — usage
-
-```bash
-# Sur le LXC prod, après avoir sourcé .env :
-DATABASE_URL=... USER_EMAIL=kwaite@example.com tsx scripts/seed-artistes.ts
-# Avec un fichier custom :
-DATABASE_URL=... USER_EMAIL=... tsx scripts/seed-artistes.ts /chemin/vers/artistes.txt
 ```
 
 ### update.sh — ordre strict
@@ -249,27 +183,7 @@ sont gérées manuellement avec snapshot préalable.
 
 ### backup.sh
 
-Le NAS est monté en bind mount dans le LXC sur `/mnt/backup/` — pas de rsync, écriture directe :
-
-```bash
-su - postgres -c "pg_dump strapontin" | gzip > /mnt/backup/strapontin_$(date +%Y%m%d_%H%M%S).sql.gz
-cp /opt/strapontin/.env /mnt/backup/.env.$(date +%Y%m%d)
-find /mnt/backup/ -name "*.sql.gz" -mtime +30 -delete
-```
-
-Note : `pg_dump` doit être exécuté en tant que `postgres` (peer auth).
-
-Montage NAS dans le LXC :
-
-```bash
-# Dans provision-lxc.sh (à exécuter depuis le host Proxmox)
-# Prérequis : créer /volume1/backup/Strapontin/ dans DSM au préalable
-pct set $VMID --mp0 /mnt/synology/backup/Strapontin,mp=/mnt/backup
-```
-
-### Backup automatique
-
-Cron systemd (`OnCalendar=daily`) sur le LXC — indépendant des mises à jour manuelles.
+NAS monté en bind mount sur `/mnt/backup/`. `pg_dump` exécuté en tant que `postgres` (peer auth). Cron systemd quotidien (`OnCalendar=daily`). Montage NAS : `pct set $VMID --mp0 /mnt/synology/backup/Strapontin,mp=/mnt/backup` (depuis host Proxmox).
 
 ## Infrastructure (déploiement)
 
@@ -288,15 +202,7 @@ Cron systemd (`OnCalendar=daily`) sur le LXC — indépendant des mises à jour 
 
 ## Variables d'environnement (.env)
 
-```
-TICKETMASTER_API_KEY=
-DATABASE_URL=postgresql://strapontin:password@localhost:5432/strapontin
-REDIS_URL=redis://localhost:6379
-BETTER_AUTH_SECRET=
-RESEND_API_KEY=
-PUBLIC_BASE_URL=https://strapontin.kwaite.fr
-CONTACT_EMAIL=strapontin@kwaite.fr
-```
+Voir `.env.example`. En prod, seules `DATABASE_URL`, `REDIS_URL` et `BETTER_AUTH_SECRET` restent dans `.env` — les autres clés applicatives sont dans `app_config` (DB).
 
 ## Sources de données
 
@@ -348,7 +254,7 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 ### Pièges BullMQ
 
 - **BullMQ v5 interdit les `:` dans les `jobId`** — utiliser `__` comme séparateur (`artiste__norm`, `artistes__batch`, `region__all`, `salle__venueId`, `matches__all`, `purge__YYYY-MM-DD`). Les `:` dans le _type de job_ (premier arg de `queue.add`) sont acceptés.
-- **`removeOnFail: { count: N }` bloque le re-queuing des jobs à `jobId` fixe** — quand un job échoue avec cette option, sa clé Redis persiste. Tout appel ultérieur à `queue.add` avec le même `jobId` retourne silencieusement le job échoué sans en créer un nouveau. Utiliser `removeOnFail: true` pour les jobs cron à `jobId` fixe (`artistes__batch`, `region__all`, `matches__all`, `purge__*`).
+- **`removeOnFail: { count: N }` et `removeOnComplete: { count: N }` bloquent le re-queuing des jobs à `jobId` fixe** (BullMQ ≥ 5.76) — le hash Redis persiste et tout `queue.add` ultérieur avec le même `jobId` est ignoré silencieusement. Utiliser `removeOnFail: true` et `removeOnComplete: true` pour les jobs cron à `jobId` fixe (`artistes__batch`, `region__all`, `matches__all`, `salle__*`).
 
 ### Centroïdes des départements (`CENTRES_DEPT`)
 
@@ -393,6 +299,7 @@ Table `app_config` : clé API et autres variables configurables depuis l'IHM adm
 `CONTACT_EMAIL` et `PUBLIC_BASE_URL` sont affichées en clair dans `/admin` ; les autres restent masquées.
 
 **Validation à la saisie** (action `sauvegarderConfig`) :
+
 - `PUBLIC_BASE_URL` : format URL valide + `https://` + résolution DNS du domaine (bloquant)
 - `RESEND_API_KEY` : format `re_` + appel test `GET api.resend.com/domains` (HTTP 401 = clé invalide)
 - `TICKETMASTER_API_KEY` : format alphanumérique 16–64 chars + appel test Discovery API (HTTP 401 = clé invalide)
@@ -541,24 +448,24 @@ Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`,
 
 Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + bottom nav).
 
-| Route              | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                | Accueil — prochains concerts artistes suivis uniquement (JOIN userArtistes), groupés en tournées. Bouton "Masquer" sur chaque concert (masque_le dans user_matches) — le concert disparaît de l'Accueil mais reste visible dans /spectacles.                                                                                                                                                                                                                                                         |
-| `/artistes`        | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `/salles`          | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `/spectacles`      | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours / Masqués / tri (Par date · Nouveautés). Filtres : classification, genre, artiste, mois, budget. Chip "Masqués" affiche les concerts masqués depuis l'Accueil avec bouton "Réafficher".                                                                                                                                                                                 |
-| `/decouverte`      | Tous les concerts en base. Chips dept, catégories, genres, tri (Par date · Nouveautés). Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs.                                                                                                                                                                                                                                                                                     |
-| `/parametres`      | 5 sections (cards) : Mon compte (nom, **email**, identifiant, mot de passe), Recherche de concerts (depts, rayon, filtreDisponibles), Notifications (frequenceNotifications : jamais / temps_reel / quotidien + cases notifArtistes / notifSalles visibles si fréquence ≠ jamais), Apparence (thème), Export / Import (JSON fusionner / écraser, checkbox config opt-in, fetch déclenché post-import). **Zone de danger** : suppression du compte (RGPD art. 17) avec suppression en cascade via FK. |
-| `/forgot-password` | Saisie email → envoi lien reset MDP via Resend (hors garde auth)                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `/reset-password`  | Formulaire nouveau mot de passe (token Better-Auth, valable 1h — hors garde auth)                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `/aide`            | Page statique : guide d'utilisation, RGPD (Règlement Général sur la Protection des Données), licence MIT. Accessible depuis la sidebar desktop et le drawer mobile. Lien vers `/changelog` en bas de page.                                                                                                                                                                                                                                                                                           |
-| `/changelog`       | Page statique : liste des nouveautés par version. Accessible depuis la sidebar desktop, le drawer mobile "···" et `/aide`.                                                                                                                                                                                                                                                                                                                                                                           |
-| `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json` (artistes, salles, config). Protégé par session.                                                                                                                                                                                                                                                                                                                                                                                         |
-| `/admin`           | Invitation (email seul) + liste + suppression + **modification** (nom, email) + **réinitialisation MDP** (lien reset envoyé via Resend) — réservé admin. Badge "premier login en attente" si `must_change_credentials = true`.                                                                                                                                                                                                                                                                       |
-| `/setup`           | Création premier compte admin (accessible uniquement si 0 users en base)                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `/login`           | Authentification username/password (identifiant insensible à la casse)                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `/first-login`     | Première connexion — choix du nom, identifiant et nouveau mot de passe. Redirigé automatiquement si `must_change_credentials = true`.                                                                                                                                                                                                                                                                                                                                                                |
-| `/health`          | GET — vérification DB (SELECT 1), retourne `{"status":"ok"}` ou 503, hors garde d'auth                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Route              | Description                                                                                                                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                | Accueil — concerts artistes suivis, groupés en tournées. Bouton "Masquer" (masque_le dans user_matches) — reste visible dans /spectacles.                                                           |
+| `/artistes`        | Recherche MusicBrainz + DB → suggestions avec nom canonique → suivre/supprimer                                                                                                                      |
+| `/salles`          | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                                                                                          |
+| `/spectacles`      | Mes spectacles — userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15j / Masqués / tri. Filtres : classification, genre, artiste, mois, budget.                           |
+| `/decouverte`      | Tous les concerts en base. Chips dept, catégories, genres, tri. Filtres mois, budget. Bannière si dept hors prefs (timestamp Redis + Actualiser / Ajouter aux prefs).                               |
+| `/parametres`      | 5 sections : Mon compte (nom, email, identifiant, MDP), Recherche (depts, rayon), Notifications (fréquence + artistes/salles), Apparence (thème), Export/Import. Zone de danger : suppression RGPD. |
+| `/forgot-password` | Saisie email → lien reset MDP via Resend (hors garde auth)                                                                                                                                          |
+| `/reset-password`  | Formulaire nouveau MDP (token Better-Auth, 1h — hors garde auth)                                                                                                                                    |
+| `/aide`            | Guide, RGPD, licence MIT. Lien vers `/changelog`.                                                                                                                                                   |
+| `/changelog`       | Nouveautés par version.                                                                                                                                                                             |
+| `/api/preferences` | `GET` — télécharge `strapontin-preferences-YYYY-MM-DD.json`. Protégé par session.                                                                                                                   |
+| `/admin`           | Invitation (email) + liste + suppression + modification (nom, email) + réinit MDP — réservé admin. Badge si `must_change_credentials = true`.                                                       |
+| `/setup`           | Création premier compte admin (si 0 users en base)                                                                                                                                                  |
+| `/login`           | Authentification username/password (insensible à la casse)                                                                                                                                          |
+| `/first-login`     | Premier login — choix nom, identifiant, MDP. Redirigé si `must_change_credentials = true`.                                                                                                          |
+| `/health`          | GET — `{"status":"ok"}` ou 503, hors garde d'auth                                                                                                                                                   |
 
 ## Affichage — tournées
 
@@ -628,22 +535,6 @@ Format JSON : `{ version, exporteAt, artistes, salles, config }`.
 
 ## Roadmap — jalons
 
-### v1.0 — livré (2026-04-18)
-
-Première version publique. Release taguée sur Codeberg, déploiement prod validé de bout en bout.
-
-### v1.1 — jalon actif
-
-| #    | Item                                      |
-| ---- | ----------------------------------------- |
-| #65  | Bandsintown 401 — désactiver ou remplacer |
-| #37  | Doublons inter-jobs                       |
-| #115 | LXC de développement dédié                |
-
-### v1.2 (post-v1.1)
-
-| Priorité | Item                                                                                          |
-| -------- | --------------------------------------------------------------------------------------------- |
-| v1.2     | ~~Notifications email (Resend)~~ — livré : invitation, reset MDP, digest temps_reel/quotidien |
-| v1.2     | Shotgun.live — Playwright + API interne JSON                                                  |
-| Phase 3  | Dice.fm — scraping Playwright                                                                 |
+- **v1.0** — livré 2026-04-18
+- **v1.1** — terminé (#65 Bandsintown, #37 doublons, #115 → déplacé v1.2)
+- **v1.2** — actif : #110 (page maintenance NPM), #115 (LXC dev), #116 (portabilité scripts), Shotgun.live, Dice.fm

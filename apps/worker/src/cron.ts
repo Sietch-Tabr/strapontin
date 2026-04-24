@@ -28,7 +28,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
       { type: "fetch:artistes:batch" },
       {
         jobId: "artistes__batch",
-        removeOnComplete: { count: 10 },
+        removeOnComplete: true,
         removeOnFail: true,
       },
     );
@@ -64,7 +64,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
       },
       {
         jobId: "region__all",
-        removeOnComplete: { count: 10 },
+        removeOnComplete: true,
         removeOnFail: true,
       },
     );
@@ -83,7 +83,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
       { type: "fetch:salle", venueId: tmVenueId },
       {
         jobId: `salle__${tmVenueId}`,
-        removeOnComplete: { count: 10 },
+        removeOnComplete: true,
         removeOnFail: { count: 20 },
       },
     );
@@ -95,8 +95,8 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     { type: "recalculer:matches" },
     {
       jobId: "matches__all",
-      delay: 60_000, // 1 min après les fetches
-      removeOnComplete: { count: 10 },
+      delay: 60_000,
+      removeOnComplete: true,
       removeOnFail: true,
     },
   );
