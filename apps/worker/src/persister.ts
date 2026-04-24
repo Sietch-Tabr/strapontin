@@ -14,6 +14,7 @@ import { normaliserTexte, similarite } from "@strapontin/core";
 import type { ConcertBrut } from "@strapontin/sources";
 import { db } from "./db.js";
 import { envoyerDigestConcerts } from "./email.js";
+import { envoyerPushDigest } from "./push.js";
 
 const logger = pino({ name: "persister" });
 
@@ -428,16 +429,18 @@ async function envoyerDigestPourUser(userId: string, email: string): Promise<voi
 
   if (nouveauxMatches.length === 0) return;
 
-  await envoyerDigestConcerts({
-    email,
-    concerts: nouveauxMatches.map((m) => ({
-      artiste: m.artiste,
-      date: m.date,
-      salle: m.salle,
-      ville: m.ville,
-      url: m.url,
-    })),
-  });
+  const concertsPourNotif = nouveauxMatches.map((m) => ({
+    artiste: m.artiste,
+    date: m.date,
+    salle: m.salle,
+    ville: m.ville,
+    url: m.url,
+  }));
+
+  await Promise.allSettled([
+    envoyerDigestConcerts({ email, concerts: concertsPourNotif }),
+    envoyerPushDigest(userId, concertsPourNotif),
+  ]);
 
   // Marquer comme notifiés
   const concertIds = nouveauxMatches.map((m) => m.concertId);

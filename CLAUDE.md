@@ -387,7 +387,9 @@ Table `app_config` : clé API et autres variables configurables depuis l'IHM adm
 **Chiffrement** : AES-256-GCM. Clé de 32 bytes dérivée de `BETTER_AUTH_SECRET` via `scryptSync` (salt fixe `strapontin-app-config`).
 ⚠️ Si `BETTER_AUTH_SECRET` change en production, toutes les valeurs en base deviennent illisibles — vider la table `app_config` et les re-saisir depuis l'IHM.
 
-**Clés gérées** : `TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`.
+**Clés gérées** : `TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`.
+
+⚠️ Ne jamais changer les clés VAPID sans supprimer les abonnements push existants (`DELETE FROM push_abonnements`) — les anciens endpoints deviennent invalides.
 
 **Pattern lecture** :
 - Web : `apps/web/src/lib/server/config.ts` → `lireConfig(cle)` → `sauvegarderConfig(cle, valeur)` → `lireConfigsPresentes()`
@@ -517,6 +519,8 @@ Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`,
   - Résolution : cookie en priorité ; si absent → lecture DB + pose cookie automatique (`hooks.server.ts`)
 - **Palette** : neutres (gris, blanc/noir) + une couleur accent unique (à définir Phase 0)
 - **PWA** : `static/manifest.json` (name, icons, display: standalone, theme_color: #ffffff). Icônes : `icon-192.png` et `icon-512.png` générées depuis `favicon.png` (1024×1024). `<link rel="manifest">` + `<meta name="theme-color">` dans `app.html`.
+- **Service Worker** : `apps/web/src/service-worker.ts` — géré automatiquement par SvelteKit. Cache les assets statiques. Gère les événements `push` (notifications Web Push) et `notificationclick` (ouvre `/spectacles`).
+- **Notifications push** : opt-in dans `/parametres` → section "Notifications push". Clés VAPID stockées dans `app_config`. Génération : `tsx scripts/generer-vapid.ts`. Envoi dans `apps/worker/src/push.ts` → `envoyerPushDigest()`. Table DB : `push_abonnements`. Nettoyage auto des abonnements révoqués (codes 404/410).
 
 ## Navigation
 
