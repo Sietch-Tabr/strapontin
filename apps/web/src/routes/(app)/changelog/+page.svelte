@@ -43,6 +43,7 @@
 					<ul class="list-inside list-disc space-y-1">
 						<li>Modification du nom et de l'email d'un utilisateur depuis la page Admin.</li>
 						<li>Réinitialisation du mot de passe par l'admin : envoi d'un lien de reset à l'utilisateur.</li>
+						<li>Configuration des clés API depuis l'interface Admin (Ticketmaster, Resend, email de contact, URL de base) — sans accès au serveur.</li>
 					</ul>
 				</div>
 				<div>

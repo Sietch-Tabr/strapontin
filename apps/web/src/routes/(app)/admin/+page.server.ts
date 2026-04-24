@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import { envoyerInvitation } from "$lib/server/email";
+import { lireConfigsPresentes, sauvegarderConfig } from "$lib/server/config";
 import { PUBLIC_BASE_URL } from "$env/static/public";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -47,7 +48,21 @@ export const load: PageServerLoad = async ({ locals }) => {
       : null,
   };
 
-  return { utilisateurs: tousLesUsers, quotaTM, statsJobs };
+  const configsPresentes = await lireConfigsPresentes();
+
+  const CLES_CONFIG = [
+    "TICKETMASTER_API_KEY",
+    "RESEND_API_KEY",
+    "CONTACT_EMAIL",
+    "PUBLIC_BASE_URL",
+  ] as const;
+
+  const configStatuts = CLES_CONFIG.map((cle) => ({
+    cle,
+    presente: configsPresentes.has(cle),
+  }));
+
+  return { utilisateurs: tousLesUsers, quotaTM, statsJobs, configStatuts };
 };
 
 export const actions: Actions = {
@@ -148,6 +163,31 @@ export const actions: Actions = {
     });
 
     return { succes: true, action: "reinitialiserMdp", email: cible.email };
+  },
+
+  sauvegarderConfig: async ({ request, locals }) => {
+    if (locals.user?.role !== "admin") {
+      return fail(403, { erreur: "Accès refusé." });
+    }
+
+    const donnees = await request.formData();
+    const cle = donnees.get("cle")?.toString().trim() ?? "";
+    const valeur = donnees.get("valeur")?.toString().trim() ?? "";
+
+    const CLES_AUTORISEES = new Set([
+      "TICKETMASTER_API_KEY",
+      "RESEND_API_KEY",
+      "CONTACT_EMAIL",
+      "PUBLIC_BASE_URL",
+    ]);
+
+    if (!CLES_AUTORISEES.has(cle)) {
+      return fail(400, { erreur: "Clé de configuration invalide." });
+    }
+
+    await sauvegarderConfig(cle, valeur);
+
+    return { succes: true, action: "sauvegarderConfig", cle };
   },
 
   modifierCompte: async ({ request, locals }) => {

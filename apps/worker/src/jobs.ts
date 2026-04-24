@@ -2,13 +2,13 @@
 
 import pino from "pino";
 import type { Job } from "bullmq";
-import type { ConcertBrut } from "@strapontin/sources";
+import type { ConcertBrut, TicketmasterSource } from "@strapontin/sources";
 import { resoudreNomCanonique } from "@strapontin/sources";
 import { dedoublonner, normaliserTexte } from "@strapontin/core";
 import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import { lt } from "drizzle-orm";
 import { db } from "./db.js";
-import { ticketmaster, eventim } from "./sources.js";
+import { obtenirTicketmaster, eventim } from "./sources.js";
 import { persisterConcerts, recalculerMatches, notifierUsersQuotidien } from "./persister.js";
 import {
   redis,
@@ -147,8 +147,8 @@ async function echouerStatsJob(
     );
 }
 
-async function sauvegarderQuotaTM(): Promise<void> {
-  const quota = ticketmaster.obtenirQuota();
+async function sauvegarderQuotaTM(tm: TicketmasterSource): Promise<void> {
+  const quota = tm.obtenirQuota();
   if (quota) {
     await redis
       .set(CLE_QUOTA_TM, JSON.stringify(quota))
@@ -208,8 +208,9 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     case "fetch:artiste": {
       logger.info({ artiste: data.artiste }, "fetch:artiste démarré");
 
+      const tm = await obtenirTicketmaster();
       const [resultsTM, resultsEventim] = await Promise.allSettled([
-        ticketmaster.fetchArtiste(data.artiste),
+        tm.fetchArtiste(data.artiste),
         eventim.fetchArtiste(data.artiste),
       ]);
 
@@ -231,7 +232,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         );
       }
 
-      await sauvegarderQuotaTM();
+      await sauvegarderQuotaTM(tm);
 
       const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
       logger.info(
@@ -254,6 +255,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     case "fetch:artistes:batch": {
       logger.info("fetch:artistes:batch démarré");
       const debutBatch = await demarrerStatsJob("artistes-batch");
+      const tmBatch = await obtenirTicketmaster();
       try {
         if (!(await verifierQuotaTM("fetch:artistes:batch"))) {
           await terminerStatsJob("artistes-batch", debutBatch);
@@ -293,7 +295,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
         // Résoudre les IDs manquants via /attractions
         for (const { nom, norm } of sansId) {
-          const id = await ticketmaster.rechercherAttractionId(nom);
+          const id = await tmBatch.rechercherAttractionId(nom);
           if (id) {
             idsParNorm.set(norm, id);
             await redis
@@ -314,7 +316,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         const concertsTM: ConcertBrut[] = [];
         for (let i = 0; i < tousIds.length; i += TAILLE_LOT) {
           const lot = tousIds.slice(i, i + TAILLE_LOT);
-          const resultats = await ticketmaster.fetchArtistesBatch(lot);
+          const resultats = await tmBatch.fetchArtistesBatch(lot);
           concertsTM.push(...resultats);
           if (i + TAILLE_LOT < tousIds.length) {
             await new Promise((r) => setTimeout(r, 250));
@@ -331,12 +333,12 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
           (r) => !nomsAvecId.has(r.artisteNormalise),
         );
         for (const { artisteAffiche } of artistesSansTm) {
-          const resultats = await ticketmaster.fetchArtiste(artisteAffiche);
+          const resultats = await tmBatch.fetchArtiste(artisteAffiche);
           concertsTM.push(...resultats);
           await new Promise((r) => setTimeout(r, 250));
         }
 
-        await sauvegarderQuotaTM();
+        await sauvegarderQuotaTM(tmBatch);
 
         // Eventim : appels parallèles par artiste
         const nomsArtistes = rows.map((r) => r.artisteAffiche);
@@ -370,6 +372,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     case "fetch:region": {
       logger.info({ depts: data.depts }, "fetch:region démarré");
       const debutRegion = await demarrerStatsJob("region");
+      const tmRegion = await obtenirTicketmaster();
       try {
         if (!(await verifierQuotaTM("fetch:region"))) {
           await terminerStatsJob("region", debutRegion);
@@ -378,7 +381,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
         const rayonKmRegion = data.rayonKm ?? 50;
         const [resultsTM, resultsEventim] = await Promise.allSettled([
-          ticketmaster.fetchRegion(data.depts, undefined, rayonKmRegion),
+          tmRegion.fetchRegion(data.depts, undefined, rayonKmRegion),
           eventim.fetchRegion(data.depts),
         ]);
 
@@ -389,7 +392,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
             : []),
         ];
 
-        await sauvegarderQuotaTM();
+        await sauvegarderQuotaTM(tmRegion);
 
         const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
         logger.info(
@@ -437,17 +440,18 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     case "fetch:salle": {
       logger.info({ venueId: data.venueId }, "fetch:salle démarré");
 
-      if (!ticketmaster.fetchSalle) {
+      const tmSalle = await obtenirTicketmaster();
+      if (!tmSalle.fetchSalle) {
         logger.error("fetchSalle non disponible sur la source TM");
         break;
       }
-      const concertsSalle = await ticketmaster.fetchSalle(data.venueId);
+      const concertsSalle = await tmSalle.fetchSalle(data.venueId);
       logger.info(
         { venueId: data.venueId, total: concertsSalle.length },
         "TM fetchSalle terminé",
       );
 
-      await sauvegarderQuotaTM();
+      await sauvegarderQuotaTM(tmSalle);
 
       const dedoublonnes = await resoudreArtistesConcerts(
         dedoublonner(concertsSalle),

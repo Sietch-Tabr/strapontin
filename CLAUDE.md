@@ -380,6 +380,21 @@ interface SourceConcerts {
 }
 ```
 
+### Configuration applicative (`app_config`)
+
+Table `app_config` : clé API et autres variables configurables depuis l'IHM admin (`/admin`), chiffrées en base. Prend le dessus sur les variables d'environnement.
+
+**Chiffrement** : AES-256-GCM. Clé de 32 bytes dérivée de `BETTER_AUTH_SECRET` via `scryptSync` (salt fixe `strapontin-app-config`).
+⚠️ Si `BETTER_AUTH_SECRET` change en production, toutes les valeurs en base deviennent illisibles — vider la table `app_config` et les re-saisir depuis l'IHM.
+
+**Clés gérées** : `TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`.
+
+**Pattern lecture** :
+- Web : `apps/web/src/lib/server/config.ts` → `lireConfig(cle)` → `sauvegarderConfig(cle, valeur)` → `lireConfigsPresentes()`
+- Worker : `apps/worker/src/config.ts` (même API, import `db` du worker)
+
+**Pattern worker** (`apps/worker/src/sources.ts`) : `obtenirTicketmaster()` lit la clé TM depuis la DB avec cache mémoire TTL 5 min + fallback `process.env["TICKETMASTER_API_KEY"]`. Les jobs BullMQ appellent `obtenirTicketmaster()` en début de traitement (pas de singleton statique).
+
 ## Authentification
 
 Better-Auth, username/password. Invite-only : admin crée le compte en saisissant uniquement
