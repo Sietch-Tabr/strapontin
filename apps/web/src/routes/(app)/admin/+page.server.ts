@@ -12,7 +12,7 @@ import { eq } from "drizzle-orm";
 import { randomBytes, createECDH } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import { envoyerInvitation } from "$lib/server/email";
-import { lireConfigsPresentes, sauvegarderConfig } from "$lib/server/config";
+import { lireConfig, lireConfigsPresentes, sauvegarderConfig } from "$lib/server/config";
 import { PUBLIC_BASE_URL } from "$env/static/public";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -64,10 +64,16 @@ export const load: PageServerLoad = async ({ locals }) => {
     "VAPID_PRIVATE_KEY",
   ] as const;
 
-  const configStatuts = CLES_CONFIG.map((cle) => ({
-    cle,
-    presente: configsPresentes.has(cle),
-  }));
+  const CLES_EN_CLAIR = new Set(["CONTACT_EMAIL", "PUBLIC_BASE_URL"]);
+
+  const configStatuts = await Promise.all(
+    CLES_CONFIG.map(async (cle) => ({
+      cle,
+      presente: configsPresentes.has(cle),
+      valeur: CLES_EN_CLAIR.has(cle) ? await lireConfig(cle) : null,
+      secret: !CLES_EN_CLAIR.has(cle),
+    })),
+  );
 
   return { utilisateurs: tousLesUsers, quotaTM, statsJobs, configStatuts };
 };

@@ -196,7 +196,9 @@
 							<div class="min-w-0">
 								<p class="text-sm font-mono font-medium text-foreground">{config.cle}</p>
 								<p class="text-xs text-muted-foreground mt-0.5">
-									{#if config.presente}
+									{#if config.valeur}
+										<span class="font-mono">{config.valeur}</span>
+									{:else if config.presente}
 										<span class="text-green-600 dark:text-green-400">Configurée en base</span>
 									{:else}
 										<span>Non configurée — utilise la variable d'environnement</span>
@@ -245,7 +247,7 @@
 									</label>
 									<input
 										id="val-{config.cle}"
-										type="password"
+										type={config.secret ? 'password' : 'text'}
 										name="valeur"
 										bind:value={configValeur}
 										autocomplete="off"
