@@ -277,6 +277,30 @@ export const appConfig = pgTable("app_config", {
 });
 
 // -------------------------------------------------------------------
+// push_abonnements
+// Abonnements Web Push des utilisateurs (endpoint + clés ECDH).
+// Chaque user peut avoir plusieurs abonnements (multi-appareils).
+// -------------------------------------------------------------------
+
+export const pushAbonnements = pgTable(
+  "push_abonnements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    creeLe: timestamp("cree_le", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("uq_push_user_endpoint").on(table.userId, table.endpoint),
+    index("idx_push_abonnements_user").on(table.userId),
+  ],
+);
+
+// -------------------------------------------------------------------
 // fetch_jobs
 // Historique et planning des jobs de fetch. Lu par la page admin.
 // -------------------------------------------------------------------

@@ -43,6 +43,94 @@
 	let importEnCours = $state(false);
 	let modeImport = $state<'merger' | 'ecraser'>('merger');
 	let confirmationSuppression = $state(false);
+
+	// Push
+	let pushSupporte = $state(false);
+	let pushAbonne = $state<PushSubscription | null>(null);
+	let pushClePublique = $state<string | null>(null);
+	let pushPermissionRefusee = $state(false);
+	let pushEnCours = $state(false);
+	let pushErreur = $state<string | null>(null);
+
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+		pushSupporte = true;
+		void chargerEtatPush();
+	});
+
+	async function chargerEtatPush() {
+		try {
+			const [reponseVapid, registration] = await Promise.all([
+				fetch('/api/push').then((r) => r.json() as Promise<{ disponible: boolean; clePublique: string | null }>),
+				navigator.serviceWorker.ready,
+			]);
+			if (!reponseVapid.disponible) { pushSupporte = false; return; }
+			pushClePublique = reponseVapid.clePublique;
+			pushAbonne = await registration.pushManager.getSubscription();
+			pushPermissionRefusee = Notification.permission === 'denied';
+		} catch {
+			pushSupporte = false;
+		}
+	}
+
+	async function activerPush() {
+		if (!pushClePublique || pushEnCours) return;
+		pushEnCours = true;
+		pushErreur = null;
+		try {
+			const permission = await Notification.requestPermission();
+			if (permission !== 'granted') {
+				pushPermissionRefusee = permission === 'denied';
+				return;
+			}
+			const registration = await navigator.serviceWorker.ready;
+			const abonnement = await registration.pushManager.subscribe({
+				userVisibleOnly: true,
+				applicationServerKey: urlBase64VersUint8Array(pushClePublique),
+			});
+			const reponse = await fetch('/api/push', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(abonnement.toJSON()),
+			});
+			if (!reponse.ok) throw new Error('Échec enregistrement');
+			pushAbonne = abonnement;
+		} catch (err) {
+			pushErreur = err instanceof Error ? err.message : 'Une erreur est survenue';
+		} finally {
+			pushEnCours = false;
+		}
+	}
+
+	async function desactiverPush() {
+		if (!pushAbonne || pushEnCours) return;
+		pushEnCours = true;
+		pushErreur = null;
+		try {
+			const endpoint = pushAbonne.endpoint;
+			await pushAbonne.unsubscribe();
+			await fetch('/api/push', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ endpoint }),
+			});
+			pushAbonne = null;
+		} catch (err) {
+			pushErreur = err instanceof Error ? err.message : 'Une erreur est survenue';
+		} finally {
+			pushEnCours = false;
+		}
+	}
+
+	function urlBase64VersUint8Array(base64: string): ArrayBuffer {
+		const rembourrage = '='.repeat((4 - (base64.length % 4)) % 4);
+		const b64 = (base64 + rembourrage).replace(/-/g, '+').replace(/_/g, '/');
+		const brut = atob(b64);
+		const octets = new Uint8Array(brut.length);
+		for (let i = 0; i < brut.length; i++) octets[i] = brut.charCodeAt(i);
+		return octets.buffer;
+	}
 </script>
 
 <svelte:head>
@@ -241,6 +329,53 @@
 			{/if}
 			</form>
 		</section>
+
+		<!-- Notifications push -->
+		{#if pushSupporte}
+		<section class="rounded-lg border border-border bg-card p-6">
+			<div class="mb-6 flex items-center gap-2">
+				<Bell size={18} class="text-foreground" aria-hidden="true" />
+				<h2 class="text-base font-semibold text-foreground">Notifications push</h2>
+			</div>
+
+			{#if pushErreur}
+				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+					{pushErreur}
+				</p>
+			{/if}
+
+			{#if pushPermissionRefusee}
+				<p class="text-sm text-muted-foreground">
+					Les notifications sont bloquées dans votre navigateur. Pour les activer, modifiez les permissions du site dans les paramètres de votre navigateur.
+				</p>
+			{:else if pushAbonne}
+				<p class="mb-4 text-sm text-muted-foreground">
+					Les notifications push sont activées sur cet appareil. Vous recevrez une alerte lors de chaque digest.
+				</p>
+				<button
+					type="button"
+					onclick={desactiverPush}
+					disabled={pushEnCours}
+					class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+				>
+					{pushEnCours ? 'Désactivation…' : 'Désactiver les notifications push'}
+				</button>
+			{:else}
+				<p class="mb-4 text-sm text-muted-foreground">
+					Recevez une notification sur cet appareil en même temps que vos emails de digest.
+				</p>
+				<button
+					type="button"
+					onclick={activerPush}
+					disabled={pushEnCours}
+					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+				>
+					<Bell size={16} />
+					{pushEnCours ? 'Activation…' : 'Activer les notifications push'}
+				</button>
+			{/if}
+		</section>
+		{/if}
 
 		<!-- Apparence -->
 		<section class="rounded-lg border border-border bg-card p-6">

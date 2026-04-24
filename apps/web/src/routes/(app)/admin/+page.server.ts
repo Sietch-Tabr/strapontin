@@ -55,6 +55,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     "RESEND_API_KEY",
     "CONTACT_EMAIL",
     "PUBLIC_BASE_URL",
+    "VAPID_PUBLIC_KEY",
+    "VAPID_PRIVATE_KEY",
   ] as const;
 
   const configStatuts = CLES_CONFIG.map((cle) => ({
@@ -179,6 +181,8 @@ export const actions: Actions = {
       "RESEND_API_KEY",
       "CONTACT_EMAIL",
       "PUBLIC_BASE_URL",
+      "VAPID_PUBLIC_KEY",
+      "VAPID_PRIVATE_KEY",
     ]);
 
     if (!CLES_AUTORISEES.has(cle)) {
