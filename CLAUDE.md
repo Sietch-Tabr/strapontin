@@ -501,6 +501,7 @@ Exports `@strapontin/core` : `normaliserTexte`, `normaliserVille`, `similarite`,
   - `auto` : script inline dans `app.html` (`%sveltekit.nonce%`) détecte `prefers-color-scheme` côté client
   - Résolution : cookie en priorité ; si absent → lecture DB + pose cookie automatique (`hooks.server.ts`)
 - **Palette** : neutres (gris, blanc/noir) + une couleur accent unique (à définir Phase 0)
+- **PWA** : `static/manifest.json` (name, icons, display: standalone, theme_color: #ffffff). Icônes : `icon-192.png` et `icon-512.png` générées depuis `favicon.png` (1024×1024). `<link rel="manifest">` + `<meta name="theme-color">` dans `app.html`.
 
 ## Navigation
 

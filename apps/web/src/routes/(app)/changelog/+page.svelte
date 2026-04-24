@@ -20,6 +20,10 @@
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
 				<div>
+					<p class="mb-1 font-medium text-foreground">Application installable</p>
+					<p>Strapontin peut désormais être installé comme application sur votre appareil (Android, iOS, desktop) via le menu de votre navigateur. L'application s'ouvre alors sans barre d'adresse, comme une application native.</p>
+				</div>
+				<div>
 					<p class="mb-1 font-medium text-foreground">Masquer un concert</p>
 					<p>Un bouton "Masquer" est disponible sur chaque concert de l'Accueil. Le concert disparaît de la page d'accueil mais reste visible dans Mes spectacles. Pour le réafficher, utilisez le chip "Masqués" dans Mes spectacles puis cliquez sur "Réafficher".</p>
 				</div>
