@@ -1,10 +1,15 @@
 import { db } from "$lib/server/db";
-import { redis, CLE_QUOTA_TM, cleStatsJob, type StatsJobRedis } from "$lib/server/redis";
+import {
+  redis,
+  CLE_QUOTA_TM,
+  cleStatsJob,
+  type StatsJobRedis,
+} from "$lib/server/redis";
 import { auth } from "$lib/auth";
 import { users } from "@strapontin/core/schema";
 import type { QuotaTM } from "@strapontin/sources";
 import { eq } from "drizzle-orm";
-import { randomBytes } from "crypto";
+import { randomBytes, createECDH } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import { envoyerInvitation } from "$lib/server/email";
 import { lireConfigsPresentes, sauvegarderConfig } from "$lib/server/config";
@@ -88,7 +93,8 @@ export const actions: Actions = {
     const nomInitial = email.split("@")[0].slice(0, 100);
 
     // Username temporaire unique : u_ + 8 chars aléatoires
-    const usernameTemp = "u_" + randomBytes(6).toString("base64url").slice(0, 8);
+    const usernameTemp =
+      "u_" + randomBytes(6).toString("base64url").slice(0, 8);
 
     // Mot de passe temporaire cryptographiquement sûr
     const motDePasseTemp = randomBytes(12).toString("base64url").slice(0, 16);
@@ -161,7 +167,10 @@ export const actions: Actions = {
     }
 
     await auth.api.requestPasswordReset({
-      body: { email: cible.email, redirectTo: `${PUBLIC_BASE_URL}/reset-password` },
+      body: {
+        email: cible.email,
+        redirectTo: `${PUBLIC_BASE_URL}/reset-password`,
+      },
     });
 
     return { succes: true, action: "reinitialiserMdp", email: cible.email };
@@ -192,6 +201,22 @@ export const actions: Actions = {
     await sauvegarderConfig(cle, valeur);
 
     return { succes: true, action: "sauvegarderConfig", cle };
+  },
+
+  genererVapid: async ({ locals }) => {
+    if (locals.user?.role !== "admin") {
+      return fail(403, { erreur: "Accès refusé." });
+    }
+
+    const ecdh = createECDH("prime256v1");
+    ecdh.generateKeys();
+
+    await Promise.all([
+      sauvegarderConfig("VAPID_PUBLIC_KEY", ecdh.getPublicKey("base64url")),
+      sauvegarderConfig("VAPID_PRIVATE_KEY", ecdh.getPrivateKey("base64url")),
+    ]);
+
+    return { succes: true, action: "genererVapid" };
   },
 
   modifierCompte: async ({ request, locals }) => {

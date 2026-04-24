@@ -183,6 +183,11 @@
 					Clé <strong>{form.cle}</strong> mise à jour.
 				</p>
 			{/if}
+			{#if form?.action === 'genererVapid' && form?.succes}
+				<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+					Clés VAPID générées et enregistrées.
+				</p>
+			{/if}
 
 			<div class="rounded-xl border border-border bg-card divide-y divide-border">
 				{#each data.configStatuts as config (config.cle)}
@@ -198,16 +203,28 @@
 									{/if}
 								</p>
 							</div>
-							<button
-								type="button"
-								onclick={() => {
-									configEditionCle = configEditionCle === config.cle ? null : config.cle;
-									configValeur = '';
-								}}
-								class="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
-							>
-								{configEditionCle === config.cle ? 'Annuler' : 'Modifier'}
-							</button>
+							<div class="flex shrink-0 items-center gap-1">
+								{#if config.cle === 'VAPID_PUBLIC_KEY'}
+									<form method="POST" action="?/genererVapid" use:enhance>
+										<button
+											type="submit"
+											class="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
+										>
+											Générer
+										</button>
+									</form>
+								{/if}
+								<button
+									type="button"
+									onclick={() => {
+										configEditionCle = configEditionCle === config.cle ? null : config.cle;
+										configValeur = '';
+									}}
+									class="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
+								>
+									{configEditionCle === config.cle ? 'Annuler' : 'Modifier'}
+								</button>
+							</div>
 						</div>
 
 						{#if configEditionCle === config.cle}
