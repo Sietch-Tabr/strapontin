@@ -518,7 +518,7 @@ Toutes les routes sont sous `apps/web/src/routes/(app)/` (layout avec sidebar + 
 | `/salles`          | Recherche DB (ILIKE) + Ticketmaster Venues → suggestions → suivre/supprimer + saisie libre                                                                                                                                                                         |
 | `/spectacles`      | **Mes spectacles** — concerts userMatches (artistes + salles suivis). Chips : Mes artistes / Mes salles / 15 prochains jours / tri (Par date · Nouveautés). Filtres : classification, genre, artiste, mois, budget.                                                |
 | `/decouverte`      | Tous les concerts en base. Chips dept, catégories, genres, tri (Par date · Nouveautés). Filtres mois, budget. Bannière si dept hors prefs : timestamp last-fetch Redis + actions Actualiser / Ajouter aux prefs.                                                   |
-| `/parametres`      | 5 sections (cards) : Mon compte (nom, **email**, identifiant, mot de passe), Recherche de concerts (depts, rayon, filtreDisponibles), Notifications (frequenceNotifications : jamais / temps_reel / quotidien), Apparence (thème), Export / Import (JSON fusionner / écraser, checkbox config opt-in, fetch déclenché post-import). **Zone de danger** : suppression du compte (RGPD art. 17) avec suppression en cascade via FK. |
+| `/parametres`      | 5 sections (cards) : Mon compte (nom, **email**, identifiant, mot de passe), Recherche de concerts (depts, rayon, filtreDisponibles), Notifications (frequenceNotifications : jamais / temps_reel / quotidien + cases notifArtistes / notifSalles visibles si fréquence ≠ jamais), Apparence (thème), Export / Import (JSON fusionner / écraser, checkbox config opt-in, fetch déclenché post-import). **Zone de danger** : suppression du compte (RGPD art. 17) avec suppression en cascade via FK. |
 | `/forgot-password` | Saisie email → envoi lien reset MDP via Resend (hors garde auth) |
 | `/reset-password`  | Formulaire nouveau mot de passe (token Better-Auth, valable 1h — hors garde auth) |
 | `/aide`            | Page statique : guide d'utilisation, RGPD (Règlement Général sur la Protection des Données), licence MIT. Accessible depuis la sidebar desktop et le drawer mobile. Lien vers `/changelog` en bas de page.                                                         |
@@ -586,7 +586,7 @@ Pas de page d'inscription publique. Premier accès via `/setup` (accessible uniq
 ## Export / Import préférences
 
 Format JSON : `{ version, exporteAt, artistes, salles, config }`.
-`config` inclut : `departements`, `rayonKm`, `filtreDisponibles`, `frequenceNotifications`, `theme`.
+`config` inclut : `departements`, `rayonKm`, `filtreDisponibles`, `frequenceNotifications`, `notifArtistes`, `notifSalles`, `theme`.
 
 - **Export** : `GET /api/preferences` → téléchargement direct
 - **Import** (`/parametres`) :

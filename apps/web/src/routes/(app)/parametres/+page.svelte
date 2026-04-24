@@ -14,6 +14,8 @@
 	let rayonKm = $state<number>(untrack(() => data.config?.rayonKm ?? 50));
 	let filtreDisponibles = $state<boolean>(untrack(() => data.config?.filtreDisponibles ?? true));
 	let frequenceNotifications = $state<string>(untrack(() => data.config?.frequenceNotifications ?? 'jamais'));
+	let notifArtistes = $state<boolean>(untrack(() => data.config?.notifArtistes ?? true));
+	let notifSalles = $state<boolean>(untrack(() => data.config?.notifSalles ?? false));
 	let nom = $state<string>(untrack(() => data.utilisateur?.name ?? ''));
 	let email = $state<string>(untrack(() => data.utilisateur?.email ?? ''));
 	let identifiant = $state<string>(untrack(() => (data.utilisateur as { username?: string | null } & typeof data.utilisateur)?.username ?? ''));
@@ -25,6 +27,8 @@
 		rayonKm = data.config?.rayonKm ?? 50;
 		filtreDisponibles = data.config?.filtreDisponibles ?? true;
 		frequenceNotifications = data.config?.frequenceNotifications ?? 'jamais';
+		notifArtistes = data.config?.notifArtistes ?? true;
+		notifSalles = data.config?.notifSalles ?? false;
 		nom = data.utilisateur?.name ?? '';
 		email = data.utilisateur?.email ?? '';
 		identifiant = (data.utilisateur as { username?: string | null } & typeof data.utilisateur)?.username ?? '';
@@ -192,6 +196,35 @@
 						</label>
 					{/each}
 				</div>
+
+				{#if frequenceNotifications !== 'jamais'}
+				<div class="space-y-1 rounded-md border border-border p-4">
+					<p class="mb-3 text-sm font-medium text-foreground">Inclure dans les emails</p>
+					<label class="flex cursor-pointer items-center gap-3">
+						<input
+							type="checkbox"
+							name="notifArtistes"
+							bind:checked={notifArtistes}
+							class="accent-foreground"
+						/>
+						<span class="text-sm text-foreground">Concerts de mes artistes suivis</span>
+					</label>
+					<label class="flex cursor-pointer items-center gap-3">
+						<input
+							type="checkbox"
+							name="notifSalles"
+							bind:checked={notifSalles}
+							class="accent-foreground"
+						/>
+						<span class="text-sm text-foreground">Concerts dans mes salles suivies</span>
+					</label>
+					{#if !notifArtistes && !notifSalles}
+					<p class="mt-2 text-xs text-amber-600 dark:text-amber-400">
+						Au moins une option doit être cochée pour recevoir des notifications.
+					</p>
+					{/if}
+				</div>
+				{/if}
 
 				<button
 					type="submit"

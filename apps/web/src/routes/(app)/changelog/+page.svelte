@@ -41,6 +41,7 @@
 					<p class="mb-1 font-medium text-foreground">Notifications email</p>
 					<ul class="list-inside list-disc space-y-1">
 						<li>Notifications concerts : recevez un email lorsque de nouveaux concerts correspondent à vos préférences. Trois fréquences au choix dans Paramètres : désactivées, après chaque mise à jour (toutes les 2h), ou récapitulatif quotidien à 8h.</li>
+						<li>Choix du contenu des notifications : concerts de vos artistes suivis, de vos salles suivies, ou les deux (Paramètres → Notifications).</li>
 						<li>Email d'invitation automatique lors de la création de compte par l'admin.</li>
 					</ul>
 				</div>
