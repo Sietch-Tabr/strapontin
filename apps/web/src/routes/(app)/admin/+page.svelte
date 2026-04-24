@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { UserPlus, Trash2, ShieldCheck, Zap, RefreshCw, Loader2, Pencil, KeyRound } from '@lucide/svelte';
+	import { UserPlus, Trash2, ShieldCheck, Zap, RefreshCw, Loader2, Pencil, KeyRound, Settings } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -12,6 +12,9 @@
 	let modificationId = $state<string | null>(null);
 	let nomModification = $state('');
 	let emailModification = $state('');
+
+	let configEditionCle = $state<string | null>(null);
+	let configValeur = $state('');
 
 	function formaterReset(timestampMs: number): string {
 		if (!timestampMs) return '—';
@@ -166,6 +169,95 @@
 					</div>
 				{/each}
 			</div>
+		</section>
+
+		<!-- Configuration -->
+		<section>
+			<h2 class="mb-4 text-base font-medium text-foreground flex items-center gap-2">
+				<Settings size={16} class="text-muted-foreground" aria-hidden="true" />
+				Configuration
+			</h2>
+
+			{#if form?.action === 'sauvegarderConfig' && form?.succes}
+				<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+					Clé <strong>{form.cle}</strong> mise à jour.
+				</p>
+			{/if}
+
+			<div class="rounded-xl border border-border bg-card divide-y divide-border">
+				{#each data.configStatuts as config (config.cle)}
+					<div>
+						<div class="flex items-center justify-between gap-4 px-4 py-3">
+							<div class="min-w-0">
+								<p class="text-sm font-mono font-medium text-foreground">{config.cle}</p>
+								<p class="text-xs text-muted-foreground mt-0.5">
+									{#if config.presente}
+										<span class="text-green-600 dark:text-green-400">Configurée en base</span>
+									{:else}
+										<span>Non configurée — utilise la variable d'environnement</span>
+									{/if}
+								</p>
+							</div>
+							<button
+								type="button"
+								onclick={() => {
+									configEditionCle = configEditionCle === config.cle ? null : config.cle;
+									configValeur = '';
+								}}
+								class="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
+							>
+								{configEditionCle === config.cle ? 'Annuler' : 'Modifier'}
+							</button>
+						</div>
+
+						{#if configEditionCle === config.cle}
+							<form
+								method="POST"
+								action="?/sauvegarderConfig"
+								class="border-t border-border px-4 py-3 space-y-3"
+								use:enhance={() => async ({ update }) => {
+									configEditionCle = null;
+									configValeur = '';
+									await update();
+								}}
+							>
+								<input type="hidden" name="cle" value={config.cle} />
+								<div>
+									<label class="mb-1 block text-xs text-muted-foreground" for="val-{config.cle}">
+										Nouvelle valeur (laisser vide pour supprimer)
+									</label>
+									<input
+										id="val-{config.cle}"
+										type="password"
+										name="valeur"
+										bind:value={configValeur}
+										autocomplete="off"
+										class="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+									/>
+								</div>
+								<div class="flex gap-2">
+									<button
+										type="submit"
+										class="rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-colors hover:bg-foreground/90"
+									>
+										Enregistrer
+									</button>
+									<button
+										type="button"
+										onclick={() => { configEditionCle = null; configValeur = ''; }}
+										class="rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
+									>
+										Annuler
+									</button>
+								</div>
+							</form>
+						{/if}
+					</div>
+				{/each}
+			</div>
+			<p class="mt-2 text-xs text-muted-foreground">
+				Les valeurs sont chiffrées en base. Elles prennent le dessus sur les variables d'environnement.
+			</p>
 		</section>
 
 		<!-- Créer un compte -->

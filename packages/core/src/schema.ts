@@ -263,6 +263,20 @@ export const userMatches = pgTable(
 );
 
 // -------------------------------------------------------------------
+// app_config
+// Configuration applicative chiffrée (clés API, etc.). Modifiable par l'admin depuis l'IHM.
+// Chiffrement AES-256-GCM, clé dérivée de BETTER_AUTH_SECRET.
+// -------------------------------------------------------------------
+
+export const appConfig = pgTable("app_config", {
+  cle: text("cle").primaryKey(),
+  valeurChiffree: text("valeur_chiffree").notNull(),
+  misAJourLe: timestamp("mis_a_jour_le", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// -------------------------------------------------------------------
 // fetch_jobs
 // Historique et planning des jobs de fetch. Lu par la page admin.
 // -------------------------------------------------------------------
