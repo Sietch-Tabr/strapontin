@@ -13,13 +13,15 @@ import {
   and,
   ilike,
   isNotNull,
+  isNull,
   sql,
   inArray,
   desc,
   asc,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
-import type { PageServerLoad } from "./$types";
+import { error } from "@sveltejs/kit";
+import type { PageServerLoad, Actions } from "./$types";
 
 const SEUIL_NEW_MS = 7 * 24 * 3600 * 1000;
 
@@ -35,6 +37,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const quinzaine = url.searchParams.get("quinzaine") === "1";
   const tri =
     url.searchParams.get("tri") === "nouveaute" ? "nouveaute" : "date";
+  const afficherMasques = url.searchParams.get("masques") === "1";
   const budgetStr = url.searchParams.get("budget")?.trim() ?? "";
   const budget =
     budgetStr && /^\d+$/.test(budgetStr) ? parseInt(budgetStr) : null;
@@ -56,6 +59,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const conditions: SQL[] = [
     eq(userMatches.userId, locals.user!.id),
     gte(concerts.date, aujourdhui),
+    afficherMasques ? isNotNull(userMatches.masqueLe) : isNull(userMatches.masqueLe),
   ];
 
   if (quinzaine) {
@@ -163,5 +167,25 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     sourceArtistes,
     sourceSalles,
     genresDisponibles,
+    afficherMasques,
   };
+};
+
+export const actions: Actions = {
+  demasquer: async ({ request, locals }) => {
+    const donnees = await request.formData();
+    const concertId = donnees.get("concertId");
+    if (!concertId || typeof concertId !== "string") {
+      error(400, "Concert manquant");
+    }
+    await db
+      .update(userMatches)
+      .set({ masqueLe: null })
+      .where(
+        and(
+          eq(userMatches.userId, locals.user!.id),
+          eq(userMatches.concertId, concertId),
+        ),
+      );
+  },
 };

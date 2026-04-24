@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { Music } from '@lucide/svelte';
+	import { enhance } from '$app/forms';
 
 	let { data }: { data: PageData } = $props();
 
@@ -109,16 +110,28 @@
 										{concert.salle}{concert.ville ? ` · ${concert.ville}` : ''}
 									</p>
 								</div>
-								{#if concert.url}
-									<a
-										href={concert.url}
-										target="_blank"
-										rel="noopener noreferrer"
-										class="ml-3 shrink-0 rounded-md border border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-									>
-										Billets
-									</a>
-								{/if}
+								<div class="ml-3 flex shrink-0 items-center gap-2">
+									{#if concert.url}
+										<a
+											href={concert.url}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="rounded-md border border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+										>
+											Billets
+										</a>
+									{/if}
+									<form method="POST" action="?/masquer" use:enhance>
+										<input type="hidden" name="concertId" value={concert.id} />
+										<button
+											type="submit"
+											class="rounded-md px-2 py-1 text-xs text-muted-foreground/50 transition-colors hover:bg-accent hover:text-muted-foreground"
+											aria-label="Masquer ce concert"
+										>
+											Masquer
+										</button>
+									</form>
+								</div>
 							</div>
 						{/each}
 					</div>

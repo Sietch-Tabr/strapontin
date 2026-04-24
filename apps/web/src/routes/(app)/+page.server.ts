@@ -6,9 +6,10 @@ import {
   userSalles,
   userConfig,
 } from "@strapontin/core/schema";
-import { eq, gte, and, count } from "drizzle-orm";
+import { eq, gte, and, count, isNull } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
-import type { PageServerLoad } from "./$types";
+import { error } from "@sveltejs/kit";
+import type { PageServerLoad, Actions } from "./$types";
 
 const SEUIL_NEW_MS = 7 * 24 * 3600 * 1000;
 
@@ -26,6 +27,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   const conditions: SQL[] = [
     eq(userMatches.userId, locals.user!.id),
     gte(concerts.date, aujourdhui),
+    isNull(userMatches.masqueLe),
   ];
 
   if (filtreDisponibles) {
@@ -100,4 +102,23 @@ export const load: PageServerLoad = async ({ locals }) => {
     .where(eq(userSalles.userId, locals.user!.id));
 
   return { artistesGroupes, nbArtistes, nbSalles };
+};
+
+export const actions: Actions = {
+  masquer: async ({ request, locals }) => {
+    const donnees = await request.formData();
+    const concertId = donnees.get("concertId");
+    if (!concertId || typeof concertId !== "string") {
+      error(400, "Concert manquant");
+    }
+    await db
+      .update(userMatches)
+      .set({ masqueLe: new Date() })
+      .where(
+        and(
+          eq(userMatches.userId, locals.user!.id),
+          eq(userMatches.concertId, concertId),
+        ),
+      );
+  },
 };
