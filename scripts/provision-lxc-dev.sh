@@ -261,14 +261,56 @@ pct exec "$VMID" -- bash -c "
 "
 
 # ---------------------------------------------------------------
-# 7. Activation des services (PG + Redis uniquement)
+# 7. Services systemd
 # ---------------------------------------------------------------
+
+echo "[7] Création des services systemd dev..."
+
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-dev-web.service << 'UNIT'
+[Unit]
+Description=Strapontin — dev server web (HMR)
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=strapontin
+WorkingDirectory=/opt/strapontin
+EnvironmentFile=/opt/strapontin/.env
+ExecStart=/bin/pnpm dev
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+UNIT"
+
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-dev-worker.service << 'UNIT'
+[Unit]
+Description=Strapontin — dev worker (tsx watch)
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+User=strapontin
+WorkingDirectory=/opt/strapontin
+EnvironmentFile=/opt/strapontin/.env
+ExecStart=/bin/pnpm worker:dev
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+UNIT"
 
 echo "[7] Activation des services..."
 pct exec "$VMID" -- bash -c "
     systemctl daemon-reload
     systemctl mask systemd-networkd-wait-online.service
-    systemctl enable postgresql redis-server
+    systemctl enable postgresql redis-server strapontin-dev-web strapontin-dev-worker
 "
 
 # ---------------------------------------------------------------
@@ -341,19 +383,34 @@ pct exec "$VMID" -- bash -c "
     su - $APP_USER -c 'set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && pnpm --filter @strapontin/core db:migrate'
 "
 
+echo "[9] Démarrage des services..."
+pct exec "$VMID" -- bash -c "
+    systemctl start postgresql redis-server
+    systemctl start strapontin-dev-web strapontin-dev-worker
+"
+
+echo "[9] Healthcheck..."
+RETRIES=20
+until pct exec "$VMID" -- curl -sf http://localhost:3000/health > /dev/null 2>&1 || [ "$RETRIES" -eq 0 ]; do
+    sleep 3
+    RETRIES=$((RETRIES - 1))
+done
+if [ "$RETRIES" -eq 0 ]; then
+    echo "  [ECHEC] Le dev server ne répond pas sur le port 3000" >&2
+    pct exec "$VMID" -- systemctl status strapontin-dev-web --no-pager >&2
+    exit 1
+fi
+echo "  [OK]    Dev server opérationnel"
+
 echo ""
 echo "================================================================"
-echo "  Provisioning terminé — LXC $VMID ($HOSTNAME) $IP"
+echo "  Provisioning terminé — LXC $VMID ($HOSTNAME) ${IP%%/*}"
 echo "================================================================"
 echo ""
-echo "  Connexion  : ssh root@192.168.20.78"
-echo "  Dev server : http://192.168.20.78:3000"
+echo "  Application : http://192.168.20.78:3000"
 echo "  Premier login : http://192.168.20.78:3000/setup"
-echo ""
-echo "  Démarrer l'application :"
-echo "    cd /opt/strapontin && pnpm dev        (terminal 1)"
-echo "    cd /opt/strapontin && pnpm worker:dev  (terminal 2)"
+echo "  SSH          : ssh root@192.168.20.78"
 echo ""
 echo "Pour supprimer ce LXC :"
-echo "  pct set $VMID --protection 0 && pct destroy $VMID"
+echo "  pct set $VMID --protection 0 && pct stop $VMID && pct destroy $VMID"
 echo ""
