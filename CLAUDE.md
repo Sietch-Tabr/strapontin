@@ -2,10 +2,16 @@
 
 ## Lancer l'application (développement)
 
+L'app démarre automatiquement au démarrage du LXC dev (`pct start 114`).
+Accès : `http://192.168.20.78:3000`
+
 ```bash
-# Sur le LXC dev (192.168.20.78) — deux terminaux SSH
-pnpm dev        # SvelteKit dev server (port 3000)
-pnpm worker:dev # BullMQ worker (process séparé)
+# Logs en direct
+journalctl -fu strapontin-dev-web
+journalctl -fu strapontin-dev-worker
+
+# Redémarrer (ex. après git pull + pnpm install)
+systemctl restart strapontin-dev-web strapontin-dev-worker
 ```
 
 ## Architecture — monorepo pnpm workspaces
@@ -42,15 +48,18 @@ strapontin/
 ### Dev quotidien (LXC dev)
 
 LXC dev : VMID 114, `192.168.20.78`, VLAN 20 — même stack que prod (PG 18, Redis 8).
-Démarrer / arrêter depuis le host Proxmox : `pct start 114` / `pct stop 114`.
+Les services `strapontin-dev-web` et `strapontin-dev-worker` démarrent automatiquement avec le LXC.
 
 ```bash
-# Connexion
+# Démarrer / arrêter le LXC (depuis le host Proxmox)
+pct start 114
+pct stop 114
+
+# Connexion SSH
 ssh root@192.168.20.78
 
-# Deux terminaux SSH
-pnpm dev        # SvelteKit HMR (port 3000)
-pnpm worker:dev # BullMQ worker (process séparé)
+# Redémarrer les services (après git pull + pnpm install)
+systemctl restart strapontin-dev-web strapontin-dev-worker
 ```
 
 Application accessible sur `http://192.168.20.78:3000`.
