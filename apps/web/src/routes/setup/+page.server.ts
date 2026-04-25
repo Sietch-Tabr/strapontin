@@ -7,15 +7,14 @@ import { lireConfig, sauvegarderConfig } from "$lib/server/config";
 import { count, eq } from "drizzle-orm";
 import type { Actions, PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
   const [{ valeur }] = await db.select({ valeur: count() }).from(users);
 
-  // Si des utilisateurs existent déjà, rediriger vers le login
   if (valeur > 0) {
     redirect(302, "/login");
   }
 
-  return {};
+  return { urlBase: url.origin };
 };
 
 export const actions: Actions = {
