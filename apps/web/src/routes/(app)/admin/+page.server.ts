@@ -17,7 +17,7 @@ import {
   lireConfigsPresentes,
   sauvegarderConfig,
 } from "$lib/server/config";
-import { PUBLIC_BASE_URL } from "$env/static/public";
+import { env as envPublic } from "$env/dynamic/public";
 import type { PageServerLoad, Actions } from "./$types";
 
 const FORMAT_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -179,7 +179,7 @@ export const actions: Actions = {
     await auth.api.requestPasswordReset({
       body: {
         email: cible.email,
-        redirectTo: `${PUBLIC_BASE_URL}/reset-password`,
+        redirectTo: `${envPublic.PUBLIC_BASE_URL}/reset-password`,
       },
     });
 

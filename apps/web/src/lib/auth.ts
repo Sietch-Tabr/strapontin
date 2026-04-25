@@ -1,13 +1,13 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { username } from "better-auth/plugins";
-import { PUBLIC_BASE_URL } from "$env/static/public";
+import { env as envPublic } from "$env/dynamic/public";
 import { db } from "$lib/server/db";
 import * as schema from "@strapontin/core/schema";
 import { envoyerResetMotDePasse } from "$lib/server/email";
 
 export const auth = betterAuth({
-  baseURL: PUBLIC_BASE_URL,
+  baseURL: envPublic.PUBLIC_BASE_URL,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {

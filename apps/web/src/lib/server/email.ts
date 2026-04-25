@@ -2,7 +2,7 @@
 // Si RESEND_API_KEY est absent de app_config, toutes les fonctions retournent silencieusement sans erreur.
 
 import { Resend } from "resend";
-import { PUBLIC_BASE_URL } from "$env/static/public";
+import { env as envPublic } from "$env/dynamic/public";
 import { lireConfig } from "$lib/server/config";
 import pino from "pino";
 
@@ -26,7 +26,7 @@ async function obtenirResend(): Promise<{
   if (!cle) return null;
   const contactEmail =
     (await lireConfig("CONTACT_EMAIL")) ?? "admin@strapontin.kwaite.fr";
-  const baseUrl = (await lireConfig("PUBLIC_BASE_URL")) ?? PUBLIC_BASE_URL;
+  const baseUrl = (await lireConfig("PUBLIC_BASE_URL")) ?? envPublic.PUBLIC_BASE_URL ?? "";
   return { client: new Resend(cle), replyTo: contactEmail, baseUrl };
 }
 

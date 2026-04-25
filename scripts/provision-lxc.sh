@@ -32,6 +32,7 @@ DB_NAME="strapontin"
 DB_USER="strapontin"
 NODE_VERSION="22"
 PG_VERSION="18"
+BASE_URL="http://localhost"
 
 echo "=== Provisioning LXC strapontin (VMID : $VMID) ==="
 
@@ -254,6 +255,7 @@ pct exec "$VMID" -- bash -c "cat > $APP_DIR/.env << 'ENV'
 DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME
 REDIS_URL=redis://localhost:6379
 BETTER_AUTH_SECRET=$AUTH_SECRET
+PUBLIC_BASE_URL=$BASE_URL
 ENV
 chown $APP_USER:$APP_USER $APP_DIR/.env
 chmod 600 $APP_DIR/.env
