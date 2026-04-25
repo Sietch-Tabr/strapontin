@@ -35,12 +35,9 @@ PG_VERSION="18"
 BASE_URL="${BASE_URL:-}"
 
 if [ -z "$BASE_URL" ]; then
-    if [ -t 0 ]; then
-        read -rp "URL publique de l'application (ex. https://strapontin.example.fr) : " BASE_URL
-    fi
+    read -rp "URL publique de l'application (ex. https://strapontin.example.fr) : " BASE_URL
     if [ -z "$BASE_URL" ]; then
         echo "ERREUR : BASE_URL obligatoire." >&2
-        echo "  Depuis SSH : BASE_URL=https://strapontin.example.fr bash provision-lxc.sh" >&2
         exit 1
     fi
 fi
