@@ -34,13 +34,15 @@ NODE_VERSION="22"
 PG_VERSION="18"
 BASE_URL="${BASE_URL:-}"
 
-echo "=== Provisioning LXC strapontin (VMID : $VMID) ==="
-
 if [ -z "$BASE_URL" ]; then
-    echo "ERREUR : BASE_URL non défini." >&2
-    echo "  Exemple : BASE_URL=https://strapontin.example.fr bash provision-lxc.sh" >&2
-    exit 1
+    read -rp "URL publique de l'application (ex. https://strapontin.example.fr) : " BASE_URL
+    if [ -z "$BASE_URL" ]; then
+        echo "ERREUR : BASE_URL obligatoire." >&2
+        exit 1
+    fi
 fi
+
+echo "=== Provisioning LXC strapontin (VMID : $VMID) ==="
 
 # ---------------------------------------------------------------
 # 1. Template Debian 13
