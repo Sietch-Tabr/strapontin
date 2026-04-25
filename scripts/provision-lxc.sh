@@ -32,9 +32,15 @@ DB_NAME="strapontin"
 DB_USER="strapontin"
 NODE_VERSION="22"
 PG_VERSION="18"
-BASE_URL="http://localhost"
+BASE_URL="${BASE_URL:-}"
 
 echo "=== Provisioning LXC strapontin (VMID : $VMID) ==="
+
+if [ -z "$BASE_URL" ]; then
+    echo "ERREUR : BASE_URL non défini." >&2
+    echo "  Exemple : BASE_URL=https://strapontin.example.fr bash provision-lxc.sh" >&2
+    exit 1
+fi
 
 # ---------------------------------------------------------------
 # 1. Template Debian 13
