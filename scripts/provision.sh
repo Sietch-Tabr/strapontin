@@ -326,6 +326,7 @@ PUBLIC_BASE_URL=$PUBLIC_BASE_URL
 ENV
 chown $APP_USER:$APP_USER $APP_DIR/.env
 chmod 600 $APP_DIR/.env
+touch $APP_DIR/.env.local
 "
 fi
 
