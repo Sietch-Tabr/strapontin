@@ -114,25 +114,21 @@ git checkout -b feature/nom-court
 
 ### Pipeline Woodpecker (.woodpecker.yaml)
 
-Deux steps sur push `main` : `typecheck` puis `deploy` (`depends_on: [typecheck]`).
+Trois steps sur push `main` : `test`, `typecheck`, puis `deploy` (`depends_on: [test, typecheck]`).
 
-- **`typecheck`** (`node:22-alpine`) : crée un `.env` stub, exécute `svelte-check` sur web et `tsc --noEmit` sur worker. Bloque le deploy en cas d'erreur TypeScript.
+- **`test`** (`node:22`) : `pnpm -r test` — tous les packages vitest.
+- **`typecheck`** (`node:22`) : crée un `.env` stub, exécute `svelte-check` sur web et `tsc --noEmit` sur worker. Bloque le deploy en cas d'erreur TypeScript.
 - **`deploy`** (`alpine`) : SSH vers le LXC prod, exécute `update.sh`.
 
-Voir `.woodpecker.yaml` pour le YAML complet. Secrets : `ssh_key` (clé privée), `lxc_host` = `192.168.20.79`. LXC 111 (Woodpecker) et LXC 113 (strapontin) sur VLAN 20 — SSH direct.
+Voir `.woodpecker.yaml` pour le YAML complet. Secrets : `ssh_key` (clé privée générée par `provision.sh`), `lxc_host` (IP du LXC prod). LXC 111 (Woodpecker) et LXC 113 (strapontin) sur VLAN 20 — SSH direct.
+
+**Piège pnpm store** : `.npmrc` contient `package-import-method=copy` — évite l'erreur `ENOENT: uv_cwd` sur le postinstall d'esbuild quand pnpm utilise des hardlinks depuis le store bind-mounté.
 
 ### Configuration CI/CD (une seule fois)
 
-Clé SSH : `ssh-keygen -t ed25519 -C "woodpecker-strapontin" -f ~/.ssh/woodpecker_strapontin -N ""`
+La clé SSH Woodpecker est **générée automatiquement par `provision.sh --env prod`** (étape 8). La clé privée est affichée dans le résumé de fin — à coller dans Woodpecker comme secret `ssh_key`. Le secret `lxc_host` doit correspondre à l'IP affichée dans ce même résumé.
 
-**Piège post-reinstallation** : le LXC recréé n'a pas de `authorized_keys`. La clé publique est aussi dans `/root/.ssh/authorized_keys` sur Proxmox (commentaire `woodpecker-strapontin`) :
-
-```bash
-ssh root@192.168.1.99 "
-  PUBKEY=\$(grep woodpecker-strapontin /root/.ssh/authorized_keys)
-  pct exec 113 -- bash -c \"mkdir -p /root/.ssh && echo '\$PUBKEY' >> /root/.ssh/authorized_keys && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys\"
-"
-```
+**Recréation du LXC** : `provision.sh` génère une nouvelle paire de clés à chaque provisioning. Mettre à jour `ssh_key` dans Woodpecker avec la nouvelle clé privée affichée.
 
 ## Scripts d'exploitation
 
@@ -346,6 +342,10 @@ Rôles : `user` | `admin`.
 
 **Politique mot de passe** : 12 caractères minimum (NIST SP 800-63B, longueur seule).
 S'applique à `/setup`, `/parametres` (changePassword) et `/first-login`.
+
+**`baseURL` Better Auth** : non configuré dans `auth.ts` — Better Auth détecte l'origin depuis chaque requête entrante. `PUBLIC_BASE_URL` est dans `app_config` (DB, asynchrone) et ne peut pas être lue à l'initialisation synchrone de Better Auth. Correct pour notre cas (pas d'OAuth, réseau protégé par NPM + VLAN).
+
+**`PUBLIC_BASE_URL` — validation** : `/setup` accepte `http://` et `https://` (IP ou domaine). `/admin` exige `https://` pour un domaine public, mais accepte `http://` pour une IP ou `localhost` (dev). La résolution DNS est ignorée pour les IPs.
 
 **Rate limiting login** : activé via `rateLimit` natif Better Auth dans `apps/web/src/lib/auth.ts` :
 
