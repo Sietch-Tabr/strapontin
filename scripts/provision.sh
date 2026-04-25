@@ -590,12 +590,12 @@ echo "  Provisioning terminé — LXC $VMID ($HOSTNAME)"
 echo "================================================================"
 echo ""
 if [[ "$ENV" == "prod" ]]; then
-    echo "  URL          : https://strapontin.kwaite.fr"
-    echo "  Premier login : https://strapontin.kwaite.fr/setup"
+    echo "  Ouvrez https://<votre-domaine>/setup dans votre navigateur"
+    echo "  pour finaliser l'installation (l'URL sera pré-remplie automatiquement)."
 else
-    echo "  Application  : http://192.168.20.78:3000"
-    echo "  Premier login : http://192.168.20.78:3000/setup"
-    echo "  SSH          : ssh root@192.168.20.78"
+    echo "  Application  : http://${IP%%/*}:3000"
+    echo "  Premier login : http://${IP%%/*}:3000/setup"
+    echo "  SSH          : ssh root@${IP%%/*}"
 fi
 echo ""
 echo "Pour supprimer ce LXC :"

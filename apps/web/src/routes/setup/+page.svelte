@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { ActionData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	let { form }: { form: ActionData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let chargement = $state(false);
 	let formValide = $state(false);
@@ -85,7 +85,7 @@
 					name="baseUrl"
 					type="url"
 					required
-					placeholder="https://strapontin.mondomaine.fr"
+					value={data.urlBase}
 					autocomplete="url"
 					class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				/>
