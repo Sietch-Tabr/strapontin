@@ -276,6 +276,7 @@ SOFTWARE.</pre>
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="titre-signalement"
+		tabindex="-1"
 		onkeydown={piegerFocus}
 	>
 		<button
