@@ -35,7 +35,18 @@
 	});
 
 	let enregistrementConfig = $state(false);
-	let enregistrementNotifications = $state(false);
+	let formulaireRecherche = $state<HTMLFormElement | undefined>(undefined);
+	let formulaireNotifications = $state<HTMLFormElement | undefined>(undefined);
+	let timerRayon: ReturnType<typeof setTimeout> | undefined;
+
+	function autoSauvegarderRecherche() {
+		clearTimeout(timerRayon);
+		timerRayon = setTimeout(() => formulaireRecherche?.requestSubmit(), 400);
+	}
+
+	function autoSauvegarderNotifications() {
+		formulaireNotifications?.requestSubmit();
+	}
 	let enregistrementCompte = $state(false);
 	let enregistrementEmail = $state(false);
 	let enregistrementIdentifiant = $state(false);
@@ -148,25 +159,15 @@
 		<section class="rounded-lg border border-border bg-card p-6">
 			<h2 class="mb-6 text-base font-semibold text-foreground">Recherche de concerts</h2>
 
-			{#if form?.succes === 'config'}
-				<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-					Préférences enregistrées.
-				</p>
-			{/if}
-			{#if form?.erreur && form?.section === 'config'}
-				<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-					{form.erreur}
-				</p>
-			{/if}
-
+			<!-- Départements — bouton explicite car modification destructive possible -->
 			<form
 				method="POST"
-				action="?/config"
+				action="?/departements"
 				class="space-y-4"
 				use:enhance={() => {
 					enregistrementConfig = true;
 					return async ({ result, update }) => {
-						if (result.type === 'success') toast.success('Configuration enregistrée');
+						if (result.type === 'success') toast.success('Départements enregistrés');
 						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
 						await update({ reset: false });
 						enregistrementConfig = false;
@@ -179,12 +180,31 @@
 					<ComboboxDepts
 						depts={TOUS_LES_DEPTS}
 						actifs={deptsSelectionnes}
-						onChange={(actifs) => {
-							deptsSelectionnes = actifs;
-						}}
+						onChange={(actifs) => { deptsSelectionnes = actifs; }}
 					/>
 				</div>
 
+				<button
+					type="submit"
+					disabled={enregistrementConfig}
+					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+				>
+					<Save size={16} />
+					{enregistrementConfig ? 'Enregistrement…' : 'Enregistrer'}
+				</button>
+			</form>
+
+			<!-- Rayon et filtre — auto-save -->
+			<form
+				bind:this={formulaireRecherche}
+				method="POST"
+				action="?/rechercheRapide"
+				class="space-y-4 border-t border-border pt-4"
+				use:enhance={() => async ({ result, update }) => {
+					if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+					await update({ reset: false });
+				}}
+			>
 				<div>
 					<label for="rayonKm" class="mb-1.5 block text-sm font-medium text-foreground">
 						Rayon ({rayonKm} km)
@@ -194,6 +214,7 @@
 						type="range"
 						name="rayonKm"
 						bind:value={rayonKm}
+						oninput={autoSauvegarderRecherche}
 						min="0"
 						max="500"
 						step="10"
@@ -211,21 +232,13 @@
 						type="checkbox"
 						name="filtreDisponibles"
 						bind:checked={filtreDisponibles}
+						onchange={autoSauvegarderRecherche}
 						class="h-4 w-4 rounded border-border accent-foreground"
 					/>
 					<label for="filtreDisponibles" class="text-sm text-foreground">
 						Masquer les concerts dont les billets ne sont plus disponibles
 					</label>
 				</div>
-
-				<button
-					type="submit"
-					disabled={enregistrementConfig}
-					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
-				>
-					<Save size={16} />
-					{enregistrementConfig ? 'Enregistrement…' : 'Enregistrer'}
-				</button>
 			</form>
 		</section>
 
@@ -248,17 +261,13 @@
 			{/if}
 
 			<form
+				bind:this={formulaireNotifications}
 				method="POST"
 				action="?/notifications"
 				class="space-y-4"
-				use:enhance={() => {
-					enregistrementNotifications = true;
-					return async ({ result, update }) => {
-						if (result.type === 'success') toast.success('Notifications enregistrées');
-						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
-						await update({ reset: false });
-						enregistrementNotifications = false;
-					};
+				use:enhance={() => async ({ result, update }) => {
+					if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+					await update({ reset: false });
 				}}
 			>
 				{#if resendDisponible}
@@ -278,6 +287,7 @@
 								name="frequenceNotifications"
 								value={option.valeur}
 								bind:group={frequenceNotifications}
+								onchange={autoSauvegarderNotifications}
 								class="accent-foreground"
 							/>
 							<span class="text-sm text-foreground">{option.label}</span>
@@ -293,6 +303,7 @@
 							type="checkbox"
 							name="notifArtistes"
 							bind:checked={notifArtistes}
+							onchange={autoSauvegarderNotifications}
 							class="accent-foreground"
 						/>
 						<span class="text-sm text-foreground">Concerts de mes artistes suivis</span>
@@ -302,6 +313,7 @@
 							type="checkbox"
 							name="notifSalles"
 							bind:checked={notifSalles}
+							onchange={autoSauvegarderNotifications}
 							class="accent-foreground"
 						/>
 						<span class="text-sm text-foreground">Concerts dans mes salles suivies</span>
@@ -313,15 +325,6 @@
 					{/if}
 				</div>
 				{/if}
-
-				<button
-					type="submit"
-					disabled={enregistrementNotifications}
-					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
-				>
-					<Save size={16} />
-					{enregistrementNotifications ? 'Enregistrement…' : 'Enregistrer'}
-				</button>
 			{:else}
 				<p class="text-sm text-muted-foreground">
 					Les notifications email ne sont pas disponibles sur cette instance (service email non configuré).
