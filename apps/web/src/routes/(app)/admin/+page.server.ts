@@ -220,16 +220,17 @@ export const actions: Actions = {
             cle,
           });
         }
-        if (url.protocol !== "https:") {
+        const estIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(url.hostname) || url.hostname === "localhost";
+        if (!estIp && url.protocol !== "https:") {
           return fail(400, {
-            erreur: "L'URL doit commencer par https://",
+            erreur: "L'URL doit commencer par https:// pour un domaine public.",
             action: "sauvegarderConfig",
             cle,
           });
         }
         try {
           const { lookup } = await import("dns/promises");
-          await lookup(url.hostname);
+          if (!estIp) await lookup(url.hostname);
         } catch {
           return fail(400, {
             erreur: "Le domaine est introuvable (échec de résolution DNS).",
