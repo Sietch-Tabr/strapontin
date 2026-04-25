@@ -1,7 +1,9 @@
+import { createECDH } from "crypto";
 import { redirect, fail } from "@sveltejs/kit";
 import { auth } from "$lib/auth";
 import { db } from "$lib/server/db";
 import { users } from "@strapontin/core/schema";
+import { lireConfig, sauvegarderConfig } from "$lib/server/config";
 import { count, eq } from "drizzle-orm";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -71,6 +73,17 @@ export const actions: Actions = {
         displayUsername: identifiant,
       })
       .where(eq(users.email, email));
+
+    // Générer les clés VAPID si absentes (premier déploiement, pas d'abonnements existants)
+    const vapidExistant = await lireConfig("VAPID_PUBLIC_KEY");
+    if (!vapidExistant) {
+      const ecdh = createECDH("prime256v1");
+      ecdh.generateKeys();
+      await Promise.all([
+        sauvegarderConfig("VAPID_PUBLIC_KEY", ecdh.getPublicKey("base64url")),
+        sauvegarderConfig("VAPID_PRIVATE_KEY", ecdh.getPrivateKey("base64url")),
+      ]);
+    }
 
     redirect(302, "/login");
   },
