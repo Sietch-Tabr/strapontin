@@ -5,12 +5,12 @@ import type { PageServerLoad, Actions } from "./$types";
 const TYPES_VALIDES = ["bug", "suggestion", "question"] as const;
 
 export const load: PageServerLoad = async () => {
-  return { resendDisponible };
+  return { resendDisponible: await resendDisponible() };
 };
 
 export const actions: Actions = {
   signalerBug: async ({ request, locals }) => {
-    if (!resendDisponible) {
+    if (!await resendDisponible()) {
       return fail(503, { erreur: "Le service email n'est pas configuré." });
     }
 

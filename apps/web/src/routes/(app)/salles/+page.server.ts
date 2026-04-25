@@ -4,7 +4,7 @@ import { userSalles, concerts } from "@strapontin/core/schema";
 import { levenshtein } from "@strapontin/core";
 import { eq, and, ilike, sql, count } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
-import { TICKETMASTER_API_KEY } from "$env/static/private";
+import { lireConfig } from "$lib/server/config";
 import type { PageServerLoad, Actions } from "./$types";
 
 const TM_VENUES_URL = "https://app.ticketmaster.com/discovery/v2/venues.json";
@@ -38,6 +38,7 @@ interface ResultatSalle {
 }
 
 async function rechercherSallesTM(terme: string): Promise<ResultatSalle[]> {
+  const TICKETMASTER_API_KEY = await lireConfig("TICKETMASTER_API_KEY");
   if (!TICKETMASTER_API_KEY) return [];
   try {
     const url =
