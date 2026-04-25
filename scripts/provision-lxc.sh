@@ -35,7 +35,8 @@ PG_VERSION="18"
 BASE_URL="${BASE_URL:-}"
 
 if [ -z "$BASE_URL" ]; then
-    read -rp "URL publique de l'application (ex. https://strapontin.example.fr) : " BASE_URL
+    printf "URL publique de l'application (ex. https://strapontin.example.fr) : " > /dev/tty
+    read -r BASE_URL < /dev/tty
     if [ -z "$BASE_URL" ]; then
         echo "ERREUR : BASE_URL obligatoire." >&2
         exit 1
