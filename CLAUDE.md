@@ -213,8 +213,6 @@ NAS monté en bind mount sur `/mnt/backup/`. `pg_dump` exécuté en tant que `po
   - Piège : coller du contenu avec `\n` littéraux casse le conf silencieusement → voir wiki Déploiement
 - Provisioning : `scripts/provision-lxc.sh` (depuis host Proxmox 192.168.1.99)
   - Pré-requis : copier les scripts vers le host (`ssh mkdir -p /opt/strapontin/scripts` + `scp scripts/provision-lxc.sh scripts/deploy.sh root@192.168.1.99:/opt/strapontin/scripts/`)
-  - Lancer avec `-t` pour le prompt interactif : `ssh -t root@192.168.1.99 "bash /opt/strapontin/scripts/provision-lxc.sh"`
-  - Le script demande `BASE_URL` si non défini (ex. `https://strapontin.kwaite.fr`)
   - VMID résolu dynamiquement : `VMID=$(pvesh get /cluster/nextid)`
 - Variables : `.env` sur le serveur (non commité), `.env.example` versionné
 

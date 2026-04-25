@@ -26,7 +26,8 @@ async function obtenirResend(): Promise<{
   if (!cle) return null;
   const contactEmail =
     (await lireConfig("CONTACT_EMAIL")) ?? "admin@strapontin.kwaite.fr";
-  const baseUrl = (await lireConfig("PUBLIC_BASE_URL")) ?? envPublic.PUBLIC_BASE_URL ?? "";
+  const baseUrl =
+    (await lireConfig("PUBLIC_BASE_URL")) ?? envPublic.PUBLIC_BASE_URL ?? "";
   return { client: new Resend(cle), replyTo: contactEmail, baseUrl };
 }
 

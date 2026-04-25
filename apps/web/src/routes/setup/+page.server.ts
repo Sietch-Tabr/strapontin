@@ -32,9 +32,17 @@ export const actions: Actions = {
       donnees.get("identifiant")?.toString().trim().toLowerCase() ?? "";
     const email = donnees.get("email")?.toString().trim() ?? "";
     const motDePasse = donnees.get("motDePasse")?.toString() ?? "";
+    const baseUrl = donnees.get("baseUrl")?.toString().trim() ?? "";
 
-    if (!nom || !identifiant || !email || !motDePasse) {
+    if (!nom || !identifiant || !email || !motDePasse || !baseUrl) {
       return fail(400, { erreur: "Tous les champs sont obligatoires." });
+    }
+
+    try {
+      const url = new URL(baseUrl);
+      if (url.protocol !== "https:") throw new Error();
+    } catch {
+      return fail(400, { erreur: "L'URL doit être au format https://votre-domaine.fr" });
     }
 
     if (identifiant.length < 3 || identifiant.length > 30) {
@@ -73,6 +81,8 @@ export const actions: Actions = {
         displayUsername: identifiant,
       })
       .where(eq(users.email, email));
+
+    await sauvegarderConfig("PUBLIC_BASE_URL", baseUrl);
 
     // Générer les clés VAPID si absentes (premier déploiement, pas d'abonnements existants)
     const vapidExistant = await lireConfig("VAPID_PUBLIC_KEY");
