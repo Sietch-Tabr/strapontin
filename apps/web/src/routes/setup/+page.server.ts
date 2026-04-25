@@ -42,7 +42,8 @@ export const actions: Actions = {
       if (!["https:", "http:"].includes(url.protocol)) throw new Error();
     } catch {
       return fail(400, {
-        erreur: "L'URL doit être une URL valide (ex : https://mondomaine.fr ou http://192.168.1.10:3000).",
+        erreur:
+          "L'URL doit être une URL valide (ex : https://mondomaine.fr ou http://192.168.1.10:3000).",
       });
     }
 

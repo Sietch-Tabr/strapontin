@@ -220,7 +220,9 @@ export const actions: Actions = {
             cle,
           });
         }
-        const estIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(url.hostname) || url.hostname === "localhost";
+        const estIp =
+          /^(\d{1,3}\.){3}\d{1,3}$/.test(url.hostname) ||
+          url.hostname === "localhost";
         if (!estIp && url.protocol !== "https:") {
           return fail(400, {
             erreur: "L'URL doit commencer par https:// pour un domaine public.",
@@ -299,7 +301,10 @@ export const actions: Actions = {
       const [nbArtistes, configs] = await Promise.all([
         db.$count(userArtistes),
         db
-          .select({ departements: userConfig.departements, rayonKm: userConfig.rayonKm })
+          .select({
+            departements: userConfig.departements,
+            rayonKm: userConfig.rayonKm,
+          })
           .from(userConfig),
       ]);
 
@@ -307,7 +312,11 @@ export const actions: Actions = {
         await queue.add(
           "fetch:artistes:batch",
           { type: "fetch:artistes:batch" },
-          { jobId: "artistes__batch", removeOnComplete: true, removeOnFail: true },
+          {
+            jobId: "artistes__batch",
+            removeOnComplete: true,
+            removeOnFail: true,
+          },
         );
       }
 
@@ -322,7 +331,11 @@ export const actions: Actions = {
       if (tousLesDepts.size > 0) {
         await queue.add(
           "fetch:region",
-          { type: "fetch:region", depts: [...tousLesDepts], rayonKm: maxRayonKm },
+          {
+            type: "fetch:region",
+            depts: [...tousLesDepts],
+            rayonKm: maxRayonKm,
+          },
           { jobId: "region__all", removeOnComplete: true, removeOnFail: true },
         );
       }
