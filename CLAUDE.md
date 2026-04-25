@@ -25,8 +25,7 @@ strapontin/
 │   ├── core/             ← Dédoublonnage, normalisation, filtres (logique pure)
 │   └── sources/          ← Clients API : TM, Bandsintown, Eventim
 ├── scripts/
-│   ├── provision-lxc.sh      ← Création + provisioning LXC prod depuis host Proxmox
-│   ├── provision-lxc-dev.sh  ← Création + provisioning LXC dev (VMID 114, 192.168.20.78)
+│   ├── provision.sh          ← Création + provisioning LXC prod ou dev (`--env prod|dev`)
 │   ├── deploy.sh             ← Premier déploiement (clone + build + migrations + services)
 │   ├── backup.sh             ← pg_dump + .env → /mnt/backup/ (NAS monté)
 │   ├── update.sh             ← backup → pull → build → migrate → restart → healthcheck
@@ -139,8 +138,8 @@ ssh root@192.168.1.99 "
 
 ```
 scripts/
-├── provision-lxc.sh     # création + provisioning LXC depuis host Proxmox (idempotent)
-│                        #   pct create, réseau VLAN 20, apt, PostgreSQL, Redis, systemd, bind mount NAS
+├── provision.sh         # création + provisioning LXC prod ou dev (--env prod|dev, idempotent)
+│                        #   pct create, réseau VLAN 20, apt, PostgreSQL, Redis, systemd, bind mount NAS (prod)
 ├── deploy.sh            # premier déploiement : clone → build → migrations → services
 ├── backup.sh            # pg_dump + .env → /mnt/backup/ (NAS monté en bind mount), purge 30j
 ├── update.sh            # backup → pull → install → build → migrate → restart → healthcheck
@@ -211,8 +210,9 @@ NAS monté en bind mount sur `/mnt/backup/`. `pg_dump` exécuté en tant que `po
   - Proxy host 26 — WebSocket off, Block Exploits off, SSL forcé, HTTP/2
   - `advanced_config` : headers sécurité + `location /` custom (sans headers WebSocket)
   - Piège : coller du contenu avec `\n` littéraux casse le conf silencieusement → voir wiki Déploiement
-- Provisioning : `scripts/provision-lxc.sh` (depuis host Proxmox 192.168.1.99)
-  - Pré-requis : copier les scripts vers le host (`ssh mkdir -p /opt/strapontin/scripts` + `scp scripts/provision-lxc.sh scripts/deploy.sh root@192.168.1.99:/opt/strapontin/scripts/`)
+- Provisioning : `scripts/provision.sh` (depuis host Proxmox 192.168.1.99)
+  - Pré-requis : copier les scripts vers le host (`ssh mkdir -p /opt/strapontin/scripts` + `scp scripts/provision.sh scripts/deploy.sh root@192.168.1.99:/opt/strapontin/scripts/`)
+  - Appel : `provision.sh --env prod` ou `provision.sh --env dev`
   - VMID résolu dynamiquement : `VMID=$(pvesh get /cluster/nextid)`
 - Variables : `.env` sur le serveur (non commité), `.env.example` versionné
 
@@ -253,7 +253,7 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
 ### Redis — configuration
 
-- `maxmemory 128mb` + `maxmemory-policy allkeys-lru` — configuré dans `/etc/redis/redis.conf` via `provision-lxc.sh`
+- `maxmemory 128mb` + `maxmemory-policy allkeys-lru` — configuré dans `/etc/redis/redis.conf` via `provision.sh`
 - Pas de réplication, instance unique — le `maxmemory` borne la consommation si les clés sans TTL grossissent
 
 ### Redis — clés applicatives
