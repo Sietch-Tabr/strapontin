@@ -1,9 +1,9 @@
 // Client Resend pour les emails transactionnels côté web.
-// Si RESEND_API_KEY est absent, toutes les fonctions retournent silencieusement sans erreur.
+// Si RESEND_API_KEY est absent de app_config, toutes les fonctions retournent silencieusement sans erreur.
 
 import { Resend } from "resend";
-import { RESEND_API_KEY, CONTACT_EMAIL } from "$env/static/private";
 import { PUBLIC_BASE_URL } from "$env/static/public";
+import { lireConfig } from "$lib/server/config";
 import pino from "pino";
 
 const logger = pino({ name: "email" });
@@ -17,12 +17,24 @@ function echapperHtml(texte: string): string {
     .replace(/'/g, "&#x27;");
 }
 
-const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+async function obtenirResend(): Promise<{
+  client: Resend;
+  replyTo: string;
+  baseUrl: string;
+} | null> {
+  const cle = await lireConfig("RESEND_API_KEY");
+  if (!cle) return null;
+  const contactEmail =
+    (await lireConfig("CONTACT_EMAIL")) ?? "admin@strapontin.kwaite.fr";
+  const baseUrl = (await lireConfig("PUBLIC_BASE_URL")) ?? PUBLIC_BASE_URL;
+  return { client: new Resend(cle), replyTo: contactEmail, baseUrl };
+}
 
-export const resendDisponible = !!RESEND_API_KEY;
+export async function resendDisponible(): Promise<boolean> {
+  return !!(await lireConfig("RESEND_API_KEY"));
+}
 
 const EXPEDITEUR = "Strapontin <noreply@strapontin.kwaite.fr>";
-const REPLY_TO = CONTACT_EMAIL || "admin@strapontin.kwaite.fr";
 
 function enTeteHtml(titre: string): string {
   return `<!DOCTYPE html>
@@ -36,10 +48,10 @@ function enTeteHtml(titre: string): string {
 <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;border:1px solid #e5e5e5">`;
 }
 
-function piedHtml(): string {
+function piedHtml(baseUrl: string): string {
   return `</div>
 <p style="text-align:center;color:#aaa;font-size:12px;margin-top:24px">
-  Strapontin — <a href="${PUBLIC_BASE_URL}/parametres" style="color:#aaa">Gérer mes préférences</a>
+  Strapontin — <a href="${baseUrl}/parametres" style="color:#aaa">Gérer mes préférences</a>
 </p>
 </body>
 </html>`;
@@ -50,7 +62,8 @@ export async function envoyerInvitation(params: {
   identifiant: string;
   motDePasse: string;
 }): Promise<void> {
-  if (!resend) {
+  const ctx = await obtenirResend();
+  if (!ctx) {
     logger.warn("RESEND_API_KEY absent — email invitation non envoyé");
     return;
   }
@@ -71,15 +84,15 @@ export async function envoyerInvitation(params: {
 <p style="color:#555;font-size:14px;margin:0 0 24px">
   Il vous sera demandé de choisir un nouvel identifiant et un nouveau mot de passe à la première connexion.
 </p>
-<a href="${PUBLIC_BASE_URL}/login"
+<a href="${ctx.baseUrl}/login"
    style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
   Se connecter →
 </a>
-${piedHtml()}`;
+${piedHtml(ctx.baseUrl)}`;
 
-  const { error } = await resend.emails.send({
+  const { error } = await ctx.client.emails.send({
     from: EXPEDITEUR,
-    replyTo: REPLY_TO,
+    replyTo: ctx.replyTo,
     to: params.email,
     subject: "Votre invitation Strapontin",
     html: corps,
@@ -96,7 +109,8 @@ export async function envoyerResetMotDePasse(params: {
   email: string;
   lienReset: string;
 }): Promise<void> {
-  if (!resend) {
+  const ctx = await obtenirResend();
+  if (!ctx) {
     logger.warn("RESEND_API_KEY absent — email reset non envoyé");
     return;
   }
@@ -114,11 +128,11 @@ export async function envoyerResetMotDePasse(params: {
 <p style="color:#aaa;font-size:13px;margin-top:24px">
   Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
 </p>
-${piedHtml()}`;
+${piedHtml(ctx.baseUrl)}`;
 
-  const { error } = await resend.emails.send({
+  const { error } = await ctx.client.emails.send({
     from: EXPEDITEUR,
-    replyTo: REPLY_TO,
+    replyTo: ctx.replyTo,
     to: params.email,
     subject: "Réinitialisation de votre mot de passe Strapontin",
     html: corps,
@@ -137,7 +151,8 @@ export async function envoyerSignalement(params: {
   expediteurEmail: string;
   expediteurNom: string;
 }): Promise<void> {
-  if (!resend) {
+  const ctx = await obtenirResend();
+  if (!ctx) {
     logger.warn("RESEND_API_KEY absent — signalement non envoyé");
     return;
   }
@@ -162,12 +177,12 @@ export async function envoyerSignalement(params: {
   </tr>
 </table>
 <p style="color:#555;font-size:14px;white-space:pre-wrap;border-left:3px solid #e5e5e5;padding-left:12px;margin:0">${echapperHtml(params.message)}</p>
-${piedHtml()}`;
+${piedHtml(ctx.baseUrl)}`;
 
-  const { error } = await resend.emails.send({
+  const { error } = await ctx.client.emails.send({
     from: EXPEDITEUR,
     replyTo: params.expediteurEmail,
-    to: REPLY_TO,
+    to: ctx.replyTo,
     subject: `[Strapontin] Signalement — ${typeLabel} — ${params.expediteurNom}`,
     html: corps,
   });

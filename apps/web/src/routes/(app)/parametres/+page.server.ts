@@ -55,7 +55,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
   return {
     config,
     theme: (cookies.get("theme") ?? "auto") as "auto" | "clair" | "sombre",
-    resendDisponible,
+    resendDisponible: await resendDisponible(),
   };
 };
 
