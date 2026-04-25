@@ -1,6 +1,6 @@
 steps:
   - name: test
-    image: node:22-alpine
+    image: node:22
     commands:
       - corepack enable
       - pnpm install --frozen-lockfile
@@ -9,7 +9,7 @@ steps:
       - event: push
 
   - name: typecheck
-    image: node:22-alpine
+    image: node:22
     commands:
       - corepack enable
       - pnpm install --frozen-lockfile
