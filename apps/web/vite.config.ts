@@ -22,4 +22,8 @@ function stripBetterAuthAnnotations() {
 export default defineConfig({
   envDir: resolve(__dirname, "../.."),
   plugins: [stripBetterAuthAnnotations(), tailwindcss(), sveltekit()],
+  server: {
+    host: true,
+    port: 3000,
+  },
 });
