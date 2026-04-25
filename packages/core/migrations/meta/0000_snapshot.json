@@ -1,5 +1,5 @@
 {
-  "id": "078765e3-7e0d-42c7-9057-872d0e98e740",
+  "id": "e5188768-1d6b-43d4-974f-227486431c51",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -93,16 +93,44 @@
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.app_config": {
+      "name": "app_config",
+      "schema": "",
+      "columns": {
+        "cle": {
+          "name": "cle",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "valeur_chiffree": {
+          "name": "valeur_chiffree",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mis_a_jour_le": {
+          "name": "mis_a_jour_le",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -294,11 +322,7 @@
         "uq_concerts_artiste_date_salle": {
           "name": "uq_concerts_artiste_date_salle",
           "nullsNotDistinct": false,
-          "columns": [
-            "artiste_norm",
-            "date",
-            "salle_norm"
-          ]
+          "columns": ["artiste_norm", "date", "salle_norm"]
         }
       },
       "policies": {},
@@ -416,6 +440,89 @@
       },
       "isRLSEnabled": false
     },
+    "public.push_abonnements": {
+      "name": "push_abonnements",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endpoint": {
+          "name": "endpoint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "p256dh": {
+          "name": "p256dh",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth": {
+          "name": "auth",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cree_le": {
+          "name": "cree_le",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_push_abonnements_user": {
+          "name": "idx_push_abonnements_user",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "push_abonnements_user_id_users_id_fk": {
+          "name": "push_abonnements_user_id_users_id_fk",
+          "tableFrom": "push_abonnements",
+          "tableTo": "users",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "uq_push_user_endpoint": {
+          "name": "uq_push_user_endpoint",
+          "nullsNotDistinct": false,
+          "columns": ["user_id", "endpoint"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.sessions": {
       "name": "sessions",
       "schema": "",
@@ -475,12 +582,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -490,9 +593,7 @@
         "sessions_token_unique": {
           "name": "sessions_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -551,12 +652,8 @@
           "name": "user_artistes_user_id_users_id_fk",
           "tableFrom": "user_artistes",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -566,10 +663,7 @@
         "uq_user_artistes_user_artiste": {
           "name": "uq_user_artistes_user_artiste",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "artiste_normalise"
-          ]
+          "columns": ["user_id", "artiste_normalise"]
         }
       },
       "policies": {},
@@ -607,8 +701,22 @@
           "notNull": true,
           "default": true
         },
-        "notifications_email": {
-          "name": "notifications_email",
+        "frequence_notifications": {
+          "name": "frequence_notifications",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'jamais'"
+        },
+        "notif_artistes": {
+          "name": "notif_artistes",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "notif_salles": {
+          "name": "notif_salles",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -635,12 +743,8 @@
           "name": "user_config_user_id_users_id_fk",
           "tableFrom": "user_config",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -652,6 +756,10 @@
         "chk_user_config_theme": {
           "name": "chk_user_config_theme",
           "value": "\"user_config\".\"theme\" IN ('auto', 'clair', 'sombre')"
+        },
+        "chk_frequence_notifications": {
+          "name": "chk_frequence_notifications",
+          "value": "\"user_config\".\"frequence_notifications\" IN ('jamais', 'temps_reel', 'quotidien')"
         }
       },
       "isRLSEnabled": false
@@ -680,6 +788,12 @@
         },
         "vu_le": {
           "name": "vu_le",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "masque_le": {
+          "name": "masque_le",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -723,12 +837,8 @@
           "name": "user_matches_user_id_users_id_fk",
           "tableFrom": "user_matches",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -736,12 +846,8 @@
           "name": "user_matches_concert_id_concerts_id_fk",
           "tableFrom": "user_matches",
           "tableTo": "concerts",
-          "columnsFrom": [
-            "concert_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["concert_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -751,10 +857,7 @@
         "uq_user_matches_user_concert": {
           "name": "uq_user_matches_user_concert",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "concert_id"
-          ]
+          "columns": ["user_id", "concert_id"]
         }
       },
       "policies": {},
@@ -790,12 +893,8 @@
           "name": "user_salles_user_id_users_id_fk",
           "tableFrom": "user_salles",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -803,10 +902,7 @@
       "compositePrimaryKeys": {
         "user_salles_user_id_salle_id_pk": {
           "name": "user_salles_user_id_salle_id_pk",
-          "columns": [
-            "user_id",
-            "salle_id"
-          ]
+          "columns": ["user_id", "salle_id"]
         }
       },
       "uniqueConstraints": {},
@@ -879,15 +975,13 @@
           "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -897,16 +991,12 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         },
         "users_username_unique": {
           "name": "users_username_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "username"
-          ]
+          "columns": ["username"]
         }
       },
       "policies": {},

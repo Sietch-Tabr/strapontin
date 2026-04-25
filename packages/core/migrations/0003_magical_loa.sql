@@ -1,1 +1,0 @@
-ALTER TABLE "user_matches" ADD COLUMN "masque_le" timestamp with time zone;

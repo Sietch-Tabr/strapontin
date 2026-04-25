@@ -494,7 +494,7 @@ Sur `/` (accueil), les concerts sont regroupés par artiste. Si un artiste a ≥
 
 ## Schéma PostgreSQL
 
-Migration initiale unique `0000_initial.sql` dans `packages/core/migrations/` — reflète le schéma complet de la v1 (tables + colonne `theme`). Générée par `pnpm --filter @strapontin/core db:generate`, appliquée par `db:migrate`.
+Migration unique `0000_initial.sql` dans `packages/core/migrations/` — schéma complet v1.1 (toutes tables dans leur état final, fusionné). Appliquée par `db:migrate`.
 
 Les nouvelles migrations sont numérotées séquentiellement à partir de `0001`.
 

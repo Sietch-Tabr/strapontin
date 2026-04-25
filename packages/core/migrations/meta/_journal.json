@@ -8,41 +8,6 @@
       "when": 1776191819903,
       "tag": "0000_initial",
       "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1776807197588,
-      "tag": "0001_frequence-notifications",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1776995094065,
-      "tag": "0002_acoustic_smiling_tiger",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1776996316005,
-      "tag": "0003_magical_loa",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1777013593310,
-      "tag": "0004_busy_pestilence",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1777014614526,
-      "tag": "0005_rainy_christian_walker",
-      "breakpoints": true
     }
   ]
 }
