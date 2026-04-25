@@ -6,9 +6,10 @@ import {
   type StatsJobRedis,
 } from "$lib/server/redis";
 import { auth } from "$lib/auth";
-import { users } from "@strapontin/core/schema";
+import { users, userArtistes, userConfig } from "@strapontin/core/schema";
 import type { QuotaTM } from "@strapontin/sources";
 import { eq } from "drizzle-orm";
+import { queue } from "$lib/server/queue";
 import { randomBytes, createECDH } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import { envoyerInvitation } from "$lib/server/email";
@@ -292,6 +293,39 @@ export const actions: Actions = {
     }
 
     await sauvegarderConfig(cle, valeur);
+
+    if (cle === "TICKETMASTER_API_KEY" && valeur) {
+      const [nbArtistes, configs] = await Promise.all([
+        db.$count(userArtistes),
+        db
+          .select({ departements: userConfig.departements, rayonKm: userConfig.rayonKm })
+          .from(userConfig),
+      ]);
+
+      if (nbArtistes > 0) {
+        await queue.add(
+          "fetch:artistes:batch",
+          { type: "fetch:artistes:batch" },
+          { jobId: "artistes__batch", removeOnComplete: true, removeOnFail: true },
+        );
+      }
+
+      const tousLesDepts = new Set<string>();
+      for (const config of configs) {
+        for (const dept of config.departements) {
+          if (dept.trim()) tousLesDepts.add(dept.trim());
+        }
+      }
+      const maxRayonKm = Math.max(...configs.map((c) => c.rayonKm ?? 50), 50);
+
+      if (tousLesDepts.size > 0) {
+        await queue.add(
+          "fetch:region",
+          { type: "fetch:region", depts: [...tousLesDepts], rayonKm: maxRayonKm },
+          { jobId: "region__all", removeOnComplete: true, removeOnFail: true },
+        );
+      }
+    }
 
     return { succes: true, action: "sauvegarderConfig", cle };
   },
