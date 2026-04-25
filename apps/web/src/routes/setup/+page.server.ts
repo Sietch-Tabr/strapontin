@@ -85,6 +85,7 @@ export const actions: Actions = {
       .where(eq(users.email, email));
 
     await sauvegarderConfig("PUBLIC_BASE_URL", baseUrl);
+    await sauvegarderConfig("CONTACT_EMAIL", email);
 
     // Générer les clés VAPID si absentes (premier déploiement, pas d'abonnements existants)
     const vapidExistant = await lireConfig("VAPID_PUBLIC_KEY");
