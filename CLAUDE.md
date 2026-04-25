@@ -3,9 +3,9 @@
 ## Lancer l'application (développement)
 
 ```bash
-pnpm install
-pnpm dev           # SvelteKit dev server (port 3000)
-pnpm worker:dev    # BullMQ worker (process séparé)
+# Sur le LXC dev (192.168.20.78) — deux terminaux SSH
+pnpm dev        # SvelteKit dev server (port 3000)
+pnpm worker:dev # BullMQ worker (process séparé)
 ```
 
 ## Architecture — monorepo pnpm workspaces
@@ -19,10 +19,11 @@ strapontin/
 │   ├── core/             ← Dédoublonnage, normalisation, filtres (logique pure)
 │   └── sources/          ← Clients API : TM, Bandsintown, Eventim
 ├── scripts/
-│   ├── provision-lxc.sh  ← Création + provisioning LXC depuis host Proxmox
-│   ├── deploy.sh         ← Premier déploiement (clone + build + migrations + services)
-│   ├── backup.sh         ← pg_dump + .env → /mnt/backup/ (NAS monté)
-│   └── update.sh         ← backup → pull → build → migrate → restart → healthcheck
+│   ├── provision-lxc.sh      ← Création + provisioning LXC prod depuis host Proxmox
+│   ├── provision-lxc-dev.sh  ← Création + provisioning LXC dev (VMID 114, 192.168.20.78)
+│   ├── deploy.sh             ← Premier déploiement (clone + build + migrations + services)
+│   ├── backup.sh             ← pg_dump + .env → /mnt/backup/ (NAS monté)
+│   └── update.sh             ← backup → pull → build → migrate → restart → healthcheck
 └── archive/
     └── concert-finder-cli/  ← App Python CLI d'origine (référence)
 ```
@@ -38,17 +39,21 @@ strapontin/
 
 ## Workflow de développement
 
-### Dev local (quotidien)
+### Dev quotidien (LXC dev)
+
+LXC dev : VMID 114, `192.168.20.78`, VLAN 20 — même stack que prod (PG 18, Redis 8).
+Démarrer / arrêter depuis le host Proxmox : `pct start 114` / `pct stop 114`.
 
 ```bash
+# Connexion
+ssh root@192.168.20.78
+
+# Deux terminaux SSH
 pnpm dev        # SvelteKit HMR (port 3000)
 pnpm worker:dev # BullMQ worker (process séparé)
 ```
 
-- PostgreSQL 18 + Redis 8 installés via Homebrew sur le Mac
-- `.env.local` (prioritaire sur `.env`) pointe sur la DB locale
-- Le dev server est accessible depuis le réseau via WireGuard (`http://192.168.100.3:3000`)
-  pour tester sur mobile ou valider le SSR sans déployer
+Application accessible sur `http://192.168.20.78:3000`.
 
 ### Gestion des issues (Codeberg)
 
