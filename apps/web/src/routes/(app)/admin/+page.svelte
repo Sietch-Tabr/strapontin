@@ -237,7 +237,7 @@
 									type="button"
 									onclick={() => {
 										configEditionCle = configEditionCle === config.cle ? null : config.cle;
-										configValeur = '';
+										configValeur = !config.secret && config.valeur ? config.valeur : '';
 									}}
 									class="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
 								>
