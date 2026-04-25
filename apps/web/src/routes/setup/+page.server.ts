@@ -42,7 +42,9 @@ export const actions: Actions = {
       const url = new URL(baseUrl);
       if (url.protocol !== "https:") throw new Error();
     } catch {
-      return fail(400, { erreur: "L'URL doit être au format https://votre-domaine.fr" });
+      return fail(400, {
+        erreur: "L'URL doit être au format https://votre-domaine.fr",
+      });
     }
 
     if (identifiant.length < 3 || identifiant.length > 30) {
