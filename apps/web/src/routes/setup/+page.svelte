@@ -5,6 +5,11 @@
 	let { form }: { form: ActionData } = $props();
 
 	let chargement = $state(false);
+	let formValide = $state(false);
+
+	function verifierValidite(e: Event) {
+		formValide = (e.currentTarget as HTMLFormElement).checkValidity();
+	}
 </script>
 
 <svelte:head>
@@ -30,6 +35,7 @@
 					await update();
 				};
 			}}
+			oninput={verifierValidite}
 			class="space-y-4"
 		>
 			<div class="space-y-2">
@@ -92,8 +98,8 @@
 
 			<button
 				type="submit"
-				disabled={chargement}
-				class="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+				disabled={chargement || !formValide}
+				class="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
 			>
 				{chargement ? 'Création…' : 'Créer le compte admin'}
 			</button>

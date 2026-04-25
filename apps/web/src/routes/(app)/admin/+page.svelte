@@ -218,7 +218,7 @@
 									{:else if config.presente}
 										<span class="text-green-600 dark:text-green-400">Configurée en base</span>
 									{:else}
-										<span>Non configurée — utilise la variable d'environnement</span>
+										<span>Non configurée</span>
 									{/if}
 								</p>
 							</div>

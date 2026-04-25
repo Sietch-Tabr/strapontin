@@ -29,7 +29,8 @@ strapontin/
 │   ├── provision-lxc-dev.sh  ← Création + provisioning LXC dev (VMID 114, 192.168.20.78)
 │   ├── deploy.sh             ← Premier déploiement (clone + build + migrations + services)
 │   ├── backup.sh             ← pg_dump + .env → /mnt/backup/ (NAS monté)
-│   └── update.sh             ← backup → pull → build → migrate → restart → healthcheck
+│   ├── update.sh             ← backup → pull → build → migrate → restart → healthcheck
+│   └── update-dev.sh         ← déploie la branche courante sur le LXC dev (Mac → SSH)
 └── archive/
     └── concert-finder-cli/  ← App Python CLI d'origine (référence)
 ```
@@ -143,6 +144,7 @@ scripts/
 ├── deploy.sh            # premier déploiement : clone → build → migrations → services
 ├── backup.sh            # pg_dump + .env → /mnt/backup/ (NAS monté en bind mount), purge 30j
 ├── update.sh            # backup → pull → install → build → migrate → restart → healthcheck
+├── update-dev.sh        # déploie la branche courante sur le LXC dev (Mac → SSH → 192.168.20.78)
 ├── system-update.sh     # mise à jour OS du LXC (depuis host Proxmox) : snapshot → apt → healthcheck
 ├── seed-artistes.ts     # importe une liste d'artistes pour un user (tsx scripts/seed-artistes.ts)
 └── artistes-seed.txt    # liste d'artistes par défaut (un par ligne, # = commentaire)
