@@ -466,6 +466,19 @@ if [[ "$ENV" == "prod" ]]; then
         systemctl enable strapontin-backup.timer
         systemctl start strapontin-backup.timer
 "
+    echo "[8] Autorisation clé SSH Woodpecker..."
+    WOODPECKER_PUBKEY=$(grep woodpecker-strapontin /root/.ssh/authorized_keys 2>/dev/null || true)
+    if [[ -n "$WOODPECKER_PUBKEY" ]]; then
+        pct exec "$VMID" -- bash -c "
+            mkdir -p /root/.ssh
+            echo '$WOODPECKER_PUBKEY' >> /root/.ssh/authorized_keys
+            chmod 700 /root/.ssh
+            chmod 600 /root/.ssh/authorized_keys
+        "
+        echo "  [OK]    Clé SSH Woodpecker autorisée"
+    else
+        echo "  [WARN]  Clé woodpecker-strapontin introuvable sur le host — à configurer manuellement"
+    fi
 else
     pct exec "$VMID" -- bash -c "
         systemctl enable strapontin-dev-web strapontin-dev-worker
@@ -592,6 +605,10 @@ echo ""
 if [[ "$ENV" == "prod" ]]; then
     echo "  Ouvrez https://<votre-domaine>/setup dans votre navigateur"
     echo "  pour finaliser l'installation (l'URL sera pré-remplie automatiquement)."
+    echo ""
+    echo "  Vérifier dans Woodpecker (secrets) :"
+    echo "    lxc_host = ${IP%%/*}"
+    echo "    ssh_key  = contenu de ~/.ssh/woodpecker_strapontin (clé privée)"
 else
     echo "  Application  : http://${IP%%/*}:3000"
     echo "  Premier login : http://${IP%%/*}:3000/setup"
