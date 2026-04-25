@@ -36,17 +36,6 @@ PG_VERSION="18"
 echo "=== Provisioning LXC strapontin (VMID : $VMID) ==="
 
 # ---------------------------------------------------------------
-# 0. Saisies interactives (avant toute opération automatisée)
-# ---------------------------------------------------------------
-
-echo ""
-echo "Clés API optionnelles (Entrée pour ignorer) :"
-printf "  TICKETMASTER_API_KEY  : "; read -r TM_KEY
-printf "  BANDSINTOWN_APP_ID    : "; read -r BST_ID
-printf "  RESEND_API_KEY        : "; read -r RESEND_KEY
-echo ""
-
-# ---------------------------------------------------------------
 # 1. Template Debian 13
 # ---------------------------------------------------------------
 
@@ -261,17 +250,14 @@ pct exec "$VMID" -- bash -c "
 echo "[6] Génération du .env..."
 DB_PASSWORD=$(openssl rand -hex 16)
 AUTH_SECRET=$(openssl rand -hex 32)
-pct exec "$VMID" -- bash -c "
-    cp $APP_DIR/.env.example $APP_DIR/.env
-    sed -i 's|changeme|${DB_PASSWORD}|' $APP_DIR/.env
-    sed -i 's|BETTER_AUTH_SECRET=|BETTER_AUTH_SECRET=${AUTH_SECRET}|' $APP_DIR/.env
-    chown $APP_USER:$APP_USER $APP_DIR/.env
-    chmod 600 $APP_DIR/.env
+pct exec "$VMID" -- bash -c "cat > $APP_DIR/.env << 'ENV'
+DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME
+REDIS_URL=redis://localhost:6379
+BETTER_AUTH_SECRET=$AUTH_SECRET
+ENV
+chown $APP_USER:$APP_USER $APP_DIR/.env
+chmod 600 $APP_DIR/.env
 "
-
-[ -n "$TM_KEY" ]     && pct exec "$VMID" -- sed -i "s|TICKETMASTER_API_KEY=|TICKETMASTER_API_KEY=$TM_KEY|"     "$APP_DIR/.env" || true
-[ -n "$BST_ID" ]     && pct exec "$VMID" -- sed -i "s|BANDSINTOWN_APP_ID=|BANDSINTOWN_APP_ID=$BST_ID|"         "$APP_DIR/.env" || true
-[ -n "$RESEND_KEY" ] && pct exec "$VMID" -- sed -i "s|RESEND_API_KEY=|RESEND_API_KEY=$RESEND_KEY|"             "$APP_DIR/.env" || true
 
 echo "[6] Création base PostgreSQL..."
 pct exec "$VMID" -- bash -c "
@@ -396,7 +382,7 @@ else
 fi
 
 # Variables .env obligatoires
-for VAR in DATABASE_URL REDIS_URL BETTER_AUTH_SECRET PUBLIC_BASE_URL; do
+for VAR in DATABASE_URL REDIS_URL BETTER_AUTH_SECRET; do
     VAL=$(pct exec "$VMID" -- bash -c "source $APP_DIR/.env 2>/dev/null && echo \${$VAR}" 2>/dev/null || true)
     if [ -z "$VAL" ]; then
         echo "  [ECHEC] $VAR vide dans .env"
