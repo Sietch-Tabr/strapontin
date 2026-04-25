@@ -24,5 +24,6 @@ export default defineConfig({
   plugins: [stripBetterAuthAnnotations(), tailwindcss(), sveltekit()],
   server: {
     host: true,
+    port: 3000,
   },
 });
