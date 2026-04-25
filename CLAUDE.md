@@ -156,14 +156,14 @@ Les clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL
 
 Détails : [wiki Sources de données](https://codeberg.org/Kwaite/strapontin/wiki/Sources-de-données)
 
-| Source                    | Statut    |
-| ------------------------- | --------- |
-| Ticketmaster Discovery v2 | Core      |
-| Eventim France            | Core      |
-| Shotgun.live              | Phase 2   |
-| Dice.fm                   | Phase 3   |
+| Source                    | Statut                                       |
+| ------------------------- | -------------------------------------------- |
+| Ticketmaster Discovery v2 | Core                                         |
+| Eventim France            | Core                                         |
+| Shotgun.live              | Phase 2                                      |
+| Dice.fm                   | Phase 3                                      |
 | Bandsintown               | Abandonné — HTTP 401 depuis 2026-04-10 (#65) |
-| Fnac Spectacles           | Abandonné — Cloudflare JS challenge |
+| Fnac Spectacles           | Abandonné — Cloudflare JS challenge          |
 
 ## Pattern workers (BullMQ)
 
