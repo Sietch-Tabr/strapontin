@@ -60,13 +60,30 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 };
 
 export const actions: Actions = {
-  config: async ({ request, locals }) => {
+  departements: async ({ request, locals }) => {
     const donnees = await request.formData();
 
     const depts = (donnees.get("departements")?.toString() ?? "")
       .split(",")
       .map((d) => normaliserDept(d))
       .filter((d): d is string => d !== null);
+
+    await db
+      .insert(userConfig)
+      .values({
+        userId: locals.user!.id,
+        departements: depts,
+      })
+      .onConflictDoUpdate({
+        target: userConfig.userId,
+        set: { departements: depts, updatedAt: new Date() },
+      });
+
+    return { succes: "departements" };
+  },
+
+  rechercheRapide: async ({ request, locals }) => {
+    const donnees = await request.formData();
 
     const rayonKm = Math.min(
       500,
@@ -81,21 +98,15 @@ export const actions: Actions = {
       .insert(userConfig)
       .values({
         userId: locals.user!.id,
-        departements: depts,
         rayonKm,
         filtreDisponibles,
       })
       .onConflictDoUpdate({
         target: userConfig.userId,
-        set: {
-          departements: depts,
-          rayonKm,
-          filtreDisponibles,
-          updatedAt: new Date(),
-        },
+        set: { rayonKm, filtreDisponibles, updatedAt: new Date() },
       });
 
-    return { succes: "config" };
+    return { succes: "rechercheRapide" };
   },
 
   notifications: async ({ request, locals }) => {
@@ -167,7 +178,7 @@ export const actions: Actions = {
     return { succes: "theme", theme };
   },
 
-  compte: async ({ request, locals }) => {
+  compte: async ({ request }) => {
     const donnees = await request.formData();
     const nom = donnees.get("nom")?.toString().trim() ?? "";
 
