@@ -1,6 +1,8 @@
 steps:
   - name: test
     image: node:22
+    environment:
+      PNPM_STORE_DIR: /tmp/pnpm-store
     commands:
       - corepack enable
       - pnpm install --frozen-lockfile
@@ -10,6 +12,8 @@ steps:
 
   - name: typecheck
     image: node:22
+    environment:
+      PNPM_STORE_DIR: /tmp/pnpm-store
     commands:
       - corepack enable
       - pnpm install --frozen-lockfile
