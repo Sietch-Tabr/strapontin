@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { BookOpen, Shield, Scale, MessageSquare } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
@@ -6,20 +7,59 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
+	let dialogOuvert = $state(false);
+	let boutonOuverture = $state<HTMLButtonElement | undefined>(undefined);
 	let typeSignalement = $state('bug');
-	let messageSignalement = $state('');
 	let envoi = $state(false);
 
 	const CANEVAS: Record<string, string> = {
 		bug: 'Décrivez le problème\n\nÉtapes pour reproduire :\n1. \n2. \n\nComportement attendu :\n\nComportement observé :',
-		suggestion: 'Décrivez votre suggestion\n\nContexte (pourquoi c\'est utile) :\n\nComportement souhaité :',
+		suggestion: "Décrivez votre suggestion\n\nContexte (pourquoi c'est utile) :\n\nComportement souhaité :",
 		question: 'Votre question',
 	};
 
+	let messageSignalement = $state(CANEVAS['bug']!);
+
+	function ouvrirDialog() {
+		dialogOuvert = true;
+		tick().then(() => {
+			document.getElementById('type-signalement')?.focus();
+		});
+	}
+
+	function fermerDialog() {
+		dialogOuvert = false;
+		tick().then(() => boutonOuverture?.focus());
+	}
+
+	function changerType(type: string) {
+		typeSignalement = type;
+		messageSignalement = CANEVAS[type] ?? '';
+	}
+
+	function piegerFocus(e: KeyboardEvent) {
+		if (e.key === 'Escape') { fermerDialog(); return; }
+		if (e.key !== 'Tab') return;
+		const dialog = document.getElementById('dialog-signalement');
+		if (!dialog) return;
+		const focusables = Array.from(
+			dialog.querySelectorAll<HTMLElement>('button,input,select,textarea,[tabindex]')
+		).filter((el) => !el.hasAttribute('disabled') && el.tabIndex >= 0);
+		if (focusables.length === 0) return;
+		const premier = focusables[0]!;
+		const dernier = focusables[focusables.length - 1]!;
+		if (e.shiftKey && document.activeElement === premier) {
+			e.preventDefault(); dernier.focus();
+		} else if (!e.shiftKey && document.activeElement === dernier) {
+			e.preventDefault(); premier.focus();
+		}
+	}
+
 	$effect(() => {
 		if (form?.succes) {
-			messageSignalement = '';
+			messageSignalement = CANEVAS['bug']!;
 			typeSignalement = 'bug';
+			fermerDialog();
 		}
 	});
 </script>
@@ -203,71 +243,14 @@ SOFTWARE.</pre>
 			</div>
 
 			{#if data.resendDisponible}
-				{#if form?.succes}
-					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-						Votre message a été envoyé. Merci !
-					</p>
-				{/if}
-				{#if form?.erreur}
-					<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-						{form.erreur}
-					</p>
-				{/if}
-
-				<form
-					method="POST"
-					action="?/signalerBug"
-					class="space-y-4"
-					use:enhance={() => {
-						envoi = true;
-						return async ({ result, update }) => {
-							if (result.type === 'success') toast.success('Message envoyé');
-							else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
-							await update();
-							envoi = false;
-						};
-					}}
+				<button
+					bind:this={boutonOuverture}
+					type="button"
+					onclick={ouvrirDialog}
+					class="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
 				>
-					<div>
-						<label for="type-signalement" class="mb-1.5 block text-sm font-medium text-foreground">
-							Type
-						</label>
-						<select
-							id="type-signalement"
-							name="type"
-							bind:value={typeSignalement}
-							onchange={() => { messageSignalement = ''; }}
-							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-						>
-							<option value="bug">Bug</option>
-							<option value="suggestion">Amélioration</option>
-							<option value="question">Question</option>
-						</select>
-					</div>
-
-					<div>
-						<label for="message-signalement" class="mb-1.5 block text-sm font-medium text-foreground">
-							Message <span class="text-muted-foreground">(2000 caractères max)</span>
-						</label>
-						<textarea
-							id="message-signalement"
-							name="message"
-							bind:value={messageSignalement}
-							rows={8}
-							maxlength={2000}
-							placeholder={CANEVAS[typeSignalement]}
-							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-						></textarea>
-					</div>
-
-					<button
-						type="submit"
-						disabled={envoi || !messageSignalement.trim()}
-						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
-					>
-						{envoi ? 'Envoi…' : 'Envoyer'}
-					</button>
-				</form>
+					Ouvrir le formulaire
+				</button>
 			{:else}
 				<p class="text-sm text-muted-foreground">
 					Pour signaler un problème ou proposer une amélioration, écrivez à
@@ -286,3 +269,103 @@ SOFTWARE.</pre>
 
 	</div>
 </div>
+
+{#if dialogOuvert}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center p-4"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="titre-signalement"
+		onkeydown={piegerFocus}
+	>
+		<button
+			type="button"
+			class="absolute inset-0 bg-black/50"
+			onclick={fermerDialog}
+			aria-label="Fermer"
+			tabindex="-1"
+		></button>
+
+		<div
+			id="dialog-signalement"
+			class="relative w-full max-w-lg rounded-xl bg-background p-6 shadow-xl"
+		>
+			<div class="mb-5 flex items-center justify-between">
+				<h2 id="titre-signalement" class="text-base font-semibold text-foreground">
+					Signaler un problème ou une suggestion
+				</h2>
+				<button
+					type="button"
+					onclick={fermerDialog}
+					aria-label="Fermer"
+					class="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+				>
+					✕
+				</button>
+			</div>
+
+			<form
+				method="POST"
+				action="?/signalerBug"
+				class="space-y-4"
+				use:enhance={() => {
+					envoi = true;
+					return async ({ result, update }) => {
+						if (result.type === 'success') toast.success('Message envoyé');
+						else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+						await update();
+						envoi = false;
+					};
+				}}
+			>
+				<div>
+					<label for="type-signalement" class="mb-1.5 block text-sm font-medium text-foreground">
+						Type
+					</label>
+					<select
+						id="type-signalement"
+						name="type"
+						value={typeSignalement}
+						onchange={(e) => changerType((e.currentTarget as HTMLSelectElement).value)}
+						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+					>
+						<option value="bug">Bug</option>
+						<option value="suggestion">Amélioration</option>
+						<option value="question">Question</option>
+					</select>
+				</div>
+
+				<div>
+					<label for="message-signalement" class="mb-1.5 block text-sm font-medium text-foreground">
+						Message <span class="text-muted-foreground">(2000 caractères max)</span>
+					</label>
+					<textarea
+						id="message-signalement"
+						name="message"
+						bind:value={messageSignalement}
+						rows={8}
+						maxlength={2000}
+						class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+					></textarea>
+				</div>
+
+				<div class="flex gap-3">
+					<button
+						type="submit"
+						disabled={envoi || !messageSignalement.trim()}
+						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+					>
+						{envoi ? 'Envoi…' : 'Envoyer'}
+					</button>
+					<button
+						type="button"
+						onclick={fermerDialog}
+						class="rounded-md px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
+					>
+						Annuler
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
