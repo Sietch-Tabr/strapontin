@@ -42,7 +42,9 @@ export const actions: Actions = {
       const url = new URL(baseUrl);
       if (url.protocol !== "https:") throw new Error();
     } catch {
-      return fail(400, { erreur: "L'URL doit être au format https://votre-domaine.fr" });
+      return fail(400, {
+        erreur: "L'URL doit être au format https://votre-domaine.fr",
+      });
     }
 
     if (identifiant.length < 3 || identifiant.length > 30) {
@@ -83,6 +85,7 @@ export const actions: Actions = {
       .where(eq(users.email, email));
 
     await sauvegarderConfig("PUBLIC_BASE_URL", baseUrl);
+    await sauvegarderConfig("CONTACT_EMAIL", email);
 
     // Générer les clés VAPID si absentes (premier déploiement, pas d'abonnements existants)
     const vapidExistant = await lireConfig("VAPID_PUBLIC_KEY");

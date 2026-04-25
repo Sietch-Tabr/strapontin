@@ -110,7 +110,7 @@
 										{concert.salle}{concert.ville ? ` · ${concert.ville}` : ''}
 									</p>
 								</div>
-								<div class="ml-3 flex shrink-0 items-center gap-2">
+								<div class="ml-3 flex shrink-0 flex-col items-end gap-1">
 									{#if concert.url}
 										<a
 											href={concert.url}
@@ -125,7 +125,7 @@
 										<input type="hidden" name="concertId" value={concert.id} />
 										<button
 											type="submit"
-											class="rounded-md px-2 py-1 text-xs text-muted-foreground/50 transition-colors hover:bg-accent hover:text-muted-foreground"
+											class="rounded-md px-2 py-0.5 text-xs text-muted-foreground/40 transition-colors hover:bg-accent hover:text-muted-foreground"
 											aria-label="Masquer ce concert"
 										>
 											Masquer

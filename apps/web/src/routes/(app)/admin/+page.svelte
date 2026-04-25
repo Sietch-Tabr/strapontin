@@ -277,6 +277,11 @@
 										autocomplete="off"
 										class="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
 									/>
+									{#if config.cle === 'PUBLIC_BASE_URL'}
+										<p class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+											Modifier cette URL invalide les liens de réinitialisation de mot de passe en cours.
+										</p>
+									{/if}
 								</div>
 								<div class="flex gap-2">
 									<button
