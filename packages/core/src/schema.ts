@@ -41,6 +41,7 @@ export const concerts = pgTable(
     classification: text("classification"),
     genre: text("genre"),
     disponible: boolean("disponible").notNull().default(true),
+    statut: text("statut"),
     firstSeen: timestamp("first_seen", { withTimezone: true })
       .notNull()
       .defaultNow(),

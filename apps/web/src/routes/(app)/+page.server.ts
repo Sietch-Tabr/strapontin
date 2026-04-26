@@ -6,14 +6,14 @@ import {
   userSalles,
   userConfig,
 } from "@strapontin/core/schema";
-import { eq, gte, and, count, isNull } from "drizzle-orm";
+import { eq, gte, and, count, isNull, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
 const SEUIL_NEW_MS = 7 * 24 * 3600 * 1000;
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0];
 
   const config = await db
@@ -24,14 +24,29 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   const filtreDisponibles = config?.filtreDisponibles ?? true;
 
+  const inclureComplets = url.searchParams.has("complets")
+    ? url.searchParams.get("complets") === "1"
+    : !filtreDisponibles;
+  const inclureAnnules = url.searchParams.has("annules")
+    ? url.searchParams.get("annules") === "1"
+    : !filtreDisponibles;
+
   const conditions: SQL[] = [
     eq(userMatches.userId, locals.user!.id),
     gte(concerts.date, aujourdhui),
     isNull(userMatches.masqueLe),
   ];
 
-  if (filtreDisponibles) {
-    conditions.push(eq(concerts.disponible, true));
+  if (!inclureComplets || !inclureAnnules) {
+    const statuts: SQL[] = [
+      sql`(${concerts.statut} IS NULL OR ${concerts.statut} = 'onsale')`,
+    ];
+    if (inclureComplets) statuts.push(sql`${concerts.statut} = 'offsale'`);
+    if (inclureAnnules)
+      statuts.push(
+        sql`${concerts.statut} IN ('cancelled', 'postponed', 'rescheduled')`,
+      );
+    conditions.push(or(...statuts)!);
   }
 
   // Uniquement les concerts des artistes suivis (pas les salles)
@@ -45,6 +60,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       ville: concerts.ville,
       url: concerts.url,
       firstSeen: concerts.firstSeen,
+      statut: concerts.statut,
     })
     .from(userMatches)
     .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
@@ -71,6 +87,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       ville: string | null;
       url: string | null;
       firstSeen: Date | null;
+      statut: string | null;
     }[]
   >();
   for (const concert of prochainsConcerts) {
@@ -101,7 +118,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     .from(userSalles)
     .where(eq(userSalles.userId, locals.user!.id));
 
-  return { artistesGroupes, nbArtistes, nbSalles };
+  return { artistesGroupes, nbArtistes, nbSalles, inclureComplets, inclureAnnules };
 };
 
 export const actions: Actions = {

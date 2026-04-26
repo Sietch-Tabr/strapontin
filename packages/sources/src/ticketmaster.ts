@@ -210,7 +210,7 @@ export function mapEvenement(
     const nomEvenement = evt["name"] as string;
     let artiste: string;
     if (nomAttractionPrincipal) {
-      artiste = nomAttractionPrincipal;
+      artiste = normaliserCasse(nomAttractionPrincipal);
     } else if (artisteFallback) {
       // Faux positif TM : keyword search trop large, titre sans rapport avec l'artiste cherché
       if (!nomEvenement.toLowerCase().includes(artisteFallback.toLowerCase())) {
@@ -256,9 +256,8 @@ export function mapEvenement(
           | Record<string, string>
           | undefined
       )?.["name"]?.toLowerCase() ?? null;
-    // Normaliser "arts & theatre" → "theatre"
     const classification =
-      segmentNom === "arts & theatre" ? "theatre" : segmentNom;
+      segmentNom === "arts et théâtre" ? "theatre" : segmentNom;
     const genre =
       (
         classificationsData?.[0]?.["genre"] as

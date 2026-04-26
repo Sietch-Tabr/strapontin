@@ -233,7 +233,7 @@ TM retourne les noms en TOUT MAJUSCULE pour les événements France.
 
 - **Couche 1 — dédup** (`fusionner`) : quand TM et Eventim couvrent le même concert, préférer la valeur avec le plus de diacritiques (Eventim a la bonne casse).
 - **Couche 2 — source TM** (`normaliserCasse`) : title-case français sur les noms tout-majuscule. La lettre après apostrophe est capitalisée (`L'OLYMPIA` → `L'Olympia`). Les accents ne sont pas restaurés.
-- **Couche 3 — resolver** (`resoudreNomCanonique`) : MusicBrainz (score ≥ 90) puis Deezer en fallback. Cache Redis TTL 7j. Délai 1,1 s entre requêtes MB. Timeout 8 s.
+- **Couche 3 — resolver** (`resoudreNomCanonique`) : MusicBrainz (score ≥ 90 **et** similarité Levenshtein ≥ 0.6) puis Deezer en fallback. Cache Redis TTL 7j. Délai 1,1 s entre requêtes MB. Timeout 8 s.
 
 ### Particularité TM — nom d'artiste vs titre d'événement
 
@@ -243,6 +243,7 @@ TM retourne les noms en TOUT MAJUSCULE pour les événements France.
 
 `reconcilierSalles()` réécrit `salle_norm` des concerts entrants dont la salle est sémantiquement identique à un existant (similarité ≥ 0.5 ou containment, longueur ≥ 4).
 Clé upsert : `(artiste_norm, date, salle_norm)`. En conflit : diacritiques préférées pour l'artiste, casse mixte préférée pour la salle.
+Colonne `statut` (`text`, nullable) : valeur brute TM (`onsale`, `offsale`, `cancelled`, `postponed`, `rescheduled`), `NULL` pour Eventim. Le worker l'écrit en upsert ; le digest ne notifie pas les statuts `cancelled/postponed/rescheduled`.
 
 ## UI / Design system
 
@@ -254,6 +255,7 @@ Clé upsert : `(artiste_norm, date, salle_norm)`. En conflit : diacritiques pré
 ## Schéma PostgreSQL
 
 Migration `0000_initial.sql` — schéma complet v1.1 fusionné. Nouvelles migrations à partir de `0001`.
+`0001_statut_concert.sql` : `ALTER TABLE concerts ADD COLUMN statut text` (v1.2.1).
 Tables : `users`, `sessions`, `accounts`, `verifications` (Better Auth) + `concerts`, `user_artistes`, `user_salles`, `user_config`, `user_matches`, `fetch_jobs`, `push_abonnements`, `app_config`.
 `users.id` est de type `text` (Better Auth génère ses propres IDs).
 

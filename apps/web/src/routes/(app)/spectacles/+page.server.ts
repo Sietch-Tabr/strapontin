@@ -14,6 +14,7 @@ import {
   ilike,
   isNotNull,
   isNull,
+  or,
   sql,
   inArray,
   desc,
@@ -56,6 +57,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   const filtreDisponibles = config?.filtreDisponibles ?? true;
 
+  const inclureComplets = url.searchParams.has("complets")
+    ? url.searchParams.get("complets") === "1"
+    : !filtreDisponibles;
+  const inclureAnnules = url.searchParams.has("annules")
+    ? url.searchParams.get("annules") === "1"
+    : !filtreDisponibles;
+
   const conditions: SQL[] = [
     eq(userMatches.userId, locals.user!.id),
     gte(concerts.date, aujourdhui),
@@ -65,8 +73,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   if (quinzaine) {
     conditions.push(lte(concerts.date, dans15Jours));
   }
-  if (filtreDisponibles) {
-    conditions.push(eq(concerts.disponible, true));
+  if (!inclureComplets || !inclureAnnules) {
+    const statuts: SQL[] = [
+      sql`(${concerts.statut} IS NULL OR ${concerts.statut} = 'onsale')`,
+    ];
+    if (inclureComplets) statuts.push(sql`${concerts.statut} = 'offsale'`);
+    if (inclureAnnules)
+      statuts.push(
+        sql`${concerts.statut} IN ('cancelled', 'postponed', 'rescheduled')`,
+      );
+    conditions.push(or(...statuts)!);
   }
   if (recherche) {
     conditions.push(ilike(concerts.artiste, `%${recherche}%`));
@@ -122,6 +138,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       prixMax: concerts.prixMax,
       classification: concerts.classification,
       firstSeen: concerts.firstSeen,
+      statut: concerts.statut,
     })
     .from(userMatches)
     .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
@@ -168,6 +185,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     sourceSalles,
     genresDisponibles,
     afficherMasques,
+    inclureComplets,
+    inclureAnnules,
   };
 };
 

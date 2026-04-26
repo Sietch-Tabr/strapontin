@@ -18,6 +18,8 @@
 		sourceArtistes?: boolean;
 		sourceSalles?: boolean;
 		tri?: string;
+		complets?: boolean;
+		annules?: boolean;
 	} = {}): string {
 		const params = new URLSearchParams();
 		if (recherche) params.set('q', recherche);
@@ -31,14 +33,25 @@
 
 		const artistes = options.sourceArtistes ?? data.sourceArtistes;
 		const salles = options.sourceSalles ?? data.sourceSalles;
-		// N'écrire les params source que si la sélection est partielle
 		if (artistes && !salles) params.set('source', 'artistes');
 		if (salles && !artistes) params.set('source', 'salles');
 
 		const newTri = options.tri ?? data.tri;
 		if (newTri === 'nouveaute') params.set('tri', 'nouveaute');
 
+		const newComplets = options.complets ?? data.inclureComplets;
+		const newAnnules = options.annules ?? data.inclureAnnules;
+		params.set('complets', newComplets ? '1' : '0');
+		params.set('annules', newAnnules ? '1' : '0');
+
 		return `/spectacles?${params}`;
+	}
+
+	function badgeStatut(statut: string | null): { label: string; classes: string } | null {
+		if (statut === 'offsale') return { label: 'Complet', classes: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' };
+		if (statut === 'cancelled') return { label: 'Annulé', classes: 'bg-red-500/15 text-red-600 dark:text-red-400' };
+		if (statut === 'postponed' || statut === 'rescheduled') return { label: 'Reporté', classes: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' };
+		return null;
 	}
 
 	function formaterDate(dateStr: string): string {
@@ -149,6 +162,28 @@
 		>
 			Masqués
 		</a>
+		<a
+			href={construireUrl({ complets: !data.inclureComplets })}
+			data-sveltekit-replacestate
+			aria-current={data.inclureComplets ? 'true' : undefined}
+			class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+				{data.inclureComplets
+					? 'border-orange-400 bg-orange-500/15 text-orange-600 dark:text-orange-400'
+					: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+		>
+			Complet
+		</a>
+		<a
+			href={construireUrl({ annules: !data.inclureAnnules })}
+			data-sveltekit-replacestate
+			aria-current={data.inclureAnnules ? 'true' : undefined}
+			class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+				{data.inclureAnnules
+					? 'border-red-400 bg-red-500/15 text-red-600 dark:text-red-400'
+					: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+		>
+			Annulé/Reporté
+		</a>
 	</div>
 
 	<!-- Chip tri -->
@@ -186,6 +221,8 @@
 		{#if data.sourceArtistes && !data.sourceSalles}<input type="hidden" name="source" value="artistes" />{/if}
 		{#if data.sourceSalles && !data.sourceArtistes}<input type="hidden" name="source" value="salles" />{/if}
 		{#if data.tri === 'nouveaute'}<input type="hidden" name="tri" value="nouveaute" />{/if}
+		<input type="hidden" name="complets" value={data.inclureComplets ? '1' : '0'} />
+		<input type="hidden" name="annules" value={data.inclureAnnules ? '1' : '0'} />
 
 		<div class="flex flex-wrap gap-2">
 			<label for="q-spectacles" class="sr-only">Rechercher un artiste</label>
@@ -302,11 +339,15 @@
 				</thead>
 				<tbody class="divide-y divide-border">
 					{#each data.tousLesConcerts as concert (concert.id)}
+						{@const badge = badgeStatut(concert.statut)}
 						<tr class="transition-colors hover:bg-muted/30">
 							<td class="px-4 py-3 font-medium text-foreground">
 								{concert.artiste}
 								{#if concert.estNew}
 									<span class="ml-1.5 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">Nouveau</span>
+								{/if}
+								{#if badge}
+									<span class="ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold {badge.classes}">{badge.label}</span>
 								{/if}
 							</td>
 							<td class="px-4 py-3 text-muted-foreground">{formaterDate(concert.date)}</td>
@@ -348,6 +389,7 @@
 		<!-- Vue cartes mobile -->
 		<div class="space-y-2 lg:hidden">
 			{#each data.tousLesConcerts as concert (concert.id)}
+				{@const badge = badgeStatut(concert.statut)}
 				<div class="rounded-xl border border-border bg-card px-4 py-3">
 					<div class="flex items-start justify-between gap-2">
 						<div class="min-w-0">
@@ -355,6 +397,9 @@
 								{concert.artiste}
 								{#if concert.estNew}
 									<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">NEW</span>
+								{/if}
+								{#if badge}
+									<span class="ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold {badge.classes}">{badge.label}</span>
 								{/if}
 							</p>
 							<p class="mt-0.5 text-sm text-muted-foreground">{formaterDate(concert.date)}{concert.heure ? ` · ${formaterHeure(concert.heure)}` : ''}</p>
