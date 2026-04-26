@@ -1,22 +1,18 @@
 steps:
   - name: test
     image: node:22
-    environment:
-      PNPM_STORE_DIR: /tmp/pnpm-store
     commands:
       - corepack enable
-      - pnpm install --frozen-lockfile
+      - pnpm install --frozen-lockfile --store-dir /tmp/pnpm-store
       - pnpm -r test
     when:
       - event: push
 
   - name: typecheck
     image: node:22
-    environment:
-      PNPM_STORE_DIR: /tmp/pnpm-store
     commands:
       - corepack enable
-      - pnpm install --frozen-lockfile
+      - pnpm install --frozen-lockfile --store-dir /tmp/pnpm-store
       - printf 'DATABASE_URL=x\nBETTER_AUTH_SECRET=x\nREDIS_URL=x\nPUBLIC_BASE_URL=http://localhost\n' > .env
       - pnpm --filter @strapontin/web run check
       - pnpm --filter @strapontin/worker exec tsc --noEmit
