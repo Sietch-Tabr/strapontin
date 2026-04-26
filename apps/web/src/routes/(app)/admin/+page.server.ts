@@ -102,16 +102,21 @@ export const actions: Actions = {
     // Nom initial = préfixe de l'email
     const nomInitial = email.split("@")[0].slice(0, 100);
 
-    // Username temporaire unique : u_ + 8 chars aléatoires
-    const usernameTemp =
-      "u_" + randomBytes(6).toString("base64url").slice(0, 8);
+    // Username temporaire : u_ + 8 chars hex (charset [0-9a-f], pas de tiret)
+    const usernameTemp = "u_" + randomBytes(4).toString("hex");
 
     // Mot de passe temporaire cryptographiquement sûr
     const motDePasseTemp = randomBytes(12).toString("base64url").slice(0, 16);
 
     try {
       await auth.api.signUpEmail({
-        body: { name: nomInitial, email, password: motDePasseTemp },
+        body: {
+          name: nomInitial,
+          email,
+          password: motDePasseTemp,
+          username: usernameTemp,
+          displayUsername: usernameTemp,
+        },
       });
     } catch {
       return fail(400, {
@@ -121,11 +126,7 @@ export const actions: Actions = {
 
     await db
       .update(users)
-      .set({
-        username: usernameTemp,
-        displayUsername: usernameTemp,
-        mustChangeCredentials: true,
-      })
+      .set({ mustChangeCredentials: true })
       .where(eq(users.email, email));
 
     await envoyerInvitation({
