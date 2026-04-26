@@ -113,7 +113,7 @@ Trois steps sur push `main` : `test`, `typecheck`, puis `deploy` (`depends_on: [
 
 Secrets : `ssh_key` (clé privée générée par `provision.sh --env prod`), `lxc_host` (IP du LXC prod).
 
-**Piège pnpm store** : `.npmrc` contient `package-import-method=copy` — évite l'erreur `ENOENT: uv_cwd` sur le postinstall d'esbuild. Les steps CI passent `--store-dir ./.pnpm-store` en flag CLI — le store est dans le workspace (filesystem plus généreux que `/tmp`, partagé entre les steps du même run). `PNPM_STORE_DIR` (env var) n'est pas fiable sur pnpm@10 ; `/tmp` est trop petit pour les 224 packages (dont `@lucide/svelte` avec ses milliers d'icônes). `.pnpm-store/` est dans `.gitignore`.
+**Piège pnpm store** : les steps CI passent `--store-dir ./.pnpm-store` en flag CLI — le store est dans le workspace (filesystem principal, suffisamment grand, partagé entre les steps du même run). `PNPM_STORE_DIR` (env var) n'est pas fiable sur pnpm@10. `package-import-method=copy` a été supprimé du `.npmrc` : il causait une race condition (fichier enregistré comme téléchargé mais pas encore écrit sur disque → ENOENT au copyfile) — l'erreur `uv_cwd` d'esbuild qu'il corrigeait ne se produit plus avec un store sur filesystem réel. `.pnpm-store/` est dans `.gitignore`.
 
 ## Scripts d'exploitation
 
