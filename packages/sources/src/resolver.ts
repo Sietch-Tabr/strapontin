@@ -43,13 +43,6 @@ function similariteLocale(a: string, b: string): number {
   return 1 - dp[a.length]![b.length]! / longueur;
 }
 
-// Ratio de caractères communs — utilisé pour Deezer (pas de score natif)
-function similitudeBrute(a: string, b: string): number {
-  if (a === b) return 1;
-  if (a.length === 0 || b.length === 0) return 0;
-  const communes = [...a].filter((c) => b.includes(c)).length;
-  return (2 * communes) / (a.length + b.length);
-}
 
 function attendreMB(): Promise<void> {
   return new Promise((r) => setTimeout(r, DELAI_MB_MS));
@@ -120,7 +113,7 @@ async function rechercherDeezerArtiste(nom: string): Promise<string | null> {
     if (!resultat) return null;
     // Valider la pertinence du résultat Deezer (contrairement à MB, pas de score natif)
     if (
-      similitudeBrute(nom.toLowerCase(), resultat.toLowerCase()) <
+      similariteLocale(normaliserLocal(nom), normaliserLocal(resultat)) <
       SEUIL_CONFIANCE_DEEZER
     ) {
       return null;
