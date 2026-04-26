@@ -226,7 +226,7 @@ describe("mapEvenement — Ticketmaster", () => {
   it("parse_classification_arts_theatre", () => {
     const evt = evenementTMRaw({
       classifications: [
-        { segment: { name: "Arts & Theatre" }, genre: { name: "Theatre" } },
+        { segment: { name: "Arts et théâtre" }, genre: { name: "Théâtre" } },
       ],
     });
     const resultat = mapEvenement(evt);

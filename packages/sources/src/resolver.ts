@@ -7,12 +7,43 @@ const DEEZER_BASE = "https://api.deezer.com";
 const CONTACT_EMAIL = process.env["CONTACT_EMAIL"] ?? "noreply@example.com";
 const USER_AGENT = `Strapontin/1.0 (${CONTACT_EMAIL})`;
 const DELAI_MB_MS = 1100;
-// Timeout réseau pour MB et Deezer — évite le blocage si la source ne répond pas
 const TIMEOUT_FETCH_MS = 8000;
-// Seuil de confiance Deezer : similarité entre le nom recherché et le résultat retourné
+const SEUIL_CONFIANCE_MB = 0.6;
 const SEUIL_CONFIANCE_DEEZER = 0.7;
 
-// Ratio de caractères communs (SequenceMatcher simplifié) — évite d'importer @strapontin/core
+// Normalisation minimale pour comparaison — évite d'importer @strapontin/core
+function normaliserLocal(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Similarité Levenshtein 0–1 — évite d'importer @strapontin/core
+function similariteLocale(a: string, b: string): number {
+  if (a === b) return 1;
+  if (a.length === 0 || b.length === 0) return 0;
+  const longueur = Math.max(a.length, b.length);
+  const dp = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) =>
+      i === 0 ? j : j === 0 ? i : 0,
+    ),
+  );
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i]![j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1]![j - 1]!
+          : 1 + Math.min(dp[i - 1]![j]!, dp[i]![j - 1]!, dp[i - 1]![j - 1]!);
+    }
+  }
+  return 1 - dp[a.length]![b.length]! / longueur;
+}
+
+// Ratio de caractères communs — utilisé pour Deezer (pas de score natif)
 function similitudeBrute(a: string, b: string): number {
   if (a === b) return 1;
   if (a.length === 0 || b.length === 0) return 0;
@@ -45,6 +76,11 @@ async function rechercherMBArtiste(nom: string): Promise<string | null> {
     };
     const artiste = data.artists?.[0];
     if (!artiste || artiste.score < 90) return null;
+    if (
+      similariteLocale(normaliserLocal(nom), normaliserLocal(artiste.name)) <
+      SEUIL_CONFIANCE_MB
+    )
+      return null;
     return artiste.name;
   } catch {
     await attendreMB();

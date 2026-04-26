@@ -28,6 +28,13 @@
 	const totalConcerts = $derived(
 		data.artistesGroupes.reduce((acc, g) => acc + g.concerts.length, 0)
 	);
+
+	function badgeStatut(statut: string | null): { label: string; classes: string } | null {
+		if (statut === 'offsale') return { label: 'Complet', classes: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' };
+		if (statut === 'cancelled') return { label: 'Annulé', classes: 'bg-red-500/15 text-red-600 dark:text-red-400' };
+		if (statut === 'postponed' || statut === 'rescheduled') return { label: 'Reporté', classes: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' };
+		return null;
+	}
 </script>
 
 <svelte:head>
@@ -39,6 +46,34 @@
 		<p class="text-sm text-muted-foreground">Bonjour, {data.utilisateur?.name}</p>
 		<h1 class="text-2xl font-semibold text-foreground">Mes prochains concerts</h1>
 	</div>
+
+	<!-- Chips de filtre statut -->
+	{#if totalConcerts > 0 || data.inclureComplets || data.inclureAnnules}
+		<div class="mb-6 flex flex-wrap gap-1.5">
+			<a
+				href="?complets={data.inclureComplets ? '0' : '1'}&annules={data.inclureAnnules ? '1' : '0'}"
+				data-sveltekit-replacestate
+				aria-current={data.inclureComplets ? 'true' : undefined}
+				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+					{data.inclureComplets
+						? 'border-orange-400 bg-orange-500/15 text-orange-600 dark:text-orange-400'
+						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+			>
+				Complet
+			</a>
+			<a
+				href="?complets={data.inclureComplets ? '1' : '0'}&annules={data.inclureAnnules ? '0' : '1'}"
+				data-sveltekit-replacestate
+				aria-current={data.inclureAnnules ? 'true' : undefined}
+				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+					{data.inclureAnnules
+						? 'border-red-400 bg-red-500/15 text-red-600 dark:text-red-400'
+						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+			>
+				Annulé/Reporté
+			</a>
+		</div>
+	{/if}
 
 	{#if totalConcerts === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
@@ -89,23 +124,30 @@
 					<!-- Liste des dates — lien billetterie sur chaque ligne -->
 					<div class="divide-y divide-border/50">
 						{#each groupe.concerts as concert (concert.id)}
-							<div class="flex items-center justify-between px-4 py-3">
-								<div class="min-w-0">
-									{#if groupe.estTournee}
-										<p class="text-sm font-medium text-foreground">
-											{formaterDateCourte(concert.date)}
-											{#if concert.estNew}
-												<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">Nouveau</span>
-											{/if}
-										</p>
-									{:else}
-										<p class="text-sm text-muted-foreground">
-											{formaterDate(concert.date)}
-											{#if concert.estNew}
-												<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">Nouveau</span>
-											{/if}
-										</p>
-									{/if}
+						{@const badge = badgeStatut(concert.statut)}
+						<div class="flex items-center justify-between px-4 py-3">
+							<div class="min-w-0">
+								{#if groupe.estTournee}
+									<p class="text-sm font-medium text-foreground">
+										{formaterDateCourte(concert.date)}
+										{#if concert.estNew}
+											<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">Nouveau</span>
+										{/if}
+										{#if badge}
+											<span class="ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold {badge.classes}">{badge.label}</span>
+										{/if}
+									</p>
+								{:else}
+									<p class="text-sm text-muted-foreground">
+										{formaterDate(concert.date)}
+										{#if concert.estNew}
+											<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">Nouveau</span>
+										{/if}
+										{#if badge}
+											<span class="ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold {badge.classes}">{badge.label}</span>
+										{/if}
+									</p>
+								{/if}
 									<p class="mt-0.5 text-xs text-muted-foreground truncate">
 										{concert.salle}{concert.ville ? ` · ${concert.ville}` : ''}
 									</p>

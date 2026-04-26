@@ -1,7 +1,7 @@
 // Persiste les concerts dédoublonnés en base et met à jour user_matches.
 
 import pino from "pino";
-import { eq, and, inArray, notInArray, isNull, or, sql } from "drizzle-orm";
+import { eq, and, inArray, notInArray, isNull, not, or, sql } from "drizzle-orm";
 import {
   concerts,
   userMatches,
@@ -51,6 +51,7 @@ type ValeurConcert = {
   classification: string | null;
   genre: string | null;
   disponible: boolean;
+  statut: string | null;
 };
 
 // Réécrit salleNorm des concerts entrants pour qu'ils correspondent à un existant en base
@@ -168,6 +169,7 @@ export async function persisterConcerts(
       genre: c.genre,
       disponible:
         c.statut !== null ? !STATUTS_INDISPONIBLES.has(c.statut) : true,
+      statut: c.statut ?? null,
     }));
 
     const valeurs = deduplicerLotReconcilie(await reconcilierSalles(valeursBrutes));
@@ -192,6 +194,7 @@ export async function persisterConcerts(
           classification: sql`COALESCE(excluded.classification, ${concerts.classification})`,
           genre: sql`COALESCE(excluded.genre, ${concerts.genre})`,
           disponible: sql`excluded.disponible`,
+          statut: sql`excluded.statut`,
           updatedAt: sql`now()`,
         },
       })
@@ -425,7 +428,18 @@ async function envoyerDigestPourUser(userId: string, email: string): Promise<voi
     })
     .from(userMatches)
     .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
-    .where(and(eq(userMatches.userId, userId), isNull(userMatches.notifieLe), isNull(userMatches.masqueLe), filtreConcerts));
+    .where(
+      and(
+        eq(userMatches.userId, userId),
+        isNull(userMatches.notifieLe),
+        isNull(userMatches.masqueLe),
+        or(
+          isNull(concerts.statut),
+          not(inArray(concerts.statut, ["cancelled", "postponed", "rescheduled"])),
+        ),
+        filtreConcerts,
+      ),
+    );
 
   if (nouveauxMatches.length === 0) return;
 
