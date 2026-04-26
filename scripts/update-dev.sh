@@ -18,6 +18,7 @@ ssh root@"$LXC_DEV" "
     su - $APP_USER -c \"git -C $APP_DIR checkout $BRANCHE 2>&1\"
     su - $APP_USER -c \"git -C $APP_DIR reset --hard origin/$BRANCHE 2>&1\"
     su - $APP_USER -c \"cd $APP_DIR && pnpm install --frozen-lockfile 2>&1\"
+    su - $APP_USER -c \"set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && NO_COLOR=1 pnpm --filter @strapontin/core db:migrate 2>&1\"
     systemctl restart strapontin-dev-web strapontin-dev-worker
 "
 

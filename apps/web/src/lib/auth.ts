@@ -6,6 +6,7 @@ import * as schema from "@strapontin/core/schema";
 import { envoyerResetMotDePasse } from "$lib/server/email";
 
 export const auth = betterAuth({
+  baseURL: process.env.BETTER_AUTH_URL,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {

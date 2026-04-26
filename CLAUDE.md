@@ -149,7 +149,7 @@ Détails complets : [wiki Déploiement](https://codeberg.org/Kwaite/strapontin/w
 
 ## Variables d'environnement (.env)
 
-`.env` sur le serveur : `DATABASE_URL`, `REDIS_URL`, `BETTER_AUTH_SECRET` uniquement.
+`.env` sur le serveur : `DATABASE_URL`, `REDIS_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (URL publique de l'app — évite le warning Better Auth au démarrage et fixe les liens de reset mot de passe).
 Les clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`) sont dans `app_config` (DB), configurables depuis `/admin`.
 
 ## Sources de données
