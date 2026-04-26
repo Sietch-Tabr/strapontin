@@ -150,7 +150,7 @@
 
 			<div class="rounded-xl border border-border bg-card divide-y divide-border">
 				{#each [
-					{ label: 'Artistes suivis', stats: data.statsJobs.arristesBatch },
+					{ label: 'Artistes suivis', stats: data.statsJobs.artistesBatch },
 					{ label: 'Concerts par région', stats: data.statsJobs.region },
 				] as { label, stats }}
 					<div class="px-4 py-3 flex items-start justify-between gap-4">

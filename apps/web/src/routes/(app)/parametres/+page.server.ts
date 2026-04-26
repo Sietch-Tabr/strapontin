@@ -719,7 +719,7 @@ export const actions: Actions = {
         {
           jobId: "artistes__batch",
           removeOnComplete: true,
-          removeOnFail: { count: 20 },
+          removeOnFail: true,
         },
       )
       .catch(() => {
@@ -735,7 +735,7 @@ export const actions: Actions = {
           {
             jobId: `salle__${salle.tmVenueId}`,
             removeOnComplete: true,
-            removeOnFail: { count: 20 },
+            removeOnFail: true,
           },
         )
         .catch(() => {
@@ -751,7 +751,7 @@ export const actions: Actions = {
           {
             jobId: `region__manuel__${deptsNouveaux.sort().join("_")}`,
             removeOnComplete: true,
-            removeOnFail: { count: 20 },
+            removeOnFail: true,
           },
         )
         .catch(() => {

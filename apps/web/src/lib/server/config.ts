@@ -4,9 +4,12 @@ import {
   randomBytes,
   scryptSync,
 } from "crypto";
+import pino from "pino";
 import { db } from "./db";
 import { appConfig } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
+
+const logger = pino({ name: "config" });
 
 const secret = process.env["BETTER_AUTH_SECRET"];
 if (!secret) throw new Error("BETTER_AUTH_SECRET est requis au démarrage");
@@ -44,7 +47,8 @@ export async function lireConfig(cle: string): Promise<string | null> {
   if (!lignes[0]) return null;
   try {
     return dechiffrer(lignes[0].valeurChiffree);
-  } catch {
+  } catch (err) {
+    logger.error({ err, cle }, "config: échec déchiffrement — BETTER_AUTH_SECRET modifié ?");
     return null;
   }
 }
