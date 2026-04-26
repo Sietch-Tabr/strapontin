@@ -212,7 +212,7 @@ Invite-only : l'admin crée le compte avec l'email uniquement. Le système gén�
 
 **Politique mot de passe** : 12 caractères minimum (NIST SP 800-63B).
 
-**`baseURL` Better Auth** : non configuré dans `auth.ts` — Better Auth détecte l'origin depuis chaque requête. `PUBLIC_BASE_URL` est dans `app_config` (DB, asynchrone) et ne peut pas être lue à l'initialisation synchrone.
+**`baseURL` Better Auth** : lu depuis `process.env.BETTER_AUTH_URL` dans `auth.ts`. À définir dans `.env` sur chaque serveur (prod : `https://strapontin.kwaite.fr`, dev : `http://192.168.20.78:3000`). Fixe les liens de reset mot de passe et supprime le warning au démarrage.
 
 **`PUBLIC_BASE_URL` — validation** : `/setup` accepte `http://` et `https://` (IP ou domaine). `/admin` exige `https://` pour les domaines publics, accepte `http://` pour les IPs et `localhost`.
 
