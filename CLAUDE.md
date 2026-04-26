@@ -113,7 +113,7 @@ Trois steps sur push `main` : `test`, `typecheck`, puis `deploy` (`depends_on: [
 
 Secrets : `ssh_key` (clé privée générée par `provision.sh --env prod`), `lxc_host` (IP du LXC prod).
 
-**Piège pnpm store** : `.npmrc` contient `package-import-method=copy` — évite l'erreur `ENOENT: uv_cwd` sur le postinstall d'esbuild. Les steps CI définissent `PNPM_STORE_DIR=/tmp/pnpm-store` pour forcer le store dans `/tmp` (éphémère par conteneur). Sans ça, pnpm auto-détecte `/woodpecker/.pnpm-store` qui est un mount persistant partagé entre tous les runs → corruption de store entre builds concurrents.
+**Piège pnpm store** : `.npmrc` contient `package-import-method=copy` — évite l'erreur `ENOENT: uv_cwd` sur le postinstall d'esbuild. Les steps CI passent `--store-dir /tmp/pnpm-store` directement en flag CLI (`pnpm install --frozen-lockfile --store-dir /tmp/pnpm-store`) — la variable d'environnement `PNPM_STORE_DIR` n'est pas fiable sur pnpm@10 (config global runner prend la priorité). Sans ce flag, pnpm auto-détecte `/woodpecker/.pnpm-store` (mount partagé entre tous les runs) → corruption de store entre builds concurrents.
 
 ## Scripts d'exploitation
 
