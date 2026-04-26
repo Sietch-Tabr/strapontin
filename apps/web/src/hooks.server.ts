@@ -58,6 +58,21 @@ const securiser: Handle = async ({ event, resolve }) => {
     "max-age=31536000; includeSubDomains",
   );
   reponse.headers.set("X-Robots-Tag", "noindex, nofollow");
+  // unsafe-inline requis pour l'hydratation SvelteKit et Tailwind
+  reponse.headers.set(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "connect-src 'self' https:",
+      "font-src 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'",
+    ].join("; "),
+  );
   return reponse;
 };
 

@@ -49,7 +49,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   ]);
 
   const statsJobs = {
-    arristesBatch: statsArtistesBatchJson
+    artistesBatch: statsArtistesBatchJson
       ? (JSON.parse(statsArtistesBatchJson) as StatsJobRedis)
       : null,
     region: statsRegionJson

@@ -84,7 +84,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
       {
         jobId: `salle__${tmVenueId}`,
         removeOnComplete: true,
-        removeOnFail: { count: 20 },
+        removeOnFail: true,
       },
     );
   }

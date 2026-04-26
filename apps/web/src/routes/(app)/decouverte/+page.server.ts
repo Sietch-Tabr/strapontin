@@ -213,7 +213,7 @@ export const actions: Actions = {
         {
           jobId: `region__manuel__${deptsALancer.join("_")}`,
           removeOnComplete: true,
-          removeOnFail: { count: 20 },
+          removeOnFail: true,
         },
       )
       .catch(() => {
@@ -271,7 +271,7 @@ export const actions: Actions = {
         {
           jobId: `region__manuel__${deptsALancer.join("_")}`,
           removeOnComplete: true,
-          removeOnFail: { count: 20 },
+          removeOnFail: true,
         },
       )
       .catch(() => {
