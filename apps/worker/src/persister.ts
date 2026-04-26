@@ -1,7 +1,16 @@
 // Persiste les concerts dédoublonnés en base et met à jour user_matches.
 
 import pino from "pino";
-import { eq, and, inArray, notInArray, isNull, not, or, sql } from "drizzle-orm";
+import {
+  eq,
+  and,
+  inArray,
+  notInArray,
+  isNull,
+  not,
+  or,
+  sql,
+} from "drizzle-orm";
 import {
   concerts,
   userMatches,
@@ -105,7 +114,9 @@ function scoreArtisteSalle(artiste: string, salle: string): number {
   const salleDiacr = salle.normalize("NFD").length - salle.length;
   const artisteCasseMixte = artiste !== artiste.toUpperCase() ? 1 : 0;
   const salleCasseMixte = salle !== salle.toUpperCase() ? 1 : 0;
-  return artisteDiacr * 10 + artisteCasseMixte * 5 + salleDiacr + salleCasseMixte;
+  return (
+    artisteDiacr * 10 + artisteCasseMixte * 5 + salleDiacr + salleCasseMixte
+  );
 }
 
 // Dédoublonne par clé de conflit (artiste_norm, date, salle_norm) avant l'upsert.
@@ -116,7 +127,11 @@ export function deduplicerParCleConflit(liste: ConcertBrut[]): ConcertBrut[] {
   for (const c of liste) {
     const cle = `${normaliserTexte(c.artiste)}|${c.date}|${normaliserTexte(c.salle)}`;
     const existant = parCle.get(cle);
-    if (!existant || scoreArtisteSalle(c.artiste, c.salle) > scoreArtisteSalle(existant.artiste, existant.salle)) {
+    if (
+      !existant ||
+      scoreArtisteSalle(c.artiste, c.salle) >
+        scoreArtisteSalle(existant.artiste, existant.salle)
+    ) {
       parCle.set(cle, c);
     }
   }
@@ -130,7 +145,11 @@ function deduplicerLotReconcilie(lot: ValeurConcert[]): ValeurConcert[] {
   for (const v of lot) {
     const cle = `${v.artisteNorm}|${v.date}|${v.salleNorm}`;
     const existant = parCle.get(cle);
-    if (!existant || scoreArtisteSalle(v.artiste, v.salle) > scoreArtisteSalle(existant.artiste, existant.salle)) {
+    if (
+      !existant ||
+      scoreArtisteSalle(v.artiste, v.salle) >
+        scoreArtisteSalle(existant.artiste, existant.salle)
+    ) {
       parCle.set(cle, v);
     }
   }
@@ -172,7 +191,9 @@ export async function persisterConcerts(
       statut: c.statut ?? null,
     }));
 
-    const valeurs = deduplicerLotReconcilie(await reconcilierSalles(valeursBrutes));
+    const valeurs = deduplicerLotReconcilie(
+      await reconcilierSalles(valeursBrutes),
+    );
 
     const inseres = await db
       .insert(concerts)
@@ -372,7 +393,10 @@ export async function notifierUsersQuotidien(): Promise<void> {
   }
 }
 
-async function envoyerDigestPourUser(userId: string, email: string): Promise<void> {
+async function envoyerDigestPourUser(
+  userId: string,
+  email: string,
+): Promise<void> {
   const prefs = await db
     .select({
       notifArtistes: userConfig.notifArtistes,
@@ -393,7 +417,10 @@ async function envoyerDigestPourUser(userId: string, email: string): Promise<voi
       .where(eq(userArtistes.userId, userId));
     if (artisteNorms.length > 0) {
       conditionsFiltrage.push(
-        inArray(concerts.artisteNorm, artisteNorms.map((a) => a.artisteNormalise)),
+        inArray(
+          concerts.artisteNorm,
+          artisteNorms.map((a) => a.artisteNormalise),
+        ),
       );
     }
   }
@@ -405,7 +432,10 @@ async function envoyerDigestPourUser(userId: string, email: string): Promise<voi
       .where(eq(userSalles.userId, userId));
     if (salles.length > 0) {
       conditionsFiltrage.push(
-        inArray(concerts.salleNorm, salles.map((s) => normaliserTexte(s.salleId))),
+        inArray(
+          concerts.salleNorm,
+          salles.map((s) => normaliserTexte(s.salleId)),
+        ),
       );
     }
   }
@@ -435,7 +465,9 @@ async function envoyerDigestPourUser(userId: string, email: string): Promise<voi
         isNull(userMatches.masqueLe),
         or(
           isNull(concerts.statut),
-          not(inArray(concerts.statut, ["cancelled", "postponed", "rescheduled"])),
+          not(
+            inArray(concerts.statut, ["cancelled", "postponed", "rescheduled"]),
+          ),
         ),
         filtreConcerts,
       ),
@@ -462,6 +494,9 @@ async function envoyerDigestPourUser(userId: string, email: string): Promise<voi
     .update(userMatches)
     .set({ notifieLe: new Date() })
     .where(
-      and(eq(userMatches.userId, userId), inArray(userMatches.concertId, concertIds)),
+      and(
+        eq(userMatches.userId, userId),
+        inArray(userMatches.concertId, concertIds),
+      ),
     );
 }

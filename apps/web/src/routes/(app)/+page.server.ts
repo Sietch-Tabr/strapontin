@@ -118,7 +118,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     .from(userSalles)
     .where(eq(userSalles.userId, locals.user!.id));
 
-  return { artistesGroupes, nbArtistes, nbSalles, inclureComplets, inclureAnnules };
+  return {
+    artistesGroupes,
+    nbArtistes,
+    nbSalles,
+    inclureComplets,
+    inclureAnnules,
+  };
 };
 
 export const actions: Actions = {

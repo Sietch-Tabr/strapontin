@@ -255,7 +255,7 @@ Colonne `statut` (`text`, nullable) : valeur brute TM (`onsale`, `offsale`, `can
 ## Schéma PostgreSQL
 
 Migration `0000_initial.sql` — schéma complet v1.1 fusionné. Nouvelles migrations à partir de `0001`.
-`0001_statut_concert.sql` : `ALTER TABLE concerts ADD COLUMN statut text` (v1.2.1).
+`0001_silent_sphinx.sql` : `ALTER TABLE concerts ADD COLUMN statut text` + `SET DEFAULT now()` sur `users.created_at/updated_at` (v1.2.1).
 Tables : `users`, `sessions`, `accounts`, `verifications` (Better Auth) + `concerts`, `user_artistes`, `user_salles`, `user_config`, `user_matches`, `fetch_jobs`, `push_abonnements`, `app_config`.
 `users.id` est de type `text` (Better Auth génère ses propres IDs).
 

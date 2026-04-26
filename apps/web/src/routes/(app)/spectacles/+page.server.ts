@@ -67,7 +67,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const conditions: SQL[] = [
     eq(userMatches.userId, locals.user!.id),
     gte(concerts.date, aujourdhui),
-    afficherMasques ? isNotNull(userMatches.masqueLe) : isNull(userMatches.masqueLe),
+    afficherMasques
+      ? isNotNull(userMatches.masqueLe)
+      : isNull(userMatches.masqueLe),
   ];
 
   if (quinzaine) {
