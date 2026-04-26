@@ -5,3 +5,4 @@ dist/
 .svelte-kit/
 *.sql.gz
 .DS_Store
+.pnpm-store/
