@@ -11,8 +11,7 @@ const logger = pino({ name: "source:ticketmaster" });
 
 const BASE_URL = "https://app.ticketmaster.com/discovery/v2";
 const CLASSIFICATIONS = ["music", "theatre", "opera", "musical"];
-const TAILLE_PAGE = 20;
-// Taille maximale autorisée par TM pour les appels groupés (région, batch artistes)
+// Taille maximale autorisée par TM (region, batch artistes, salle, artiste individuel)
 const TAILLE_PAGE_REGION = 200;
 // Protection quota : ne jamais dépasser 5 pages par appel (max 1 000 concerts)
 const NB_PAGES_MAX = 5;
@@ -168,7 +167,7 @@ function normaliserCasse(nom: string): string {
 
 const CLASSIFICATION_MAP: Record<string, string> = {
   musique: "music",
-  "opéra": "opera",
+  opéra: "opera",
   "comédie musicale": "musical",
   "arts et théâtre": "theatre",
 };
@@ -320,12 +319,14 @@ async function fetchPage(
     : null;
 
   if (!res.ok) {
-    // 429 = rate limit attendu, 5xx = erreur serveur TM — les deux sont récupérables
+    // 429 = rate limit attendu, 5xx = erreur serveur TM — les deux sont récupérables.
+    // Ne pas propager le quota : sur 429, TM retourne Rate-Limit: 5 (limite/s, pas quota/j),
+    // ce qui polluerait Redis avec des valeurs aberrantes (total:5, dispo:0).
     logger.warn(
       { status: res.status, url, dispo: quota?.dispo, total: quota?.total },
       "erreur HTTP Ticketmaster",
     );
-    return { events: [], total: 0, quota };
+    return { events: [], total: 0, quota: null };
   }
 
   const data = (await res.json()) as Record<string, unknown>;
@@ -340,6 +341,14 @@ async function fetchPage(
     .map((evt) => mapEvenement(evt, artisteFallback))
     .filter((e): e is ConcertBrut => e !== null);
   return { events, total, quota };
+}
+
+function obtenirFenetreFetch(): { startDateTime: string; endDateTime: string } {
+  const fmt = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, "Z");
+  const maintenant = new Date();
+  const dans6Mois = new Date(maintenant);
+  dans6Mois.setMonth(dans6Mois.getMonth() + 6);
+  return { startDateTime: fmt(maintenant), endDateTime: fmt(dans6Mois) };
 }
 
 // Récupère toutes les pages d'un appel TM jusqu'à NB_PAGES_MAX.
@@ -396,7 +405,7 @@ export class TicketmasterSource implements SourceConcerts {
     const params = new URLSearchParams({
       keyword: nom,
       classificationName: CLASSIFICATIONS.join(","),
-      size: String(TAILLE_PAGE),
+      size: String(TAILLE_PAGE_REGION),
       sort: "date,asc",
     });
 
@@ -407,15 +416,18 @@ export class TicketmasterSource implements SourceConcerts {
   }
 
   async fetchSalle(venueId: string): Promise<ConcertBrut[]> {
+    const { startDateTime, endDateTime } = obtenirFenetreFetch();
     const params = new URLSearchParams({
       venueId,
-      size: String(TAILLE_PAGE),
+      size: String(TAILLE_PAGE_REGION),
       sort: "date,asc",
+      startDateTime,
+      endDateTime,
     });
 
-    const { events, total, quota } = await fetchPage(params, this.apiKey);
+    const { events, quota } = await fetchToutesPages(params, this.apiKey);
     if (quota) this._dernierQuota = quota;
-    logger.info({ venueId, total }, "TM fetchSalle");
+    logger.info({ venueId, total: events.length }, "TM fetchSalle");
     return events;
   }
 
@@ -471,6 +483,7 @@ export class TicketmasterSource implements SourceConcerts {
         continue;
       }
 
+      const { startDateTime, endDateTime } = obtenirFenetreFetch();
       const params = new URLSearchParams({
         latlong: `${centre.lat},${centre.lng}`,
         radius: String(rayonKm),
@@ -478,6 +491,8 @@ export class TicketmasterSource implements SourceConcerts {
         classificationName: classifs.join(","),
         size: String(TAILLE_PAGE_REGION),
         sort: "date,asc",
+        startDateTime,
+        endDateTime,
       });
 
       const { events, quota } = await fetchToutesPages(params, this.apiKey);
