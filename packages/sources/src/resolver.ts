@@ -43,7 +43,6 @@ function similariteLocale(a: string, b: string): number {
   return 1 - dp[a.length]![b.length]! / longueur;
 }
 
-
 function attendreMB(): Promise<void> {
   return new Promise((r) => setTimeout(r, DELAI_MB_MS));
 }

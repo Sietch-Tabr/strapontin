@@ -105,10 +105,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     }
   }
 
+  const dejaLaSuivie =
+    recherche.length >= 2 &&
+    sallesSuivies.some(
+      (s) => s.salleId.toLowerCase() === recherche.toLowerCase(),
+    );
+
   return {
     sallesSuivies,
     resultatsRecherche,
     recherche,
+    dejaLaSuivie,
   };
 };
 

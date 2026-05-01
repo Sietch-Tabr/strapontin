@@ -72,8 +72,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       ),
     )
     .where(and(...conditions))
-    .orderBy(concerts.date)
-    .limit(50);
+    .orderBy(concerts.date);
 
   // Regrouper par artiste pour détecter les tournées (≥ 2 concerts)
   const groupesMap = new Map<

@@ -88,8 +88,7 @@
 
 	async function seDeconnecter() {
 		drawerOuvert = false;
-		await signOut();
-		goto('/login');
+		try { await signOut(); } finally { goto('/login'); }
 	}
 </script>
 

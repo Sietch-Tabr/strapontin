@@ -16,6 +16,34 @@
 		<section>
 			<div class="mb-4 flex items-center gap-2 text-foreground">
 				<History size={20} aria-hidden="true" />
+				<h2 class="text-base font-medium">v 1.2.1 — Mai 2026</h2>
+			</div>
+			<div class="space-y-4 text-sm text-muted-foreground">
+				<div>
+					<p class="mb-1 font-medium text-foreground">Notifications email et push</p>
+					<p>Les notifications email et push fonctionnent désormais correctement. La clé API Resend est lue depuis la configuration de l'application (comme les autres clés). Le marquage « déjà notifié » n'est effectué que si l'envoi a réussi.</p>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Accueil</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Tous vos concerts s'affichent (la limite de 50 est supprimée).</li>
+						<li>Les chips « Complet » et « Annulé/Reporté » s'affichent dès que vous suivez des artistes, même sans concert en cours.</li>
+						<li>Quand les filtres actifs expliquent l'absence de résultats, un message dédié vous invite à les ajuster.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Artistes et salles</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Si vous recherchez un artiste ou une salle déjà suivie, l'application l'indique clairement au lieu d'afficher « non trouvé ».</li>
+						<li>Après avoir supprimé un artiste ou une salle, un message vous rappelle que les concerts associés disparaîtront lors de la prochaine actualisation (dans moins de 2h).</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+
+		<section>
+			<div class="mb-4 flex items-center gap-2 text-foreground">
+				<History size={20} aria-hidden="true" />
 				<h2 class="text-base font-medium">v 1.2 — Avril 2026</h2>
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
