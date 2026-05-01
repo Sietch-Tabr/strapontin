@@ -38,6 +38,14 @@
 						<li>Après avoir supprimé un artiste ou une salle, un message vous rappelle que les concerts associés disparaîtront lors de la prochaine actualisation (dans moins de 2h).</li>
 					</ul>
 				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Mes spectacles</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Le filtre par catégorie et par genre affiche désormais le bon message d'état vide quand aucun résultat ne correspond.</li>
+						<li>Le filtre par budget fonctionne correctement pour tous les montants (la comparaison était lexicographique, ex. 9 €  était considéré supérieur à 30 €).</li>
+						<li>La chip « Masqués » conserve désormais tous les autres filtres actifs au lieu de les effacer.</li>
+					</ul>
+				</div>
 			</div>
 		</section>
 
