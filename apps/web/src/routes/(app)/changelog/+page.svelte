@@ -60,6 +60,12 @@
 						<li>L'import en mode « Fusionner » vérifie désormais que le total (existants + nouveaux) ne dépasse pas les limites (500 artistes, 200 salles) et affiche un message explicite si c'est le cas.</li>
 					</ul>
 				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Administration</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Un bouton « Relancer tous les fetches » permet de déclencher manuellement l'actualisation des concerts (artistes suivis + région) sans attendre le cron 2h — utile après une remise à zéro ou un correctif.</li>
+					</ul>
+				</div>
 			</div>
 		</section>
 

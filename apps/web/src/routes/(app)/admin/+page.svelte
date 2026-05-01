@@ -13,6 +13,7 @@
 	let nomModification = $state('');
 	let emailModification = $state('');
 
+	let relancerEnCours = $state(false);
 	let configEditionCle = $state<string | null>(null);
 	let configValeur = $state('');
 
@@ -148,6 +149,12 @@
 				Actualisations
 			</h2>
 
+			{#if form?.action === 'relancerFetches' && form?.succes}
+				<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+					Fetches relancés — ils démarreront dans quelques secondes.
+				</p>
+			{/if}
+
 			<div class="rounded-xl border border-border bg-card divide-y divide-border">
 				{#each [
 					{ label: 'Artistes suivis', stats: data.statsJobs.artistesBatch },
@@ -186,6 +193,32 @@
 					</div>
 				{/each}
 			</div>
+
+			<form
+				method="POST"
+				action="?/relancerFetches"
+				class="mt-3"
+				use:enhance={() => {
+					relancerEnCours = true;
+					return async ({ update }) => {
+						relancerEnCours = false;
+						await update();
+					};
+				}}
+			>
+				<button
+					type="submit"
+					disabled={relancerEnCours}
+					class="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+				>
+					{#if relancerEnCours}
+						<Loader2 size={15} class="animate-spin" />
+					{:else}
+						<RefreshCw size={15} />
+					{/if}
+					Relancer tous les fetches
+				</button>
+			</form>
 		</section>
 
 		<!-- Configuration -->
