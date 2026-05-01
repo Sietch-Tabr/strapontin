@@ -202,7 +202,10 @@ async function fetchProduitsParRegion(
     headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
   });
 
-  if (!res.ok) return [];
+  if (!res.ok) {
+    logger.warn({ status: res.status, dept }, "Eventim region erreur");
+    return [];
+  }
 
   const data = (await res.json()) as Record<string, unknown>;
   const produits = data["products"] as Record<string, unknown>[] | undefined;

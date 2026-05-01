@@ -186,10 +186,12 @@ Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
 
 - **BullMQ v5 interdit les `:` dans les `jobId`** — utiliser `__` comme séparateur (`artiste__norm`, `artistes__batch`, `region__all`, `salle__venueId`, `matches__all`, `purge__YYYY-MM-DD`). Les `:` dans le _type de job_ (premier arg de `queue.add`) sont acceptés.
 - **`removeOnFail: { count: N }` et `removeOnComplete: { count: N }` bloquent le re-queuing des jobs à `jobId` fixe** (BullMQ ≥ 5.76) — le hash Redis persiste et tout `queue.add` ultérieur avec le même `jobId` est ignoré silencieusement. Utiliser `removeOnFail: true` et `removeOnComplete: true` pour les jobs cron à `jobId` fixe.
+- **Concurrence** : `{ concurrency: 1 }` dans le constructeur `Worker` — les jobs TM s'exécutent séquentiellement, évitant le pic concurrent (>5 req/s) qui causait des 429 TM (#213).
 
 ### Redis — configuration
 
 - `maxmemory 128mb` + `maxmemory-policy allkeys-lru` — configuré via `provision.sh`
+- Historique quota TM : liste `strapontin:tm:quota:historique` (LTRIM à 100 entrées) — écrite à chaque `sauvegarderQuotaTM()` en plus de `strapontin:tm:quota`.
 
 ### Configuration applicative (`app_config`)
 
@@ -211,6 +213,8 @@ Invite-only : l'admin crée le compte avec l'email uniquement. Le système gén�
 À la première connexion, `must_change_credentials = true` → redirection vers `/first-login`. Login par **identifiant** (insensible à la casse). Rôles : `user` | `admin`.
 
 **Politique mot de passe** : 12 caractères minimum (NIST SP 800-63B).
+
+**Logs auth** : after hook Better Auth sur `/sign-in/username` (`createAuthMiddleware` dans `auth.ts`) — `info` connexion réussie (`identifiant`, `ip`, `userId`), `warn` échec (`identifiant`, `ip`).
 
 **`baseURL` Better Auth** : lu depuis `process.env.BETTER_AUTH_URL` dans `auth.ts`. À définir dans `.env` sur chaque serveur (prod : `https://strapontin.kwaite.fr`, dev : `http://192.168.20.78:3000`). Fixe les liens de reset mot de passe et supprime le warning au démarrage.
 
