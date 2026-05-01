@@ -113,7 +113,7 @@ Trois steps sur push `main` : `test`, `typecheck`, puis `deploy` (`depends_on: [
 
 Secrets : `ssh_key` (clé privée générée par `provision.sh --env prod`), `lxc_host` (IP du LXC prod).
 
-**Piège pnpm store** : les steps CI passent `--store-dir ./.pnpm-store` en flag CLI — le store est dans le workspace (filesystem principal, suffisamment grand, partagé entre les steps du même run). `PNPM_STORE_DIR` (env var) n'est pas fiable sur pnpm@10. `package-import-method=copy` a été supprimé du `.npmrc` : il causait une race condition (fichier enregistré comme téléchargé mais pas encore écrit sur disque → ENOENT au copyfile) — l'erreur `uv_cwd` d'esbuild qu'il corrigeait ne se produit plus avec un store sur filesystem réel. `.pnpm-store/` est dans `.gitignore`.
+**Piège pnpm store** : les steps CI passent `--store-dir ./.pnpm-store` en flag CLI — le store est dans le workspace, partagé entre les steps. `PNPM_STORE_DIR` (env var) n'est pas fiable sur pnpm@10. `package-import-method=copy` supprimé du `.npmrc` (causait une race condition ENOENT). `typecheck` a `depends_on: [test]` pour sérialiser les deux steps — sans cela, les installs parallèles sur le même store causent une race condition ENOENT. `.pnpm-store/` est dans `.gitignore`.
 
 ## Scripts d'exploitation
 

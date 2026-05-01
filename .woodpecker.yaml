@@ -10,6 +10,7 @@ steps:
 
   - name: typecheck
     image: node:22
+    depends_on: [test]
     commands:
       - corepack enable
       - pnpm install --frozen-lockfile --store-dir ./.pnpm-store
