@@ -2,39 +2,13 @@
 	import type { PageData } from './$types';
 	import { Music } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
+	import { badgeStatut, formaterDate, formaterHeure } from '$lib/formats';
 
 	let { data }: { data: PageData } = $props();
-
-	function formaterDate(dateStr: string): string {
-		const [annee, mois, jour] = dateStr.split('-').map(Number);
-		return new Date(annee, mois - 1, jour).toLocaleDateString('fr-FR', {
-			weekday: 'long',
-			day: 'numeric',
-			month: 'long',
-			year: 'numeric'
-		});
-	}
-
-	function formaterDateCourte(dateStr: string): string {
-		const [annee, mois, jour] = dateStr.split('-').map(Number);
-		return new Date(annee, mois - 1, jour).toLocaleDateString('fr-FR', {
-			weekday: 'short',
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric'
-		});
-	}
 
 	const totalConcerts = $derived(
 		data.artistesGroupes.reduce((acc, g) => acc + g.concerts.length, 0)
 	);
-
-	function badgeStatut(statut: string | null): { label: string; classes: string } | null {
-		if (statut === 'offsale') return { label: 'Complet', classes: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' };
-		if (statut === 'cancelled') return { label: 'Annulé', classes: 'bg-red-500/15 text-red-600 dark:text-red-400' };
-		if (statut === 'postponed' || statut === 'rescheduled') return { label: 'Reporté', classes: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' };
-		return null;
-	}
 </script>
 
 <svelte:head>
@@ -134,7 +108,7 @@
 							<div class="min-w-0">
 								{#if groupe.estTournee}
 									<p class="text-sm font-medium text-foreground">
-										{formaterDateCourte(concert.date)}
+										{formaterDate(concert.date)}
 										{#if concert.estNew}
 											<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">Nouveau</span>
 										{/if}
@@ -144,7 +118,7 @@
 									</p>
 								{:else}
 									<p class="text-sm text-muted-foreground">
-										{formaterDate(concert.date)}
+										{formaterDate(concert.date, 'long')}
 										{#if concert.estNew}
 											<span class="ml-1 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">Nouveau</span>
 										{/if}

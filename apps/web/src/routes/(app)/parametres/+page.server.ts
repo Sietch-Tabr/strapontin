@@ -11,8 +11,11 @@ import { fail, redirect } from "@sveltejs/kit";
 import { queue } from "$lib/server/queue";
 import { resendDisponible } from "$lib/server/email";
 import type { PageServerLoad, Actions } from "./$types";
-
-const FORMAT_IDENTIFIANT = /^[a-z0-9_]+$/;
+import {
+  FORMAT_IDENTIFIANT,
+  FORMAT_EMAIL,
+  FORMAT_DEPT,
+} from "$lib/constantes/validations";
 
 // Normalise un code département saisi par l'utilisateur.
 // Accepte les formats standards (ex. "75", "971") et la Corse en codes
@@ -21,7 +24,7 @@ const FORMAT_IDENTIFIANT = /^[a-z0-9_]+$/;
 function normaliserDept(d: string): string | null {
   const valeur = d.trim().toUpperCase();
   if (/^2[AB]$/.test(valeur)) return "20";
-  if (/^\d{2,3}$/.test(valeur)) return valeur;
+  if (FORMAT_DEPT.test(valeur)) return valeur;
   return null;
 }
 
@@ -267,7 +270,7 @@ export const actions: Actions = {
       });
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!FORMAT_EMAIL.test(email)) {
       return fail(400, {
         erreur: "Format d'email invalide.",
         section: "email",

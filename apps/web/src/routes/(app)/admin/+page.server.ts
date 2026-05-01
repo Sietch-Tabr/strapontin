@@ -19,8 +19,7 @@ import {
   sauvegarderConfig,
 } from "$lib/server/config";
 import type { PageServerLoad, Actions } from "./$types";
-
-const FORMAT_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { FORMAT_EMAIL } from "$lib/constantes/validations";
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (locals.user?.role !== "admin") {

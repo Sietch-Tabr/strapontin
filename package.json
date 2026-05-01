@@ -10,7 +10,7 @@
     "typecheck": "pnpm -r typecheck"
   },
   "engines": {
-    "node": ">=22",
+    "node": ">=24",
     "pnpm": ">=9"
   },
   "devDependencies": {

@@ -4,8 +4,7 @@ import { users } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
-
-const FORMAT_IDENTIFIANT = /^[a-z0-9_]+$/;
+import { FORMAT_IDENTIFIANT } from "$lib/constantes/validations";
 
 export const load: PageServerLoad = async ({ locals }) => {
   // Si le flag est déjà à false, l'utilisateur n'a rien à faire ici

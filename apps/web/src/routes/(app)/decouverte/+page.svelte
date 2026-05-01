@@ -5,6 +5,7 @@
 	import ComboboxDepts from '$lib/components/ui/combobox-depts.svelte';
 	import { Compass, Search, X, Check, Info, RefreshCw, Plus, Loader } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
+	import { formaterDate } from '$lib/formats';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -118,16 +119,6 @@
 			? data.genres.filter((g) => g !== genre)
 			: [...data.genres, genre];
 		return construireUrl({ genres });
-	}
-
-	function formaterDate(dateStr: string): string {
-		const [annee, moisNum, jour] = dateStr.split('-').map(Number);
-		return new Date(annee, moisNum - 1, jour).toLocaleDateString('fr-FR', {
-			weekday: 'short',
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric'
-		});
 	}
 
 	function labelMois(m: string): string {
