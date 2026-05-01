@@ -179,7 +179,8 @@ export const actions: Actions = {
     const baseUrl = (await lireConfig("PUBLIC_BASE_URL")) ?? "";
     if (!baseUrl) {
       return fail(400, {
-        erreur: "PUBLIC_BASE_URL n'est pas configurée. Le lien de reset serait invalide.",
+        erreur:
+          "PUBLIC_BASE_URL n'est pas configurée. Le lien de reset serait invalide.",
         action: "reinitialiserMdp",
       });
     }

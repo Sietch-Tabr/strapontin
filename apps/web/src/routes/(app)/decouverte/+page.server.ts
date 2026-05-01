@@ -37,7 +37,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   // Filtre multi-valeur via URL ?genre=Rock&genre=Pop (limité à 20 valeurs)
   const genres = url.searchParams.getAll("genre").slice(0, 20);
   // Filtre multi-valeur via URL ?classification=music&classification=theatre (limité à 20 valeurs)
-  const classifications = url.searchParams.getAll("classification").slice(0, 20);
+  const classifications = url.searchParams
+    .getAll("classification")
+    .slice(0, 20);
 
   // Départements de l'user (pour pré-cocher)
   const configs = await db
