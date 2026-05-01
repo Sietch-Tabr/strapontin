@@ -586,6 +586,19 @@ export const actions: Actions = {
           (s) => !sallesExistantesIds.has(s.salleId.trim()),
         );
 
+        if (artistesExistants.length + artistesNouveaux.length > 500) {
+          return fail(400, {
+            erreur: `Import impossible : vous avez déjà ${artistesExistants.length} artiste${artistesExistants.length > 1 ? "s" : ""}, l'ajout de ${artistesNouveaux.length} dépasserait la limite de 500.`,
+            section: "import",
+          });
+        }
+        if (sallesExistantes.length + sallesNouvelles.length > 200) {
+          return fail(400, {
+            erreur: `Import impossible : vous avez déjà ${sallesExistantes.length} salle${sallesExistantes.length > 1 ? "s" : ""}, l'ajout de ${sallesNouvelles.length} dépasserait la limite de 200.`,
+            section: "import",
+          });
+        }
+
         await db.transaction(async (tx) => {
           if (artistesNouveaux.length > 0) {
             await tx.insert(userArtistes).values(

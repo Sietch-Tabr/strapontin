@@ -226,7 +226,7 @@
 				<Search size={16} />
 				Filtrer
 			</button>
-			{#if recherche || mois || budget || data.deptFiltre || data.classifications.length > 0 || data.genres.length > 0}
+			{#if recherche || mois || budget || data.deptFiltre || data.classifications.length > 0 || data.genres.length > 0 || data.tri !== 'date'}
 				<a
 					href="/decouverte"
 					class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -249,7 +249,7 @@
 					onChange={(nouveauxActifs) =>
 						goto(construireUrl({ depts: nouveauxActifs, deptsFiltre: true }))}
 				/>
-				{#if data.userDepts.length > 0 && data.deptsActifs.length !== data.userDepts.length}
+				{#if data.userDepts.length > 0 && JSON.stringify([...data.deptsActifs].sort()) !== JSON.stringify([...data.userDepts].sort())}
 					<a
 						href={construireUrl({ depts: data.userDepts, deptsFiltre: true })}
 						data-sveltekit-replacestate
@@ -449,7 +449,7 @@
 	{#if data.resultats.length === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
 			<Compass size={40} class="mb-4 text-muted-foreground/50" />
-			{#if data.recherche || data.deptsActifs.length > 0 || data.mois || data.genres.length > 0 || data.classifications.length > 0}
+			{#if data.recherche || data.deptsActifs.length > 0 || data.mois || data.genres.length > 0 || data.classifications.length > 0 || data.budget}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun résultat pour ces filtres.</p>
 				<a href="/decouverte" class="mt-4 text-sm text-muted-foreground underline underline-offset-2">
 					Voir tous les concerts

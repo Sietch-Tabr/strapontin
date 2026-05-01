@@ -177,10 +177,18 @@ export const actions: Actions = {
       return fail(404, { erreur: "Utilisateur introuvable." });
     }
 
+    const baseUrl = (await lireConfig("PUBLIC_BASE_URL")) ?? "";
+    if (!baseUrl) {
+      return fail(400, {
+        erreur: "PUBLIC_BASE_URL n'est pas configurée. Le lien de reset serait invalide.",
+        action: "reinitialiserMdp",
+      });
+    }
+
     await auth.api.requestPasswordReset({
       body: {
         email: cible.email,
-        redirectTo: `${(await lireConfig("PUBLIC_BASE_URL")) ?? ""}/reset-password`,
+        redirectTo: `${baseUrl}/reset-password`,
       },
     });
 

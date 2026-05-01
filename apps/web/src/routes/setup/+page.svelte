@@ -39,6 +39,20 @@
 			class="space-y-4"
 		>
 			<div class="space-y-2">
+				<label for="baseUrl" class="text-sm font-medium">URL publique de l'application</label>
+				<input
+					id="baseUrl"
+					name="baseUrl"
+					type="url"
+					required
+					value={data.urlBase}
+					autocomplete="url"
+					class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+				<p class="text-xs text-muted-foreground">Utilisée pour les liens dans les emails.</p>
+			</div>
+
+			<div class="space-y-2">
 				<label for="nom" class="text-sm font-medium">Nom d'affichage</label>
 				<input
 					id="nom"
@@ -76,20 +90,6 @@
 					autocomplete="email"
 					class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				/>
-			</div>
-
-			<div class="space-y-2">
-				<label for="baseUrl" class="text-sm font-medium">URL publique de l'application</label>
-				<input
-					id="baseUrl"
-					name="baseUrl"
-					type="url"
-					required
-					value={data.urlBase}
-					autocomplete="url"
-					class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-				/>
-				<p class="text-xs text-muted-foreground">Utilisée pour les liens dans les emails.</p>
 			</div>
 
 			<div class="space-y-2">
