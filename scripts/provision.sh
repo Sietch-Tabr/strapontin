@@ -43,7 +43,7 @@ APP_DIR="/opt/strapontin"
 APP_USER="strapontin"
 DB_NAME="strapontin"
 DB_USER="strapontin"
-NODE_VERSION="22"
+NODE_VERSION="24"
 PG_VERSION="18"
 VMID=$(pvesh get /cluster/nextid)
 
