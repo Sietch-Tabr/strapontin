@@ -107,8 +107,8 @@ git checkout -b feature/nom-court
 
 Trois steps sur push `main` : `test`, `typecheck`, puis `deploy` (`depends_on: [test, typecheck]`).
 
-- **`test`** (`node:22`) : `pnpm -r test` — tous les packages vitest.
-- **`typecheck`** (`node:22`) : crée un `.env` stub, exécute `svelte-check` sur web et `tsc --noEmit` sur worker. Bloque le deploy en cas d'erreur TypeScript.
+- **`test`** (`node:24`) : `pnpm -r test` — tous les packages vitest.
+- **`typecheck`** (`node:24`) : crée un `.env` stub, exécute `svelte-check` sur web et `tsc --noEmit` sur worker. Bloque le deploy en cas d'erreur TypeScript.
 - **`deploy`** (`alpine`) : SSH vers le LXC prod, exécute `update.sh`.
 
 Secrets : `ssh_key` (clé privée générée par `provision.sh --env prod`), `lxc_host` (IP du LXC prod).
