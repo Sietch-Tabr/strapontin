@@ -47,24 +47,10 @@ function normaliserTheme(
 const securiser: Handle = async ({ event, resolve }) => {
   const reponse = await resolve(event);
   // HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy gérés par NPM
+  // CSP géré par svelte.config.js (mode nonce)
   reponse.headers.set("X-Robots-Tag", "noindex, nofollow");
   reponse.headers.set("Cross-Origin-Opener-Policy", "same-origin");
   reponse.headers.set("Cross-Origin-Resource-Policy", "same-origin");
-  // unsafe-inline requis pour l'hydratation SvelteKit et Tailwind
-  reponse.headers.set(
-    "Content-Security-Policy",
-    [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
-      "connect-src 'self' https:",
-      "font-src 'self'",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "frame-ancestors 'none'",
-    ].join("; "),
-  );
   return reponse;
 };
 
