@@ -46,18 +46,10 @@ function normaliserTheme(
 
 const securiser: Handle = async ({ event, resolve }) => {
   const reponse = await resolve(event);
-  reponse.headers.set("X-Content-Type-Options", "nosniff");
-  reponse.headers.set("X-Frame-Options", "DENY");
-  reponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  reponse.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()",
-  );
-  reponse.headers.set(
-    "Strict-Transport-Security",
-    "max-age=31536000; includeSubDomains",
-  );
+  // HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy gérés par NPM
   reponse.headers.set("X-Robots-Tag", "noindex, nofollow");
+  reponse.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  reponse.headers.set("Cross-Origin-Resource-Policy", "same-origin");
   // unsafe-inline requis pour l'hydratation SvelteKit et Tailwind
   reponse.headers.set(
     "Content-Security-Policy",
@@ -167,4 +159,8 @@ const gererAuth: Handle = async ({ event, resolve }) => {
   });
 };
 
-export const handle: Handle = sequence(bloquerAccesDirectIP, securiser, gererAuth);
+export const handle: Handle = sequence(
+  bloquerAccesDirectIP,
+  securiser,
+  gererAuth,
+);
