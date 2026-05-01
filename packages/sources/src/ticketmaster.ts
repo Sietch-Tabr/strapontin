@@ -327,8 +327,9 @@ async function fetchPage(
     // 429 = rate limit attendu, 5xx = erreur serveur TM — les deux sont récupérables.
     // Ne pas propager le quota : sur 429, TM retourne Rate-Limit: 5 (limite/s, pas quota/j),
     // ce qui polluerait Redis avec des valeurs aberrantes (total:5, dispo:0).
+    const urlSafe = url.replace(/apikey=[^&]+/, "apikey=***");
     logger.warn(
-      { status: res.status, url, dispo: quota?.dispo, total: quota?.total },
+      { status: res.status, url: urlSafe, dispo: quota?.dispo, total: quota?.total },
       "erreur HTTP Ticketmaster",
     );
     return { events: [], total: 0, quota: null };
