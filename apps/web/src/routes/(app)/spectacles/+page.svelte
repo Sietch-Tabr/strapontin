@@ -20,6 +20,7 @@
 		tri?: string;
 		complets?: boolean;
 		annules?: boolean;
+		masques?: boolean;
 	} = {}): string {
 		const params = new URLSearchParams();
 		if (recherche) params.set('q', recherche);
@@ -43,6 +44,9 @@
 		const newAnnules = options.annules ?? data.inclureAnnules;
 		params.set('complets', newComplets ? '1' : '0');
 		params.set('annules', newAnnules ? '1' : '0');
+
+		const affMasques = options.masques ?? data.afficherMasques;
+		if (affMasques) params.set('masques', '1');
 
 		return `/spectacles?${params}`;
 	}
@@ -152,7 +156,7 @@
 			15 prochains jours
 		</a>
 		<a
-			href={data.afficherMasques ? '/spectacles' : '/spectacles?masques=1'}
+			href={construireUrl({ masques: !data.afficherMasques })}
 			data-sveltekit-replacestate
 			aria-current={data.afficherMasques ? 'true' : undefined}
 			class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
@@ -223,6 +227,7 @@
 		{#if data.tri === 'nouveaute'}<input type="hidden" name="tri" value="nouveaute" />{/if}
 		<input type="hidden" name="complets" value={data.inclureComplets ? '1' : '0'} />
 		<input type="hidden" name="annules" value={data.inclureAnnules ? '1' : '0'} />
+		{#if data.afficherMasques}<input type="hidden" name="masques" value="1" />{/if}
 
 		<div class="flex flex-wrap gap-2">
 			<label for="q-spectacles" class="sr-only">Rechercher un artiste</label>
@@ -309,7 +314,7 @@
 			<Ticket size={40} class="mb-4 text-muted-foreground/50" />
 			{#if data.afficherMasques}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun concert masqué.</p>
-			{:else if data.recherche || data.mois || data.quinzaine || data.budget}
+			{:else if data.recherche || data.mois || data.quinzaine || data.budget || data.classification || data.genre}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun résultat pour ces filtres.</p>
 				<a href="/spectacles" class="mt-4 text-sm text-muted-foreground underline underline-offset-2">
 					Voir tous les spectacles
