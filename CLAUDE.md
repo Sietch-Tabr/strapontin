@@ -84,7 +84,7 @@ EOF
 ```
 
 `tea issue view N` n'affiche pas `body` par défaut — toujours passer `-f "index,title,body"`.
-Jalons : **v1.0**, **v1.1**, **v1.2**, **v1.3**. Labels : `bug`, `enhancement`, `question`.
+Jalons : **v1.2.2**, **v1.3.0**, **v1.4.0** (actifs). Labels : `bug`, `enhancement`, `question`.
 
 ### Workflow Git
 
@@ -107,7 +107,7 @@ git checkout -b feature/nom-court
 
 Trois steps sur push `main` : `test`, `typecheck`, puis `deploy` (`depends_on: [test, typecheck]`).
 
-- **`test`** (`node:24`) : `pnpm -r test` — tous les packages vitest.
+- **`test`** (`node:24`) : `pnpm -r test` — unitaires core + sources + worker (les tests d'intégration et E2E sont exclus du CI, ils nécessitent le LXC dev).
 - **`typecheck`** (`node:24`) : crée un `.env` stub, exécute `svelte-check` sur web et `tsc --noEmit` sur worker. Bloque le deploy en cas d'erreur TypeScript.
 - **`deploy`** (`alpine`) : SSH vers le LXC prod, exécute `update.sh`.
 
@@ -162,10 +162,10 @@ Détails : [wiki Sources de données](https://codeberg.org/Kwaite/strapontin/wik
 | ------------------------- | -------------------------------------------- |
 | Ticketmaster Discovery v2 | Core                                         |
 | Eventim France            | Core                                         |
-| Shotgun.live              | Phase 2                                      |
-| Dice.fm                   | Phase 3                                      |
 | Bandsintown               | Abandonné — HTTP 401 depuis 2026-04-10 (#65) |
 | Fnac Spectacles           | Abandonné — Cloudflare JS challenge          |
+| Shotgun.live              | Abandonné — hors scope (#19)                 |
+| Dice.fm                   | Abandonné — hors scope (#19)                 |
 
 ## Pattern workers (BullMQ)
 
@@ -274,11 +274,19 @@ Détails : [wiki Schéma de base de données](https://codeberg.org/Kwaite/strapo
 - Logging : pino 10, lazy `%s` (pas de template literals dans les appels logger), pas de `console.log`
 - **tsconfig packages Node** (worker, sources) : `"types": ["node"]` — requis depuis TypeScript 6
 - **`<button>` hors formulaire** : toujours `type="button"` — le défaut HTML `submit` déclenche le formulaire parent sur mobile
-- **Tests** : vitest dans `packages/core`, `packages/sources`, `apps/worker` — `pnpm -r test`. Tests worker mockent `../db.js`. Nommage : `<fonction>_<scenario>_<attendu>`.
+- **Tests** — trois niveaux :
+  - Unitaires (`pnpm -r test`) : core, sources, worker — mocks DB. Tournent en CI.
+  - Fonctionnels SvelteKit (`pnpm --filter web test:fonctionnel`) : `load`/`actions` sans navigateur, mocks Drizzle.
+  - Intégration worker (`pnpm --filter worker test:integration`) : PG + Redis réels, tunnel SSH requis (`ssh -L 15432:127.0.0.1:5432 -L 16379:127.0.0.1:6379 root@192.168.20.78`).
+  - E2E Playwright (`E2E_BASE_URL=http://192.168.20.78:3000 pnpm --filter web test:e2e`) : Chromium sur app déployée, LXC dev requis.
+  - Nommage : `<fonction>_<scenario>_<attendu>`. Piège Better Auth depuis Node.js : header `Origin` obligatoire (sinon 403).
 
 ## Roadmap — jalons
 
 - **v1.0** — livré 2026-04-18
 - **v1.1** — terminé (#65 Bandsintown, #37 doublons, #118 noms canoniques)
 - **v1.2** — livraison 2026-04-26 : #115 (LXC dev), #116 (provision.sh unifié), notifications push, PWA, masquer concert, RGPD, configuration clés admin, auto-save paramètres, formulaire de signalement, pré-remplissage URL au /setup, CI pnpm stabilisé
-- **v1.3** — à planifier : #110 (page maintenance NPM), #163–165 (tests), Shotgun.live, Dice.fm
+- **v1.2.1** — livré 2026-05-01 : observabilité, sécurité, Node 24, tests, 50 tickets
+- **v1.2.2** — en cours : bugfixes post-v1.2.1
+- **v1.3.0** — planifié : #110 (page maintenance NPM), #170 (email OVH)
+- **v1.4.0** — à planifier
