@@ -99,7 +99,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     conditions.push(ilike(concerts.genre, genre));
   }
   if (budget !== null) {
-    conditions.push(lte(concerts.prixMin, String(budget)));
+    conditions.push(sql`${concerts.prixMin}::numeric <= ${budget}`);
   }
 
   // Filtre source artistes/salles via sous-requêtes sur userMatches
