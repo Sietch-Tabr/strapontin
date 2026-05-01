@@ -166,6 +166,18 @@ function normaliserCasse(nom: string): string {
     .join("");
 }
 
+const CLASSIFICATION_MAP: Record<string, string> = {
+  musique: "music",
+  "opéra": "opera",
+  "comédie musicale": "musical",
+  "arts et théâtre": "theatre",
+};
+
+function normaliserClassification(nom: string | null): string | null {
+  if (!nom) return null;
+  return CLASSIFICATION_MAP[nom] ?? nom;
+}
+
 export function extraireDept(codePostal: string | undefined): string | null {
   if (!codePostal) return null;
   if (codePostal.startsWith("97")) return codePostal.slice(0, 3);
@@ -256,8 +268,7 @@ export function mapEvenement(
           | Record<string, string>
           | undefined
       )?.["name"]?.toLowerCase() ?? null;
-    const classification =
-      segmentNom === "arts et théâtre" ? "theatre" : segmentNom;
+    const classification = normaliserClassification(segmentNom);
     const genre =
       (
         classificationsData?.[0]?.["genre"] as

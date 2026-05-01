@@ -504,10 +504,7 @@ async function envoyerDigestPourUser(
           inArray(userMatches.concertId, concertIds),
         ),
       );
-    logger.info(
-      { userId, emailOk, pushOk, nb: concertIds.length },
-      "notifié",
-    );
+    logger.info({ userId, emailOk, pushOk, nb: concertIds.length }, "notifié");
   } else {
     logger.warn({ userId }, "notification échouée — notifie_le non mis à jour");
   }

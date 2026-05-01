@@ -63,7 +63,11 @@
 		music: 'Musique',
 		theatre: 'Théâtre',
 		opera: 'Opéra',
-		musical: 'Musical'
+		musical: 'Musical',
+		musique: 'Musique',
+		'arts et théâtre': 'Théâtre',
+		film: 'Film',
+		sports: 'Sports'
 	};
 
 	// Construit une URL /decouverte avec tous les filtres actifs.
