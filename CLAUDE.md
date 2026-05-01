@@ -147,6 +147,8 @@ ssh root@192.168.1.99 "bash -s" < scripts/system-update.sh
 
 Détails complets : [wiki Déploiement](https://codeberg.org/Kwaite/strapontin/wiki/Déploiement) · [wiki Exploitation](https://codeberg.org/Kwaite/strapontin/wiki/Exploitation)
 
+**Headers de sécurité — responsabilités** : NPM pose HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. SvelteKit (`hooks.server.ts`) pose X-Robots-Tag, COOP, CORP. Le CSP est géré par `svelte.config.js` avec `mode: "nonce"` — `script-src` nonce uniquement, sans `unsafe-inline`. Détails : [wiki Déploiement](https://codeberg.org/Kwaite/strapontin/wiki/Déploiement#responsabilit%C3%A9-des-headers-de-s%C3%A9curit%C3%A9).
+
 ## Variables d'environnement (.env)
 
 `.env` sur le serveur : `DATABASE_URL`, `REDIS_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (URL publique de l'app — évite le warning Better Auth au démarrage et fixe les liens de reset mot de passe).

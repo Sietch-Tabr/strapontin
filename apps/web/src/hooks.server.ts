@@ -46,33 +46,11 @@ function normaliserTheme(
 
 const securiser: Handle = async ({ event, resolve }) => {
   const reponse = await resolve(event);
-  reponse.headers.set("X-Content-Type-Options", "nosniff");
-  reponse.headers.set("X-Frame-Options", "DENY");
-  reponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  reponse.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()",
-  );
-  reponse.headers.set(
-    "Strict-Transport-Security",
-    "max-age=31536000; includeSubDomains",
-  );
+  // HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy gérés par NPM
+  // CSP géré par svelte.config.js (mode nonce)
   reponse.headers.set("X-Robots-Tag", "noindex, nofollow");
-  // unsafe-inline requis pour l'hydratation SvelteKit et Tailwind
-  reponse.headers.set(
-    "Content-Security-Policy",
-    [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
-      "connect-src 'self' https:",
-      "font-src 'self'",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "frame-ancestors 'none'",
-    ].join("; "),
-  );
+  reponse.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  reponse.headers.set("Cross-Origin-Resource-Policy", "same-origin");
   return reponse;
 };
 
@@ -167,4 +145,8 @@ const gererAuth: Handle = async ({ event, resolve }) => {
   });
 };
 
-export const handle: Handle = sequence(bloquerAccesDirectIP, securiser, gererAuth);
+export const handle: Handle = sequence(
+  bloquerAccesDirectIP,
+  securiser,
+  gererAuth,
+);
