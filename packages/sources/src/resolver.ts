@@ -123,16 +123,25 @@ async function rechercherDeezerArtiste(nom: string): Promise<string | null> {
   }
 }
 
+export type SourceResolution =
+  | "musicbrainz"
+  | "deezer"
+  | "inchange";
+
 export async function resoudreNomCanonique(
   type: "artiste" | "salle",
   nom: string,
-): Promise<string> {
+): Promise<{ nom: string; source: SourceResolution }> {
   if (type === "artiste") {
     const nomMB = await rechercherMBArtiste(nom);
-    if (nomMB) return nomMB;
+    if (nomMB) return { nom: nomMB, source: "musicbrainz" };
     const nomDeezer = await rechercherDeezerArtiste(nom);
-    return nomDeezer ?? nom;
+    return nomDeezer
+      ? { nom: nomDeezer, source: "deezer" }
+      : { nom, source: "inchange" };
   }
   const nomMB = await rechercherMBSalle(nom);
-  return nomMB ?? nom;
+  return nomMB
+    ? { nom: nomMB, source: "musicbrainz" }
+    : { nom, source: "inchange" };
 }

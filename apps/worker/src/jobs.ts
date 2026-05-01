@@ -17,6 +17,8 @@ import {
 import {
   redis,
   CLE_QUOTA_TM,
+  CLE_HISTORIQUE_QUOTA_TM,
+  NB_HISTORIQUE_QUOTA,
   cleAttractionId,
   cleNomCanonique,
   TTL_NOM_CANONIQUE_S,
@@ -62,23 +64,37 @@ async function resoudreArtistesConcerts(
   if (nomsAResoudre.length === 0) return concerts;
 
   const tableauResolution = new Map<string, string>();
+  let cacheHits = 0;
+  let nbMB = 0;
+  let nbDeezer = 0;
+  let nbInchange = 0;
+
   for (const nom of nomsAResoudre) {
     const norm = normaliserTexte(nom);
     const cle = cleNomCanonique("artiste", norm);
     const cache = await redis.get(cle).catch(() => null);
     if (cache) {
       tableauResolution.set(nom, cache);
+      cacheHits++;
       continue;
     }
-    const resolu = await resoudreNomCanonique("artiste", nom);
+    const { nom: nomResolu, source } = await resoudreNomCanonique("artiste", nom);
+    if (source === "musicbrainz") nbMB++;
+    else if (source === "deezer") nbDeezer++;
+    else nbInchange++;
     // Cacher même si le nom n'a pas changé — évite les appels MB/Deezer répétés à chaque cron
     await redis
-      .setex(cle, TTL_NOM_CANONIQUE_S, resolu)
+      .setex(cle, TTL_NOM_CANONIQUE_S, nomResolu)
       .catch((err) =>
         logger.warn({ err, nom }, "redis: échec écriture nom canonique"),
       );
-    tableauResolution.set(nom, resolu);
+    tableauResolution.set(nom, nomResolu);
   }
+
+  logger.info(
+    { total: nomsAResoudre.length, cacheHits, musicbrainz: nbMB, deezer: nbDeezer, inchange: nbInchange },
+    "resolver noms canoniques",
+  );
 
   return concerts.map((c) =>
     tableauResolution.has(c.artiste)
@@ -142,17 +158,19 @@ async function demarrerStatsJob(cleType: string): Promise<Date> {
 
 async function terminerStatsJob(cleType: string, debut: Date): Promise<void> {
   const fin = new Date();
+  const durationMs = fin.getTime() - debut.getTime();
   const stats: StatsJobRedis = {
     statut: "done",
     debutRun: debut.toISOString(),
     finRun: fin.toISOString(),
-    durationMs: fin.getTime() - debut.getTime(),
+    durationMs,
   };
   await redis
     .setex(cleStatsJob(cleType), TTL_STATS_JOB_S, JSON.stringify(stats))
     .catch((err) =>
       logger.warn({ err }, `redis: échec écriture stats job ${cleType}`),
     );
+  logger.info({ job: cleType, durationMs }, "durée job");
 }
 
 async function echouerStatsJob(
@@ -173,12 +191,27 @@ async function echouerStatsJob(
     );
 }
 
-async function sauvegarderQuotaTM(tm: TicketmasterSource): Promise<void> {
+async function sauvegarderQuotaTM(tm: TicketmasterSource): Promise<number | null> {
   const quota = tm.obtenirQuota();
-  if (quota) {
-    await redis
-      .set(CLE_QUOTA_TM, JSON.stringify(quota))
-      .catch((err) => logger.warn({ err }, "redis: échec écriture quota TM"));
+  if (!quota) return null;
+  const payload = JSON.stringify(quota);
+  await redis
+    .set(CLE_QUOTA_TM, payload)
+    .catch((err) => logger.warn({ err }, "redis: échec écriture quota TM"));
+  await redis
+    .rpush(CLE_HISTORIQUE_QUOTA_TM, payload)
+    .then(() => redis.ltrim(CLE_HISTORIQUE_QUOTA_TM, -NB_HISTORIQUE_QUOTA, -1))
+    .catch((err) => logger.warn({ err }, "redis: échec écriture historique quota TM"));
+  return quota.dispo;
+}
+
+async function lireDispoQuotaTM(): Promise<number | null> {
+  const json = await redis.get(CLE_QUOTA_TM).catch(() => null);
+  if (!json) return null;
+  try {
+    return (JSON.parse(json) as { dispo: number }).dispo;
+  } catch {
+    return null;
   }
 }
 
@@ -287,6 +320,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
           await terminerStatsJob("artistes-batch", debutBatch);
           break;
         }
+        const dispoAvantBatch = await lireDispoQuotaTM();
 
         // Charger tous les artistes distincts depuis la DB
         const rows = await db
@@ -364,7 +398,13 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
           await new Promise((r) => setTimeout(r, 250));
         }
 
-        await sauvegarderQuotaTM(tmBatch);
+        const dispoApresBatch = await sauvegarderQuotaTM(tmBatch);
+        if (dispoAvantBatch !== null && dispoApresBatch !== null) {
+          logger.info(
+            { dispoAvant: dispoAvantBatch, dispoApres: dispoApresBatch, consommes: dispoAvantBatch - dispoApresBatch },
+            "quota TM consommé (artistes:batch)",
+          );
+        }
 
         // Eventim : concurrence limitée à 5 pour éviter le bannissement IP
         const nomsArtistes = rows.map((r) => r.artisteAffiche);
@@ -405,6 +445,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
           await terminerStatsJob("region", debutRegion);
           break;
         }
+        const dispoAvantRegion = await lireDispoQuotaTM();
 
         const rayonKmRegion = data.rayonKm ?? 50;
         const [resultsTM, resultsEventim] = await Promise.allSettled([
@@ -419,7 +460,13 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
             : []),
         ];
 
-        await sauvegarderQuotaTM(tmRegion);
+        const dispoApresRegion = await sauvegarderQuotaTM(tmRegion);
+        if (dispoAvantRegion !== null && dispoApresRegion !== null) {
+          logger.info(
+            { dispoAvant: dispoAvantRegion, dispoApres: dispoApresRegion, consommes: dispoAvantRegion - dispoApresRegion },
+            "quota TM consommé (region)",
+          );
+        }
 
         const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
         logger.info(

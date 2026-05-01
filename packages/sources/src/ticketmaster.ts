@@ -321,7 +321,10 @@ async function fetchPage(
 
   if (!res.ok) {
     // 429 = rate limit attendu, 5xx = erreur serveur TM — les deux sont récupérables
-    logger.warn({ status: res.status, url }, "erreur HTTP Ticketmaster");
+    logger.warn(
+      { status: res.status, url, dispo: quota?.dispo, total: quota?.total },
+      "erreur HTTP Ticketmaster",
+    );
     return { events: [], total: 0, quota };
   }
 
@@ -368,6 +371,13 @@ async function fetchToutesPages(
 
     // Respecter le rate limit TM (5 req/s) entre les pages
     await new Promise((r) => setTimeout(r, 250));
+  }
+
+  if (tousLesEvents.length > 0 && tousLesEvents.length < totalElements) {
+    logger.warn(
+      { total: totalElements, recuperes: tousLesEvents.length },
+      "NB_PAGES_MAX atteint — concerts manqués",
+    );
   }
 
   return { events: tousLesEvents, quota };

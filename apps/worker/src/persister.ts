@@ -165,6 +165,8 @@ export async function persisterConcerts(
   const listeFiltree = deduplicerParCleConflit(liste);
 
   const ids: string[] = [];
+  let totalInserts = 0;
+  let totalUpdates = 0;
 
   // Insérer par lots de 50
   const TAILLE_LOT = 50;
@@ -219,12 +221,16 @@ export async function persisterConcerts(
           updatedAt: sql`now()`,
         },
       })
-      .returning({ id: concerts.id });
+      .returning({ id: concerts.id, estInsertion: sql<boolean>`(xmax = 0)` });
 
-    ids.push(...inseres.map((r) => r.id));
+    for (const r of inseres) {
+      ids.push(r.id);
+      if (r.estInsertion) totalInserts++;
+      else totalUpdates++;
+    }
   }
 
-  logger.info({ total: ids.length }, "concerts persistés");
+  logger.info({ total: ids.length, inserts: totalInserts, updates: totalUpdates }, "concerts persistés");
   return ids;
 }
 

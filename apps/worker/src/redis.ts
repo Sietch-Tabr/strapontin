@@ -8,6 +8,8 @@ const REDIS_URL = process.env["REDIS_URL"] ?? "redis://localhost:6379";
 export const redis = new Redis(REDIS_URL, { lazyConnect: true });
 
 export const CLE_QUOTA_TM = "strapontin:tm:quota";
+export const CLE_HISTORIQUE_QUOTA_TM = "strapontin:tm:quota:historique";
+export const NB_HISTORIQUE_QUOTA = 100;
 
 // Cache attraction IDs Ticketmaster — TTL 7 jours
 export const TTL_ATTRACTION_ID_S = 7 * 24 * 3600;
