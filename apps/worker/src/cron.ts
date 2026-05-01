@@ -38,10 +38,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
   // Note : on ne filtre PAS sur filtreDisponibles — c'est un filtre d'affichage,
   // pas un critère pour savoir si l'user veut des concerts de sa région.
   const configs = await db
-    .select({
-      departements: userConfig.departements,
-      rayonKm: userConfig.rayonKm,
-    })
+    .select({ departements: userConfig.departements })
     .from(userConfig);
 
   const tousLesDepts = new Set<string>();
@@ -51,16 +48,12 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     }
   }
 
-  // Rayon maximal parmi tous les users pour couvrir les préférences de chacun
-  const maxRayonKm = Math.max(...configs.map((c) => c.rayonKm ?? 50), 50);
-
   if (tousLesDepts.size > 0) {
     await queue.add(
       "fetch:region",
       {
         type: "fetch:region",
         depts: [...tousLesDepts],
-        rayonKm: maxRayonKm,
       },
       {
         jobId: "region__all",

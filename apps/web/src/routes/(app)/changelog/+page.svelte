@@ -16,6 +16,28 @@
 		<section>
 			<div class="mb-4 flex items-center gap-2 text-foreground">
 				<History size={20} aria-hidden="true" />
+				<h2 class="text-base font-medium">v 1.2.2 — Mai 2026</h2>
+			</div>
+			<div class="space-y-4 text-sm text-muted-foreground">
+				<div>
+					<p class="mb-1 font-medium text-foreground">Paramètres</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Le curseur « rayon de recherche » a été supprimé. Le rayon est maintenant calculé automatiquement selon la taille géographique de chaque département — les grandes régions comme la Gironde ou la Corse obtiennent un rayon adapté.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Concerts</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Les recherches par département et par salle se limitent désormais aux 6 prochains mois, ce qui réduit le nombre de résultats inutiles et améliore les performances.</li>
+						<li>Les artistes et salles suivis récupèrent désormais jusqu'à 200 concerts par page au lieu de 20.</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+
+		<section>
+			<div class="mb-4 flex items-center gap-2 text-foreground">
+				<History size={20} aria-hidden="true" />
 				<h2 class="text-base font-medium">v 1.2.1 — Mai 2026</h2>
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">

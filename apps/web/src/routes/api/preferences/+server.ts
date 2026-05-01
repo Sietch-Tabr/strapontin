@@ -27,7 +27,6 @@ export const GET: RequestHandler = async ({ locals }) => {
     db
       .select({
         departements: userConfig.departements,
-        rayonKm: userConfig.rayonKm,
         filtreDisponibles: userConfig.filtreDisponibles,
         frequenceNotifications: userConfig.frequenceNotifications,
         notifArtistes: userConfig.notifArtistes,

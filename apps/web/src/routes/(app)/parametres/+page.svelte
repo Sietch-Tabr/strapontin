@@ -11,7 +11,6 @@
 	let resendDisponible = $derived(data.resendDisponible);
 
 	let deptsSelectionnes = $state<string[]>(untrack(() => data.config?.departements ?? []));
-	let rayonKm = $state<number>(untrack(() => data.config?.rayonKm ?? 50));
 	let filtreDisponibles = $state<boolean>(untrack(() => data.config?.filtreDisponibles ?? true));
 	let frequenceNotifications = $state<string>(untrack(() => data.config?.frequenceNotifications ?? 'jamais'));
 	let notifArtistes = $state<boolean>(untrack(() => data.config?.notifArtistes ?? true));
@@ -24,7 +23,6 @@
 	// Resynchronisation après une action serveur (import, enregistrement)
 	$effect(() => {
 		deptsSelectionnes = data.config?.departements ?? [];
-		rayonKm = data.config?.rayonKm ?? 50;
 		filtreDisponibles = data.config?.filtreDisponibles ?? true;
 		frequenceNotifications = data.config?.frequenceNotifications ?? 'jamais';
 		notifArtistes = data.config?.notifArtistes ?? true;
@@ -37,11 +35,9 @@
 	let enregistrementConfig = $state(false);
 	let formulaireRecherche = $state<HTMLFormElement | undefined>(undefined);
 	let formulaireNotifications = $state<HTMLFormElement | undefined>(undefined);
-	let timerRayon: ReturnType<typeof setTimeout> | undefined;
 
 	function autoSauvegarderRecherche() {
-		clearTimeout(timerRayon);
-		timerRayon = setTimeout(() => formulaireRecherche?.requestSubmit(), 400);
+		formulaireRecherche?.requestSubmit();
 	}
 
 	function autoSauvegarderNotifications() {
@@ -205,27 +201,6 @@
 					await update({ reset: false });
 				}}
 			>
-				<div>
-					<label for="rayonKm" class="mb-1.5 block text-sm font-medium text-foreground">
-						Rayon ({rayonKm} km)
-					</label>
-					<input
-						id="rayonKm"
-						type="range"
-						name="rayonKm"
-						bind:value={rayonKm}
-						oninput={autoSauvegarderRecherche}
-						min="0"
-						max="500"
-						step="10"
-						class="w-full accent-foreground"
-					/>
-					<div class="flex justify-between text-xs text-muted-foreground">
-						<span>0 km</span>
-						<span>500 km</span>
-					</div>
-				</div>
-
 				<div class="flex items-center gap-3">
 					<input
 						id="filtreDisponibles"
