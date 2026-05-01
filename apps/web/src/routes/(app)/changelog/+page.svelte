@@ -46,6 +46,20 @@
 						<li>La chip « Masqués » conserve désormais tous les autres filtres actifs au lieu de les effacer.</li>
 					</ul>
 				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Découverte</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Le filtre par budget déclenche désormais le message « Aucun résultat pour ces filtres. » quand aucun concert ne correspond.</li>
+						<li>La chip « Mes depts » s'affiche correctement même quand le nombre de départements sélectionnés correspond mais pas leur contenu.</li>
+						<li>Le lien « Réinitialiser » apparaît maintenant aussi quand seul le tri a été modifié.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Paramètres</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>L'import en mode « Fusionner » vérifie désormais que le total (existants + nouveaux) ne dépasse pas les limites (500 artistes, 200 salles) et affiche un message explicite si c'est le cas.</li>
+					</ul>
+				</div>
 			</div>
 		</section>
 
