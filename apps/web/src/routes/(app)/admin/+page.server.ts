@@ -369,6 +369,56 @@ export const actions: Actions = {
     return { succes: true, action: "genererVapid" };
   },
 
+  relancerFetches: async ({ locals }) => {
+    if (locals.user?.role !== "admin") {
+      return fail(403, { erreur: "Accès refusé." });
+    }
+
+    const [nbArtistes, configs] = await Promise.all([
+      db.$count(userArtistes),
+      db
+        .select({
+          departements: userConfig.departements,
+          rayonKm: userConfig.rayonKm,
+        })
+        .from(userConfig),
+    ]);
+
+    if (nbArtistes > 0) {
+      await queue.add(
+        "fetch:artistes:batch",
+        { type: "fetch:artistes:batch" },
+        {
+          jobId: "artistes__batch",
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      );
+    }
+
+    const tousLesDepts = new Set<string>();
+    for (const config of configs) {
+      for (const dept of config.departements) {
+        if (dept.trim()) tousLesDepts.add(dept.trim());
+      }
+    }
+    const maxRayonKm = Math.max(...configs.map((c) => c.rayonKm ?? 50), 50);
+
+    if (tousLesDepts.size > 0) {
+      await queue.add(
+        "fetch:region",
+        {
+          type: "fetch:region",
+          depts: [...tousLesDepts],
+          rayonKm: maxRayonKm,
+        },
+        { jobId: "region__all", removeOnComplete: true, removeOnFail: true },
+      );
+    }
+
+    return { succes: true, action: "relancerFetches" };
+  },
+
   modifierCompte: async ({ request, locals }) => {
     if (locals.user?.role !== "admin") {
       return fail(403, { erreur: "Accès refusé." });
