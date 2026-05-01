@@ -4,32 +4,25 @@ import {
   concerts,
   userArtistes,
   userSalles,
-  userConfig,
 } from "@strapontin/core/schema";
-import { eq, gte, and, count, isNull, or, sql } from "drizzle-orm";
+import { eq, gte, and, count, isNull } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
+import {
+  lireFiltresStatut,
+  construireConditionStatut,
+} from "$lib/server/filtres";
 
 const SEUIL_NEW_MS = 7 * 24 * 3600 * 1000;
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0];
 
-  const config = await db
-    .select({ filtreDisponibles: userConfig.filtreDisponibles })
-    .from(userConfig)
-    .where(eq(userConfig.userId, locals.user!.id))
-    .then((rows) => rows[0] ?? null);
-
-  const filtreDisponibles = config?.filtreDisponibles ?? true;
-
-  const inclureComplets = url.searchParams.has("complets")
-    ? url.searchParams.get("complets") === "1"
-    : !filtreDisponibles;
-  const inclureAnnules = url.searchParams.has("annules")
-    ? url.searchParams.get("annules") === "1"
-    : !filtreDisponibles;
+  const { inclureComplets, inclureAnnules } = await lireFiltresStatut(
+    url,
+    locals.user!.id,
+  );
 
   const conditions: SQL[] = [
     eq(userMatches.userId, locals.user!.id),
@@ -37,17 +30,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     isNull(userMatches.masqueLe),
   ];
 
-  if (!inclureComplets || !inclureAnnules) {
-    const statuts: SQL[] = [
-      sql`(${concerts.statut} IS NULL OR ${concerts.statut} = 'onsale')`,
-    ];
-    if (inclureComplets) statuts.push(sql`${concerts.statut} = 'offsale'`);
-    if (inclureAnnules)
-      statuts.push(
-        sql`${concerts.statut} IN ('cancelled', 'postponed', 'rescheduled')`,
-      );
-    conditions.push(or(...statuts)!);
-  }
+  const conditionStatut = construireConditionStatut(
+    inclureComplets,
+    inclureAnnules,
+  );
+  if (conditionStatut) conditions.push(conditionStatut);
 
   // Uniquement les concerts des artistes suivis (pas les salles)
   const prochainsConcerts = await db

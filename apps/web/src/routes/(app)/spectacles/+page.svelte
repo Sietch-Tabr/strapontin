@@ -4,6 +4,7 @@
 	import { Ticket, Search, X } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
+	import { badgeStatut, formaterDate, formaterHeure } from '$lib/formats';
 
 	let { data }: { data: PageData } = $props();
 
@@ -49,28 +50,6 @@
 		if (affMasques) params.set('masques', '1');
 
 		return `/spectacles?${params}`;
-	}
-
-	function badgeStatut(statut: string | null): { label: string; classes: string } | null {
-		if (statut === 'offsale') return { label: 'Complet', classes: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' };
-		if (statut === 'cancelled') return { label: 'Annulé', classes: 'bg-red-500/15 text-red-600 dark:text-red-400' };
-		if (statut === 'postponed' || statut === 'rescheduled') return { label: 'Reporté', classes: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' };
-		return null;
-	}
-
-	function formaterDate(dateStr: string): string {
-		const [annee, moisNum, jour] = dateStr.split('-').map(Number);
-		return new Date(annee, moisNum - 1, jour).toLocaleDateString('fr-FR', {
-			weekday: 'short',
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric'
-		});
-	}
-
-	function formaterHeure(heure: string | null): string {
-		if (!heure) return '';
-		return heure.slice(0, 5);
 	}
 
 	function formaterPrix(min: string | null, max: string | null): string {

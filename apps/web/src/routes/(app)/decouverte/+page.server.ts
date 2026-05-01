@@ -22,6 +22,7 @@ import {
 } from "$lib/server/redis";
 import { fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
+import { FORMAT_DEPT, FORMAT_MOIS } from "$lib/constantes/validations";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0]!;
@@ -51,7 +52,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const deptsUrl = url.searchParams
     .getAll("dept")
     .map((d) => d.trim())
-    .filter((d) => /^\d{2,3}$/.test(d));
+    .filter((d) => FORMAT_DEPT.test(d));
   const deptsActifs = deptFiltre ? deptsUrl : userDepts;
 
   const conditions: SQL[] = [
@@ -65,7 +66,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   if (deptsActifs.length > 0) {
     conditions.push(inArray(concerts.dept, deptsActifs));
   }
-  if (mois && /^\d{4}-\d{2}$/.test(mois)) {
+  if (mois && FORMAT_MOIS.test(mois)) {
     conditions.push(sql`to_char(${concerts.date}, 'YYYY-MM') = ${mois}`);
   }
   if (genres.length > 0) {
@@ -201,7 +202,7 @@ export const actions: Actions = {
     const depts = formData
       .getAll("dept")
       .map(String)
-      .filter((d) => /^\d{2,3}$/.test(d));
+      .filter((d) => FORMAT_DEPT.test(d));
     if (depts.length === 0)
       return fail(400, { message: "Aucun département sélectionné" });
 
@@ -243,7 +244,7 @@ export const actions: Actions = {
     const depts = formData
       .getAll("dept")
       .map(String)
-      .filter((d) => /^\d{2,3}$/.test(d));
+      .filter((d) => FORMAT_DEPT.test(d));
     if (depts.length === 0)
       return fail(400, { message: "Aucun département sélectionné" });
 
