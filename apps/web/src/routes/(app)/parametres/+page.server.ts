@@ -40,7 +40,6 @@ interface SalleExportee {
 
 interface ConfigExportee {
   departements?: string[];
-  rayonKm?: number;
   filtreDisponibles?: boolean;
   frequenceNotifications?: string;
   notifArtistes?: boolean;
@@ -88,11 +87,6 @@ export const actions: Actions = {
   rechercheRapide: async ({ request, locals }) => {
     const donnees = await request.formData();
 
-    const rayonKm = Math.min(
-      500,
-      Math.max(0, parseInt(donnees.get("rayonKm")?.toString() ?? "50") || 50),
-    );
-
     const filtreDisponibles =
       donnees.get("filtreDisponibles") === "on" ||
       donnees.get("filtreDisponibles") === "true";
@@ -101,12 +95,11 @@ export const actions: Actions = {
       .insert(userConfig)
       .values({
         userId: locals.user!.id,
-        rayonKm,
         filtreDisponibles,
       })
       .onConflictDoUpdate({
         target: userConfig.userId,
-        set: { rayonKm, filtreDisponibles, updatedAt: new Date() },
+        set: { filtreDisponibles, updatedAt: new Date() },
       });
 
     return { succes: "rechercheRapide" };
@@ -474,10 +467,6 @@ export const actions: Actions = {
             const depts = (cfg.departements ?? [])
               .map((d) => normaliserDept(String(d)))
               .filter((d): d is string => d !== null);
-            const rayon =
-              typeof cfg.rayonKm === "number"
-                ? Math.min(500, Math.max(0, cfg.rayonKm))
-                : 50;
 
             // Récupérer les depts existants pour détecter les nouveaux
             const configActuelle = await tx
@@ -508,7 +497,6 @@ export const actions: Actions = {
               .values({
                 userId,
                 departements: depts,
-                rayonKm: rayon,
                 filtreDisponibles: cfg.filtreDisponibles ?? true,
                 frequenceNotifications: ([
                   "jamais",
@@ -529,7 +517,6 @@ export const actions: Actions = {
                 target: userConfig.userId,
                 set: {
                   departements: depts,
-                  rayonKm: rayon,
                   filtreDisponibles: cfg.filtreDisponibles ?? true,
                   frequenceNotifications: ([
                     "jamais",
@@ -627,10 +614,6 @@ export const actions: Actions = {
             const depts = (cfg.departements ?? [])
               .map((d) => normaliserDept(String(d)))
               .filter((d): d is string => d !== null);
-            const rayon =
-              typeof cfg.rayonKm === "number"
-                ? Math.min(500, Math.max(0, cfg.rayonKm))
-                : 50;
 
             const configActuelle = await tx
               .select({ departements: userConfig.departements })
@@ -664,7 +647,6 @@ export const actions: Actions = {
               .values({
                 userId,
                 departements: tousLesDepts,
-                rayonKm: rayon,
                 filtreDisponibles: cfg.filtreDisponibles ?? true,
                 frequenceNotifications: ([
                   "jamais",
@@ -685,7 +667,6 @@ export const actions: Actions = {
                 target: userConfig.userId,
                 set: {
                   departements: tousLesDepts,
-                  rayonKm: rayon,
                   filtreDisponibles: cfg.filtreDisponibles ?? true,
                   frequenceNotifications: ([
                     "jamais",

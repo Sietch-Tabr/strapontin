@@ -312,7 +312,6 @@ export const actions: Actions = {
         db
           .select({
             departements: userConfig.departements,
-            rayonKm: userConfig.rayonKm,
           })
           .from(userConfig),
       ]);
@@ -335,7 +334,6 @@ export const actions: Actions = {
           if (dept.trim()) tousLesDepts.add(dept.trim());
         }
       }
-      const maxRayonKm = Math.max(...configs.map((c) => c.rayonKm ?? 50), 50);
 
       if (tousLesDepts.size > 0) {
         await queue.add(
@@ -343,7 +341,6 @@ export const actions: Actions = {
           {
             type: "fetch:region",
             depts: [...tousLesDepts],
-            rayonKm: maxRayonKm,
           },
           { jobId: "region__all", removeOnComplete: true, removeOnFail: true },
         );
@@ -379,7 +376,6 @@ export const actions: Actions = {
       db
         .select({
           departements: userConfig.departements,
-          rayonKm: userConfig.rayonKm,
         })
         .from(userConfig),
     ]);
@@ -402,7 +398,6 @@ export const actions: Actions = {
         if (dept.trim()) tousLesDepts.add(dept.trim());
       }
     }
-    const maxRayonKm = Math.max(...configs.map((c) => c.rayonKm ?? 50), 50);
 
     if (tousLesDepts.size > 0) {
       await queue.add(
@@ -410,7 +405,6 @@ export const actions: Actions = {
         {
           type: "fetch:region",
           depts: [...tousLesDepts],
-          rayonKm: maxRayonKm,
         },
         { jobId: "region__all", removeOnComplete: true, removeOnFail: true },
       );

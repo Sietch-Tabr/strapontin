@@ -15,6 +15,13 @@
       "when": 1777215737588,
       "tag": "0001_silent_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777670725730,
+      "tag": "0002_supprimer_rayon_km",
+      "breakpoints": true
     }
   ]
 }

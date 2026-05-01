@@ -78,7 +78,10 @@ async function resoudreArtistesConcerts(
       cacheHits++;
       continue;
     }
-    const { nom: nomResolu, source } = await resoudreNomCanonique("artiste", nom);
+    const { nom: nomResolu, source } = await resoudreNomCanonique(
+      "artiste",
+      nom,
+    );
     if (source === "musicbrainz") nbMB++;
     else if (source === "deezer") nbDeezer++;
     else nbInchange++;
@@ -92,7 +95,13 @@ async function resoudreArtistesConcerts(
   }
 
   logger.info(
-    { total: nomsAResoudre.length, cacheHits, musicbrainz: nbMB, deezer: nbDeezer, inchange: nbInchange },
+    {
+      total: nomsAResoudre.length,
+      cacheHits,
+      musicbrainz: nbMB,
+      deezer: nbDeezer,
+      inchange: nbInchange,
+    },
     "resolver noms canoniques",
   );
 
@@ -191,7 +200,9 @@ async function echouerStatsJob(
     );
 }
 
-async function sauvegarderQuotaTM(tm: TicketmasterSource): Promise<number | null> {
+async function sauvegarderQuotaTM(
+  tm: TicketmasterSource,
+): Promise<number | null> {
   const quota = tm.obtenirQuota();
   if (!quota) return null;
   const payload = JSON.stringify(quota);
@@ -201,7 +212,9 @@ async function sauvegarderQuotaTM(tm: TicketmasterSource): Promise<number | null
   await redis
     .rpush(CLE_HISTORIQUE_QUOTA_TM, payload)
     .then(() => redis.ltrim(CLE_HISTORIQUE_QUOTA_TM, -NB_HISTORIQUE_QUOTA, -1))
-    .catch((err) => logger.warn({ err }, "redis: échec écriture historique quota TM"));
+    .catch((err) =>
+      logger.warn({ err }, "redis: échec écriture historique quota TM"),
+    );
   return quota.dispo;
 }
 
@@ -229,7 +242,6 @@ export interface JobFetchRegion {
   type: "fetch:region";
   depts: string[];
   userId?: string;
-  rayonKm?: number;
 }
 
 export interface JobFetchSalle {
@@ -401,7 +413,11 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         const dispoApresBatch = await sauvegarderQuotaTM(tmBatch);
         if (dispoAvantBatch !== null && dispoApresBatch !== null) {
           logger.info(
-            { dispoAvant: dispoAvantBatch, dispoApres: dispoApresBatch, consommes: dispoAvantBatch - dispoApresBatch },
+            {
+              dispoAvant: dispoAvantBatch,
+              dispoApres: dispoApresBatch,
+              consommes: dispoAvantBatch - dispoApresBatch,
+            },
             "quota TM consommé (artistes:batch)",
           );
         }
@@ -447,9 +463,8 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         }
         const dispoAvantRegion = await lireDispoQuotaTM();
 
-        const rayonKmRegion = data.rayonKm ?? 50;
         const [resultsTM, resultsEventim] = await Promise.allSettled([
-          tmRegion.fetchRegion(data.depts, undefined, rayonKmRegion),
+          tmRegion.fetchRegion(data.depts),
           eventim.fetchRegion(data.depts),
         ]);
 
@@ -463,7 +478,11 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
         const dispoApresRegion = await sauvegarderQuotaTM(tmRegion);
         if (dispoAvantRegion !== null && dispoApresRegion !== null) {
           logger.info(
-            { dispoAvant: dispoAvantRegion, dispoApres: dispoApresRegion, consommes: dispoAvantRegion - dispoApresRegion },
+            {
+              dispoAvant: dispoAvantRegion,
+              dispoApres: dispoApresRegion,
+              consommes: dispoAvantRegion - dispoApresRegion,
+            },
             "quota TM consommé (region)",
           );
         }

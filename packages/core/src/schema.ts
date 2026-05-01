@@ -208,7 +208,6 @@ export const userConfig = pgTable(
       .primaryKey()
       .references(() => users.id, { onDelete: "cascade" }),
     departements: text("departements").array().notNull().default([]),
-    rayonKm: integer("rayon_km").notNull().default(50),
     filtreDisponibles: boolean("filtre_disponibles").notNull().default(true),
     frequenceNotifications: text("frequence_notifications")
       .notNull()
