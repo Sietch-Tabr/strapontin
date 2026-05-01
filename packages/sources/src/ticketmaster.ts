@@ -10,7 +10,7 @@ export interface VenueTM {
 const logger = pino({ name: "source:ticketmaster" });
 
 const BASE_URL = "https://app.ticketmaster.com/discovery/v2";
-const CLASSIFICATIONS = ["music", "theatre", "opera", "musical"];
+const CLASSIFICATIONS = ["music", "opera", "musical"];
 // Taille maximale autorisée par TM (region, batch artistes, salle, artiste individuel)
 const TAILLE_PAGE_REGION = 200;
 // Protection quota : ne jamais dépasser 5 pages par appel (max 1 000 concerts)
