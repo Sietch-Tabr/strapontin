@@ -489,7 +489,7 @@ export class TicketmasterSource implements SourceConcerts {
 
       const { startDateTime, endDateTime } = obtenirFenetreFetch();
       const params = new URLSearchParams({
-        latlong: `${centre.lat},${centre.lng}`,
+        geoPoint: `${centre.lat},${centre.lng}`,
         radius: String(centre.rayon),
         unit: "km",
         classificationName: classifs.join(","),
