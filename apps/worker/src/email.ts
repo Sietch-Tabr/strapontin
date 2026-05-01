@@ -9,10 +9,14 @@ let cacheResend: CacheResend | null = null;
 
 async function obtenirResend(): Promise<Resend | null> {
   const maintenant = Date.now();
-  if (cacheResend && maintenant < cacheResend.expireA) return cacheResend.resend;
+  if (cacheResend && maintenant < cacheResend.expireA)
+    return cacheResend.resend;
   const cle = await lireConfig("RESEND_API_KEY").catch(() => null);
   if (!cle) return null;
-  cacheResend = { resend: new Resend(cle), expireA: maintenant + 5 * 60 * 1000 };
+  cacheResend = {
+    resend: new Resend(cle),
+    expireA: maintenant + 5 * 60 * 1000,
+  };
   return cacheResend.resend;
 }
 
