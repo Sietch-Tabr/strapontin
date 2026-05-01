@@ -1,13 +1,20 @@
-// Client Resend pour les emails transactionnels côté worker.
-// Si RESEND_API_KEY est absent, toutes les fonctions retournent silencieusement sans erreur.
-
 import { Resend } from "resend";
 import pino from "pino";
+import { lireConfig } from "./config.js";
 
 const logger = pino({ name: "email" });
 
-const cleResend = process.env["RESEND_API_KEY"];
-const resend = cleResend ? new Resend(cleResend) : null;
+type CacheResend = { resend: Resend; expireA: number };
+let cacheResend: CacheResend | null = null;
+
+async function obtenirResend(): Promise<Resend | null> {
+  const maintenant = Date.now();
+  if (cacheResend && maintenant < cacheResend.expireA) return cacheResend.resend;
+  const cle = await lireConfig("RESEND_API_KEY").catch(() => null);
+  if (!cle) return null;
+  cacheResend = { resend: new Resend(cle), expireA: maintenant + 5 * 60 * 1000 };
+  return cacheResend.resend;
+}
 
 const BASE_URL = process.env["PUBLIC_BASE_URL"] ?? "http://localhost:3000";
 const EXPEDITEUR = "Strapontin <noreply@strapontin.kwaite.fr>";
@@ -73,13 +80,14 @@ function lignesConcerts(concerts: ConcertDigest[]): string {
 export async function envoyerDigestConcerts(params: {
   email: string;
   concerts: ConcertDigest[];
-}): Promise<void> {
+}): Promise<boolean> {
+  const resend = await obtenirResend();
   if (!resend) {
     logger.warn("RESEND_API_KEY absent — digest concerts non envoyé");
-    return;
+    return false;
   }
 
-  if (params.concerts.length === 0) return;
+  if (params.concerts.length === 0) return false;
 
   const nb = params.concerts.length;
   const sujet =
@@ -111,7 +119,8 @@ ${piedHtml()}`;
 
   if (error) {
     logger.error({ err: error, email: params.email }, "échec envoi digest");
-  } else {
-    logger.info({ email: params.email, nb }, "digest envoyé");
+    return false;
   }
+  logger.info({ email: params.email, nb }, "digest envoyé");
+  return true;
 }

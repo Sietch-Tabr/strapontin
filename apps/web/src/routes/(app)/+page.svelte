@@ -48,7 +48,7 @@
 	</div>
 
 	<!-- Chips de filtre statut -->
-	{#if totalConcerts > 0 || data.inclureComplets || data.inclureAnnules}
+	{#if totalConcerts > 0 || data.inclureComplets || data.inclureAnnules || data.nbArtistes > 0}
 		<div class="mb-6 flex flex-wrap gap-1.5">
 			<a
 				href="?complets={data.inclureComplets ? '0' : '1'}&annules={data.inclureAnnules ? '1' : '0'}"
@@ -97,6 +97,11 @@
 						Ajouter des salles
 					</a>
 				</div>
+			{:else if !data.inclureComplets || !data.inclureAnnules}
+				<p class="mb-1 text-base font-medium text-foreground">Aucun concert avec ces filtres.</p>
+				<p class="text-sm text-muted-foreground">
+					Essayez d'inclure les concerts complets ou annulés ci-dessus.
+				</p>
 			{:else}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun concert pour l'instant.</p>
 				<p class="text-sm text-muted-foreground">

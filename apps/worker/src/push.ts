@@ -69,13 +69,13 @@ function construirePayload(concerts: ConcertPush[], baseUrl: string): string {
 export async function envoyerPushDigest(
   userId: string,
   concerts: ConcertPush[],
-): Promise<void> {
-  if (concerts.length === 0) return;
+): Promise<boolean> {
+  if (concerts.length === 0) return false;
 
   const cles = await obtenirClesVapid();
   if (!cles) {
     logger.warn({ userId }, "VAPID non configuré — push ignoré");
-    return;
+    return false;
   }
 
   const abonnements = await db
@@ -88,21 +88,26 @@ export async function envoyerPushDigest(
     .from(pushAbonnements)
     .where(eq(pushAbonnements.userId, userId));
 
-  if (abonnements.length === 0) return;
+  if (abonnements.length === 0) return false;
 
   const baseUrl =
     (await lireConfig("PUBLIC_BASE_URL").catch(() => null)) ??
     process.env["PUBLIC_BASE_URL"] ??
     "https://strapontin.kwaite.fr";
 
+  const contactEmail =
+    (await lireConfig("CONTACT_EMAIL").catch(() => null)) ??
+    "admin@example.com";
+
   webPush.setVapidDetails(
-    `mailto:${process.env["CONTACT_EMAIL"] ?? "admin@example.com"}`,
+    `mailto:${contactEmail}`,
     cles.publicKey,
     cles.privateKey,
   );
 
   const payload = construirePayload(concerts, baseUrl);
 
+  let nbEnvoyes = 0;
   await Promise.allSettled(
     abonnements.map(async (ab) => {
       try {
@@ -110,10 +115,10 @@ export async function envoyerPushDigest(
           { endpoint: ab.endpoint, keys: { p256dh: ab.p256dh, auth: ab.auth } },
           payload,
         );
+        nbEnvoyes++;
       } catch (err: unknown) {
         const status = (err as { statusCode?: number }).statusCode;
         if (status === 404 || status === 410) {
-          // Abonnement expiré ou révoqué — supprimer
           await db
             .delete(pushAbonnements)
             .where(eq(pushAbonnements.id, ab.id))
@@ -131,4 +136,9 @@ export async function envoyerPushDigest(
       }
     }),
   );
+
+  if (nbEnvoyes > 0) {
+    logger.info({ userId, nb: nbEnvoyes }, "push digest envoyé");
+  }
+  return nbEnvoyes > 0;
 }

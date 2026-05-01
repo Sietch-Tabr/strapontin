@@ -88,7 +88,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     }
   }
 
-  return { artistes, recherche, suggestions };
+  const dejaLeSuivi =
+    recherche.length >= 2 &&
+    artistes.some((a) => a.artisteNormalise === normaliserTexte(recherche));
+
+  return { artistes, recherche, suggestions, dejaLeSuivi };
 };
 
 export const actions: Actions = {

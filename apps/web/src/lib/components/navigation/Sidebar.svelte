@@ -34,8 +34,7 @@
 	}
 
 	async function seDeconnecter() {
-		await signOut();
-		goto('/login');
+		try { await signOut(); } finally { goto('/login'); }
 	}
 </script>
 

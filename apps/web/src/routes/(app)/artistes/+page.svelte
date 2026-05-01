@@ -92,22 +92,30 @@
 			</ul>
 		</section>
 	{:else if data.recherche.length >= 2}
-		<!-- Aucun résultat — proposer d'ajouter directement -->
-		<div class="mb-8 rounded-xl border border-dashed border-border p-4">
-			<p class="mb-3 text-sm text-muted-foreground">
-				Aucun résultat pour « {data.recherche} ».
-			</p>
-			<form method="POST" action="?/ajouter" use:enhance>
-				<input type="hidden" name="nom" value={data.recherche} />
-				<button
-					type="submit"
-					class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
-				>
-					<Plus size={16} />
-					Ajouter « {data.recherche} » quand même
-				</button>
-			</form>
-		</div>
+		{#if data.dejaLeSuivi}
+			<div class="mb-8 rounded-xl border border-border bg-card p-4">
+				<p class="text-sm text-muted-foreground">
+					Vous suivez déjà « {data.recherche} ».
+				</p>
+			</div>
+		{:else}
+			<!-- Aucun résultat — proposer d'ajouter directement -->
+			<div class="mb-8 rounded-xl border border-dashed border-border p-4">
+				<p class="mb-3 text-sm text-muted-foreground">
+					Aucun résultat pour « {data.recherche} ».
+				</p>
+				<form method="POST" action="?/ajouter" use:enhance>
+					<input type="hidden" name="nom" value={data.recherche} />
+					<button
+						type="submit"
+						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+					>
+						<Plus size={16} />
+						Ajouter « {data.recherche} » quand même
+					</button>
+				</form>
+			</div>
+		{/if}
 	{/if}
 
 	<!-- Artistes suivis -->
@@ -127,7 +135,7 @@
 					<li class="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
 						<span class="font-medium text-card-foreground">{artiste.artisteAffiche}</span>
 						<form method="POST" action="?/supprimer" use:enhance={() => async ({ result, update }) => {
-								if (result.type === 'success') toast.success('Artiste supprimé');
+								if (result.type === 'success') toast.success('Artiste supprimé. Les concerts associés disparaîtront à la prochaine actualisation (dans moins de 2h).');
 								else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
 								await update();
 								await tick();

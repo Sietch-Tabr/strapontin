@@ -483,20 +483,32 @@ async function envoyerDigestPourUser(
     url: m.url,
   }));
 
-  await Promise.allSettled([
+  const resultats = await Promise.allSettled([
     envoyerDigestConcerts({ email, concerts: concertsPourNotif }),
     envoyerPushDigest(userId, concertsPourNotif),
   ]);
 
-  // Marquer comme notifiés
-  const concertIds = nouveauxMatches.map((m) => m.concertId);
-  await db
-    .update(userMatches)
-    .set({ notifieLe: new Date() })
-    .where(
-      and(
-        eq(userMatches.userId, userId),
-        inArray(userMatches.concertId, concertIds),
-      ),
+  const emailOk =
+    resultats[0].status === "fulfilled" && resultats[0].value === true;
+  const pushOk =
+    resultats[1].status === "fulfilled" && resultats[1].value === true;
+
+  if (emailOk || pushOk) {
+    const concertIds = nouveauxMatches.map((m) => m.concertId);
+    await db
+      .update(userMatches)
+      .set({ notifieLe: new Date() })
+      .where(
+        and(
+          eq(userMatches.userId, userId),
+          inArray(userMatches.concertId, concertIds),
+        ),
+      );
+    logger.info(
+      { userId, emailOk, pushOk, nb: concertIds.length },
+      "notifié",
     );
+  } else {
+    logger.warn({ userId }, "notification échouée — notifie_le non mis à jour");
+  }
 }
