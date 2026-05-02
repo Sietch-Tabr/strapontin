@@ -19,7 +19,7 @@ const SEUIL_NEW_MS = 7 * 24 * 3600 * 1000;
 export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0];
 
-  const { inclureComplets, inclureAnnules } = await lireFiltresStatut(
+  const { inclureIndisponibles } = await lireFiltresStatut(
     url,
     locals.user!.id,
   );
@@ -30,10 +30,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     isNull(userMatches.masqueLe),
   ];
 
-  const conditionStatut = construireConditionStatut(
-    inclureComplets,
-    inclureAnnules,
-  );
+  const conditionStatut = construireConditionStatut(inclureIndisponibles);
   if (conditionStatut) conditions.push(conditionStatut);
 
   // Uniquement les concerts des artistes suivis (pas les salles)
@@ -108,8 +105,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     artistesGroupes,
     nbArtistes,
     nbSalles,
-    inclureComplets,
-    inclureAnnules,
+    inclureIndisponibles,
   };
 };
 

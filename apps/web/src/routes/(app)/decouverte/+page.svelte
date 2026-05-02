@@ -55,6 +55,7 @@
 	let recherche = $state(untrack(() => data.recherche));
 	let mois = $state(untrack(() => data.mois));
 	let budget = $state(untrack(() => data.budget));
+	let formEl = $state<HTMLFormElement | null>(null);
 
 	const moisDisponibles = $derived(data.moisDisponibles);
 
@@ -154,7 +155,7 @@
 	</div>
 
 	<!-- Filtres texte/mois via formulaire GET classique -->
-	<form method="GET" class="mb-4 space-y-3">
+	<form method="GET" class="mb-4 space-y-3" bind:this={formEl}>
 		<!-- Inputs cachés pour préserver l'état des chips lors du submit -->
 		{#if data.tri === 'nouveaute'}
 			<input type="hidden" name="tri" value="nouveaute" />
@@ -183,11 +184,19 @@
 				autocomplete="off"
 				class="flex-1 min-w-40 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			/>
+			<button
+				type="submit"
+				class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+			>
+				<Search size={16} />
+				Rechercher
+			</button>
 			<label for="mois-decouverte" class="sr-only">Filtrer par mois</label>
 			<select
 				id="mois-decouverte"
 				name="mois"
 				bind:value={mois}
+				onchange={() => formEl?.requestSubmit()}
 				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			>
 				<option value="">Tous les mois</option>
@@ -200,6 +209,7 @@
 				id="budget-decouverte"
 				name="budget"
 				bind:value={budget}
+				onchange={() => formEl?.requestSubmit()}
 				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			>
 				<option value="">Tous les prix</option>
@@ -208,13 +218,6 @@
 				<option value="80">≤ 80 €</option>
 				<option value="100">≤ 100 €</option>
 			</select>
-			<button
-				type="submit"
-				class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-			>
-				<Search size={16} />
-				Filtrer
-			</button>
 			{#if recherche || mois || budget || data.deptFiltre || data.classifications.length > 0 || data.genres.length > 0 || data.tri !== 'date'}
 				<a
 					href="/decouverte"

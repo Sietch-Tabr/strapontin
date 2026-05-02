@@ -211,7 +211,7 @@
 						class="h-4 w-4 rounded border-border accent-foreground"
 					/>
 					<label for="filtreDisponibles" class="text-sm text-foreground">
-						Masquer par défaut les concerts complets et annulés
+						Masquer par défaut les concerts indisponibles
 					</label>
 				</div>
 			</form>

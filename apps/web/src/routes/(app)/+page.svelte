@@ -21,30 +21,19 @@
 		<h1 class="text-2xl font-semibold text-foreground">Mes prochains concerts</h1>
 	</div>
 
-	<!-- Chips de filtre statut -->
-	{#if totalConcerts > 0 || data.inclureComplets || data.inclureAnnules || data.nbArtistes > 0}
+	<!-- Chip de filtre statut -->
+	{#if totalConcerts > 0 || data.inclureIndisponibles || data.nbArtistes > 0}
 		<div class="mb-6 flex flex-wrap gap-1.5">
 			<a
-				href="?complets={data.inclureComplets ? '0' : '1'}&annules={data.inclureAnnules ? '1' : '0'}"
+				href="?indisponibles={data.inclureIndisponibles ? '0' : '1'}"
 				data-sveltekit-replacestate
-				aria-current={data.inclureComplets ? 'true' : undefined}
+				aria-current={data.inclureIndisponibles ? 'true' : undefined}
 				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
-					{data.inclureComplets
+					{data.inclureIndisponibles
 						? 'border-orange-400 bg-orange-500/15 text-orange-600 dark:text-orange-400'
 						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
 			>
-				Complet
-			</a>
-			<a
-				href="?complets={data.inclureComplets ? '1' : '0'}&annules={data.inclureAnnules ? '0' : '1'}"
-				data-sveltekit-replacestate
-				aria-current={data.inclureAnnules ? 'true' : undefined}
-				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
-					{data.inclureAnnules
-						? 'border-red-400 bg-red-500/15 text-red-600 dark:text-red-400'
-						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
-			>
-				Annulé/Reporté
+				Indisponibles
 			</a>
 		</div>
 	{/if}
@@ -71,10 +60,10 @@
 						Ajouter des salles
 					</a>
 				</div>
-			{:else if !data.inclureComplets || !data.inclureAnnules}
+			{:else if !data.inclureIndisponibles}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun concert avec ces filtres.</p>
 				<p class="text-sm text-muted-foreground">
-					Essayez d'inclure les concerts complets ou annulés ci-dessus.
+					Essayez d'inclure les concerts indisponibles ci-dessus.
 				</p>
 			{:else}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun concert pour l'instant.</p>

@@ -52,7 +52,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     sourcesUrl.length === 0 || sourcesUrl.includes("artistes");
   const sourceSalles = sourcesUrl.length === 0 || sourcesUrl.includes("salles");
 
-  const { inclureComplets, inclureAnnules } = await lireFiltresStatut(
+  const { inclureIndisponibles } = await lireFiltresStatut(
     url,
     locals.user!.id,
   );
@@ -68,10 +68,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   if (quinzaine) {
     conditions.push(lte(concerts.date, dans15Jours));
   }
-  const conditionStatut = construireConditionStatut(
-    inclureComplets,
-    inclureAnnules,
-  );
+  const conditionStatut = construireConditionStatut(inclureIndisponibles);
   if (conditionStatut) conditions.push(conditionStatut);
   if (recherche) {
     conditions.push(ilike(concerts.artiste, `%${recherche}%`));
@@ -174,8 +171,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     sourceSalles,
     genresDisponibles,
     afficherMasques,
-    inclureComplets,
-    inclureAnnules,
+    inclureIndisponibles,
   };
 };
 
