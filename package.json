@@ -19,7 +19,8 @@
   },
   "pnpm": {
     "overrides": {
-      "cookie": ">=0.7.0"
+      "cookie": ">=0.7.0",
+      "postcss": ">=8.5.10"
     }
   }
 }
