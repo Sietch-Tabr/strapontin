@@ -57,31 +57,34 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     .filter((d) => FORMAT_DEPT.test(d));
   const deptsActifs = deptFiltre ? deptsUrl : userDepts;
 
-  const conditions: SQL[] = [
+  // Conditions de base partagées par les requêtes de filtres (dept respecté)
+  const conditionsBase: SQL[] = [
     gte(concerts.date, aujourdhui),
     eq(concerts.disponible, true),
+    ...(deptsActifs.length > 0 ? [inArray(concerts.dept, deptsActifs)] : []),
   ];
 
+  // Conditions complètes pour les résultats (sans le filtre mois — calculé séparément)
+  const conditionsSansMois: SQL[] = [...conditionsBase];
   if (recherche) {
-    conditions.push(ilike(concerts.artiste, `%${recherche}%`));
+    conditionsSansMois.push(ilike(concerts.artiste, `%${recherche}%`));
   }
-  if (deptsActifs.length > 0) {
-    conditions.push(inArray(concerts.dept, deptsActifs));
+  if (genres.length > 0) {
+    conditionsSansMois.push(inArray(concerts.genre, genres));
   }
+  if (classifications.length > 0) {
+    conditionsSansMois.push(inArray(concerts.classification, classifications));
+  }
+  if (budget !== null) {
+    conditionsSansMois.push(lte(concerts.prixMin, String(budget)));
+  }
+
+  const conditions: SQL[] = [...conditionsSansMois];
   if (mois && FORMAT_MOIS.test(mois)) {
     conditions.push(sql`to_char(${concerts.date}, 'YYYY-MM') = ${mois}`);
   }
-  if (genres.length > 0) {
-    conditions.push(inArray(concerts.genre, genres));
-  }
-  if (classifications.length > 0) {
-    conditions.push(inArray(concerts.classification, classifications));
-  }
-  if (budget !== null) {
-    conditions.push(lte(concerts.prixMin, String(budget)));
-  }
 
-  const [tousDepts, tousGenres, tousClassifications] = await Promise.all([
+  const [tousDepts, tousGenres, tousClassifications, moisDispo] = await Promise.all([
     db
       .selectDistinct({ dept: concerts.dept })
       .from(concerts)
@@ -90,25 +93,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     db
       .selectDistinct({ genre: concerts.genre })
       .from(concerts)
-      .where(
-        and(
-          gte(concerts.date, aujourdhui),
-          eq(concerts.disponible, true),
-          isNotNull(concerts.genre),
-        ),
-      )
+      .where(and(...conditionsBase, isNotNull(concerts.genre)))
       .orderBy(concerts.genre),
     db
       .selectDistinct({ classification: concerts.classification })
       .from(concerts)
-      .where(
-        and(
-          gte(concerts.date, aujourdhui),
-          eq(concerts.disponible, true),
-          isNotNull(concerts.classification),
-        ),
-      )
+      .where(and(...conditionsBase, isNotNull(concerts.classification)))
       .orderBy(concerts.classification),
+    db
+      .selectDistinct({ mois: sql<string>`left(${concerts.date}::text, 7)` })
+      .from(concerts)
+      .where(and(...conditionsSansMois))
+      .orderBy(sql`left(${concerts.date}::text, 7)`),
   ]);
 
   const deptsDisponibles = tousDepts
@@ -194,6 +190,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     deptsDisponibles,
     genresDisponibles,
     classificationsDisponibles,
+    moisDisponibles: moisDispo.map((m) => m.mois),
   };
 };
 
