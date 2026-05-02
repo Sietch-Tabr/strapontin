@@ -14,13 +14,14 @@
 	let genre = $state(untrack(() => data.genre));
 	let budget = $state(untrack(() => data.budget));
 
+	let formEl = $state<HTMLFormElement | null>(null);
+
 	function construireUrl(options: {
 		quinzaine?: boolean;
 		sourceArtistes?: boolean;
 		sourceSalles?: boolean;
 		tri?: string;
-		complets?: boolean;
-		annules?: boolean;
+		indisponibles?: boolean;
 		masques?: boolean;
 	} = {}): string {
 		const params = new URLSearchParams();
@@ -41,10 +42,8 @@
 		const newTri = options.tri ?? data.tri;
 		if (newTri === 'nouveaute') params.set('tri', 'nouveaute');
 
-		const newComplets = options.complets ?? data.inclureComplets;
-		const newAnnules = options.annules ?? data.inclureAnnules;
-		params.set('complets', newComplets ? '1' : '0');
-		params.set('annules', newAnnules ? '1' : '0');
+		const newIndisponibles = options.indisponibles ?? data.inclureIndisponibles;
+		params.set('indisponibles', newIndisponibles ? '1' : '0');
 
 		const affMasques = options.masques ?? data.afficherMasques;
 		if (affMasques) params.set('masques', '1');
@@ -146,26 +145,15 @@
 			Masqués
 		</a>
 		<a
-			href={construireUrl({ complets: !data.inclureComplets })}
+			href={construireUrl({ indisponibles: !data.inclureIndisponibles })}
 			data-sveltekit-replacestate
-			aria-current={data.inclureComplets ? 'true' : undefined}
+			aria-current={data.inclureIndisponibles ? 'true' : undefined}
 			class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
-				{data.inclureComplets
+				{data.inclureIndisponibles
 					? 'border-orange-400 bg-orange-500/15 text-orange-600 dark:text-orange-400'
 					: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
 		>
-			Complet
-		</a>
-		<a
-			href={construireUrl({ annules: !data.inclureAnnules })}
-			data-sveltekit-replacestate
-			aria-current={data.inclureAnnules ? 'true' : undefined}
-			class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
-				{data.inclureAnnules
-					? 'border-red-400 bg-red-500/15 text-red-600 dark:text-red-400'
-					: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
-		>
-			Annulé/Reporté
+			Indisponibles
 		</a>
 	</div>
 
@@ -199,13 +187,12 @@
 	</div>
 
 	<!-- Filtres texte -->
-	<form method="GET" class="mb-6 space-y-3">
+	<form method="GET" class="mb-6 space-y-3" bind:this={formEl}>
 		{#if data.quinzaine}<input type="hidden" name="quinzaine" value="1" />{/if}
 		{#if data.sourceArtistes && !data.sourceSalles}<input type="hidden" name="source" value="artistes" />{/if}
 		{#if data.sourceSalles && !data.sourceArtistes}<input type="hidden" name="source" value="salles" />{/if}
 		{#if data.tri === 'nouveaute'}<input type="hidden" name="tri" value="nouveaute" />{/if}
-		<input type="hidden" name="complets" value={data.inclureComplets ? '1' : '0'} />
-		<input type="hidden" name="annules" value={data.inclureAnnules ? '1' : '0'} />
+		<input type="hidden" name="indisponibles" value={data.inclureIndisponibles ? '1' : '0'} />
 		{#if data.afficherMasques}<input type="hidden" name="masques" value="1" />{/if}
 
 		<div class="flex flex-wrap gap-2">
@@ -219,11 +206,19 @@
 				autocomplete="off"
 				class="flex-1 min-w-40 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			/>
+			<button
+				type="submit"
+				class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+			>
+				<Search size={16} />
+				Rechercher
+			</button>
 			<label for="mois-spectacles" class="sr-only">Filtrer par mois</label>
 			<select
 				id="mois-spectacles"
 				name="mois"
 				bind:value={mois}
+				onchange={() => formEl?.requestSubmit()}
 				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			>
 				<option value="">Tous les mois</option>
@@ -236,6 +231,7 @@
 				id="classification-spectacles"
 				name="classification"
 				bind:value={classification}
+				onchange={() => formEl?.requestSubmit()}
 				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			>
 				<option value="">Toutes catégories</option>
@@ -248,6 +244,7 @@
 					id="genre-spectacles"
 					name="genre"
 					bind:value={genre}
+					onchange={() => formEl?.requestSubmit()}
 					class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 				>
 					<option value="">Tous les genres</option>
@@ -261,6 +258,7 @@
 				id="budget-spectacles"
 				name="budget"
 				bind:value={budget}
+				onchange={() => formEl?.requestSubmit()}
 				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			>
 				<option value="">Tous les prix</option>
@@ -269,13 +267,6 @@
 				<option value="80">≤ 80 €</option>
 				<option value="100">≤ 100 €</option>
 			</select>
-			<button
-				type="submit"
-				class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-			>
-				<Search size={16} />
-				Filtrer
-			</button>
 			{#if aFiltres}
 				<a
 					href="/spectacles"

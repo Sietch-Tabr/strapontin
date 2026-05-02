@@ -182,7 +182,7 @@ Paradigme fondamental : **pré-fetch en arrière-plan, jamais d'appel API depuis
 | `recalculer:matches`   | Après fetch               | Recalcule `user_matches` pour tous les users (artistes + salles, filtre géo si depts configurés) |
 | `purger:concerts`      | Cron quotidien (minuit)   | Supprime les concerts dont la date est passée depuis > 7 jours                                   |
 
-Classifications TM pour `fetch:region` : `music`, `theatre`, `opera`, `musical`.
+Classifications TM (`fetchArtiste`, `fetchArtistesBatch`, `fetchRegion`) : `music`, `opera`, `musical` — `theatre` exclu (spectacles sans `_embedded.attractions`, inflatent les totaux sans produire de concerts utilisables).
 
 ### Pièges BullMQ
 

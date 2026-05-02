@@ -1,12 +1,12 @@
 import { db } from "$lib/server/db";
 import { userConfig, concerts } from "@strapontin/core/schema";
-import { eq, or, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 
 export async function lireFiltresStatut(
   url: URL,
   userId: string,
-): Promise<{ inclureComplets: boolean; inclureAnnules: boolean }> {
+): Promise<{ inclureIndisponibles: boolean }> {
   const config = await db
     .select({ filtreDisponibles: userConfig.filtreDisponibles })
     .from(userConfig)
@@ -15,28 +15,17 @@ export async function lireFiltresStatut(
 
   const filtreDisponibles = config?.filtreDisponibles ?? true;
 
-  const inclureComplets = url.searchParams.has("complets")
-    ? url.searchParams.get("complets") === "1"
-    : !filtreDisponibles;
-  const inclureAnnules = url.searchParams.has("annules")
-    ? url.searchParams.get("annules") === "1"
+  const inclureIndisponibles = url.searchParams.has("indisponibles")
+    ? url.searchParams.get("indisponibles") === "1"
     : !filtreDisponibles;
 
-  return { inclureComplets, inclureAnnules };
+  return { inclureIndisponibles };
 }
 
 export function construireConditionStatut(
-  inclureComplets: boolean,
-  inclureAnnules: boolean,
+  inclureIndisponibles: boolean,
 ): SQL | null {
-  if (inclureComplets && inclureAnnules) return null;
-  const statuts: SQL[] = [
-    sql`(${concerts.statut} IS NULL OR ${concerts.statut} = 'onsale')`,
-  ];
-  if (inclureComplets) statuts.push(sql`${concerts.statut} = 'offsale'`);
-  if (inclureAnnules)
-    statuts.push(
-      sql`${concerts.statut} IN ('cancelled', 'postponed', 'rescheduled')`,
-    );
-  return or(...statuts)!;
+  if (inclureIndisponibles) return null;
+  // rescheduled toujours visible (nouvelle date connue) — masquer offsale, cancelled, postponed
+  return sql`(${concerts.statut} IS NULL OR ${concerts.statut} IN ('onsale', 'rescheduled'))`;
 }
