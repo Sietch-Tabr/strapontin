@@ -56,9 +56,7 @@
 	let mois = $state(untrack(() => data.mois));
 	let budget = $state(untrack(() => data.budget));
 
-	const moisDisponibles = $derived(
-		[...new Set(data.resultats.map((c) => c.date.slice(0, 7)))].sort()
-	);
+	const moisDisponibles = $derived(data.moisDisponibles);
 
 	const LABELS_CLASSIFICATION: Record<string, string> = {
 		music: 'Musique',
