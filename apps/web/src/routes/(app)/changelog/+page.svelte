@@ -20,6 +20,14 @@
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
 				<div>
+					<p class="mb-1 font-medium text-foreground">Filtres</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Les deux chips « Complet » et « Annulé/Reporté » sont remplacés par un seul chip <strong class="text-foreground">« Indisponibles »</strong> sur l'accueil et Mes spectacles. Il masque les concerts complets, annulés et reportés sans date — les concerts reportés avec une nouvelle date restent toujours visibles.</li>
+						<li>Dans Découverte et Mes spectacles, changer un filtre (mois, prix, catégorie, genre) applique le résultat immédiatement, sans avoir à cliquer sur un bouton.</li>
+						<li>Le bouton « Filtrer » est renommé « Rechercher » et se trouve maintenant directement à côté du champ de recherche.</li>
+					</ul>
+				</div>
+				<div>
 					<p class="mb-1 font-medium text-foreground">Paramètres</p>
 					<ul class="list-inside list-disc space-y-1">
 						<li>Le curseur « rayon de recherche » a été supprimé. Le rayon est maintenant calculé automatiquement selon la taille géographique de chaque département — les grandes régions comme la Gironde ou la Corse obtiennent un rayon adapté.</li>
