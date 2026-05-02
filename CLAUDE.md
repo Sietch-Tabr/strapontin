@@ -84,7 +84,7 @@ EOF
 ```
 
 `tea issue view N` n'affiche pas `body` par défaut — toujours passer `-f "index,title,body"`.
-Jalons : **v1.2.2**, **v1.3.0**, **v1.4.0** (actifs). Labels : `bug`, `enhancement`, `question`.
+Jalons : **v1.2.3**, **v1.3.0**, **v1.4.0** (actifs). Labels : `bug`, `enhancement`, `question`.
 
 ### Workflow Git
 
@@ -289,6 +289,7 @@ Détails : [wiki Schéma de base de données](https://codeberg.org/Kwaite/strapo
 - **v1.1** — terminé (#65 Bandsintown, #37 doublons, #118 noms canoniques)
 - **v1.2** — livraison 2026-04-26 : #115 (LXC dev), #116 (provision.sh unifié), notifications push, PWA, masquer concert, RGPD, configuration clés admin, auto-save paramètres, formulaire de signalement, pré-remplissage URL au /setup, CI pnpm stabilisé
 - **v1.2.1** — livré 2026-05-01 : observabilité, sécurité, Node 24, tests, 50 tickets
-- **v1.2.2** — en cours : bugfixes post-v1.2.1
-- **v1.3.0** — planifié : #110 (page maintenance NPM), #170 (email OVH)
+- **v1.2.2** — livré 2026-05-02
+- **v1.2.3** — en cours : bugfixes post-v1.2.2
+- **v1.3.0** — planifié : #110 (page maintenance NPM), #170 (email OVH), #245 (notifs offsale), #246 (navigation push)
 - **v1.4.0** — à planifier
