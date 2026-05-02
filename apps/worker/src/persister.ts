@@ -162,7 +162,17 @@ export async function persisterConcerts(
 ): Promise<string[]> {
   if (liste.length === 0) return [];
 
-  const listeFiltree = deduplicerParCleConflit(liste);
+  const apresDedup = deduplicerParCleConflit(liste);
+  const listeFiltree = apresDedup.filter((c) => {
+    if (normaliserTexte(c.artiste).length === 0) {
+      logger.warn(
+        { artiste: c.artiste, date: c.date, salle: c.salle },
+        "concert rejeté — artiste_norm vide",
+      );
+      return false;
+    }
+    return true;
+  });
 
   const ids: string[] = [];
   let totalInserts = 0;

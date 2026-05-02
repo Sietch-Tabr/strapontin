@@ -13,8 +13,9 @@ const BASE_URL = "https://app.ticketmaster.com/discovery/v2";
 const CLASSIFICATIONS = ["music", "opera", "musical"];
 // Taille maximale autorisée par TM (region, batch artistes, salle, artiste individuel)
 const TAILLE_PAGE_REGION = 200;
-// Protection quota : ne jamais dépasser 5 pages par appel (max 1 000 concerts)
-const NB_PAGES_MAX = 5;
+// Protection quota : ne jamais dépasser 7 pages par appel (max 1 400 concerts)
+// 7 pages couvre les depts IDF (~1 295 events TM sur 6 mois, soit 7 pages × 200)
+const NB_PAGES_MAX = 7;
 
 export interface QuotaTM {
   dispo: number;
@@ -388,9 +389,15 @@ async function fetchToutesPages(
     await new Promise((r) => setTimeout(r, 250));
   }
 
-  if (tousLesEvents.length > 0 && tousLesEvents.length < totalElements) {
+  const nbPagesTotal = Math.ceil(totalElements / TAILLE_PAGE_REGION);
+  if (nbPagesTotal > NB_PAGES_MAX) {
     logger.warn(
-      { total: totalElements, recuperes: tousLesEvents.length },
+      {
+        total: totalElements,
+        recuperes: tousLesEvents.length,
+        pagesFetched: NB_PAGES_MAX,
+        pagesTotal: nbPagesTotal,
+      },
       "NB_PAGES_MAX atteint — concerts manqués",
     );
   }
@@ -434,6 +441,8 @@ export class TicketmasterSource implements SourceConcerts {
     const { events, quota } = await fetchToutesPages(params, this.apiKey);
     if (quota) this._dernierQuota = quota;
     logger.info({ venueId, total: events.length }, "TM fetchSalle");
+    // Respecter le rate limit TM (5 req/s) entre les fetchSalle séquentiels
+    await new Promise((r) => setTimeout(r, 200));
     return events;
   }
 

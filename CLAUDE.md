@@ -176,8 +176,8 @@ Paradigme fondamental : **pré-fetch en arrière-plan, jamais d'appel API depuis
 | Type                   | Déclenchement             | Description                                                                                      |
 | ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------ |
 | `fetch:artiste`        | Ajout artiste + cron 2h   | Fetch TM + Eventim par nom artiste                                                               |
-| `fetch:artistes:batch` | Cron 2h                   | Fetch TM en lots de 20 attractionIds — 200 concerts/lot, paginé jusqu'à 1 000 concerts           |
-| `fetch:region`         | Cron 2h + action manuelle | Fetch TM + Eventim par département — 200 concerts/dept, paginé. Timestamp Redis par dept         |
+| `fetch:artistes:batch` | Cron 2h                   | Fetch TM en lots de 20 attractionIds — 200 concerts/lot, paginé jusqu'à 1 400 concerts           |
+| `fetch:region`         | Cron 2h + action manuelle | Fetch TM + Eventim par département — 200 concerts/dept, paginé jusqu'à 1 400 concerts. Timestamp Redis par dept |
 | `fetch:salle`          | Ajout salle + cron 2h     | Fetch TM par `venueId` (stocké dans `user_salles.tmVenueId`)                                     |
 | `recalculer:matches`   | Après fetch               | Recalcule `user_matches` pour tous les users (artistes + salles, filtre géo si depts configurés) |
 | `purger:concerts`      | Cron quotidien (minuit)   | Supprime les concerts dont la date est passée depuis > 7 jours                                   |
@@ -189,6 +189,8 @@ Classifications TM (`fetchArtiste`, `fetchArtistesBatch`, `fetchRegion`) : `musi
 - **BullMQ v5 interdit les `:` dans les `jobId`** — utiliser `__` comme séparateur (`artiste__norm`, `artistes__batch`, `region__all`, `salle__venueId`, `matches__all`, `purge__YYYY-MM-DD`). Les `:` dans le _type de job_ (premier arg de `queue.add`) sont acceptés.
 - **`removeOnFail: { count: N }` et `removeOnComplete: { count: N }` bloquent le re-queuing des jobs à `jobId` fixe** (BullMQ ≥ 5.76) — le hash Redis persiste et tout `queue.add` ultérieur avec le même `jobId` est ignoré silencieusement. Utiliser `removeOnFail: true` et `removeOnComplete: true` pour les jobs cron à `jobId` fixe.
 - **Concurrence** : `{ concurrency: 1 }` dans le constructeur `Worker` — les jobs TM s'exécutent séquentiellement, évitant le pic concurrent (>5 req/s) qui causait des 429 TM (#213).
+- **Rate limit burst** : TM applique une limite de 5 req/s indépendamment du quota journalier. `fetchSalle` ajoute 200ms après chaque appel ; `fetchToutesPages` ajoute 250ms entre pages (#240).
+- **`artiste_norm` vide** : `persisterConcerts` rejette les concerts dont `normaliserTexte(artiste)` produit une chaîne vide (scripts non-latins comme l'arabe, séparateurs `– – –`) — ils sont loggés `warn` et non insérés (#242, #243).
 
 ### Redis — configuration
 
