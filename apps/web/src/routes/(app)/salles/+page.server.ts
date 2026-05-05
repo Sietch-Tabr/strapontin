@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "$lib/server/db";
 import { queue } from "$lib/server/queue";
 import { userSalles, concerts } from "@strapontin/core/schema";
@@ -158,12 +159,14 @@ export const actions: Actions = {
       tmVenueId,
     });
 
+    const correlationId = randomUUID();
+
     if (tmVenueId) {
       // Déclencher fetch:salle immédiatement si on a l'ID Ticketmaster
       await queue
         .add(
           "fetch:salle",
-          { type: "fetch:salle", venueId: tmVenueId, userId: locals.user!.id },
+          { type: "fetch:salle", venueId: tmVenueId, userId: locals.user!.id, correlationId },
           {
             attempts: 3,
             backoff: { type: "exponential", delay: 5000 },
@@ -178,7 +181,7 @@ export const actions: Actions = {
       await queue
         .add(
           "recalculer:matches",
-          { type: "recalculer:matches", userIds: [locals.user!.id] },
+          { type: "recalculer:matches", userIds: [locals.user!.id], correlationId },
           {
             attempts: 2,
             backoff: { type: "exponential", delay: 2000 },

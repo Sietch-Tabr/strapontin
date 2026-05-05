@@ -10,7 +10,7 @@ import { users, userArtistes, userConfig } from "@strapontin/core/schema";
 import type { QuotaTM } from "@strapontin/sources";
 import { eq } from "drizzle-orm";
 import { queue } from "$lib/server/queue";
-import { randomBytes, createECDH } from "crypto";
+import { randomBytes, randomUUID, createECDH } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
 import { envoyerInvitation } from "$lib/server/email";
 import {
@@ -316,10 +316,12 @@ export const actions: Actions = {
           .from(userConfig),
       ]);
 
+      const correlationIdConfig = randomUUID();
+
       if (nbArtistes > 0) {
         await queue.add(
           "fetch:artistes:batch",
-          { type: "fetch:artistes:batch" },
+          { type: "fetch:artistes:batch", correlationId: correlationIdConfig },
           {
             jobId: "artistes__batch",
             removeOnComplete: true,
@@ -341,6 +343,7 @@ export const actions: Actions = {
           {
             type: "fetch:region",
             depts: [...tousLesDepts],
+            correlationId: correlationIdConfig,
           },
           { jobId: "region__all", removeOnComplete: true, removeOnFail: true },
         );
@@ -380,10 +383,12 @@ export const actions: Actions = {
         .from(userConfig),
     ]);
 
+    const correlationIdRelance = randomUUID();
+
     if (nbArtistes > 0) {
       await queue.add(
         "fetch:artistes:batch",
-        { type: "fetch:artistes:batch" },
+        { type: "fetch:artistes:batch", correlationId: correlationIdRelance },
         {
           jobId: "artistes__batch",
           removeOnComplete: true,
@@ -405,6 +410,7 @@ export const actions: Actions = {
         {
           type: "fetch:region",
           depts: [...tousLesDepts],
+          correlationId: correlationIdRelance,
         },
         { jobId: "region__all", removeOnComplete: true, removeOnFail: true },
       );
