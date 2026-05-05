@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "$lib/server/db";
 import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import {
@@ -209,7 +210,7 @@ export const actions: Actions = {
     await queue
       .add(
         "fetch:region",
-        { type: "fetch:region", depts: deptsALancer, userId: locals.user!.id },
+        { type: "fetch:region", depts: deptsALancer, userId: locals.user!.id, correlationId: randomUUID() },
         {
           jobId: `region__manuel__${deptsALancer.join("_")}`,
           removeOnComplete: true,
@@ -267,7 +268,7 @@ export const actions: Actions = {
     await queue
       .add(
         "fetch:region",
-        { type: "fetch:region", depts: deptsALancer, userId: locals.user!.id },
+        { type: "fetch:region", depts: deptsALancer, userId: locals.user!.id, correlationId: randomUUID() },
         {
           jobId: `region__manuel__${deptsALancer.join("_")}`,
           removeOnComplete: true,

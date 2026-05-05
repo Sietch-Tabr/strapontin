@@ -245,35 +245,42 @@ export interface JobFetchArtiste {
   type: "fetch:artiste";
   artiste: string;
   userId?: string;
+  correlationId?: string;
 }
 
 export interface JobFetchArtistesBatch {
   type: "fetch:artistes:batch";
+  correlationId?: string;
 }
 
 export interface JobFetchRegion {
   type: "fetch:region";
   depts: string[];
   userId?: string;
+  correlationId?: string;
 }
 
 export interface JobFetchSalle {
   type: "fetch:salle";
   venueId: string;
   userId?: string;
+  correlationId?: string;
 }
 
 export interface JobRecalculerMatches {
   type: "recalculer:matches";
   userIds?: string[];
+  correlationId?: string;
 }
 
 export interface JobPurgerConcerts {
   type: "purger:concerts";
+  correlationId?: string;
 }
 
 export interface JobNotifierDigest {
   type: "notifier:digest";
+  correlationId?: string;
 }
 
 export type JobData =
@@ -287,10 +294,11 @@ export type JobData =
 
 export async function traiterJob(job: Job<JobData>): Promise<void> {
   const { data } = job;
+  const correlationId = data.correlationId;
 
   switch (data.type) {
     case "fetch:artiste": {
-      logger.info({ artiste: data.artiste }, "fetch:artiste démarré");
+      logger.info({ artiste: data.artiste, correlationId }, "fetch:artiste démarré");
 
       const tm = await obtenirTicketmaster();
       const [resultsTM, resultsEventim] = await Promise.allSettled([
@@ -337,7 +345,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     }
 
     case "fetch:artistes:batch": {
-      logger.info("fetch:artistes:batch démarré");
+      logger.info({ correlationId }, "fetch:artistes:batch démarré");
       const debutBatch = await demarrerStatsJob("artistes-batch");
       const tmBatch = await obtenirTicketmaster();
       try {
@@ -466,7 +474,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     }
 
     case "fetch:region": {
-      logger.info({ depts: data.depts }, "fetch:region démarré");
+      logger.info({ depts: data.depts, correlationId }, "fetch:region démarré");
       const debutRegion = await demarrerStatsJob("region");
       const tmRegion = await obtenirTicketmaster();
       try {
@@ -544,7 +552,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     }
 
     case "fetch:salle": {
-      logger.info({ venueId: data.venueId }, "fetch:salle démarré");
+      logger.info({ venueId: data.venueId, correlationId }, "fetch:salle démarré");
 
       const tmSalle = await obtenirTicketmaster();
       if (!tmSalle.fetchSalle) {
@@ -571,7 +579,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     }
 
     case "recalculer:matches": {
-      logger.info({ userIds: data.userIds }, "recalculer:matches démarré");
+      logger.info({ userIds: data.userIds, correlationId }, "recalculer:matches démarré");
       await recalculerMatches(data.userIds);
       break;
     }
@@ -595,7 +603,7 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     }
 
     case "notifier:digest": {
-      logger.info("notifier:digest démarré");
+      logger.info({ correlationId }, "notifier:digest démarré");
       await notifierUsersQuotidien();
       logger.info("notifier:digest terminé");
       break;

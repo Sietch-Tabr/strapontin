@@ -1,6 +1,7 @@
 // Planification des jobs récurrents — toutes les 2h pour chaque user actif.
 // Note : BullMQ v5 interdit les ":" dans les jobId — utiliser "__" comme séparateur.
 
+import { randomUUID } from "crypto";
 import pino from "pino";
 import { Queue } from "bullmq";
 import { isNotNull } from "drizzle-orm";
@@ -18,14 +19,15 @@ export function creerQueue(connexionRedis: {
 }
 
 export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
-  logger.info("planification des jobs utilisateurs");
+  const correlationId = randomUUID();
+  logger.info({ correlationId }, "planification des jobs utilisateurs");
 
   // Un seul job batch pour tous les artistes — évite N requêtes TM individuelles
   const nbArtistes = await db.$count(userArtistes);
   if (nbArtistes > 0) {
     await queue.add(
       "fetch:artistes:batch",
-      { type: "fetch:artistes:batch" },
+      { type: "fetch:artistes:batch", correlationId },
       {
         jobId: "artistes__batch",
         removeOnComplete: true,
@@ -54,6 +56,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
       {
         type: "fetch:region",
         depts: [...tousLesDepts],
+        correlationId,
       },
       {
         jobId: "region__all",
@@ -73,7 +76,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     if (!tmVenueId) continue;
     await queue.add(
       "fetch:salle",
-      { type: "fetch:salle", venueId: tmVenueId },
+      { type: "fetch:salle", venueId: tmVenueId, correlationId },
       {
         jobId: `salle__${tmVenueId}`,
         removeOnComplete: true,
@@ -85,7 +88,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
   // Recalculer les matches après les fetches
   await queue.add(
     "recalculer:matches",
-    { type: "recalculer:matches" },
+    { type: "recalculer:matches", correlationId },
     {
       jobId: "matches__all",
       delay: 60_000,
@@ -108,7 +111,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
 
   await queue.add(
     "purger:concerts",
-    { type: "purger:concerts" },
+    { type: "purger:concerts", correlationId },
     {
       jobId: `purge__${tag}`,
       delay: delaiPurge,
@@ -127,7 +130,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
 
   await queue.add(
     "notifier:digest",
-    { type: "notifier:digest" },
+    { type: "notifier:digest", correlationId },
     {
       jobId: `digest__${tag}`,
       delay: delaiDigest,

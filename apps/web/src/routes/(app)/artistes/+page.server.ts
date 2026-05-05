@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "$lib/server/db";
 import { queue } from "$lib/server/queue";
 import { userArtistes, concerts } from "@strapontin/core/schema";
@@ -142,7 +143,7 @@ export const actions: Actions = {
     await queue
       .add(
         "fetch:artiste",
-        { type: "fetch:artiste", artiste: nom, userId: locals.user!.id },
+        { type: "fetch:artiste", artiste: nom, userId: locals.user!.id, correlationId: randomUUID() },
         {
           attempts: 3,
           backoff: { type: "exponential", delay: 5000 },
