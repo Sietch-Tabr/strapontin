@@ -173,14 +173,14 @@ Paradigme fondamental : **pré-fetch en arrière-plan, jamais d'appel API depuis
 
 ### Jobs implémentés
 
-| Type                   | Déclenchement             | Description                                                                                      |
-| ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------ |
-| `fetch:artiste`        | Ajout artiste + cron 2h   | Fetch TM + Eventim par nom artiste                                                               |
-| `fetch:artistes:batch` | Cron 2h                   | Fetch TM en lots de 20 attractionIds — 200 concerts/lot, paginé jusqu'à 1 400 concerts           |
+| Type                   | Déclenchement             | Description                                                                                                     |
+| ---------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `fetch:artiste`        | Ajout artiste + cron 2h   | Fetch TM + Eventim par nom artiste                                                                              |
+| `fetch:artistes:batch` | Cron 2h                   | Fetch TM en lots de 20 attractionIds — 200 concerts/lot, paginé jusqu'à 1 400 concerts                          |
 | `fetch:region`         | Cron 2h + action manuelle | Fetch TM + Eventim par département — 200 concerts/dept, paginé jusqu'à 1 400 concerts. Timestamp Redis par dept |
-| `fetch:salle`          | Ajout salle + cron 2h     | Fetch TM par `venueId` (stocké dans `user_salles.tmVenueId`)                                     |
-| `recalculer:matches`   | Après fetch               | Recalcule `user_matches` pour tous les users (artistes + salles, filtre géo si depts configurés) |
-| `purger:concerts`      | Cron quotidien (minuit)   | Supprime les concerts dont la date est passée depuis > 7 jours                                   |
+| `fetch:salle`          | Ajout salle + cron 2h     | Fetch TM par `venueId` (stocké dans `user_salles.tmVenueId`)                                                    |
+| `recalculer:matches`   | Après fetch               | Recalcule `user_matches` pour tous les users (artistes + salles, filtre géo si depts configurés)                |
+| `purger:concerts`      | Cron quotidien (minuit)   | Supprime les concerts dont la date est passée depuis > 7 jours                                                  |
 
 Classifications TM (`fetchArtiste`, `fetchArtistesBatch`, `fetchRegion`) : `music`, `opera`, `musical` — `theatre` exclu (spectacles sans `_embedded.attractions`, inflatent les totaux sans produire de concerts utilisables).
 
