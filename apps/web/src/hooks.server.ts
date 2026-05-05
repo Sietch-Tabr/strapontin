@@ -46,11 +46,21 @@ function normaliserTheme(
 
 const securiser: Handle = async ({ event, resolve }) => {
   const reponse = await resolve(event);
-  // HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy gérés par NPM
   // CSP géré par svelte.config.js (mode nonce)
+  // Les headers ci-dessous sont aussi posés par NPM — fallback si accès direct à l'app
   reponse.headers.set("X-Robots-Tag", "noindex, nofollow");
   reponse.headers.set("Cross-Origin-Opener-Policy", "same-origin");
   reponse.headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  reponse.headers.set("X-Frame-Options", "DENY");
+  reponse.headers.set("X-Content-Type-Options", "nosniff");
+  reponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  reponse.headers.set("Permissions-Policy", "geolocation=(), camera=(), microphone=()");
+  if (!dev) {
+    reponse.headers.set(
+      "Strict-Transport-Security",
+      "max-age=63072000; includeSubDomains",
+    );
+  }
   return reponse;
 };
 
