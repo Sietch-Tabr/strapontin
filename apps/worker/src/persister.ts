@@ -44,7 +44,7 @@ export function estDoublonSalle(a: string, b: string): boolean {
   return court.length >= LONGUEUR_MIN_CONTAINMENT && long.includes(court);
 }
 
-type ValeurConcert = {
+export type ValeurConcert = {
   artiste: string;
   artisteNorm: string;
   date: string;
@@ -186,7 +186,7 @@ export function deduplicerParCleConflit(liste: ConcertBrut[]): ConcertBrut[] {
 
 // Deuxième passe après reconcilierSalles : les réécritures de salleNorm peuvent créer
 // de nouveaux doublons intra-lot (ex. deux salles réconciliées vers la même clé).
-function deduplicerLotReconcilie(lot: ValeurConcert[]): ValeurConcert[] {
+export function deduplicerLotReconcilie(lot: ValeurConcert[]): ValeurConcert[] {
   const parCle = new Map<string, ValeurConcert>();
   for (const v of lot) {
     const cle = `${v.artisteNorm}|${v.date}|${v.salleNorm}`;

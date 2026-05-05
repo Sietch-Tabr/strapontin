@@ -105,11 +105,11 @@ git checkout -b feature/nom-court
 
 ### Pipeline Woodpecker (.woodpecker.yaml)
 
-Trois steps sur push `main` : `test`, `typecheck`, puis `deploy` (`depends_on: [test, typecheck]`).
+Trois steps : `test` (toutes les branches), `typecheck` (toutes les branches), puis `deploy` (main uniquement).
 
 - **`test`** (`node:24`) : `pnpm -r test` — unitaires core + sources + worker (les tests d'intégration et E2E sont exclus du CI, ils nécessitent le LXC dev).
-- **`typecheck`** (`node:24`) : crée un `.env` stub, exécute `svelte-check` sur web et `tsc --noEmit` sur worker. Bloque le deploy en cas d'erreur TypeScript.
-- **`deploy`** (`alpine`) : SSH vers le LXC prod, exécute `update.sh`.
+- **`typecheck`** (`node:24`) : crée un `.env` stub, exécute `svelte-check` sur web, `tsc --noEmit` sur worker, et `pnpm audit --audit-level=high`.
+- **`deploy`** (`alpine`) : SSH vers le LXC prod, exécute `update.sh`. Ne tourne que sur `main`.
 
 Secrets : `ssh_key` (clé privée générée par `provision.sh --env prod`), `lxc_host` (IP du LXC prod).
 
