@@ -164,7 +164,12 @@ export const actions: Actions = {
         .add(
           "fetch:salle",
           { type: "fetch:salle", venueId: tmVenueId, userId: locals.user!.id },
-          { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+          {
+            attempts: 3,
+            backoff: { type: "exponential", delay: 5000 },
+            removeOnComplete: { count: 10 },
+            removeOnFail: { count: 20 },
+          },
         )
         .catch(() => {
           /* le worker est peut-être arrêté en dev */
@@ -174,7 +179,12 @@ export const actions: Actions = {
         .add(
           "recalculer:matches",
           { type: "recalculer:matches", userIds: [locals.user!.id] },
-          { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+          {
+            attempts: 2,
+            backoff: { type: "exponential", delay: 2000 },
+            removeOnComplete: { count: 10 },
+            removeOnFail: { count: 20 },
+          },
         )
         .catch(() => {
           /* le worker est peut-être arrêté en dev */

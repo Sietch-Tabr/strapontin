@@ -143,7 +143,12 @@ export const actions: Actions = {
       .add(
         "fetch:artiste",
         { type: "fetch:artiste", artiste: nom, userId: locals.user!.id },
-        { removeOnComplete: { count: 10 }, removeOnFail: { count: 20 } },
+        {
+          attempts: 3,
+          backoff: { type: "exponential", delay: 5000 },
+          removeOnComplete: { count: 10 },
+          removeOnFail: { count: 20 },
+        },
       )
       .catch(() => {
         /* le worker est peut-être arrêté en dev */
