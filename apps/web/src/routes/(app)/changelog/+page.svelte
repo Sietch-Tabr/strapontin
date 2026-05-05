@@ -16,6 +16,21 @@
 		<section>
 			<div class="mb-4 flex items-center gap-2 text-foreground">
 				<History size={20} aria-hidden="true" />
+				<h2 class="text-base font-medium">v 1.2.3 — Mai 2026</h2>
+			</div>
+			<div class="space-y-4 text-sm text-muted-foreground">
+				<div>
+					<p class="mb-1 font-medium text-foreground">Concerts</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Correction d'un problème qui pouvait afficher le même concert en doublon lors du premier ajout d'un artiste (si Ticketmaster renvoyait deux noms de salle légèrement différents pour le même événement).</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+
+		<section>
+			<div class="mb-4 flex items-center gap-2 text-foreground">
+				<History size={20} aria-hidden="true" />
 				<h2 class="text-base font-medium">v 1.2.2 — Mai 2026</h2>
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
