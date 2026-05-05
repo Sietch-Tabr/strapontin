@@ -224,8 +224,8 @@ export async function persisterConcerts(
   let totalInserts = 0;
   let totalUpdates = 0;
 
-  // Insérer par lots de 50
-  const TAILLE_LOT = 50;
+  // Insérer par lots de 500 — PG gère sans problème, réduit les aller-retours DB
+  const TAILLE_LOT = 500;
   for (let i = 0; i < listeFiltree.length; i += TAILLE_LOT) {
     const lot = listeFiltree.slice(i, i + TAILLE_LOT);
 
