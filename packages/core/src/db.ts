@@ -4,6 +4,6 @@ import * as schema from "./schema.js";
 
 export type DB = ReturnType<typeof creerDb>;
 
-export function creerDb(url: string) {
-  return drizzle(postgres(url), { schema });
+export function creerDb(url: string, max = 10) {
+  return drizzle(postgres(url, { max }), { schema });
 }
