@@ -69,15 +69,28 @@ async function resoudreArtistesConcerts(
   let nbDeezer = 0;
   let nbInchange = 0;
 
-  for (const nom of nomsAResoudre) {
-    const norm = normaliserTexte(nom);
-    const cle = cleNomCanonique("artiste", norm);
-    const cache = await redis.get(cle).catch(() => null);
-    if (cache) {
-      tableauResolution.set(nom, cache);
+  // Passe 1 — lectures Redis en parallèle (pas de limite de débit)
+  const resultatsCache = await Promise.all(
+    nomsAResoudre.map(async (nom) => {
+      const norm = normaliserTexte(nom);
+      const cle = cleNomCanonique("artiste", norm);
+      const cached = await redis.get(cle).catch(() => null);
+      return { nom, norm, cle, cached };
+    }),
+  );
+
+  const nomsSansCache: { nom: string; norm: string; cle: string }[] = [];
+  for (const { nom, norm, cle, cached } of resultatsCache) {
+    if (cached) {
+      tableauResolution.set(nom, cached);
       cacheHits++;
-      continue;
+    } else {
+      nomsSansCache.push({ nom, norm, cle });
     }
+  }
+
+  // Passe 2 — résolution MB/Deezer séquentielle (rate limit MB 1 req/s)
+  for (const { nom, cle } of nomsSansCache) {
     const { nom: nomResolu, source } = await resoudreNomCanonique(
       "artiste",
       nom,

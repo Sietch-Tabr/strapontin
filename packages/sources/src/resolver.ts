@@ -47,19 +47,12 @@ function attendreMB(): Promise<void> {
   return new Promise((r) => setTimeout(r, DELAI_MB_MS));
 }
 
-function fetchAvecTimeout(url: string, init?: RequestInit): Promise<Response> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_FETCH_MS);
-  return fetch(url, { ...init, signal: ctrl.signal }).finally(() =>
-    clearTimeout(timer),
-  );
-}
-
 async function rechercherMBArtiste(nom: string): Promise<string | null> {
   const url = `${MUSICBRAINZ_BASE}/artist/?query=${encodeURIComponent(nom)}&fmt=json&limit=1`;
   try {
-    const res = await fetchAvecTimeout(url, {
+    const res = await fetch(url, {
       headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(TIMEOUT_FETCH_MS),
     });
     await attendreMB();
     if (!res.ok) return null;
@@ -83,8 +76,9 @@ async function rechercherMBArtiste(nom: string): Promise<string | null> {
 async function rechercherMBSalle(nom: string): Promise<string | null> {
   const url = `${MUSICBRAINZ_BASE}/place/?query=${encodeURIComponent(nom)}&fmt=json&limit=1`;
   try {
-    const res = await fetchAvecTimeout(url, {
+    const res = await fetch(url, {
       headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(TIMEOUT_FETCH_MS),
     });
     await attendreMB();
     if (!res.ok) return null;
@@ -103,7 +97,7 @@ async function rechercherMBSalle(nom: string): Promise<string | null> {
 async function rechercherDeezerArtiste(nom: string): Promise<string | null> {
   const url = `${DEEZER_BASE}/search/artist?q=${encodeURIComponent(nom)}&limit=1`;
   try {
-    const res = await fetchAvecTimeout(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_FETCH_MS) });
     if (!res.ok) return null;
     const data = (await res.json()) as {
       data?: Array<{ name: string }>;
