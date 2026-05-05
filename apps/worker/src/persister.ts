@@ -67,10 +67,56 @@ type ValeurConcert = {
 // quand la salle est sémantiquement la même mais nommée différemment selon la source.
 // On réécrit uniquement salleNorm (clé de conflit), pas salle, afin que la règle
 // de préférence casse-mixte de l'upsert puisse choisir le meilleur nom d'affichage.
+// Deux passes : intra-lot d'abord, puis contre la base.
 async function reconcilierSalles(
   lot: ValeurConcert[],
 ): Promise<ValeurConcert[]> {
-  const artistesNorms = [...new Set(lot.map((c) => c.artisteNorm))];
+  // Passe 1 — réconciliation intra-lot
+  // TM peut retourner le même event avec deux noms de salle légèrement différents
+  // (ex. "salle pleyel" / "salle pleyel paris 08") dans le même lot.
+  // On unifie vers le salleNorm le plus long (le plus spécifique).
+  const remplacementsIntraLot = new Map<string, string>();
+  const parGroupe = new Map<string, string[]>();
+
+  for (const concert of lot) {
+    const cle = `${concert.artisteNorm}|${concert.date}`;
+    const groupe = parGroupe.get(cle) ?? [];
+    if (!groupe.includes(concert.salleNorm)) groupe.push(concert.salleNorm);
+    parGroupe.set(cle, groupe);
+  }
+
+  for (const sallesNorm of parGroupe.values()) {
+    if (sallesNorm.length <= 1) continue;
+    for (let i = 0; i < sallesNorm.length; i++) {
+      for (let j = i + 1; j < sallesNorm.length; j++) {
+        const a = sallesNorm[i]!;
+        const b = sallesNorm[j]!;
+        if (estDoublonSalle(a, b)) {
+          const canonique = a.length >= b.length ? a : b;
+          remplacementsIntraLot.set(a, canonique);
+          remplacementsIntraLot.set(b, canonique);
+        }
+      }
+    }
+  }
+
+  const lotApresIntraLot =
+    remplacementsIntraLot.size === 0
+      ? lot
+      : lot.map((concert) => {
+          const canonique = remplacementsIntraLot.get(concert.salleNorm);
+          if (!canonique || canonique === concert.salleNorm) return concert;
+          logger.debug(
+            { entrant: concert.salleNorm, canonique },
+            "doublon salle intra-lot réconcilié",
+          );
+          return { ...concert, salleNorm: canonique };
+        });
+
+  // Passe 2 — réconciliation contre la base
+  const artistesNorms = [
+    ...new Set(lotApresIntraLot.map((c) => c.artisteNorm)),
+  ];
 
   const existants = await db
     .select({
@@ -89,7 +135,7 @@ async function reconcilierSalles(
     indexExistants.set(cle, groupe);
   }
 
-  return lot.map((concert) => {
+  return lotApresIntraLot.map((concert) => {
     const cle = `${concert.artisteNorm}|${concert.date}`;
     const sallesExistantes = indexExistants.get(cle);
     if (!sallesExistantes) return concert;
