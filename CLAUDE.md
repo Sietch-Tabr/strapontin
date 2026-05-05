@@ -191,6 +191,7 @@ Classifications TM (`fetchArtiste`, `fetchArtistesBatch`, `fetchRegion`) : `musi
 - **Concurrence** : `{ concurrency: 1 }` dans le constructeur `Worker` — les jobs TM s'exécutent séquentiellement, évitant le pic concurrent (>5 req/s) qui causait des 429 TM (#213).
 - **Rate limit burst** : TM applique une limite de 5 req/s indépendamment du quota journalier. `fetchSalle` ajoute 200ms après chaque appel ; `fetchToutesPages` ajoute 250ms entre pages (#240).
 - **`artiste_norm` vide** : `persisterConcerts` rejette les concerts dont `normaliserTexte(artiste)` produit une chaîne vide (scripts non-latins comme l'arabe, séparateurs `– – –`) — ils sont loggés `warn` et non insérés (#242, #243).
+- **Retry strategy** : jobs à `jobId` fixe (cron/admin) → pas de retry (re-planifiés toutes les 2h de toute façon). Jobs sans `jobId` fixe (actions utilisateur : `fetch:artiste`, `fetch:salle`, `recalculer:matches`) → `attempts: 3, backoff: exponential 5s` (#255).
 
 ### Redis — configuration
 
