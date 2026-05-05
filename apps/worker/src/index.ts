@@ -12,7 +12,7 @@ const connexionRedis = {
 
 const worker = new Worker<JobData>("concerts", traiterJob, {
   connection: connexionRedis,
-  concurrency: 1,
+  concurrency: 3,
 });
 
 worker.on("ready", () => {
