@@ -17,9 +17,9 @@ steps:
       - printf 'DATABASE_URL=x\nBETTER_AUTH_SECRET=x\nREDIS_URL=x\nPUBLIC_BASE_URL=http://localhost\n' > .env
       - pnpm --filter @strapontin/web run check
       - pnpm --filter @strapontin/worker exec tsc --noEmit
+      - pnpm audit --audit-level=high
     when:
       - event: push
-        branch: main
 
   - name: deploy
     image: alpine

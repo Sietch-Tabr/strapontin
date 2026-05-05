@@ -128,6 +128,15 @@ describe("dedoublonner — passe fuzzy", () => {
     expect(dedoublonner(concerts)).toHaveLength(1);
   });
 
+  it("ne fusionne pas 'The Beatles' vs 'Beatles' car sim < 0.85", () => {
+    // "beatles" (7) vs "the beatles" (11) — distance Levenshtein 4, sim ≈ 0.636
+    const concerts = [
+      concert({ artiste: "The Beatles", date: "2025-11-01", salle: "Olympia", ville: "Paris", source: "ticketmaster" }),
+      concert({ artiste: "Beatles", date: "2025-11-01", salle: "Olympia", ville: "Paris", source: "eventim" }),
+    ];
+    expect(dedoublonner(concerts)).toHaveLength(2);
+  });
+
   it("ne fusionne pas deux artistes distincts malgré même date/ville", () => {
     const concerts = [
       concert({ artiste: "Radiohead", date: "2025-11-12", salle: "Accor Arena", ville: "Paris", source: "ticketmaster" }),

@@ -2,7 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("../db.js", () => ({ db: {} }));
 
-import { estDoublonSalle, deduplicerParCleConflit } from "../persister.js";
+import {
+  estDoublonSalle,
+  deduplicerParCleConflit,
+  deduplicerLotReconcilie,
+  type ValeurConcert,
+} from "../persister.js";
 import type { ConcertBrut } from "@strapontin/sources";
 
 describe("estDoublonSalle", () => {
@@ -116,5 +121,66 @@ describe("deduplicerParCleConflit", () => {
 
   it("deduplicer_liste_vide_retourne_vide", () => {
     expect(deduplicerParCleConflit([])).toHaveLength(0);
+  });
+});
+
+function valeur(
+  artisteNorm: string,
+  date: string,
+  salleNorm: string,
+  artiste = artisteNorm,
+  salle = salleNorm,
+): ValeurConcert {
+  return {
+    artiste,
+    artisteNorm,
+    date,
+    heure: null,
+    salle,
+    salleNorm,
+    ville: null,
+    dept: null,
+    prixMin: null,
+    prixMax: null,
+    url: null,
+    source: "ticketmaster",
+    classification: null,
+    genre: null,
+    disponible: true,
+    statut: null,
+  };
+}
+
+describe("deduplicerLotReconcilie", () => {
+  it("liste_vide_retourne_vide", () => {
+    expect(deduplicerLotReconcilie([])).toHaveLength(0);
+  });
+
+  it("concerts_cles_differentes_conserves_les_deux", () => {
+    const lot = [
+      valeur("mika", "2026-06-01", "accor arena"),
+      valeur("coldplay", "2026-06-01", "stade de france"),
+    ];
+    expect(deduplicerLotReconcilie(lot)).toHaveLength(2);
+  });
+
+  it("doublon_meme_cle_conserve_version_avec_diacritiques_artiste", () => {
+    const lot = [
+      valeur("julien dore", "2026-05-10", "olympia", "Julien Dore", "Olympia"),
+      valeur("julien dore", "2026-05-10", "olympia", "Julien Doré", "Olympia"),
+    ];
+    const resultat = deduplicerLotReconcilie(lot);
+    expect(resultat).toHaveLength(1);
+    expect(resultat[0]!.artiste).toBe("Julien Doré");
+  });
+
+  it("doublon_meme_cle_conserve_version_avec_casse_mixte_salle", () => {
+    const lot = [
+      valeur("mika", "2026-07-01", "zenith paris", "Mika", "ZENITH PARIS"),
+      valeur("mika", "2026-07-01", "zenith paris", "Mika", "Zénith Paris"),
+    ];
+    const resultat = deduplicerLotReconcilie(lot);
+    expect(resultat).toHaveLength(1);
+    expect(resultat[0]!.salle).toBe("Zénith Paris");
   });
 });
