@@ -273,8 +273,10 @@ export async function persisterConcerts(
           url: sql`COALESCE(excluded.url, ${concerts.url})`,
           classification: sql`COALESCE(excluded.classification, ${concerts.classification})`,
           genre: sql`COALESCE(excluded.genre, ${concerts.genre})`,
-          disponible: sql`excluded.disponible`,
-          statut: sql`excluded.statut`,
+          // Conserver le statut TM si la source entrante (Eventim) n'en fournit pas —
+          // évite qu'un fetch Eventim postérieur écrase 'offsale' avec NULL.
+          disponible: sql`CASE WHEN excluded.statut IS NOT NULL THEN excluded.disponible ELSE ${concerts.disponible} END`,
+          statut: sql`COALESCE(excluded.statut, ${concerts.statut})`,
           updatedAt: sql`now()`,
         },
       })
