@@ -127,7 +127,7 @@ Secrets : `ssh_key` (clé privée générée par `provision.sh --env prod`), `lx
 6. `systemctl restart strapontin-web strapontin-worker`
 7. healthcheck : `curl -f http://localhost:3000/health` (10 retries × 3s)
 
-Rollback automatique si healthcheck expire : `git reset --hard $PREV_COMMIT` → rebuild → restart.
+Rollback automatique sur `trap ERR` (étapes 3–5 : install, build, migrate) et sur healthcheck expiré. ⚠️ Si la migration (étape 5) échoue après avoir démarré, le schéma DB peut être partiellement modifié — le rollback restaure uniquement le code.
 
 `system-update.sh` — à exécuter depuis le **host Proxmox** (pas depuis le LXC ni le Mac) :
 
