@@ -7,6 +7,7 @@ import { Queue } from "bullmq";
 import { isNotNull } from "drizzle-orm";
 import { userArtistes, userConfig, userSalles } from "@strapontin/core/schema";
 import { db } from "./db.js";
+import { lireDispoQuotaTM, SEUIL_QUOTA_CRON } from "./jobs.js";
 import type { JobData } from "./jobs.js";
 
 const logger = pino({ name: "cron" });
@@ -22,9 +23,20 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
   const correlationId = randomUUID();
   logger.info({ correlationId }, "planification des jobs utilisateurs");
 
+  // Contrôle quota TM : les jobs cron (batch, région) sont suspendus si le quota
+  // disponible est inférieur au seuil — les actions utilisateur continuent jusqu'au seuil d'abandon.
+  const dispo = await lireDispoQuotaTM();
+  const cronAutorise = dispo === null || dispo >= SEUIL_QUOTA_CRON;
+  if (!cronAutorise) {
+    logger.warn(
+      { dispo, seuil: SEUIL_QUOTA_CRON },
+      "quota TM faible — jobs cron (batch, région) suspendus",
+    );
+  }
+
   // Un seul job batch pour tous les artistes — évite N requêtes TM individuelles
   const nbArtistes = await db.$count(userArtistes);
-  if (nbArtistes > 0) {
+  if (nbArtistes > 0 && cronAutorise) {
     await queue.add(
       "fetch:artistes:batch",
       { type: "fetch:artistes:batch", correlationId },
@@ -50,7 +62,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     }
   }
 
-  if (tousLesDepts.size > 0) {
+  if (tousLesDepts.size > 0 && cronAutorise) {
     await queue.add(
       "fetch:region",
       {
