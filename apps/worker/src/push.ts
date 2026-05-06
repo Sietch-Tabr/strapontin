@@ -62,7 +62,10 @@ function construirePayload(concerts: ConcertPush[], baseUrl: string): string {
     title: titre,
     body: corps,
     icon: `${baseUrl}/icon-192.png`,
-    url: `${baseUrl}/spectacles`,
+    url:
+      concerts.length === 1
+        ? `${baseUrl}/spectacles?artiste=${encodeURIComponent(premiere.artiste)}`
+        : `${baseUrl}/spectacles`,
   });
 }
 
