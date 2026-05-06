@@ -5,7 +5,7 @@ import type { Job } from "bullmq";
 import type { ConcertBrut, TicketmasterSource } from "@strapontin/sources";
 import { resoudreNomCanonique } from "@strapontin/sources";
 import { dedoublonner, normaliserTexte } from "@strapontin/core";
-import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
+import { concerts, userArtistes } from "@strapontin/core/schema";
 import { lt } from "drizzle-orm";
 import { db } from "./db.js";
 import { obtenirTicketmaster, eventim } from "./sources.js";
@@ -299,7 +299,10 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
 
   switch (data.type) {
     case "fetch:artiste": {
-      logger.info({ artiste: data.artiste, correlationId }, "fetch:artiste démarré");
+      logger.info(
+        { artiste: data.artiste, correlationId },
+        "fetch:artiste démarré",
+      );
 
       const tm = await obtenirTicketmaster();
       const [resultsTM, resultsEventim] = await Promise.allSettled([
@@ -553,7 +556,10 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     }
 
     case "fetch:salle": {
-      logger.info({ venueId: data.venueId, correlationId }, "fetch:salle démarré");
+      logger.info(
+        { venueId: data.venueId, correlationId },
+        "fetch:salle démarré",
+      );
 
       const tmSalle = await obtenirTicketmaster();
       if (!tmSalle.fetchSalle) {
@@ -580,7 +586,10 @@ export async function traiterJob(job: Job<JobData>): Promise<void> {
     }
 
     case "recalculer:matches": {
-      logger.info({ userIds: data.userIds, correlationId }, "recalculer:matches démarré");
+      logger.info(
+        { userIds: data.userIds, correlationId },
+        "recalculer:matches démarré",
+      );
       await recalculerMatches(data.userIds);
       break;
     }
