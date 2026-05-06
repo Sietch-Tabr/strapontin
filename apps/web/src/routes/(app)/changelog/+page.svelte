@@ -16,6 +16,22 @@
 		<section>
 			<div class="mb-4 flex items-center gap-2 text-foreground">
 				<History size={20} aria-hidden="true" />
+				<h2 class="text-base font-medium">v 1.3.0 — Mai 2026</h2>
+			</div>
+			<div class="space-y-4 text-sm text-muted-foreground">
+				<div>
+					<p class="mb-1 font-medium text-foreground">Notifications</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Les concerts dont les billets ne sont plus disponibles n'apparaissent plus comme « Nouveaux » et ne déclenchent plus de notification.</li>
+						<li>Le clic sur une notification ouvre directement les spectacles de l'artiste concerné.</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+
+		<section>
+			<div class="mb-4 flex items-center gap-2 text-foreground">
+				<History size={20} aria-hidden="true" />
 				<h2 class="text-base font-medium">v 1.2.3 — Mai 2026</h2>
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">

@@ -400,6 +400,30 @@ export async function recalculerMatches(userIds?: string[]): Promise<void> {
     const valeurs = concertIds.map((concertId) => ({ userId, concertId }));
     await db.insert(userMatches).values(valeurs).onConflictDoNothing();
 
+    // Les concerts indisponibles restent visibles dans /spectacles mais ne doivent pas
+    // afficher le badge Nouveau — on les marque notifiés immédiatement sans envoyer de notif.
+    await db
+      .update(userMatches)
+      .set({ notifieLe: new Date() })
+      .where(
+        and(
+          eq(userMatches.userId, userId),
+          isNull(userMatches.notifieLe),
+          inArray(
+            userMatches.concertId,
+            db
+              .select({ id: concerts.id })
+              .from(concerts)
+              .where(
+                and(
+                  inArray(concerts.id, concertIds),
+                  eq(concerts.disponible, false),
+                ),
+              ),
+          ),
+        ),
+      );
+
     logger.info({ userId, matches: concertIds.length }, "matches recalculés");
   }
 
