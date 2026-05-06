@@ -29,6 +29,7 @@ const logger = pino({ name: "persister" });
 
 const STATUTS_INDISPONIBLES = new Set([
   "cancelled",
+  "offsale",
   "postponed",
   "rescheduled",
 ]);
@@ -528,7 +529,7 @@ async function envoyerDigestPourUser(
         or(
           isNull(concerts.statut),
           not(
-            inArray(concerts.statut, ["cancelled", "postponed", "rescheduled"]),
+            inArray(concerts.statut, ["cancelled", "offsale", "postponed", "rescheduled"]),
           ),
         ),
         filtreConcerts,

@@ -252,7 +252,7 @@ TM retourne les noms en TOUT MAJUSCULE pour les événements France.
 
 `reconcilierSalles()` réécrit `salle_norm` des concerts entrants dont la salle est sémantiquement identique à un existant (similarité ≥ 0.5 ou containment, longueur ≥ 4).
 Clé upsert : `(artiste_norm, date, salle_norm)`. En conflit : diacritiques préférées pour l'artiste, casse mixte préférée pour la salle.
-Colonne `statut` (`text`, nullable) : valeur brute TM (`onsale`, `offsale`, `cancelled`, `postponed`, `rescheduled`), `NULL` pour Eventim. Le worker l'écrit en upsert ; le digest ne notifie pas les statuts `cancelled/postponed/rescheduled`.
+Colonne `statut` (`text`, nullable) : valeur brute TM (`onsale`, `offsale`, `cancelled`, `postponed`, `rescheduled`), `NULL` pour Eventim. Le worker l'écrit en upsert ; le digest ne notifie pas les statuts `cancelled/offsale/postponed/rescheduled` (seuls `onsale` et `NULL` déclenchent une notification).
 
 ## UI / Design system
 
