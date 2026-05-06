@@ -127,7 +127,8 @@ async function resoudreArtistesConcerts(
 
 // Seuils de protection quota TM (resets toutes les 24h)
 const SEUIL_QUOTA_WARN = 200;
-const SEUIL_QUOTA_ABORT = 10;
+const SEUIL_QUOTA_ABORT = 50;
+export const SEUIL_QUOTA_CRON = 500;
 
 // Vérifie le quota TM stocké en Redis. Retourne false si le job doit être annulé.
 async function verifierQuotaTM(nomJob: string): Promise<boolean> {
@@ -231,7 +232,7 @@ async function sauvegarderQuotaTM(
   return quota.dispo;
 }
 
-async function lireDispoQuotaTM(): Promise<number | null> {
+export async function lireDispoQuotaTM(): Promise<number | null> {
   const json = await redis.get(CLE_QUOTA_TM).catch(() => null);
   if (!json) return null;
   try {
