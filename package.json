@@ -9,9 +9,10 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
   },
+  "packageManager": "pnpm@11.0.8",
   "engines": {
     "node": ">=24",
-    "pnpm": ">=9"
+    "pnpm": ">=11"
   },
   "devDependencies": {
     "@types/web-push": "^3.6.4",
