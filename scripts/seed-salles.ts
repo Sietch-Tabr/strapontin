@@ -16,7 +16,7 @@ if (!DATABASE_URL) {
 }
 
 if (!USER_EMAIL) {
-  console.error("USER_EMAIL manquant — ex: USER_EMAIL=kwaite@hotmail.fr");
+  console.error("USER_EMAIL manquant — ex: USER_EMAIL=user@example.com");
   process.exit(1);
 }
 
