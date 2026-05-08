@@ -289,7 +289,10 @@ export async function persisterConcerts(
     }
   }
 
-  logger.info({ total: ids.length, inserts: totalInserts, updates: totalUpdates }, "concerts persistés");
+  logger.info(
+    { total: ids.length, inserts: totalInserts, updates: totalUpdates },
+    "concerts persistés",
+  );
   return ids;
 }
 
@@ -555,7 +558,12 @@ async function envoyerDigestPourUser(
         or(
           isNull(concerts.statut),
           not(
-            inArray(concerts.statut, ["cancelled", "offsale", "postponed", "rescheduled"]),
+            inArray(concerts.statut, [
+              "cancelled",
+              "offsale",
+              "postponed",
+              "rescheduled",
+            ]),
           ),
         ),
         filtreConcerts,

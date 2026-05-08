@@ -14,8 +14,6 @@ import {
   construireConditionStatut,
 } from "$lib/server/filtres";
 
-const SEUIL_NEW_MS = 7 * 24 * 3600 * 1000;
-
 export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0];
 
@@ -43,8 +41,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       salle: concerts.salle,
       ville: concerts.ville,
       url: concerts.url,
-      firstSeen: concerts.firstSeen,
       statut: concerts.statut,
+      notifieLe: userMatches.notifieLe,
     })
     .from(userMatches)
     .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
@@ -69,8 +67,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       salle: string;
       ville: string | null;
       url: string | null;
-      firstSeen: Date | null;
       statut: string | null;
+      notifieLe: Date | null;
     }[]
   >();
   for (const concert of prochainsConcerts) {
@@ -79,15 +77,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     groupesMap.set(concert.artiste, liste);
   }
 
-  const seuilNew = new Date(Date.now() - SEUIL_NEW_MS);
-
   const artistesGroupes = [...groupesMap.entries()].map(([artiste, dates]) => ({
     artiste,
     estTournee: dates.length >= 2,
-    estNew: dates.some((c) => c.firstSeen && new Date(c.firstSeen) > seuilNew),
+    estNew: dates.some((c) => c.notifieLe === null),
     concerts: dates.map((c) => ({
       ...c,
-      estNew: c.firstSeen ? new Date(c.firstSeen) > seuilNew : false,
+      estNew: c.notifieLe === null,
     })),
   }));
 
