@@ -86,6 +86,7 @@ export const users = pgTable(
     mustChangeCredentials: boolean("must_change_credentials")
       .notNull()
       .default(false),
+    twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -153,6 +154,21 @@ export const verifications = pgTable("verifications", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }),
+});
+
+// -------------------------------------------------------------------
+// two_factor
+// Table des secrets TOTP par utilisateur (Better Auth plugin twoFactor).
+// -------------------------------------------------------------------
+
+export const twoFactors = pgTable("two_factor", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  secret: text("secret").notNull(),
+  backupCodes: text("backup_codes").notNull(),
+  verified: boolean("verified").default(true),
 });
 
 // -------------------------------------------------------------------

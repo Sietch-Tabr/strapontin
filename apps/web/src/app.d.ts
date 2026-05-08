@@ -11,6 +11,7 @@ declare global {
             role: string;
             username?: string | null;
             mustChangeCredentials: boolean;
+            twoFactorEnabled?: boolean | null;
           })
         | null;
     }

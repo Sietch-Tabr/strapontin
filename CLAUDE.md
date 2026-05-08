@@ -230,12 +230,14 @@ Invite-only : l'admin crée le compte avec l'email uniquement. Le système gén�
 
 **`PUBLIC_BASE_URL` — validation** : `/setup` accepte `http://` et `https://` (IP ou domaine). `/admin` exige `https://` pour les domaines publics, accepte `http://` pour les IPs et `localhost`.
 
-**Rate limiting login** : 5 tentatives max / 15 min sur `/sign-in/username`. Storage mémoire.
+**Rate limiting login** : 5 tentatives max / 15 min sur `/sign-in/username` et `/two-factor/verify-totp`. Storage mémoire.
 
 **Cap par utilisateur** : 500 artistes max, 200 salles max.
 
 Plugin `username` : colonnes `username` + `display_username` sur `users`.
 Annotation `@__NO_SIDE_EFFECTS__` strippée dans `vite.config.ts` → évite une erreur Rollup avec adapter-node.
+
+**Double authentification TOTP (2FA)** : plugin `twoFactor` dans `auth.ts` (`issuer: "Strapontin"`). Activer/désactiver dans `/parametres#deux-facteurs`. Guard dans `hooks.server.ts` redirige tout admin sans 2FA vers `/parametres#deux-facteurs`. Flux login : si `twoFactorRedirect: true` dans la réponse, afficher le formulaire TOTP puis appeler `authClient.twoFactor.verifyTotp({ code })`. Les actions serveur utilisent `auth.handler` avec une requête synthétique (le plugin ne s'expose pas via `auth.api`). Colonne `two_factor_enabled` sur `users` + table `two_factor` (migration `0003_two_factor.sql`).
 
 ## Dédoublonnage inter-sources (packages/core)
 

@@ -124,6 +124,17 @@ const gererAuth: Handle = async ({ event, resolve }) => {
     redirect(302, "/first-login");
   }
 
+  // Admin sans 2FA : rediriger vers les paramètres
+  if (
+    session.user.role === "admin" &&
+    !session.user.twoFactorEnabled &&
+    event.url.pathname !== "/parametres" &&
+    event.url.pathname !== "/first-login" &&
+    !event.url.pathname.startsWith("/api/")
+  ) {
+    redirect(302, "/parametres#deux-facteurs");
+  }
+
   // Résoudre le thème : cookie en priorité (normalisé pour compat anciens cookies).
   // Si absent ou invalide (nouvel appareil), lire la préférence en DB et poser le cookie.
   let theme = normaliserTheme(event.cookies.get("theme"));
