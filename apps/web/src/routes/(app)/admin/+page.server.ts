@@ -7,9 +7,9 @@ import {
 } from "$lib/server/redis";
 import { CLE_LOGS_ADMIN, type EntreeLogAdmin } from "$lib/server/log-admin";
 import { auth } from "$lib/auth";
-import { users, userArtistes, userConfig } from "@strapontin/core/schema";
+import { users, userArtistes, userConfig, sessions } from "@strapontin/core/schema";
 import type { QuotaTM } from "@strapontin/sources";
-import { eq } from "drizzle-orm";
+import { eq, max } from "drizzle-orm";
 import { queue } from "$lib/server/queue";
 import { randomBytes, randomUUID, createECDH } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
@@ -27,18 +27,30 @@ export const load: PageServerLoad = async ({ locals }) => {
     redirect(302, "/");
   }
 
-  const tousLesUsers = await db
-    .select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      role: users.role,
-      username: users.username,
-      mustChangeCredentials: users.mustChangeCredentials,
-      createdAt: users.createdAt,
-    })
-    .from(users)
-    .orderBy(users.createdAt);
+  const [tousLesUsers, activites] = await Promise.all([
+    db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        username: users.username,
+        mustChangeCredentials: users.mustChangeCredentials,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .orderBy(users.createdAt),
+    db
+      .select({ userId: sessions.userId, derniere: max(sessions.createdAt) })
+      .from(sessions)
+      .groupBy(sessions.userId),
+  ]);
+
+  const activiteParUser = new Map(activites.map((a) => [a.userId, a.derniere]));
+  const utilisateurs = tousLesUsers.map((u) => ({
+    ...u,
+    derniereActivite: activiteParUser.get(u.id) ?? null,
+  }));
 
   const quotaJson = await redis.get(CLE_QUOTA_TM).catch(() => null);
   const quotaTM: QuotaTM | null = quotaJson ? JSON.parse(quotaJson) : null;
@@ -84,7 +96,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     })),
   );
 
-  return { utilisateurs: tousLesUsers, quotaTM, statsJobs, configStatuts, logsAdmin };
+  return { utilisateurs, quotaTM, statsJobs, configStatuts, logsAdmin };
 };
 
 export const actions: Actions = {
