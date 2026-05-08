@@ -22,6 +22,13 @@
       "when": 1777670725730,
       "tag": "0002_supprimer_rayon_km",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1746748800000,
+      "tag": "0003_two_factor",
+      "breakpoints": true
     }
   ]
 }

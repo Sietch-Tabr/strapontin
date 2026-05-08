@@ -39,6 +39,12 @@
 						<li>La page d'administration a été réorganisée en onglets : Tableau de bord, Logs, Configuration, Utilisateurs. La colonne « Dernière activité » indique la date de connexion de chaque utilisateur.</li>
 					</ul>
 				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Double authentification</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>La double authentification TOTP est disponible dans Paramètres → Double authentification. Fonctionne avec Google Authenticator, Authy, 1Password et toute application compatible TOTP. Elle est obligatoire pour les administrateurs.</li>
+					</ul>
+				</div>
 			</div>
 		</section>
 

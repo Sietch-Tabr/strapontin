@@ -2,7 +2,7 @@
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
-	import { Sun, Moon, Monitor, Save, KeyRound, User, Download, Upload, Bell } from '@lucide/svelte';
+	import { Sun, Moon, Monitor, Save, KeyRound, User, Download, Upload, Bell, Shield } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 	import ComboboxDepts from '$lib/components/ui/combobox-depts.svelte';
 	import { TOUS_LES_DEPTS } from '$lib/constantes/depts';
@@ -47,6 +47,8 @@
 	let enregistrementEmail = $state(false);
 	let enregistrementIdentifiant = $state(false);
 	let enregistrementMdp = $state(false);
+	let activation2FaEnCours = $state(false);
+	let desactivation2FaEnCours = $state(false);
 	let importEnCours = $state(false);
 	let modeImport = $state<'merger' | 'ecraser'>('merger');
 	let confirmationSuppression = $state(false);
@@ -646,6 +648,133 @@
 					</button>
 				</form>
 			</div>
+		</section>
+
+		<!-- Double authentification -->
+		<section id="deux-facteurs" class="rounded-lg border border-border bg-card p-6">
+			<div class="mb-6 flex items-center gap-2">
+				<Shield size={18} class="text-foreground" aria-hidden="true" />
+				<h2 class="text-base font-semibold text-foreground">Double authentification (2FA)</h2>
+			</div>
+
+			{#if data.utilisateur?.twoFactorEnabled}
+				<!-- 2FA activée -->
+				<div class="mb-4 flex items-center gap-2">
+					<span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>
+					<span class="text-sm text-green-700 dark:text-green-400">Double authentification activée</span>
+				</div>
+				<p class="mb-4 text-sm text-muted-foreground">
+					Votre compte est protégé par une application d'authentification TOTP.
+				</p>
+
+				{#if form?.succes === 'desactiverDeuxFacteurs'}
+					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+						Double authentification désactivée.
+					</p>
+				{:else}
+					{#if form?.erreur && form?.section === 'deuxFacteurs'}
+						<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+							{form.erreur}
+						</p>
+					{/if}
+					<form method="POST" action="?/desactiverDeuxFacteurs" class="space-y-3" use:enhance={() => {
+						desactivation2FaEnCours = true;
+						return async ({ result, update }) => {
+							if (result.type === 'success') toast.success('Double authentification désactivée.');
+							else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue.');
+							await update();
+							desactivation2FaEnCours = false;
+						};
+					}}>
+						<div>
+							<label for="mdp-desactiver-2fa" class="mb-1.5 block text-sm font-medium text-foreground">
+								Confirmer avec votre mot de passe
+							</label>
+							<input
+								id="mdp-desactiver-2fa"
+								type="password"
+								name="motDePasse"
+								required
+								autocomplete="current-password"
+								class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+							/>
+						</div>
+						<button
+							type="submit"
+							disabled={desactivation2FaEnCours}
+							class="rounded-md border border-destructive/50 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+						>
+							{desactivation2FaEnCours ? 'Désactivation…' : 'Désactiver la double authentification'}
+						</button>
+					</form>
+				{/if}
+			{:else}
+				<!-- 2FA non activée -->
+				<p class="mb-4 text-sm text-muted-foreground">
+					Protégez votre compte avec une application d'authentification (Google Authenticator, Authy, 1Password…).
+					Un code temporaire vous sera demandé à chaque connexion.
+				</p>
+
+				{#if form?.succes === 'activerDeuxFacteurs'}
+					<!-- Affichage du QR code après activation -->
+					<div class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+						Double authentification activée. Scannez le QR code ci-dessous avec votre application.
+					</div>
+					<div class="space-y-6">
+						<div>
+							<p class="mb-3 text-sm font-medium text-foreground">Scannez ce QR code</p>
+							<img src={form.qrCodeDataUrl} alt="QR code TOTP" class="rounded-md border border-border" width="200" height="200" />
+						</div>
+						<div>
+							<p class="mb-2 text-sm font-medium text-foreground">Codes de secours</p>
+							<p class="mb-3 text-sm text-muted-foreground">
+								Conservez ces codes en lieu sûr. Chacun ne peut être utilisé qu'une seule fois en cas de perte d'accès à votre application.
+							</p>
+							<div class="grid grid-cols-2 gap-1.5 font-mono text-sm sm:grid-cols-3">
+								{#each (form.backupCodes ?? []) as code (code)}
+									<code class="rounded bg-muted px-2 py-1 text-muted-foreground">{code}</code>
+								{/each}
+							</div>
+						</div>
+					</div>
+				{:else}
+					{#if form?.erreur && form?.section === 'deuxFacteurs'}
+						<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+							{form.erreur}
+						</p>
+					{/if}
+					<form method="POST" action="?/activerDeuxFacteurs" class="space-y-3" use:enhance={() => {
+						activation2FaEnCours = true;
+						return async ({ result, update }) => {
+							if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue.');
+							await update();
+							activation2FaEnCours = false;
+						};
+					}}>
+						<div>
+							<label for="mdp-activer-2fa" class="mb-1.5 block text-sm font-medium text-foreground">
+								Confirmer avec votre mot de passe
+							</label>
+							<input
+								id="mdp-activer-2fa"
+								type="password"
+								name="motDePasse"
+								required
+								autocomplete="current-password"
+								class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+							/>
+						</div>
+						<button
+							type="submit"
+							disabled={activation2FaEnCours}
+							class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+						>
+							<Shield size={16} />
+							{activation2FaEnCours ? 'Activation…' : 'Activer la double authentification'}
+						</button>
+					</form>
+				{/if}
+			{/if}
 		</section>
 
 		<!-- Export / Import -->

@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { username } from "better-auth/plugins";
+import { username, twoFactor } from "better-auth/plugins";
 import pino from "pino";
 import { db } from "$lib/server/db";
 import * as schema from "@strapontin/core/schema";
@@ -34,6 +34,7 @@ export const auth = betterAuth({
       session: schema.sessions,
       account: schema.accounts,
       verification: schema.verifications,
+      twoFactor: schema.twoFactors,
     },
   }),
   emailAndPassword: {
@@ -46,6 +47,9 @@ export const auth = betterAuth({
     username({
       minUsernameLength: 3,
       maxUsernameLength: 30,
+    }),
+    twoFactor({
+      issuer: "Strapontin",
     }),
   ],
   user: {
@@ -66,6 +70,10 @@ export const auth = betterAuth({
     max: 100,
     customRules: {
       "/sign-in/username": {
+        window: 900,
+        max: 5,
+      },
+      "/two-factor/verify-totp": {
         window: 900,
         max: 5,
       },
