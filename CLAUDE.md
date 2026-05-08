@@ -115,6 +115,8 @@ Secrets : `ssh_key` (clé privée générée par `provision.sh --env prod`), `lx
 
 **Piège pnpm store** : les steps CI passent `--store-dir ./.pnpm-store` en flag CLI — le store est dans le workspace, partagé entre les steps. `PNPM_STORE_DIR` (env var) n'est pas fiable sur pnpm@11. `package-import-method=copy` supprimé du `.npmrc` (causait une race condition ENOENT). `typecheck` a `depends_on: [test]` pour sérialiser les deux steps — sans cela, les installs parallèles sur le même store causent une race condition ENOENT. `.pnpm-store/` est dans `.gitignore`.
 
+**pnpm 11 — pièges** : `packageManager: "pnpm@11.0.8"` dans `package.json` épingle la version pour corepack (sinon `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`). `pnpm-workspace.yaml` : `allowBuilds: true` pour `esbuild` et `msgpackr-extract` (sinon `ERR_PNPM_IGNORED_BUILDS`). `confirmModulesPurge: false` dans `pnpm-workspace.yaml` — pnpm 11 demande confirmation TTY avant de purger `node_modules` ; sans TTY (deploy SSH), il aborte (sinon `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`).
+
 ## Scripts d'exploitation
 
 `update.sh` — ordre strict :
@@ -290,11 +292,6 @@ Détails : [wiki Schéma de base de données](https://codeberg.org/Kwaite/strapo
 
 ## Roadmap — jalons
 
-- **v1.0** — livré 2026-04-18
-- **v1.1** — terminé (#65 Bandsintown, #37 doublons, #118 noms canoniques)
-- **v1.2** — livraison 2026-04-26 : #115 (LXC dev), #116 (provision.sh unifié), notifications push, PWA, masquer concert, RGPD, configuration clés admin, auto-save paramètres, formulaire de signalement, pré-remplissage URL au /setup, CI pnpm stabilisé
-- **v1.2.1** — livré 2026-05-01 : observabilité, sécurité, Node 24, tests, 50 tickets
-- **v1.2.2** — livré 2026-05-02
-- **v1.2.3** — en cours : bugfixes post-v1.2.2
-- **v1.3.0** — planifié : #110 (page maintenance NPM), #170 (email OVH), #245 (notifs offsale), #246 (navigation push)
+- **v1.0–v1.2.3** — livrés (2026-04-18 → 2026-05-08) : LXC dev, notifications push, PWA, RGPD, Better Auth, observabilité, Node 24, pnpm 11
+- **v1.3.0** — en cours : #245 (notifs offsale), #246 (navigation push), #267 (quota), #247 (update.sh), #251 (IPv6), #248 (aide), #249 (repo public), #252 (logs admin), #253 (onglets admin), #250 (2FA TOTP)
 - **v1.4.0** — à planifier
