@@ -36,6 +36,7 @@
 					<p class="mb-1 font-medium text-foreground">Administration</p>
 					<ul class="list-inside list-disc space-y-1">
 						<li>Les logs système sont maintenant visibles dans la page d'administration : connexions, modifications de configuration et état des jobs.</li>
+						<li>La page d'administration a été réorganisée en onglets : Tableau de bord, Logs, Configuration, Utilisateurs. La colonne « Dernière activité » indique la date de connexion de chaque utilisateur.</li>
 					</ul>
 				</div>
 			</div>
