@@ -5,6 +5,7 @@ import {
   cleStatsJob,
   type StatsJobRedis,
 } from "$lib/server/redis";
+import { CLE_LOGS_ADMIN, type EntreeLogAdmin } from "$lib/server/log-admin";
 import { auth } from "$lib/auth";
 import { users, userArtistes, userConfig } from "@strapontin/core/schema";
 import type { QuotaTM } from "@strapontin/sources";
@@ -56,6 +57,11 @@ export const load: PageServerLoad = async ({ locals }) => {
       : null,
   };
 
+  const logsRaw = await redis.lrange(CLE_LOGS_ADMIN, 0, 49).catch(() => [] as string[]);
+  const logsAdmin: EntreeLogAdmin[] = logsRaw
+    .map((s) => { try { return JSON.parse(s) as EntreeLogAdmin; } catch { return null; } })
+    .filter((e): e is EntreeLogAdmin => e !== null);
+
   const configsPresentes = await lireConfigsPresentes();
 
   const CLES_CONFIG = [
@@ -78,7 +84,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     })),
   );
 
-  return { utilisateurs: tousLesUsers, quotaTM, statsJobs, configStatuts };
+  return { utilisateurs: tousLesUsers, quotaTM, statsJobs, configStatuts, logsAdmin };
 };
 
 export const actions: Actions = {
