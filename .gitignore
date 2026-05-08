@@ -6,3 +6,4 @@ dist/
 *.sql.gz
 .DS_Store
 .pnpm-store/
+.auth-state.json
