@@ -7,6 +7,7 @@ import type { Handle } from "@sveltejs/kit";
 import { db, fermerDb } from "$lib/server/db";
 import { userConfig } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
+import { estAdresseIP } from "$lib/server/reseau";
 
 if (!building) {
   process.on("sveltekit:shutdown", async () => {
@@ -19,7 +20,6 @@ const ROUTES_PUBLIQUES = ["/login", "/setup", "/health"];
 
 // Bloque les accès directs par adresse IP (ex. http://192.168.20.79:3000)
 // qui contournent Nginx Proxy Manager. Autorise localhost (healthcheck) et tout nom de domaine.
-const estAdresseIP = (hote: string) => /^[\d.]+(?::\d+)?$/.test(hote);
 
 const bloquerAccesDirectIP: Handle = async ({ event, resolve }) => {
   if (dev) return resolve(event);
@@ -54,7 +54,10 @@ const securiser: Handle = async ({ event, resolve }) => {
   reponse.headers.set("X-Frame-Options", "DENY");
   reponse.headers.set("X-Content-Type-Options", "nosniff");
   reponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  reponse.headers.set("Permissions-Policy", "geolocation=(), camera=(), microphone=()");
+  reponse.headers.set(
+    "Permissions-Policy",
+    "geolocation=(), camera=(), microphone=()",
+  );
   if (!dev) {
     reponse.headers.set(
       "Strict-Transport-Security",

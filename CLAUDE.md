@@ -149,6 +149,8 @@ Détails complets : [wiki Déploiement](https://codeberg.org/Kwaite/strapontin/w
 
 **Headers de sécurité — responsabilités** : NPM pose HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. SvelteKit (`hooks.server.ts`) pose X-Robots-Tag, COOP, CORP. Le CSP est géré par `svelte.config.js` avec `mode: "nonce"` — `script-src` nonce uniquement, sans `unsafe-inline`. Détails : [wiki Déploiement](https://codeberg.org/Kwaite/strapontin/wiki/Déploiement#responsabilit%C3%A9-des-headers-de-s%C3%A9curit%C3%A9).
 
+**Blocage accès direct IP** : `hooks.server.ts` utilise `estAdresseIP()` depuis `$lib/server/reseau.ts` — couvre IPv4 (`192.168.x.x`), IPv6 bracketé (`[::1]:3000`) et IPv6 non bracketé (`::1`). Autorise les noms de domaine et `localhost`.
+
 ## Variables d'environnement (.env)
 
 `.env` sur le serveur : `DATABASE_URL`, `REDIS_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (URL publique de l'app — évite le warning Better Auth au démarrage et fixe les liens de reset mot de passe).
@@ -261,6 +263,7 @@ Colonne `statut` (`text`, nullable) : valeur brute TM (`onsale`, `offsale`, `can
 - **Thème** : `auto`/`clair`/`sombre` — cookie (1 an) + DB → pas de FOUC. Script inline dans `app.html` pour l'auto-détection.
 - **PWA** : `static/manifest.json`. Service worker : cache assets + gère push + `notificationclick` ouvre `/spectacles`.
 - **Push** : cap 10 abonnements/user. `GET /api/push` intentionnellement public (service worker récupère la clé VAPID sans session). Nettoyage auto des abonnements révoqués (404/410).
+- **Badge "Nouveau"** : basé sur `user_matches.notifie_le IS NULL` (pas de seuil temporel). Disparaît dès que le digest a notifié l'utilisateur. Les concerts `disponible=false` ont `notifie_le` posé immédiatement dans `recalculerMatches()` → jamais de badge "Nouveau" pour eux.
 
 ## Schéma PostgreSQL
 

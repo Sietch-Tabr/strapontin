@@ -230,8 +230,9 @@ export const actions: Actions = {
           });
         }
         const estIp =
+          url.hostname === "localhost" ||
           /^(\d{1,3}\.){3}\d{1,3}$/.test(url.hostname) ||
-          url.hostname === "localhost";
+          (/^[0-9a-fA-F:]+$/.test(url.hostname) && url.hostname.includes(":"));
         if (!estIp && url.protocol !== "https:") {
           return fail(400, {
             erreur: "L'URL doit commencer par https:// pour un domaine public.",
