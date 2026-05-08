@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { BookOpen, Shield, Scale, MessageSquare } from '@lucide/svelte';
+	import { BookOpen, Bell, Settings, Compass, Shield, Scale, MessageSquare, Code } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
 	import type { PageData, ActionData } from './$types';
@@ -70,195 +70,142 @@
 
 <div class="p-6 lg:p-8">
 	<div class="mb-8">
-		<h1 class="text-2xl font-semibold text-foreground">Aide et informations</h1>
+		<h1 class="text-2xl font-semibold text-foreground">Aide</h1>
 	</div>
 
-	<div class="max-w-xl space-y-10">
+	<div class="max-w-2xl space-y-10">
 
-		<!-- Guide d'utilisation -->
-		<section>
-			<div class="mb-4 flex items-center gap-2 text-foreground">
-				<BookOpen size={20} aria-hidden="true" />
-				<h2 class="text-base font-medium">Guide d'utilisation</h2>
-			</div>
-			<div class="space-y-4 text-sm text-muted-foreground">
-				<p>
-					Strapontin vous permet de suivre les concerts de vos artistes favoris et des salles de
-					spectacle de votre choix, en France entière.
-				</p>
+		<!-- Groupe : Usage courant -->
+		<section aria-labelledby="titre-usage">
+			<p id="titre-usage" class="mb-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+				Usage courant
+			</p>
+			<div class="grid gap-3 sm:grid-cols-2">
 
-				<div>
-					<p class="mb-1 font-medium text-foreground">Mes artistes et Mes salles</p>
-					<p>
-						Recherchez et ajoutez les artistes et salles que vous souhaitez suivre. Les concerts
-						correspondants sont récupérés automatiquement et mis à jour toutes les 2 heures.
+				<div class="rounded-lg border border-border bg-card p-4">
+					<div class="mb-2 flex items-center gap-2">
+						<BookOpen size={16} class="text-muted-foreground" aria-hidden="true" />
+						<h2 class="text-sm font-medium text-foreground">Artistes &amp; salles</h2>
+					</div>
+					<p class="text-sm text-muted-foreground">
+						Recherchez et ajoutez les artistes et salles à suivre. Les concerts sont récupérés automatiquement et mis à jour toutes les 2 heures depuis Ticketmaster et Eventim.
 					</p>
 				</div>
 
-				<div>
-					<p class="mb-1 font-medium text-foreground">Mes spectacles</p>
-					<p>
-						Liste des prochains concerts correspondant à vos artistes et salles suivis. Filtrez par
-						classification, genre, mois ou budget, et triez par date ou nouveauté.
+				<div class="rounded-lg border border-border bg-card p-4">
+					<div class="mb-2 flex items-center gap-2">
+						<Compass size={16} class="text-muted-foreground" aria-hidden="true" />
+						<h2 class="text-sm font-medium text-foreground">Mes spectacles &amp; Découverte</h2>
+					</div>
+					<p class="text-sm text-muted-foreground">
+						<strong class="font-medium text-foreground">Mes spectacles</strong> : vos prochains concerts, filtrables par catégorie, mois ou budget.
+						<strong class="font-medium text-foreground">Découverte</strong> : tous les concerts en base, filtrables par département.
 					</p>
 				</div>
 
-				<div>
-					<p class="mb-1 font-medium text-foreground">Découverte</p>
-					<p>
-						Tous les concerts référencés en base, pour explorer au-delà de vos préférences.
-						Filtrez par département et catégorie.
+				<div class="rounded-lg border border-border bg-card p-4">
+					<div class="mb-2 flex items-center gap-2">
+						<Bell size={16} class="text-muted-foreground" aria-hidden="true" />
+						<h2 class="text-sm font-medium text-foreground">Notifications</h2>
+					</div>
+					<p class="text-sm text-muted-foreground">
+						Recevez un email ou une notification push lorsque de nouveaux concerts correspondent à vos préférences.
+						Trois fréquences disponibles : désactivées, à chaque mise à jour (toutes les 2h) ou en récapitulatif quotidien à 8h.
+						Désactivées par défaut — à activer dans Paramètres.
 					</p>
 				</div>
 
-				<div>
-					<p class="mb-1 font-medium text-foreground">Actualisation</p>
-					<p>
-						Les données sont mises à jour automatiquement depuis Ticketmaster et Eventim.
-						L'ajout d'un nouvel artiste ou d'une salle déclenche une actualisation immédiate.
-					</p>
-				</div>
-
-				<div>
-					<p class="mb-1 font-medium text-foreground">Paramètres</p>
-					<p>
-						Configurez vos départements de recherche, votre rayon et activez le filtre des billets
-						indisponibles. Choisissez le thème d'affichage (Automatique suit les préférences de votre
-						système, Clair ou Sombre sont fixes) — ce choix se synchronise sur tous vos appareils.
+				<div class="rounded-lg border border-border bg-card p-4">
+					<div class="mb-2 flex items-center gap-2">
+						<Settings size={16} class="text-muted-foreground" aria-hidden="true" />
+						<h2 class="text-sm font-medium text-foreground">Paramètres</h2>
+					</div>
+					<p class="text-sm text-muted-foreground">
+						Configurez vos départements de recherche, le filtre des billets indisponibles et votre thème (Automatique, Clair ou Sombre — synchronisé sur tous vos appareils).
 						Exportez et importez vos préférences au format JSON.
 					</p>
 				</div>
 
-				<div>
-					<p class="mb-1 font-medium text-foreground">Notifications email</p>
-					<p>
-						Recevez un email lorsque de nouveaux concerts correspondent à vos préférences (artistes
-						ou salles suivis). Trois options disponibles dans Paramètres → Notifications : désactivées,
-						après chaque mise à jour (toutes les 2 heures), ou en récapitulatif quotidien à 8h.
-						Opt-in — désactivées par défaut.
-					</p>
-				</div>
-
-				<div>
-					<p class="mb-1 font-medium text-foreground">Mot de passe oublié</p>
-					<p>
-						Depuis la page de connexion, cliquez sur « Mot de passe oublié ? » et saisissez votre
-						adresse email. Un lien valable 1 heure vous sera envoyé.
-					</p>
-				</div>
 			</div>
 		</section>
 
-		<!-- RGPD -->
-		<section>
-			<div class="mb-4 flex items-center gap-2 text-foreground">
-				<Shield size={20} aria-hidden="true" />
-				<h2 class="text-base font-medium">RGPD — Données personnelles</h2>
-			</div>
-			<p class="mb-4 text-xs text-muted-foreground">
-				Règlement Général sur la Protection des Données
+		<!-- Groupe : Informations -->
+		<section aria-labelledby="titre-infos">
+			<p id="titre-infos" class="mb-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+				Informations
 			</p>
-			<div class="space-y-4 text-sm text-muted-foreground">
-				<div>
-					<p class="mb-1 font-medium text-foreground">Données collectées</p>
-					<ul class="list-inside list-disc space-y-1">
-						<li>Informations de compte : nom d'affichage, identifiant, adresse email</li>
-						<li>Préférences : artistes et salles suivis, départements, rayon de recherche</li>
-						<li>Sessions de connexion</li>
-					</ul>
+			<div class="grid gap-3 sm:grid-cols-2">
+
+				<div class="rounded-lg border border-border bg-card p-4">
+					<div class="mb-2 flex items-center gap-2">
+						<Shield size={16} class="text-muted-foreground" aria-hidden="true" />
+						<h2 class="text-sm font-medium text-foreground">Données personnelles</h2>
+					</div>
+					<div class="space-y-2 text-sm text-muted-foreground">
+						<p>Données collectées : nom, identifiant, email, préférences et sessions. Utilisées exclusivement pour le fonctionnement de l'application, jamais partagées.</p>
+						<p>Hébergement sur serveur privé auto-hébergé en France. Données conservées tant que le compte est actif.</p>
+						<p>
+							Export intégral depuis
+							<a href="/parametres" class="underline underline-offset-4 hover:text-foreground">Paramètres → Export</a>.
+							Suppression de compte sur demande à l'administrateur.
+						</p>
+					</div>
 				</div>
 
-				<div>
-					<p class="mb-1 font-medium text-foreground">Finalité</p>
-					<p>
-						Ces données sont utilisées exclusivement pour le fonctionnement de l'application :
-						authentification, personnalisation des résultats et envoi d'alertes email si activées.
-						Elles ne sont partagées avec aucun tiers.
+				<div class="rounded-lg border border-border bg-card p-4">
+					<div class="mb-2 flex items-center gap-2">
+						<Scale size={16} class="text-muted-foreground" aria-hidden="true" />
+						<h2 class="text-sm font-medium text-foreground">Licence</h2>
+					</div>
+					<p class="text-sm text-muted-foreground">
+						Strapontin est distribué sous licence <span class="font-medium text-foreground">MIT</span> — logiciel libre, utilisation, modification et redistribution autorisées sous réserve de conserver la mention de copyright.
 					</p>
 				</div>
 
-				<div>
-					<p class="mb-1 font-medium text-foreground">Hébergement et conservation</p>
-					<p>
-						Les données sont stockées sur un serveur privé auto-hébergé en France et conservées
-						tant que votre compte est actif.
-					</p>
-				</div>
-
-				<div>
-					<p class="mb-1 font-medium text-foreground">Vos droits</p>
-					<p>
-						Vous pouvez exporter l'intégralité de vos données depuis
+				<div class="rounded-lg border border-border bg-card p-4">
+					<div class="mb-2 flex items-center gap-2">
+						<Code size={16} class="text-muted-foreground" aria-hidden="true" />
+						<h2 class="text-sm font-medium text-foreground">Code source</h2>
+					</div>
+					<p class="text-sm text-muted-foreground">
+						Le code source est disponible sur
 						<a
-							href="/parametres"
+							href="https://codeberg.org/Kwaite/strapontin"
+							target="_blank"
+							rel="noopener noreferrer"
 							class="underline underline-offset-4 hover:text-foreground"
-						>Paramètres → Export</a>.
-						Pour demander la modification ou la suppression de votre compte, contactez
-						l'administrateur de l'instance.
+						>Codeberg</a>.
 					</p>
 				</div>
+
+				<div class="rounded-lg border border-border bg-card p-4">
+					<div class="mb-2 flex items-center gap-2">
+						<MessageSquare size={16} class="text-muted-foreground" aria-hidden="true" />
+						<h2 class="text-sm font-medium text-foreground">Signaler un problème</h2>
+					</div>
+					{#if data.resendDisponible}
+						<p class="mb-3 text-sm text-muted-foreground">
+							Un bug, une suggestion, une question ?
+						</p>
+						<button
+							bind:this={boutonOuverture}
+							type="button"
+							onclick={ouvrirDialog}
+							class="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+						>
+							Ouvrir le formulaire
+						</button>
+					{:else}
+						<p class="text-sm text-muted-foreground">
+							Écrivez à
+							<a href="mailto:admin@strapontin.kwaite.fr" class="underline underline-offset-4 hover:text-foreground">
+								admin@strapontin.kwaite.fr
+							</a>.
+						</p>
+					{/if}
+				</div>
+
 			</div>
-		</section>
-
-		<!-- Licence -->
-		<section>
-			<div class="mb-4 flex items-center gap-2 text-foreground">
-				<Scale size={20} aria-hidden="true" />
-				<h2 class="text-base font-medium">Licence</h2>
-			</div>
-			<div class="space-y-3 text-sm text-muted-foreground">
-				<p>
-					Strapontin est un logiciel libre distribué sous licence
-					<span class="font-medium text-foreground">MIT</span>.
-				</p>
-				<pre class="rounded-md bg-muted px-4 py-3 text-xs leading-relaxed whitespace-pre-wrap">MIT License
-
-Copyright (c) 2026 Kwaite
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.</pre>
-			</div>
-		</section>
-
-		<!-- Signaler un problème -->
-		<section>
-			<div class="mb-4 flex items-center gap-2 text-foreground">
-				<MessageSquare size={20} aria-hidden="true" />
-				<h2 class="text-base font-medium">Signaler un problème ou une suggestion</h2>
-			</div>
-
-			{#if data.resendDisponible}
-				<button
-					bind:this={boutonOuverture}
-					type="button"
-					onclick={ouvrirDialog}
-					class="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-				>
-					Ouvrir le formulaire
-				</button>
-			{:else}
-				<p class="text-sm text-muted-foreground">
-					Pour signaler un problème ou proposer une amélioration, écrivez à
-					<a href="mailto:admin@strapontin.kwaite.fr" class="underline underline-offset-4 hover:text-foreground">
-						admin@strapontin.kwaite.fr
-					</a>.
-				</p>
-			{/if}
 		</section>
 
 		<p class="text-sm text-muted-foreground">

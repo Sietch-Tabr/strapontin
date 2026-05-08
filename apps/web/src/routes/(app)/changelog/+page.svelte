@@ -26,6 +26,12 @@
 						<li>Le clic sur une notification ouvre directement les spectacles de l'artiste concerné.</li>
 					</ul>
 				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Aide</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>La page d'aide a été réorganisée et mise à jour.</li>
+					</ul>
+				</div>
 			</div>
 		</section>
 
