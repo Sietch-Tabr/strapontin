@@ -2,6 +2,7 @@ import pino from "pino";
 import { Worker } from "bullmq";
 import { traiterJob, type JobData } from "./jobs.js";
 import { creerQueue, planifierJobsUsers } from "./cron.js";
+import { logAdmin } from "./log-admin.js";
 
 const logger = pino({ name: "worker" });
 
@@ -19,6 +20,11 @@ worker.on("ready", () => {
   logger.info("worker démarré — en attente de jobs");
 });
 
+worker.on("active", (job) => {
+  logger.info({ jobId: job.id, name: job.name }, "job lancé");
+  void logAdmin("info", "jobs", `${job.name} lancé`, { jobId: job.id });
+});
+
 worker.on("completed", (job) => {
   logger.info({ jobId: job.id, name: job.name }, "job terminé");
 });
@@ -28,6 +34,10 @@ worker.on("failed", (job, err) => {
     { jobId: job?.id, name: job?.name, err: err.message },
     "job échoué",
   );
+  void logAdmin("error", "jobs", `${job?.name ?? "inconnu"} échoué`, {
+    jobId: job?.id,
+    erreur: err.message,
+  });
 });
 
 worker.on("error", (err) => {

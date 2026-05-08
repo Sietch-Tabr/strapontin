@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { UserPlus, Trash2, ShieldCheck, Zap, RefreshCw, Loader2, Pencil, KeyRound, Settings } from '@lucide/svelte';
+	import { UserPlus, Trash2, ShieldCheck, Zap, RefreshCw, Loader2, Pencil, KeyRound, Settings, ScrollText } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -550,6 +550,38 @@
 					</li>
 				{/each}
 			</ul>
+		</section>
+
+		<!-- Logs système -->
+		<section>
+			<h2 class="mb-4 text-base font-medium text-foreground flex items-center gap-2">
+				<ScrollText size={16} class="text-muted-foreground" aria-hidden="true" />
+				Logs système
+			</h2>
+
+			{#if data.logsAdmin.length === 0}
+				<div class="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+					Aucun événement enregistré.
+				</div>
+			{:else}
+				<div class="rounded-xl border border-border bg-card divide-y divide-border font-mono text-xs">
+					{#each data.logsAdmin as entree}
+						{@const couleurNiveau =
+							entree.niveau === 'error' ? 'text-red-600 dark:text-red-400' :
+							entree.niveau === 'warn'  ? 'text-yellow-600 dark:text-yellow-400' :
+							entree.niveau === 'debug' ? 'text-muted-foreground' :
+							'text-foreground'}
+						<div class="flex items-baseline gap-3 px-4 py-2">
+							<span class="shrink-0 text-muted-foreground tabular-nums">
+								{new Date(entree.ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+							</span>
+							<span class="shrink-0 w-12 {couleurNiveau} uppercase font-medium">{entree.niveau}</span>
+							<span class="shrink-0 w-14 text-muted-foreground">{entree.source}</span>
+							<span class="text-foreground">{entree.message}{entree.meta ? ' — ' + JSON.stringify(entree.meta) : ''}</span>
+						</div>
+					{/each}
+				</div>
+			{/if}
 		</section>
 
 	</div>

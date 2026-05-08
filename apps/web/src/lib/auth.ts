@@ -6,6 +6,7 @@ import pino from "pino";
 import { db } from "$lib/server/db";
 import * as schema from "@strapontin/core/schema";
 import { envoyerResetMotDePasse } from "$lib/server/email";
+import { logAdmin } from "$lib/server/log-admin";
 
 const logger = pino({ name: "auth" });
 
@@ -17,12 +18,12 @@ export const auth = betterAuth({
       const ip = ctx.request?.headers.get("x-forwarded-for") ?? "inconnu";
       const identifiant = (ctx.body as Record<string, unknown> | undefined)?.["username"] ?? "inconnu";
       if (ctx.context.newSession) {
-        logger.info(
-          { identifiant, ip, userId: ctx.context.newSession.user.id },
-          "connexion reussie",
-        );
+        const userId = ctx.context.newSession.user.id;
+        logger.info({ identifiant, ip, userId }, "connexion reussie");
+        void logAdmin("info", "auth", "connexion réussie", { identifiant, ip, userId });
       } else {
         logger.warn({ identifiant, ip }, "echec connexion");
+        void logAdmin("warn", "auth", "échec connexion", { identifiant, ip });
       }
     }),
   },

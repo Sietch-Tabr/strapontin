@@ -32,6 +32,12 @@
 						<li>La page d'aide a été réorganisée et mise à jour.</li>
 					</ul>
 				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Administration</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Les logs système sont maintenant visibles dans la page d'administration : connexions, modifications de configuration et état des jobs.</li>
+					</ul>
+				</div>
 			</div>
 		</section>
 

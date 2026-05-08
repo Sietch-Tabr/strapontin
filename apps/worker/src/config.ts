@@ -7,6 +7,7 @@ import {
 import { db } from "./db.js";
 import { appConfig } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
+import { logAdmin } from "./log-admin.js";
 
 const secret = process.env["BETTER_AUTH_SECRET"];
 if (!secret) throw new Error("BETTER_AUTH_SECRET est requis au démarrage");
@@ -54,6 +55,7 @@ export async function lireConfig(cle: string): Promise<string | null> {
       valeur = dechiffrer(lignes[0].valeurChiffree);
     } catch {
       valeur = null;
+      void logAdmin("warn", "config", "déchiffrement échoué", { cle });
     }
   }
 
@@ -68,6 +70,7 @@ export async function sauvegarderConfig(
   cacheConfig.delete(cle);
   if (!valeur) {
     await db.delete(appConfig).where(eq(appConfig.cle, cle));
+    void logAdmin("info", "config", "config supprimée", { cle });
     return;
   }
   const valeurChiffree = chiffrer(valeur);
@@ -78,6 +81,7 @@ export async function sauvegarderConfig(
       target: appConfig.cle,
       set: { valeurChiffree, misAJourLe: new Date() },
     });
+  void logAdmin("info", "config", "config sauvegardée", { cle });
 }
 
 export { chiffrer, dechiffrer };
