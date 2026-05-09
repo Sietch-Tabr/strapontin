@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
+	import { authClient } from '$lib/auth-client';
 	import { toast } from 'svelte-sonner';
 	import { Sun, Moon, Monitor, Save, KeyRound, User, Download, Upload, Bell, Shield } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
@@ -57,14 +58,18 @@
 		e.preventDefault();
 		confirmationEnCours = true;
 		erreurConfirmation2Fa = '';
-		const codePropre = codeConfirmation2Fa.replace(/\s/g, '');
-		const { authClient: client } = await import('$lib/auth-client');
-		const resultat = await client.twoFactor.verifyTotp({ code: codePropre });
-		if (resultat.error) {
-			erreurConfirmation2Fa = 'Code incorrect. Vérifiez votre application d\'authentification.';
+		try {
+			const codePropre = codeConfirmation2Fa.replace(/\s/g, '');
+			const resultat = await authClient.twoFactor.verifyTotp({ code: codePropre });
+			if (resultat.error) {
+				erreurConfirmation2Fa = 'Code incorrect. Vérifiez votre application d\'authentification.';
+				confirmationEnCours = false;
+			} else {
+				window.location.href = '/parametres#deux-facteurs';
+			}
+		} catch {
+			erreurConfirmation2Fa = 'Une erreur est survenue. Réessayez.';
 			confirmationEnCours = false;
-		} else {
-			window.location.href = '/parametres#deux-facteurs';
 		}
 	}
 	let importEnCours = $state(false);
