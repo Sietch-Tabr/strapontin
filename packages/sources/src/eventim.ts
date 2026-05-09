@@ -182,39 +182,52 @@ async function fetchProduitsParRegion(
   classifications: string[],
 ): Promise<ConcertBrut[]> {
   const aujourd_hui = new Date().toISOString().split("T")[0]!;
+  const concerts: ConcertBrut[] = [];
 
-  const params = new URLSearchParams({
-    webId: WEB_ID,
-    language: "fr",
-    country: "FR",
-    query: dept,
-    date_from: aujourd_hui,
-    sort: "DateAsc",
-    top: String(TAILLE_PAGE),
-  });
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    if (page > 1) await new Promise((r) => setTimeout(r, 200));
 
-  for (const c of classifications) {
-    params.append("categories", c);
+    const params = new URLSearchParams({
+      webId: WEB_ID,
+      language: "fr",
+      country: "FR",
+      query: dept,
+      date_from: aujourd_hui,
+      sort: "DateAsc",
+      top: String(TAILLE_PAGE),
+      page: String(page),
+    });
+
+    for (const c of classifications) {
+      params.append("categories", c);
+    }
+
+    const url = `${BASE_URL}/v1/products?${params.toString()}`;
+    const res = await fetch(url, {
+      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
+    });
+
+    if (!res.ok) {
+      logger.warn({ status: res.status, dept }, "Eventim region erreur");
+      break;
+    }
+
+    const data = (await res.json()) as Record<string, unknown>;
+    const produits = data["products"] as Record<string, unknown>[] | undefined;
+    if (!produits?.length) break;
+
+    concerts.push(
+      ...produits
+        .map(mapProduit)
+        .filter((c): c is ConcertBrut => c !== null)
+        .filter((c) => c.dept === dept),
+    );
+
+    const total = (data["totalResults"] as number | undefined) ?? 0;
+    if (concerts.length >= total) break;
   }
 
-  const url = `${BASE_URL}/v1/products?${params.toString()}`;
-  const res = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
-  });
-
-  if (!res.ok) {
-    logger.warn({ status: res.status, dept }, "Eventim region erreur");
-    return [];
-  }
-
-  const data = (await res.json()) as Record<string, unknown>;
-  const produits = data["products"] as Record<string, unknown>[] | undefined;
-  if (!produits) return [];
-
-  return produits
-    .map(mapProduit)
-    .filter((c): c is ConcertBrut => c !== null)
-    .filter((c) => c.dept === dept);
+  return concerts;
 }
 
 export class EventimSource implements SourceConcerts {

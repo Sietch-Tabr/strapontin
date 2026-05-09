@@ -36,11 +36,11 @@ su - strapontin -c "cd $APP_DIR && pnpm install --frozen-lockfile"
 
 # Migrations DB
 echo "Migrations..."
-su - strapontin -c "set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && pnpm --filter @strapontin/core db:migrate"
+su - strapontin -c "set -a; . $APP_DIR/.env; set +a; cd $APP_DIR && pnpm --filter @strapontin/core db:migrate"
 
 # Build
 echo "Build..."
-su - strapontin -c "set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && pnpm build"
+su - strapontin -c "set -a; . $APP_DIR/.env; set +a; cd $APP_DIR && pnpm build"
 
 # Démarrer les services
 echo "Démarrage des services..."
@@ -49,7 +49,7 @@ systemctl restart strapontin-web strapontin-worker
 # Healthcheck — retries sur 30s (port 3000)
 echo "Healthcheck..."
 RETRIES=10
-until curl -sf http://localhost:3000 > /dev/null 2>&1 || [ "$RETRIES" -eq 0 ]; do
+until curl -sf http://localhost:3000/health > /dev/null 2>&1 || [ "$RETRIES" -eq 0 ]; do
     sleep 3
     RETRIES=$((RETRIES - 1))
 done

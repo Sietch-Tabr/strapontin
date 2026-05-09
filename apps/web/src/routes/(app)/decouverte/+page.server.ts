@@ -4,7 +4,6 @@ import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import {
   eq,
   gte,
-  lte,
   and,
   ilike,
   inArray,
@@ -77,7 +76,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     conditionsSansMois.push(inArray(concerts.classification, classifications));
   }
   if (budget !== null) {
-    conditionsSansMois.push(lte(concerts.prixMin, String(budget)));
+    conditionsSansMois.push(sql`${concerts.prixMin}::numeric <= ${budget}`);
   }
 
   const conditions: SQL[] = [...conditionsSansMois];

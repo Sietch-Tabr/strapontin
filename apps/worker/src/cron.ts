@@ -127,7 +127,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     {
       jobId: `purge__${tag}`,
       delay: delaiPurge,
-      removeOnComplete: { count: 3 },
+      removeOnComplete: true,
       removeOnFail: true,
     },
   );
@@ -146,7 +146,7 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     {
       jobId: `digest__${tag}`,
       delay: delaiDigest,
-      removeOnComplete: { count: 3 },
+      removeOnComplete: true,
       removeOnFail: true,
     },
   );

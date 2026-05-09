@@ -75,11 +75,11 @@ export async function envoyerInvitation(params: {
 <table style="border-collapse:collapse;width:100%;margin-bottom:24px">
   <tr>
     <td style="padding:8px 0;color:#888;font-size:14px;width:130px">Identifiant</td>
-    <td style="padding:8px 0;font-family:monospace;font-size:14px;color:#111">${params.identifiant}</td>
+    <td style="padding:8px 0;font-family:monospace;font-size:14px;color:#111">${echapperHtml(params.identifiant)}</td>
   </tr>
   <tr>
     <td style="padding:8px 0;color:#888;font-size:14px">Mot de passe</td>
-    <td style="padding:8px 0;font-family:monospace;font-size:14px;color:#111">${params.motDePasse}</td>
+    <td style="padding:8px 0;font-family:monospace;font-size:14px;color:#111">${echapperHtml(params.motDePasse)}</td>
   </tr>
 </table>
 <p style="color:#555;font-size:14px;margin:0 0 24px">

@@ -244,9 +244,9 @@ pct exec "$VMID" -- bash -c "
     DEBIAN_FRONTEND=noninteractive apt-get install -y redis
 "
 
-echo "[5] Configuration Redis (policy noeviction)..."
+echo "[5] Configuration Redis (policy allkeys-lru)..."
 pct exec "$VMID" -- bash -c "
-    sed -i 's/^# maxmemory-policy noeviction/maxmemory-policy noeviction/' /etc/redis/redis.conf
+    sed -i 's/^# maxmemory-policy .*/maxmemory-policy allkeys-lru/' /etc/redis/redis.conf
 "
 
 # ---------------------------------------------------------------

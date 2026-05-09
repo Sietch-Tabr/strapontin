@@ -28,7 +28,7 @@ const utilisateur = await db
   .limit(1);
 
 if (utilisateur.length === 0) {
-  console.error(`Aucun utilisateur trouvé pour l'email : ${email}`);
+  console.error("Aucun utilisateur trouvé");
   await client.end();
   process.exit(1);
 }
@@ -41,5 +41,5 @@ await db
   .set({ password: hash })
   .where(eq(accounts.userId, userId));
 
-console.log(`Mot de passe mis à jour pour ${email}`);
+console.log("Mot de passe mis à jour");
 await client.end();

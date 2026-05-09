@@ -20,7 +20,6 @@ async function obtenirResend(): Promise<Resend | null> {
   return cacheResend.resend;
 }
 
-const BASE_URL = process.env["PUBLIC_BASE_URL"] ?? "http://localhost:3000";
 const EXPEDITEUR = "Strapontin <noreply@strapontin.kwaite.fr>";
 const REPLY_TO = "admin@strapontin.kwaite.fr";
 
@@ -36,13 +35,21 @@ function enTeteHtml(titre: string): string {
 <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;border:1px solid #e5e5e5">`;
 }
 
-function piedHtml(): string {
+function piedHtml(baseUrl: string): string {
   return `</div>
 <p style="text-align:center;color:#aaa;font-size:12px;margin-top:24px">
-  Strapontin — <a href="${BASE_URL}/parametres" style="color:#aaa">Gérer mes préférences</a>
+  Strapontin — <a href="${baseUrl}/parametres" style="color:#aaa">Gérer mes préférences</a>
 </p>
 </body>
 </html>`;
+}
+
+async function obtenirBaseUrl(): Promise<string> {
+  return (
+    (await lireConfig("PUBLIC_BASE_URL").catch(() => null)) ??
+    process.env["PUBLIC_BASE_URL"] ??
+    "http://localhost:3000"
+  );
 }
 
 export type ConcertDigest = {
@@ -99,6 +106,7 @@ export async function envoyerDigestConcerts(params: {
       ? "1 nouveau concert correspond à vos préférences"
       : `${nb} nouveaux concerts correspondent à vos préférences`;
 
+  const baseUrl = await obtenirBaseUrl();
   const corps = `${enTeteHtml(sujet)}
 <h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px">${sujet}</h2>
 <p style="color:#555;font-size:14px;margin:0 0 24px">Voici les nouveaux concerts ajoutés :</p>
@@ -106,12 +114,12 @@ export async function envoyerDigestConcerts(params: {
 ${lignesConcerts(params.concerts)}
 </table>
 <p style="margin-top:24px">
-  <a href="${BASE_URL}/spectacles"
+  <a href="${baseUrl}/spectacles"
      style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
     Voir mes spectacles →
   </a>
 </p>
-${piedHtml()}`;
+${piedHtml(baseUrl)}`;
 
   const { error } = await resend.emails.send({
     from: EXPEDITEUR,
