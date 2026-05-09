@@ -57,8 +57,9 @@
 		e.preventDefault();
 		confirmationEnCours = true;
 		erreurConfirmation2Fa = '';
+		const codePropre = codeConfirmation2Fa.replace(/\s/g, '');
 		const { authClient: client } = await import('$lib/auth-client');
-		const resultat = await client.twoFactor.verifyTotp({ code: codeConfirmation2Fa });
+		const resultat = await client.twoFactor.verifyTotp({ code: codePropre });
 		if (resultat.error) {
 			erreurConfirmation2Fa = 'Code incorrect. Vérifiez votre application d\'authentification.';
 			confirmationEnCours = false;
@@ -760,10 +761,7 @@
 								<input
 									type="text"
 									inputmode="numeric"
-									pattern="[0-9]{6}"
-									maxlength="6"
 									bind:value={codeConfirmation2Fa}
-									required
 									autocomplete="one-time-code"
 									placeholder="000000"
 									class="w-full rounded-md border border-input bg-background px-3 py-2 text-center text-lg tracking-widest ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
