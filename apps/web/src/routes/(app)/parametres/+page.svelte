@@ -48,28 +48,71 @@
 	let enregistrementEmail = $state(false);
 	let enregistrementIdentifiant = $state(false);
 	let enregistrementMdp = $state(false);
-	let activation2FaEnCours = $state(false);
-	let desactivation2FaEnCours = $state(false);
+	let motDePasse2Fa = $state('');
+	let erreur2Fa = $state('');
+	let chargement2Fa = $state(false);
+	let qrCodeDataUrl = $state('');
+	let backupCodes2Fa = $state<string[]>([]);
+	let etape2Fa = $state<'repos' | 'scan'>('repos');
 	let codeConfirmation2Fa = $state('');
 	let erreurConfirmation2Fa = $state('');
 	let confirmationEnCours = $state(false);
+
+	async function activerTwoFa(e: SubmitEvent) {
+		e.preventDefault();
+		chargement2Fa = true;
+		erreur2Fa = '';
+		try {
+			const resultat = await authClient.twoFactor.enable({ password: motDePasse2Fa });
+			if (resultat.error) {
+				erreur2Fa = 'Mot de passe incorrect.';
+				return;
+			}
+			const uri = (resultat.data as { totpURI: string; backupCodes: string[] }).totpURI;
+			backupCodes2Fa = (resultat.data as { totpURI: string; backupCodes: string[] }).backupCodes ?? [];
+			const { default: QRCode } = await import('qrcode');
+			qrCodeDataUrl = await QRCode.toDataURL(uri, { errorCorrectionLevel: 'M', margin: 2, width: 200 });
+			etape2Fa = 'scan';
+		} catch {
+			erreur2Fa = 'Une erreur est survenue.';
+		} finally {
+			chargement2Fa = false;
+		}
+	}
 
 	async function confirmerActivation2Fa(e: SubmitEvent) {
 		e.preventDefault();
 		confirmationEnCours = true;
 		erreurConfirmation2Fa = '';
 		try {
-			const codePropre = codeConfirmation2Fa.replace(/\s/g, '');
-			const resultat = await authClient.twoFactor.verifyTotp({ code: codePropre });
+			const resultat = await authClient.twoFactor.verifyTotp({ code: codeConfirmation2Fa.replace(/\s/g, '') });
 			if (resultat.error) {
 				erreurConfirmation2Fa = 'Code incorrect. Vérifiez votre application d\'authentification.';
-				confirmationEnCours = false;
-			} else {
-				window.location.href = '/parametres#deux-facteurs';
+				return;
 			}
+			window.location.href = '/parametres#deux-facteurs';
 		} catch {
 			erreurConfirmation2Fa = 'Une erreur est survenue. Réessayez.';
+		} finally {
 			confirmationEnCours = false;
+		}
+	}
+
+	async function desactiverTwoFa(e: SubmitEvent) {
+		e.preventDefault();
+		chargement2Fa = true;
+		erreur2Fa = '';
+		try {
+			const resultat = await authClient.twoFactor.disable({ password: motDePasse2Fa });
+			if (resultat.error) {
+				erreur2Fa = 'Mot de passe incorrect.';
+				return;
+			}
+			window.location.href = '/parametres#deux-facteurs';
+		} catch {
+			erreur2Fa = 'Une erreur est survenue.';
+		} finally {
+			chargement2Fa = false;
 		}
 	}
 	let importEnCours = $state(false);
@@ -689,139 +732,111 @@
 				<p class="mb-4 text-sm text-muted-foreground">
 					Votre compte est protégé par une application d'authentification TOTP.
 				</p>
-
-				{#if form?.succes === 'desactiverDeuxFacteurs'}
-					<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-						Double authentification désactivée.
-					</p>
-				{:else}
-					{#if form?.erreur && form?.section === 'deuxFacteurs'}
-						<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-							{form.erreur}
-						</p>
-					{/if}
-					<form method="POST" action="?/desactiverDeuxFacteurs" class="space-y-3" use:enhance={() => {
-						desactivation2FaEnCours = true;
-						return async ({ result, update }) => {
-							if (result.type === 'success') toast.success('Double authentification désactivée.');
-							else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue.');
-							await update();
-							desactivation2FaEnCours = false;
-						};
-					}}>
-						<div>
-							<label for="mdp-desactiver-2fa" class="mb-1.5 block text-sm font-medium text-foreground">
-								Confirmer avec votre mot de passe
-							</label>
-							<input
-								id="mdp-desactiver-2fa"
-								type="password"
-								name="motDePasse"
-								required
-								autocomplete="current-password"
-								class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-							/>
-						</div>
-						<button
-							type="submit"
-							disabled={desactivation2FaEnCours}
-							class="rounded-md border border-destructive/50 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
-						>
-							{desactivation2FaEnCours ? 'Désactivation…' : 'Désactiver la double authentification'}
-						</button>
-					</form>
+				{#if erreur2Fa}
+					<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{erreur2Fa}</p>
 				{/if}
+				<form onsubmit={desactiverTwoFa} class="space-y-3">
+					<div>
+						<label for="mdp-desactiver-2fa" class="mb-1.5 block text-sm font-medium text-foreground">
+							Confirmer avec votre mot de passe
+						</label>
+						<input
+							id="mdp-desactiver-2fa"
+							type="password"
+							bind:value={motDePasse2Fa}
+							required
+							autocomplete="current-password"
+							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+						/>
+					</div>
+					<button
+						type="submit"
+						disabled={chargement2Fa}
+						class="rounded-md border border-destructive/50 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+					>
+						{chargement2Fa ? 'Désactivation…' : 'Désactiver la double authentification'}
+					</button>
+				</form>
+
+			{:else if etape2Fa === 'scan'}
+				<!-- QR code + confirmation -->
+				<div class="space-y-6">
+					<div class="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+						Scannez le QR code avec votre application d'authentification, puis saisissez le code généré pour finaliser l'activation.
+					</div>
+					<div>
+						<p class="mb-3 text-sm font-medium text-foreground">1. Scannez ce QR code</p>
+						<img src={qrCodeDataUrl} alt="QR code TOTP" class="rounded-md border border-border" width="200" height="200" />
+					</div>
+					<div>
+						<p class="mb-2 text-sm font-medium text-foreground">Codes de secours</p>
+						<p class="mb-3 text-sm text-muted-foreground">
+							Conservez ces codes en lieu sûr. Chacun ne peut être utilisé qu'une seule fois en cas de perte d'accès à votre application.
+						</p>
+						<div class="grid grid-cols-2 gap-1.5 font-mono text-sm sm:grid-cols-3">
+							{#each backupCodes2Fa as code (code)}
+								<code class="rounded bg-muted px-2 py-1 text-muted-foreground">{code}</code>
+							{/each}
+						</div>
+					</div>
+					<div class="border-t border-border pt-4">
+						<p class="mb-3 text-sm font-medium text-foreground">2. Confirmez l'activation</p>
+						<form onsubmit={confirmerActivation2Fa} class="space-y-3">
+							<input
+								type="text"
+								inputmode="numeric"
+								bind:value={codeConfirmation2Fa}
+								autocomplete="one-time-code"
+								placeholder="000000"
+								class="w-full rounded-md border border-input bg-background px-3 py-2 text-center text-lg tracking-widest ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+							/>
+							{#if erreurConfirmation2Fa}
+								<p class="text-sm text-destructive">{erreurConfirmation2Fa}</p>
+							{/if}
+							<button
+								type="submit"
+								disabled={confirmationEnCours}
+								class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+							>
+								<Shield size={16} />
+								{confirmationEnCours ? 'Vérification…' : 'Confirmer l\'activation'}
+							</button>
+						</form>
+					</div>
+				</div>
+
 			{:else}
 				<!-- 2FA non activée -->
 				<p class="mb-4 text-sm text-muted-foreground">
 					Protégez votre compte avec une application d'authentification (Google Authenticator, Authy, 1Password…).
 					Un code temporaire vous sera demandé à chaque connexion.
 				</p>
-
-				{#if form?.succes === 'activerDeuxFacteurs'}
-					<!-- Affichage du QR code après activation -->
-					<div class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-						Double authentification activée. Scannez le QR code ci-dessous avec votre application.
-					</div>
-					<div class="space-y-6">
-						<div>
-							<p class="mb-3 text-sm font-medium text-foreground">Scannez ce QR code</p>
-							<img src={form.qrCodeDataUrl} alt="QR code TOTP" class="rounded-md border border-border" width="200" height="200" />
-						</div>
-						<div>
-							<p class="mb-2 text-sm font-medium text-foreground">Codes de secours</p>
-							<p class="mb-3 text-sm text-muted-foreground">
-								Conservez ces codes en lieu sûr. Chacun ne peut être utilisé qu'une seule fois en cas de perte d'accès à votre application.
-							</p>
-							<div class="grid grid-cols-2 gap-1.5 font-mono text-sm sm:grid-cols-3">
-								{#each (form.backupCodes ?? []) as code (code)}
-									<code class="rounded bg-muted px-2 py-1 text-muted-foreground">{code}</code>
-								{/each}
-							</div>
-						</div>
-						<div class="border-t border-border pt-4">
-							<p class="mb-3 text-sm font-medium text-foreground">Confirmer l'activation</p>
-							<p class="mb-3 text-sm text-muted-foreground">Saisissez le code affiché dans votre application pour finaliser l'activation.</p>
-							<form onsubmit={confirmerActivation2Fa} class="space-y-3">
-								<input
-									type="text"
-									inputmode="numeric"
-									bind:value={codeConfirmation2Fa}
-									autocomplete="one-time-code"
-									placeholder="000000"
-									class="w-full rounded-md border border-input bg-background px-3 py-2 text-center text-lg tracking-widest ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-								/>
-								{#if erreurConfirmation2Fa}
-									<p class="text-sm text-destructive">{erreurConfirmation2Fa}</p>
-								{/if}
-								<button
-									type="submit"
-									disabled={confirmationEnCours}
-									class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
-								>
-									<Shield size={16} />
-									{confirmationEnCours ? 'Vérification…' : 'Confirmer l\'activation'}
-								</button>
-							</form>
-						</div>
-					</div>
-				{:else}
-					{#if form?.erreur && form?.section === 'deuxFacteurs'}
-						<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-							{form.erreur}
-						</p>
-					{/if}
-					<form method="POST" action="?/activerDeuxFacteurs" class="space-y-3" use:enhance={() => {
-						activation2FaEnCours = true;
-						return async ({ result, update }) => {
-							if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue.');
-							await update();
-							activation2FaEnCours = false;
-						};
-					}}>
-						<div>
-							<label for="mdp-activer-2fa" class="mb-1.5 block text-sm font-medium text-foreground">
-								Confirmer avec votre mot de passe
-							</label>
-							<input
-								id="mdp-activer-2fa"
-								type="password"
-								name="motDePasse"
-								required
-								autocomplete="current-password"
-								class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-							/>
-						</div>
-						<button
-							type="submit"
-							disabled={activation2FaEnCours}
-							class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
-						>
-							<Shield size={16} />
-							{activation2FaEnCours ? 'Activation…' : 'Activer la double authentification'}
-						</button>
-					</form>
+				{#if erreur2Fa}
+					<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{erreur2Fa}</p>
 				{/if}
+				<form onsubmit={activerTwoFa} class="space-y-3">
+					<div>
+						<label for="mdp-activer-2fa" class="mb-1.5 block text-sm font-medium text-foreground">
+							Confirmer avec votre mot de passe
+						</label>
+						<input
+							id="mdp-activer-2fa"
+							type="password"
+							bind:value={motDePasse2Fa}
+							required
+							autocomplete="current-password"
+							class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+						/>
+					</div>
+					<button
+						type="submit"
+						disabled={chargement2Fa}
+						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+					>
+						<Shield size={16} />
+						{chargement2Fa ? 'Activation…' : 'Activer la double authentification'}
+					</button>
+				</form>
 			{/if}
 		</section>
 

@@ -1,6 +1,5 @@
 import { db } from "$lib/server/db";
 import { auth } from "$lib/auth";
-import QRCode from "qrcode";
 import {
   userConfig,
   userArtistes,
@@ -307,85 +306,6 @@ export const actions: Actions = {
     cookies.delete("theme", { path: "/" });
 
     redirect(302, "/login");
-  },
-
-  activerDeuxFacteurs: async ({ request }) => {
-    const donnees = await request.formData();
-    const motDePasse = donnees.get("motDePasse")?.toString() ?? "";
-
-    if (!motDePasse) {
-      return fail(400, {
-        erreur: "Mot de passe requis.",
-        section: "deuxFacteurs",
-      });
-    }
-
-    const corps = JSON.stringify({ password: motDePasse });
-    const entetes = new Headers(request.headers);
-    entetes.set("content-type", "application/json");
-    const rep = await auth.handler(
-      new Request("http://localhost/api/auth/two-factor/enable", {
-        method: "POST",
-        headers: entetes,
-        body: corps,
-      }),
-    );
-
-    if (!rep.ok) {
-      return fail(400, {
-        erreur: "Mot de passe incorrect.",
-        section: "deuxFacteurs",
-      });
-    }
-
-    const donneesTfa = (await rep.json()) as {
-      totpURI: string;
-      backupCodes: string[];
-    };
-
-    const qrCodeDataUrl = await QRCode.toDataURL(donneesTfa.totpURI, {
-      errorCorrectionLevel: "M",
-      margin: 2,
-      width: 200,
-    });
-
-    return {
-      succes: "activerDeuxFacteurs" as const,
-      qrCodeDataUrl,
-      backupCodes: donneesTfa.backupCodes,
-    };
-  },
-
-  desactiverDeuxFacteurs: async ({ request }) => {
-    const donnees = await request.formData();
-    const motDePasse = donnees.get("motDePasse")?.toString() ?? "";
-
-    if (!motDePasse) {
-      return fail(400, {
-        erreur: "Mot de passe requis.",
-        section: "deuxFacteurs",
-      });
-    }
-
-    const corps = JSON.stringify({ password: motDePasse });
-    const entetes = new Headers(request.headers);
-    entetes.set("content-type", "application/json");
-    const rep = await auth.handler(
-      new Request("http://localhost/api/auth/two-factor/disable", {
-        method: "POST",
-        headers: entetes,
-        body: corps,
-      }),
-    );
-
-    if (!rep.ok) {
-      return fail(400, {
-        erreur: "Mot de passe incorrect.",
-        section: "deuxFacteurs",
-      });
-    }
-
-    return { succes: "desactiverDeuxFacteurs" as const };
   },
 
   motDePasse: async ({ request }) => {
