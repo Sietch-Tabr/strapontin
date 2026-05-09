@@ -49,6 +49,23 @@
 	let enregistrementMdp = $state(false);
 	let activation2FaEnCours = $state(false);
 	let desactivation2FaEnCours = $state(false);
+	let codeConfirmation2Fa = $state('');
+	let erreurConfirmation2Fa = $state('');
+	let confirmationEnCours = $state(false);
+
+	async function confirmerActivation2Fa(e: SubmitEvent) {
+		e.preventDefault();
+		confirmationEnCours = true;
+		erreurConfirmation2Fa = '';
+		const { authClient: client } = await import('$lib/auth-client');
+		const resultat = await client.twoFactor.verifyTotp({ code: codeConfirmation2Fa });
+		if (resultat.error) {
+			erreurConfirmation2Fa = 'Code incorrect. Vérifiez votre application d\'authentification.';
+			confirmationEnCours = false;
+		} else {
+			window.location.href = '/parametres#deux-facteurs';
+		}
+	}
 	let importEnCours = $state(false);
 	let modeImport = $state<'merger' | 'ecraser'>('merger');
 	let confirmationSuppression = $state(false);
@@ -735,6 +752,34 @@
 									<code class="rounded bg-muted px-2 py-1 text-muted-foreground">{code}</code>
 								{/each}
 							</div>
+						</div>
+						<div class="border-t border-border pt-4">
+							<p class="mb-3 text-sm font-medium text-foreground">Confirmer l'activation</p>
+							<p class="mb-3 text-sm text-muted-foreground">Saisissez le code affiché dans votre application pour finaliser l'activation.</p>
+							<form onsubmit={confirmerActivation2Fa} class="space-y-3">
+								<input
+									type="text"
+									inputmode="numeric"
+									pattern="[0-9]{6}"
+									maxlength="6"
+									bind:value={codeConfirmation2Fa}
+									required
+									autocomplete="one-time-code"
+									placeholder="000000"
+									class="w-full rounded-md border border-input bg-background px-3 py-2 text-center text-lg tracking-widest ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+								/>
+								{#if erreurConfirmation2Fa}
+									<p class="text-sm text-destructive">{erreurConfirmation2Fa}</p>
+								{/if}
+								<button
+									type="submit"
+									disabled={confirmationEnCours}
+									class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+								>
+									<Shield size={16} />
+									{confirmationEnCours ? 'Vérification…' : 'Confirmer l\'activation'}
+								</button>
+							</form>
 						</div>
 					</div>
 				{:else}
