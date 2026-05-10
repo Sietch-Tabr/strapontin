@@ -1,0 +1,5170 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "Strapontin",
+    "languages": [
+      "TypeScript",
+      "Svelte",
+      "SQL",
+      "JavaScript",
+      "Shell",
+      "YAML",
+      "JSON",
+      "Markdown",
+      "CSS"
+    ],
+    "frameworks": [
+      "SvelteKit",
+      "BullMQ",
+      "Drizzle ORM",
+      "Better Auth",
+      "Resend",
+      "Vitest",
+      "Playwright",
+      "Woodpecker CI",
+      "Tailwind CSS",
+      "Vite",
+      "Pino"
+    ],
+    "description": "Agrégateur de concerts personnel — suit artistes et salles, agrège Ticketmaster et Eventim, notifie par email et push",
+    "analyzedAt": "2026-05-10T08:59:25.153269+00:00",
+    "gitCommitHash": "ad25d137feac7d6f72fc912ad66067ec0fedaa1b"
+  },
+  "nodes": [
+    {
+      "id": "file:.env.example",
+      "type": "file",
+      "name": ".env.example",
+      "filePath": ".env.example",
+      "summary": "Template listing all required environment variables for the application, covering API keys, database, Redis, authentication secret, and the public base URL.",
+      "tags": [
+        "configuration",
+        "environment",
+        "security",
+        "infrastructure"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:.mcp.json",
+      "type": "config",
+      "name": ".mcp.json",
+      "filePath": ".mcp.json",
+      "summary": "MCP (Model Context Protocol) server configuration registering the code-review-graph and everything-search tools for use inside Claude Code.",
+      "tags": [
+        "configuration",
+        "developer-tools",
+        "tooling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:.npmrc",
+      "type": "file",
+      "name": ".npmrc",
+      "filePath": ".npmrc",
+      "summary": "Root pnpm configuration file setting workspace-level registry or install options.",
+      "tags": [
+        "configuration",
+        "build-system",
+        "package-manager"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:.woodpecker.yaml",
+      "type": "config",
+      "name": ".woodpecker.yaml",
+      "filePath": ".woodpecker.yaml",
+      "summary": "Woodpecker CI/CD pipeline definition with three sequential steps: unit tests and typechecking on every push, then SSH-based production deployment on the main branch only.",
+      "tags": [
+        "ci-cd",
+        "deployment",
+        "configuration",
+        "build-system"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Uses Woodpecker (Gitea-compatible CI). The deploy step runs update.sh on the production LXC via SSH using secrets stored in Woodpecker."
+    },
+    {
+      "id": "file:apps/web/.npmrc",
+      "type": "file",
+      "name": ".npmrc",
+      "filePath": "apps/web/.npmrc",
+      "summary": "pnpm configuration file scoped to the web application workspace.",
+      "tags": [
+        "configuration",
+        "build-system",
+        "package-manager"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:apps/web/components.json",
+      "type": "config",
+      "name": "components.json",
+      "filePath": "apps/web/components.json",
+      "summary": "shadcn-svelte component library configuration defining Tailwind integration, path aliases, TypeScript settings, and the component registry for the web application.",
+      "tags": [
+        "configuration",
+        "ui",
+        "component-library",
+        "tailwind"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:apps/web/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "apps/web/package.json",
+      "summary": "Package manifest for the SvelteKit web application declaring scripts (dev, build, check, test), dev dependencies including Playwright and svelte-check, and runtime dependencies such as better-auth, drizzle-orm, and BullMQ.",
+      "tags": [
+        "configuration",
+        "build-system",
+        "dependency-management"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/playwright.config.ts",
+      "type": "file",
+      "name": "playwright.config.ts",
+      "filePath": "apps/web/playwright.config.ts",
+      "summary": "Playwright end-to-end test configuration targeting the deployed LXC dev environment, with Chromium browser and base URL driven by the E2E_BASE_URL environment variable.",
+      "tags": [
+        "test",
+        "e2e",
+        "configuration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:apps/web/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "apps/web/README.md",
+      "summary": "Standard SvelteKit scaffold README covering project creation, local development workflow, and production build instructions.",
+      "tags": [
+        "documentation",
+        "development"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/app.css",
+      "type": "file",
+      "name": "app.css",
+      "filePath": "apps/web/src/app.css",
+      "summary": "Global stylesheet importing Tailwind CSS base layers and defining CSS custom properties for the application's design tokens including theme colors, typography, and spacing.",
+      "tags": [
+        "styles",
+        "design-system",
+        "tailwind",
+        "theme"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/app.d.ts",
+      "type": "file",
+      "name": "app.d.ts",
+      "filePath": "apps/web/src/app.d.ts",
+      "summary": "SvelteKit ambient type declarations extending the App namespace to type event.locals with the authenticated session, user object, and resolved theme value.",
+      "tags": [
+        "type-definition",
+        "authentication",
+        "sveltekit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/app.html",
+      "type": "file",
+      "name": "app.html",
+      "filePath": "apps/web/src/app.html",
+      "summary": "SvelteKit root HTML template including the PWA manifest link, theme detection inline script to prevent FOUC, and the %sveltekit.body% placeholder.",
+      "tags": [
+        "markup",
+        "pwa",
+        "theme",
+        "entry-point"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Contains an inline script that reads the 'theme' cookie before render to avoid flash-of-unstyled-content for dark mode."
+    },
+    {
+      "id": "file:apps/web/src/hooks.server.ts",
+      "type": "file",
+      "name": "hooks.server.ts",
+      "filePath": "apps/web/src/hooks.server.ts",
+      "summary": "SvelteKit server hooks composing three sequential handlers: IP-based access blocking for direct server access, security headers injection, and the main authentication/session/theme resolution handler that redirects unauthenticated users and enforces 2FA for admins.",
+      "tags": [
+        "middleware",
+        "authentication",
+        "security",
+        "sveltekit"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/web/src/hooks.server.ts:bloquerAccesDirectIP",
+      "type": "function",
+      "name": "bloquerAccesDirectIP",
+      "filePath": "apps/web/src/hooks.server.ts",
+      "lineRange": [
+        24,
+        31
+      ],
+      "summary": "SvelteKit Handle middleware that returns 403 when the Host header is a raw IP address, blocking direct server access that bypasses the Nginx reverse proxy.",
+      "tags": [
+        "middleware",
+        "security",
+        "access-control"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/web/src/hooks.server.ts:securiser",
+      "type": "function",
+      "name": "securiser",
+      "filePath": "apps/web/src/hooks.server.ts",
+      "lineRange": [
+        47,
+        68
+      ],
+      "summary": "SvelteKit Handle middleware that appends security headers (COOP, CORP, X-Frame-Options, HSTS, etc.) to every response.",
+      "tags": [
+        "middleware",
+        "security"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/web/src/hooks.server.ts:gererAuth",
+      "type": "function",
+      "name": "gererAuth",
+      "filePath": "apps/web/src/hooks.server.ts",
+      "lineRange": [
+        70,
+        170
+      ],
+      "summary": "Main SvelteKit Handle middleware managing session validation, redirect logic for unauthenticated users, first-login enforcement, admin 2FA enforcement, and theme resolution from cookie or database.",
+      "tags": [
+        "middleware",
+        "authentication",
+        "session",
+        "theme"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/lib/auth-client.ts",
+      "type": "file",
+      "name": "auth-client.ts",
+      "filePath": "apps/web/src/lib/auth-client.ts",
+      "summary": "Client-side Better Auth singleton exporting authClient along with the signIn, signOut, and useSession helpers for use in Svelte components.",
+      "tags": [
+        "authentication",
+        "client",
+        "singleton"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/auth.ts",
+      "type": "file",
+      "name": "auth.ts",
+      "filePath": "apps/web/src/lib/auth.ts",
+      "summary": "Server-side Better Auth configuration with Drizzle adapter, username and TOTP two-factor plugins, password reset email integration, rate limiting, and an after-hook that logs successful and failed sign-in attempts.",
+      "tags": [
+        "authentication",
+        "server",
+        "security",
+        "middleware"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/lib/components/navigation/BottomNav.svelte",
+      "type": "file",
+      "name": "BottomNav.svelte",
+      "filePath": "apps/web/src/lib/components/navigation/BottomNav.svelte",
+      "summary": "Mobile bottom navigation bar Svelte component rendering the primary app sections (spectacles, artistes, salles, compte) with active-state indicators and new-content badges.",
+      "tags": [
+        "component",
+        "navigation",
+        "mobile",
+        "ui"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/lib/components/navigation/Sidebar.svelte",
+      "type": "file",
+      "name": "Sidebar.svelte",
+      "filePath": "apps/web/src/lib/components/navigation/Sidebar.svelte",
+      "summary": "Desktop sidebar navigation Svelte component mirroring the BottomNav sections with expanded labels, user context, and admin links.",
+      "tags": [
+        "component",
+        "navigation",
+        "desktop",
+        "ui"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/lib/components/ui/combobox-depts.svelte",
+      "type": "file",
+      "name": "combobox-depts.svelte",
+      "filePath": "apps/web/src/lib/components/ui/combobox-depts.svelte",
+      "summary": "Svelte combobox component for selecting one or more French departments (départements), driving the geographic filter used in concert search.",
+      "tags": [
+        "component",
+        "ui",
+        "filter",
+        "geographic"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/lib/components/ui/sonner/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "apps/web/src/lib/components/ui/sonner/index.ts",
+      "summary": "Barrel re-export for the Sonner toast notification component, making Toaster importable from the sonner package alias.",
+      "tags": [
+        "barrel",
+        "component",
+        "notifications"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/components/ui/sonner/sonner.svelte",
+      "type": "file",
+      "name": "sonner.svelte",
+      "filePath": "apps/web/src/lib/components/ui/sonner/sonner.svelte",
+      "summary": "Svelte wrapper component around the svelte-sonner Toaster, forwarding theme prop and positioning configuration for toast notifications.",
+      "tags": [
+        "component",
+        "notifications",
+        "ui"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/constantes/depts.ts",
+      "type": "file",
+      "name": "depts.ts",
+      "filePath": "apps/web/src/lib/constantes/depts.ts",
+      "summary": "Exports the TOUS_LES_DEPTS constant containing the complete list of French department codes used for geographic filtering of concerts.",
+      "tags": [
+        "utility",
+        "data-model",
+        "geographic"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/constantes/validations.ts",
+      "type": "file",
+      "name": "validations.ts",
+      "filePath": "apps/web/src/lib/constantes/validations.ts",
+      "summary": "Exports regex constants for validating user inputs: username format, email, month, and department code.",
+      "tags": [
+        "validation",
+        "utility",
+        "type-definition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/formats.ts",
+      "type": "file",
+      "name": "formats.ts",
+      "filePath": "apps/web/src/lib/formats.ts",
+      "summary": "Utility functions for formatting concert data for display: concert status badge mapping, locale-aware date formatting in long or short form, and time string truncation.",
+      "tags": [
+        "utility",
+        "formatting",
+        "ui"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/web/src/lib/formats.ts:badgeStatut",
+      "type": "function",
+      "name": "badgeStatut",
+      "filePath": "apps/web/src/lib/formats.ts",
+      "lineRange": [
+        1,
+        20
+      ],
+      "summary": "Maps a raw Ticketmaster status string (onsale, cancelled, postponed, etc.) to a display label and CSS variant for the status badge component.",
+      "tags": [
+        "utility",
+        "formatting",
+        "ui"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/web/src/lib/formats.ts:formaterDate",
+      "type": "function",
+      "name": "formaterDate",
+      "filePath": "apps/web/src/lib/formats.ts",
+      "lineRange": [
+        22,
+        33
+      ],
+      "summary": "Converts an ISO date string to a human-readable French locale date using toLocaleDateString, supporting long and short format options.",
+      "tags": [
+        "utility",
+        "formatting",
+        "date"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "apps/web/src/lib/index.ts",
+      "summary": "Empty or minimal barrel file at the root of the web lib directory.",
+      "tags": [
+        "barrel"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/server/config.ts",
+      "type": "file",
+      "name": "config.ts",
+      "filePath": "apps/web/src/lib/server/config.ts",
+      "summary": "Server-side application configuration service providing AES-256-GCM encryption/decryption of sensitive config values stored in the app_config database table, with an in-memory TTL cache to reduce database reads.",
+      "tags": [
+        "server",
+        "config",
+        "security",
+        "encryption"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/lib/server/config.ts:lireConfig",
+      "type": "function",
+      "name": "lireConfig",
+      "filePath": "apps/web/src/lib/server/config.ts",
+      "lineRange": [
+        44,
+        65
+      ],
+      "summary": "Reads and decrypts a configuration value from the app_config table, using an in-memory TTL cache to avoid repeated DB queries. Returns null if the key is absent.",
+      "tags": [
+        "server",
+        "config",
+        "encryption",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/lib/server/config.ts:sauvegarderConfig",
+      "type": "function",
+      "name": "sauvegarderConfig",
+      "filePath": "apps/web/src/lib/server/config.ts",
+      "lineRange": [
+        67,
+        84
+      ],
+      "summary": "Encrypts and upserts a configuration key/value pair into the app_config table, invalidating the in-memory cache entry.",
+      "tags": [
+        "server",
+        "config",
+        "encryption",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/web/src/lib/server/config.ts:lireConfigsPresentes",
+      "type": "function",
+      "name": "lireConfigsPresentes",
+      "filePath": "apps/web/src/lib/server/config.ts",
+      "lineRange": [
+        86,
+        89
+      ],
+      "summary": "Returns the list of configuration keys present in the database without decrypting values, used by the admin UI to show which keys are configured.",
+      "tags": [
+        "server",
+        "config",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/server/db.ts",
+      "type": "file",
+      "name": "db.ts",
+      "filePath": "apps/web/src/lib/server/db.ts",
+      "summary": "Initializes and exports the Drizzle ORM database connection singleton, plus a `fermerDb` helper to cleanly close the underlying PostgreSQL pool.",
+      "tags": [
+        "service",
+        "database",
+        "singleton"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/server/email.ts",
+      "type": "file",
+      "name": "email.ts",
+      "filePath": "apps/web/src/lib/server/email.ts",
+      "summary": "Provides Resend-based email sending for invitations, password resets, and user reports, with HTML escaping and templated header/footer helpers.",
+      "tags": [
+        "service",
+        "email",
+        "utility",
+        "notification"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/lib/server/email.ts:envoyerInvitation",
+      "type": "function",
+      "name": "envoyerInvitation",
+      "filePath": "apps/web/src/lib/server/email.ts",
+      "lineRange": [
+        61,
+        107
+      ],
+      "summary": "Sends an invite email with a temporary username and password to a newly created user via the Resend API.",
+      "tags": [
+        "email",
+        "authentication",
+        "notification"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/lib/server/email.ts:envoyerResetMotDePasse",
+      "type": "function",
+      "name": "envoyerResetMotDePasse",
+      "filePath": "apps/web/src/lib/server/email.ts",
+      "lineRange": [
+        109,
+        147
+      ],
+      "summary": "Sends a password-reset email containing a one-time link via the Resend API.",
+      "tags": [
+        "email",
+        "authentication",
+        "security"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/lib/server/email.ts:envoyerSignalement",
+      "type": "function",
+      "name": "envoyerSignalement",
+      "filePath": "apps/web/src/lib/server/email.ts",
+      "lineRange": [
+        149,
+        196
+      ],
+      "summary": "Sends a user-submitted report (concert inaccuracy or feedback) to the admin contact email via Resend.",
+      "tags": [
+        "email",
+        "feedback",
+        "notification"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/lib/server/filtres.ts",
+      "type": "file",
+      "name": "filtres.ts",
+      "filePath": "apps/web/src/lib/server/filtres.ts",
+      "summary": "Provides helpers to read the user's availability filter preference from the DB and URL params, and to build the corresponding Drizzle SQL condition.",
+      "tags": [
+        "utility",
+        "filter",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/server/log-admin.ts",
+      "type": "file",
+      "name": "log-admin.ts",
+      "filePath": "apps/web/src/lib/server/log-admin.ts",
+      "summary": "Writes structured admin log entries to a capped Redis list (`strapontin:logs:admin`), used by the admin dashboard to show recent activity.",
+      "tags": [
+        "service",
+        "logging",
+        "redis"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/server/queue.ts",
+      "type": "file",
+      "name": "queue.ts",
+      "filePath": "apps/web/src/lib/server/queue.ts",
+      "summary": "Exports the shared BullMQ `Queue` instance and Redis connection config used by the web app to enqueue background jobs.",
+      "tags": [
+        "service",
+        "queue",
+        "bullmq",
+        "singleton"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/server/redis.ts",
+      "type": "file",
+      "name": "redis.ts",
+      "filePath": "apps/web/src/lib/server/redis.ts",
+      "summary": "Exports the ioredis client singleton plus Redis key-name helpers and constants (quota key, region fetch TTL, staleness threshold, job stats key).",
+      "tags": [
+        "service",
+        "redis",
+        "singleton",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/server/reseau.ts",
+      "type": "file",
+      "name": "reseau.ts",
+      "filePath": "apps/web/src/lib/server/reseau.ts",
+      "summary": "Exports `estAdresseIP`, a utility that detects whether a host string is an IP address (IPv4, bracketed IPv6, or bare IPv6) to block direct-IP access in hooks.",
+      "tags": [
+        "utility",
+        "security",
+        "network",
+        "tested"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/lib/utils.ts",
+      "type": "file",
+      "name": "utils.ts",
+      "filePath": "apps/web/src/lib/utils.ts",
+      "summary": "Exports the `cn` class-name merging helper (clsx + tailwind-merge) used across Svelte components for conditional Tailwind styling.",
+      "tags": [
+        "utility",
+        "styling",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/+layout.server.ts",
+      "type": "file",
+      "name": "+layout.server.ts",
+      "filePath": "apps/web/src/routes/(app)/+layout.server.ts",
+      "summary": "SvelteKit layout server load function that guards the entire (app) group by redirecting unauthenticated users to the login page.",
+      "tags": [
+        "middleware",
+        "authentication",
+        "api-handler",
+        "tested"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/+layout.svelte",
+      "type": "file",
+      "name": "+layout.svelte",
+      "filePath": "apps/web/src/routes/(app)/+layout.svelte",
+      "summary": "Root layout component for the authenticated (app) route group, rendering the navigation shell and slot for child pages.",
+      "tags": [
+        "component",
+        "layout",
+        "entry-point"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/(app)/+page.server.ts",
+      "summary": "Server load function for the main concerts dashboard: queries matched concerts grouped by artist with availability filters, plus actions to toggle the availability filter.",
+      "tags": [
+        "api-handler",
+        "database",
+        "service"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/routes/(app)/+page.server.ts:load",
+      "type": "function",
+      "name": "load",
+      "filePath": "apps/web/src/routes/(app)/+page.server.ts",
+      "lineRange": [
+        17,
+        106
+      ],
+      "summary": "Loads the user's matched concerts from the DB (joined with user_matches, user_artistes), groups them by artist, and returns counts of followed artists/venues.",
+      "tags": [
+        "api-handler",
+        "database",
+        "data-model"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(app)/+page.svelte",
+      "summary": "Main concerts dashboard page component rendering the user's matched concerts grouped by artist with status badges and new-concert indicators.",
+      "tags": [
+        "component",
+        "entry-point",
+        "data-model"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/(app)/admin/+page.server.ts",
+      "summary": "Admin dashboard server load function fetching users, sessions, TM quota, job stats, admin logs, and app config; plus actions for user management, invitations, and manual job triggers.",
+      "tags": [
+        "api-handler",
+        "admin",
+        "database",
+        "service",
+        "tested"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/web/src/routes/(app)/admin/+page.server.ts:load",
+      "type": "function",
+      "name": "load",
+      "filePath": "apps/web/src/routes/(app)/admin/+page.server.ts",
+      "lineRange": [
+        25,
+        100
+      ],
+      "summary": "Aggregates all admin dashboard data in parallel: user list with last-session activity, Ticketmaster quota from Redis, background-job stats, admin log entries, and app config values.",
+      "tags": [
+        "api-handler",
+        "admin",
+        "database",
+        "redis"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/admin/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(app)/admin/+page.svelte",
+      "summary": "Admin dashboard UI rendering user management, Ticketmaster quota graphs, background job status, admin logs, and app configuration forms.",
+      "tags": [
+        "component",
+        "admin",
+        "data-model"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/aide/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/(app)/aide/+page.server.ts",
+      "summary": "Help page server load exposing whether email is available, and an action that dispatches user-submitted reports via `envoyerSignalement`.",
+      "tags": [
+        "api-handler",
+        "email",
+        "service"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/aide/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(app)/aide/+page.svelte",
+      "summary": "Help page UI with FAQ sections, keyboard shortcuts reference, and a contact/report form that submits to the server action.",
+      "tags": [
+        "component",
+        "documentation",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/artistes/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/(app)/artistes/+page.server.ts",
+      "summary": "Artists management page server logic: loads followed artists, searches the concert DB and MusicBrainz for suggestions, with actions to add/remove/refresh artists.",
+      "tags": [
+        "api-handler",
+        "database",
+        "service",
+        "tested"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/routes/(app)/artistes/+page.server.ts:rechercherMusicBrainz",
+      "type": "function",
+      "name": "rechercherMusicBrainz",
+      "filePath": "apps/web/src/routes/(app)/artistes/+page.server.ts",
+      "lineRange": [
+        19,
+        42
+      ],
+      "summary": "Queries the MusicBrainz API for artists matching a search term, filters results with score >= 60, and returns name/disambiguation pairs.",
+      "tags": [
+        "api-handler",
+        "external-api",
+        "search"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/artistes/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(app)/artistes/+page.svelte",
+      "summary": "Artists management UI listing followed artists with search-and-add interface backed by MusicBrainz and concert DB suggestions.",
+      "tags": [
+        "component",
+        "data-model",
+        "search"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/changelog/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(app)/changelog/+page.svelte",
+      "summary": "Changelog page component listing version-by-version user-facing feature additions, fixes, and improvements in reverse chronological order.",
+      "tags": [
+        "component",
+        "documentation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/decouverte/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/(app)/decouverte/+page.server.ts",
+      "summary": "Discovery page server load: queries concerts with multi-faceted filters (dept, genre, classification, month, budget, text), checks Redis for stale region data, and returns facet lists for the UI.",
+      "tags": [
+        "api-handler",
+        "database",
+        "service",
+        "filter"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/web/src/routes/(app)/decouverte/+page.server.ts:load",
+      "type": "function",
+      "name": "load",
+      "filePath": "apps/web/src/routes/(app)/decouverte/+page.server.ts",
+      "lineRange": [
+        27,
+        198
+      ],
+      "summary": "Reads all URL filter params, queries the concert DB with dynamic Drizzle conditions, fetches facet value lists in parallel, checks Redis staleness for departments outside user prefs, and assembles the full discovery payload.",
+      "tags": [
+        "api-handler",
+        "database",
+        "filter",
+        "redis"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/decouverte/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(app)/decouverte/+page.svelte",
+      "summary": "Discovery page UI with multi-filter sidebar (dept, genre, classification, month, budget), concert result list, and inline quick-follow artist buttons.",
+      "tags": [
+        "component",
+        "filter",
+        "search"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/first-login/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/(app)/first-login/+page.server.ts",
+      "summary": "First-login server logic: redirects users who don't need credential change, then handles the action to update username, display name, and password on first login.",
+      "tags": [
+        "api-handler",
+        "authentication",
+        "security"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/first-login/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(app)/first-login/+page.svelte",
+      "summary": "First-login page component prompting users to set their username and password on initial account activation.",
+      "tags": [
+        "component",
+        "authentication",
+        "security"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/parametres/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/(app)/parametres/+page.server.ts",
+      "summary": "Settings page server logic handling department preferences, notification settings, theme, 2FA TOTP management, push subscription, account deletion, and password change — the most action-dense file in the app.",
+      "tags": [
+        "api-handler",
+        "service",
+        "authentication",
+        "configuration"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/parametres/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(app)/parametres/+page.svelte",
+      "summary": "Settings page UI with tabbed sections for department configuration, notifications (email + push), theme selection, 2FA TOTP setup, and account management (password change, delete).",
+      "tags": [
+        "component",
+        "configuration",
+        "authentication"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/salles/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/(app)/salles/+page.server.ts",
+      "summary": "SvelteKit server route for the venue tracking page: loads user-followed venues, searches local DB and Ticketmaster API for venues, and handles add/remove actions with Levenshtein-based deduplication.",
+      "tags": [
+        "api-handler",
+        "service",
+        "data-model",
+        "utility",
+        "tested"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses Drizzle ORM with ilike/sql operators; local normalisation + Levenshtein similarity to deduplicate Ticketmaster search results against DB entries."
+    },
+    {
+      "id": "function:apps/web/src/routes/(app)/salles/+page.server.ts:normaliserSalleCle",
+      "type": "function",
+      "name": "normaliserSalleCle",
+      "filePath": "apps/web/src/routes/(app)/salles/+page.server.ts",
+      "lineRange": [
+        15,
+        21
+      ],
+      "summary": "Normalises a venue name to a canonical key by lowercasing and stripping diacritics, used as a comparison key for deduplication.",
+      "tags": [
+        "utility",
+        "normalisation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/web/src/routes/(app)/salles/+page.server.ts:estMemeSalle",
+      "type": "function",
+      "name": "estMemeSalle",
+      "filePath": "apps/web/src/routes/(app)/salles/+page.server.ts",
+      "lineRange": [
+        25,
+        32
+      ],
+      "summary": "Compares two venue names using normalised keys and Levenshtein distance to decide if they refer to the same venue.",
+      "tags": [
+        "utility",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/web/src/routes/(app)/salles/+page.server.ts:rechercherSallesTM",
+      "type": "function",
+      "name": "rechercherSallesTM",
+      "filePath": "apps/web/src/routes/(app)/salles/+page.server.ts",
+      "lineRange": [
+        41,
+        64
+      ],
+      "summary": "Fetches venue search results from the Ticketmaster API for a given search term, returning a mapped list of venue objects.",
+      "tags": [
+        "api-handler",
+        "service"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/routes/(app)/salles/+page.server.ts:load",
+      "type": "function",
+      "name": "load",
+      "filePath": "apps/web/src/routes/(app)/salles/+page.server.ts",
+      "lineRange": [
+        66,
+        121
+      ],
+      "summary": "SvelteKit load function: retrieves followed venues, runs DB and TM searches deduplicating results, and returns merged venue list with follow status.",
+      "tags": [
+        "api-handler",
+        "service"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/salles/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(app)/salles/+page.svelte",
+      "summary": "SvelteKit page component for venue management: renders the venue search form and list of followed venues with add/remove controls.",
+      "tags": [
+        "component",
+        "service"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/spectacles/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/(app)/spectacles/+page.server.ts",
+      "summary": "SvelteKit server route for the concerts page: loads matched concerts for the current user with multi-filter support (search, month, classification, genre, source, price, status, sort order) and handles mark-as-seen actions.",
+      "tags": [
+        "api-handler",
+        "service",
+        "data-model"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Complex dynamic WHERE clause built with Drizzle conditional arrays; joins user_matches with concerts table; supports 7+ independent URL-driven filters."
+    },
+    {
+      "id": "function:apps/web/src/routes/(app)/spectacles/+page.server.ts:load",
+      "type": "function",
+      "name": "load",
+      "filePath": "apps/web/src/routes/(app)/spectacles/+page.server.ts",
+      "lineRange": [
+        32,
+        176
+      ],
+      "summary": "Loads the user's matched concerts by dynamically building a filtered Drizzle query from URL search parameters, also returning available genres for filtering.",
+      "tags": [
+        "api-handler",
+        "service"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/routes/(app)/spectacles/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(app)/spectacles/+page.svelte",
+      "summary": "The main concerts page component displaying matched concerts in a filterable, sortable list with badges for new items, status indicators, and mark-as-seen interaction.",
+      "tags": [
+        "component",
+        "service",
+        "event-handler"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/web/src/routes/(auth)/forgot-password/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/(auth)/forgot-password/+page.server.ts",
+      "summary": "SvelteKit server route handling the forgot-password form action, triggering a Better Auth password reset email.",
+      "tags": [
+        "api-handler",
+        "middleware"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/(auth)/forgot-password/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(auth)/forgot-password/+page.svelte",
+      "summary": "Forgot-password page component with email input form and feedback messaging.",
+      "tags": [
+        "component",
+        "middleware"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/(auth)/login/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(auth)/login/+page.svelte",
+      "summary": "Login page component supporting username/password sign-in and optional TOTP 2FA step, with inline error display and redirect on success.",
+      "tags": [
+        "component",
+        "middleware"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/routes/(auth)/reset-password/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/(auth)/reset-password/+page.server.ts",
+      "summary": "SvelteKit server route for the password-reset page: validates the token from the URL and handles the reset action via Better Auth.",
+      "tags": [
+        "api-handler",
+        "middleware"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/(auth)/reset-password/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/(auth)/reset-password/+page.svelte",
+      "summary": "Reset-password page component rendering the new-password form and handling success/error feedback.",
+      "tags": [
+        "component",
+        "middleware"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/+layout.server.ts",
+      "type": "file",
+      "name": "+layout.server.ts",
+      "filePath": "apps/web/src/routes/+layout.server.ts",
+      "summary": "Root SvelteKit layout server file that exposes the authenticated user from locals to all child routes.",
+      "tags": [
+        "middleware",
+        "entry-point"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/+layout.svelte",
+      "type": "file",
+      "name": "+layout.svelte",
+      "filePath": "apps/web/src/routes/+layout.svelte",
+      "summary": "Root SvelteKit layout component that wraps all pages with shared shell markup.",
+      "tags": [
+        "component",
+        "entry-point"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/api/fetch-region-status/+server.ts",
+      "type": "file",
+      "name": "+server.ts",
+      "filePath": "apps/web/src/routes/api/fetch-region-status/+server.ts",
+      "summary": "Server-Sent Events endpoint that streams real-time status of a BullMQ region-fetch job to the client, using QueueEvents to listen for completion or failure.",
+      "tags": [
+        "api-handler",
+        "service",
+        "event-handler"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Implements SSE via ReadableStream and QueueEvents.on; includes a 30s timeout and explicit abort-signal cleanup."
+    },
+    {
+      "id": "function:apps/web/src/routes/api/fetch-region-status/+server.ts:GET",
+      "type": "function",
+      "name": "GET",
+      "filePath": "apps/web/src/routes/api/fetch-region-status/+server.ts",
+      "lineRange": [
+        8,
+        72
+      ],
+      "summary": "Streams BullMQ job progress for a specific region-fetch job as Server-Sent Events, closing the stream on completion, failure, timeout, or client disconnect.",
+      "tags": [
+        "api-handler",
+        "event-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/routes/api/preferences/+server.ts",
+      "type": "file",
+      "name": "+server.ts",
+      "filePath": "apps/web/src/routes/api/preferences/+server.ts",
+      "summary": "REST GET endpoint that returns the authenticated user's full preferences (followed artists, followed venues, config) as JSON, used by the PWA service worker for offline caching.",
+      "tags": [
+        "api-handler",
+        "service"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/routes/api/preferences/+server.ts:GET",
+      "type": "function",
+      "name": "GET",
+      "filePath": "apps/web/src/routes/api/preferences/+server.ts",
+      "lineRange": [
+        7,
+        62
+      ],
+      "summary": "Queries artists, venues, and user config in parallel via Promise.all, returning a combined preferences JSON response with cache-control headers.",
+      "tags": [
+        "api-handler",
+        "service"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/routes/api/push/+server.ts",
+      "type": "file",
+      "name": "+server.ts",
+      "filePath": "apps/web/src/routes/api/push/+server.ts",
+      "summary": "REST API for Web Push subscription management: GET returns the VAPID public key, POST registers a new push subscription (with per-user cap of 10), DELETE removes an existing subscription.",
+      "tags": [
+        "api-handler",
+        "service"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/routes/api/push/+server.ts:GET",
+      "type": "function",
+      "name": "GET",
+      "filePath": "apps/web/src/routes/api/push/+server.ts",
+      "lineRange": [
+        8,
+        19
+      ],
+      "summary": "Returns the VAPID public key from app config; intentionally public (no auth required) so the service worker can retrieve it.",
+      "tags": [
+        "api-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/web/src/routes/api/push/+server.ts:POST",
+      "type": "function",
+      "name": "POST",
+      "filePath": "apps/web/src/routes/api/push/+server.ts",
+      "lineRange": [
+        21,
+        62
+      ],
+      "summary": "Registers a Web Push subscription for the authenticated user after validating the payload structure and enforcing a cap of 10 subscriptions per user.",
+      "tags": [
+        "api-handler",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/routes/api/push/+server.ts:DELETE",
+      "type": "function",
+      "name": "DELETE",
+      "filePath": "apps/web/src/routes/api/push/+server.ts",
+      "lineRange": [
+        64,
+        86
+      ],
+      "summary": "Removes a specific Web Push subscription by endpoint for the authenticated user.",
+      "tags": [
+        "api-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/health/+server.ts",
+      "type": "file",
+      "name": "+server.ts",
+      "filePath": "apps/web/src/routes/health/+server.ts",
+      "summary": "Health-check endpoint that pings the PostgreSQL database and Redis in parallel, returning a JSON status response used by the deployment update script.",
+      "tags": [
+        "api-handler",
+        "service"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/web/src/routes/health/+server.ts:GET",
+      "type": "function",
+      "name": "GET",
+      "filePath": "apps/web/src/routes/health/+server.ts",
+      "lineRange": [
+        6,
+        20
+      ],
+      "summary": "Executes a SELECT 1 on the DB and PING on Redis simultaneously, returning a healthy/error JSON status.",
+      "tags": [
+        "api-handler",
+        "service"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/routes/setup/+page.server.ts",
+      "type": "file",
+      "name": "+page.server.ts",
+      "filePath": "apps/web/src/routes/setup/+page.server.ts",
+      "summary": "SvelteKit server route for the initial setup wizard: redirects to home if any user already exists, and handles admin account creation with first-run configuration.",
+      "tags": [
+        "api-handler",
+        "middleware"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/routes/setup/+page.svelte",
+      "type": "file",
+      "name": "+page.svelte",
+      "filePath": "apps/web/src/routes/setup/+page.svelte",
+      "summary": "Setup wizard page component for first-run admin account creation, collecting username, email, and password.",
+      "tags": [
+        "component",
+        "middleware"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/service-worker.ts",
+      "type": "file",
+      "name": "service-worker.ts",
+      "filePath": "apps/web/src/service-worker.ts",
+      "summary": "PWA service worker that caches static assets, handles push notifications, and responds to notificationclick events to open the concerts page.",
+      "tags": [
+        "service",
+        "event-handler"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Registers install/activate/fetch/push/notificationclick event listeners; uses Cache API for offline asset caching."
+    },
+    {
+      "id": "file:apps/web/src/tests/fonctionnel/admin.test.ts",
+      "type": "file",
+      "name": "admin.test.ts",
+      "filePath": "apps/web/src/tests/fonctionnel/admin.test.ts",
+      "summary": "Functional tests for the admin page server route, covering load and action behaviors with mocked DB and auth session.",
+      "tags": [
+        "test",
+        "api-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/tests/fonctionnel/artistes.test.ts",
+      "type": "file",
+      "name": "artistes.test.ts",
+      "filePath": "apps/web/src/tests/fonctionnel/artistes.test.ts",
+      "summary": "Functional tests for the artists page server route, exercising load and add/remove actions with mocked DB.",
+      "tags": [
+        "test",
+        "api-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/tests/fonctionnel/layout.test.ts",
+      "type": "file",
+      "name": "layout.test.ts",
+      "filePath": "apps/web/src/tests/fonctionnel/layout.test.ts",
+      "summary": "Functional tests for the app layout server route, verifying that user session data is correctly forwarded.",
+      "tags": [
+        "test",
+        "middleware"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/src/tests/fonctionnel/salles.test.ts",
+      "type": "file",
+      "name": "salles.test.ts",
+      "filePath": "apps/web/src/tests/fonctionnel/salles.test.ts",
+      "summary": "Functional tests for the venues page server route, covering search, add, and remove venue scenarios with mocked DB.",
+      "tags": [
+        "test",
+        "api-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/tests/fonctionnel/utils.ts",
+      "type": "file",
+      "name": "utils.ts",
+      "filePath": "apps/web/src/tests/fonctionnel/utils.ts",
+      "summary": "Shared test utilities providing factory functions for mock SvelteKit RequestEvent and mock Drizzle DB instances used across functional tests.",
+      "tags": [
+        "test",
+        "utility",
+        "factory"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/tests/fonctionnel/utils.ts:creerMockEvent",
+      "type": "function",
+      "name": "creerMockEvent",
+      "filePath": "apps/web/src/tests/fonctionnel/utils.ts",
+      "lineRange": [
+        3,
+        42
+      ],
+      "summary": "Builds a typed mock SvelteKit RequestEvent with configurable form data, URL params, and auth locals for use in functional tests.",
+      "tags": [
+        "test",
+        "factory"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/src/tests/fonctionnel/utils.ts:creerMockDb",
+      "type": "function",
+      "name": "creerMockDb",
+      "filePath": "apps/web/src/tests/fonctionnel/utils.ts",
+      "lineRange": [
+        46,
+        72
+      ],
+      "summary": "Creates a mock Drizzle DB object with sequential result mocking for select/insert/delete/update chains used in functional tests.",
+      "tags": [
+        "test",
+        "factory"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/src/tests/unitaire/hooks.test.ts",
+      "type": "file",
+      "name": "hooks.test.ts",
+      "filePath": "apps/web/src/tests/unitaire/hooks.test.ts",
+      "summary": "Unit tests for the server hooks IP-detection utility, verifying that direct IP access (IPv4, IPv6 bracketed/unbracketed) is correctly detected.",
+      "tags": [
+        "test",
+        "middleware"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:apps/web/static/manifest.json",
+      "type": "config",
+      "name": "manifest.json",
+      "filePath": "apps/web/static/manifest.json",
+      "summary": "PWA Web App Manifest defining the application name, icons, theme colors, and standalone display mode for home-screen installation.",
+      "tags": [
+        "configuration",
+        "infrastructure"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:apps/web/static/robots.txt",
+      "type": "document",
+      "name": "robots.txt",
+      "filePath": "apps/web/static/robots.txt",
+      "summary": "Web crawler directive file allowing all bots and specifying the sitemap location for the SvelteKit application.",
+      "tags": [
+        "documentation",
+        "configuration",
+        "seo"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/svelte.config.js",
+      "type": "file",
+      "name": "svelte.config.js",
+      "filePath": "apps/web/svelte.config.js",
+      "summary": "SvelteKit configuration enabling adapter-node for deployment, nonce-based CSP, and custom warning filters for a11y false positives.",
+      "tags": [
+        "configuration",
+        "build-system",
+        "security"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Uses adapter-node for Node.js deployment and configures Content Security Policy with nonce mode to avoid unsafe-inline scripts."
+    },
+    {
+      "id": "file:apps/web/tests/e2e/auth.e2e.ts",
+      "type": "file",
+      "name": "auth.e2e.ts",
+      "filePath": "apps/web/tests/e2e/auth.e2e.ts",
+      "summary": "Playwright E2E tests for authentication flows (login, logout, first-login credential change).",
+      "tags": [
+        "test",
+        "e2e",
+        "authentication"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/tests/e2e/global-setup.ts",
+      "type": "file",
+      "name": "global-setup.ts",
+      "filePath": "apps/web/tests/e2e/global-setup.ts",
+      "summary": "Playwright global setup that creates an E2E test account, authenticates via HTTP, and persists the browser session state to disk for test reuse.",
+      "tags": [
+        "test",
+        "e2e",
+        "authentication",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/tests/e2e/global-setup.ts:setup",
+      "type": "function",
+      "name": "setup",
+      "filePath": "apps/web/tests/e2e/global-setup.ts",
+      "lineRange": [
+        9,
+        49
+      ],
+      "summary": "Global Playwright setup function that provisions an E2E test user, authenticates, and writes session state to a JSON file.",
+      "tags": [
+        "test",
+        "e2e",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/web/tests/e2e/global-setup.ts:seConnecter",
+      "type": "function",
+      "name": "seConnecter",
+      "filePath": "apps/web/tests/e2e/global-setup.ts",
+      "lineRange": [
+        51,
+        82
+      ],
+      "summary": "Authenticates a test user via the Better Auth sign-in endpoint and returns the session cookie.",
+      "tags": [
+        "test",
+        "authentication",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/web/tests/e2e/navigation.e2e.ts",
+      "type": "file",
+      "name": "navigation.e2e.ts",
+      "filePath": "apps/web/tests/e2e/navigation.e2e.ts",
+      "summary": "Playwright E2E tests verifying navigation flows across the main application pages (concerts, artistes, salles, parametres, admin).",
+      "tags": [
+        "test",
+        "e2e",
+        "navigation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:apps/web/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "filePath": "apps/web/tsconfig.json",
+      "summary": "TypeScript compiler configuration for the SvelteKit web app, extending the .svelte-kit generated config with strict mode enabled.",
+      "tags": [
+        "configuration",
+        "typescript",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/vite.config.ts",
+      "type": "file",
+      "name": "vite.config.ts",
+      "filePath": "apps/web/vite.config.ts",
+      "summary": "Vite configuration for SvelteKit that applies a custom Rollup plugin to strip Better Auth's @__NO_SIDE_EFFECTS__ annotations, preventing Rollup errors during build.",
+      "tags": [
+        "configuration",
+        "build-system"
+      ],
+      "complexity": "simple",
+      "languageNotes": "The stripBetterAuthAnnotations Rollup plugin patches a Better Auth incompatibility with adapter-node's bundler."
+    },
+    {
+      "id": "file:apps/web/vitest.fonctionnel.config.ts",
+      "type": "file",
+      "name": "vitest.fonctionnel.config.ts",
+      "filePath": "apps/web/vitest.fonctionnel.config.ts",
+      "summary": "Vitest configuration for functional SvelteKit tests (load functions and form actions) running in a Node environment without a browser.",
+      "tags": [
+        "configuration",
+        "test",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/web/vitest.unitaire.config.ts",
+      "type": "file",
+      "name": "vitest.unitaire.config.ts",
+      "filePath": "apps/web/vitest.unitaire.config.ts",
+      "summary": "Vitest configuration for unit tests in the web app, scoped to test files inside the src directory.",
+      "tags": [
+        "configuration",
+        "test",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:apps/worker/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "apps/worker/package.json",
+      "summary": "Package manifest for the BullMQ worker app, declaring dependencies on BullMQ, Drizzle ORM, ioredis, pino, web-push, and Resend, with build and test scripts.",
+      "tags": [
+        "configuration",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/worker/src/__tests__/integration/cron.integration.test.ts",
+      "type": "file",
+      "name": "cron.integration.test.ts",
+      "filePath": "apps/worker/src/__tests__/integration/cron.integration.test.ts",
+      "summary": "Integration tests verifying that planifierJobsUsers enqueues the correct BullMQ jobs (fetch:artiste, fetch:region, fetch:salle, purger:concerts, recalculer:matches) against real PostgreSQL and Redis instances.",
+      "tags": [
+        "test",
+        "integration",
+        "service"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/worker/src/__tests__/integration/db-test.ts",
+      "type": "file",
+      "name": "db-test.ts",
+      "filePath": "apps/worker/src/__tests__/integration/db-test.ts",
+      "summary": "Test utility providing a Drizzle ORM database instance connected to the integration test DB, with helpers to clean up concerts and user data between test runs.",
+      "tags": [
+        "test",
+        "utility",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/worker/src/__tests__/integration/global-setup.ts",
+      "type": "file",
+      "name": "global-setup.ts",
+      "filePath": "apps/worker/src/__tests__/integration/global-setup.ts",
+      "summary": "Vitest global setup/teardown for worker integration tests that spawns an SSH tunnel to the dev LXC and waits for PostgreSQL and Redis ports to be accessible.",
+      "tags": [
+        "test",
+        "integration",
+        "infrastructure"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/worker/src/__tests__/integration/global-setup.ts:setup",
+      "type": "function",
+      "name": "setup",
+      "filePath": "apps/worker/src/__tests__/integration/global-setup.ts",
+      "lineRange": [
+        31,
+        67
+      ],
+      "summary": "Spawns an SSH tunnel process to forward PostgreSQL and Redis ports from the dev LXC, with retry logic to confirm connectivity before tests run.",
+      "tags": [
+        "test",
+        "infrastructure",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/worker/src/__tests__/integration/persister.integration.test.ts",
+      "type": "file",
+      "name": "persister.integration.test.ts",
+      "filePath": "apps/worker/src/__tests__/integration/persister.integration.test.ts",
+      "summary": "Integration tests for persisterConcerts verifying upsert logic, diacritics preference, status handling, and deduplication against a real PostgreSQL database.",
+      "tags": [
+        "test",
+        "integration",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/worker/src/__tests__/integration/reconcilier.integration.test.ts",
+      "type": "file",
+      "name": "reconcilier.integration.test.ts",
+      "filePath": "apps/worker/src/__tests__/integration/reconcilier.integration.test.ts",
+      "summary": "Integration tests for reconcilierSalles verifying that semantically equivalent venue names (TM vs Eventim) are unified across concert batches against a real PostgreSQL database.",
+      "tags": [
+        "test",
+        "integration",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/worker/src/__tests__/persister.test.ts",
+      "type": "file",
+      "name": "persister.test.ts",
+      "filePath": "apps/worker/src/__tests__/persister.test.ts",
+      "summary": "Unit tests for deduplication and conflict-resolution logic in persister.ts, covering diacritics preference, mixed-case venue preference, and cross-source deduplication with mocked database.",
+      "tags": [
+        "test",
+        "unit",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/worker/src/config.ts",
+      "type": "file",
+      "name": "config.ts",
+      "filePath": "apps/worker/src/config.ts",
+      "summary": "Application configuration module providing AES-256-GCM encryption helpers and database-backed key-value config read/write with in-memory caching, used to securely store and retrieve API keys.",
+      "tags": [
+        "configuration",
+        "security",
+        "service"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/worker/src/config.ts:lireConfig",
+      "type": "function",
+      "name": "lireConfig",
+      "filePath": "apps/worker/src/config.ts",
+      "lineRange": [
+        42,
+        64
+      ],
+      "summary": "Reads an encrypted configuration value from the app_config table, decrypts it with AES-256-GCM, and caches the result in memory for 5 minutes.",
+      "tags": [
+        "configuration",
+        "security",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/worker/src/config.ts:sauvegarderConfig",
+      "type": "function",
+      "name": "sauvegarderConfig",
+      "filePath": "apps/worker/src/config.ts",
+      "lineRange": [
+        66,
+        85
+      ],
+      "summary": "Encrypts a configuration value with AES-256-GCM and upserts it into the app_config table, invalidating the in-memory cache.",
+      "tags": [
+        "configuration",
+        "security",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/worker/src/cron.ts",
+      "type": "file",
+      "name": "cron.ts",
+      "filePath": "apps/worker/src/cron.ts",
+      "summary": "BullMQ job scheduler that creates the Redis queue and enqueues all periodic jobs (fetch:artiste:batch, fetch:region, fetch:salle, recalculer:matches, purger:concerts, digest quotidien) based on user data and TM quota availability.",
+      "tags": [
+        "service",
+        "event-handler",
+        "data-pipeline",
+        "tested"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/worker/src/cron.ts:planifierJobsUsers",
+      "type": "function",
+      "name": "planifierJobsUsers",
+      "filePath": "apps/worker/src/cron.ts",
+      "lineRange": [
+        22,
+        162
+      ],
+      "summary": "Queries user preferences and enqueues BullMQ jobs for all active users — artist batch fetches, per-department region fetches, venue fetches, match recalculation, concert purge, and daily digest — while checking TM quota thresholds.",
+      "tags": [
+        "service",
+        "event-handler",
+        "data-pipeline"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/worker/src/db.ts",
+      "type": "file",
+      "name": "db.ts",
+      "filePath": "apps/worker/src/db.ts",
+      "summary": "Singleton Drizzle ORM database connection for the worker process, initialized from the DATABASE_URL environment variable.",
+      "tags": [
+        "service",
+        "database",
+        "singleton"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/worker/src/email.ts",
+      "type": "file",
+      "name": "email.ts",
+      "filePath": "apps/worker/src/email.ts",
+      "summary": "Email notification module using Resend to send HTML digest emails listing new concerts matched for a user, with lazy API client initialization and configurable base URL.",
+      "tags": [
+        "service",
+        "event-handler",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/worker/src/email.ts:envoyerDigestConcerts",
+      "type": "function",
+      "name": "envoyerDigestConcerts",
+      "filePath": "apps/worker/src/email.ts",
+      "lineRange": [
+        91,
+        138
+      ],
+      "summary": "Composes and sends an HTML email digest via Resend listing matched concerts for a user, using configured API key and base URL.",
+      "tags": [
+        "service",
+        "event-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/worker/src/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "apps/worker/src/index.ts",
+      "summary": "Worker process entry point that creates a BullMQ Worker consuming the job queue with concurrency 2, registers the traiterJob handler for all job types, and sets up a recurring cron scheduler via setInterval.",
+      "tags": [
+        "entry-point",
+        "service",
+        "event-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/worker/src/jobs.ts",
+      "type": "file",
+      "name": "jobs.ts",
+      "filePath": "apps/worker/src/jobs.ts",
+      "summary": "Core job execution module implementing handlers for all BullMQ job types (fetch:artiste, fetch:artistes:batch, fetch:region, fetch:salle, recalculer:matches, purger:concerts, digest:quotidien) with TM quota management and Redis stat tracking.",
+      "tags": [
+        "service",
+        "api-handler",
+        "data-pipeline"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/worker/src/jobs.ts:traiterJob",
+      "type": "function",
+      "name": "traiterJob",
+      "filePath": "apps/worker/src/jobs.ts",
+      "lineRange": [
+        296,
+        626
+      ],
+      "summary": "Main BullMQ job dispatcher that routes each job type to its handler — fetching from Ticketmaster and Eventim, deduplicating concerts, persisting to DB, recalculating user matches, purging old concerts, and triggering notifications.",
+      "tags": [
+        "service",
+        "api-handler",
+        "event-handler"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/worker/src/jobs.ts:verifierQuotaTM",
+      "type": "function",
+      "name": "verifierQuotaTM",
+      "filePath": "apps/worker/src/jobs.ts",
+      "lineRange": [
+        134,
+        166
+      ],
+      "summary": "Reads the current Ticketmaster API quota from Redis and throws an error if the remaining calls fall below the abort threshold, with warnings at the warn threshold.",
+      "tags": [
+        "service",
+        "validation",
+        "api-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/worker/src/jobs.ts:lireDispoQuotaTM",
+      "type": "function",
+      "name": "lireDispoQuotaTM",
+      "filePath": "apps/worker/src/jobs.ts",
+      "lineRange": [
+        235,
+        243
+      ],
+      "summary": "Reads and returns the available Ticketmaster API quota from Redis, returning Infinity when no quota data is present.",
+      "tags": [
+        "service",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/worker/src/jobs.ts:resoudreArtistesConcerts",
+      "type": "function",
+      "name": "resoudreArtistesConcerts",
+      "filePath": "apps/worker/src/jobs.ts",
+      "lineRange": [
+        59,
+        126
+      ],
+      "summary": "Resolves canonical artist names for a list of concerts by checking a Redis cache first, then calling the MusicBrainz/Deezer resolver for cache misses and storing results.",
+      "tags": [
+        "service",
+        "data-pipeline",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/worker/src/log-admin.ts",
+      "type": "file",
+      "name": "log-admin.ts",
+      "filePath": "apps/worker/src/log-admin.ts",
+      "summary": "Admin log utility that appends structured log entries to a capped Redis list (last 200 entries), providing an audit trail visible from the admin dashboard.",
+      "tags": [
+        "service",
+        "utility",
+        "singleton"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/worker/src/log-admin.ts:logAdmin",
+      "type": "function",
+      "name": "logAdmin",
+      "filePath": "apps/worker/src/log-admin.ts",
+      "lineRange": [
+        16,
+        33
+      ],
+      "summary": "Appends a structured log entry to the Redis admin log list and trims it to the configured maximum length.",
+      "tags": [
+        "service",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/worker/src/persister.ts",
+      "type": "file",
+      "name": "persister.ts",
+      "filePath": "apps/worker/src/persister.ts",
+      "summary": "Concert persistence and user matching engine: reconciles venue names across sources, upserts concerts with diacritics and casing preference logic, recalculates user matches with geographic filters, and triggers real-time and digest notifications.",
+      "tags": [
+        "service",
+        "data-model",
+        "data-pipeline",
+        "tested"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/worker/src/persister.ts:persisterConcerts",
+      "type": "function",
+      "name": "persisterConcerts",
+      "filePath": "apps/worker/src/persister.ts",
+      "lineRange": [
+        207,
+        297
+      ],
+      "summary": "Deduplicates, reconciles venue names, and upserts a batch of concerts into PostgreSQL using conflict resolution that prefers diacritical artist names and mixed-case venue names.",
+      "tags": [
+        "service",
+        "data-model",
+        "database"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/worker/src/persister.ts:recalculerMatches",
+      "type": "function",
+      "name": "recalculerMatches",
+      "filePath": "apps/worker/src/persister.ts",
+      "lineRange": [
+        300,
+        437
+      ],
+      "summary": "Rebuilds user_matches for specified users by querying their tracked artists and venues, applying department-based geographic filters, and triggering real-time push notifications for new matches.",
+      "tags": [
+        "service",
+        "data-model",
+        "event-handler"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/worker/src/persister.ts:reconcilierSalles",
+      "type": "function",
+      "name": "reconcilierSalles",
+      "filePath": "apps/worker/src/persister.ts",
+      "lineRange": [
+        72,
+        156
+      ],
+      "summary": "Normalizes venue names within an incoming concert batch by comparing them against existing DB entries using similarity and containment heuristics, unifying semantically identical venues.",
+      "tags": [
+        "service",
+        "data-pipeline",
+        "validation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/worker/src/persister.ts:envoyerDigestPourUser",
+      "type": "function",
+      "name": "envoyerDigestPourUser",
+      "filePath": "apps/worker/src/persister.ts",
+      "lineRange": [
+        488,
+        608
+      ],
+      "summary": "Queries unnotified concert matches for a user filtered by their notification preferences (artists/venues), sends a Resend email digest, and marks the matches as notified.",
+      "tags": [
+        "service",
+        "event-handler"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/worker/src/push.ts",
+      "type": "file",
+      "name": "push.ts",
+      "filePath": "apps/worker/src/push.ts",
+      "summary": "Web Push notification module that fetches VAPID keys and user push subscriptions from the database, sends push payloads via web-push, and cleans up expired subscriptions (HTTP 404/410 responses).",
+      "tags": [
+        "service",
+        "event-handler",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/worker/src/redis.ts",
+      "type": "file",
+      "name": "redis.ts",
+      "filePath": "apps/worker/src/redis.ts",
+      "summary": "Initialises the Redis client and exports key-generation helpers (attraction ID, region fetch, canonical name, job stats) plus TTL constants used across the worker.",
+      "tags": [
+        "service",
+        "utility",
+        "singleton",
+        "configuration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/worker/src/sources.ts",
+      "type": "file",
+      "name": "sources.ts",
+      "filePath": "apps/worker/src/sources.ts",
+      "summary": "Lazily initialises the Ticketmaster and Eventim API source clients, reading the Ticketmaster API key from the encrypted app_config table at call time.",
+      "tags": [
+        "service",
+        "factory",
+        "api-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:apps/worker/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "filePath": "apps/worker/tsconfig.json",
+      "summary": "TypeScript compiler configuration for the worker application, extending a shared base config with Node.js type declarations.",
+      "tags": [
+        "configuration",
+        "build-system",
+        "typescript"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/worker/vitest.config.ts",
+      "type": "file",
+      "name": "vitest.config.ts",
+      "filePath": "apps/worker/vitest.config.ts",
+      "summary": "Vitest unit test configuration for the worker package, targeting unit tests that run in CI without real infrastructure.",
+      "tags": [
+        "test",
+        "configuration",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/worker/vitest.integration.config.ts",
+      "type": "file",
+      "name": "vitest.integration.config.ts",
+      "filePath": "apps/worker/vitest.integration.config.ts",
+      "summary": "Vitest integration test configuration for the worker, targeting tests that require a real PostgreSQL and Redis connection via SSH tunnel to the dev LXC.",
+      "tags": [
+        "test",
+        "configuration",
+        "infrastructure"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:CLAUDE.md",
+      "type": "document",
+      "name": "CLAUDE.md",
+      "filePath": "CLAUDE.md",
+      "summary": "Comprehensive AI-agent guide for the Strapontin project covering architecture, dev workflow, deployment scripts, BullMQ patterns and pitfalls, Redis configuration, authentication, deduplication logic, and coding conventions across 27 sections.",
+      "tags": [
+        "documentation",
+        "entry-point",
+        "development"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "package.json",
+      "summary": "Root pnpm workspace package manifest pinning pnpm@11 via corepack, defining monorepo-wide scripts (test, typecheck, lint, audit), and dev tool dependencies.",
+      "tags": [
+        "configuration",
+        "build-system",
+        "monorepo"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/core/drizzle.config.ts",
+      "type": "file",
+      "name": "drizzle.config.ts",
+      "filePath": "packages/core/drizzle.config.ts",
+      "summary": "Drizzle Kit configuration pointing to the core package schema and migrations directory, used by `drizzle-kit generate` and `drizzle-kit migrate` CLI commands.",
+      "tags": [
+        "configuration",
+        "database",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:packages/core/migrations/0000_initial.sql:accounts",
+      "type": "table",
+      "name": "accounts",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "lineRange": [
+        3,
+        17
+      ],
+      "summary": "Better Auth OAuth/credential account records linking provider tokens to users.",
+      "tags": [
+        "database",
+        "authentication",
+        "schema-definition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:packages/core/migrations/0000_initial.sql:concerts",
+      "type": "table",
+      "name": "concerts",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "lineRange": [
+        25,
+        46
+      ],
+      "summary": "Central concerts table storing normalised artist/venue/city fields, source metadata, availability status, and pricing from Ticketmaster and Eventim.",
+      "tags": [
+        "database",
+        "data-model",
+        "schema-definition"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:packages/core/migrations/0000_initial.sql:users",
+      "type": "table",
+      "name": "users",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "lineRange": [
+        121,
+        136
+      ],
+      "summary": "User accounts with Better Auth-managed IDs, invite-only username/display_username columns, role, and a must_change_credentials flag for first-login enforcement.",
+      "tags": [
+        "database",
+        "authentication",
+        "data-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:packages/core/migrations/0000_initial.sql:user_artistes",
+      "type": "table",
+      "name": "user_artistes",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "lineRange": [
+        83,
+        89
+      ],
+      "summary": "Many-to-many join table tracking which normalised artist names each user is following.",
+      "tags": [
+        "database",
+        "data-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:packages/core/migrations/0000_initial.sql:user_matches",
+      "type": "table",
+      "name": "user_matches",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "lineRange": [
+        105,
+        112
+      ],
+      "summary": "Tracks per-user concert match state including notification timestamp, view timestamp, and masking flag to power the New badge and notification digest.",
+      "tags": [
+        "database",
+        "data-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:packages/core/migrations/0000_initial.sql:user_salles",
+      "type": "table",
+      "name": "user_salles",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "lineRange": [
+        114,
+        119
+      ],
+      "summary": "Stores followed venues per user with the Ticketmaster venueId for background fetch jobs.",
+      "tags": [
+        "database",
+        "data-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:packages/core/migrations/0000_initial.sql:app_config",
+      "type": "table",
+      "name": "app_config",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "lineRange": [
+        19,
+        23
+      ],
+      "summary": "AES-256-GCM encrypted key-value store for application configuration such as API keys and base URL, managed via the admin UI.",
+      "tags": [
+        "database",
+        "configuration",
+        "security"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:packages/core/migrations/0000_initial.sql:push_abonnements",
+      "type": "table",
+      "name": "push_abonnements",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "lineRange": [
+        61,
+        69
+      ],
+      "summary": "Web Push subscription endpoints (VAPID) per user, capped at 10 per user, auto-cleaned on 404/410 responses.",
+      "tags": [
+        "database",
+        "data-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:packages/core/migrations/0000_initial.sql:fetch_jobs",
+      "type": "table",
+      "name": "fetch_jobs",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "lineRange": [
+        48,
+        59
+      ],
+      "summary": "Persists background fetch job history with type, params, status, duration, and error for audit and scheduling.",
+      "tags": [
+        "database",
+        "data-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:packages/core/migrations/0000_initial.sql:user_config",
+      "type": "table",
+      "name": "user_config",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "lineRange": [
+        91,
+        103
+      ],
+      "summary": "Per-user preferences including followed departments, notification frequency, theme, and notification opt-in flags.",
+      "tags": [
+        "database",
+        "data-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:packages/core/migrations/0000_initial.sql:sessions",
+      "type": "table",
+      "name": "sessions",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "lineRange": [
+        71,
+        81
+      ],
+      "summary": "Better Auth session records with expiry token, IP address, and user agent.",
+      "tags": [
+        "database",
+        "authentication"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/core/migrations/0000_initial.sql",
+      "type": "file",
+      "name": "0000_initial.sql",
+      "filePath": "packages/core/migrations/0000_initial.sql",
+      "summary": "Initial Drizzle migration creating 12 core tables (concerts, users, sessions, accounts, user_artistes, user_salles, user_matches, user_config, app_config, push_abonnements, fetch_jobs, verifications) with 10 performance indexes.",
+      "tags": [
+        "database",
+        "migration",
+        "schema-definition"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:packages/core/migrations/0001_silent_sphinx.sql",
+      "type": "file",
+      "name": "0001_silent_sphinx.sql",
+      "filePath": "packages/core/migrations/0001_silent_sphinx.sql",
+      "summary": "Migration adding the statut column to the concerts table to track Ticketmaster sale status (onsale, offsale, cancelled, etc.).",
+      "tags": [
+        "database",
+        "migration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/core/migrations/0002_supprimer_rayon_km.sql",
+      "type": "file",
+      "name": "0002_supprimer_rayon_km.sql",
+      "filePath": "packages/core/migrations/0002_supprimer_rayon_km.sql",
+      "summary": "Empty migration file representing the removal of the rayon_km column from user_config (schema-only change handled by Drizzle).",
+      "tags": [
+        "database",
+        "migration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:packages/core/migrations/0003_melted_rumiko_fujikawa.sql:two_factor",
+      "type": "table",
+      "name": "two_factor",
+      "filePath": "packages/core/migrations/0003_melted_rumiko_fujikawa.sql",
+      "lineRange": [
+        1,
+        7
+      ],
+      "summary": "TOTP two-factor authentication secrets and backup codes per user, added by the Better Auth twoFactor plugin.",
+      "tags": [
+        "database",
+        "authentication",
+        "security"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/core/migrations/0003_melted_rumiko_fujikawa.sql",
+      "type": "file",
+      "name": "0003_melted_rumiko_fujikawa.sql",
+      "filePath": "packages/core/migrations/0003_melted_rumiko_fujikawa.sql",
+      "summary": "Migration adding the two_factor table and two_factor_enabled column on users to support TOTP-based two-factor authentication.",
+      "tags": [
+        "database",
+        "migration",
+        "security"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:packages/core/migrations/meta/_journal.json",
+      "type": "config",
+      "name": "_journal.json",
+      "filePath": "packages/core/migrations/meta/_journal.json",
+      "summary": "Drizzle migration journal tracking the ordered sequence of applied migrations with their checksums and timestamps.",
+      "tags": [
+        "configuration",
+        "database",
+        "migration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:packages/core/migrations/meta/0000_snapshot.json",
+      "type": "config",
+      "name": "0000_snapshot.json",
+      "filePath": "packages/core/migrations/meta/0000_snapshot.json",
+      "summary": "Drizzle schema snapshot capturing the full database state after the initial migration, used for diffing and future migration generation.",
+      "tags": [
+        "configuration",
+        "database",
+        "schema-definition"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:packages/core/migrations/meta/0001_snapshot.json",
+      "type": "config",
+      "name": "0001_snapshot.json",
+      "filePath": "packages/core/migrations/meta/0001_snapshot.json",
+      "summary": "Drizzle schema snapshot after migration 0001 adding the statut column to concerts.",
+      "tags": [
+        "configuration",
+        "database",
+        "schema-definition"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:packages/core/migrations/meta/0002_snapshot.json",
+      "type": "config",
+      "name": "0002_snapshot.json",
+      "filePath": "packages/core/migrations/meta/0002_snapshot.json",
+      "summary": "Drizzle schema snapshot after migration 0002 removing the rayon_km column from user_config.",
+      "tags": [
+        "configuration",
+        "database",
+        "schema-definition"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:packages/core/migrations/meta/0003_snapshot.json",
+      "type": "config",
+      "name": "0003_snapshot.json",
+      "filePath": "packages/core/migrations/meta/0003_snapshot.json",
+      "summary": "Drizzle schema snapshot after migration 0003 adding the two_factor table for TOTP 2FA support.",
+      "tags": [
+        "configuration",
+        "database",
+        "schema-definition"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:packages/core/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "packages/core/package.json",
+      "summary": "Package manifest for @strapontin/core, defining ESM exports for the index and schema entry points, Drizzle ORM and postgres.js dependencies, and db:generate/db:migrate scripts.",
+      "tags": [
+        "configuration",
+        "build-system",
+        "monorepo"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/core/src/__tests__/deduplication.test.ts",
+      "type": "file",
+      "name": "deduplication.test.ts",
+      "filePath": "packages/core/src/__tests__/deduplication.test.ts",
+      "summary": "Unit tests for the dedoublonner function covering edge cases: empty lists, single concerts, exact-match deduplication across sources, fuzzy name matching at the 0.85 threshold, and the date+venue fallback pass.",
+      "tags": [
+        "test",
+        "deduplication",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:packages/core/src/__tests__/normalisation.test.ts",
+      "type": "file",
+      "name": "normalisation.test.ts",
+      "filePath": "packages/core/src/__tests__/normalisation.test.ts",
+      "summary": "Unit tests for normaliserTexte, normaliserVille, similarite, and levenshtein covering accent removal, punctuation stripping, saint/st substitution, and similarity scoring.",
+      "tags": [
+        "test",
+        "utility",
+        "normalisation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/core/src/db.ts",
+      "type": "file",
+      "name": "db.ts",
+      "filePath": "packages/core/src/db.ts",
+      "summary": "Exports creerDb, a factory function that initialises a Drizzle ORM instance backed by a postgres.js connection pool with configurable max connections.",
+      "tags": [
+        "database",
+        "factory",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/core/src/deduplication.ts",
+      "type": "file",
+      "name": "deduplication.ts",
+      "filePath": "packages/core/src/deduplication.ts",
+      "summary": "Core concert deduplication engine implementing a three-pass algorithm: exact match on (artiste_norm, date, ville_norm), fuzzy match on (date, ville_norm) with Levenshtein similarity ≥ 0.85, and a venue-name fallback for divergent city data between sources.",
+      "tags": [
+        "utility",
+        "service",
+        "data-model",
+        "tested"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses a private ConcertAvecNormes interface to augment ConcertBrut with pre-computed normalised fields, keeping the algorithm purely functional without side effects."
+    },
+    {
+      "id": "function:packages/core/src/deduplication.ts:dedoublonner",
+      "type": "function",
+      "name": "dedoublonner",
+      "filePath": "packages/core/src/deduplication.ts",
+      "lineRange": [
+        86,
+        217
+      ],
+      "summary": "Main exported deduplication function running three grouping passes (exact, fuzzy by date+city, fuzzy by date+venue) and merging duplicates into single canonical concerts.",
+      "tags": [
+        "utility",
+        "service",
+        "data-model"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:packages/core/src/deduplication.ts:fusionner",
+      "type": "function",
+      "name": "fusionner",
+      "filePath": "packages/core/src/deduplication.ts",
+      "lineRange": [
+        37,
+        69
+      ],
+      "summary": "Merges a group of duplicate concerts into one canonical record, preferring richer diacritics for artist names and mixed case for venue names.",
+      "tags": [
+        "utility",
+        "data-model"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:packages/core/src/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "packages/core/src/index.ts",
+      "summary": "Public barrel for @strapontin/core, re-exporting creerDb, the DB type, dedoublonner, normaliserTexte, normaliserVille, similarite, and levenshtein.",
+      "tags": [
+        "entry-point",
+        "barrel",
+        "exports"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/core/src/normalisation.ts",
+      "type": "file",
+      "name": "normalisation.ts",
+      "filePath": "packages/core/src/normalisation.ts",
+      "summary": "Pure text normalisation utilities for concert deduplication: strips accents and punctuation (normaliserTexte), applies saint→st substitution for city names (normaliserVille), and computes Unicode-aware Levenshtein similarity.",
+      "tags": [
+        "utility",
+        "serialization",
+        "tested"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:packages/core/src/normalisation.ts:normaliserTexte",
+      "type": "function",
+      "name": "normaliserTexte",
+      "filePath": "packages/core/src/normalisation.ts",
+      "lineRange": [
+        3,
+        13
+      ],
+      "summary": "Normalises a text string by lowercasing, removing NFD diacritics, stripping punctuation, collapsing whitespace — the canonical key generator for deduplication.",
+      "tags": [
+        "utility",
+        "serialization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:packages/core/src/normalisation.ts:levenshtein",
+      "type": "function",
+      "name": "levenshtein",
+      "filePath": "packages/core/src/normalisation.ts",
+      "lineRange": [
+        32,
+        50
+      ],
+      "summary": "Unicode-aware Levenshtein edit distance implementation using Array.from for correct codepoint iteration, used as the foundation for similarite.",
+      "tags": [
+        "utility",
+        "serialization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:packages/core/src/normalisation.ts:similarite",
+      "type": "function",
+      "name": "similarite",
+      "filePath": "packages/core/src/normalisation.ts",
+      "lineRange": [
+        23,
+        30
+      ],
+      "summary": "Returns a 0–1 similarity score between two strings by dividing the Levenshtein distance against the longer string length.",
+      "tags": [
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/core/src/schema.ts",
+      "type": "file",
+      "name": "schema.ts",
+      "filePath": "packages/core/src/schema.ts",
+      "summary": "Drizzle ORM table definitions for all 13 database tables (concerts, users, sessions, accounts, verifications, twoFactors, userArtistes, userSalles, userConfig, userMatches, appConfig, pushAbonnements, fetchJobs) with relations and TypeScript inferred types.",
+      "tags": [
+        "data-model",
+        "schema-definition",
+        "type-definition"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Each table export is paired with a TypeScript Select/Insert type inferred via Drizzle's $inferSelect/$inferInsert, providing full type safety without separate interface files."
+    },
+    {
+      "id": "config:packages/sources/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "packages/sources/package.json",
+      "summary": "Package manifest for the @strapontin/sources workspace package, declaring exports, dependencies (pino), and dev dependencies (vitest, typescript).",
+      "tags": [
+        "configuration",
+        "build-system",
+        "monorepo"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/sources/src/__tests__/eventim.test.ts",
+      "type": "file",
+      "name": "eventim.test.ts",
+      "filePath": "packages/sources/src/__tests__/eventim.test.ts",
+      "summary": "Unit test suite for the Eventim API client, covering product mapping, date parsing, postal code extraction, and paginated fetch logic using mocked HTTP responses.",
+      "tags": [
+        "test",
+        "eventim",
+        "api-handler",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:packages/sources/src/__tests__/ticketmaster.test.ts",
+      "type": "file",
+      "name": "ticketmaster.test.ts",
+      "filePath": "packages/sources/src/__tests__/ticketmaster.test.ts",
+      "summary": "Unit test suite for the Ticketmaster Discovery v2 API client, covering event mapping, date parsing, case normalisation, batch fetching, and quota header extraction using mocked HTTP responses.",
+      "tags": [
+        "test",
+        "ticketmaster",
+        "api-handler",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:packages/sources/src/eventim.ts",
+      "type": "file",
+      "name": "eventim.ts",
+      "filePath": "packages/sources/src/eventim.ts",
+      "summary": "Reverse-engineered Eventim France API client implementing SourceConcerts; fetches concerts by artist attraction ID or geographic region (department), mapping raw Eventim product JSON to the ConcertBrut format.",
+      "tags": [
+        "api-handler",
+        "service",
+        "data-model",
+        "eventim",
+        "tested"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses undocumented Eventim API endpoints reverse-engineered from browser traffic; includes a two-step lookup (search attraction ID then fetch products)."
+    },
+    {
+      "id": "class:packages/sources/src/eventim.ts:EventimSource",
+      "type": "class",
+      "name": "EventimSource",
+      "filePath": "packages/sources/src/eventim.ts",
+      "lineRange": [
+        233,
+        263
+      ],
+      "summary": "Implements the SourceConcerts interface for Eventim France; exposes fetchArtiste and fetchRegion methods that orchestrate attraction lookup and paginated product retrieval.",
+      "tags": [
+        "api-handler",
+        "service",
+        "eventim"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:packages/sources/src/eventim.ts:mapProduit",
+      "type": "function",
+      "name": "mapProduit",
+      "filePath": "packages/sources/src/eventim.ts",
+      "lineRange": [
+        33,
+        94
+      ],
+      "summary": "Maps a raw Eventim product object to a ConcertBrut record; handles date parsing, venue extraction, department derivation from postal code, and URL validation.",
+      "tags": [
+        "serialization",
+        "data-model",
+        "eventim"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:packages/sources/src/eventim.ts:fetchProduitsParAttraction",
+      "type": "function",
+      "name": "fetchProduitsParAttraction",
+      "filePath": "packages/sources/src/eventim.ts",
+      "lineRange": [
+        130,
+        178
+      ],
+      "summary": "Paginates through Eventim product pages for a given attraction ID over a 6-month window, accumulating ConcertBrut results with rate-limit delays between requests.",
+      "tags": [
+        "api-handler",
+        "eventim",
+        "service"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:packages/sources/src/eventim.ts:fetchProduitsParRegion",
+      "type": "function",
+      "name": "fetchProduitsParRegion",
+      "filePath": "packages/sources/src/eventim.ts",
+      "lineRange": [
+        180,
+        231
+      ],
+      "summary": "Fetches Eventim concerts for a French department filtered by classification, paginating all result pages with rate-limit delays and filtering out concerts without a French postal code.",
+      "tags": [
+        "api-handler",
+        "eventim",
+        "service"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:packages/sources/src/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "packages/sources/src/index.ts",
+      "summary": "Public barrel for the @strapontin/sources package; re-exports ConcertBrut, SourceConcerts, QuotaTM, TicketmasterSource, EventimSource, and resoudreNomCanonique.",
+      "tags": [
+        "entry-point",
+        "barrel",
+        "exports"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/sources/src/resolver.ts",
+      "type": "file",
+      "name": "resolver.ts",
+      "filePath": "packages/sources/src/resolver.ts",
+      "summary": "Canonical name resolver for artists and venues; queries MusicBrainz (score >= 90 + Levenshtein >= 0.6) then falls back to Deezer, with Redis caching (TTL 7 days) and 1.1 s rate limiting between MusicBrainz requests.",
+      "tags": [
+        "service",
+        "utility",
+        "api-handler",
+        "serialization"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Implements a local Levenshtein distance via dynamic programming for similarity scoring before calling external APIs."
+    },
+    {
+      "id": "function:packages/sources/src/resolver.ts:resoudreNomCanonique",
+      "type": "function",
+      "name": "resoudreNomCanonique",
+      "filePath": "packages/sources/src/resolver.ts",
+      "lineRange": [
+        125,
+        141
+      ],
+      "summary": "Resolves a canonical display name for an artist or venue by querying MusicBrainz then Deezer, returning null when confidence thresholds are not met.",
+      "tags": [
+        "service",
+        "utility",
+        "api-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:packages/sources/src/resolver.ts:similariteLocale",
+      "type": "function",
+      "name": "similariteLocale",
+      "filePath": "packages/sources/src/resolver.ts",
+      "lineRange": [
+        26,
+        44
+      ],
+      "summary": "Computes a normalised Levenshtein similarity score (0–1) between two strings using a full edit-distance matrix.",
+      "tags": [
+        "utility",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:packages/sources/src/ticketmaster.ts",
+      "type": "file",
+      "name": "ticketmaster.ts",
+      "filePath": "packages/sources/src/ticketmaster.ts",
+      "summary": "Ticketmaster Discovery v2 API client implementing SourceConcerts; supports fetch by artist, venue, batch of attraction IDs, and geographic region, with quota tracking, rate-limit handling, and title-case normalisation for French venue names.",
+      "tags": [
+        "api-handler",
+        "service",
+        "ticketmaster",
+        "data-model",
+        "tested"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Reads X-RateLimit-* headers to track remaining daily quota and suspends fetching below configurable thresholds; normaliserCasse handles French articles and apostrophe capitalisation."
+    },
+    {
+      "id": "class:packages/sources/src/ticketmaster.ts:TicketmasterSource",
+      "type": "class",
+      "name": "TicketmasterSource",
+      "filePath": "packages/sources/src/ticketmaster.ts",
+      "lineRange": [
+        408,
+        522
+      ],
+      "summary": "Implements SourceConcerts for the Ticketmaster Discovery v2 API; exposes fetchArtiste, fetchSalle, fetchArtistesBatch, and fetchRegion methods alongside quota inspection and attraction ID lookup.",
+      "tags": [
+        "api-handler",
+        "service",
+        "ticketmaster"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:packages/sources/src/ticketmaster.ts:mapEvenement",
+      "type": "function",
+      "name": "mapEvenement",
+      "filePath": "packages/sources/src/ticketmaster.ts",
+      "lineRange": [
+        205,
+        303
+      ],
+      "summary": "Maps a raw Ticketmaster event object to ConcertBrut, resolving the artist name from attractions or fallback title, normalising venue case, extracting department from postal code, and filtering by music classification.",
+      "tags": [
+        "serialization",
+        "data-model",
+        "ticketmaster"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:packages/sources/src/ticketmaster.ts:fetchPage",
+      "type": "function",
+      "name": "fetchPage",
+      "filePath": "packages/sources/src/ticketmaster.ts",
+      "lineRange": [
+        305,
+        351
+      ],
+      "summary": "Fetches a single page of events from the Ticketmaster Discovery API, parses quota headers from the response, and maps the event list to ConcertBrut records.",
+      "tags": [
+        "api-handler",
+        "ticketmaster",
+        "service"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:packages/sources/src/ticketmaster.ts:fetchToutesPages",
+      "type": "function",
+      "name": "fetchToutesPages",
+      "filePath": "packages/sources/src/ticketmaster.ts",
+      "lineRange": [
+        363,
+        406
+      ],
+      "summary": "Paginates through all pages of a Ticketmaster search result (up to 7 pages / 1400 concerts), adding 250 ms delays between requests to stay within the 5 req/s burst limit.",
+      "tags": [
+        "api-handler",
+        "ticketmaster",
+        "service"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:packages/sources/src/ticketmaster.ts:normaliserCasse",
+      "type": "function",
+      "name": "normaliserCasse",
+      "filePath": "packages/sources/src/ticketmaster.ts",
+      "lineRange": [
+        153,
+        172
+      ],
+      "summary": "Converts an all-uppercase venue name returned by Ticketmaster France to French title case, handling articles, hyphens, and apostrophe-capitalised words.",
+      "tags": [
+        "utility",
+        "serialization",
+        "ticketmaster"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:packages/sources/src/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "packages/sources/src/types.ts",
+      "summary": "Shared TypeScript type definitions for the sources package, declaring the ConcertBrut data transfer object and the SourceConcerts interface.",
+      "tags": [
+        "type-definition",
+        "data-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:packages/sources/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "filePath": "packages/sources/tsconfig.json",
+      "summary": "TypeScript compiler configuration for the sources package, extending the root tsconfig and including all source files.",
+      "tags": [
+        "configuration",
+        "typescript",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:packages/sources/vitest.config.ts",
+      "type": "file",
+      "name": "vitest.config.ts",
+      "filePath": "packages/sources/vitest.config.ts",
+      "summary": "Vitest configuration for the sources package unit tests.",
+      "tags": [
+        "configuration",
+        "test",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:pnpm-workspace.yaml",
+      "type": "config",
+      "name": "pnpm-workspace.yaml",
+      "filePath": "pnpm-workspace.yaml",
+      "summary": "pnpm workspace configuration defining the monorepo package globs, allowed native builds (esbuild, msgpackr-extract), and disabling the interactive purge confirmation for headless deploy environments.",
+      "tags": [
+        "configuration",
+        "monorepo",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "README.md",
+      "summary": "Project overview for Strapontin with sections covering features (artist/venue tracking, multi-source aggregation, push notifications), tech stack (SvelteKit, Drizzle, BullMQ, Better-Auth), installation steps, and licence.",
+      "tags": [
+        "documentation",
+        "entry-point",
+        "overview"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/.gitkeep",
+      "type": "file",
+      "name": ".gitkeep",
+      "filePath": "scripts/.gitkeep",
+      "summary": "Empty placeholder file to track the scripts/ directory in git.",
+      "tags": [
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:scripts/artistes-seed.txt",
+      "type": "document",
+      "name": "artistes-seed.txt",
+      "filePath": "scripts/artistes-seed.txt",
+      "summary": "Plain-text list of 87 artist names used as seed data for the scripts/seed-artistes.ts import script.",
+      "tags": [
+        "data-pipeline",
+        "documentation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/backup.sh",
+      "type": "file",
+      "name": "backup.sh",
+      "filePath": "scripts/backup.sh",
+      "summary": "Shell script that performs a PostgreSQL dump and backs up the .env file to a NAS-mounted backup directory with date-stamped filenames.",
+      "tags": [
+        "infrastructure",
+        "deployment",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/deploy.sh",
+      "type": "file",
+      "name": "deploy.sh",
+      "filePath": "scripts/deploy.sh",
+      "summary": "First-deployment shell script that clones the repo, installs dependencies, runs database migrations, and starts systemd services on the production LXC container.",
+      "tags": [
+        "deployment",
+        "infrastructure",
+        "build-system"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/fetch-bboxes-depts.mjs",
+      "type": "file",
+      "name": "fetch-bboxes-depts.mjs",
+      "filePath": "scripts/fetch-bboxes-depts.mjs",
+      "summary": "One-shot maintenance script that queries Nominatim for each French department's bounding box, computes the centroid and a kilometre radius, and prints the result as a TypeScript constant.",
+      "tags": [
+        "utility",
+        "data-pipeline",
+        "script"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/generer-centres-dept.ts",
+      "type": "file",
+      "name": "generer-centres-dept.ts",
+      "filePath": "scripts/generer-centres-dept.ts",
+      "summary": "TypeScript maintenance script that fetches all French departments from the geo.api.gouv.fr communes API, computes geographic centroids, and outputs a TypeScript lookup table.",
+      "tags": [
+        "utility",
+        "data-pipeline",
+        "script"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/generer-vapid.mjs",
+      "type": "file",
+      "name": "generer-vapid.mjs",
+      "filePath": "scripts/generer-vapid.mjs",
+      "summary": "Minimal one-shot script that generates a VAPID key pair using the Web Crypto API and prints the public and private keys for use in .env.",
+      "tags": [
+        "utility",
+        "security",
+        "script"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/maintenance.html",
+      "type": "file",
+      "name": "maintenance.html",
+      "filePath": "scripts/maintenance.html",
+      "summary": "Static maintenance page served by nginx during deployments; displays a bilingual (French) downtime message with Strapontin branding.",
+      "tags": [
+        "infrastructure",
+        "deployment"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/pentest.mjs",
+      "type": "file",
+      "name": "pentest.mjs",
+      "filePath": "scripts/pentest.mjs",
+      "summary": "Playwright-based security test script that validates HTTP security headers, protected route access control, XSS resistance, login rate limiting, IDOR prevention, and push subscription edge cases against a running Strapontin instance.",
+      "tags": [
+        "security",
+        "test",
+        "validation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:scripts/provision.sh",
+      "type": "file",
+      "name": "provision.sh",
+      "filePath": "scripts/provision.sh",
+      "summary": "Comprehensive LXC provisioning script (620 lines) that creates and configures a Proxmox LXC container for prod or dev, installing PostgreSQL 18, Redis 8, Node.js 24, pnpm, and systemd service units for the web and worker processes.",
+      "tags": [
+        "infrastructure",
+        "deployment",
+        "containerization"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:scripts/reset-password.ts",
+      "type": "file",
+      "name": "reset-password.ts",
+      "filePath": "scripts/reset-password.ts",
+      "summary": "One-off administrative TypeScript script that resets a user's password directly in the database and sets must_change_credentials=true, bypassing Better-Auth.",
+      "tags": [
+        "utility",
+        "security",
+        "script"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/seed-artistes.ts",
+      "type": "file",
+      "name": "seed-artistes.ts",
+      "filePath": "scripts/seed-artistes.ts",
+      "summary": "Administrative seed script that reads artist names from artistes-seed.txt, normalises them, deduplicates against existing DB entries, and bulk-inserts into user_artistes for a specified user email.",
+      "tags": [
+        "data-pipeline",
+        "script",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/seed-salles.ts",
+      "type": "file",
+      "name": "seed-salles.ts",
+      "filePath": "scripts/seed-salles.ts",
+      "summary": "Administrative seed script that inserts a hardcoded list of venues (salles) with Ticketmaster venue IDs into user_salles for a specified user email, skipping duplicates.",
+      "tags": [
+        "data-pipeline",
+        "script",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/system-update.sh",
+      "type": "file",
+      "name": "system-update.sh",
+      "filePath": "scripts/system-update.sh",
+      "summary": "Bash script run from the Proxmox host to safely upgrade the production LXC container: takes a Proxmox snapshot, runs apt upgrade, verifies all application services, and performs an HTTP healthcheck with automatic rollback instructions on failure.",
+      "tags": [
+        "infrastructure",
+        "deployment",
+        "script"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:scripts/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "filePath": "scripts/tsconfig.json",
+      "summary": "TypeScript compiler configuration for the scripts directory, extending the shared base config with ESNext module output, bundler resolution, Node.js types, and ES2022 lib targeting.",
+      "tags": [
+        "configuration",
+        "typescript",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/update-dev.sh",
+      "type": "file",
+      "name": "update-dev.sh",
+      "filePath": "scripts/update-dev.sh",
+      "summary": "Bash script executed locally on the developer's Mac to deploy the current git branch to the dev LXC container over SSH: fetches, resets, installs dependencies, runs DB migrations, restarts services, and verifies the healthcheck endpoint.",
+      "tags": [
+        "deployment",
+        "script",
+        "infrastructure"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/update.sh",
+      "type": "file",
+      "name": "update.sh",
+      "filePath": "scripts/update.sh",
+      "summary": "Production deployment script triggered by Woodpecker CI over SSH: orchestrates backup, git reset to main, pnpm install, build, DB migration, service restart, and healthcheck with automatic rollback on any failure.",
+      "tags": [
+        "deployment",
+        "script",
+        "infrastructure",
+        "ci-cd"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:tsconfig.base.json",
+      "type": "config",
+      "name": "tsconfig.base.json",
+      "filePath": "tsconfig.base.json",
+      "summary": "Root TypeScript base configuration shared across all monorepo packages, enabling strict mode, noUncheckedIndexedAccess, bundler module resolution, and ES2022 target.",
+      "tags": [
+        "configuration",
+        "typescript",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:scripts/update.sh:rollback",
+      "type": "function",
+      "name": "rollback",
+      "filePath": "scripts/update.sh",
+      "lineRange": [
+        23,
+        35
+      ],
+      "summary": "Restores the previous application version by hard-resetting git to the prior commit, rebuilding, and restarting services; warns if a DB migration was partially applied.",
+      "tags": [
+        "deployment",
+        "infrastructure"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:apps/web/src/lib/components/ui/sonner/index.ts",
+      "target": "file:apps/web/src/lib/components/ui/sonner/sonner.svelte",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/web/src/lib/server/config.ts",
+      "target": "file:apps/web/src/lib/server/db.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/web/src/hooks.server.ts",
+      "target": "function:apps/web/src/hooks.server.ts:bloquerAccesDirectIP",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/hooks.server.ts",
+      "target": "function:apps/web/src/hooks.server.ts:securiser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/hooks.server.ts",
+      "target": "function:apps/web/src/hooks.server.ts:gererAuth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/lib/formats.ts",
+      "target": "function:apps/web/src/lib/formats.ts:badgeStatut",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/lib/formats.ts",
+      "target": "function:apps/web/src/lib/formats.ts:formaterDate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/lib/formats.ts",
+      "target": "function:apps/web/src/lib/formats.ts:badgeStatut",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/lib/formats.ts",
+      "target": "function:apps/web/src/lib/formats.ts:formaterDate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/lib/server/config.ts",
+      "target": "function:apps/web/src/lib/server/config.ts:lireConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/lib/server/config.ts",
+      "target": "function:apps/web/src/lib/server/config.ts:sauvegarderConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/lib/server/config.ts",
+      "target": "function:apps/web/src/lib/server/config.ts:lireConfigsPresentes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/lib/server/config.ts",
+      "target": "function:apps/web/src/lib/server/config.ts:lireConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/lib/server/config.ts",
+      "target": "function:apps/web/src/lib/server/config.ts:sauvegarderConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/lib/server/config.ts",
+      "target": "function:apps/web/src/lib/server/config.ts:lireConfigsPresentes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/lib/components/ui/sonner/index.ts",
+      "target": "file:apps/web/src/lib/components/ui/sonner/sonner.svelte",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "config:.woodpecker.yaml",
+      "target": "file:apps/web/src/hooks.server.ts",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:apps/web/package.json",
+      "target": "file:apps/web/src/hooks.server.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/hooks.server.ts",
+      "target": "file:apps/web/src/lib/auth.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "document:apps/web/README.md",
+      "target": "file:apps/web/src/hooks.server.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/lib/server/email.ts",
+      "target": "function:apps/web/src/lib/server/email.ts:envoyerInvitation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/lib/server/email.ts",
+      "target": "function:apps/web/src/lib/server/email.ts:envoyerResetMotDePasse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/lib/server/email.ts",
+      "target": "function:apps/web/src/lib/server/email.ts:envoyerSignalement",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/lib/server/email.ts",
+      "target": "function:apps/web/src/lib/server/email.ts:envoyerInvitation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/lib/server/email.ts",
+      "target": "function:apps/web/src/lib/server/email.ts:envoyerResetMotDePasse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/lib/server/email.ts",
+      "target": "function:apps/web/src/lib/server/email.ts:envoyerSignalement",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/+page.server.ts:load",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/+page.server.ts:load",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/admin/+page.server.ts:load",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/admin/+page.server.ts:load",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/artistes/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/artistes/+page.server.ts:rechercherMusicBrainz",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/decouverte/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/decouverte/+page.server.ts:load",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/decouverte/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/decouverte/+page.server.ts:load",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/filtres.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/db.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/db.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/redis.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/log-admin.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/email.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/queue.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/aide/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/email.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/artistes/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/db.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/artistes/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/queue.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/decouverte/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/db.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/decouverte/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/redis.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/decouverte/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/queue.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/parametres/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/db.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/parametres/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/redis.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/parametres/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/email.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/parametres/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/queue.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/first-login/+page.server.ts",
+      "target": "file:apps/web/src/lib/server/db.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/+layout.server.ts",
+      "target": "file:apps/web/src/routes/(app)/+layout.svelte",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/+page.server.ts",
+      "target": "file:apps/web/src/routes/(app)/+page.svelte",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+      "target": "file:apps/web/src/routes/(app)/admin/+page.svelte",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/aide/+page.server.ts",
+      "target": "file:apps/web/src/routes/(app)/aide/+page.svelte",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/artistes/+page.server.ts",
+      "target": "file:apps/web/src/routes/(app)/artistes/+page.svelte",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/decouverte/+page.server.ts",
+      "target": "file:apps/web/src/routes/(app)/decouverte/+page.svelte",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/first-login/+page.server.ts",
+      "target": "file:apps/web/src/routes/(app)/first-login/+page.svelte",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/parametres/+page.server.ts",
+      "target": "file:apps/web/src/routes/(app)/parametres/+page.svelte",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/salles/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/salles/+page.server.ts:normaliserSalleCle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/salles/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/salles/+page.server.ts:estMemeSalle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/salles/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/salles/+page.server.ts:rechercherSallesTM",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/salles/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/salles/+page.server.ts:load",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/salles/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/salles/+page.server.ts:normaliserSalleCle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/salles/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/salles/+page.server.ts:load",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/spectacles/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/spectacles/+page.server.ts:load",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/spectacles/+page.server.ts",
+      "target": "function:apps/web/src/routes/(app)/spectacles/+page.server.ts:load",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/api/fetch-region-status/+server.ts",
+      "target": "function:apps/web/src/routes/api/fetch-region-status/+server.ts:GET",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/api/fetch-region-status/+server.ts",
+      "target": "function:apps/web/src/routes/api/fetch-region-status/+server.ts:GET",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/api/preferences/+server.ts",
+      "target": "function:apps/web/src/routes/api/preferences/+server.ts:GET",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/api/preferences/+server.ts",
+      "target": "function:apps/web/src/routes/api/preferences/+server.ts:GET",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/api/push/+server.ts",
+      "target": "function:apps/web/src/routes/api/push/+server.ts:GET",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/api/push/+server.ts",
+      "target": "function:apps/web/src/routes/api/push/+server.ts:POST",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/api/push/+server.ts",
+      "target": "function:apps/web/src/routes/api/push/+server.ts:DELETE",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/api/push/+server.ts",
+      "target": "function:apps/web/src/routes/api/push/+server.ts:GET",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/api/push/+server.ts",
+      "target": "function:apps/web/src/routes/api/push/+server.ts:POST",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/api/push/+server.ts",
+      "target": "function:apps/web/src/routes/api/push/+server.ts:DELETE",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/routes/health/+server.ts",
+      "target": "function:apps/web/src/routes/health/+server.ts:GET",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/routes/health/+server.ts",
+      "target": "function:apps/web/src/routes/health/+server.ts:GET",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/utils.ts",
+      "target": "function:apps/web/src/tests/fonctionnel/utils.ts:creerMockEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/utils.ts",
+      "target": "function:apps/web/src/tests/fonctionnel/utils.ts:creerMockDb",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/utils.ts",
+      "target": "function:apps/web/src/tests/fonctionnel/utils.ts:creerMockEvent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/utils.ts",
+      "target": "function:apps/web/src/tests/fonctionnel/utils.ts:creerMockDb",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/admin.test.ts",
+      "target": "file:apps/web/src/tests/fonctionnel/utils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/admin.test.ts",
+      "target": "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/artistes.test.ts",
+      "target": "file:apps/web/src/tests/fonctionnel/utils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/artistes.test.ts",
+      "target": "file:apps/web/src/routes/(app)/artistes/+page.server.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/layout.test.ts",
+      "target": "file:apps/web/src/tests/fonctionnel/utils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/layout.test.ts",
+      "target": "file:apps/web/src/routes/(app)/+layout.server.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/salles.test.ts",
+      "target": "file:apps/web/src/tests/fonctionnel/utils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/web/src/tests/fonctionnel/salles.test.ts",
+      "target": "file:apps/web/src/routes/(app)/salles/+page.server.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/web/src/tests/unitaire/hooks.test.ts",
+      "target": "file:apps/web/src/lib/server/reseau.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/salles/+page.server.ts",
+      "target": "file:apps/web/src/tests/fonctionnel/salles.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+      "target": "file:apps/web/src/tests/fonctionnel/admin.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/artistes/+page.server.ts",
+      "target": "file:apps/web/src/tests/fonctionnel/artistes.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/routes/(app)/+layout.server.ts",
+      "target": "file:apps/web/src/tests/fonctionnel/layout.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/web/src/lib/server/reseau.ts",
+      "target": "file:apps/web/src/tests/unitaire/hooks.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:apps/web/static/manifest.json",
+      "target": "file:apps/web/src/service-worker.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/tests/e2e/global-setup.ts",
+      "target": "function:apps/web/tests/e2e/global-setup.ts:setup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/tests/e2e/global-setup.ts",
+      "target": "function:apps/web/tests/e2e/global-setup.ts:seConnecter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/web/tests/e2e/global-setup.ts",
+      "target": "function:apps/web/tests/e2e/global-setup.ts:setup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "config:apps/web/tsconfig.json",
+      "target": "file:apps/web/vite.config.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:apps/web/tsconfig.json",
+      "target": "file:apps/web/svelte.config.js",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/vitest.fonctionnel.config.ts",
+      "target": "file:apps/web/svelte.config.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/vitest.unitaire.config.ts",
+      "target": "file:apps/web/svelte.config.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/__tests__/integration/global-setup.ts",
+      "target": "function:apps/worker/src/__tests__/integration/global-setup.ts:setup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/__tests__/integration/global-setup.ts",
+      "target": "function:apps/worker/src/__tests__/integration/global-setup.ts:setup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/worker/src/cron.ts",
+      "target": "file:apps/worker/src/__tests__/integration/cron.integration.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Direction corrected (was test → production)"
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "file:apps/worker/src/__tests__/integration/persister.integration.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Direction corrected (was test → production)"
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "file:apps/worker/src/__tests__/integration/reconcilier.integration.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Direction corrected (was test → production)"
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "file:apps/worker/src/__tests__/persister.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Direction corrected (was test → production)"
+    },
+    {
+      "source": "file:apps/worker/src/config.ts",
+      "target": "function:apps/worker/src/config.ts:lireConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/config.ts",
+      "target": "function:apps/worker/src/config.ts:sauvegarderConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/config.ts",
+      "target": "function:apps/worker/src/config.ts:lireConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/worker/src/config.ts",
+      "target": "function:apps/worker/src/config.ts:sauvegarderConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/worker/src/config.ts",
+      "target": "file:apps/worker/src/db.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/config.ts",
+      "target": "file:apps/worker/src/log-admin.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/cron.ts",
+      "target": "function:apps/worker/src/cron.ts:planifierJobsUsers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/cron.ts",
+      "target": "function:apps/worker/src/cron.ts:planifierJobsUsers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/worker/src/cron.ts",
+      "target": "file:apps/worker/src/jobs.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/cron.ts",
+      "target": "file:apps/worker/src/db.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/email.ts",
+      "target": "function:apps/worker/src/email.ts:envoyerDigestConcerts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/email.ts",
+      "target": "function:apps/worker/src/email.ts:envoyerDigestConcerts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/worker/src/email.ts",
+      "target": "file:apps/worker/src/config.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/index.ts",
+      "target": "file:apps/worker/src/jobs.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/index.ts",
+      "target": "file:apps/worker/src/cron.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/jobs.ts",
+      "target": "function:apps/worker/src/jobs.ts:traiterJob",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/jobs.ts",
+      "target": "function:apps/worker/src/jobs.ts:verifierQuotaTM",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/jobs.ts",
+      "target": "function:apps/worker/src/jobs.ts:lireDispoQuotaTM",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/jobs.ts",
+      "target": "function:apps/worker/src/jobs.ts:resoudreArtistesConcerts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/jobs.ts",
+      "target": "function:apps/worker/src/jobs.ts:traiterJob",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/worker/src/jobs.ts",
+      "target": "function:apps/worker/src/jobs.ts:lireDispoQuotaTM",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/worker/src/jobs.ts",
+      "target": "file:apps/worker/src/persister.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/jobs.ts",
+      "target": "file:apps/worker/src/db.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/log-admin.ts",
+      "target": "function:apps/worker/src/log-admin.ts:logAdmin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/log-admin.ts",
+      "target": "function:apps/worker/src/log-admin.ts:logAdmin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "function:apps/worker/src/persister.ts:persisterConcerts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "function:apps/worker/src/persister.ts:recalculerMatches",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "function:apps/worker/src/persister.ts:reconcilierSalles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "function:apps/worker/src/persister.ts:envoyerDigestPourUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "function:apps/worker/src/persister.ts:persisterConcerts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "function:apps/worker/src/persister.ts:recalculerMatches",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "file:apps/worker/src/push.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "file:apps/worker/src/email.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/src/persister.ts",
+      "target": "file:apps/worker/src/db.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:apps/worker/package.json",
+      "target": "file:apps/worker/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:packages/core/src/deduplication.ts",
+      "target": "function:packages/core/src/deduplication.ts:dedoublonner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/core/src/deduplication.ts",
+      "target": "function:packages/core/src/deduplication.ts:fusionner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/core/src/deduplication.ts",
+      "target": "function:packages/core/src/deduplication.ts:dedoublonner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/normalisation.ts",
+      "target": "function:packages/core/src/normalisation.ts:normaliserTexte",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/core/src/normalisation.ts",
+      "target": "function:packages/core/src/normalisation.ts:levenshtein",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/core/src/normalisation.ts",
+      "target": "function:packages/core/src/normalisation.ts:similarite",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/core/src/normalisation.ts",
+      "target": "function:packages/core/src/normalisation.ts:normaliserTexte",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/normalisation.ts",
+      "target": "function:packages/core/src/normalisation.ts:levenshtein",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/normalisation.ts",
+      "target": "function:packages/core/src/normalisation.ts:similarite",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/deduplication.ts",
+      "target": "file:packages/core/src/normalisation.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:packages/core/src/index.ts",
+      "target": "file:packages/core/src/deduplication.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:packages/core/src/index.ts",
+      "target": "file:packages/core/src/normalisation.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:packages/core/src/index.ts",
+      "target": "file:packages/core/src/db.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:packages/core/src/deduplication.ts",
+      "target": "file:packages/core/src/__tests__/deduplication.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Direction corrected (was test → production)"
+    },
+    {
+      "source": "file:packages/core/src/normalisation.ts",
+      "target": "file:packages/core/src/__tests__/normalisation.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Direction corrected (was test → production)"
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0000_initial.sql:concerts",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0000_initial.sql:users",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0000_initial.sql:user_artistes",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0000_initial.sql:user_matches",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0000_initial.sql:user_salles",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0000_initial.sql:app_config",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0000_initial.sql:push_abonnements",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0000_initial.sql:fetch_jobs",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0003_melted_rumiko_fujikawa.sql:two_factor",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/migrations/0001_silent_sphinx.sql",
+      "target": "table:packages/core/migrations/0000_initial.sql:concerts",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:packages/core/migrations/0002_supprimer_rayon_km.sql",
+      "target": "table:packages/core/migrations/0000_initial.sql:user_config",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:packages/core/migrations/0003_melted_rumiko_fujikawa.sql",
+      "target": "table:packages/core/migrations/0003_melted_rumiko_fujikawa.sql:two_factor",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "config:packages/core/migrations/meta/_journal.json",
+      "target": "file:packages/core/migrations/0000_initial.sql",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:packages/core/package.json",
+      "target": "file:packages/core/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:package.json",
+      "target": "file:packages/core/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:apps/worker/tsconfig.json",
+      "target": "file:apps/worker/src/redis.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:apps/worker/tsconfig.json",
+      "target": "file:apps/worker/src/sources.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/worker/vitest.config.ts",
+      "target": "file:packages/core/src/__tests__/deduplication.test.ts",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/worker/vitest.config.ts",
+      "target": "file:packages/core/src/__tests__/normalisation.test.ts",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:packages/core/src/deduplication.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:packages/core/src/normalisation.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:apps/worker/src/redis.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:packages/core/drizzle.config.ts",
+      "target": "file:packages/core/src/schema.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:packages/sources/src/eventim.ts",
+      "target": "class:packages/sources/src/eventim.ts:EventimSource",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/sources/src/eventim.ts",
+      "target": "function:packages/sources/src/eventim.ts:mapProduit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/sources/src/eventim.ts",
+      "target": "function:packages/sources/src/eventim.ts:fetchProduitsParAttraction",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/sources/src/eventim.ts",
+      "target": "function:packages/sources/src/eventim.ts:fetchProduitsParRegion",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/sources/src/eventim.ts",
+      "target": "class:packages/sources/src/eventim.ts:EventimSource",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/sources/src/eventim.ts",
+      "target": "function:packages/sources/src/eventim.ts:mapProduit",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/sources/src/ticketmaster.ts",
+      "target": "class:packages/sources/src/ticketmaster.ts:TicketmasterSource",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/sources/src/ticketmaster.ts",
+      "target": "function:packages/sources/src/ticketmaster.ts:mapEvenement",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/sources/src/ticketmaster.ts",
+      "target": "function:packages/sources/src/ticketmaster.ts:fetchPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/sources/src/ticketmaster.ts",
+      "target": "function:packages/sources/src/ticketmaster.ts:fetchToutesPages",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/sources/src/ticketmaster.ts",
+      "target": "function:packages/sources/src/ticketmaster.ts:normaliserCasse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/sources/src/ticketmaster.ts",
+      "target": "class:packages/sources/src/ticketmaster.ts:TicketmasterSource",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/sources/src/ticketmaster.ts",
+      "target": "function:packages/sources/src/ticketmaster.ts:mapEvenement",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/sources/src/resolver.ts",
+      "target": "function:packages/sources/src/resolver.ts:resoudreNomCanonique",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/sources/src/resolver.ts",
+      "target": "function:packages/sources/src/resolver.ts:similariteLocale",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:packages/sources/src/resolver.ts",
+      "target": "function:packages/sources/src/resolver.ts:resoudreNomCanonique",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/sources/src/eventim.ts",
+      "target": "file:packages/sources/src/__tests__/eventim.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Direction corrected (was test → production)"
+    },
+    {
+      "source": "file:packages/sources/src/ticketmaster.ts",
+      "target": "file:packages/sources/src/__tests__/ticketmaster.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Direction corrected (was test → production)"
+    },
+    {
+      "source": "config:packages/sources/tsconfig.json",
+      "target": "file:packages/sources/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:packages/sources/package.json",
+      "target": "file:packages/sources/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:pnpm-workspace.yaml",
+      "target": "config:packages/sources/package.json",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "document:README.md",
+      "target": "file:packages/sources/src/index.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:scripts/artistes-seed.txt",
+      "target": "file:scripts/seed-artistes.ts",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/deploy.sh",
+      "target": "file:packages/sources/src/index.ts",
+      "type": "deploys",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:scripts/provision.sh",
+      "target": "file:scripts/deploy.sh",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:scripts/update.sh",
+      "target": "function:scripts/update.sh:rollback",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "config:scripts/tsconfig.json",
+      "target": "config:tsconfig.base.json",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/web/src/lib/server/log-admin.ts",
+      "target": "file:apps/web/src/lib/server/redis.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0000_initial.sql:sessions",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0000_initial.sql:accounts",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:packages/core/src/schema.ts",
+      "target": "table:packages/core/migrations/0000_initial.sql:user_config",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:database",
+      "name": "Database Layer",
+      "description": "PostgreSQL schema definitions, Drizzle ORM table models, sequential migrations, and migration metadata snapshots that form the persistent data foundation for all concert, user, and job data.",
+      "nodeIds": [
+        "file:packages/core/drizzle.config.ts",
+        "file:packages/core/migrations/0000_initial.sql",
+        "file:packages/core/migrations/0001_silent_sphinx.sql",
+        "file:packages/core/migrations/0002_supprimer_rayon_km.sql",
+        "file:packages/core/migrations/0003_melted_rumiko_fujikawa.sql",
+        "config:packages/core/migrations/meta/_journal.json",
+        "config:packages/core/migrations/meta/0000_snapshot.json",
+        "config:packages/core/migrations/meta/0001_snapshot.json",
+        "config:packages/core/migrations/meta/0002_snapshot.json",
+        "config:packages/core/migrations/meta/0003_snapshot.json",
+        "table:packages/core/migrations/0000_initial.sql:accounts",
+        "table:packages/core/migrations/0000_initial.sql:concerts",
+        "table:packages/core/migrations/0000_initial.sql:users",
+        "table:packages/core/migrations/0000_initial.sql:user_artistes",
+        "table:packages/core/migrations/0000_initial.sql:user_matches",
+        "table:packages/core/migrations/0000_initial.sql:user_salles",
+        "table:packages/core/migrations/0000_initial.sql:app_config",
+        "table:packages/core/migrations/0000_initial.sql:push_abonnements",
+        "table:packages/core/migrations/0000_initial.sql:fetch_jobs",
+        "table:packages/core/migrations/0000_initial.sql:user_config",
+        "table:packages/core/migrations/0000_initial.sql:sessions",
+        "table:packages/core/migrations/0003_melted_rumiko_fujikawa.sql:two_factor",
+        "file:packages/core/src/schema.ts",
+        "file:packages/core/src/db.ts"
+      ]
+    },
+    {
+      "id": "layer:core-library",
+      "name": "Core Library",
+      "description": "Shared pure-function business logic published as @strapontin/core: text normalisation, Levenshtein similarity, and the three-pass concert deduplication engine used by both the worker and web app.",
+      "nodeIds": [
+        "file:packages/core/src/deduplication.ts",
+        "file:packages/core/src/normalisation.ts",
+        "file:packages/core/src/index.ts",
+        "config:packages/core/package.json"
+      ]
+    },
+    {
+      "id": "layer:external-sources",
+      "name": "External Sources",
+      "description": "API client adapters published as @strapontin/sources that fetch concert data from Ticketmaster Discovery v2 and Eventim France, plus a MusicBrainz/Deezer canonical name resolver with Redis caching.",
+      "nodeIds": [
+        "file:packages/sources/src/ticketmaster.ts",
+        "file:packages/sources/src/eventim.ts",
+        "file:packages/sources/src/resolver.ts",
+        "file:packages/sources/src/types.ts",
+        "file:packages/sources/src/index.ts",
+        "config:packages/sources/package.json",
+        "config:packages/sources/tsconfig.json"
+      ]
+    },
+    {
+      "id": "layer:worker",
+      "name": "Background Worker",
+      "description": "BullMQ worker process that executes all background jobs (fetch concerts by artist/venue/region, recalculate user matches, send digest emails, send push notifications) and schedules them via a recurring cron.",
+      "nodeIds": [
+        "file:apps/worker/src/index.ts",
+        "file:apps/worker/src/jobs.ts",
+        "file:apps/worker/src/cron.ts",
+        "file:apps/worker/src/persister.ts",
+        "file:apps/worker/src/push.ts",
+        "file:apps/worker/src/email.ts",
+        "file:apps/worker/src/sources.ts",
+        "file:apps/worker/src/config.ts",
+        "file:apps/worker/src/db.ts",
+        "file:apps/worker/src/redis.ts",
+        "file:apps/worker/src/log-admin.ts",
+        "config:apps/worker/package.json",
+        "config:apps/worker/tsconfig.json"
+      ]
+    },
+    {
+      "id": "layer:web-server",
+      "name": "Web Server",
+      "description": "SvelteKit server-side code including request hooks, authentication middleware, REST/SSE API endpoints, server load functions, form actions, and server-only services (DB, Redis, queue, config, email).",
+      "nodeIds": [
+        "file:apps/web/src/hooks.server.ts",
+        "file:apps/web/src/lib/auth.ts",
+        "file:apps/web/src/lib/server/config.ts",
+        "file:apps/web/src/lib/server/db.ts",
+        "file:apps/web/src/lib/server/email.ts",
+        "file:apps/web/src/lib/server/filtres.ts",
+        "file:apps/web/src/lib/server/log-admin.ts",
+        "file:apps/web/src/lib/server/queue.ts",
+        "file:apps/web/src/lib/server/redis.ts",
+        "file:apps/web/src/lib/server/reseau.ts",
+        "file:apps/web/src/routes/+layout.server.ts",
+        "file:apps/web/src/routes/(app)/+layout.server.ts",
+        "file:apps/web/src/routes/(app)/+page.server.ts",
+        "file:apps/web/src/routes/(app)/admin/+page.server.ts",
+        "file:apps/web/src/routes/(app)/aide/+page.server.ts",
+        "file:apps/web/src/routes/(app)/artistes/+page.server.ts",
+        "file:apps/web/src/routes/(app)/decouverte/+page.server.ts",
+        "file:apps/web/src/routes/(app)/first-login/+page.server.ts",
+        "file:apps/web/src/routes/(app)/parametres/+page.server.ts",
+        "file:apps/web/src/routes/(app)/salles/+page.server.ts",
+        "file:apps/web/src/routes/(app)/spectacles/+page.server.ts",
+        "file:apps/web/src/routes/(auth)/forgot-password/+page.server.ts",
+        "file:apps/web/src/routes/(auth)/reset-password/+page.server.ts",
+        "file:apps/web/src/routes/api/fetch-region-status/+server.ts",
+        "file:apps/web/src/routes/api/preferences/+server.ts",
+        "file:apps/web/src/routes/api/push/+server.ts",
+        "file:apps/web/src/routes/health/+server.ts",
+        "file:apps/web/src/routes/setup/+page.server.ts",
+        "file:apps/web/src/service-worker.ts",
+        "file:apps/web/src/app.d.ts"
+      ]
+    },
+    {
+      "id": "layer:web-frontend",
+      "name": "Web Frontend",
+      "description": "SvelteKit client-side code including Svelte page and layout components, shared UI components (navigation, combobox, toast), utility helpers, auth client, global styles, and the PWA manifest.",
+      "nodeIds": [
+        "file:apps/web/src/app.css",
+        "file:apps/web/src/app.html",
+        "file:apps/web/src/lib/auth-client.ts",
+        "file:apps/web/src/lib/components/navigation/BottomNav.svelte",
+        "file:apps/web/src/lib/components/navigation/Sidebar.svelte",
+        "file:apps/web/src/lib/components/ui/combobox-depts.svelte",
+        "file:apps/web/src/lib/components/ui/sonner/index.ts",
+        "file:apps/web/src/lib/components/ui/sonner/sonner.svelte",
+        "file:apps/web/src/lib/constantes/depts.ts",
+        "file:apps/web/src/lib/constantes/validations.ts",
+        "file:apps/web/src/lib/formats.ts",
+        "file:apps/web/src/lib/index.ts",
+        "file:apps/web/src/lib/utils.ts",
+        "file:apps/web/src/routes/+layout.svelte",
+        "file:apps/web/src/routes/(app)/+layout.svelte",
+        "file:apps/web/src/routes/(app)/+page.svelte",
+        "file:apps/web/src/routes/(app)/admin/+page.svelte",
+        "file:apps/web/src/routes/(app)/aide/+page.svelte",
+        "file:apps/web/src/routes/(app)/artistes/+page.svelte",
+        "file:apps/web/src/routes/(app)/changelog/+page.svelte",
+        "file:apps/web/src/routes/(app)/decouverte/+page.svelte",
+        "file:apps/web/src/routes/(app)/first-login/+page.svelte",
+        "file:apps/web/src/routes/(app)/parametres/+page.svelte",
+        "file:apps/web/src/routes/(app)/salles/+page.svelte",
+        "file:apps/web/src/routes/(app)/spectacles/+page.svelte",
+        "file:apps/web/src/routes/(auth)/forgot-password/+page.svelte",
+        "file:apps/web/src/routes/(auth)/login/+page.svelte",
+        "file:apps/web/src/routes/(auth)/reset-password/+page.svelte",
+        "file:apps/web/src/routes/setup/+page.svelte",
+        "config:apps/web/static/manifest.json",
+        "document:apps/web/static/robots.txt",
+        "config:apps/web/components.json",
+        "file:apps/web/svelte.config.js",
+        "file:apps/web/vite.config.ts",
+        "file:apps/web/.npmrc",
+        "config:apps/web/package.json",
+        "config:apps/web/tsconfig.json",
+        "document:apps/web/README.md"
+      ]
+    },
+    {
+      "id": "layer:tests",
+      "name": "Tests",
+      "description": "All automated test suites across the monorepo: unit tests for core normalisation and deduplication, unit and functional tests for worker and web server logic, integration tests against real PostgreSQL/Redis, and Playwright E2E tests against the deployed LXC environment.",
+      "nodeIds": [
+        "file:packages/core/src/__tests__/deduplication.test.ts",
+        "file:packages/core/src/__tests__/normalisation.test.ts",
+        "file:packages/sources/src/__tests__/eventim.test.ts",
+        "file:packages/sources/src/__tests__/ticketmaster.test.ts",
+        "file:packages/sources/vitest.config.ts",
+        "file:apps/worker/src/__tests__/integration/cron.integration.test.ts",
+        "file:apps/worker/src/__tests__/integration/db-test.ts",
+        "file:apps/worker/src/__tests__/integration/global-setup.ts",
+        "file:apps/worker/src/__tests__/integration/persister.integration.test.ts",
+        "file:apps/worker/src/__tests__/integration/reconcilier.integration.test.ts",
+        "file:apps/worker/src/__tests__/persister.test.ts",
+        "file:apps/worker/vitest.config.ts",
+        "file:apps/worker/vitest.integration.config.ts",
+        "file:apps/web/src/tests/fonctionnel/admin.test.ts",
+        "file:apps/web/src/tests/fonctionnel/artistes.test.ts",
+        "file:apps/web/src/tests/fonctionnel/layout.test.ts",
+        "file:apps/web/src/tests/fonctionnel/salles.test.ts",
+        "file:apps/web/src/tests/fonctionnel/utils.ts",
+        "file:apps/web/src/tests/unitaire/hooks.test.ts",
+        "file:apps/web/tests/e2e/auth.e2e.ts",
+        "file:apps/web/tests/e2e/global-setup.ts",
+        "file:apps/web/tests/e2e/navigation.e2e.ts",
+        "file:apps/web/playwright.config.ts",
+        "file:apps/web/vitest.fonctionnel.config.ts",
+        "file:apps/web/vitest.unitaire.config.ts",
+        "file:scripts/pentest.mjs"
+      ]
+    },
+    {
+      "id": "layer:infrastructure",
+      "name": "Infrastructure & Config",
+      "description": "Deployment and provisioning shell scripts for Proxmox LXC containers, the Woodpecker CI/CD pipeline, root monorepo configuration files, TypeScript base configs, maintenance utilities, and project documentation.",
+      "nodeIds": [
+        "file:scripts/provision.sh",
+        "file:scripts/deploy.sh",
+        "file:scripts/update.sh",
+        "file:scripts/update-dev.sh",
+        "file:scripts/backup.sh",
+        "file:scripts/system-update.sh",
+        "file:scripts/maintenance.html",
+        "file:scripts/generer-vapid.mjs",
+        "file:scripts/generer-centres-dept.ts",
+        "file:scripts/fetch-bboxes-depts.mjs",
+        "file:scripts/reset-password.ts",
+        "file:scripts/seed-artistes.ts",
+        "file:scripts/seed-salles.ts",
+        "file:scripts/.gitkeep",
+        "document:scripts/artistes-seed.txt",
+        "config:scripts/tsconfig.json",
+        "config:.woodpecker.yaml",
+        "config:package.json",
+        "config:pnpm-workspace.yaml",
+        "config:tsconfig.base.json",
+        "config:.mcp.json",
+        "file:.env.example",
+        "file:.npmrc",
+        "document:README.md",
+        "document:CLAUDE.md"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "Project Overview",
+      "description": "Start with the README to understand what Strapontin does and why it exists. It is an invite-only personal concert aggregator that fetches events from Ticketmaster and Eventim every 2 hours and notifies users by email or push notification. The README also sets out the fundamental architectural principle: all API calls happen in the background worker — the browser only ever reads the database. This single constraint drives every design decision in the codebase.",
+      "nodeIds": [
+        "document:README.md"
+      ]
+    },
+    {
+      "order": 2,
+      "title": "Monorepo Structure",
+      "description": "The root `package.json` and `pnpm-workspace.yaml` define the monorepo topology: three apps (`web`, `worker`) and two shared packages (`core`, `sources`) managed as a pnpm workspace with pnpm@11 pinned via corepack. Understanding this layout is essential — when you see `@strapontin/core` imported in the worker, you know it comes from `packages/core`. The `tsconfig.base.json` enforces strict TypeScript settings across all packages from a single source of truth.",
+      "nodeIds": [
+        "config:package.json",
+        "config:pnpm-workspace.yaml",
+        "config:tsconfig.base.json"
+      ]
+    },
+    {
+      "order": 3,
+      "title": "Database Schema",
+      "description": "The Drizzle ORM schema (`packages/core/src/schema.ts`) is the canonical source of truth for all 13 database tables and their TypeScript types. The initial migration (`0000_initial.sql`) creates the core data model: `concerts` (the central aggregation store), `users`, `user_artistes` and `user_salles` (what users follow), `user_matches` (which concerts match which user), and `user_config` (per-user preferences). Understanding these tables upfront makes every route and worker job immediately legible.",
+      "nodeIds": [
+        "file:packages/core/src/schema.ts",
+        "file:packages/core/migrations/0000_initial.sql",
+        "table:packages/core/migrations/0000_initial.sql:concerts",
+        "table:packages/core/migrations/0000_initial.sql:users",
+        "table:packages/core/migrations/0000_initial.sql:user_matches"
+      ],
+      "languageLesson": "Drizzle ORM uses a code-first approach: `schema.ts` declares tables as TypeScript values, and `drizzle-kit generate` diffs the schema against the previous snapshot to produce a SQL migration. The inferred `$inferSelect` and `$inferInsert` types give you zero-boilerplate TypeScript types for each table row."
+    },
+    {
+      "order": 4,
+      "title": "Normalisation & Deduplication",
+      "description": "The `@strapontin/core` package provides the pure business logic shared by both `web` and `worker`. `normalisation.ts` strips accents, punctuation, and performs city-name substitutions (saint → st) to produce consistent keys. `deduplication.ts` then applies a three-pass algorithm on incoming concerts: exact match on `(artiste_norm, date, ville_norm)`, fuzzy match on `(date, ville_norm)` with Levenshtein similarity ≥ 0.85, and a venue-name fallback for cases where Ticketmaster and Eventim report different city names. This is the algorithmic core that makes cross-source aggregation reliable.",
+      "nodeIds": [
+        "file:packages/core/src/normalisation.ts",
+        "file:packages/core/src/deduplication.ts",
+        "file:packages/core/src/index.ts"
+      ],
+      "languageLesson": "Levenshtein distance measures the minimum number of single-character edits to transform one string into another. Normalising before comparing (removing accents, lowercasing) dramatically reduces false negatives; the 0.85 threshold allows for minor spelling differences between sources while avoiding false matches."
+    },
+    {
+      "order": 5,
+      "title": "External API Sources",
+      "description": "The `@strapontin/sources` package provides the two live data clients. `types.ts` defines the shared `ConcertBrut` DTO and the `SourceConcerts` interface that both clients implement. `ticketmaster.ts` calls the Discovery v2 API with quota tracking — every response includes a rate-limit header that the client parses and stores in Redis. `eventim.ts` uses a reverse-engineered internal Eventim API. `resolver.ts` canonicalises artist and venue names via MusicBrainz (then Deezer as a fallback) with a 7-day Redis cache, which is critical because Ticketmaster returns French venue names in ALL CAPS.",
+      "nodeIds": [
+        "file:packages/sources/src/types.ts",
+        "file:packages/sources/src/ticketmaster.ts",
+        "file:packages/sources/src/eventim.ts",
+        "file:packages/sources/src/resolver.ts",
+        "file:packages/sources/src/index.ts"
+      ]
+    },
+    {
+      "order": 6,
+      "title": "Worker Entry Point & Job Scheduler",
+      "description": "`apps/worker/src/index.ts` is the background process entry point. It creates a BullMQ `Worker` with `concurrency: 2` (deliberately kept low to avoid TM rate-limit bursts) and registers `traiterJob` as the handler for all job types. A `setInterval` calls the scheduler every 2 hours. `cron.ts` implements the scheduler: it reads all users and their followed artists/venues from the database, then enqueues the appropriate fetch jobs, respecting two TM quota thresholds — if available quota falls below 500, batch cron jobs are skipped; below 50, all TM jobs abort.",
+      "nodeIds": [
+        "file:apps/worker/src/index.ts",
+        "file:apps/worker/src/cron.ts",
+        "file:apps/worker/src/redis.ts"
+      ],
+      "languageLesson": "BullMQ uses Redis as its job store. Jobs with a fixed `jobId` are idempotent — adding the same job ID twice is a no-op. For recurring cron jobs this means using `removeOnComplete: true` (not `{ count: N }`) to clear the Redis hash after completion, otherwise re-queuing is silently ignored on subsequent scheduler runs."
+    },
+    {
+      "order": 7,
+      "title": "Job Execution & Concert Persistence",
+      "description": "`jobs.ts` implements the handler for every job type: `fetch:artiste`, `fetch:artistes:batch`, `fetch:region`, `fetch:salle`, `recalculer:matches`, `purger:concerts`, and `digest:quotidien`. After fetching raw concerts from the sources, each job calls through to `persister.ts`, which is the most logic-dense file in the worker. The persister reconciles venue names across sources, upserts concerts with diacritics and casing preference rules, then recalculates `user_matches` for all users, applying geographic department filters before triggering push and email notifications.",
+      "nodeIds": [
+        "file:apps/worker/src/jobs.ts",
+        "file:apps/worker/src/persister.ts",
+        "file:apps/worker/src/sources.ts",
+        "file:apps/worker/src/push.ts",
+        "file:apps/worker/src/email.ts"
+      ]
+    },
+    {
+      "order": 8,
+      "title": "Web Server Hooks & Authentication",
+      "description": "`hooks.server.ts` is the first file that runs on every SvelteKit request. It sequences three handlers: `bloquerAccesDirectIP` (rejects requests whose `Host` header is a bare IP address — guarding against direct-IP bypass of the nginx proxy), `securiser` (injects COOP, CORP, and X-Robots-Tag headers), and `gererAuth` (resolves the Better Auth session, writes user and theme to `event.locals`, redirects unauthenticated users, and enforces 2FA for admin accounts). `auth.ts` configures Better Auth with a Drizzle adapter, username plugin, TOTP two-factor plugin, and an after-hook that logs sign-in attempts to pino.",
+      "nodeIds": [
+        "file:apps/web/src/hooks.server.ts",
+        "file:apps/web/src/lib/auth.ts",
+        "file:apps/web/src/app.d.ts",
+        "file:apps/web/src/lib/server/reseau.ts"
+      ],
+      "languageLesson": "SvelteKit's `handle` hook wraps every request/response cycle. Composing multiple handlers with `sequence(a, b, c)` from `@sveltejs/kit/hooks` keeps each concern independent and testable. Values written to `event.locals` in a hook are available to all `load` functions and `+server.ts` routes for that request."
+    },
+    {
+      "order": 9,
+      "title": "Shared Server Infrastructure",
+      "description": "Several singleton modules underpin all server routes. `db.ts` exports the Drizzle connection pool (fan-in: 7 — the most widely imported file in the project). `redis.ts` exports the ioredis client and key-name helpers, keeping all Redis key strings in one place. `queue.ts` exports the shared BullMQ `Queue` instance so web routes can enqueue background jobs (e.g., when a user adds an artist the `fetch:artiste` job is immediately enqueued). `config.ts` provides AES-256-GCM encrypted read/write access to the `app_config` table for API keys stored by the admin.",
+      "nodeIds": [
+        "file:apps/web/src/lib/server/db.ts",
+        "file:apps/web/src/lib/server/redis.ts",
+        "file:apps/web/src/lib/server/queue.ts",
+        "file:apps/web/src/lib/server/config.ts"
+      ]
+    },
+    {
+      "order": 10,
+      "title": "Main App Routes",
+      "description": "The `(app)` route group is protected by its layout server, which redirects unauthenticated users to `/login`. The root page (`+page.server.ts`) queries `user_matches` joined with `concerts` to build the dashboard of matched concerts. The `/spectacles` route adds multi-filter support (month, genre, classification, source, price, status). The `/artistes` route loads followed artists and enqueues a `fetch:artiste` job on add. The `/salles` route does the same for venues. Together these routes show how every user interaction immediately triggers a background job rather than a synchronous API call.",
+      "nodeIds": [
+        "file:apps/web/src/routes/(app)/+layout.server.ts",
+        "file:apps/web/src/routes/(app)/+page.server.ts",
+        "file:apps/web/src/routes/(app)/spectacles/+page.server.ts",
+        "file:apps/web/src/routes/(app)/artistes/+page.server.ts",
+        "file:apps/web/src/routes/(app)/salles/+page.server.ts"
+      ]
+    },
+    {
+      "order": 11,
+      "title": "Frontend Shell & UI System",
+      "description": "The root layout (`+layout.svelte`) and authenticated layout (`(app)/+layout.svelte`) form the navigation shell. `BottomNav.svelte` serves mobile users; `Sidebar.svelte` serves desktop users. The design system is built on shadcn-svelte with Tailwind v4, configured via `components.json`. `app.html` contains an inline theme-detection script to apply the correct dark/light CSS class before the page paints, preventing flash of unstyled content. `app.css` defines the Tailwind base layers and CSS custom properties for the token system.",
+      "nodeIds": [
+        "file:apps/web/src/routes/+layout.svelte",
+        "file:apps/web/src/routes/(app)/+layout.svelte",
+        "file:apps/web/src/lib/components/navigation/BottomNav.svelte",
+        "file:apps/web/src/lib/components/navigation/Sidebar.svelte",
+        "file:apps/web/src/app.html",
+        "file:apps/web/src/app.css"
+      ]
+    },
+    {
+      "order": 12,
+      "title": "PWA, Push Notifications & Service Worker",
+      "description": "Strapontin installs as a Progressive Web App. `manifest.json` declares the app name, icons, and standalone display mode. `service-worker.ts` pre-caches static assets and listens for push events from the server, showing a notification and handling `notificationclick` to open `/spectacles`. The `/api/push` route manages VAPID subscription registration and deletion (capped at 10 per user). The worker's `push.ts` reads subscriptions from `push_abonnements` and sends Web Push payloads via web-push, auto-cleaning expired subscriptions that return 404 or 410.",
+      "nodeIds": [
+        "config:apps/web/static/manifest.json",
+        "file:apps/web/src/service-worker.ts",
+        "file:apps/web/src/routes/api/push/+server.ts",
+        "table:packages/core/migrations/0000_initial.sql:push_abonnements"
+      ],
+      "languageLesson": "Web Push uses VAPID (Voluntary Application Server Identification) to authenticate the push server. VAPID keys must be stable — changing them invalidates all existing browser subscriptions stored in `push_abonnements`. The GET `/api/push` endpoint is intentionally unauthenticated so the service worker can retrieve the public key without a session cookie."
+    },
+    {
+      "order": 13,
+      "title": "CI/CD & Deployment Pipeline",
+      "description": "`.woodpecker.yaml` defines the three-step pipeline that runs on every push. The `test` step runs unit tests across all packages with mocked databases. The `typecheck` step runs `svelte-check`, `tsc --noEmit`, and `pnpm audit`. On merges to `main`, the `deploy` step SSHes into the production LXC and calls `update.sh`. That script orchestrates the full deployment sequence: `backup.sh` (pg_dump to NAS), `git reset --hard`, `pnpm install`, `pnpm build`, `drizzle-kit migrate`, `systemctl restart`, and finally a health-check against `/health` with 10 retries. A `trap ERR` provides automatic rollback if any step fails.",
+      "nodeIds": [
+        "config:.woodpecker.yaml",
+        "file:scripts/update.sh",
+        "file:scripts/deploy.sh",
+        "file:scripts/provision.sh",
+        "file:apps/web/src/routes/health/+server.ts"
+      ],
+      "languageLesson": "YAML CI/CD pipelines use `depends_on` to serialize steps that share a resource. In this project the `typecheck` step depends on `test` to prevent both steps from running `pnpm install` on the same `.pnpm-store` directory simultaneously, which caused ENOENT race conditions on pnpm 11."
+    }
+  ]
+}
