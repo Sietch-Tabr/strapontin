@@ -271,9 +271,7 @@ Colonne `statut` (`text`, nullable) : valeur brute TM (`onsale`, `offsale`, `can
 
 ## Schéma PostgreSQL
 
-Migration `0000_initial.sql` — schéma complet v1.1 fusionné. Nouvelles migrations à partir de `0001`.
-`0001_silent_sphinx.sql` : `ALTER TABLE concerts ADD COLUMN statut text` + `SET DEFAULT now()` sur `users.created_at/updated_at` (v1.2.1).
-Tables : `users`, `sessions`, `accounts`, `verifications` (Better Auth) + `concerts`, `user_artistes`, `user_salles`, `user_config`, `user_matches`, `fetch_jobs`, `push_abonnements`, `app_config`.
+Migrations dans `packages/core/migrations/` — toujours via `pnpm --filter @strapontin/core db:generate`, jamais à la main.
 `users.id` est de type `text` (Better Auth génère ses propres IDs).
 
 Détails : [wiki Schéma de base de données](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de-base-de-données)
@@ -292,8 +290,8 @@ Détails : [wiki Schéma de base de données](https://codeberg.org/Kwaite/strapo
   - E2E Playwright (`E2E_BASE_URL=http://192.168.20.78:3000 pnpm --filter web test:e2e`) : Chromium sur app déployée, LXC dev requis.
   - Nommage : `<fonction>_<scenario>_<attendu>`. Piège Better Auth depuis Node.js : header `Origin` obligatoire (sinon 403).
 
-## Roadmap — jalons
+## Outils Claude Code
 
-- **v1.0–v1.2.3** — livrés (2026-04-18 → 2026-05-08) : LXC dev, notifications push, PWA, RGPD, Better Auth, observabilité, Node 24, pnpm 11
-- **v1.3.0** — en cours : #245 (notifs offsale), #246 (navigation push), #267 (quota), #247 (update.sh), #251 (IPv6), #248 (aide), #249 (repo public), #252 (logs admin), #253 (onglets admin), #250 (2FA TOTP)
-- **v1.4.0** — à planifier
+- **Understand-Anything** (`/understand`) — graphe de connaissance du codebase ; utiliser avant toute exploration large ou onboarding. `/understand-knowledge` pour le wiki.
+- **code-review-graph** — MCP disponible via `.mcp.json` ; analyse d'impact et blast-radius sur les modifications (451 nœuds, 6325 arêtes indexés).
+- **everything-search** — MCP de recherche de fichiers via Spotlight (évite le bruit `node_modules/`).
