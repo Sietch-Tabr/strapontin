@@ -8,3 +8,4 @@ dist/
 .pnpm-store/
 .auth-state.json
 .code-review-graph/
+.understand-anything/
