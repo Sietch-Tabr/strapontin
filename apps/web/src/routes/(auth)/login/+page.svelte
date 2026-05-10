@@ -35,7 +35,7 @@
 		chargement = true;
 		erreur = '';
 
-		const resultat = await authClient.twoFactor.verifyTotp({ code: code2Fa });
+		const resultat = await authClient.twoFactor.verifyTotp({ code: code2Fa.replace(/\s/g, '') });
 
 		if (resultat.error) {
 			erreur = 'Code incorrect. Vérifiez votre application d\'authentification.';
@@ -118,7 +118,6 @@
 						id="code-2fa"
 						type="text"
 						inputmode="numeric"
-						pattern="[0-9]{6}"
 						maxlength="6"
 						bind:value={code2Fa}
 						required
