@@ -8,4 +8,5 @@ dist/
 .pnpm-store/
 .auth-state.json
 .code-review-graph/
-.understand-anything/
+.understand-anything/intermediate/
+.understand-anything/tmp/
