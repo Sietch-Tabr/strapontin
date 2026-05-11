@@ -69,9 +69,6 @@
 					<li class="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
 						<div>
 							<p class="font-medium text-card-foreground">{suggestion.nom}</p>
-							{#if suggestion.pays}
-								<p class="text-xs text-muted-foreground">{suggestion.pays}</p>
-							{/if}
 						</div>
 						<form method="POST" action="?/ajouter" use:enhance={() => async ({ result, update }) => {
 								if (result.type === 'success') toast.success('Artiste ajouté');
