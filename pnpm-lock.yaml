@@ -179,6 +179,9 @@ importers:
 
   packages/sources:
     dependencies:
+      '@strapontin/core':
+        specifier: workspace:*
+        version: link:../core
       pino:
         specifier: ^10.0.0
         version: 10.3.1

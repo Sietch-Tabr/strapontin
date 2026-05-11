@@ -1,4 +1,5 @@
 import pino from "pino";
+import { normaliserTexte } from "@strapontin/core";
 import type { ConcertBrut, SourceConcerts } from "./types.js";
 
 const logger = pino({ name: "source:eventim" });
@@ -117,10 +118,10 @@ async function rechercherAttractionId(terme: string): Promise<string | null> {
     | undefined;
   if (!attractions?.length) return null;
 
-  // Chercher d'abord une correspondance exacte (insensible à la casse)
-  const termeLower = terme.toLowerCase().trim();
+  // Chercher d'abord une correspondance exacte normalisée (accents et casse)
+  const termeNorm = normaliserTexte(terme);
   const exact = attractions.find(
-    (a) => (a["name"] as string)?.toLowerCase().trim() === termeLower,
+    (a) => normaliserTexte((a["name"] as string) ?? "") === termeNorm,
   );
   const choisi = exact ?? attractions[0];
   const id = choisi?.["attractionId"] ?? choisi?.["id"];

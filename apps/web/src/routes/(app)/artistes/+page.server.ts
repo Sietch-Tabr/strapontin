@@ -1,42 +1,43 @@
 import { randomUUID } from "crypto";
+import pino from "pino";
 import { db } from "$lib/server/db";
 import { queue } from "$lib/server/queue";
 import { userArtistes, concerts } from "@strapontin/core/schema";
 import { normaliserTexte } from "@strapontin/core";
-import { eq, and, ilike, sql, count } from "drizzle-orm";
+import { eq, and, like, count } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
-const MUSICBRAINZ_URL = "https://musicbrainz.org/ws/2/artist";
-const USER_AGENT = "Strapontin/1.0 (strapontin.kwaite.fr)";
+const logger = pino({ name: "artistes" });
+const DEEZER_URL = "https://api.deezer.com/search/artist";
 
 interface SuggestionArtiste {
   nom: string;
-  pays?: string;
-  source: "base" | "musicbrainz";
+  source: "base" | "deezer";
 }
 
-async function rechercherMusicBrainz(
-  terme: string,
-): Promise<SuggestionArtiste[]> {
+async function rechercherDeezer(terme: string): Promise<SuggestionArtiste[]> {
   try {
-    const url = `${MUSICBRAINZ_URL}?query=${encodeURIComponent(terme)}&fmt=json&limit=6`;
-    const resp = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT },
-      signal: AbortSignal.timeout(3000),
-    });
-    if (!resp.ok) return [];
+    const url = `${DEEZER_URL}?q=${encodeURIComponent(terme)}&limit=6`;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!resp.ok) {
+      logger.warn({ terme, status: resp.status }, "Deezer recherche artiste erreur HTTP");
+      return [];
+    }
     const data = (await resp.json()) as {
-      artists?: { name: string; country?: string; score?: number }[];
+      data?: { name: string; nb_fan: number }[];
     };
-    return (data.artists ?? [])
-      .filter((a) => (a.score ?? 0) >= 60)
-      .map((a) => ({
-        nom: a.name,
-        pays: a.country,
-        source: "musicbrainz" as const,
-      }));
-  } catch {
+    const resultats = (data.data ?? [])
+      .sort((a, b) => b.nb_fan - a.nb_fan);
+    const vus = new Set<string>();
+    return resultats.flatMap((a) => {
+      const norm = normaliserTexte(a.name);
+      if (vus.has(norm)) return [];
+      vus.add(norm);
+      return [{ nom: a.name, source: "deezer" as const }];
+    });
+  } catch (err) {
+    logger.warn({ terme, err }, "Deezer recherche artiste échouée");
     return [];
   }
 }
@@ -57,11 +58,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   let suggestions: SuggestionArtiste[] = [];
 
   if (recherche.length >= 2) {
-    // Chercher d'abord dans les concerts déjà en base
+    const rechercheNorm = normaliserTexte(recherche);
+
     const enBase = await db
       .selectDistinct({ artiste: concerts.artiste })
       .from(concerts)
-      .where(ilike(concerts.artiste, `%${recherche}%`))
+      .where(like(concerts.artisteNorm, `%${rechercheNorm}%`))
       .orderBy(concerts.artiste)
       .limit(5);
 
@@ -73,14 +75,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       .filter((r) => !nomsSuivisNormalises.has(normaliserTexte(r.artiste)))
       .map((r) => ({ nom: r.artiste, source: "base" as const }));
 
-    // Compléter avec MusicBrainz si < 3 résultats
+    // Compléter avec Deezer si < 3 résultats
     if (suggestions.length < 3) {
-      const mbResultats = await rechercherMusicBrainz(recherche);
+      const deezerResultats = await rechercherDeezer(recherche);
       const nomsDejaPresents = new Set([
         ...suggestions.map((s) => normaliserTexte(s.nom)),
         ...nomsSuivisNormalises,
       ]);
-      for (const r of mbResultats) {
+      for (const r of deezerResultats) {
         if (!nomsDejaPresents.has(normaliserTexte(r.nom))) {
           suggestions.push(r);
           nomsDejaPresents.add(normaliserTexte(r.nom));

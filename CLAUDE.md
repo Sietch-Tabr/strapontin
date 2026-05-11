@@ -166,7 +166,9 @@ Détails : [wiki Sources de données](https://codeberg.org/Kwaite/strapontin/wik
 | ------------------------- | -------------------------------------------- |
 | Ticketmaster Discovery v2 | Core                                         |
 | Eventim France            | Core                                         |
+| Deezer Search API         | Autocomplete artiste (`/artistes`) — sans clé, sans auth. Remplace MusicBrainz (bloqué). |
 | Bandsintown               | Abandonné — HTTP 401 depuis 2026-04-10 (#65) |
+| MusicBrainz               | Bloqué — IP SFR blacklistée par Cloudflare (#293). Utilisé dans le resolver mais inopérant. |
 | Fnac Spectacles           | Abandonné — Cloudflare JS challenge          |
 | Shotgun.live              | Abandonné — hors scope (#19)                 |
 | Dice.fm                   | Abandonné — hors scope (#19)                 |
@@ -249,7 +251,7 @@ TM retourne les noms en TOUT MAJUSCULE pour les événements France.
 
 - **Couche 1 — dédup** (`fusionner`) : quand TM et Eventim couvrent le même concert, préférer la valeur avec le plus de diacritiques (Eventim a la bonne casse).
 - **Couche 2 — source TM** (`normaliserCasse`) : title-case français sur les noms tout-majuscule. La lettre après apostrophe est capitalisée (`L'OLYMPIA` → `L'Olympia`). Les accents ne sont pas restaurés.
-- **Couche 3 — resolver** (`resoudreNomCanonique`) : MusicBrainz (score ≥ 90 **et** similarité Levenshtein ≥ 0.6) puis Deezer en fallback. Cache Redis TTL 7j. Délai 1,1 s entre requêtes MB. Timeout 8 s.
+- **Couche 3 — resolver** (`resoudreNomCanonique`) : MusicBrainz (score ≥ 90 **et** similarité Levenshtein ≥ 0.6) puis Deezer en fallback. Cache Redis TTL 7j. Délai 1,1 s entre requêtes MB. Timeout 8 s. ⚠️ MusicBrainz est bloqué depuis l'IP prod/dev (SFR, `109.7.245.24`) par Cloudflare — les appels MB échouent silencieusement, Deezer est le seul resolver effectif. Demande de déblocage possible via [MetaBrainz Community](https://community.metabrainz.org/t/master-thread-is-my-ip-blocked/339002).
 
 ### Particularité TM — nom d'artiste vs titre d'événement
 
@@ -295,3 +297,42 @@ Détails : [wiki Schéma de base de données](https://codeberg.org/Kwaite/strapo
 - **Understand-Anything** (`/understand`) — graphe de connaissance du codebase ; utiliser avant toute exploration large ou onboarding. `/understand-knowledge` pour le wiki.
 - **code-review-graph** — MCP disponible via `.mcp.json` ; analyse d'impact et blast-radius sur les modifications (451 nœuds, 6325 arêtes indexés).
 - **everything-search** — MCP de recherche de fichiers via Spotlight (évite le bruit `node_modules/`).
+
+<!-- code-review-graph MCP tools -->
+## MCP Tools: code-review-graph
+
+**IMPORTANT: This project has a knowledge graph. ALWAYS use the
+code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
+the codebase.** The graph is faster, cheaper (fewer tokens), and gives
+you structural context (callers, dependents, test coverage) that file
+scanning cannot.
+
+### When to use graph tools FIRST
+
+- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
+- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
+- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
+- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
+- **Architecture questions**: `get_architecture_overview` + `list_communities`
+
+Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
+
+### Key Tools
+
+| Tool | Use when |
+| ------ | ---------- |
+| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
+| `get_review_context` | Need source snippets for review — token-efficient |
+| `get_impact_radius` | Understanding blast radius of a change |
+| `get_affected_flows` | Finding which execution paths are impacted |
+| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
+| `semantic_search_nodes` | Finding functions/classes by name or keyword |
+| `get_architecture_overview` | Understanding high-level codebase structure |
+| `refactor_tool` | Planning renames, finding dead code |
+
+### Workflow
+
+1. The graph auto-updates on file changes (via hooks).
+2. Use `detect_changes` for code review.
+3. Use `get_affected_flows` to understand impact.
+4. Use `query_graph` pattern="tests_for" to check coverage.

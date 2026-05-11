@@ -16,6 +16,22 @@
 		<section>
 			<div class="mb-4 flex items-center gap-2 text-foreground">
 				<History size={20} aria-hidden="true" />
+				<h2 class="text-base font-medium">v 1.3.1 — Mai 2026</h2>
+			</div>
+			<div class="space-y-4 text-sm text-muted-foreground">
+				<div>
+					<p class="mb-1 font-medium text-foreground">Recherche d'artiste</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>La recherche d'artiste trouve désormais les résultats quelle que soit l'orthographe des accents (« Adèle » trouve « Adele », « Etienne Daho » trouve « Étienne Daho »).</li>
+						<li>Les suggestions s'appuient maintenant sur Deezer, plus fiable depuis ce serveur.</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+
+		<section>
+			<div class="mb-4 flex items-center gap-2 text-foreground">
+				<History size={20} aria-hidden="true" />
 				<h2 class="text-base font-medium">v 1.3.0 — Mai 2026</h2>
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
