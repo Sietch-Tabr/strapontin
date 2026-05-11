@@ -5,7 +5,7 @@
 // 2. Fuzzy  : (date, ville_norm) + similarité artiste ≥ 0.85
 // Fallback  : (date, salle_norm) pour les grandes salles avec villes divergentes
 
-import type { ConcertBrut } from "@strapontin/sources";
+import type { ConcertBrut } from "./types.js";
 import {
   normaliserTexte,
   normaliserVille,

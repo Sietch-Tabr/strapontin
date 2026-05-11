@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { ConcertBrut } from "@strapontin/sources";
+import type { ConcertBrut } from "@strapontin/core";
 import { dedoublonner } from "../deduplication.js";
 
 function concert(
