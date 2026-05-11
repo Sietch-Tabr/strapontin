@@ -8,3 +8,4 @@ export {
   similarite,
   levenshtein,
 } from "./normalisation.js";
+export type { ConcertBrut, SourceConcerts } from "./types.js";
