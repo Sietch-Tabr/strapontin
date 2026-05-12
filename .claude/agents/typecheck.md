@@ -9,6 +9,7 @@ color: yellow
 Vérifier les diagnostics LSP sur chaque fichier fourni.
 
 Pour chaque fichier :
+
 1. Appeler LSP diagnostics sur le fichier
 2. Si erreurs : lister fichier + ligne + message d'erreur
 3. Si aucune erreur : confirmer "OK"
