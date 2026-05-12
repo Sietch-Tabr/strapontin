@@ -7,8 +7,9 @@ Avant toute action, résumer ce qui va être commité et attendre un "oui" expli
 
 1. Déléguer à l'agent `typecheck` la vérification des fichiers `.ts` et `.svelte` listés par `git diff --name-only`. Corriger toute erreur signalée avant de continuer.
 2. Si des fichiers de test couvrent les modules modifiés, lancer `pnpm -r test`.
-3. Afficher `git diff --stat`.
-4. Proposer un message de commit au format `type: description courte en français`.
+3. Lancer `pnpm audit --audit-level=high`. Si une vulnérabilité haute est détectée, signaler et attendre validation avant de continuer.
+4. Afficher `git diff --stat`.
+5. Proposer un message de commit au format `type: description courte en français`.
    Types valides : feat, fix, refactor, docs, test, style, perf, chore.
-5. Attendre validation explicite du message.
-6. `git add -A && git commit -m "..."`
+6. Attendre validation explicite du message.
+7. `git add -A && git commit -m "..."`
