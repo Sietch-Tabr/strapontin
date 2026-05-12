@@ -21,7 +21,8 @@
   "pnpm": {
     "overrides": {
       "cookie": ">=0.7.0",
-      "postcss": ">=8.5.10"
+      "postcss": ">=8.5.10",
+      "kysely": "0.28.17"
     }
   }
 }
