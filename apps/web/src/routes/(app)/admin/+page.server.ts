@@ -448,8 +448,10 @@ export const actions: Actions = {
     const nom = donnees.get("nom")?.toString().trim() ?? "";
     const email = donnees.get("email")?.toString().trim().toLowerCase() ?? "";
 
-    if (!userId) {
-      return fail(400, { erreur: "Utilisateur invalide." });
+    if (!userId || userId === locals.user.id) {
+      return fail(400, {
+        erreur: "Utilisez /parametres pour modifier votre propre compte.",
+      });
     }
 
     if (nom && nom.length > 100) {
@@ -458,6 +460,17 @@ export const actions: Actions = {
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return fail(400, { erreur: "Format d'email invalide." });
+    }
+
+    if (email) {
+      const existant = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .then((r) => r[0] ?? null);
+      if (existant && existant.id !== userId) {
+        return fail(400, { erreur: "Cette adresse email est déjà utilisée." });
+      }
     }
 
     const mise: Partial<{ name: string; email: string; updatedAt: Date }> = {

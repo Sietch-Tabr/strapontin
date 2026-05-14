@@ -59,7 +59,11 @@ su - strapontin -c "set -a; source $APP_DIR/.env; set +a; cd $APP_DIR && NO_COLO
 
 # 6. Redémarrage des services
 echo "[6/6] redémarrage..."
-systemctl restart strapontin-web strapontin-worker
+[[ -f "$APP_DIR/apps/web/build/index.js" ]] || { echo "ERREUR : build incomplet (index.js manquant)" >&2; exit 1; }
+[[ -f "$APP_DIR/apps/web/build/client/service-worker.js.br" ]] || { echo "ERREUR : build incomplet (service-worker.js.br manquant)" >&2; exit 1; }
+systemctl stop strapontin-web strapontin-worker
+sleep 1
+systemctl start strapontin-web strapontin-worker
 
 # Healthcheck — retries sur 30s
 RETRIES=10
