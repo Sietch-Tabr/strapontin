@@ -4,7 +4,8 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 
 # provision-java.sh — provisionnement LXC 115 (stack Java/Spring Boot)
 # À exécuter depuis le HOST Proxmox en tant que root :
-#   ssh root@192.168.1.99 "bash -s" < scripts/provision-java.sh
+#   scp scripts/provision-java.sh root@192.168.1.99:/tmp/
+#   ssh root@192.168.1.99 "bash /tmp/provision-java.sh"
 #
 # Ce LXC est le "vert" de la stratégie blue-green pour la migration v2.0.0.
 # À la bascule prod : la MAC de LXC 113 est assignée à ce LXC 115,
