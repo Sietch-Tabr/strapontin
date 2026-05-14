@@ -16,6 +16,28 @@
 		<section>
 			<div class="mb-4 flex items-center gap-2 text-foreground">
 				<History size={20} aria-hidden="true" />
+				<h2 class="text-base font-medium">v 1.4.0 — Mai 2026</h2>
+			</div>
+			<div class="space-y-4 text-sm text-muted-foreground">
+				<div>
+					<p class="mb-1 font-medium text-foreground">Mes spectacles</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>La liste des spectacles est maintenant paginée (100 par page) — plus de long défilement lorsque le nombre de concerts dépasse la centaine.</li>
+						<li>Les mois disponibles dans le filtre sont calculés côté serveur : ils reflètent l'ensemble de vos concerts, quelle que soit la page affichée.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Accueil</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>L'accueil affiche désormais vos 50 prochains concerts. Si vous en avez davantage, un lien vous renvoie vers Mes spectacles.</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+
+		<section>
+			<div class="mb-4 flex items-center gap-2 text-foreground">
+				<History size={20} aria-hidden="true" />
 				<h2 class="text-base font-medium">v 1.3.1 — Mai 2026</h2>
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
