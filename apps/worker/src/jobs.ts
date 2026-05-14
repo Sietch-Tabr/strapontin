@@ -6,7 +6,7 @@ import type { ConcertBrut, TicketmasterSource } from "@strapontin/sources";
 import { resoudreNomCanonique } from "@strapontin/sources";
 import { dedoublonner, normaliserTexte } from "@strapontin/core";
 import { concerts, userArtistes } from "@strapontin/core/schema";
-import { lt } from "drizzle-orm";
+import { lt, eq } from "drizzle-orm";
 import { db } from "./db.js";
 import { obtenirTicketmaster, eventim } from "./sources.js";
 import {
@@ -245,7 +245,6 @@ export async function lireDispoQuotaTM(): Promise<number | null> {
 export interface JobFetchArtiste {
   type: "fetch:artiste";
   artiste: string;
-  userId?: string;
   correlationId?: string;
 }
 
@@ -337,8 +336,13 @@ export async function traiterFetchArtiste(
 
   await persisterConcerts(dedoublonnes);
 
-  if (data.userId) {
-    await recalculerMatches([data.userId]);
+  const artisteNorm = normaliserTexte(data.artiste);
+  const usersFollowing = await db
+    .select({ userId: userArtistes.userId })
+    .from(userArtistes)
+    .where(eq(userArtistes.artisteNormalise, artisteNorm));
+  if (usersFollowing.length > 0) {
+    await recalculerMatches(usersFollowing.map((u) => u.userId));
   }
 }
 

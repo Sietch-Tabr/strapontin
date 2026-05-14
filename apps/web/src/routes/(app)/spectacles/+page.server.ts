@@ -17,6 +17,7 @@ import {
   inArray,
   desc,
   asc,
+  count,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { error } from "@sveltejs/kit";
@@ -29,11 +30,14 @@ import { FORMAT_MOIS } from "$lib/constantes/validations";
 
 const SEUIL_NEW_MS = 7 * 24 * 3600 * 1000;
 
+const CONCERTS_PAR_PAGE = 100;
+
 export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0];
   const dans15Jours = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
+  const page = Math.max(0, parseInt(url.searchParams.get("page") ?? "0") || 0);
   const recherche = (url.searchParams.get("q")?.trim() ?? "").slice(0, 100);
   const mois = url.searchParams.get("mois")?.trim() ?? "";
   const classification = url.searchParams.get("classification")?.trim() ?? "";
@@ -111,49 +115,70 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     }
   }
 
-  const tousLesConcerts = await db
-    .select({
-      id: concerts.id,
-      artiste: concerts.artiste,
-      date: concerts.date,
-      heure: concerts.heure,
-      salle: concerts.salle,
-      ville: concerts.ville,
-      url: concerts.url,
-      prixMin: concerts.prixMin,
-      prixMax: concerts.prixMax,
-      classification: concerts.classification,
-      firstSeen: concerts.firstSeen,
-      statut: concerts.statut,
-    })
-    .from(userMatches)
-    .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
-    .where(and(...conditions))
-    .orderBy(
-      ...(tri === "nouveaute"
-        ? [desc(concerts.firstSeen), asc(concerts.date)]
-        : [asc(concerts.date), asc(concerts.artiste)]),
-    )
-    .limit(200);
+  const ordreColonnes =
+    tri === "nouveaute"
+      ? [desc(concerts.firstSeen), asc(concerts.date)]
+      : [asc(concerts.date), asc(concerts.artiste)];
+
+  const [tousLesConcerts, [{ total: totalConcerts }]] = await Promise.all([
+    db
+      .select({
+        id: concerts.id,
+        artiste: concerts.artiste,
+        date: concerts.date,
+        heure: concerts.heure,
+        salle: concerts.salle,
+        ville: concerts.ville,
+        url: concerts.url,
+        prixMin: concerts.prixMin,
+        prixMax: concerts.prixMax,
+        classification: concerts.classification,
+        firstSeen: concerts.firstSeen,
+        statut: concerts.statut,
+      })
+      .from(userMatches)
+      .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
+      .where(and(...conditions))
+      .orderBy(...ordreColonnes)
+      .limit(CONCERTS_PAR_PAGE)
+      .offset(page * CONCERTS_PAR_PAGE),
+    db
+      .select({ total: count() })
+      .from(userMatches)
+      .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
+      .where(and(...conditions)),
+  ]);
 
   const seuilNew = new Date(Date.now() - SEUIL_NEW_MS);
 
-  const tousGenres = await db
-    .selectDistinct({ genre: concerts.genre })
-    .from(userMatches)
-    .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
-    .where(
-      and(
-        eq(userMatches.userId, locals.user!.id),
-        gte(concerts.date, aujourdhui),
-        isNotNull(concerts.genre),
-      ),
-    )
-    .orderBy(concerts.genre);
+  const conditionsBase = [
+    eq(userMatches.userId, locals.user!.id),
+    gte(concerts.date, aujourdhui),
+    afficherMasques ? isNotNull(userMatches.masqueLe) : isNull(userMatches.masqueLe),
+  ];
+
+  const [tousGenres, tousLesMois] = await Promise.all([
+    db
+      .selectDistinct({ genre: concerts.genre })
+      .from(userMatches)
+      .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
+      .where(and(...conditionsBase, isNotNull(concerts.genre)))
+      .orderBy(concerts.genre),
+    db
+      .selectDistinct({ mois: sql<string>`left(${concerts.date}::text, 7)` })
+      .from(userMatches)
+      .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
+      .where(and(...conditionsBase))
+      .orderBy(sql`left(${concerts.date}::text, 7)`),
+  ]);
 
   const genresDisponibles = tousGenres
     .map((g) => g.genre)
     .filter((g): g is string => g !== null);
+
+  const moisDisponibles = tousLesMois.map((m) => m.mois);
+
+  const totalPages = Math.max(1, Math.ceil(totalConcerts / CONCERTS_PAR_PAGE));
 
   return {
     tousLesConcerts: tousLesConcerts.map((c) => ({
@@ -170,8 +195,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     sourceArtistes,
     sourceSalles,
     genresDisponibles,
+    moisDisponibles,
     afficherMasques,
     inclureIndisponibles,
+    page,
+    totalPages,
+    totalConcerts,
   };
 };
 

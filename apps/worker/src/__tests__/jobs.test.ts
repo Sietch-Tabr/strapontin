@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const mockDbSelect = vi.hoisted(() => vi.fn());
 vi.mock("../db.js", () => ({
   db: {
+    select: mockDbSelect,
     delete: vi.fn().mockReturnValue({
       where: vi.fn().mockReturnValue({
         returning: vi.fn().mockResolvedValue([]),
@@ -90,6 +92,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(obtenirTicketmaster).mockResolvedValue(tmMock() as never);
   vi.mocked(eventim.fetchArtiste).mockResolvedValue([]);
+  // Par défaut : aucun user ne suit l'artiste
+  mockDbSelect.mockReturnValue({
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue([]),
+    }),
+  });
 });
 
 // --- traiterFetchArtiste ---
@@ -108,17 +116,22 @@ describe("traiterFetchArtiste", () => {
     expect(persisterConcerts).toHaveBeenCalledOnce();
   });
 
-  it("appelle_recalculerMatches_si_userId_present", async () => {
+  it("recalcule_matches_pour_tous_les_users_suivant_artiste", async () => {
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([{ userId: "u1" }, { userId: "u2" }]),
+      }),
+    });
+
     await traiterFetchArtiste({
       type: "fetch:artiste",
       artiste: "Coldplay",
-      userId: "user-123",
     });
 
-    expect(recalculerMatches).toHaveBeenCalledWith(["user-123"]);
+    expect(recalculerMatches).toHaveBeenCalledWith(["u1", "u2"]);
   });
 
-  it("ne_pas_appeler_recalculerMatches_si_userId_absent", async () => {
+  it("ne_pas_appeler_recalculerMatches_si_aucun_user_ne_suit", async () => {
     await traiterFetchArtiste({
       type: "fetch:artiste",
       artiste: "Coldplay",

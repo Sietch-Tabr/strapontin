@@ -4,7 +4,7 @@ import { db } from "$lib/server/db";
 import { queue } from "$lib/server/queue";
 import { userArtistes, concerts } from "@strapontin/core/schema";
 import { normaliserTexte } from "@strapontin/core";
-import { eq, and, like, count } from "drizzle-orm";
+import { eq, and, like, count, gt } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -142,20 +142,39 @@ export const actions: Actions = {
       artisteAffiche: nom,
     });
 
-    await queue
-      .add(
-        "fetch:artiste",
-        { type: "fetch:artiste", artiste: nom, userId: locals.user!.id, correlationId: randomUUID() },
-        {
-          attempts: 3,
-          backoff: { type: "exponential", delay: 5000 },
-          removeOnComplete: { count: 10 },
-          removeOnFail: { count: 20 },
-        },
-      )
-      .catch(() => {
-        /* le worker est peut-être arrêté en dev */
-      });
+    // Vérifier si les concerts de cet artiste sont frais (< 2h)
+    const deuxHeuresAvant = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const concertsFrais = await db
+      .select({ id: concerts.id })
+      .from(concerts)
+      .where(and(eq(concerts.artisteNorm, normalise), gt(concerts.updatedAt, deuxHeuresAvant)))
+      .limit(1);
+
+    if (concertsFrais.length > 0) {
+      // Données déjà fraîches — recalcul direct sans appel API
+      await queue
+        .add(
+          "recalculer:matches",
+          { type: "recalculer:matches", userIds: [locals.user!.id], correlationId: randomUUID() },
+          { removeOnComplete: true, removeOnFail: true },
+        )
+        .catch(() => {});
+    } else {
+      // Données absentes ou périmées — fetch partagé par artiste (dédup BullMQ)
+      await queue
+        .add(
+          "fetch:artiste",
+          { type: "fetch:artiste", artiste: nom, correlationId: randomUUID() },
+          {
+            jobId: `artiste__${normalise}`,
+            attempts: 3,
+            backoff: { type: "exponential", delay: 5000 },
+            removeOnComplete: true,
+            removeOnFail: true,
+          },
+        )
+        .catch(() => {});
+    }
 
     return { succes: true };
   },

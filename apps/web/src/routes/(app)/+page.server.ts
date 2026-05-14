@@ -31,30 +31,37 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const conditionStatut = construireConditionStatut(inclureIndisponibles);
   if (conditionStatut) conditions.push(conditionStatut);
 
-  // Uniquement les concerts des artistes suivis (pas les salles)
-  const prochainsConcerts = await db
-    .select({
-      id: concerts.id,
-      artiste: concerts.artiste,
-      date: concerts.date,
-      heure: concerts.heure,
-      salle: concerts.salle,
-      ville: concerts.ville,
-      url: concerts.url,
-      statut: concerts.statut,
-      notifieLe: userMatches.notifieLe,
-    })
-    .from(userMatches)
-    .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
-    .innerJoin(
-      userArtistes,
-      and(
-        eq(userArtistes.userId, userMatches.userId),
-        eq(userArtistes.artisteNormalise, concerts.artisteNorm),
-      ),
-    )
-    .where(and(...conditions))
-    .orderBy(concerts.date);
+  const joinUserArtistes = and(
+    eq(userArtistes.userId, userMatches.userId),
+    eq(userArtistes.artisteNormalise, concerts.artisteNorm),
+  );
+
+  const [prochainsConcerts, [{ total: totalConcerts }]] = await Promise.all([
+    db
+      .select({
+        id: concerts.id,
+        artiste: concerts.artiste,
+        date: concerts.date,
+        heure: concerts.heure,
+        salle: concerts.salle,
+        ville: concerts.ville,
+        url: concerts.url,
+        statut: concerts.statut,
+        notifieLe: userMatches.notifieLe,
+      })
+      .from(userMatches)
+      .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
+      .innerJoin(userArtistes, joinUserArtistes)
+      .where(and(...conditions))
+      .orderBy(concerts.date)
+      .limit(50),
+    db
+      .select({ total: count() })
+      .from(userMatches)
+      .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
+      .innerJoin(userArtistes, joinUserArtistes)
+      .where(and(...conditions)),
+  ]);
 
   // Regrouper par artiste pour détecter les tournées (≥ 2 concerts)
   const groupesMap = new Map<
@@ -102,6 +109,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     nbArtistes,
     nbSalles,
     inclureIndisponibles,
+    totalConcerts,
+    tronque: totalConcerts > 50,
   };
 };
 

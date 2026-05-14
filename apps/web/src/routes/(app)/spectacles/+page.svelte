@@ -23,6 +23,7 @@
 		tri?: string;
 		indisponibles?: boolean;
 		masques?: boolean;
+		page?: number;
 	} = {}): string {
 		const params = new URLSearchParams();
 		if (recherche) params.set('q', recherche);
@@ -48,6 +49,9 @@
 		const affMasques = options.masques ?? data.afficherMasques;
 		if (affMasques) params.set('masques', '1');
 
+		const p = options.page ?? 0;
+		if (p > 0) params.set('page', String(p));
+
 		return `/spectacles?${params}`;
 	}
 
@@ -58,10 +62,6 @@
 		if (pMax && pMax !== pMin) return `${pMin}–${pMax} €`;
 		return `${pMin} €`;
 	}
-
-	const moisDisponibles = $derived(
-		[...new Set(data.tousLesConcerts.map((c) => c.date.slice(0, 7)))].sort()
-	);
 
 	function labelMois(m: string): string {
 		const [annee, moisNum] = m.split('-').map(Number);
@@ -94,7 +94,7 @@
 	<div class="mb-8">
 		<h1 class="text-2xl font-semibold text-foreground">Mes spectacles</h1>
 		<p class="mt-1 text-sm text-muted-foreground">
-			{data.tousLesConcerts.length} concert{data.tousLesConcerts.length !== 1 ? 's' : ''} à venir
+			{data.totalConcerts} concert{data.totalConcerts !== 1 ? 's' : ''} à venir
 		</p>
 	</div>
 
@@ -222,7 +222,7 @@
 				class="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			>
 				<option value="">Tous les mois</option>
-				{#each moisDisponibles as m (m)}
+				{#each data.moisDisponibles as m (m)}
 					<option value={m}>{labelMois(m)}</option>
 				{/each}
 			</select>
@@ -411,6 +411,29 @@
 					</div>
 				</div>
 			{/each}
+		{#if data.totalPages > 1}
+			<div class="mt-6 flex items-center justify-center gap-3">
+				{#if data.page > 0}
+					<a
+						href={construireUrl({ page: data.page - 1 })}
+						class="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+					>
+						← Précédent
+					</a>
+				{/if}
+				<span class="text-sm text-muted-foreground">
+					Page {data.page + 1} / {data.totalPages}
+				</span>
+				{#if data.page < data.totalPages - 1}
+					<a
+						href={construireUrl({ page: data.page + 1 })}
+						class="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+					>
+						Suivant →
+					</a>
+				{/if}
+			</div>
+		{/if}
 		</div>
 	{/if}
 </div>
