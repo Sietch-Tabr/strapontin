@@ -108,6 +108,7 @@ sleep 5
 
 echo "[4] Locale, fuseau horaire, journald..."
 pct exec "$VMID" -- bash -c "
+    export LC_ALL=C
     echo 'fr_FR.UTF-8 UTF-8' >> /etc/locale.gen
     locale-gen
     update-locale LANG=fr_FR.UTF-8 LC_ALL=fr_FR.UTF-8
