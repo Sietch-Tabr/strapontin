@@ -11,6 +11,12 @@ export const GET: RequestHandler = async ({ url, locals, request }) => {
   const jobId = url.searchParams.get("jobId");
   if (!jobId) throw error(400, "jobId manquant");
 
+  const JOB_IDS_GLOBAUX = new Set(["artistes__batch", "region__all"]);
+  const PATTERN_JOB_DYNAMIQUE = /^(artiste|salle)__[a-z0-9_-]{1,100}$/;
+  if (!JOB_IDS_GLOBAUX.has(jobId) && !PATTERN_JOB_DYNAMIQUE.test(jobId)) {
+    throw error(403, "Job non autorisé");
+  }
+
   const stream = new ReadableStream({
     async start(controller) {
       const envoyer = (payload: string) => {

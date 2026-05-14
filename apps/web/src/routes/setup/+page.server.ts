@@ -19,12 +19,6 @@ export const load: PageServerLoad = async ({ url }) => {
 
 export const actions: Actions = {
   default: async ({ request }) => {
-    const [{ valeur }] = await db.select({ valeur: count() }).from(users);
-
-    if (valeur > 0) {
-      return fail(403, { erreur: "Un administrateur existe déjà." });
-    }
-
     const donnees = await request.formData();
     const nom = donnees.get("nom")?.toString().trim() ?? "";
     const identifiant =
@@ -66,23 +60,26 @@ export const actions: Actions = {
       });
     }
 
+    let dejaSetup = false;
     try {
-      await auth.api.signUpEmail({
-        body: { name: nom, email, password: motDePasse },
+      await db.transaction(async (tx) => {
+        const [{ valeur }] = await tx.select({ valeur: count() }).from(users);
+        if (valeur > 0) {
+          dejaSetup = true;
+          return;
+        }
+        await auth.api.signUpEmail({
+          body: { name: nom, email, password: motDePasse },
+        });
+        await tx
+          .update(users)
+          .set({ role: "admin", username: identifiant, displayUsername: identifiant })
+          .where(eq(users.email, email));
       });
     } catch {
       return fail(400, { erreur: "Impossible de créer le compte." });
     }
-
-    // Passer le rôle admin et définir le username
-    await db
-      .update(users)
-      .set({
-        role: "admin",
-        username: identifiant,
-        displayUsername: identifiant,
-      })
-      .where(eq(users.email, email));
+    if (dejaSetup) return fail(403, { erreur: "Un administrateur existe déjà." });
 
     await sauvegarderConfig("PUBLIC_BASE_URL", baseUrl);
     await sauvegarderConfig("CONTACT_EMAIL", email);

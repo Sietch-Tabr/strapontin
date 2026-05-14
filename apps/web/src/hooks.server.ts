@@ -16,7 +16,7 @@ if (!building) {
   });
 }
 
-const ROUTES_PUBLIQUES = ["/login", "/setup", "/health"];
+const ROUTES_PUBLIQUES = ["/login", "/setup", "/health", "/api/push"];
 
 // Bloque les accès directs par adresse IP (ex. http://192.168.20.79:3000)
 // qui contournent Nginx Proxy Manager. Autorise localhost (healthcheck) et tout nom de domaine.
@@ -129,8 +129,7 @@ const gererAuth: Handle = async ({ event, resolve }) => {
     session.user.role === "admin" &&
     !session.user.twoFactorEnabled &&
     event.url.pathname !== "/parametres" &&
-    event.url.pathname !== "/first-login" &&
-    !event.url.pathname.startsWith("/api/")
+    event.url.pathname !== "/first-login"
   ) {
     redirect(302, "/parametres#deux-facteurs");
   }

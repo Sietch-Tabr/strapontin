@@ -16,6 +16,7 @@ import {
   FORMAT_EMAIL,
   FORMAT_DEPT,
 } from "$lib/constantes/validations";
+import { normaliserTexte } from "@strapontin/core";
 
 // Normalise un code département saisi par l'utilisateur.
 // Accepte les formats standards (ex. "75", "971") et la Corse en codes
@@ -408,6 +409,7 @@ export const actions: Actions = {
         typeof a.normalise === "string" &&
         a.nom.trim() &&
         a.nom.length <= 200 &&
+        a.normalise.trim() &&
         a.normalise.length <= 200,
     );
     const sallesValides = donneesParsees.salles.filter(
@@ -448,7 +450,7 @@ export const actions: Actions = {
               artistesValides.map((a) => ({
                 userId,
                 artisteAffiche: a.nom.trim(),
-                artisteNormalise: a.normalise.trim(),
+                artisteNormalise: normaliserTexte(a.nom),
               })),
             );
           }
