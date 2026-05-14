@@ -291,19 +291,20 @@ export async function persisterConcerts(
 
   // Supprimer les doublons par (source, url) introduits si l'artiste_norm a changé
   // entre deux fetches (ex: "Artiste - Tournée" → "Artiste"). Garder le plus récent.
-  const urlsBatch = listeFiltree
-    .map((c) => c.url)
-    .filter((u): u is string => u !== null && u !== undefined);
-  if (urlsBatch.length > 0) {
-    await db.execute(sql`
-      DELETE FROM concerts c1
-      USING concerts c2
-      WHERE c1.source = c2.source
-        AND c1.url = c2.url
-        AND c1.id != c2.id
-        AND c1.url = ANY(${urlsBatch})
-        AND c1.updated_at < c2.updated_at
-    `);
+  const doublons = (await db.execute(sql`
+    SELECT DISTINCT c1.id
+    FROM concerts c1
+    JOIN concerts c2
+      ON c1.source = c2.source
+     AND c1.url    = c2.url
+     AND c1.id    != c2.id
+     AND c1.updated_at < c2.updated_at
+    WHERE c1.url IS NOT NULL
+  `)) as unknown as Array<{ id: string }>;
+  if (doublons.length > 0) {
+    const idsDoublons = doublons.map((r) => r.id);
+    await db.delete(concerts).where(inArray(concerts.id, idsDoublons));
+    logger.info({ supprimes: idsDoublons.length }, "doublons url supprimés");
   }
 
   logger.info(
