@@ -117,7 +117,7 @@ pct exec "$VMID" -- bash -c "
     mkdir -p /etc/systemd/journald.conf.d
     printf '[Journal]\nSystemMaxUse=100M\n' > /etc/systemd/journald.conf.d/strapontin.conf
     systemctl restart systemd-journald
-    printf 'LANG=fr_FR.UTF-8\nLC_ALL=fr_FR.UTF-8\nDEBIAN_FRONTEND=noninteractive\n' > /etc/environment
+    printf 'LANG=fr_FR.UTF-8\nLC_ALL=fr_FR.UTF-8\n' > /etc/environment
 "
 
 echo "[4] Autologin root sur console Proxmox..."
