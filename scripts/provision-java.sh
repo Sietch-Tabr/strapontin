@@ -129,11 +129,13 @@ pct exec "$VMID" -- bash -c "
 
 echo "[4] Dépendances de base..."
 pct exec "$VMID" -- bash -c "
-    DEBIAN_FRONTEND=noninteractive apt-get update -qq
-    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -qq
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    export DEBIAN_FRONTEND=noninteractive
+    export LC_ALL=C.UTF-8
+    apt-get update -qq
+    apt-get upgrade -y -qq
+    apt-get install -y \
         curl wget gnupg2 ca-certificates lsb-release \
-        unattended-upgrades net.ipv4.ip_forward
+        unattended-upgrades
 "
 
 echo "[4] Mises à jour automatiques (sécurité uniquement)..."
