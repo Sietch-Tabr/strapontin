@@ -51,7 +51,7 @@
 
 	{#if totalAffiches === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
-			<Music size={40} class="mb-4 text-muted-foreground/50" />
+			<Music size={40} class="mb-4 text-muted-foreground/50" aria-hidden="true" />
 			{#if data.nbArtistes === 0 && data.nbSalles === 0}
 				<p class="mb-1 text-base font-medium text-foreground">Bienvenue sur Strapontin !</p>
 				<p class="mb-6 text-sm text-muted-foreground">

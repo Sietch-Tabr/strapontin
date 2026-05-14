@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { authClient, signIn } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -22,6 +23,7 @@
 		if (resultat.data && (resultat.data as { twoFactorRedirect?: boolean }).twoFactorRedirect) {
 			etape2Fa = true;
 			chargement = false;
+			tick().then(() => (document.getElementById('code-2fa') as HTMLInputElement | null)?.focus());
 		} else if (resultat.error) {
 			erreur = 'Identifiant ou mot de passe incorrect.';
 			chargement = false;

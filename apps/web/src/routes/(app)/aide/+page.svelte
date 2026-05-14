@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { BookOpen, Bell, Settings, Compass, Shield, Scale, MessageSquare, Code, Smartphone } from '@lucide/svelte';
+	import { BookOpen, Bell, Settings, Compass, Shield, Scale, MessageSquare, Code, Smartphone, X } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
 	import type { PageData, ActionData } from './$types';
@@ -258,7 +258,7 @@
 					aria-label="Fermer"
 					class="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 				>
-					✕
+					<X size={18} aria-hidden="true" />
 				</button>
 			</div>
 

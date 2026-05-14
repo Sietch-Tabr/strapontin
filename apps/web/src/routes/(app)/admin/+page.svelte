@@ -432,54 +432,66 @@
 						Aucun événement pour ces filtres.
 					</div>
 				{:else}
-					<div class="rounded-xl border border-border bg-card divide-y divide-border font-mono text-xs">
-						{#each logsAdminFiltres as entree, idx}
-							{@const couleurNiveau =
-								entree.niveau === 'error' ? 'text-red-600 dark:text-red-400' :
-								entree.niveau === 'warn'  ? 'text-yellow-600 dark:text-yellow-400' :
-								entree.niveau === 'debug' ? 'text-muted-foreground' :
-								'text-foreground'}
-							{@const meta = formaterMeta(entree.meta)}
-							{@const expandé = logsExpandés.has(idx)}
-							<div class="px-4 py-2">
-								<div class="flex items-baseline gap-3">
-									<span class="shrink-0 text-muted-foreground tabular-nums">
+					<table class="w-full rounded-xl border border-border bg-card font-mono text-xs">
+						<thead>
+							<tr class="border-b border-border">
+								<th scope="col" class="px-4 py-1.5 text-left text-[10px] font-normal uppercase tracking-wider text-muted-foreground/60 whitespace-nowrap">Heure</th>
+								<th scope="col" class="w-12 py-1.5 text-left text-[10px] font-normal uppercase tracking-wider text-muted-foreground/60">Niveau</th>
+								<th scope="col" class="w-20 py-1.5 text-left text-[10px] font-normal uppercase tracking-wider text-muted-foreground/60">Source</th>
+								<th scope="col" class="py-1.5 pr-4 text-left text-[10px] font-normal uppercase tracking-wider text-muted-foreground/60" colspan="2">Message</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-border">
+							{#each logsAdminFiltres as entree, idx}
+								{@const couleurNiveau =
+									entree.niveau === 'error' ? 'text-red-600 dark:text-red-400' :
+									entree.niveau === 'warn'  ? 'text-yellow-600 dark:text-yellow-400' :
+									entree.niveau === 'debug' ? 'text-muted-foreground' :
+									'text-foreground'}
+								{@const meta = formaterMeta(entree.meta)}
+								{@const expandé = logsExpandés.has(idx)}
+								<tr>
+									<td class="px-4 py-2 align-top whitespace-nowrap text-muted-foreground tabular-nums">
 										{new Date(entree.ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-									</span>
-									<span class="shrink-0 w-12 {couleurNiveau} uppercase font-medium">{entree.niveau}</span>
-									<span class="shrink-0 w-20 text-muted-foreground truncate">{entree.source}</span>
-									<span class="text-foreground min-w-0 break-words">{entree.message}</span>
-									{#if meta && meta.paires.length > 2}
-										<button
-											type="button"
-											onclick={() => {
-												const copie = new Set(logsExpandés);
-												if (expandé) copie.delete(idx); else copie.add(idx);
-												logsExpandés = copie;
-											}}
-											class="shrink-0 text-muted-foreground hover:text-foreground"
-											aria-label={expandé ? 'Réduire les détails' : 'Voir les détails'}
-										>
-											{#if expandé}<ChevronDown size={12} />{:else}<ChevronRight size={12} />{/if}
-										</button>
-									{/if}
-								</div>
-								{#if meta}
-									{#if expandé || meta.paires.length <= 2}
-										<div class="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 pl-28">
-											{#each meta.paires as [cle, valeur]}
-												<span class="text-muted-foreground">
-													<span class="text-foreground/60">{cle}</span>=<span>{valeur}</span>
-												</span>
-											{/each}
+									</td>
+									<td class="py-2 align-top w-12 {couleurNiveau} uppercase font-medium">{entree.niveau}</td>
+									<td class="py-2 align-top w-20 max-w-[5rem] truncate text-muted-foreground">{entree.source}</td>
+									<td class="py-2 align-top text-foreground break-words">
+										<div class="flex items-baseline gap-3">
+											<span class="min-w-0 break-words">{entree.message}</span>
+											{#if meta && meta.paires.length > 2}
+												<button
+													type="button"
+													onclick={() => {
+														const copie = new Set(logsExpandés);
+														if (expandé) copie.delete(idx); else copie.add(idx);
+														logsExpandés = copie;
+													}}
+													class="shrink-0 text-muted-foreground hover:text-foreground"
+													aria-label={expandé ? 'Réduire les détails' : 'Voir les détails'}
+												>
+													{#if expandé}<ChevronDown size={12} aria-hidden="true" />{:else}<ChevronRight size={12} aria-hidden="true" />{/if}
+												</button>
+											{/if}
 										</div>
-									{:else}
-										<p class="mt-0.5 pl-28 text-muted-foreground truncate">{meta.courte}</p>
-									{/if}
-								{/if}
-							</div>
-						{/each}
-					</div>
+										{#if meta}
+											{#if expandé || meta.paires.length <= 2}
+												<div class="mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
+													{#each meta.paires as [cle, valeur]}
+														<span class="text-muted-foreground">
+															<span class="text-foreground/60">{cle}</span>=<span>{valeur}</span>
+														</span>
+													{/each}
+												</div>
+											{:else}
+												<p class="mt-0.5 text-muted-foreground truncate">{meta.courte}</p>
+											{/if}
+										{/if}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
 				{/if}
 			</section>
 

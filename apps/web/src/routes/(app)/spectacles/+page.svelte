@@ -210,7 +210,7 @@
 				type="submit"
 				class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
 			>
-				<Search size={16} />
+				<Search size={16} aria-hidden="true" />
 				Rechercher
 			</button>
 			<label for="mois-spectacles" class="sr-only">Filtrer par mois</label>
@@ -272,7 +272,7 @@
 					href="/spectacles"
 					class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
 				>
-					<X size={16} />
+					<X size={16} aria-hidden="true" />
 					Réinitialiser
 				</a>
 			{/if}
@@ -281,7 +281,7 @@
 
 	{#if data.tousLesConcerts.length === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
-			<Ticket size={40} class="mb-4 text-muted-foreground/50" />
+			<Ticket size={40} class="mb-4 text-muted-foreground/50" aria-hidden="true" />
 			{#if data.afficherMasques}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun concert masqué.</p>
 			{:else if data.recherche || data.mois || data.quinzaine || data.budget || data.classification || data.genre}

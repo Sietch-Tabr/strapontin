@@ -14,3 +14,15 @@ dist/
 CLAUDE.local.md
 .claude/settings.local.json
 .claude/agent-memory/
+
+# Outils IA tiers
+.gemini/
+.kiro/
+.qoder/
+.rtk/
+.cursorrules
+.windsurfrules
+.opencode.json
+AGENTS.md
+GEMINI.md
+QODER.md

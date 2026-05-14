@@ -45,7 +45,7 @@
 		</a>
 	</div>
 
-	<nav class="flex-1 p-2 pt-3">
+	<nav class="flex-1 p-2 pt-3" aria-label="Navigation principale">
 		<div class="space-y-0.5">
 			{#each elementsNav as { label, icone: Icone, route }}
 				<a
@@ -55,7 +55,7 @@
 						? 'bg-sidebar-accent text-sidebar-accent-foreground'
 						: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
 				>
-					<Icone size={18} />
+					<Icone size={18} aria-hidden="true" />
 					{label}
 				</a>
 			{/each}
@@ -72,7 +72,7 @@
 						? 'bg-sidebar-accent text-sidebar-accent-foreground'
 						: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
 				>
-					<Icone size={18} />
+					<Icone size={18} aria-hidden="true" />
 					{label}
 				</a>
 			{/each}
@@ -88,7 +88,7 @@
 					? 'bg-sidebar-accent text-sidebar-accent-foreground'
 					: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
 			>
-				<ShieldCheck size={18} />
+				<ShieldCheck size={18} aria-hidden="true" />
 				Admin
 			</a>
 		{/if}
@@ -99,7 +99,7 @@
 				? 'bg-sidebar-accent text-sidebar-accent-foreground'
 				: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
 		>
-			<Settings size={18} />
+			<Settings size={18} aria-hidden="true" />
 			Paramètres
 		</a>
 		<div class="my-1 border-t border-sidebar-border"></div>
@@ -110,7 +110,7 @@
 				? 'bg-sidebar-accent text-sidebar-accent-foreground'
 				: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
 		>
-			<HelpCircle size={18} />
+			<HelpCircle size={18} aria-hidden="true" />
 			Aide
 		</a>
 		<a
@@ -120,7 +120,7 @@
 				? 'bg-sidebar-accent text-sidebar-accent-foreground'
 				: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
 		>
-			<History size={18} />
+			<History size={18} aria-hidden="true" />
 			Nouveautés
 		</a>
 
@@ -132,7 +132,7 @@
 				class="text-sidebar-foreground/60 transition-colors hover:text-sidebar-foreground"
 				aria-label="Se déconnecter"
 			>
-				<LogOut size={16} />
+				<LogOut size={16} aria-hidden="true" />
 			</button>
 		</div>
 	</div>
