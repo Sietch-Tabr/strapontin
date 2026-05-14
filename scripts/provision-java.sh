@@ -54,7 +54,15 @@ if [ -z "$DEV_SSH_KEY" ]; then
 fi
 
 DB_PASSWORD=$(openssl rand -hex 16)
-AUTH_SECRET=$(openssl rand -hex 32)
+
+printf "BETTER_AUTH_SECRET de prod (LXC 113 — /opt/strapontin/.env) : "
+read -r BETTER_AUTH_SECRET
+echo ""
+
+if [ -z "$BETTER_AUTH_SECRET" ]; then
+    echo "ERREUR : BETTER_AUTH_SECRET requis (chiffrement app_config)" >&2
+    exit 1
+fi
 
 # ---------------------------------------------------------------
 # 1. Template Debian 13
@@ -234,7 +242,7 @@ pct exec "$VMID" -- bash -c "cat > $APP_DIR/.env << 'ENVFILE'
 SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/$DB_NAME
 SPRING_DATASOURCE_USERNAME=$APP_USER
 SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
-BETTER_AUTH_SECRET=$AUTH_SECRET
+BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
 ENVFILE
 chown $APP_USER:$APP_USER $APP_DIR/.env
 chmod 600 $APP_DIR/.env
@@ -264,7 +272,7 @@ UNIT"
 pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-web.service << 'UNIT'
 [Unit]
 Description=Strapontin — API REST
-After=network.target postgresql.service strapontin-worker.service
+After=network.target postgresql.service
 
 [Service]
 Type=simple
@@ -313,8 +321,8 @@ echo "================================================================"
 echo "LXC $VMID provisionné avec succès."
 echo ""
 echo "CREDENTIALS GÉNÉRÉS (à conserver) :"
-echo "  DB_PASSWORD      : $DB_PASSWORD"
-echo "  BETTER_AUTH_SECRET : $AUTH_SECRET"
+echo "  DB_PASSWORD        : $DB_PASSWORD"
+echo "  BETTER_AUTH_SECRET : (identique à LXC 113)"
 echo "  Fichier           : $APP_DIR/.env (chmod 600)"
 echo ""
 echo "ÉTAPES SUIVANTES :"
