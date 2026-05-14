@@ -56,11 +56,11 @@ fi
 DB_PASSWORD=$(openssl rand -hex 16)
 
 printf "BETTER_AUTH_SECRET de prod (LXC 113 — /opt/strapontin/.env) : "
-read -r BETTER_AUTH_SECRET
+read -r APP_CONFIG_SECRET
 echo ""
 
-if [ -z "$BETTER_AUTH_SECRET" ]; then
-    echo "ERREUR : BETTER_AUTH_SECRET requis (chiffrement app_config)" >&2
+if [ -z "$APP_CONFIG_SECRET" ]; then
+    echo "ERREUR : APP_CONFIG_SECRET requis (chiffrement app_config)" >&2
     exit 1
 fi
 
@@ -242,7 +242,7 @@ pct exec "$VMID" -- bash -c "cat > $APP_DIR/.env << 'ENVFILE'
 SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/$DB_NAME
 SPRING_DATASOURCE_USERNAME=$APP_USER
 SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
-BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
+APP_CONFIG_SECRET=$APP_CONFIG_SECRET
 ENVFILE
 chown $APP_USER:$APP_USER $APP_DIR/.env
 chmod 600 $APP_DIR/.env
@@ -322,7 +322,7 @@ echo "LXC $VMID provisionné avec succès."
 echo ""
 echo "CREDENTIALS GÉNÉRÉS (à conserver) :"
 echo "  DB_PASSWORD        : $DB_PASSWORD"
-echo "  BETTER_AUTH_SECRET : (identique à LXC 113)"
+echo "  APP_CONFIG_SECRET  : (valeur BETTER_AUTH_SECRET de LXC 113)"
 echo "  Fichier           : $APP_DIR/.env (chmod 600)"
 echo ""
 echo "ÉTAPES SUIVANTES :"
