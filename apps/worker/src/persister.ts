@@ -432,6 +432,18 @@ export async function recalculerMatches(userIds?: string[]): Promise<void> {
     logger.info({ userId, matches: concertIds.length }, "matches recalculés");
   }
 
+  // Purger les matches des users qui n'ont plus aucun artiste ni salle
+  if (usersSet.size > 0) {
+    const usersAvecMatchesOrphelins = await db
+      .selectDistinct({ userId: userMatches.userId })
+      .from(userMatches)
+      .where(notInArray(userMatches.userId, [...usersSet]));
+    for (const { userId } of usersAvecMatchesOrphelins) {
+      await db.delete(userMatches).where(eq(userMatches.userId, userId));
+      logger.info({ userId }, "matches orphelins supprimés");
+    }
+  }
+
   // Notifier les users en mode temps_reel après recalcul
   await notifierUsersTempsReel(usersARecalculer);
 }
