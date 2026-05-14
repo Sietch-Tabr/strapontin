@@ -307,7 +307,12 @@ async function fetchPage(
   params: URLSearchParams,
   apiKey: string,
   artisteFallback?: string,
-): Promise<{ events: ConcertBrut[]; total: number; totalPages: number; quota: QuotaTM | null }> {
+): Promise<{
+  events: ConcertBrut[];
+  total: number;
+  totalPages: number;
+  quota: QuotaTM | null;
+}> {
   params.set("apikey", apiKey);
   params.set("locale", "fr");
   params.set("countryCode", "FR");
@@ -331,7 +336,12 @@ async function fetchPage(
     // ce qui polluerait Redis avec des valeurs aberrantes (total:5, dispo:0).
     const urlSafe = url.replace(/apikey=[^&]+/, "apikey=***");
     logger.warn(
-      { status: res.status, url: urlSafe, dispo: quota?.dispo, total: quota?.total },
+      {
+        status: res.status,
+        url: urlSafe,
+        dispo: quota?.dispo,
+        total: quota?.total,
+      },
       "erreur HTTP Ticketmaster",
     );
     return { events: [], total: 0, totalPages: NB_PAGES_MAX, quota: null };
