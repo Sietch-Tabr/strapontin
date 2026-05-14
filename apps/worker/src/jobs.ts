@@ -293,334 +293,336 @@ export type JobData =
   | JobPurgerConcerts
   | JobNotifierDigest;
 
-export async function traiterJob(job: Job<JobData>): Promise<void> {
-  const { data } = job;
-  const correlationId = data.correlationId;
+export async function traiterFetchArtiste(
+  data: JobFetchArtiste,
+): Promise<void> {
+  const { correlationId } = data;
+  logger.info(
+    { artiste: data.artiste, correlationId },
+    "fetch:artiste démarré",
+  );
 
-  switch (data.type) {
-    case "fetch:artiste": {
-      logger.info(
-        { artiste: data.artiste, correlationId },
-        "fetch:artiste démarré",
-      );
+  const tm = await obtenirTicketmaster();
+  const [resultsTM, resultsEventim] = await Promise.allSettled([
+    tm.fetchArtiste(data.artiste),
+    eventim.fetchArtiste(data.artiste),
+  ]);
 
-      const tm = await obtenirTicketmaster();
-      const [resultsTM, resultsEventim] = await Promise.allSettled([
-        tm.fetchArtiste(data.artiste),
-        eventim.fetchArtiste(data.artiste),
-      ]);
+  const tous = [
+    ...(resultsTM.status === "fulfilled" ? resultsTM.value : []),
+    ...(resultsEventim.status === "fulfilled" ? resultsEventim.value : []),
+  ];
 
-      const tous = [
-        ...(resultsTM.status === "fulfilled" ? resultsTM.value : []),
-        ...(resultsEventim.status === "fulfilled" ? resultsEventim.value : []),
-      ];
+  if (resultsTM.status === "rejected") {
+    logger.warn({ err: resultsTM.reason, artiste: data.artiste }, "TM échoué");
+  }
+  if (resultsEventim.status === "rejected") {
+    logger.warn(
+      { err: resultsEventim.reason, artiste: data.artiste },
+      "Eventim échoué",
+    );
+  }
 
-      if (resultsTM.status === "rejected") {
-        logger.warn(
-          { err: resultsTM.reason, artiste: data.artiste },
-          "TM échoué",
-        );
+  await sauvegarderQuotaTM(tm);
+
+  const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
+  logger.info(
+    {
+      artiste: data.artiste,
+      bruts: tous.length,
+      dedoublonnes: dedoublonnes.length,
+    },
+    "dédoublonnage terminé",
+  );
+
+  await persisterConcerts(dedoublonnes);
+
+  if (data.userId) {
+    await recalculerMatches([data.userId]);
+  }
+}
+
+export async function traiterFetchArtistesBatch(
+  data: JobFetchArtistesBatch,
+): Promise<void> {
+  const { correlationId } = data;
+  logger.info({ correlationId }, "fetch:artistes:batch démarré");
+  const debutBatch = await demarrerStatsJob("artistes-batch");
+  const tmBatch = await obtenirTicketmaster();
+  try {
+    if (!(await verifierQuotaTM("fetch:artistes:batch"))) {
+      await terminerStatsJob("artistes-batch", debutBatch);
+      return;
+    }
+    const dispoAvantBatch = await lireDispoQuotaTM();
+
+    const rows = await db
+      .selectDistinct({
+        artisteAffiche: userArtistes.artisteAffiche,
+        artisteNormalise: userArtistes.artisteNormalise,
+      })
+      .from(userArtistes);
+
+    if (rows.length === 0) {
+      await terminerStatsJob("artistes-batch", debutBatch);
+      return;
+    }
+
+    const idsParNorm = new Map<string, string>();
+    const sansId: { nom: string; norm: string }[] = [];
+
+    for (const { artisteAffiche, artisteNormalise } of rows) {
+      const cached = await redis
+        .get(cleAttractionId(artisteNormalise))
+        .catch((err) => {
+          logger.warn({ err }, "redis: échec lecture attraction ID");
+          return null;
+        });
+      if (cached) {
+        idsParNorm.set(artisteNormalise, cached);
+      } else {
+        sansId.push({ nom: artisteAffiche, norm: artisteNormalise });
       }
-      if (resultsEventim.status === "rejected") {
-        logger.warn(
-          { err: resultsEventim.reason, artiste: data.artiste },
-          "Eventim échoué",
-        );
+    }
+
+    for (const { nom, norm } of sansId) {
+      const id = await tmBatch.rechercherAttractionId(nom);
+      if (id) {
+        idsParNorm.set(norm, id);
+        await redis
+          .setex(cleAttractionId(norm), TTL_ATTRACTION_ID_S, id)
+          .catch((err) =>
+            logger.warn(
+              { err, artisteNorm: norm },
+              "redis: échec écriture attraction ID",
+            ),
+          );
       }
+      await new Promise((r) => setTimeout(r, 250));
+    }
 
-      await sauvegarderQuotaTM(tm);
+    const TAILLE_LOT = 20;
+    const tousIds = [...idsParNorm.values()];
+    const concertsTM: ConcertBrut[] = [];
+    for (let i = 0; i < tousIds.length; i += TAILLE_LOT) {
+      const lot = tousIds.slice(i, i + TAILLE_LOT);
+      const resultats = await tmBatch.fetchArtistesBatch(lot);
+      concertsTM.push(...resultats);
+      if (i + TAILLE_LOT < tousIds.length) {
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    }
 
-      const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
+    const nomsAvecId = new Set(
+      rows
+        .filter((r) => idsParNorm.has(r.artisteNormalise))
+        .map((r) => r.artisteNormalise),
+    );
+    const artistesSansTm = rows.filter(
+      (r) => !nomsAvecId.has(r.artisteNormalise),
+    );
+    for (const { artisteAffiche } of artistesSansTm) {
+      const resultats = await tmBatch.fetchArtiste(artisteAffiche);
+      concertsTM.push(...resultats);
+      await new Promise((r) => setTimeout(r, 250));
+    }
+
+    const dispoApresBatch = await sauvegarderQuotaTM(tmBatch);
+    if (dispoAvantBatch !== null && dispoApresBatch !== null) {
       logger.info(
         {
-          artiste: data.artiste,
-          bruts: tous.length,
-          dedoublonnes: dedoublonnes.length,
+          dispoAvant: dispoAvantBatch,
+          dispoApres: dispoApresBatch,
+          consommes: dispoAvantBatch - dispoApresBatch,
         },
-        "dédoublonnage terminé",
+        "quota TM consommé (artistes:batch)",
       );
-
-      await persisterConcerts(dedoublonnes);
-
-      if (data.userId) {
-        await recalculerMatches([data.userId]);
-      }
-      break;
     }
 
-    case "fetch:artistes:batch": {
-      logger.info({ correlationId }, "fetch:artistes:batch démarré");
-      const debutBatch = await demarrerStatsJob("artistes-batch");
-      const tmBatch = await obtenirTicketmaster();
-      try {
-        if (!(await verifierQuotaTM("fetch:artistes:batch"))) {
-          await terminerStatsJob("artistes-batch", debutBatch);
-          break;
-        }
-        const dispoAvantBatch = await lireDispoQuotaTM();
+    const nomsArtistes = rows.map((r) => r.artisteAffiche);
+    const eventimResults = await limiterConcurrence(
+      nomsArtistes.map((nom) => () => eventim.fetchArtiste(nom)),
+      5,
+    );
 
-        // Charger tous les artistes distincts depuis la DB
-        const rows = await db
-          .selectDistinct({
-            artisteAffiche: userArtistes.artisteAffiche,
-            artisteNormalise: userArtistes.artisteNormalise,
-          })
-          .from(userArtistes);
+    const tous = [
+      ...concertsTM,
+      ...eventimResults
+        .filter((r) => r.status === "fulfilled")
+        .flatMap((r) => (r as PromiseFulfilledResult<ConcertBrut[]>).value),
+    ];
 
-        if (rows.length === 0) {
-          await terminerStatsJob("artistes-batch", debutBatch);
-          break;
-        }
+    const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
+    logger.info(
+      { bruts: tous.length, dedoublonnes: dedoublonnes.length },
+      "fetch:artistes:batch terminé",
+    );
 
-        // Résoudre les attraction IDs (Redis cache → TM si absent)
-        const idsParNorm = new Map<string, string>();
-        const sansId: { nom: string; norm: string }[] = [];
+    await persisterConcerts(dedoublonnes);
+    await recalculerMatches();
+    await terminerStatsJob("artistes-batch", debutBatch);
+  } catch (err) {
+    await echouerStatsJob("artistes-batch", debutBatch, err);
+    throw err;
+  }
+}
 
-        for (const { artisteAffiche, artisteNormalise } of rows) {
-          const cached = await redis
-            .get(cleAttractionId(artisteNormalise))
-            .catch((err) => {
-              logger.warn({ err }, "redis: échec lecture attraction ID");
-              return null;
-            });
-          if (cached) {
-            idsParNorm.set(artisteNormalise, cached);
-          } else {
-            sansId.push({ nom: artisteAffiche, norm: artisteNormalise });
-          }
-        }
+export async function traiterFetchRegion(data: JobFetchRegion): Promise<void> {
+  const { correlationId } = data;
+  logger.info({ depts: data.depts, correlationId }, "fetch:region démarré");
+  const debutRegion = await demarrerStatsJob("region");
+  const tmRegion = await obtenirTicketmaster();
+  try {
+    if (!(await verifierQuotaTM("fetch:region"))) {
+      await terminerStatsJob("region", debutRegion);
+      return;
+    }
+    const dispoAvantRegion = await lireDispoQuotaTM();
 
-        // Résoudre les IDs manquants via /attractions
-        for (const { nom, norm } of sansId) {
-          const id = await tmBatch.rechercherAttractionId(nom);
-          if (id) {
-            idsParNorm.set(norm, id);
-            await redis
-              .setex(cleAttractionId(norm), TTL_ATTRACTION_ID_S, id)
-              .catch((err) =>
-                logger.warn(
-                  { err, artisteNorm: norm },
-                  "redis: échec écriture attraction ID",
-                ),
-              );
-          }
-          await new Promise((r) => setTimeout(r, 250));
-        }
+    const [resultsTM, resultsEventim] = await Promise.allSettled([
+      tmRegion.fetchRegion(data.depts),
+      eventim.fetchRegion(data.depts),
+    ]);
 
-        // Fetch TM par lots de 20 attractionIds
-        const TAILLE_LOT = 20;
-        const tousIds = [...idsParNorm.values()];
-        const concertsTM: ConcertBrut[] = [];
-        for (let i = 0; i < tousIds.length; i += TAILLE_LOT) {
-          const lot = tousIds.slice(i, i + TAILLE_LOT);
-          const resultats = await tmBatch.fetchArtistesBatch(lot);
-          concertsTM.push(...resultats);
-          if (i + TAILLE_LOT < tousIds.length) {
-            await new Promise((r) => setTimeout(r, 250));
-          }
-        }
+    const tous = [
+      ...(resultsTM.status === "fulfilled" ? resultsTM.value : []),
+      ...(resultsEventim.status === "fulfilled" ? resultsEventim.value : []),
+    ];
 
-        // Fallback : artistes sans ID TM → recherche par keyword
-        const nomsAvecId = new Set(
-          rows
-            .filter((r) => idsParNorm.has(r.artisteNormalise))
-            .map((r) => r.artisteNormalise),
-        );
-        const artistesSansTm = rows.filter(
-          (r) => !nomsAvecId.has(r.artisteNormalise),
-        );
-        for (const { artisteAffiche } of artistesSansTm) {
-          const resultats = await tmBatch.fetchArtiste(artisteAffiche);
-          concertsTM.push(...resultats);
-          await new Promise((r) => setTimeout(r, 250));
-        }
-
-        const dispoApresBatch = await sauvegarderQuotaTM(tmBatch);
-        if (dispoAvantBatch !== null && dispoApresBatch !== null) {
-          logger.info(
-            {
-              dispoAvant: dispoAvantBatch,
-              dispoApres: dispoApresBatch,
-              consommes: dispoAvantBatch - dispoApresBatch,
-            },
-            "quota TM consommé (artistes:batch)",
-          );
-        }
-
-        // Eventim : concurrence limitée à 5 pour éviter le bannissement IP
-        const nomsArtistes = rows.map((r) => r.artisteAffiche);
-        const eventimResults = await limiterConcurrence(
-          nomsArtistes.map((nom) => () => eventim.fetchArtiste(nom)),
-          5,
-        );
-
-        const tous = [
-          ...concertsTM,
-          ...eventimResults
-            .filter((r) => r.status === "fulfilled")
-            .flatMap((r) => (r as PromiseFulfilledResult<ConcertBrut[]>).value),
-        ];
-
-        const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
-        logger.info(
-          { bruts: tous.length, dedoublonnes: dedoublonnes.length },
-          "fetch:artistes:batch terminé",
-        );
-
-        await persisterConcerts(dedoublonnes);
-        await recalculerMatches();
-        await terminerStatsJob("artistes-batch", debutBatch);
-      } catch (err) {
-        await echouerStatsJob("artistes-batch", debutBatch, err);
-        throw err;
-      }
-      break;
+    const dispoApresRegion = await sauvegarderQuotaTM(tmRegion);
+    if (dispoAvantRegion !== null && dispoApresRegion !== null) {
+      logger.info(
+        {
+          dispoAvant: dispoAvantRegion,
+          dispoApres: dispoApresRegion,
+          consommes: dispoAvantRegion - dispoApresRegion,
+        },
+        "quota TM consommé (region)",
+      );
     }
 
-    case "fetch:region": {
-      logger.info({ depts: data.depts, correlationId }, "fetch:region démarré");
-      const debutRegion = await demarrerStatsJob("region");
-      const tmRegion = await obtenirTicketmaster();
-      try {
-        if (!(await verifierQuotaTM("fetch:region"))) {
-          await terminerStatsJob("region", debutRegion);
-          break;
-        }
-        const dispoAvantRegion = await lireDispoQuotaTM();
+    const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
+    logger.info(
+      {
+        depts: data.depts,
+        bruts: tous.length,
+        dedoublonnes: dedoublonnes.length,
+      },
+      "dédoublonnage région terminé",
+    );
 
-        const [resultsTM, resultsEventim] = await Promise.allSettled([
-          tmRegion.fetchRegion(data.depts),
-          eventim.fetchRegion(data.depts),
-        ]);
+    await persisterConcerts(dedoublonnes);
 
-        const tous = [
-          ...(resultsTM.status === "fulfilled" ? resultsTM.value : []),
-          ...(resultsEventim.status === "fulfilled"
-            ? resultsEventim.value
-            : []),
-        ];
-
-        const dispoApresRegion = await sauvegarderQuotaTM(tmRegion);
-        if (dispoAvantRegion !== null && dispoApresRegion !== null) {
-          logger.info(
-            {
-              dispoAvant: dispoAvantRegion,
-              dispoApres: dispoApresRegion,
-              consommes: dispoAvantRegion - dispoApresRegion,
-            },
-            "quota TM consommé (region)",
-          );
-        }
-
-        const dedoublonnes = await resoudreArtistesConcerts(dedoublonner(tous));
-        logger.info(
-          {
-            depts: data.depts,
-            bruts: tous.length,
-            dedoublonnes: dedoublonnes.length,
-          },
-          "dédoublonnage région terminé",
-        );
-
-        await persisterConcerts(dedoublonnes);
-
-        // Enregistrer le timestamp du fetch pour chaque dept (bannière découverte)
-        await Promise.all(
-          data.depts.map((dept) =>
-            redis
-              .set(
-                cleRegionFetchee(dept),
-                new Date().toISOString(),
-                "EX",
-                TTL_REGION_FETCHEE_S,
-              )
-              .catch((err) =>
-                logger.warn(
-                  { err, dept },
-                  "redis: échec écriture timestamp région",
-                ),
-              ),
+    await Promise.all(
+      data.depts.map((dept) =>
+        redis
+          .set(
+            cleRegionFetchee(dept),
+            new Date().toISOString(),
+            "EX",
+            TTL_REGION_FETCHEE_S,
+          )
+          .catch((err) =>
+            logger.warn(
+              { err, dept },
+              "redis: échec écriture timestamp région",
+            ),
           ),
-        );
+      ),
+    );
 
-        if (data.userId) {
-          await recalculerMatches([data.userId]);
-        }
-
-        await terminerStatsJob("region", debutRegion);
-      } catch (err) {
-        await echouerStatsJob("region", debutRegion, err);
-        throw err;
-      }
-      break;
+    if (data.userId) {
+      await recalculerMatches([data.userId]);
     }
 
-    case "fetch:salle": {
-      logger.info(
-        { venueId: data.venueId, correlationId },
-        "fetch:salle démarré",
-      );
+    await terminerStatsJob("region", debutRegion);
+  } catch (err) {
+    await echouerStatsJob("region", debutRegion, err);
+    throw err;
+  }
+}
 
-      const tmSalle = await obtenirTicketmaster();
-      if (!tmSalle.fetchSalle) {
-        logger.error("fetchSalle non disponible sur la source TM");
-        break;
-      }
-      const concertsSalle = await tmSalle.fetchSalle(data.venueId);
-      logger.info(
-        { venueId: data.venueId, total: concertsSalle.length },
-        "TM fetchSalle terminé",
-      );
+export async function traiterFetchSalle(data: JobFetchSalle): Promise<void> {
+  const { correlationId } = data;
+  logger.info({ venueId: data.venueId, correlationId }, "fetch:salle démarré");
 
-      await sauvegarderQuotaTM(tmSalle);
+  const tmSalle = await obtenirTicketmaster();
+  if (!tmSalle.fetchSalle) {
+    logger.error("fetchSalle non disponible sur la source TM");
+    return;
+  }
+  const concertsSalle = await tmSalle.fetchSalle(data.venueId);
+  logger.info(
+    { venueId: data.venueId, total: concertsSalle.length },
+    "TM fetchSalle terminé",
+  );
 
-      const dedoublonnes = await resoudreArtistesConcerts(
-        dedoublonner(concertsSalle),
-      );
-      await persisterConcerts(dedoublonnes);
+  await sauvegarderQuotaTM(tmSalle);
 
-      if (data.userId) {
-        await recalculerMatches([data.userId]);
-      }
-      break;
-    }
+  const dedoublonnes = await resoudreArtistesConcerts(
+    dedoublonner(concertsSalle),
+  );
+  await persisterConcerts(dedoublonnes);
 
-    case "recalculer:matches": {
-      logger.info(
-        { userIds: data.userIds, correlationId },
-        "recalculer:matches démarré",
-      );
-      await recalculerMatches(data.userIds);
-      break;
-    }
+  if (data.userId) {
+    await recalculerMatches([data.userId]);
+  }
+}
 
-    case "purger:concerts": {
-      // Supprimer les concerts dont la date est passée depuis plus de 7 jours
-      const limite = new Date();
-      limite.setDate(limite.getDate() - 7);
-      const dateLimite = limite.toISOString().split("T")[0]!;
+export async function traiterRecalculerMatches(
+  data: JobRecalculerMatches,
+): Promise<void> {
+  const { correlationId } = data;
+  logger.info(
+    { userIds: data.userIds, correlationId },
+    "recalculer:matches démarré",
+  );
+  await recalculerMatches(data.userIds);
+}
 
-      const resultat = await db
-        .delete(concerts)
-        .where(lt(concerts.date, dateLimite))
-        .returning({ id: concerts.id });
+export async function traiterPurgerConcerts(
+  _data: JobPurgerConcerts,
+): Promise<void> {
+  const limite = new Date();
+  limite.setDate(limite.getDate() - 7);
+  const dateLimite = limite.toISOString().split("T")[0]!;
 
-      logger.info(
-        { dateLimite, supprimes: resultat.length },
-        "purger:concerts terminé",
-      );
-      break;
-    }
+  const resultat = await db
+    .delete(concerts)
+    .where(lt(concerts.date, dateLimite))
+    .returning({ id: concerts.id });
 
-    case "notifier:digest": {
-      logger.info({ correlationId }, "notifier:digest démarré");
-      await notifierUsersQuotidien();
-      logger.info("notifier:digest terminé");
-      break;
-    }
+  logger.info({ dateLimite, supprimes: resultat.length }, "purger:concerts terminé");
+}
 
-    default: {
+export async function traiterNotifierDigest(
+  data: JobNotifierDigest,
+): Promise<void> {
+  const { correlationId } = data;
+  logger.info({ correlationId }, "notifier:digest démarré");
+  await notifierUsersQuotidien();
+  logger.info("notifier:digest terminé");
+}
+
+export async function traiterJob(job: Job<JobData>): Promise<void> {
+  const { data } = job;
+
+  switch (data.type) {
+    case "fetch:artiste":
+      return traiterFetchArtiste(data);
+    case "fetch:artistes:batch":
+      return traiterFetchArtistesBatch(data);
+    case "fetch:region":
+      return traiterFetchRegion(data);
+    case "fetch:salle":
+      return traiterFetchSalle(data);
+    case "recalculer:matches":
+      return traiterRecalculerMatches(data);
+    case "purger:concerts":
+      return traiterPurgerConcerts(data);
+    case "notifier:digest":
+      return traiterNotifierDigest(data);
+    default:
       logger.warn({ data }, "type de job inconnu");
-    }
   }
 }
