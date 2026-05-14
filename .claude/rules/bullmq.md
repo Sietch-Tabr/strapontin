@@ -12,7 +12,7 @@ paths:
 - **Quota TM** : `SEUIL_QUOTA_CRON = 500` (suspend cron), `SEUIL_QUOTA_ABORT = 50` (annule tous jobs TM), `SEUIL_QUOTA_WARN = 200` (log warn) (#267).
 - **Rate limit burst** : TM limite 5 req/s. `fetchSalle` : +200ms/appel ; `fetchToutesPages` : +250ms/page (#240).
 - **`artiste_norm` vide** : `persisterConcerts` rejette les concerts dont `normaliserTexte(artiste)` → chaîne vide (scripts non-latins, séparateurs) — loggés `warn` (#242, #243).
-- **Retry** : jobs `jobId` fixe → pas de retry. Jobs utilisateur (`fetch:artiste`, `fetch:salle`, `recalculer:matches`) → `attempts: 3, backoff: exponential 5s` (#255).
+- **Retry** : tous les jobs cron (jobId fixe ou journalier) → `attempts: 3, backoff: exponential 10s` (#312). Jobs utilisateur (`fetch:artiste`, `fetch:salle`, `recalculer:matches`) → `attempts: 3, backoff: exponential 5s` (#255). `attempts` s'applique dans un run BullMQ avant `removeOnFail`, pas au re-queuing du cron.
 
 ## Redis
 

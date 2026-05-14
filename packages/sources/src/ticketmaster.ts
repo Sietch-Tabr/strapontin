@@ -15,7 +15,8 @@ const CLASSIFICATIONS = ["music", "opera", "musical"];
 const TAILLE_PAGE_REGION = 200;
 // Protection quota : ne jamais dépasser 7 pages par appel (max 1 400 concerts)
 // 7 pages couvre les depts IDF (~1 295 events TM sur 6 mois, soit 7 pages × 200)
-const NB_PAGES_MAX = 7;
+// TM refuse offset > 1000 : avec size=200, la page 5 donne offset 1000 (ok), page 6 → 1200 (HTTP 400)
+const NB_PAGES_MAX = 5;
 
 export interface QuotaTM {
   dispo: number;
@@ -306,13 +307,13 @@ async function fetchPage(
   params: URLSearchParams,
   apiKey: string,
   artisteFallback?: string,
-): Promise<{ events: ConcertBrut[]; total: number; quota: QuotaTM | null }> {
+): Promise<{ events: ConcertBrut[]; total: number; totalPages: number; quota: QuotaTM | null }> {
   params.set("apikey", apiKey);
   params.set("locale", "fr");
   params.set("countryCode", "FR");
 
   const url = `${BASE_URL}/events.json?${params.toString()}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
 
   // Extraire le quota depuis les headers TM (présents même sur les erreurs)
   const quota: QuotaTM | null = res.headers.has("Rate-Limit-Available")
@@ -333,21 +334,22 @@ async function fetchPage(
       { status: res.status, url: urlSafe, dispo: quota?.dispo, total: quota?.total },
       "erreur HTTP Ticketmaster",
     );
-    return { events: [], total: 0, quota: null };
+    return { events: [], total: 0, totalPages: NB_PAGES_MAX, quota: null };
   }
 
   const data = (await res.json()) as Record<string, unknown>;
   const page = data["page"] as Record<string, number> | undefined;
   const total = page?.["totalElements"] ?? 0;
+  const totalPages = page?.["totalPages"] ?? NB_PAGES_MAX;
 
   const embedded = data["_embedded"] as Record<string, unknown> | undefined;
   const evts = embedded?.["events"] as Record<string, unknown>[] | undefined;
-  if (!evts) return { events: [], total, quota };
+  if (!evts) return { events: [], total, totalPages, quota };
 
   const events = evts
     .map((evt) => mapEvenement(evt, artisteFallback))
     .filter((e): e is ConcertBrut => e !== null);
-  return { events, total, quota };
+  return { events, total, totalPages, quota };
 }
 
 function obtenirFenetreFetch(): { startDateTime: string; endDateTime: string } {
@@ -368,18 +370,23 @@ async function fetchToutesPages(
   const tousLesEvents: ConcertBrut[] = [];
   let quota: QuotaTM | null = null;
   let totalElements = 0;
+  let borneMax = NB_PAGES_MAX;
 
-  for (let numPage = 0; numPage < NB_PAGES_MAX; numPage++) {
+  for (let numPage = 0; numPage < borneMax; numPage++) {
     const paramsPage = new URLSearchParams(params);
     paramsPage.set("page", String(numPage));
 
     const {
       events,
       total,
+      totalPages,
       quota: q,
     } = await fetchPage(paramsPage, apiKey, artisteFallback);
     if (q) quota = q;
-    if (numPage === 0) totalElements = total;
+    if (numPage === 0) {
+      totalElements = total;
+      borneMax = Math.min(totalPages, NB_PAGES_MAX);
+    }
     tousLesEvents.push(...events);
 
     // Arrêter si la page est vide ou si on a tout récupéré
