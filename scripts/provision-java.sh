@@ -2,20 +2,24 @@
 set -euo pipefail
 trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 
-# provision-java.sh — provisionnement LXC 115 (stack Java/Spring Boot)
+# provision-java.sh — provisionnement LXC "vert" (stack Java/Spring Boot)
 # À exécuter depuis le HOST Proxmox en tant que root :
 #   scp scripts/provision-java.sh root@192.168.1.99:/tmp/
 #   ssh root@192.168.1.99 "bash /tmp/provision-java.sh"
 #
 # Ce LXC est le "vert" de la stratégie blue-green pour la migration v2.0.0.
-# À la bascule prod : la MAC de LXC 113 est assignée à ce LXC 115,
+# À la bascule prod : la MAC de LXC 113 est assignée à ce LXC,
 # qui hérite alors de l'IP 192.168.20.79 via la réservation DHCP.
+#
+# Pour redéployer proprement : détruire l'ancien LXC d'abord :
+#   pct stop <VMID> && pct destroy <VMID> --destroy-unreferenced-disks 1 --purge 1
+#   puis relancer ce script.
 
 # ---------------------------------------------------------------
 # Paramètres
 # ---------------------------------------------------------------
 
-VMID=115
+VMID=$(pvesh get /cluster/nextid)
 HOSTNAME="strapontin-java"
 IP="192.168.20.80/24"
 GW="192.168.20.1"
@@ -47,6 +51,9 @@ if [ -z "$DEV_SSH_KEY" ]; then
     echo "ERREUR : clé SSH requise" >&2
     exit 1
 fi
+
+DB_PASSWORD=$(openssl rand -hex 16)
+AUTH_SECRET=$(openssl rand -hex 32)
 
 # ---------------------------------------------------------------
 # 1. Template Debian 13
@@ -105,6 +112,12 @@ sleep 5
 # ---------------------------------------------------------------
 # 4. Système de base
 # ---------------------------------------------------------------
+
+echo "[4] Paramètre réseau net.core.somaxconn..."
+pct exec "$VMID" -- bash -c "
+    echo 'net.core.somaxconn = 511' > /etc/sysctl.d/99-strapontin.conf
+    sysctl -p /etc/sysctl.d/99-strapontin.conf
+"
 
 echo "[4] Locale, fuseau horaire, journald..."
 pct exec "$VMID" -- bash -c "
@@ -193,19 +206,17 @@ echo "[6] Création de la base $DB_NAME + extensions..."
 pct exec "$VMID" -- bash -c "
     systemctl start postgresql
     sleep 2
-    su -c \"psql -c 'CREATE DATABASE $DB_NAME;'\" postgres
-    su -c \"psql -d $DB_NAME -c 'CREATE EXTENSION IF NOT EXISTS dblink;'\" postgres
-    su -c \"psql -d $DB_NAME -c 'CREATE EXTENSION IF NOT EXISTS unaccent;'\" postgres
-    su -c \"psql -d $DB_NAME -c '\dx'\" postgres
+    su - postgres -c \"psql -c \\\"CREATE USER $APP_USER WITH PASSWORD '$DB_PASSWORD';\\\" 2>/dev/null || true\"
+    su - postgres -c \"psql -c \\\"CREATE DATABASE $DB_NAME OWNER $APP_USER;\\\" 2>/dev/null || true\"
+    su - postgres -c \"psql -d $DB_NAME -c 'CREATE EXTENSION IF NOT EXISTS dblink;'\"
+    su - postgres -c \"psql -d $DB_NAME -c 'CREATE EXTENSION IF NOT EXISTS unaccent;'\"
+    su - postgres -c \"psql -d $DB_NAME -c '\dx'\"
 "
 
 echo "[6] Configuration pg_hba.conf..."
 pct exec "$VMID" -- bash -c "
     PG_HBA=/etc/postgresql/${PG_VERSION}/main/pg_hba.conf
-    # Accès local depuis l'app Java (même LXC)
-    echo 'host  $DB_NAME  $APP_USER  127.0.0.1/32  trust' >> \$PG_HBA
-    # Accès depuis le Mac via tunnel SSH (tests d'intégration)
-    echo 'host  $DB_NAME  $APP_USER  127.0.0.1/32  trust' >> \$PG_HBA
+    echo 'host  $DB_NAME  $APP_USER  127.0.0.1/32  scram-sha-256' >> \$PG_HBA
     systemctl reload postgresql
 "
 
@@ -216,12 +227,63 @@ pct exec "$VMID" -- bash -c "
 echo "[7] Utilisateur '$APP_USER' et répertoires..."
 pct exec "$VMID" -- bash -c "
     id $APP_USER &>/dev/null || useradd -m -s /bin/bash $APP_USER
-    su -c \"psql -c \\\"CREATE USER $APP_USER;\\\"\" postgres || true
-    su -c \"psql -c \\\"GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $APP_USER;\\\"\" postgres
-    su -c \"psql -d $DB_NAME -c \\\"GRANT ALL ON SCHEMA public TO $APP_USER;\\\"\" postgres
     mkdir -p $APP_DIR/logs
     chown -R $APP_USER:$APP_USER $APP_DIR
 "
+
+echo "[7] Fichier de configuration .env..."
+pct exec "$VMID" -- bash -c "cat > $APP_DIR/.env << 'ENVFILE'
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/$DB_NAME
+SPRING_DATASOURCE_USERNAME=$APP_USER
+SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
+BETTER_AUTH_SECRET=$AUTH_SECRET
+ENVFILE
+chown $APP_USER:$APP_USER $APP_DIR/.env
+chmod 600 $APP_DIR/.env
+"
+
+echo "[7] Services systemd..."
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-worker.service << 'UNIT'
+[Unit]
+Description=Strapontin — worker Quartz
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=$APP_USER
+WorkingDirectory=$APP_DIR
+EnvironmentFile=$APP_DIR/.env
+ExecStart=/usr/bin/java -jar $APP_DIR/worker.jar
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+UNIT"
+
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-web.service << 'UNIT'
+[Unit]
+Description=Strapontin — API REST
+After=network.target postgresql.service strapontin-worker.service
+
+[Service]
+Type=simple
+User=$APP_USER
+WorkingDirectory=$APP_DIR
+EnvironmentFile=$APP_DIR/.env
+ExecStart=/usr/bin/java -jar $APP_DIR/web.jar
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+UNIT"
+
+pct exec "$VMID" -- bash -c "systemctl daemon-reload"
 
 # ---------------------------------------------------------------
 # 8. SSH développeur
@@ -252,16 +314,21 @@ echo ""
 echo "================================================================"
 echo "LXC $VMID provisionné avec succès."
 echo ""
+echo "CREDENTIALS GÉNÉRÉS (à conserver) :"
+echo "  DB_PASSWORD      : $DB_PASSWORD"
+echo "  BETTER_AUTH_SECRET : $AUTH_SECRET"
+echo "  Fichier           : $APP_DIR/.env (chmod 600)"
+echo ""
 echo "ÉTAPES SUIVANTES :"
 echo ""
 echo "1. Déployer et démarrer le worker Spring Boot."
 echo "   Le schéma sera appliqué automatiquement par Flyway au premier démarrage."
 echo ""
-echo "2. Autoriser LXC 115 à lire la DB de LXC 113 (pour migrate_data.sql) :"
+echo "2. Autoriser ce LXC à lire la DB de LXC 113 (pour migrate_data.sql) :"
 echo "   Sur LXC 113 : echo 'host strapontin postgres 192.168.20.80/32 trust' >> /etc/postgresql/18/main/pg_hba.conf"
 echo "   Sur LXC 113 : systemctl reload postgresql"
 echo ""
-echo "3. Tester le dblink depuis LXC 115 :"
+echo "3. Tester le dblink depuis ce LXC :"
 echo "   pct exec $VMID -- su -c \"psql -d $DB_NAME -c \\\"SELECT * FROM dblink('host=192.168.20.79 dbname=strapontin user=postgres', 'SELECT 1') AS t(x int);\\\"\" postgres"
 echo ""
 echo "4. À la bascule prod — noter la MAC de LXC 113 :"
