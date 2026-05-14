@@ -3,6 +3,7 @@ import { auth } from "$lib/auth";
 import { users } from "@strapontin/core/schema";
 import { eq } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
+import { logAdmin } from "$lib/server/log-admin";
 import type { PageServerLoad, Actions } from "./$types";
 import { FORMAT_IDENTIFIANT } from "$lib/constantes/validations";
 
@@ -99,6 +100,9 @@ export const actions: Actions = {
       })
       .where(eq(users.id, locals.user.id));
 
+    void logAdmin("info", "first-login", "first-login complété", {
+      userId: locals.user.id,
+    });
     redirect(302, "/");
   },
 };

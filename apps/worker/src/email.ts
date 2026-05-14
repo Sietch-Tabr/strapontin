@@ -136,3 +136,47 @@ ${piedHtml(baseUrl)}`;
   logger.info({ email: params.email, nb }, "digest envoyé");
   return true;
 }
+
+export async function envoyerAlerteWorkerInactif(params: {
+  email: string;
+  derniereActiviteIso: string | null;
+}): Promise<void> {
+  const resend = await obtenirResend();
+  if (!resend) {
+    logger.warn("RESEND_API_KEY absent — alerte worker non envoyée");
+    return;
+  }
+
+  const sujet = "Strapontin — worker inactif";
+  const baseUrl = await obtenirBaseUrl();
+  const detail = params.derniereActiviteIso
+    ? `Dernier job complété : ${new Date(params.derniereActiviteIso).toLocaleString("fr-FR")}.`
+    : "Aucun job complété enregistré.";
+
+  const corps = `${enTeteHtml(sujet)}
+<h2 style="font-size:20px;font-weight:600;color:#c00;margin:0 0 8px">Worker inactif</h2>
+<p style="color:#555;font-size:14px;margin:0 0 16px">${detail}</p>
+<p style="color:#555;font-size:14px;margin:0 0 24px">Les fetches Ticketmaster et les notifications n'ont pas été traités depuis plus de 3 heures.</p>
+<p style="margin-top:24px">
+  <a href="${baseUrl}/admin"
+     style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
+    Aller à l'administration →
+  </a>
+</p>
+${piedHtml(baseUrl)}`;
+
+  const { error } = await resend.emails.send({
+    from: EXPEDITEUR,
+    replyTo: REPLY_TO,
+    to: params.email,
+    subject: sujet,
+    html: corps,
+    text: `Worker inactif — ${detail} Consultez l'administration : ${baseUrl}/admin`,
+  });
+
+  if (error) {
+    logger.error({ err: error }, "échec envoi alerte worker");
+  } else {
+    logger.info({ email: params.email }, "alerte worker envoyée");
+  }
+}

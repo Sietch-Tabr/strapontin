@@ -3,9 +3,14 @@ import {
   redis,
   CLE_QUOTA_TM,
   cleStatsJob,
+  CLE_WORKER_LAST_SUCCESS,
   type StatsJobRedis,
 } from "$lib/server/redis";
-import { CLE_LOGS_ADMIN, type EntreeLogAdmin } from "$lib/server/log-admin";
+import {
+  CLE_LOGS_ADMIN,
+  logAdmin,
+  type EntreeLogAdmin,
+} from "$lib/server/log-admin";
 import { auth } from "$lib/auth";
 import {
   users,
@@ -74,9 +79,10 @@ export const load: PageServerLoad = async ({ locals }) => {
       : null,
   };
 
-  const logsRaw = await redis
-    .lrange(CLE_LOGS_ADMIN, 0, 49)
-    .catch(() => [] as string[]);
+  const [logsRaw, workerLastSuccessRaw] = await Promise.all([
+    redis.lrange(CLE_LOGS_ADMIN, 0, 99).catch(() => [] as string[]),
+    redis.get(CLE_WORKER_LAST_SUCCESS).catch(() => null),
+  ]);
   const logsAdmin: EntreeLogAdmin[] = logsRaw
     .map((s) => {
       try {
@@ -109,7 +115,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     })),
   );
 
-  return { utilisateurs, quotaTM, statsJobs, configStatuts, logsAdmin };
+  return { utilisateurs, quotaTM, statsJobs, configStatuts, logsAdmin, workerLastSuccess: workerLastSuccessRaw };
 };
 
 export const actions: Actions = {
@@ -167,6 +173,7 @@ export const actions: Actions = {
       });
     }
 
+    void logAdmin("info", "admin", "compte créé", { email, parAdmin: locals.user.id });
     return { succes: true, motDePasseTemp, email, identifiant: usernameTemp };
   },
 
@@ -184,6 +191,7 @@ export const actions: Actions = {
 
     await db.delete(users).where(eq(users.id, userId));
 
+    void logAdmin("warn", "admin", "compte supprimé", { userId, parAdmin: locals.user.id });
     return { succes: true };
   },
 
@@ -225,6 +233,7 @@ export const actions: Actions = {
       },
     });
 
+    void logAdmin("warn", "admin", "mot de passe réinitialisé", { userId: cible.id, parAdmin: locals.user.id });
     return { succes: true, action: "reinitialiserMdp", email: cible.email };
   },
 
@@ -496,6 +505,9 @@ export const actions: Actions = {
 
     await db.update(users).set(mise).where(eq(users.id, userId));
 
+    if (email) {
+      void logAdmin("warn", "admin", "email modifié", { userId, nouvelEmail: email, parAdmin: locals.user.id });
+    }
     return { succes: true, action: "modifierCompte" };
   },
 };

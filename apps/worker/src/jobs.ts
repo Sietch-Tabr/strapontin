@@ -14,6 +14,8 @@ import {
   recalculerMatches,
   notifierUsersQuotidien,
 } from "./persister.js";
+import { envoyerAlerteWorkerInactif } from "./email.js";
+import { lireConfig } from "./config.js";
 import {
   redis,
   CLE_QUOTA_TM,
@@ -28,7 +30,10 @@ import {
   cleStatsJob,
   TTL_STATS_JOB_S,
   type StatsJobRedis,
+  CLE_WORKER_LAST_SUCCESS,
 } from "./redis.js";
+
+import { logAdmin } from "./log-admin.js";
 
 const logger = pino({ name: "jobs" });
 
@@ -152,6 +157,10 @@ async function verifierQuotaTM(nomJob: string): Promise<boolean> {
       { dispo: quota.dispo, total: quota.total, job: nomJob },
       "quota TM épuisé — job annulé",
     );
+    void logAdmin("error", "worker", "quota TM épuisé — jobs annulés", {
+      dispo: quota.dispo,
+      total: quota.total,
+    });
     return false;
   }
 
@@ -160,6 +169,10 @@ async function verifierQuotaTM(nomJob: string): Promise<boolean> {
       { dispo: quota.dispo, total: quota.total, job: nomJob },
       "quota TM faible",
     );
+    void logAdmin("warn", "worker", "quota TM faible", {
+      dispo: quota.dispo,
+      total: quota.total,
+    });
   }
 
   return true;
@@ -599,12 +612,31 @@ export async function traiterPurgerConcerts(
   logger.info({ dateLimite, supprimes: resultat.length }, "purger:concerts terminé");
 }
 
+const SEUIL_INACTIVITE_WORKER_MS = 3 * 60 * 60 * 1000;
+
 export async function traiterNotifierDigest(
   data: JobNotifierDigest,
 ): Promise<void> {
   const { correlationId } = data;
   logger.info({ correlationId }, "notifier:digest démarré");
-  await notifierUsersQuotidien();
+
+  const [, dernierSuccesRaw, emailAdmin] = await Promise.all([
+    notifierUsersQuotidien(),
+    redis.get(CLE_WORKER_LAST_SUCCESS).catch(() => null),
+    lireConfig("CONTACT_EMAIL").catch(() => null),
+  ]);
+
+  if (emailAdmin) {
+    const depuisMs = dernierSuccesRaw
+      ? Date.now() - new Date(dernierSuccesRaw).getTime()
+      : Infinity;
+
+    if (depuisMs > SEUIL_INACTIVITE_WORKER_MS) {
+      void logAdmin("warn", "worker", "alerte inactivité worker envoyée", { email: emailAdmin });
+      await envoyerAlerteWorkerInactif({ email: emailAdmin, derniereActiviteIso: dernierSuccesRaw });
+    }
+  }
+
   logger.info("notifier:digest terminé");
 }
 

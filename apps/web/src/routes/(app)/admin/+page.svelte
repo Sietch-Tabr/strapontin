@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { page } from '$app/stores';
-	import { UserPlus, Trash2, ShieldCheck, Zap, RefreshCw, Loader2, Pencil, KeyRound, Settings, ScrollText, LayoutDashboard, Users } from '@lucide/svelte';
+	import { UserPlus, Trash2, ShieldCheck, Zap, RefreshCw, Loader2, Pencil, KeyRound, Settings, ScrollText, LayoutDashboard, Users, Clock, AlertTriangle, ChevronDown, ChevronRight } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -95,6 +95,46 @@
 	function estInactif(derniereActivite: Date | string | null): boolean {
 		if (!derniereActivite) return true;
 		return Date.now() - new Date(derniereActivite).getTime() > SEUIL_INACTIF_MS;
+	}
+
+	const SEUIL_WORKER_ALERTE_MS = 3 * 60 * 60 * 1000;
+	const workerDepuisMs = $derived(
+		data.workerLastSuccess ? Date.now() - new Date(data.workerLastSuccess).getTime() : null
+	);
+	const workerEnAlerte = $derived(
+		workerDepuisMs === null || workerDepuisMs > SEUIL_WORKER_ALERTE_MS
+	);
+
+	const SOURCES_LOGS = ['auth', 'admin', 'jobs', 'worker', 'config', 'push', 'first-login'] as const;
+	let filtreSource = $state<string>('toutes');
+	let filtreNiveaux = $state(new Set<string>(['warn', 'error']));
+
+	function toggleNiveau(niveau: string) {
+		const copie = new Set(filtreNiveaux);
+		if (copie.has(niveau)) {
+			copie.delete(niveau);
+		} else {
+			copie.add(niveau);
+		}
+		filtreNiveaux = copie;
+	}
+
+	const logsAdminFiltres = $derived(
+		data.logsAdmin.filter((e) => {
+			if (filtreSource !== 'toutes' && e.source !== filtreSource) return false;
+			if (filtreNiveaux.size > 0 && !filtreNiveaux.has(e.niveau)) return false;
+			return true;
+		})
+	);
+
+	let logsExpandés = $state(new Set<number>());
+
+	function formaterMeta(meta: Record<string, unknown> | undefined): { courte: string; paires: [string, string][] } | null {
+		if (!meta) return null;
+		const paires = Object.entries(meta).map(([k, v]): [string, string] => [k, String(v)]);
+		if (paires.length === 0) return null;
+		const courte = paires.slice(0, 2).map(([k, v]) => `${k}=${v}`).join(' ');
+		return { courte: paires.length > 2 ? courte + ' …' : courte, paires };
 	}
 </script>
 
@@ -297,6 +337,40 @@
 				</form>
 			</section>
 
+			<!-- Worker health -->
+			<section>
+				<h2 class="mb-4 text-base font-medium text-foreground flex items-center gap-2">
+					<Clock size={16} class="text-muted-foreground" aria-hidden="true" />
+					Worker
+				</h2>
+
+				<div class="rounded-xl border {workerEnAlerte ? 'border-yellow-500/40 bg-yellow-500/5' : 'border-border bg-card'} p-4">
+					{#if data.workerLastSuccess && workerDepuisMs !== null}
+						<div class="flex items-center justify-between gap-4">
+							<div>
+								<p class="text-sm font-medium text-foreground">Dernier job complété</p>
+								<p class="text-xs text-muted-foreground mt-0.5">
+									{formaterDateRelative(data.workerLastSuccess)}
+								</p>
+							</div>
+							{#if workerEnAlerte}
+								<span class="flex items-center gap-1.5 text-xs font-medium text-yellow-600 dark:text-yellow-400 shrink-0">
+									<AlertTriangle size={13} aria-hidden="true" />
+									Inactif depuis {Math.floor(workerDepuisMs / 3_600_000)} h
+								</span>
+							{:else}
+								<span class="text-xs font-medium text-green-600 dark:text-green-400 shrink-0">OK</span>
+							{/if}
+						</div>
+					{:else}
+						<div class="flex items-center gap-2 text-sm text-yellow-600 dark:text-yellow-400">
+							<AlertTriangle size={15} aria-hidden="true" />
+							Aucun job complété — worker non démarré ou Redis inaccessible.
+						</div>
+					{/if}
+				</div>
+			</section>
+
 		{:else if ongletActif === 'logs'}
 
 			<!-- Logs système -->
@@ -306,25 +380,103 @@
 					Logs système
 				</h2>
 
-				{#if data.logsAdmin.length === 0}
+				<!-- Filtres -->
+				<div class="mb-3 flex flex-wrap items-center gap-3">
+					<div class="flex items-center gap-1.5">
+						<label for="filtre-source" class="text-xs text-muted-foreground">Source</label>
+						<select
+							id="filtre-source"
+							bind:value={filtreSource}
+							class="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+						>
+							<option value="toutes">Toutes</option>
+							{#each SOURCES_LOGS as src}
+								<option value={src}>{src}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="flex items-center gap-1">
+						<span class="text-xs text-muted-foreground mr-0.5">Niveau</span>
+						{#each ['info', 'warn', 'error'] as niv}
+							{@const actif = filtreNiveaux.has(niv)}
+							<button
+								type="button"
+								onclick={() => toggleNiveau(niv)}
+								class="rounded px-2 py-0.5 text-xs font-medium transition-colors {actif
+									? niv === 'error' ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+									: niv === 'warn'  ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400'
+									: 'bg-foreground/10 text-foreground'
+									: 'text-muted-foreground hover:bg-accent'}"
+								aria-pressed={actif}
+							>
+								{niv}
+							</button>
+						{/each}
+						{#if filtreNiveaux.size > 0}
+							<button
+								type="button"
+								onclick={() => { filtreNiveaux = new Set(); }}
+								class="ml-1 text-xs text-muted-foreground underline hover:text-foreground"
+							>
+								Tous
+							</button>
+						{/if}
+					</div>
+					<span class="ml-auto text-xs text-muted-foreground tabular-nums">
+						{logsAdminFiltres.length} / {data.logsAdmin.length}
+					</span>
+				</div>
+
+				{#if logsAdminFiltres.length === 0}
 					<div class="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
-						Aucun événement enregistré.
+						Aucun événement pour ces filtres.
 					</div>
 				{:else}
 					<div class="rounded-xl border border-border bg-card divide-y divide-border font-mono text-xs">
-						{#each data.logsAdmin as entree}
+						{#each logsAdminFiltres as entree, idx}
 							{@const couleurNiveau =
 								entree.niveau === 'error' ? 'text-red-600 dark:text-red-400' :
 								entree.niveau === 'warn'  ? 'text-yellow-600 dark:text-yellow-400' :
 								entree.niveau === 'debug' ? 'text-muted-foreground' :
 								'text-foreground'}
-							<div class="flex items-baseline gap-3 px-4 py-2">
-								<span class="shrink-0 text-muted-foreground tabular-nums">
-									{new Date(entree.ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-								</span>
-								<span class="shrink-0 w-12 {couleurNiveau} uppercase font-medium">{entree.niveau}</span>
-								<span class="shrink-0 w-14 text-muted-foreground">{entree.source}</span>
-								<span class="text-foreground">{entree.message}{entree.meta ? ' — ' + JSON.stringify(entree.meta) : ''}</span>
+							{@const meta = formaterMeta(entree.meta)}
+							{@const expandé = logsExpandés.has(idx)}
+							<div class="px-4 py-2">
+								<div class="flex items-baseline gap-3">
+									<span class="shrink-0 text-muted-foreground tabular-nums">
+										{new Date(entree.ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+									</span>
+									<span class="shrink-0 w-12 {couleurNiveau} uppercase font-medium">{entree.niveau}</span>
+									<span class="shrink-0 w-20 text-muted-foreground truncate">{entree.source}</span>
+									<span class="text-foreground min-w-0 break-words">{entree.message}</span>
+									{#if meta && meta.paires.length > 2}
+										<button
+											type="button"
+											onclick={() => {
+												const copie = new Set(logsExpandés);
+												if (expandé) copie.delete(idx); else copie.add(idx);
+												logsExpandés = copie;
+											}}
+											class="shrink-0 text-muted-foreground hover:text-foreground"
+											aria-label={expandé ? 'Réduire les détails' : 'Voir les détails'}
+										>
+											{#if expandé}<ChevronDown size={12} />{:else}<ChevronRight size={12} />{/if}
+										</button>
+									{/if}
+								</div>
+								{#if meta}
+									{#if expandé || meta.paires.length <= 2}
+										<div class="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 pl-28">
+											{#each meta.paires as [cle, valeur]}
+												<span class="text-muted-foreground">
+													<span class="text-foreground/60">{cle}</span>=<span>{valeur}</span>
+												</span>
+											{/each}
+										</div>
+									{:else}
+										<p class="mt-0.5 pl-28 text-muted-foreground truncate">{meta.courte}</p>
+									{/if}
+								{/if}
 							</div>
 						{/each}
 					</div>

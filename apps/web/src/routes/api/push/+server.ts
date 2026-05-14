@@ -3,6 +3,7 @@ import { pushAbonnements } from "@strapontin/core/schema";
 import { and, count, eq } from "drizzle-orm";
 import { error, json } from "@sveltejs/kit";
 import { lireConfig } from "$lib/server/config";
+import { logAdmin } from "$lib/server/log-admin";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async () => {
@@ -58,6 +59,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     })
     .onConflictDoNothing();
 
+  void logAdmin("info", "push", "abonnement push créé", { userId: locals.user.id });
   return json({ ok: true }, { status: 201 });
 };
 
@@ -82,5 +84,6 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
       ),
     );
 
+  void logAdmin("info", "push", "abonnement push révoqué", { userId: locals.user.id });
   return json({ ok: true });
 };

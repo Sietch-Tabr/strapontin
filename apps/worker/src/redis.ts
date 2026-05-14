@@ -44,3 +44,5 @@ export interface StatsJobRedis {
 export const TTL_STATS_JOB_S = 48 * 3600;
 export const cleStatsJob = (typeJob: string): string =>
   `strapontin:job:stats:${typeJob}`;
+
+export const CLE_WORKER_LAST_SUCCESS = "strapontin:worker:last_success";

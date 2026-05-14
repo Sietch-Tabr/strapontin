@@ -3,6 +3,7 @@ import { Worker } from "bullmq";
 import { traiterJob, type JobData } from "./jobs.js";
 import { creerQueue, planifierJobsUsers } from "./cron.js";
 import { logAdmin } from "./log-admin.js";
+import { redis, CLE_WORKER_LAST_SUCCESS } from "./redis.js";
 
 const logger = pino({ name: "worker" });
 
@@ -18,6 +19,10 @@ const worker = new Worker<JobData>("concerts", traiterJob, {
 
 worker.on("ready", () => {
   logger.info("worker démarré — en attente de jobs");
+  void logAdmin("info", "worker", "worker démarré", {
+    pid: process.pid,
+    nodeVersion: process.version,
+  });
 });
 
 worker.on("active", (job) => {
@@ -27,6 +32,7 @@ worker.on("active", (job) => {
 
 worker.on("completed", (job) => {
   logger.info({ jobId: job.id, name: job.name }, "job terminé");
+  void redis.set(CLE_WORKER_LAST_SUCCESS, new Date().toISOString()).catch(() => undefined);
 });
 
 worker.on("failed", (job, err) => {
