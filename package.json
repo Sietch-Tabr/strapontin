@@ -9,7 +9,7 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
   },
-  "packageManager": "pnpm@11.0.8",
+  "packageManager": "pnpm@11.1.1",
   "engines": {
     "node": ">=24",
     "pnpm": ">=11"
