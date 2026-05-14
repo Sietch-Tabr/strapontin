@@ -3,11 +3,11 @@
 Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège automatiquement les événements depuis Ticketmaster et Eventim, vous notifie dès qu'une nouvelle date est annoncée, et centralise tout en un seul endroit — sans avoir à surveiller chaque billetterie séparément.
 
 <p align="center">
-  <img src="https://codeberg.org/Kwaite/strapontin/wiki/raw/branch/main/screenshots/concerts-desktop.png" alt="Liste des concerts — vue desktop" width="780" />
+  <img src="https://codeberg.org/Kwaite/strapontin/raw/branch/main/docs/screenshots/concerts-desktop.png" alt="Liste des concerts — vue desktop" width="780" />
 </p>
 
 <p align="center">
-  <img src="https://codeberg.org/Kwaite/strapontin/wiki/raw/branch/main/screenshots/concerts-mobile.png" alt="Liste des concerts — vue mobile" width="320" />
+  <img src="https://codeberg.org/Kwaite/strapontin/raw/branch/main/docs/screenshots/concerts-mobile.png" alt="Liste des concerts — vue mobile" width="320" />
 </p>
 
 ## Fonctionnalités
