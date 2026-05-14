@@ -52,6 +52,14 @@
 						<li>La page d'aide est réorganisée avec des sections claires et des instructions pour installer l'application (iOS, Android, Desktop).</li>
 					</ul>
 				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Accessibilité</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Sur la page Paramètres, la clé secrète TOTP peut désormais être affichée en clair (pour les applications d'authentification ne supportant pas le scan QR).</li>
+						<li>Lors de la connexion, le champ de saisie du code de vérification (2FA) reçoit automatiquement le focus.</li>
+						<li>Amélioration générale de la navigation au clavier et de la compatibilité avec les lecteurs d'écran.</li>
+					</ul>
+				</div>
 			</div>
 		</section>
 
