@@ -6,7 +6,7 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const totalConcerts = $derived(
+	const totalAffiches = $derived(
 		data.artistesGroupes.reduce((acc, g) => acc + g.concerts.length, 0)
 	);
 </script>
@@ -22,7 +22,7 @@
 	</div>
 
 	<!-- Chip de filtre statut -->
-	{#if totalConcerts > 0 || data.inclureIndisponibles || data.nbArtistes > 0}
+	{#if totalAffiches > 0 || data.inclureIndisponibles || data.nbArtistes > 0}
 		<div class="mb-6 flex flex-wrap gap-1.5">
 			<a
 				href="?indisponibles={data.inclureIndisponibles ? '0' : '1'}"
@@ -38,7 +38,7 @@
 		</div>
 	{/if}
 
-	{#if totalConcerts === 0}
+	{#if totalAffiches === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
 			<Music size={40} class="mb-4 text-muted-foreground/50" />
 			{#if data.nbArtistes === 0 && data.nbSalles === 0}
@@ -147,6 +147,12 @@
 					</div>
 				</div>
 			{/each}
+		{#if data.tronque}
+			<p class="mt-6 text-center text-sm text-muted-foreground">
+				{data.totalConcerts} concerts à venir au total —
+				<a href="/spectacles" class="underline underline-offset-2 hover:text-foreground">voir tous dans Mes spectacles</a>
+			</p>
+		{/if}
 		</div>
 	{/if}
 </div>

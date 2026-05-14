@@ -28,11 +28,12 @@ const userLocals = { user: { id: "user-1", role: "user" } };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Par défaut : premier where = pas de doublon ([]), suivants = count à 0
+  // Par défaut : 1er where = pas de doublon, 2e = count à 0 ; tous retournent aussi .limit()
   let appelWhere = 0;
-  mockWhere.mockImplementation(async () => {
+  mockWhere.mockImplementation(() => {
     appelWhere++;
-    return appelWhere === 1 ? [] : [{ total: 0 }];
+    const valeur = appelWhere === 1 ? [] : [{ total: 0 }];
+    return Object.assign(Promise.resolve(valeur), { limit: vi.fn().mockResolvedValue([]) });
   });
   mockOrderBy.mockResolvedValue([]);
   mockFrom.mockReturnValue({ where: mockWhere, orderBy: mockOrderBy, limit: vi.fn().mockReturnValue({ where: mockWhere }) });
