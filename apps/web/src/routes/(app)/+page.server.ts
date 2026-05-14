@@ -26,7 +26,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const conditions: SQL[] = [
     eq(userMatches.userId, locals.user!.id),
     gte(concerts.date, aujourdhui),
-    afficherMasques ? isNotNull(userMatches.masqueLe) : isNull(userMatches.masqueLe),
+    afficherMasques
+      ? isNotNull(userMatches.masqueLe)
+      : isNull(userMatches.masqueLe),
   ];
 
   const conditionStatut = construireConditionStatut(inclureIndisponibles);
@@ -147,7 +149,12 @@ export const actions: Actions = {
     const concertsArtiste = await db
       .select({ id: concerts.id })
       .from(concerts)
-      .where(and(eq(concerts.artisteNorm, artisteNorm), gte(concerts.date, aujourdhui)));
+      .where(
+        and(
+          eq(concerts.artisteNorm, artisteNorm),
+          gte(concerts.date, aujourdhui),
+        ),
+      );
     if (concertsArtiste.length === 0) return;
     await db
       .update(userMatches)
@@ -155,7 +162,10 @@ export const actions: Actions = {
       .where(
         and(
           eq(userMatches.userId, locals.user!.id),
-          inArray(userMatches.concertId, concertsArtiste.map((c) => c.id)),
+          inArray(
+            userMatches.concertId,
+            concertsArtiste.map((c) => c.id),
+          ),
           isNull(userMatches.masqueLe),
         ),
       );

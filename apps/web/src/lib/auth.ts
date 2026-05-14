@@ -17,11 +17,17 @@ export const auth = betterAuth({
     after: createAuthMiddleware(async (ctx) => {
       if (ctx.path !== "/sign-in/username") return;
       const ip = ctx.request?.headers.get("x-forwarded-for") ?? "inconnu";
-      const identifiant = (ctx.body as Record<string, unknown> | undefined)?.["username"] ?? "inconnu";
+      const identifiant =
+        (ctx.body as Record<string, unknown> | undefined)?.["username"] ??
+        "inconnu";
       if (ctx.context.newSession) {
         const userId = ctx.context.newSession.user.id;
         logger.info({ identifiant, ip, userId }, "connexion reussie");
-        void logAdmin("info", "auth", "connexion réussie", { identifiant, ip, userId });
+        void logAdmin("info", "auth", "connexion réussie", {
+          identifiant,
+          ip,
+          userId,
+        });
       } else {
         logger.warn({ identifiant, ip }, "echec connexion");
         void logAdmin("warn", "auth", "échec connexion", { identifiant, ip });
@@ -42,11 +48,18 @@ export const auth = betterAuth({
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
       const [userDb] = await db
-        .select({ mustChangeCredentials: schema.users.mustChangeCredentials, username: schema.users.username })
+        .select({
+          mustChangeCredentials: schema.users.mustChangeCredentials,
+          username: schema.users.username,
+        })
         .from(schema.users)
         .where(eq(schema.users.email, user.email));
       if (userDb?.mustChangeCredentials) {
-        await envoyerInvitation({ email: user.email, identifiant: userDb.username ?? '', lienReset: url });
+        await envoyerInvitation({
+          email: user.email,
+          identifiant: userDb.username ?? "",
+          lienReset: url,
+        });
       } else {
         await envoyerResetMotDePasse({ email: user.email, lienReset: url });
       }
