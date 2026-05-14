@@ -27,3 +27,5 @@ export interface StatsJobRedis {
 }
 export const cleStatsJob = (typeJob: string): string =>
   `strapontin:job:stats:${typeJob}`;
+
+export const CLE_WORKER_LAST_SUCCESS = "strapontin:worker:last_success";

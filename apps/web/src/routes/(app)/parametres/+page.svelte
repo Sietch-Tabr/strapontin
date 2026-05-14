@@ -257,23 +257,23 @@
 	</div>
 
 	<!-- Navigation onglets -->
-	<div class="mb-6 max-w-xl" role="tablist" aria-label="Sections des paramètres">
-		<div class="flex gap-1 rounded-lg border border-border bg-muted/30 p-1">
+	<nav class="mb-6 -mx-6 overflow-x-auto border-b border-border lg:-mx-8" aria-label="Sections des paramètres">
+		<div class="flex min-w-max gap-0 px-6 lg:px-8" role="tablist">
 			{#each ONGLETS as onglet (onglet.id)}
 				<button
 					type="button"
 					role="tab"
 					aria-selected={ongletActif === onglet.id}
 					onclick={() => changerOnglet(onglet.id)}
-					class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors {ongletActif === onglet.id
-						? 'bg-background text-foreground shadow-sm'
-						: 'text-muted-foreground hover:text-foreground'}"
+					class="whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors {ongletActif === onglet.id
+						? 'border-foreground text-foreground'
+						: 'border-transparent text-muted-foreground hover:text-foreground'}"
 				>
 					{onglet.label}
 				</button>
 			{/each}
 		</div>
-	</div>
+	</nav>
 
 	<div class="max-w-xl space-y-6" role="tabpanel">
 

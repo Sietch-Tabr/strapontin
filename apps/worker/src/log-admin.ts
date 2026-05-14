@@ -11,7 +11,7 @@ export interface EntreeLogAdmin {
 }
 
 const CLE_LOGS_ADMIN = "strapontin:admin:logs";
-const NB_LOGS_MAX = 100;
+const NB_LOGS_MAX = 200;
 
 export async function logAdmin(
   niveau: NiveauLog,

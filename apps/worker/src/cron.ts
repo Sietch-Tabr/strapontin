@@ -9,6 +9,7 @@ import { userArtistes, userConfig, userSalles } from "@strapontin/core/schema";
 import { db } from "./db.js";
 import { lireDispoQuotaTM, SEUIL_QUOTA_CRON } from "./jobs.js";
 import type { JobData } from "./jobs.js";
+import { logAdmin } from "./log-admin.js";
 
 const logger = pino({ name: "cron" });
 
@@ -32,6 +33,9 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
       { dispo, seuil: SEUIL_QUOTA_CRON },
       "quota TM faible — jobs cron (batch, région) suspendus",
     );
+    void logAdmin("warn", "worker", "cron suspendu — quota TM insuffisant", {
+      dispo: dispo ?? 0,
+    });
   }
 
   // Un seul job batch pour tous les artistes — évite N requêtes TM individuelles

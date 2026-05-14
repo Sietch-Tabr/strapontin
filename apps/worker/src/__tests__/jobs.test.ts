@@ -23,6 +23,15 @@ vi.mock("../persister.js", () => ({
   notifierUsersQuotidien: vi.fn(),
 }));
 
+vi.mock("../config.js", () => ({
+  lireConfig: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("../email.js", () => ({
+  envoyerAlerteWorkerInactif: vi.fn().mockResolvedValue(undefined),
+  envoyerDigestConcerts: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock("../redis.js", () => ({
   redis: {
     get: vi.fn().mockResolvedValue(null),
@@ -43,6 +52,7 @@ vi.mock("../redis.js", () => ({
   TTL_REGION_FETCHEE_S: 691200,
   cleStatsJob: (type: string) => `strapontin:job:stats:${type}`,
   TTL_STATS_JOB_S: 172800,
+  CLE_WORKER_LAST_SUCCESS: "strapontin:worker:last_success",
 }));
 
 import {
