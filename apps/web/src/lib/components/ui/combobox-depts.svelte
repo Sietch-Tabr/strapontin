@@ -73,7 +73,7 @@
 
 	{#if ouvert}
 		<div
-			role="dialog"
+			role="region"
 			aria-label="Sélection des départements"
 			class="absolute left-0 top-full z-50 mt-1 w-44 rounded-md border border-border bg-popover shadow-md"
 		>

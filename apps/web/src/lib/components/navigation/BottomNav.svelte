@@ -92,7 +92,7 @@
 	}
 </script>
 
-<nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background lg:hidden">
+<nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background lg:hidden" aria-label="Navigation principale">
 	<div class="flex h-16 items-center justify-around px-2">
 		{#each elementsNav as { label, icone: Icone, route }}
 			<a
@@ -100,7 +100,7 @@
 				class="flex flex-1 self-stretch flex-col items-center justify-center gap-1 text-xs font-medium transition-colors
 					{estActif(route) ? 'text-foreground' : 'text-muted-foreground'}"
 			>
-				<Icone size={22} />
+				<Icone size={22} aria-hidden="true" />
 				{label}
 			</a>
 		{/each}
@@ -114,7 +114,7 @@
 			class="flex flex-1 self-stretch flex-col items-center justify-center gap-1 text-xs font-medium cursor-pointer transition-colors
 				{plusEstActif() ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}"
 		>
-			<MoreHorizontal size={22} />
+			<MoreHorizontal size={22} aria-hidden="true" />
 			Plus
 		</button>
 	</div>
@@ -148,7 +148,7 @@
 						class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground
 							{estActif(route) ? 'bg-accent text-accent-foreground' : 'text-foreground'}"
 					>
-						<Icone size={20} />
+						<Icone size={20} aria-hidden="true" />
 						{label}
 					</button>
 				{/each}
@@ -162,7 +162,7 @@
 						class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground
 							{estActif('/admin') ? 'bg-accent text-accent-foreground' : 'text-foreground'}"
 					>
-						<ShieldCheck size={20} />
+						<ShieldCheck size={20} aria-hidden="true" />
 						Admin
 					</button>
 				{/if}
@@ -174,7 +174,7 @@
 						class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground
 							{estActif(route) ? 'bg-accent text-accent-foreground' : 'text-foreground'}"
 					>
-						<Icone size={20} />
+						<Icone size={20} aria-hidden="true" />
 						{label}
 					</button>
 				{/each}
@@ -186,7 +186,7 @@
 					onclick={seDeconnecter}
 					class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
 				>
-					<LogOut size={20} />
+					<LogOut size={20} aria-hidden="true" />
 					Se déconnecter
 				</button>
 			</div>

@@ -44,7 +44,7 @@
 			disabled={!termeRecherche || termeRecherche.trim().length < 2}
 			class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
 		>
-			<Search size={16} />
+			<Search size={16} aria-hidden="true" />
 			Rechercher
 		</button>
 	</form>
@@ -89,7 +89,7 @@
 								type="submit"
 								class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
 							>
-								<Plus size={14} />
+								<Plus size={14} aria-hidden="true" />
 								Suivre
 							</button>
 						</form>
@@ -128,7 +128,7 @@
 						type="submit"
 						class="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
 					>
-						<Plus size={16} />
+						<Plus size={16} aria-hidden="true" />
 						Ajouter « {data.recherche} » quand même
 					</button>
 				</form>
@@ -139,7 +139,7 @@
 	<!-- Artistes suivis -->
 	{#if data.artistes.length === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
-			<Music size={40} class="mb-4 text-muted-foreground/50" />
+			<Music size={40} class="mb-4 text-muted-foreground/50" aria-hidden="true" />
 			<p class="mb-1 text-base font-medium text-foreground">Aucun artiste suivi.</p>
 			<p class="text-sm text-muted-foreground">
 				Recherchez un artiste ci-dessus pour commencer.
@@ -173,7 +173,7 @@
 								class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
 								aria-label="Supprimer {artiste.artisteAffiche}"
 							>
-								<X size={16} />
+								<X size={16} aria-hidden="true" />
 							</button>
 						</form>
 					</li>

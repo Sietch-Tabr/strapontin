@@ -51,6 +51,8 @@
 	let erreur2Fa = $state('');
 	let chargement2Fa = $state(false);
 	let qrCodeDataUrl = $state('');
+	let cleSecrète2Fa = $state('');
+	let cleSecrèteVisible = $state(false);
 	let backupCodes2Fa = $state<string[]>([]);
 	let etape2Fa = $state<'repos' | 'scan'>('repos');
 	let codeConfirmation2Fa = $state('');
@@ -69,6 +71,7 @@
 			}
 			const uri = (resultat.data as { totpURI: string; backupCodes: string[] }).totpURI;
 			backupCodes2Fa = (resultat.data as { totpURI: string; backupCodes: string[] }).backupCodes ?? [];
+			cleSecrète2Fa = new URL(uri).searchParams.get('secret') ?? '';
 			const { default: QRCode } = await import('qrcode');
 			qrCodeDataUrl = await QRCode.toDataURL(uri, { errorCorrectionLevel: 'M', margin: 2, width: 200 });
 			etape2Fa = 'scan';
@@ -828,7 +831,20 @@
 						</div>
 						<div>
 							<p class="mb-3 text-sm font-medium text-foreground">1. Scannez ce QR code</p>
-							<img src={qrCodeDataUrl} alt="QR code TOTP" class="rounded-md border border-border" width="200" height="200" />
+							<img src={qrCodeDataUrl} alt="QR code à scanner dans votre application d'authentification pour configurer la double authentification" class="rounded-md border border-border" width="200" height="200" />
+							{#if cleSecrète2Fa}
+								<p class="mt-3 text-xs text-muted-foreground">
+									Impossible de scanner ?
+									<button type="button" onclick={() => { cleSecrèteVisible = !cleSecrèteVisible; }}
+										class="underline hover:text-foreground">
+										{cleSecrèteVisible ? 'Masquer la clé' : 'Afficher la clé manuelle'}
+									</button>
+								</p>
+								{#if cleSecrèteVisible}
+									<p class="mt-1 text-xs text-muted-foreground">Entrez cette clé dans votre application :</p>
+									<code class="mt-1 block rounded bg-muted px-3 py-2 font-mono text-sm tracking-widest select-all">{cleSecrète2Fa}</code>
+								{/if}
+							{/if}
 						</div>
 						<div>
 							<p class="mb-2 text-sm font-medium text-foreground">Codes de secours</p>

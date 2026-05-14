@@ -188,7 +188,7 @@
 				type="submit"
 				class="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
 			>
-				<Search size={16} />
+				<Search size={16} aria-hidden="true" />
 				Rechercher
 			</button>
 			<label for="mois-decouverte" class="sr-only">Filtrer par mois</label>
@@ -223,7 +223,7 @@
 					href="/decouverte"
 					class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
 				>
-					<X size={16} />
+					<X size={16} aria-hidden="true" />
 					Réinitialiser
 				</a>
 			{/if}
@@ -341,7 +341,7 @@
 		<div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-950/40">
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div class="flex items-start gap-2.5">
-					<Info size={16} class="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
+					<Info size={16} class="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" aria-hidden="true" />
 					<div>
 						<p class="text-sm font-medium text-blue-900 dark:text-blue-200">
 							{deptsASignaler.join(', ')} — hors de vos préférences
@@ -372,7 +372,7 @@
 							type="submit"
 							class="flex items-center gap-1.5 rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:bg-transparent dark:text-blue-300 dark:hover:bg-blue-900/40"
 						>
-							<RefreshCw size={12} />
+							<RefreshCw size={12} aria-hidden="true" />
 							Actualiser maintenant
 						</button>
 					</form>
@@ -392,7 +392,7 @@
 							type="submit"
 							class="flex items-center gap-1.5 rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:bg-transparent dark:text-blue-300 dark:hover:bg-blue-900/40"
 						>
-							<Plus size={12} />
+							<Plus size={12} aria-hidden="true" />
 							Ajouter à mes préférences
 						</button>
 					</form>
@@ -411,13 +411,13 @@
 			<div class="flex items-center justify-between gap-3">
 				<div class="flex items-center gap-2">
 					{#if etatFetch === 'en-cours'}
-						<Loader size={14} class="animate-spin text-blue-600 dark:text-blue-400" />
+						<Loader size={14} class="animate-spin text-blue-600 dark:text-blue-400" aria-hidden="true" />
 						<p class="text-sm text-blue-900 dark:text-blue-200">Récupération des concerts en cours...</p>
 					{:else if etatFetch === 'termine'}
-						<Check size={14} class="text-green-600 dark:text-green-400" />
+						<Check size={14} class="text-green-600 dark:text-green-400" aria-hidden="true" />
 						<p class="text-sm text-green-900 dark:text-green-200">Résultats disponibles.</p>
 					{:else}
-						<Info size={14} class="text-amber-600 dark:text-amber-400" />
+						<Info size={14} class="text-amber-600 dark:text-amber-400" aria-hidden="true" />
 						<p class="text-sm text-amber-900 dark:text-amber-200">Récupération terminée (avec avertissements).</p>
 					{/if}
 				</div>
@@ -430,7 +430,7 @@
 								? 'border-green-300 bg-white text-green-700 hover:bg-green-50 dark:border-green-700 dark:bg-transparent dark:text-green-300 dark:hover:bg-green-900/40'
 								: 'border-amber-300 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:bg-transparent dark:text-amber-300 dark:hover:bg-amber-900/40'}"
 					>
-						<RefreshCw size={12} />
+						<RefreshCw size={12} aria-hidden="true" />
 						Actualiser la page
 					</button>
 				{/if}
@@ -440,7 +440,7 @@
 
 	{#if data.resultats.length === 0}
 		<div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
-			<Compass size={40} class="mb-4 text-muted-foreground/50" />
+			<Compass size={40} class="mb-4 text-muted-foreground/50" aria-hidden="true" />
 			{#if data.recherche || data.deptsActifs.length > 0 || data.mois || data.genres.length > 0 || data.classifications.length > 0 || data.budget}
 				<p class="mb-1 text-base font-medium text-foreground">Aucun résultat pour ces filtres.</p>
 				<a href="/decouverte" class="mt-4 text-sm text-muted-foreground underline underline-offset-2">
@@ -490,7 +490,7 @@
 									{/if}
 									{#if estSuivi(concert.artisteNorm)}
 										<span class="flex items-center gap-1 rounded-md px-3 py-1 text-xs font-medium text-muted-foreground">
-											<Check size={12} />
+											<Check size={12} aria-hidden="true" />
 											Suivi
 										</span>
 									{:else}
@@ -548,7 +548,7 @@
 							{/if}
 							{#if estSuivi(concert.artisteNorm)}
 								<span class="flex items-center gap-1 px-3 py-1 text-xs text-muted-foreground">
-									<Check size={12} />
+									<Check size={12} aria-hidden="true" />
 									Suivi
 								</span>
 							{:else}
