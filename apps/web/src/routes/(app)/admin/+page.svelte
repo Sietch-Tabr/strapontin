@@ -591,7 +591,9 @@
 												Annuler
 											</button>
 										{:else if confirmationReset === utilisateur.id}
-											<span class="text-xs text-muted-foreground mr-1">Envoyer lien reset ?</span>
+											<span class="text-xs text-muted-foreground mr-1">
+												{utilisateur.mustChangeCredentials ? 'Renvoyer l\'invitation ?' : 'Envoyer lien reset ?'}
+											</span>
 											<form method="POST" action="?/reinitialiserMdp" use:enhance={() => async ({ update }) => {
 												confirmationReset = null;
 												await update();
@@ -615,7 +617,7 @@
 											<button type="button"
 												onclick={() => (confirmationReset = utilisateur.id)}
 												class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent"
-												aria-label="Réinitialiser le mot de passe de {utilisateur.name}">
+												aria-label="{utilisateur.mustChangeCredentials ? 'Renvoyer l\'invitation à ' : 'Réinitialiser le mot de passe de '}{utilisateur.name}">
 												<KeyRound size={15} />
 											</button>
 											<button type="button"
