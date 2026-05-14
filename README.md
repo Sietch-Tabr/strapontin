@@ -1,15 +1,29 @@
 # Strapontin
 
-Agrégateur de concerts personnel. Suivez vos artistes et salles préférés — Strapontin récupère automatiquement les événements depuis Ticketmaster et Eventim toutes les 2 heures et vous notifie par email ou notification push.
+Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège automatiquement les événements depuis Ticketmaster et Eventim, vous notifie dès qu'une nouvelle date est annoncée, et centralise tout en un seul endroit — sans avoir à surveiller chaque billetterie séparément.
+
+<p align="center">
+  <img src="https://codeberg.org/Kwaite/strapontin/wiki/raw/branch/main/screenshots/concerts-desktop.png" alt="Liste des concerts — vue desktop" width="780" />
+</p>
+
+<p align="center">
+  <img src="https://codeberg.org/Kwaite/strapontin/wiki/raw/branch/main/screenshots/concerts-mobile.png" alt="Liste des concerts — vue mobile" width="320" />
+</p>
 
 ## Fonctionnalités
 
-- Suivi d'artistes et de salles (500 artistes, 200 salles max par compte)
-- Actualisation automatique toutes les 2 heures
+**Suivi**
+- Artistes et salles favoris (jusqu'à 500 artistes, 200 salles)
+- Actualisation automatique toutes les 2 heures depuis Ticketmaster et Eventim
+- Dédoublonnage inter-sources automatique
+
+**Notifications**
+- Email ou notification push (immédiat ou récapitulatif quotidien à 8h)
+
+**Interface**
 - Filtrage par département, mois, budget, catégorie
-- Notifications email et push (immédiat ou récapitulatif quotidien à 8h)
-- Application installable (PWA)
 - Thème clair / sombre / automatique
+- Application installable (PWA)
 - Export / import des préférences au format JSON
 
 ## Stack
