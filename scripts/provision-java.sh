@@ -108,13 +108,12 @@ sleep 5
 
 echo "[4] Locale, fuseau horaire, journald..."
 pct exec "$VMID" -- bash -c "
-    export LC_ALL=C
+    export LC_ALL=C LANG=C DEBIAN_FRONTEND=noninteractive
     echo 'fr_FR.UTF-8 UTF-8' >> /etc/locale.gen
     locale-gen
     update-locale LANG=fr_FR.UTF-8 LC_ALL=fr_FR.UTF-8
     ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime
     echo 'Europe/Paris' > /etc/timezone
-    DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -f noninteractive tzdata
     mkdir -p /etc/systemd/journald.conf.d
     printf '[Journal]\nSystemMaxUse=100M\n' > /etc/systemd/journald.conf.d/strapontin.conf
     systemctl restart systemd-journald
