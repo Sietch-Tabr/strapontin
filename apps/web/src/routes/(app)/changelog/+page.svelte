@@ -20,16 +20,36 @@
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">
 				<div>
-					<p class="mb-1 font-medium text-foreground">Mes spectacles</p>
+					<p class="mb-1 font-medium text-foreground">Accueil</p>
 					<ul class="list-inside list-disc space-y-1">
-						<li>La liste des spectacles est maintenant paginée (100 par page) — plus de long défilement lorsque le nombre de concerts dépasse la centaine.</li>
-						<li>Les mois disponibles dans le filtre sont calculés côté serveur : ils reflètent l'ensemble de vos concerts, quelle que soit la page affichée.</li>
+						<li>Nouveau bouton « Masquer » sur chaque groupe d'artiste pour masquer toute la tournée en un clic.</li>
+						<li>Nouveau filtre « Masqués » pour retrouver et réafficher les concerts masqués.</li>
+						<li>L'accueil affiche désormais un avertissement quand plus de 50 concerts sont disponibles, avec un lien vers Mes spectacles.</li>
 					</ul>
 				</div>
 				<div>
-					<p class="mb-1 font-medium text-foreground">Accueil</p>
+					<p class="mb-1 font-medium text-foreground">Mes spectacles</p>
 					<ul class="list-inside list-disc space-y-1">
-						<li>L'accueil affiche désormais vos 50 prochains concerts. Si vous en avez davantage, un lien vous renvoie vers Mes spectacles.</li>
+						<li>Pagination par 100 concerts avec navigation entre les pages.</li>
+						<li>Les mois disponibles dans le filtre sont calculés sur l'ensemble de vos concerts, pas uniquement la page en cours.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Paramètres</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>La page est désormais organisée en quatre onglets : Préférences, Notifications, Compte, Données. L'onglet actif est mémorisé dans l'URL.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Artistes</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Un indicateur de chargement apparaît à côté de l'artiste après son ajout, pendant la recherche des concerts.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Aide</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>La page d'aide est réorganisée avec des sections claires et des instructions pour installer l'application (iOS, Android, Desktop).</li>
 					</ul>
 				</div>
 			</div>

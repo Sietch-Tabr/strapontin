@@ -7,13 +7,18 @@ import {
 } from "$lib/server/redis";
 import { CLE_LOGS_ADMIN, type EntreeLogAdmin } from "$lib/server/log-admin";
 import { auth } from "$lib/auth";
-import { users, userArtistes, userConfig, sessions } from "@strapontin/core/schema";
+import {
+  users,
+  userArtistes,
+  userConfig,
+  sessions,
+} from "@strapontin/core/schema";
 import type { QuotaTM } from "@strapontin/sources";
 import { eq, max } from "drizzle-orm";
 import { queue } from "$lib/server/queue";
 import { randomBytes, randomUUID, createECDH } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
-import { envoyerInvitation } from "$lib/server/email";
+import { env as envPublic } from "$env/dynamic/public";
 import {
   lireConfig,
   lireConfigsPresentes,
@@ -69,9 +74,17 @@ export const load: PageServerLoad = async ({ locals }) => {
       : null,
   };
 
-  const logsRaw = await redis.lrange(CLE_LOGS_ADMIN, 0, 49).catch(() => [] as string[]);
+  const logsRaw = await redis
+    .lrange(CLE_LOGS_ADMIN, 0, 49)
+    .catch(() => [] as string[]);
   const logsAdmin: EntreeLogAdmin[] = logsRaw
-    .map((s) => { try { return JSON.parse(s) as EntreeLogAdmin; } catch { return null; } })
+    .map((s) => {
+      try {
+        return JSON.parse(s) as EntreeLogAdmin;
+      } catch {
+        return null;
+      }
+    })
     .filter((e): e is EntreeLogAdmin => e !== null);
 
   const configsPresentes = await lireConfigsPresentes();
@@ -146,11 +159,13 @@ export const actions: Actions = {
       .set({ mustChangeCredentials: true })
       .where(eq(users.email, email));
 
-    await envoyerInvitation({
-      email,
-      identifiant: usernameTemp,
-      motDePasse: motDePasseTemp,
-    });
+    const baseUrl =
+      (await lireConfig("PUBLIC_BASE_URL")) ?? envPublic.PUBLIC_BASE_URL ?? "";
+    if (baseUrl) {
+      await auth.api.requestPasswordReset({
+        body: { email, redirectTo: `${baseUrl}/reset-password` },
+      });
+    }
 
     return { succes: true, motDePasseTemp, email, identifiant: usernameTemp };
   },

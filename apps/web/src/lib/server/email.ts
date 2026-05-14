@@ -61,7 +61,7 @@ function piedHtml(baseUrl: string): string {
 export async function envoyerInvitation(params: {
   email: string;
   identifiant: string;
-  motDePasse: string;
+  lienReset: string;
 }): Promise<void> {
   const ctx = await obtenirResend();
   if (!ctx) {
@@ -71,25 +71,29 @@ export async function envoyerInvitation(params: {
 
   const corps = `${enTeteHtml("Votre invitation Strapontin")}
 <h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px">Bienvenue sur Strapontin</h2>
-<p style="color:#555;margin:0 0 24px">Votre compte a été créé. Voici vos identifiants de connexion :</p>
-<table style="border-collapse:collapse;width:100%;margin-bottom:24px">
-  <tr>
-    <td style="padding:8px 0;color:#888;font-size:14px;width:130px">Identifiant</td>
-    <td style="padding:8px 0;font-family:monospace;font-size:14px;color:#111">${echapperHtml(params.identifiant)}</td>
-  </tr>
-  <tr>
-    <td style="padding:8px 0;color:#888;font-size:14px">Mot de passe</td>
-    <td style="padding:8px 0;font-family:monospace;font-size:14px;color:#111">${echapperHtml(params.motDePasse)}</td>
-  </tr>
-</table>
-<p style="color:#555;font-size:14px;margin:0 0 24px">
-  Il vous sera demandé de choisir un nouvel identifiant et un nouveau mot de passe à la première connexion.
-</p>
-<a href="${ctx.baseUrl}/login"
-   style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
-  Se connecter →
+<p style="color:#555;margin:0 0 24px">Votre compte a été créé. Commencez par choisir votre mot de passe :</p>
+<a href="${params.lienReset}"
+   style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500;margin-bottom:24px">
+  Créer mon mot de passe →
 </a>
+<p style="color:#aaa;font-size:13px;margin:16px 0 0">
+  Ce lien est valable 1 heure. Une fois votre mot de passe créé, connectez-vous avec votre identifiant temporaire :
+  <code style="font-family:monospace;background:#f5f5f5;padding:2px 6px;border-radius:4px">${echapperHtml(params.identifiant)}</code>
+</p>
+<p style="color:#aaa;font-size:13px;margin:8px 0 0">
+  Il vous sera demandé de choisir un identifiant définitif à la première connexion.
+</p>
 ${piedHtml(ctx.baseUrl)}`;
+
+  const texte = `Bienvenue sur Strapontin
+
+Votre compte a été créé. Commencez par choisir votre mot de passe en cliquant sur ce lien (valable 1 heure) :
+
+${params.lienReset}
+
+Une fois votre mot de passe créé, connectez-vous avec votre identifiant temporaire : ${params.identifiant}
+
+Il vous sera demandé de choisir un identifiant définitif à la première connexion.`;
 
   const { error } = await ctx.client.emails.send({
     from: EXPEDITEUR,
@@ -97,6 +101,7 @@ ${piedHtml(ctx.baseUrl)}`;
     to: params.email,
     subject: "Votre invitation Strapontin",
     html: corps,
+    text: texte,
   });
 
   if (error) {
@@ -131,12 +136,21 @@ export async function envoyerResetMotDePasse(params: {
 </p>
 ${piedHtml(ctx.baseUrl)}`;
 
+  const texte = `Réinitialisation du mot de passe
+
+Cliquez sur ce lien pour réinitialiser votre mot de passe (valable 1 heure) :
+
+${params.lienReset}
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.`;
+
   const { error } = await ctx.client.emails.send({
     from: EXPEDITEUR,
     replyTo: ctx.replyTo,
     to: params.email,
     subject: "Réinitialisation de votre mot de passe Strapontin",
     html: corps,
+    text: texte,
   });
 
   if (error) {
@@ -180,12 +194,20 @@ export async function envoyerSignalement(params: {
 <p style="color:#555;font-size:14px;white-space:pre-wrap;border-left:3px solid #e5e5e5;padding-left:12px;margin:0">${echapperHtml(params.message)}</p>
 ${piedHtml(ctx.baseUrl)}`;
 
+  const texte = `Signalement — ${typeLabel}
+
+Utilisateur : ${params.expediteurNom}
+Email : ${params.expediteurEmail}
+
+${params.message}`;
+
   const { error } = await ctx.client.emails.send({
     from: EXPEDITEUR,
     replyTo: params.expediteurEmail,
     to: ctx.replyTo,
     subject: `[Strapontin] Signalement — ${typeLabel} — ${params.expediteurNom}`,
     html: corps,
+    text: texte,
   });
 
   if (error) {
