@@ -13,7 +13,7 @@ import { eq, max } from "drizzle-orm";
 import { queue } from "$lib/server/queue";
 import { randomBytes, randomUUID, createECDH } from "crypto";
 import { fail, redirect } from "@sveltejs/kit";
-import { envoyerInvitation } from "$lib/server/email";
+import { env as envPublic } from "$env/dynamic/public";
 import {
   lireConfig,
   lireConfigsPresentes,
@@ -146,11 +146,12 @@ export const actions: Actions = {
       .set({ mustChangeCredentials: true })
       .where(eq(users.email, email));
 
-    await envoyerInvitation({
-      email,
-      identifiant: usernameTemp,
-      motDePasse: motDePasseTemp,
-    });
+    const baseUrl = (await lireConfig("PUBLIC_BASE_URL")) ?? envPublic.PUBLIC_BASE_URL ?? "";
+    if (baseUrl) {
+      await auth.api.requestPasswordReset({
+        body: { email, redirectTo: `${baseUrl}/reset-password` },
+      });
+    }
 
     return { succes: true, motDePasseTemp, email, identifiant: usernameTemp };
   },

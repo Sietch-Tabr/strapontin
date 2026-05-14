@@ -5,7 +5,8 @@ import { username, twoFactor } from "better-auth/plugins";
 import pino from "pino";
 import { db } from "$lib/server/db";
 import * as schema from "@strapontin/core/schema";
-import { envoyerResetMotDePasse } from "$lib/server/email";
+import { eq } from "drizzle-orm";
+import { envoyerInvitation, envoyerResetMotDePasse } from "$lib/server/email";
 import { logAdmin } from "$lib/server/log-admin";
 
 const logger = pino({ name: "auth" });
@@ -40,7 +41,15 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
-      await envoyerResetMotDePasse({ email: user.email, lienReset: url });
+      const [userDb] = await db
+        .select({ mustChangeCredentials: schema.users.mustChangeCredentials, username: schema.users.username })
+        .from(schema.users)
+        .where(eq(schema.users.email, user.email));
+      if (userDb?.mustChangeCredentials) {
+        await envoyerInvitation({ email: user.email, identifiant: userDb.username ?? '', lienReset: url });
+      } else {
+        await envoyerResetMotDePasse({ email: user.email, lienReset: url });
+      }
     },
   },
   plugins: [

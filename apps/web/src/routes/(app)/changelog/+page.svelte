@@ -16,6 +16,48 @@
 		<section>
 			<div class="mb-4 flex items-center gap-2 text-foreground">
 				<History size={20} aria-hidden="true" />
+				<h2 class="text-base font-medium">v 1.4.0 — Mai 2026</h2>
+			</div>
+			<div class="space-y-4 text-sm text-muted-foreground">
+				<div>
+					<p class="mb-1 font-medium text-foreground">Accueil</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Nouveau bouton « Masquer » sur chaque groupe d'artiste pour masquer toute la tournée en un clic.</li>
+						<li>Nouveau filtre « Masqués » pour retrouver et réafficher les concerts masqués.</li>
+						<li>L'accueil affiche désormais un avertissement quand plus de 50 concerts sont disponibles, avec un lien vers Mes spectacles.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Mes spectacles</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Pagination par 100 concerts avec navigation entre les pages.</li>
+						<li>Les mois disponibles dans le filtre sont calculés sur l'ensemble de vos concerts, pas uniquement la page en cours.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Paramètres</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>La page est désormais organisée en quatre onglets : Préférences, Notifications, Compte, Données. L'onglet actif est mémorisé dans l'URL.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Artistes</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>Un indicateur de chargement apparaît à côté de l'artiste après son ajout, pendant la recherche des concerts.</li>
+					</ul>
+				</div>
+				<div>
+					<p class="mb-1 font-medium text-foreground">Aide</p>
+					<ul class="list-inside list-disc space-y-1">
+						<li>La page d'aide est réorganisée avec des sections claires et des instructions pour installer l'application (iOS, Android, Desktop).</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+
+		<section>
+			<div class="mb-4 flex items-center gap-2 text-foreground">
+				<History size={20} aria-hidden="true" />
 				<h2 class="text-base font-medium">v 1.3.1 — Mai 2026</h2>
 			</div>
 			<div class="space-y-4 text-sm text-muted-foreground">

@@ -21,8 +21,8 @@
 		<h1 class="text-2xl font-semibold text-foreground">Mes prochains concerts</h1>
 	</div>
 
-	<!-- Chip de filtre statut -->
-	{#if totalAffiches > 0 || data.inclureIndisponibles || data.nbArtistes > 0}
+	<!-- Chips de filtre -->
+	{#if totalAffiches > 0 || data.inclureIndisponibles || data.afficherMasques || data.nbArtistes > 0}
 		<div class="mb-6 flex flex-wrap gap-1.5">
 			<a
 				href="?indisponibles={data.inclureIndisponibles ? '0' : '1'}"
@@ -34,6 +34,17 @@
 						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
 			>
 				Indisponibles
+			</a>
+			<a
+				href="?masques={data.afficherMasques ? '0' : '1'}"
+				data-sveltekit-replacestate
+				aria-current={data.afficherMasques ? 'true' : undefined}
+				class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors
+					{data.afficherMasques
+						? 'border-zinc-400 bg-zinc-500/15 text-zinc-600 dark:text-zinc-400'
+						: 'border-border bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
+			>
+				Masqués
 			</a>
 		</div>
 	{/if}
@@ -87,6 +98,18 @@
 						{#if groupe.estNew}
 							<span class="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">Nouveau</span>
 						{/if}
+						{#if !data.afficherMasques}
+							<form method="POST" action="?/masquerSerie" use:enhance class="ml-auto">
+								<input type="hidden" name="artisteNorm" value={groupe.artisteNorm} />
+								<button
+									type="submit"
+									class="rounded-md px-2 py-0.5 text-xs text-muted-foreground/50 transition-colors hover:bg-accent hover:text-muted-foreground"
+									aria-label="Masquer tous les concerts de {groupe.artiste}"
+								>
+									Masquer
+								</button>
+							</form>
+						{/if}
 					</div>
 
 					<!-- Liste des dates — lien billetterie sur chaque ligne -->
@@ -131,6 +154,18 @@
 											Billets
 										</a>
 									{/if}
+									{#if data.afficherMasques}
+									<form method="POST" action="?/demasquer" use:enhance>
+										<input type="hidden" name="concertId" value={concert.id} />
+										<button
+											type="submit"
+											class="rounded-md px-2 py-0.5 text-xs text-muted-foreground/40 transition-colors hover:bg-accent hover:text-muted-foreground"
+											aria-label="Réafficher ce concert"
+										>
+											Réafficher
+										</button>
+									</form>
+								{:else}
 									<form method="POST" action="?/masquer" use:enhance>
 										<input type="hidden" name="concertId" value={concert.id} />
 										<button
@@ -141,6 +176,7 @@
 											Masquer
 										</button>
 									</form>
+								{/if}
 								</div>
 							</div>
 						{/each}

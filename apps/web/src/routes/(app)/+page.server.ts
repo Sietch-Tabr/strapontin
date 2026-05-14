@@ -5,7 +5,7 @@ import {
   userArtistes,
   userSalles,
 } from "@strapontin/core/schema";
-import { eq, gte, and, count, isNull } from "drizzle-orm";
+import { eq, gte, and, count, isNull, isNotNull, inArray } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
@@ -16,6 +16,7 @@ import {
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const aujourdhui = new Date().toISOString().split("T")[0];
+  const afficherMasques = url.searchParams.get("masques") === "1";
 
   const { inclureIndisponibles } = await lireFiltresStatut(
     url,
@@ -25,7 +26,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const conditions: SQL[] = [
     eq(userMatches.userId, locals.user!.id),
     gte(concerts.date, aujourdhui),
-    isNull(userMatches.masqueLe),
+    afficherMasques ? isNotNull(userMatches.masqueLe) : isNull(userMatches.masqueLe),
   ];
 
   const conditionStatut = construireConditionStatut(inclureIndisponibles);
@@ -41,6 +42,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       .select({
         id: concerts.id,
         artiste: concerts.artiste,
+        artisteNorm: concerts.artisteNorm,
         date: concerts.date,
         heure: concerts.heure,
         salle: concerts.salle,
@@ -69,6 +71,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     {
       id: string;
       artiste: string;
+      artisteNorm: string;
       date: string;
       heure: string | null;
       salle: string;
@@ -86,6 +89,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   const artistesGroupes = [...groupesMap.entries()].map(([artiste, dates]) => ({
     artiste,
+    artisteNorm: dates[0]!.artisteNorm,
     estTournee: dates.length >= 2,
     estNew: dates.some((c) => c.notifieLe === null),
     concerts: dates.map((c) => ({
@@ -109,6 +113,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     nbArtistes,
     nbSalles,
     inclureIndisponibles,
+    afficherMasques,
     totalConcerts,
     tronque: totalConcerts > 50,
   };
@@ -124,6 +129,47 @@ export const actions: Actions = {
     await db
       .update(userMatches)
       .set({ masqueLe: new Date() })
+      .where(
+        and(
+          eq(userMatches.userId, locals.user!.id),
+          eq(userMatches.concertId, concertId),
+        ),
+      );
+  },
+
+  masquerSerie: async ({ request, locals }) => {
+    const donnees = await request.formData();
+    const artisteNorm = donnees.get("artisteNorm");
+    if (!artisteNorm || typeof artisteNorm !== "string") {
+      error(400, "Artiste manquant");
+    }
+    const aujourdhui = new Date().toISOString().split("T")[0];
+    const concertsArtiste = await db
+      .select({ id: concerts.id })
+      .from(concerts)
+      .where(and(eq(concerts.artisteNorm, artisteNorm), gte(concerts.date, aujourdhui)));
+    if (concertsArtiste.length === 0) return;
+    await db
+      .update(userMatches)
+      .set({ masqueLe: new Date() })
+      .where(
+        and(
+          eq(userMatches.userId, locals.user!.id),
+          inArray(userMatches.concertId, concertsArtiste.map((c) => c.id)),
+          isNull(userMatches.masqueLe),
+        ),
+      );
+  },
+
+  demasquer: async ({ request, locals }) => {
+    const donnees = await request.formData();
+    const concertId = donnees.get("concertId");
+    if (!concertId || typeof concertId !== "string") {
+      error(400, "Concert manquant");
+    }
+    await db
+      .update(userMatches)
+      .set({ masqueLe: null })
       .where(
         and(
           eq(userMatches.userId, locals.user!.id),

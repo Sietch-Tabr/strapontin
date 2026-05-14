@@ -2,7 +2,7 @@
 	import { tick, untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
-	import { Music, X, Plus, Search } from '@lucide/svelte';
+	import { Music, X, Plus, Search, Loader2 } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -11,6 +11,7 @@
 	$effect(() => { termeRecherche = data.recherche; });
 
 	let titreArtistes = $state<HTMLHeadingElement | undefined>(undefined);
+	let artistesEnFetch = $state(new Set<string>());
 </script>
 
 <svelte:head>
@@ -70,9 +71,17 @@
 						<div>
 							<p class="font-medium text-card-foreground">{suggestion.nom}</p>
 						</div>
-						<form method="POST" action="?/ajouter" use:enhance={() => async ({ result, update }) => {
-								if (result.type === 'success') toast.success('Artiste ajouté');
-								else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+						<form method="POST" action="?/ajouter" use:enhance={({ formData: donnees }) => async ({ result, update }) => {
+								if (result.type === 'success') {
+									const nom = donnees.get('nom') as string;
+									toast.success('Artiste ajouté');
+									artistesEnFetch = new Set([...artistesEnFetch, nom]);
+									setTimeout(() => {
+										artistesEnFetch = new Set([...artistesEnFetch].filter((n) => n !== nom));
+									}, 10000);
+								} else if (result.type === 'failure') {
+									toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+								}
 								await update();
 							}}>
 							<input type="hidden" name="nom" value={suggestion.nom} />
@@ -101,7 +110,19 @@
 				<p class="mb-3 text-sm text-muted-foreground">
 					Aucun résultat pour « {data.recherche} ».
 				</p>
-				<form method="POST" action="?/ajouter" use:enhance>
+				<form method="POST" action="?/ajouter" use:enhance={({ formData: donnees }) => async ({ result, update }) => {
+						if (result.type === 'success') {
+							const nom = donnees.get('nom') as string;
+							toast.success('Artiste ajouté');
+							artistesEnFetch = new Set([...artistesEnFetch, nom]);
+							setTimeout(() => {
+								artistesEnFetch = new Set([...artistesEnFetch].filter((n) => n !== nom));
+							}, 10000);
+						} else if (result.type === 'failure') {
+							toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');
+						}
+						await update();
+					}}>
 					<input type="hidden" name="nom" value={data.recherche} />
 					<button
 						type="submit"
@@ -130,7 +151,15 @@
 			<ul class="space-y-2">
 				{#each data.artistes as artiste (artiste.artisteNormalise)}
 					<li class="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
-						<span class="font-medium text-card-foreground">{artiste.artisteAffiche}</span>
+						<div class="flex min-w-0 items-center gap-2">
+							<span class="font-medium text-card-foreground">{artiste.artisteAffiche}</span>
+							{#if artistesEnFetch.has(artiste.artisteAffiche)}
+								<span class="flex items-center gap-1 text-xs text-muted-foreground">
+									<Loader2 size={12} class="animate-spin" />
+									Recherche en cours…
+								</span>
+							{/if}
+						</div>
 						<form method="POST" action="?/supprimer" use:enhance={() => async ({ result, update }) => {
 								if (result.type === 'success') toast.success('Artiste supprimé. Les concerts associés disparaîtront à la prochaine actualisation (dans moins de 2h).');
 								else if (result.type === 'failure') toast.error((result.data?.erreur as string | undefined) ?? 'Une erreur est survenue');

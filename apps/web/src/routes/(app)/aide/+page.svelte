@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { BookOpen, Bell, Settings, Compass, Shield, Scale, MessageSquare, Code } from '@lucide/svelte';
+	import { BookOpen, Bell, Settings, Compass, Shield, Scale, MessageSquare, Code, Smartphone } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
 	import type { PageData, ActionData } from './$types';
@@ -87,20 +87,11 @@
 						<BookOpen size={16} class="text-muted-foreground" aria-hidden="true" />
 						<h2 class="text-sm font-medium text-foreground">Artistes &amp; salles</h2>
 					</div>
-					<p class="text-sm text-muted-foreground">
-						Recherchez et ajoutez les artistes et salles à suivre. Les concerts sont récupérés automatiquement et mis à jour toutes les 2 heures depuis Ticketmaster et Eventim.
-					</p>
-				</div>
-
-				<div class="rounded-lg border border-border bg-card p-4">
-					<div class="mb-2 flex items-center gap-2">
-						<Compass size={16} class="text-muted-foreground" aria-hidden="true" />
-						<h2 class="text-sm font-medium text-foreground">Mes spectacles &amp; Découverte</h2>
-					</div>
-					<p class="text-sm text-muted-foreground">
-						<strong class="font-medium text-foreground">Mes spectacles</strong> : vos prochains concerts, filtrables par catégorie, mois ou budget.
-						<strong class="font-medium text-foreground">Découverte</strong> : tous les concerts en base, filtrables par département.
-					</p>
+					<ul class="space-y-1 text-sm text-muted-foreground list-disc list-inside">
+						<li>Recherchez et ajoutez les artistes et salles à suivre.</li>
+						<li>Les concerts sont mis à jour automatiquement toutes les 2 heures depuis Ticketmaster et Eventim.</li>
+						<li>Le badge <span class="font-medium text-foreground">Nouveau</span> signale les concerts apparus depuis votre dernière notification.</li>
+					</ul>
 				</div>
 
 				<div class="rounded-lg border border-border bg-card p-4">
@@ -108,11 +99,22 @@
 						<Bell size={16} class="text-muted-foreground" aria-hidden="true" />
 						<h2 class="text-sm font-medium text-foreground">Notifications</h2>
 					</div>
-					<p class="text-sm text-muted-foreground">
-						Recevez un email ou une notification push lorsque de nouveaux concerts correspondent à vos préférences.
-						Trois fréquences disponibles : désactivées, à chaque mise à jour (toutes les 2h) ou en récapitulatif quotidien à 8h.
-						Désactivées par défaut — à activer dans Paramètres.
-					</p>
+					<ul class="space-y-1 text-sm text-muted-foreground list-disc list-inside">
+						<li><span class="font-medium text-foreground">Email</span> : récapitulatif quotidien à 8h ou à chaque mise à jour. À activer dans <a href="/parametres" class="underline underline-offset-4 hover:text-foreground">Paramètres</a>.</li>
+						<li><span class="font-medium text-foreground">Push</span> : notification instantanée sur votre appareil. Désactivé par défaut.</li>
+					</ul>
+				</div>
+
+				<div class="rounded-lg border border-border bg-card p-4">
+					<div class="mb-2 flex items-center gap-2">
+						<Smartphone size={16} class="text-muted-foreground" aria-hidden="true" />
+						<h2 class="text-sm font-medium text-foreground">Installer l'application</h2>
+					</div>
+					<ul class="space-y-1 text-sm text-muted-foreground list-disc list-inside">
+						<li><span class="font-medium text-foreground">iOS</span> : Safari → Partager → « Sur l'écran d'accueil ».</li>
+						<li><span class="font-medium text-foreground">Android</span> : Chrome → menu ⋮ → « Installer l'application ».</li>
+						<li><span class="font-medium text-foreground">Desktop</span> : icône d'installation dans la barre d'adresse.</li>
+					</ul>
 				</div>
 
 				<div class="rounded-lg border border-border bg-card p-4">
@@ -120,10 +122,22 @@
 						<Settings size={16} class="text-muted-foreground" aria-hidden="true" />
 						<h2 class="text-sm font-medium text-foreground">Paramètres</h2>
 					</div>
-					<p class="text-sm text-muted-foreground">
-						Configurez vos départements de recherche, le filtre des billets indisponibles et votre thème (Automatique, Clair ou Sombre — synchronisé sur tous vos appareils).
-						Exportez et importez vos préférences au format JSON.
-					</p>
+					<ul class="space-y-1 text-sm text-muted-foreground list-disc list-inside">
+						<li>Configurez vos départements de recherche et le filtre des billets indisponibles.</li>
+						<li>Thème Automatique, Clair ou Sombre — synchronisé sur tous vos appareils.</li>
+						<li>Export et import de vos préférences au format JSON.</li>
+					</ul>
+				</div>
+
+				<div class="rounded-lg border border-border bg-card p-4 sm:col-span-2">
+					<div class="mb-2 flex items-center gap-2">
+						<Compass size={16} class="text-muted-foreground" aria-hidden="true" />
+						<h2 class="text-sm font-medium text-foreground">Mes spectacles &amp; Découverte</h2>
+					</div>
+					<ul class="space-y-1 text-sm text-muted-foreground list-disc list-inside">
+						<li><span class="font-medium text-foreground">Mes spectacles</span> : vos prochains concerts filtrables par catégorie, mois ou budget. Paginé par 100.</li>
+						<li><span class="font-medium text-foreground">Découverte</span> : tous les concerts en base, filtrables par département.</li>
+					</ul>
 				</div>
 
 			</div>
@@ -141,15 +155,11 @@
 						<Shield size={16} class="text-muted-foreground" aria-hidden="true" />
 						<h2 class="text-sm font-medium text-foreground">Données personnelles</h2>
 					</div>
-					<div class="space-y-2 text-sm text-muted-foreground">
-						<p>Données collectées : nom, identifiant, email, préférences et sessions. Utilisées exclusivement pour le fonctionnement de l'application, jamais partagées.</p>
-						<p>Hébergement sur serveur privé auto-hébergé en France. Données conservées tant que le compte est actif.</p>
-						<p>
-							Export intégral depuis
-							<a href="/parametres" class="underline underline-offset-4 hover:text-foreground">Paramètres → Export</a>.
-							Suppression de compte sur demande à l'administrateur.
-						</p>
-					</div>
+					<ul class="space-y-1 text-sm text-muted-foreground list-disc list-inside">
+						<li>Données collectées : nom, identifiant, email, préférences et sessions. Utilisées uniquement pour le fonctionnement de l'application, jamais partagées.</li>
+						<li>Hébergement sur serveur privé en France. Données conservées tant que le compte est actif.</li>
+						<li>Export intégral depuis <a href="/parametres" class="underline underline-offset-4 hover:text-foreground">Paramètres</a>. Suppression de compte sur demande à l'administrateur.</li>
+					</ul>
 				</div>
 
 				<div class="rounded-lg border border-border bg-card p-4">
