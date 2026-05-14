@@ -260,8 +260,8 @@
 	</div>
 
 	<!-- Navigation onglets -->
-	<nav class="mb-6 -mx-6 overflow-x-auto border-b border-border lg:-mx-8" aria-label="Sections des paramètres">
-		<div class="flex min-w-max gap-0 px-6 lg:px-8" role="tablist">
+	<nav class="sticky top-0 z-10 -mx-6 mb-6 overflow-x-auto border-b border-border bg-background px-6 lg:-mx-8 lg:px-8" aria-label="Sections des paramètres">
+		<div class="flex min-w-max gap-0" role="tablist">
 			{#each ONGLETS as onglet (onglet.id)}
 				<button
 					type="button"
