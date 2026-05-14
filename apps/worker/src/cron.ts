@@ -42,6 +42,8 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
       { type: "fetch:artistes:batch", correlationId },
       {
         jobId: "artistes__batch",
+        attempts: 3,
+        backoff: { type: "exponential", delay: 10_000 },
         removeOnComplete: true,
         removeOnFail: true,
       },
@@ -72,6 +74,8 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
       },
       {
         jobId: "region__all",
+        attempts: 3,
+        backoff: { type: "exponential", delay: 10_000 },
         removeOnComplete: true,
         removeOnFail: true,
       },
@@ -91,6 +95,8 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
       { type: "fetch:salle", venueId: tmVenueId, correlationId },
       {
         jobId: `salle__${tmVenueId}`,
+        attempts: 3,
+        backoff: { type: "exponential", delay: 10_000 },
         removeOnComplete: true,
         removeOnFail: true,
       },
@@ -127,6 +133,8 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     {
       jobId: `purge__${tag}`,
       delay: delaiPurge,
+      attempts: 3,
+      backoff: { type: "exponential", delay: 10_000 },
       removeOnComplete: true,
       removeOnFail: true,
     },
@@ -146,6 +154,8 @@ export async function planifierJobsUsers(queue: Queue<JobData>): Promise<void> {
     {
       jobId: `digest__${tag}`,
       delay: delaiDigest,
+      attempts: 3,
+      backoff: { type: "exponential", delay: 10_000 },
       removeOnComplete: true,
       removeOnFail: true,
     },

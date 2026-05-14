@@ -265,11 +265,11 @@ describe("TicketmasterSource.fetchArtistesBatch", () => {
   beforeEach(() => vi.restoreAllMocks());
 
   it("emet_warning_nb_pages_max_si_total_depasse_capacite", async () => {
-    // totalElements = 1500 → ceil(1500/200) = 8 pages > NB_PAGES_MAX (7)
+    // totalElements = 1200 → ceil(1200/200) = 6 pages > NB_PAGES_MAX (5)
     // Page 0 retourne 1 event, page 1 retourne vide → boucle s'arrête, warning attendu
     vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(reponseTMOk([evenementTMRaw()], 1500))
-      .mockResolvedValue(reponseTMOk([], 1500));
+      .mockResolvedValueOnce(reponseTMOk([evenementTMRaw()], 1200))
+      .mockResolvedValue(reponseTMOk([], 1200));
 
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -278,15 +278,15 @@ describe("TicketmasterSource.fetchArtistesBatch", () => {
 
     expect(resultats).toHaveLength(1);
     // Le warning pino écrit sur stdout, pas console.warn — on vérifie via les résultats
-    // et l'absence d'erreur : la condition Math.ceil(1500/200)=8 > NB_PAGES_MAX(7) est vraie
+    // et l'absence d'erreur : la condition Math.ceil(1200/200)=6 > NB_PAGES_MAX(5) est vraie
     warnSpy.mockRestore();
   });
 
   it("ne_pas_emettre_warning_si_total_dans_capacite", async () => {
-    // totalElements = 1400 → ceil(1400/200) = 7 = NB_PAGES_MAX → pas de warning
+    // totalElements = 1000 → ceil(1000/200) = 5 = NB_PAGES_MAX → pas de warning
     vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(reponseTMOk([evenementTMRaw()], 1400))
-      .mockResolvedValue(reponseTMOk([], 1400));
+      .mockResolvedValueOnce(reponseTMOk([evenementTMRaw()], 1000))
+      .mockResolvedValue(reponseTMOk([], 1000));
 
     const source = new TicketmasterSource("fake-key");
     const resultats = await source.fetchArtistesBatch(["K702"]);

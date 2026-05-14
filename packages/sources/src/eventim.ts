@@ -31,8 +31,20 @@ export function parseDateEventim(dateStr: string): {
   return { date: datePart, heure };
 }
 
+// #325 : produit["name"] est le titre de l'événement (ex: "Coldplay - Music Of The Spheres"),
+// pas le nom de l'artiste. On tente d'extraire l'artiste avant le premier séparateur " - " / " : ".
+export function extraireNomArtiste(titre: string): string {
+  const separateurs = [" - ", " : "];
+  for (const sep of separateurs) {
+    const idx = titre.indexOf(sep);
+    if (idx > 0) return titre.slice(0, idx).trim();
+  }
+  return titre;
+}
+
 export function mapProduit(
   produit: Record<string, unknown>,
+  artisteFallback?: string,
 ): ConcertBrut | null {
   try {
     // Structure : typeAttributes.liveEntertainment.{startDate, location}
@@ -45,8 +57,9 @@ export function mapProduit(
 
     const { date, heure } = parseDateEventim(dateStr);
 
-    const artiste = produit["name"] as string | undefined;
-    if (!artiste) return null;
+    const titre = produit["name"] as string | undefined;
+    if (!titre) return null;
+    const artiste = artisteFallback ?? extraireNomArtiste(titre);
 
     const location = liveEnt?.["location"] as
       | Record<string, unknown>
@@ -105,6 +118,7 @@ async function rechercherAttractionId(terme: string): Promise<string | null> {
   const url = `${BASE_URL}/v1/attractions?${params.toString()}`;
   const res = await fetch(url, {
     headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!res.ok) {
@@ -130,6 +144,7 @@ async function rechercherAttractionId(terme: string): Promise<string | null> {
 
 async function fetchProduitsParAttraction(
   attractionId: string,
+  artisteFallback?: string,
 ): Promise<ConcertBrut[]> {
   const aujourd_hui = new Date().toISOString().split("T")[0]!;
   const dateFin = new Date();
@@ -155,6 +170,7 @@ async function fetchProduitsParAttraction(
     const url = `${BASE_URL}/v1/products?${params.toString()}`;
     const res = await fetch(url, {
       headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (!res.ok) {
@@ -167,7 +183,9 @@ async function fetchProduitsParAttraction(
     if (!produits?.length) break;
 
     concerts.push(
-      ...produits.map(mapProduit).filter((c): c is ConcertBrut => c !== null),
+      ...produits
+        .map((p) => mapProduit(p, artisteFallback))
+        .filter((c): c is ConcertBrut => c !== null),
     );
 
     // Arrêter si on a récupéré tous les résultats
@@ -206,6 +224,7 @@ async function fetchProduitsParRegion(
     const url = `${BASE_URL}/v1/products?${params.toString()}`;
     const res = await fetch(url, {
       headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (!res.ok) {
@@ -219,7 +238,7 @@ async function fetchProduitsParRegion(
 
     concerts.push(
       ...produits
-        .map(mapProduit)
+        .map((p) => mapProduit(p))
         .filter((c): c is ConcertBrut => c !== null)
         .filter((c) => c.dept === dept),
     );
@@ -239,7 +258,7 @@ export class EventimSource implements SourceConcerts {
       return [];
     }
 
-    const concerts = await fetchProduitsParAttraction(attractionId);
+    const concerts = await fetchProduitsParAttraction(attractionId, nom);
     logger.info(
       { artiste: nom, total: concerts.length },
       "Eventim fetchArtiste",
