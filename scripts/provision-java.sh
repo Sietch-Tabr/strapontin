@@ -12,6 +12,7 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 # qui hérite alors de l'IP 192.168.20.79 via la réservation DHCP.
 #
 # Pour redéployer proprement : détruire l'ancien LXC d'abord :
+#   pct set <VMID> --protection 0
 #   pct stop <VMID> && pct destroy <VMID> --destroy-unreferenced-disks 1 --purge 1
 #   puis relancer ce script.
 
@@ -101,6 +102,9 @@ pct create "$VMID" "$TEMPLATE_PATH" \
 echo "[2] Montage NAS /mnt/backup..."
 pct set "$VMID" --mp0 "/mnt/synology/backup/Strapontin,mp=/mnt/backup"
 
+echo "[2] Protection contre la suppression accidentelle..."
+pct set "$VMID" --protection 1
+
 # ---------------------------------------------------------------
 # 3. Démarrage
 # ---------------------------------------------------------------
@@ -112,12 +116,6 @@ sleep 5
 # ---------------------------------------------------------------
 # 4. Système de base
 # ---------------------------------------------------------------
-
-echo "[4] Paramètre réseau net.core.somaxconn..."
-pct exec "$VMID" -- bash -c "
-    echo 'net.core.somaxconn = 511' > /etc/sysctl.d/99-strapontin.conf
-    sysctl -p /etc/sysctl.d/99-strapontin.conf
-"
 
 echo "[4] Locale, fuseau horaire, journald..."
 pct exec "$VMID" -- bash -c "
