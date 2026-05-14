@@ -117,6 +117,7 @@ pct exec "$VMID" -- bash -c "
     mkdir -p /etc/systemd/journald.conf.d
     printf '[Journal]\nSystemMaxUse=100M\n' > /etc/systemd/journald.conf.d/strapontin.conf
     systemctl restart systemd-journald
+    printf 'LANG=fr_FR.UTF-8\nLC_ALL=fr_FR.UTF-8\nDEBIAN_FRONTEND=noninteractive\n' > /etc/environment
 "
 
 echo "[4] Autologin root sur console Proxmox..."
@@ -129,8 +130,7 @@ pct exec "$VMID" -- bash -c "
 
 echo "[4] Dépendances de base..."
 pct exec "$VMID" -- bash -c "
-    export DEBIAN_FRONTEND=noninteractive
-    export LC_ALL=C.UTF-8
+    export LC_ALL=C LANG=C DEBIAN_FRONTEND=noninteractive
     apt-get update -qq
     apt-get upgrade -y -qq
     apt-get install -y \
@@ -160,13 +160,14 @@ APT_CONF
 
 echo "[5] Installation Java $JAVA_VERSION (Adoptium Temurin)..."
 pct exec "$VMID" -- bash -c "
+    export LC_ALL=C LANG=C DEBIAN_FRONTEND=noninteractive
     wget -qO /usr/share/keyrings/adoptium.asc \
         https://packages.adoptium.net/artifactory/api/gpg/key/public
     CODENAME=\$(lsb_release -cs)
     echo \"deb [signed-by=/usr/share/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb \${CODENAME} main\" \
         > /etc/apt/sources.list.d/adoptium.list
     apt-get update -qq
-    DEBIAN_FRONTEND=noninteractive apt-get install -y temurin-${JAVA_VERSION}-jdk
+    apt-get install -y temurin-${JAVA_VERSION}-jdk
     java -version
 "
 
@@ -176,13 +177,14 @@ pct exec "$VMID" -- bash -c "
 
 echo "[6] Installation PostgreSQL $PG_VERSION..."
 pct exec "$VMID" -- bash -c "
+    export LC_ALL=C LANG=C DEBIAN_FRONTEND=noninteractive
     CODENAME=\$(lsb_release -cs)
     curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
         | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
     echo \"deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt \${CODENAME}-pgdg main\" \
         > /etc/apt/sources.list.d/pgdg.list
     apt-get update -qq
-    DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-${PG_VERSION}
+    apt-get install -y postgresql-${PG_VERSION}
     systemctl enable postgresql
 "
 
