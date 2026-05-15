@@ -34,13 +34,57 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
       }[])
     : [];
 
-  const jobs = repJobs.ok ? await repJobs.json() : null;
+  type StatJobJava = {
+    typeJob: string;
+    derniereExec: string | null;
+    dureeMs: number | null;
+    erreur: string | null;
+  };
+
+  const jobsReponse = repJobs.ok
+    ? (await repJobs.json()) as { statsJobs: StatJobJava[]; quotaTM: unknown }
+    : null;
+
+  const statsJobsArr: StatJobJava[] = jobsReponse?.statsJobs ?? [];
+
+  function transformerStatJob(stat: StatJobJava) {
+    return {
+      finRun: stat.derniereExec,
+      durationMs: stat.dureeMs,
+      statut: stat.erreur ? "error" : (stat.derniereExec ? "ok" : null),
+      erreur: stat.erreur,
+      debutRun: null as string | null,
+    };
+  }
+
+  const statsJobs = {
+    artistesBatch:
+      statsJobsArr.find((s) => s.typeJob === "fetch:artistes:batch")
+        ? transformerStatJob(statsJobsArr.find((s) => s.typeJob === "fetch:artistes:batch")!)
+        : null,
+    region:
+      statsJobsArr.find((s) => s.typeJob === "fetch:region")
+        ? transformerStatJob(statsJobsArr.find((s) => s.typeJob === "fetch:region")!)
+        : null,
+  };
+
+  const workerLastSuccess =
+    statsJobsArr
+      .filter((s) => !s.erreur && s.derniereExec)
+      .map((s) => s.derniereExec as string)
+      .sort()
+      .pop() ?? null;
+
+  const quotaTM = jobsReponse?.quotaTM ?? null;
   const logsAdmin = repLogs.ok ? await repLogs.json() : [];
   const configStatuts = repConfig.ok ? await repConfig.json() : [];
 
   return {
+    utilisateur: locals.user,
     utilisateurs,
-    jobs,
+    statsJobs,
+    workerLastSuccess,
+    quotaTM,
     logsAdmin,
     configStatuts,
   };
