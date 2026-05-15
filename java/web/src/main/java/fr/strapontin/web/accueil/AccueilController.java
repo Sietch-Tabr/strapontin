@@ -77,7 +77,7 @@ public class AccueilController {
       @RequestParam(required = false) String indisponibles,
       Authentication auth) {
     String userId = utilisateur(auth).id();
-    String aujourd8 = LocalDate.now().toString();
+    LocalDate aujourd8 = LocalDate.now();
 
     boolean filtreDisponibles = lireFiltreDisponibles(userId);
     boolean inclureIndisponibles =

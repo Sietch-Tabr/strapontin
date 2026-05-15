@@ -100,8 +100,8 @@ public class SpectacleController {
       Authentication auth) {
 
     String userId = utilisateur(auth).id();
-    String aujourd8 = LocalDate.now().toString();
-    String dans15Jours = LocalDate.now().plusDays(15).toString();
+    LocalDate aujourd8 = LocalDate.now();
+    LocalDate dans15Jours = LocalDate.now().plusDays(15);
     int pageNum = Math.max(0, page);
 
     // Filtre disponibles (lu depuis user_config, surchargeable via ?indisponibles=1)
@@ -328,7 +328,7 @@ public class SpectacleController {
   public ResponseEntity<Map<String, Object>> masquerArtiste(
       @RequestBody RequeteMasquerArtiste requete, Authentication auth) {
     String userId = utilisateur(auth).id();
-    String aujourd8 = LocalDate.now().toString();
+    LocalDate aujourd8 = LocalDate.now();
 
     if (requete.artisteNorm() == null || requete.artisteNorm().isBlank()) {
       return erreur(400, "Identifiant artiste manquant.");
