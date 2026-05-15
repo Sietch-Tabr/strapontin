@@ -43,37 +43,45 @@ public class SecurityConfiguration {
   public SecurityFilterChain securityFilterChain(
       HttpSecurity http,
       RateLimitingLoginFilter rateLimitingFilter,
-      BloquerAccesDirectIpFilter bloquerIpFilter
-  ) throws Exception {
-    http
-        .addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
+      BloquerAccesDirectIpFilter bloquerIpFilter)
+      throws Exception {
+    http.addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers(HttpMethod.GET, "/api/push").permitAll()
-            .requestMatchers("/actuator/health").permitAll()
-            .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-            .requestMatchers("/api/auth/login").permitAll()
-            .requestMatchers("/api/admin/**").hasRole("ADMIN")
-            .anyRequest().authenticated()
-        )
+        .authorizeHttpRequests(
+            auth ->
+                auth.requestMatchers(HttpMethod.GET, "/api/push")
+                    .permitAll()
+                    .requestMatchers("/actuator/health")
+                    .permitAll()
+                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                    .permitAll()
+                    .requestMatchers("/api/auth/login")
+                    .permitAll()
+                    .requestMatchers("/api/admin/**")
+                    .hasRole("ADMIN")
+                    .anyRequest()
+                    .authenticated())
         // CSRF désactivé : API REST avec sessions SameSite=Strict
         .csrf(AbstractHttpConfigurer::disable)
-        .sessionManagement(session -> session
-            .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-            .maximumSessions(10)
-        )
-        .exceptionHandling(ex -> ex
-            .authenticationEntryPoint((request, response, _) -> {
-              response.setStatus(401);
-              response.setContentType("application/json;charset=UTF-8");
-              response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
-            })
-            .accessDeniedHandler((request, response, _) -> {
-              response.setStatus(403);
-              response.setContentType("application/json;charset=UTF-8");
-              response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
-            })
-        );
+        .sessionManagement(
+            session ->
+                session
+                    .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                    .maximumSessions(10))
+        .exceptionHandling(
+            ex ->
+                ex.authenticationEntryPoint(
+                        (request, response, _) -> {
+                          response.setStatus(401);
+                          response.setContentType("application/json;charset=UTF-8");
+                          response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
+                        })
+                    .accessDeniedHandler(
+                        (request, response, _) -> {
+                          response.setStatus(403);
+                          response.setContentType("application/json;charset=UTF-8");
+                          response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
+                        }));
 
     return http.build();
   }
@@ -93,9 +101,7 @@ public class SecurityConfiguration {
   /// @return l'AuthenticationManager configuré
   @Bean
   public AuthenticationManager authenticationManager(
-      UserDetailsService userDetailsService,
-      PasswordEncoder passwordEncoder
-  ) {
+      UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
     DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
     provider.setPasswordEncoder(passwordEncoder);
     return new ProviderManager(provider);

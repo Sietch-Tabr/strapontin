@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.securite;
 
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -11,8 +12,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
 
 /// Chargement des utilisateurs depuis la base de données pour Spring Security.
 ///
@@ -40,7 +39,8 @@ public class UtilisateurDetailsService implements UserDetailsService {
   /// @throws UsernameNotFoundException si aucun compte n'est trouvé
   @Override
   public UserDetails loadUserByUsername(String identifiant) throws UsernameNotFoundException {
-    String sql = """
+    String sql =
+        """
         SELECT u.id, u.username, u.email, u.role,
                u.two_factor_enabled, u.must_change_credentials,
                a.password
@@ -49,20 +49,22 @@ public class UtilisateurDetailsService implements UserDetailsService {
         WHERE lower(u.username) = lower(:identifiant)
         """;
 
-    return jdbc.query(sql, Map.of("identifiant", identifiant), rs -> {
-      if (!rs.next()) {
-        log.debug("Identifiant non trouvé : {}", identifiant);
-        throw new UsernameNotFoundException("Identifiant ou mot de passe incorrect");
-      }
-      return new UtilisateurDetails(
-          rs.getString("id"),
-          rs.getString("username"),
-          rs.getString("email"),
-          rs.getString("password"),
-          rs.getString("role"),
-          rs.getBoolean("two_factor_enabled"),
-          rs.getBoolean("must_change_credentials")
-      );
-    });
+    return jdbc.query(
+        sql,
+        Map.of("identifiant", identifiant),
+        rs -> {
+          if (!rs.next()) {
+            log.debug("Identifiant non trouvé : {}", identifiant);
+            throw new UsernameNotFoundException("Identifiant ou mot de passe incorrect");
+          }
+          return new UtilisateurDetails(
+              rs.getString("id"),
+              rs.getString("username"),
+              rs.getString("email"),
+              rs.getString("password"),
+              rs.getString("role"),
+              rs.getBoolean("two_factor_enabled"),
+              rs.getBoolean("must_change_credentials"));
+        });
   }
 }

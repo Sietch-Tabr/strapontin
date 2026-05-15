@@ -4,13 +4,12 @@
  */
 package fr.strapontin.web.securite;
 
-import org.bouncycastle.crypto.generators.SCrypt;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.bouncycastle.crypto.generators.SCrypt;
+import org.junit.jupiter.api.Test;
 
 /// Tests unitaires de {@link BetterAuthPasswordEncoder}.
 ///
@@ -106,19 +105,18 @@ class BetterAuthPasswordEncoderTest {
 
     // Hash généré avec sel en UTF-8 (correct)
     byte[] selUtf8 = saltHex.getBytes(StandardCharsets.UTF_8);
-    byte[] hashBytes = SCrypt.generate(
-        motDePasse.getBytes(StandardCharsets.UTF_8), selUtf8, N, R, P, DK_LEN
-    );
+    byte[] hashBytes =
+        SCrypt.generate(motDePasse.getBytes(StandardCharsets.UTF_8), selUtf8, N, R, P, DK_LEN);
     String hashCorrect = saltHex + ":" + HexFormat.of().formatHex(hashBytes);
 
     // Hash généré avec sel décodé (incorrect — ne doit PAS correspondre)
     byte[] selDecode = HexFormat.of().parseHex(saltHex);
-    byte[] hashBytesMauvais = SCrypt.generate(
-        motDePasse.getBytes(StandardCharsets.UTF_8), selDecode, N, R, P, DK_LEN
-    );
+    byte[] hashBytesMauvais =
+        SCrypt.generate(motDePasse.getBytes(StandardCharsets.UTF_8), selDecode, N, R, P, DK_LEN);
     String hashMauvais = saltHex + ":" + HexFormat.of().formatHex(hashBytesMauvais);
 
     assertTrue(encodeur.matches(motDePasse, hashCorrect), "Doit valider le hash avec sel UTF-8");
-    assertFalse(encodeur.matches(motDePasse, hashMauvais), "Ne doit pas valider le hash avec sel décodé");
+    assertFalse(
+        encodeur.matches(motDePasse, hashMauvais), "Ne doit pas valider le hash avec sel décodé");
   }
 }

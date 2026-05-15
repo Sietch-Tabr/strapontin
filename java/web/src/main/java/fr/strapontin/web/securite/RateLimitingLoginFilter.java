@@ -12,14 +12,13 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.time.Duration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
-import java.time.Duration;
 
 /// Filtre de rate limiting sur l'endpoint de login.
 ///
@@ -36,17 +35,13 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
   private static final Duration FENETRE = Duration.ofMinutes(15);
   private static final String URL_LOGIN = "/api/auth/login";
 
-  private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
-      .expireAfterWrite(FENETRE.plusMinutes(1))
-      .maximumSize(10_000)
-      .build();
+  private final Cache<String, Bucket> buckets =
+      Caffeine.newBuilder().expireAfterWrite(FENETRE.plusMinutes(1)).maximumSize(10_000).build();
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      FilterChain chain
-  ) throws ServletException, IOException {
+      HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+      throws ServletException, IOException {
     if (!HttpMethod.POST.matches(request.getMethod())
         || !URL_LOGIN.equals(request.getServletPath())) {
       chain.doFilter(request, response);
@@ -62,17 +57,18 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
       response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
       response.setContentType(MediaType.APPLICATION_JSON_VALUE);
       response.setCharacterEncoding("UTF-8");
-      response.getWriter().write(
-          "{\"erreur\":\"Trop de tentatives de connexion. Réessayez dans 15 minutes.\"}"
-      );
+      response
+          .getWriter()
+          .write("{\"erreur\":\"Trop de tentatives de connexion. Réessayez dans 15 minutes.\"}");
     }
   }
 
   private Bucket creerBucket() {
-    Bandwidth limite = Bandwidth.builder()
-        .capacity(MAX_TENTATIVES)
-        .refillIntervally(MAX_TENTATIVES, FENETRE)
-        .build();
+    Bandwidth limite =
+        Bandwidth.builder()
+            .capacity(MAX_TENTATIVES)
+            .refillIntervally(MAX_TENTATIVES, FENETRE)
+            .build();
     return Bucket.builder().addLimit(limite).build();
   }
 

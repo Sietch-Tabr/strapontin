@@ -6,6 +6,7 @@ package fr.strapontin.web.securite;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -20,8 +21,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Objects;
 
 /// Endpoints d'authentification de l'API REST.
 ///
@@ -62,15 +61,14 @@ public class AuthController {
   /// @return l'utilisateur authentifié ou 401 si les credentials sont invalides
   @PostMapping("/api/auth/login")
   public ResponseEntity<UtilisateurDto> login(
-      @RequestBody LoginRequest req,
-      HttpServletRequest httpRequest
-  ) {
+      @RequestBody LoginRequest req, HttpServletRequest httpRequest) {
     Objects.requireNonNull(req.identifiant(), "L'identifiant est requis");
     Objects.requireNonNull(req.motDePasse(), "Le mot de passe est requis");
 
-    Authentication auth = authenticationManager.authenticate(
-        UsernamePasswordAuthenticationToken.unauthenticated(req.identifiant(), req.motDePasse())
-    );
+    Authentication auth =
+        authenticationManager.authenticate(
+            UsernamePasswordAuthenticationToken.unauthenticated(
+                req.identifiant(), req.motDePasse()));
 
     SecurityContext contexte = SecurityContextHolder.createEmptyContext();
     contexte.setAuthentication(auth);
@@ -78,13 +76,12 @@ public class AuthController {
 
     HttpSession session = httpRequest.getSession(true);
     session.setAttribute(
-        HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-        contexte
-    );
+        HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, contexte);
 
     UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
     log.debug("Connexion réussie : {}", details.identifiant());
-    return ResponseEntity.ok(new UtilisateurDto(details.id(), details.identifiant(), details.role()));
+    return ResponseEntity.ok(
+        new UtilisateurDto(details.id(), details.identifiant(), details.role()));
   }
 
   /// Invalide la session courante et déconnecte l'utilisateur.
@@ -111,6 +108,7 @@ public class AuthController {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
     UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
-    return ResponseEntity.ok(new UtilisateurDto(details.id(), details.identifiant(), details.role()));
+    return ResponseEntity.ok(
+        new UtilisateurDto(details.id(), details.identifiant(), details.role()));
   }
 }

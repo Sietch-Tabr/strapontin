@@ -4,13 +4,12 @@
  */
 package fr.strapontin.web.securite;
 
-import org.bouncycastle.crypto.generators.SCrypt;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import org.bouncycastle.crypto.generators.SCrypt;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 /// Encodeur de mots de passe compatible avec Better-Auth (scrypt Node.js).
 ///
@@ -78,7 +77,8 @@ public class BetterAuthPasswordEncoder implements PasswordEncoder {
   ///
   /// <p>PIÈGE CRITIQUE : Better-Auth passe le sel à {@code node:crypto.scrypt()} comme
   /// string hexadécimal UTF-8 (32 bytes), jamais comme bytes décodés (16 bytes).
-  /// {@code saltHex.getBytes(UTF_8)} est correct — {@code HexFormat.parseHex(saltHex)} ne l'est pas.
+  /// {@code saltHex.getBytes(UTF_8)} est correct — {@code HexFormat.parseHex(saltHex)} ne l'est
+  // pas.
   ///
   /// @param motDePasse le mot de passe en clair
   /// @param hashStocke le hash au format {@code saltHex:hashHex}

@@ -4,12 +4,11 @@
  */
 package fr.strapontin.web.securite;
 
+import java.util.Collection;
+import java.util.List;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
-import java.util.Collection;
-import java.util.List;
 
 /// Représentation Spring Security d'un utilisateur Strapontin.
 ///
@@ -33,8 +32,8 @@ public record UtilisateurDetails(
     String motDePasse,
     String role,
     boolean twoFactorActif,
-    boolean doitChangerCredentials
-) implements UserDetails {
+    boolean doitChangerCredentials)
+    implements UserDetails {
 
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
