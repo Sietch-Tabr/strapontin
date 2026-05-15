@@ -22,10 +22,18 @@ const proxy: RequestHandler = async ({ request, params }) => {
       ? await request.arrayBuffer()
       : undefined;
 
-  return fetch(javaUrl, {
+  // On enveloppe la réponse dans un nouveau Response avec des headers mutables
+  // pour éviter "TypeError: immutable" quand SvelteKit/Vite 8 ajoute ses propres headers.
+  const rep = await fetch(javaUrl, {
     method: request.method,
     headers: entetes,
     body: corps,
+  });
+
+  return new Response(rep.body, {
+    status: rep.status,
+    statusText: rep.statusText,
+    headers: new Headers(rep.headers),
   });
 };
 

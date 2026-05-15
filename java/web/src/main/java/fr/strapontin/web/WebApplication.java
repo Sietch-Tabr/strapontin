@@ -7,6 +7,7 @@ package fr.strapontin.web;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.session.jdbc.config.annotation.web.http.EnableJdbcHttpSession;
 
 /// Point d'entrée de l'API REST Strapontin.
 ///
@@ -18,6 +19,7 @@ import org.springframework.cache.annotation.EnableCaching;
 /// @author Kwaite
 @SpringBootApplication
 @EnableCaching
+@EnableJdbcHttpSession(maxInactiveIntervalInSeconds = 604800)
 public class WebApplication {
 
   public static void main(String[] args) {
