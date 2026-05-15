@@ -28,14 +28,18 @@ class EventimSourceTest {
   private static Map<String, Object> produitEventimRaw(Map<String, Object> surcharge) {
     Map<String, Object> base = new HashMap<>();
     base.put("name", "Julien Clerc");
-    base.put("typeAttributes", Map.of(
-        "liveEntertainment", Map.of(
-            "startDate", "2025-09-15T20:30:00",
-            "location", Map.of(
-                "name", "Accor Arena",
-                "city", "Paris",
-                "postalCode", "75012"),
-            "priceRange", Map.of("min", 39.9, "max", 99.9))));
+    base.put(
+        "typeAttributes",
+        Map.of(
+            "liveEntertainment",
+            Map.of(
+                "startDate", "2025-09-15T20:30:00",
+                "location",
+                    Map.of(
+                        "name", "Accor Arena",
+                        "city", "Paris",
+                        "postalCode", "75012"),
+                "priceRange", Map.of("min", 39.9, "max", 99.9))));
     base.put("link", "https://www.eventim.fr/event/julien-clerc-1234");
     base.putAll(surcharge);
     return base;
@@ -131,8 +135,8 @@ class EventimSourceTest {
 
   @Test
   void mapProduit_dateAbsente_retourneNull() {
-    Map<String, Object> produit = produitEventimRaw(Map.of(
-        "typeAttributes", Map.of("liveEntertainment", Map.of())));
+    Map<String, Object> produit =
+        produitEventimRaw(Map.of("typeAttributes", Map.of("liveEntertainment", Map.of())));
     assertNull(EventimSource.mapProduit(produit, null));
   }
 
@@ -145,8 +149,11 @@ class EventimSourceTest {
 
   @Test
   void mapProduit_urlDepuisDomainEtPath_reconstruitUrl() {
-    Map<String, Object> produit = produitEventimRaw(Map.of(
-        "url", Map.of("domain", "https://www.eventim.fr", "path", "/event/julien-clerc-1234")));
+    Map<String, Object> produit =
+        produitEventimRaw(
+            Map.of(
+                "url",
+                Map.of("domain", "https://www.eventim.fr", "path", "/event/julien-clerc-1234")));
     Map<String, Object> base = new HashMap<>(produit);
     base.remove("link");
     ConcertBrut resultat = EventimSource.mapProduit(base, null);
@@ -166,9 +173,11 @@ class EventimSourceTest {
 
   @Test
   void mapProduit_locationAbsente_salleInconnueEtDeptNull() {
-    Map<String, Object> produit = produitEventimRaw(Map.of(
-        "typeAttributes", Map.of(
-            "liveEntertainment", Map.of("startDate", "2025-09-15T20:30:00"))));
+    Map<String, Object> produit =
+        produitEventimRaw(
+            Map.of(
+                "typeAttributes",
+                Map.of("liveEntertainment", Map.of("startDate", "2025-09-15T20:30:00"))));
     ConcertBrut resultat = EventimSource.mapProduit(produit, null);
     assertNotNull(resultat);
     assertEquals("Salle inconnue", resultat.salle());
@@ -183,12 +192,14 @@ class EventimSourceTest {
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
 
-    serveur.expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
-        .andRespond(withSuccess(
-            """
-            {"attractions":[]}
-            """,
-            MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[]}
+                """,
+                MediaType.APPLICATION_JSON));
 
     EventimSource source = new EventimSource(restClient);
     List<ConcertBrut> resultats = source.fetchArtiste("Artiste Inconnu");
@@ -203,22 +214,26 @@ class EventimSourceTest {
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
 
-    serveur.expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
-        .andRespond(withSuccess(
-            """
-            {"attractions":[
-              {"attractionId":"evt-999","name":"Julien Clerc Tribute"},
-              {"attractionId":"evt-123","name":"Julien Clerc"}
-            ]}
-            """,
-            MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[
+                  {"attractionId":"evt-999","name":"Julien Clerc Tribute"},
+                  {"attractionId":"evt-123","name":"Julien Clerc"}
+                ]}
+                """,
+                MediaType.APPLICATION_JSON));
 
-    serveur.expect(requestTo(org.hamcrest.Matchers.containsString("evt-123")))
-        .andRespond(withSuccess(
-            """
-            {"products":[],"totalResults":0}
-            """,
-            MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-123")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[],"totalResults":0}
+                """,
+                MediaType.APPLICATION_JSON));
 
     EventimSource source = new EventimSource(restClient);
     source.fetchArtiste("Julien Clerc");
@@ -232,26 +247,30 @@ class EventimSourceTest {
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
 
-    serveur.expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
-        .andRespond(withSuccess(
-            """
-            {"attractions":[{"attractionId":"evt-123","name":"Julien Clerc"}]}
-            """,
-            MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-123","name":"Julien Clerc"}]}
+                """,
+                MediaType.APPLICATION_JSON));
 
-    serveur.expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
-        .andRespond(withSuccess(
-            """
-            {"products":[
-              {"name":"Julien Clerc",
-               "typeAttributes":{"liveEntertainment":{
-                 "startDate":"2025-09-15T20:30:00",
-                 "location":{"name":"Accor Arena","city":"Paris","postalCode":"75012"},
-                 "priceRange":{"min":39.9,"max":99.9}}},
-               "link":"https://www.eventim.fr/event/julien-clerc-1234"}
-            ],"totalResults":1}
-            """,
-            MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[
+                  {"name":"Julien Clerc",
+                   "typeAttributes":{"liveEntertainment":{
+                     "startDate":"2025-09-15T20:30:00",
+                     "location":{"name":"Accor Arena","city":"Paris","postalCode":"75012"},
+                     "priceRange":{"min":39.9,"max":99.9}}},
+                   "link":"https://www.eventim.fr/event/julien-clerc-1234"}
+                ],"totalResults":1}
+                """,
+                MediaType.APPLICATION_JSON));
 
     EventimSource source = new EventimSource(restClient);
     List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");

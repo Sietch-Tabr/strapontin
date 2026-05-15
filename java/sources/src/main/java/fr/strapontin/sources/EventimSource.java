@@ -37,10 +37,11 @@ public class EventimSource {
 
   /// Crée une instance avec un RestClient par défaut incluant les headers Eventim.
   public EventimSource() {
-    this(RestClient.builder()
-        .defaultHeader("Accept", "application/json")
-        .defaultHeader("User-Agent", "Mozilla/5.0")
-        .build());
+    this(
+        RestClient.builder()
+            .defaultHeader("Accept", "application/json")
+            .defaultHeader("User-Agent", "Mozilla/5.0")
+            .build());
   }
 
   /// Crée une instance avec un RestClient personnalisé (injection de test).
@@ -71,10 +72,10 @@ public class EventimSource {
   public static String[] parseDateEventim(String dateStr) {
     String datePart = dateStr.substring(0, 10);
     int tIndex = dateStr.indexOf('T');
-    if (tIndex == -1) return new String[]{datePart, null};
+    if (tIndex == -1) return new String[] {datePart, null};
     String heurePart = dateStr.substring(tIndex + 1, Math.min(tIndex + 6, dateStr.length()));
     String heure = "00:00".equals(heurePart) ? null : heurePart;
-    return new String[]{datePart, heure};
+    return new String[] {datePart, heure};
   }
 
   /// Extrait le nom de l'artiste depuis un titre d'événement Eventim.
@@ -85,7 +86,7 @@ public class EventimSource {
   /// @param titre titre de l'événement Eventim
   /// @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
   public static String extraireNomArtiste(String titre) {
-    for (String sep : new String[]{" - ", " : "}) {
+    for (String sep : new String[] {" - ", " : "}) {
       int idx = titre.indexOf(sep);
       if (idx > 0) return titre.substring(0, idx).strip();
     }
@@ -101,9 +102,10 @@ public class EventimSource {
   public static ConcertBrut mapProduit(Map<String, Object> produit, String artisteFallback) {
     try {
       var typeAttributes = (Map<String, Object>) produit.get("typeAttributes");
-      var liveEnt = typeAttributes != null
-          ? (Map<String, Object>) typeAttributes.get("liveEntertainment")
-          : null;
+      var liveEnt =
+          typeAttributes != null
+              ? (Map<String, Object>) typeAttributes.get("liveEntertainment")
+              : null;
 
       String dateStr = liveEnt != null ? (String) liveEnt.get("startDate") : null;
       if (dateStr == null) return null;
@@ -117,19 +119,22 @@ public class EventimSource {
       String artiste = artisteFallback != null ? artisteFallback : extraireNomArtiste(titre);
 
       var location = liveEnt != null ? (Map<String, Object>) liveEnt.get("location") : null;
-      String salle = location != null && location.get("name") != null
-          ? (String) location.get("name")
-          : "Salle inconnue";
+      String salle =
+          location != null && location.get("name") != null
+              ? (String) location.get("name")
+              : "Salle inconnue";
       String ville = location != null ? (String) location.get("city") : null;
       String dept = extraireDept(location != null ? (String) location.get("postalCode") : null);
 
       var priceRange = liveEnt != null ? (Map<String, Object>) liveEnt.get("priceRange") : null;
-      Double prixMin = priceRange != null && priceRange.get("min") != null
-          ? ((Number) priceRange.get("min")).doubleValue()
-          : null;
-      Double prixMax = priceRange != null && priceRange.get("max") != null
-          ? ((Number) priceRange.get("max")).doubleValue()
-          : null;
+      Double prixMin =
+          priceRange != null && priceRange.get("min") != null
+              ? ((Number) priceRange.get("min")).doubleValue()
+              : null;
+      Double prixMax =
+          priceRange != null && priceRange.get("max") != null
+              ? ((Number) priceRange.get("max")).doubleValue()
+              : null;
 
       var urlObj = (Map<String, Object>) produit.get("url");
       String lienDirect = (String) produit.get("link");
@@ -140,8 +145,9 @@ public class EventimSource {
         url = urlObj.get("domain") + (String) urlObj.get("path");
       }
 
-      return new ConcertBrut(artiste, date, heure, salle, ville, dept, prixMin, prixMax, url,
-          "eventim", null, null, null);
+      return new ConcertBrut(
+          artiste, date, heure, salle, ville, dept, prixMin, prixMax, url, "eventim", null, null,
+          null);
     } catch (Exception e) {
       log.warn("erreur parsing produit Eventim", e);
       return null;
@@ -150,13 +156,14 @@ public class EventimSource {
 
   @SuppressWarnings("unchecked")
   private String rechercherAttractionId(String terme) {
-    String uri = UriComponentsBuilder.fromUriString(BASE_URL + "/v1/attractions")
-        .queryParam("webId", WEB_ID)
-        .queryParam("language", "fr")
-        .queryParam("search_term", terme)
-        .queryParam("top", 5)
-        .build()
-        .toUriString();
+    String uri =
+        UriComponentsBuilder.fromUriString(BASE_URL + "/v1/attractions")
+            .queryParam("webId", WEB_ID)
+            .queryParam("language", "fr")
+            .queryParam("search_term", terme)
+            .queryParam("top", 5)
+            .build()
+            .toUriString();
 
     try {
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
@@ -201,17 +208,18 @@ public class EventimSource {
         }
       }
 
-      String uri = UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
-          .queryParam("webId", WEB_ID)
-          .queryParam("language", "fr")
-          .queryParam("attraction_ids", attractionId)
-          .queryParam("date_from", fmt.format(aujourd_hui))
-          .queryParam("date_to", fmt.format(dateFin))
-          .queryParam("sort", "DateAsc")
-          .queryParam("top", TAILLE_PAGE)
-          .queryParam("page", page)
-          .build()
-          .toUriString();
+      String uri =
+          UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
+              .queryParam("webId", WEB_ID)
+              .queryParam("language", "fr")
+              .queryParam("attraction_ids", attractionId)
+              .queryParam("date_from", fmt.format(aujourd_hui))
+              .queryParam("date_to", fmt.format(dateFin))
+              .queryParam("sort", "DateAsc")
+              .queryParam("top", TAILLE_PAGE)
+              .queryParam("page", page)
+              .build()
+              .toUriString();
 
       try {
         Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
@@ -224,9 +232,8 @@ public class EventimSource {
           if (c != null) concerts.add(c);
         }
 
-        int total = data.get("totalResults") != null
-            ? ((Number) data.get("totalResults")).intValue()
-            : 0;
+        int total =
+            data.get("totalResults") != null ? ((Number) data.get("totalResults")).intValue() : 0;
         if (concerts.size() >= total) break;
       } catch (Exception e) {
         log.error("erreur HTTP Eventim products", e);
@@ -253,15 +260,16 @@ public class EventimSource {
         }
       }
 
-      var builder = UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
-          .queryParam("webId", WEB_ID)
-          .queryParam("language", "fr")
-          .queryParam("country", "FR")
-          .queryParam("query", dept)
-          .queryParam("date_from", fmt.format(aujourd_hui))
-          .queryParam("sort", "DateAsc")
-          .queryParam("top", TAILLE_PAGE)
-          .queryParam("page", page);
+      var builder =
+          UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
+              .queryParam("webId", WEB_ID)
+              .queryParam("language", "fr")
+              .queryParam("country", "FR")
+              .queryParam("query", dept)
+              .queryParam("date_from", fmt.format(aujourd_hui))
+              .queryParam("sort", "DateAsc")
+              .queryParam("top", TAILLE_PAGE)
+              .queryParam("page", page);
 
       for (String c : classifications) {
         builder = builder.queryParam("categories", c);
@@ -281,9 +289,8 @@ public class EventimSource {
           if (c != null && deptFiltrer.equals(c.dept())) concerts.add(c);
         }
 
-        int total = data.get("totalResults") != null
-            ? ((Number) data.get("totalResults")).intValue()
-            : 0;
+        int total =
+            data.get("totalResults") != null ? ((Number) data.get("totalResults")).intValue() : 0;
         if (concerts.size() >= total) break;
       } catch (Exception e) {
         log.warn("Eventim region erreur dept={}", dept, e);

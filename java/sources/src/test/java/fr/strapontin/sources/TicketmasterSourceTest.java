@@ -29,18 +29,27 @@ class TicketmasterSourceTest {
   private static Map<String, Object> evenementTMRaw(Map<String, Object> surcharge) {
     Map<String, Object> base = new HashMap<>();
     base.put("name", "Julien Clerc — Tournée 2025");
-    base.put("dates", Map.of(
-        "start", Map.of("localDate", "2025-09-15", "localTime", "20:30:00"),
-        "status", Map.of("code", "onsale")));
-    base.put("_embedded", Map.of(
-        "attractions", List.of(Map.of("name", "Julien Clerc")),
-        "venues", List.of(Map.of(
-            "name", "ACCOR ARENA",
-            "city", Map.of("name", "Paris"),
-            "postalCode", "75012"))));
-    base.put("classifications", List.of(Map.of(
-        "segment", Map.of("name", "Music"),
-        "genre", Map.of("name", "Pop"))));
+    base.put(
+        "dates",
+        Map.of(
+            "start", Map.of("localDate", "2025-09-15", "localTime", "20:30:00"),
+            "status", Map.of("code", "onsale")));
+    base.put(
+        "_embedded",
+        Map.of(
+            "attractions", List.of(Map.of("name", "Julien Clerc")),
+            "venues",
+                List.of(
+                    Map.of(
+                        "name", "ACCOR ARENA",
+                        "city", Map.of("name", "Paris"),
+                        "postalCode", "75012"))));
+    base.put(
+        "classifications",
+        List.of(
+            Map.of(
+                "segment", Map.of("name", "Music"),
+                "genre", Map.of("name", "Pop"))));
     base.put("priceRanges", List.of(Map.of("min", 39.9, "max", 99.9)));
     base.put("url", "https://example.com");
     base.putAll(surcharge);
@@ -48,19 +57,23 @@ class TicketmasterSourceTest {
   }
 
   private static String reponsePageTMJson(int totalElements, boolean avecEvents) {
-    String events = avecEvents ? """
-        [{"name":"Julien Clerc — Tournée 2025",
-          "dates":{"start":{"localDate":"2025-09-15","localTime":"20:30:00"},"status":{"code":"onsale"}},
-          "_embedded":{"attractions":[{"name":"Julien Clerc"}],
-            "venues":[{"name":"ACCOR ARENA","city":{"name":"Paris"},"postalCode":"75012"}]},
-          "classifications":[{"segment":{"name":"Music"},"genre":{"name":"Pop"}}],
-          "priceRanges":[{"min":39.9,"max":99.9}],
-          "url":"https://example.com"}]
-        """ : "[]";
+    String events =
+        avecEvents
+            ? """
+            [{"name":"Julien Clerc — Tournée 2025",
+              "dates":{"start":{"localDate":"2025-09-15","localTime":"20:30:00"},"status":{"code":"onsale"}},
+              "_embedded":{"attractions":[{"name":"Julien Clerc"}],
+                "venues":[{"name":"ACCOR ARENA","city":{"name":"Paris"},"postalCode":"75012"}]},
+              "classifications":[{"segment":{"name":"Music"},"genre":{"name":"Pop"}}],
+              "priceRanges":[{"min":39.9,"max":99.9}],
+              "url":"https://example.com"}]
+            """
+            : "[]";
     int totalPages = (int) Math.ceil((double) totalElements / 200);
     return """
-        {"_embedded":{"events":%s},"page":{"totalElements":%d,"totalPages":%d}}
-        """.formatted(events, totalElements, totalPages);
+    {"_embedded":{"events":%s},"page":{"totalElements":%d,"totalPages":%d}}
+    """
+        .formatted(events, totalElements, totalPages);
   }
 
   // --- extraireDept ---
@@ -165,13 +178,18 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_attractionsAbsentes_utiliseFallback() {
-    Map<String, Object> evt = evenementTMRaw(Map.of(
-        "_embedded", Map.of(
-            "attractions", List.of(),
-            "venues", List.of(Map.of(
-                "name", "Zénith Paris",
-                "city", Map.of("name", "Paris"),
-                "postalCode", "75019")))));
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Zénith Paris",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75019")))));
     ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "Julien Clerc");
     assertNotNull(resultat);
     assertEquals("Julien Clerc", resultat.artiste());
@@ -179,14 +197,20 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_sansAttractionNiFallback_retourneNull() {
-    Map<String, Object> evt = evenementTMRaw(Map.of(
-        "name", "Radiohead - OK Computer Tour",
-        "_embedded", Map.of(
-            "attractions", List.of(),
-            "venues", List.of(Map.of(
-                "name", "Zénith Paris",
-                "city", Map.of("name", "Paris"),
-                "postalCode", "75019")))));
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "name",
+                "Radiohead - OK Computer Tour",
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Zénith Paris",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75019")))));
     assertNull(TicketmasterSource.mapEvenement(evt, null));
   }
 
@@ -199,13 +223,18 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_salleAvecApostrophe_capitaliseApresApostrophe() {
-    Map<String, Object> evt = evenementTMRaw(Map.of(
-        "_embedded", Map.of(
-            "attractions", List.of(Map.of("name", "Julien Clerc")),
-            "venues", List.of(Map.of(
-                "name", "L'OLYMPIA",
-                "city", Map.of("name", "Paris"),
-                "postalCode", "75009")))));
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(Map.of("name", "Julien Clerc")),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "L'OLYMPIA",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75009")))));
     ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
     assertNotNull(resultat);
     assertEquals("L'Olympia", resultat.salle());
@@ -213,27 +242,39 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_fauxPositifFallback_rejetteEvenementSansRapport() {
-    Map<String, Object> evt = evenementTMRaw(Map.of(
-        "name", "Déjeuner pour 2 personnes Tour Eiffel",
-        "_embedded", Map.of(
-            "attractions", List.of(),
-            "venues", List.of(Map.of(
-                "name", "Madame Brasserie",
-                "city", Map.of("name", "Paris"),
-                "postalCode", "75007")))));
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "name",
+                "Déjeuner pour 2 personnes Tour Eiffel",
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Madame Brasserie",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75007")))));
     assertNull(TicketmasterSource.mapEvenement(evt, "2 Unlimited"));
   }
 
   @Test
   void mapEvenement_fallbackTitreContientArtiste_accepteEvenement() {
-    Map<String, Object> evt = evenementTMRaw(Map.of(
-        "name", "2 Unlimited - Greatest Hits Tour",
-        "_embedded", Map.of(
-            "attractions", List.of(),
-            "venues", List.of(Map.of(
-                "name", "Zénith Paris",
-                "city", Map.of("name", "Paris"),
-                "postalCode", "75019")))));
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "name",
+                "2 Unlimited - Greatest Hits Tour",
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Zénith Paris",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75019")))));
     ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "2 Unlimited");
     assertNotNull(resultat);
     assertEquals("2 Unlimited", resultat.artiste());
@@ -248,10 +289,14 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_classificationArtsTheatre_retourneTheatre() {
-    Map<String, Object> evt = evenementTMRaw(Map.of(
-        "classifications", List.of(Map.of(
-            "segment", Map.of("name", "Arts et théâtre"),
-            "genre", Map.of("name", "Théâtre")))));
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "classifications",
+                List.of(
+                    Map.of(
+                        "segment", Map.of("name", "Arts et théâtre"),
+                        "genre", Map.of("name", "Théâtre")))));
     ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
     assertNotNull(resultat);
     assertEquals("theatre", resultat.classification());
@@ -271,13 +316,18 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_DOMGuadeloupe_retourneDept971() {
-    Map<String, Object> evt = evenementTMRaw(Map.of(
-        "_embedded", Map.of(
-            "attractions", List.of(Map.of("name", "Artiste")),
-            "venues", List.of(Map.of(
-                "name", "Salle",
-                "city", Map.of("name", "Pointe-à-Pitre"),
-                "postalCode", "97100")))));
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(Map.of("name", "Artiste")),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Salle",
+                                "city", Map.of("name", "Pointe-à-Pitre"),
+                                "postalCode", "97100")))));
     ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
     assertNotNull(resultat);
     assertEquals("971", resultat.dept());
@@ -291,13 +341,13 @@ class TicketmasterSourceTest {
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
 
-    serveur.expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
-        .andRespond(withSuccess(
-            reponsePageTMJson(1, true),
-            MediaType.APPLICATION_JSON)
-            .header("Rate-Limit-Available", "9800")
-            .header("Rate-Limit", "10000")
-            .header("Rate-Limit-Reset", "1726420000000"));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
 
     TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
@@ -313,15 +363,17 @@ class TicketmasterSourceTest {
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
 
-    serveur.expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
-        .andRespond(withSuccess(
-            """
-            {"page":{"totalElements":0,"totalPages":0}}
-            """,
-            MediaType.APPLICATION_JSON)
-            .header("Rate-Limit-Available", "9800")
-            .header("Rate-Limit", "10000")
-            .header("Rate-Limit-Reset", "0"));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(
+                    """
+                    {"page":{"totalElements":0,"totalPages":0}}
+                    """,
+                    MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "0"));
 
     TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     List<ConcertBrut> resultats = source.fetchArtiste("Artiste Inconnu");
@@ -336,13 +388,13 @@ class TicketmasterSourceTest {
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
 
-    serveur.expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
-        .andRespond(withSuccess(
-            reponsePageTMJson(0, false),
-            MediaType.APPLICATION_JSON)
-            .header("Rate-Limit-Available", "9800")
-            .header("Rate-Limit", "10000")
-            .header("Rate-Limit-Reset", "1726420000000"));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(0, false), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
 
     TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     source.fetchArtiste("Radiohead");

@@ -36,7 +36,9 @@ public class ResolveurNomCanonique {
 
   /// Source de résolution utilisée pour un nom canonique.
   public enum SourceResolution {
-    MUSICBRAINZ, DEEZER, INCHANGE
+    MUSICBRAINZ,
+    DEEZER,
+    INCHANGE
   }
 
   /// Résultat de la résolution : nom canonique et source utilisée.
@@ -56,10 +58,7 @@ public class ResolveurNomCanonique {
         RestClient.builder()
             .defaultHeader("User-Agent", "Strapontin/2.0 (" + contactEmail + ")")
             .build(),
-        Caffeine.newBuilder()
-            .expireAfterWrite(7, TimeUnit.DAYS)
-            .maximumSize(10_000)
-            .build());
+        Caffeine.newBuilder().expireAfterWrite(7, TimeUnit.DAYS).maximumSize(10_000).build());
   }
 
   /// Crée une instance avec un RestClient et un cache personnalisés (injection de test).
@@ -93,7 +92,7 @@ public class ResolveurNomCanonique {
       if (score < 90) return null;
       String nomMB = (String) artiste.get("name");
       if (Normalisation.similarite(
-          Normalisation.normaliserTexte(nom), Normalisation.normaliserTexte(nomMB))
+              Normalisation.normaliserTexte(nom), Normalisation.normaliserTexte(nomMB))
           < SEUIL_CONFIANCE_MB) {
         return null;
       }
@@ -134,7 +133,7 @@ public class ResolveurNomCanonique {
       String resultat = (String) dataList.get(0).get("name");
       if (resultat == null) return null;
       if (Normalisation.similarite(
-          Normalisation.normaliserTexte(nom), Normalisation.normaliserTexte(resultat))
+              Normalisation.normaliserTexte(nom), Normalisation.normaliserTexte(resultat))
           < SEUIL_CONFIANCE_DEEZER) {
         return null;
       }
@@ -167,15 +166,17 @@ public class ResolveurNomCanonique {
         resultat = new ResultatResolution(nomMB, SourceResolution.MUSICBRAINZ);
       } else {
         String nomDeezer = rechercherDeezerArtiste(nom);
-        resultat = nomDeezer != null
-            ? new ResultatResolution(nomDeezer, SourceResolution.DEEZER)
-            : new ResultatResolution(nom, SourceResolution.INCHANGE);
+        resultat =
+            nomDeezer != null
+                ? new ResultatResolution(nomDeezer, SourceResolution.DEEZER)
+                : new ResultatResolution(nom, SourceResolution.INCHANGE);
       }
     } else {
       String nomMB = rechercherMBSalle(nom);
-      resultat = nomMB != null
-          ? new ResultatResolution(nomMB, SourceResolution.MUSICBRAINZ)
-          : new ResultatResolution(nom, SourceResolution.INCHANGE);
+      resultat =
+          nomMB != null
+              ? new ResultatResolution(nomMB, SourceResolution.MUSICBRAINZ)
+              : new ResultatResolution(nom, SourceResolution.INCHANGE);
     }
 
     cache.put(cleCache, resultat);
