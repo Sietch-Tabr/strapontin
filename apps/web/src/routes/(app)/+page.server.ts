@@ -72,11 +72,14 @@ export const actions: Actions = {
       error(400, "Concert manquant");
     }
     const session = cookies.get("SESSION");
-    await fetch(`${JAVA_API_URL}/api/spectacles/matches/${encodeURIComponent(concertId)}`, {
-      method: "PATCH",
-      headers: entetesJava(session),
-      body: JSON.stringify({ masquer: true }),
-    });
+    await fetch(
+      `${JAVA_API_URL}/api/spectacles/matches/${encodeURIComponent(concertId)}`,
+      {
+        method: "PATCH",
+        headers: entetesJava(session),
+        body: JSON.stringify({ masquer: true }),
+      },
+    );
   },
 
   masquerSerie: async ({ request, cookies }) => {
@@ -100,10 +103,13 @@ export const actions: Actions = {
       error(400, "Concert manquant");
     }
     const session = cookies.get("SESSION");
-    await fetch(`${JAVA_API_URL}/api/spectacles/matches/${encodeURIComponent(concertId)}`, {
-      method: "PATCH",
-      headers: entetesJava(session),
-      body: JSON.stringify({ masquer: false }),
-    });
+    await fetch(
+      `${JAVA_API_URL}/api/spectacles/matches/${encodeURIComponent(concertId)}`,
+      {
+        method: "PATCH",
+        headers: entetesJava(session),
+        body: JSON.stringify({ masquer: false }),
+      },
+    );
   },
 };

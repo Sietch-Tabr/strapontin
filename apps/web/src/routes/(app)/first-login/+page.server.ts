@@ -17,16 +17,21 @@ export const actions: Actions = {
 
     const donnees = await request.formData();
     const nom = donnees.get("nom")?.toString().trim() ?? "";
-    const identifiant = donnees.get("identifiant")?.toString().trim().toLowerCase() ?? "";
+    const identifiant =
+      donnees.get("identifiant")?.toString().trim().toLowerCase() ?? "";
     const motDePasseActuel = donnees.get("motDePasseActuel")?.toString() ?? "";
-    const motDePasseNouveau = donnees.get("motDePasseNouveau")?.toString() ?? "";
-    const motDePasseConfirmation = donnees.get("motDePasseConfirmation")?.toString() ?? "";
+    const motDePasseNouveau =
+      donnees.get("motDePasseNouveau")?.toString() ?? "";
+    const motDePasseConfirmation =
+      donnees.get("motDePasseConfirmation")?.toString() ?? "";
 
     if (!nom || !identifiant || !motDePasseActuel || !motDePasseNouveau) {
       return fail(400, { erreur: "Tous les champs sont obligatoires." });
     }
     if (motDePasseNouveau.length < 12) {
-      return fail(400, { erreur: "Le mot de passe doit contenir au moins 12 caractères." });
+      return fail(400, {
+        erreur: "Le mot de passe doit contenir au moins 12 caractères.",
+      });
     }
     if (motDePasseNouveau !== motDePasseConfirmation) {
       return fail(400, { erreur: "Les mots de passe ne correspondent pas." });
@@ -36,11 +41,20 @@ export const actions: Actions = {
     const rep = await fetch(`${JAVA_API_URL}/api/user/first-login`, {
       method: "POST",
       headers: entetesJava(session),
-      body: JSON.stringify({ nom, identifiant, motDePasseActuel, motDePasseNouveau }),
+      body: JSON.stringify({
+        nom,
+        identifiant,
+        motDePasseActuel,
+        motDePasseNouveau,
+      }),
     });
 
     if (!rep.ok) {
-      const corps = await rep.json().catch(() => ({ erreur: "Erreur inattendue." })) as { erreur?: string };
+      const corps = (await rep
+        .json()
+        .catch(() => ({ erreur: "Erreur inattendue." }))) as {
+        erreur?: string;
+      };
       return fail(rep.status, { erreur: corps.erreur ?? "Erreur inattendue." });
     }
 

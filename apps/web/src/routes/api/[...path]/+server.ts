@@ -22,7 +22,11 @@ const proxy: RequestHandler = async ({ request, params }) => {
       ? await request.arrayBuffer()
       : undefined;
 
-  return fetch(javaUrl, { method: request.method, headers: entetes, body: corps });
+  return fetch(javaUrl, {
+    method: request.method,
+    headers: entetes,
+    body: corps,
+  });
 };
 
 export const GET = proxy;

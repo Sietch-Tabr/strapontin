@@ -5,7 +5,6 @@
 package fr.strapontin.web.accueil;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -160,11 +159,7 @@ public class AccueilController {
                   List<ConcertAccueil> dates = e.getValue();
                   boolean estNew = dates.stream().anyMatch(ConcertAccueil::estNew);
                   return new GroupeArtiste(
-                      e.getKey(),
-                      dates.get(0).artisteNorm(),
-                      dates.size() >= 2,
-                      estNew,
-                      dates);
+                      e.getKey(), dates.get(0).artisteNorm(), dates.size() >= 2, estNew, dates);
                 })
             .toList();
 
@@ -181,7 +176,8 @@ public class AccueilController {
             Integer.class);
 
     return ResponseEntity.ok(
-        new ReponseAccueil(artistesGroupes, nbArtistes, nbSalles, totalConcerts, totalConcerts > LIMITE_CONCERTS));
+        new ReponseAccueil(
+            artistesGroupes, nbArtistes, nbSalles, totalConcerts, totalConcerts > LIMITE_CONCERTS));
   }
 
   private boolean lireFiltreDisponibles(String userId) {

@@ -10,7 +10,7 @@ export const load: PageServerLoad = async () => {
 
 export const actions: Actions = {
   signalerBug: async ({ request, locals }) => {
-    if (!await resendDisponible()) {
+    if (!(await resendDisponible())) {
       return fail(503, { erreur: "Le service email n'est pas configuré." });
     }
 
@@ -27,7 +27,9 @@ export const actions: Actions = {
     }
 
     if (message.length > 2000) {
-      return fail(400, { erreur: "Le message est trop long (2000 caractères maximum)." });
+      return fail(400, {
+        erreur: "Le message est trop long (2000 caractères maximum).",
+      });
     }
 
     const utilisateur = locals.user!;

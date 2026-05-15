@@ -16,7 +16,11 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
   }
 
   const donnees = (await reponse.json()) as {
-    artistes: { artisteNormalise: string; artisteAffiche: string; createdAt: string }[];
+    artistes: {
+      artisteNormalise: string;
+      artisteAffiche: string;
+      createdAt: string;
+    }[];
     suggestions: { nom: string; source: string }[];
     dejaLeSuivi: boolean;
   };
@@ -42,7 +46,11 @@ export const actions: Actions = {
     });
 
     if (!rep.ok) {
-      const corps = await rep.json().catch(() => ({ erreur: "Erreur inattendue." })) as { erreur?: string };
+      const corps = (await rep
+        .json()
+        .catch(() => ({ erreur: "Erreur inattendue." }))) as {
+        erreur?: string;
+      };
       return fail(rep.status, { erreur: corps.erreur ?? "Erreur inattendue." });
     }
 
@@ -53,7 +61,8 @@ export const actions: Actions = {
     const donnees = await request.formData();
     const artisteNormalise = donnees.get("artisteNormalise")?.toString() ?? "";
 
-    if (!artisteNormalise) return fail(400, { erreur: "Identifiant manquant." });
+    if (!artisteNormalise)
+      return fail(400, { erreur: "Identifiant manquant." });
 
     const session = cookies.get("SESSION");
     await fetch(

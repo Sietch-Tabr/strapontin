@@ -10,7 +10,8 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
   const classification = url.searchParams.get("classification")?.trim() ?? "";
   const genre = (url.searchParams.get("genre")?.trim() ?? "").slice(0, 50);
   const quinzaine = url.searchParams.get("quinzaine") === "1";
-  const tri = url.searchParams.get("tri") === "nouveaute" ? "nouveaute" : "date";
+  const tri =
+    url.searchParams.get("tri") === "nouveaute" ? "nouveaute" : "date";
   const afficherMasques = url.searchParams.get("masques") === "1";
   const budgetStr = url.searchParams.get("budget")?.trim() ?? "";
   const sourcesUrl = url.searchParams.getAll("source");
@@ -80,7 +81,8 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
     moisDisponibles: string[];
   };
 
-  const sourceArtistes = sourcesUrl.length === 0 || sourcesUrl.includes("artistes");
+  const sourceArtistes =
+    sourcesUrl.length === 0 || sourcesUrl.includes("artistes");
   const sourceSalles = sourcesUrl.length === 0 || sourcesUrl.includes("salles");
 
   return {
@@ -112,10 +114,13 @@ export const actions: Actions = {
       error(400, "Concert manquant");
     }
     const session = cookies.get("SESSION");
-    await fetch(`${JAVA_API_URL}/api/spectacles/matches/${encodeURIComponent(concertId)}`, {
-      method: "PATCH",
-      headers: entetesJava(session),
-      body: JSON.stringify({ masquer: false }),
-    });
+    await fetch(
+      `${JAVA_API_URL}/api/spectacles/matches/${encodeURIComponent(concertId)}`,
+      {
+        method: "PATCH",
+        headers: entetesJava(session),
+        body: JSON.stringify({ masquer: false }),
+      },
+    );
   },
 };

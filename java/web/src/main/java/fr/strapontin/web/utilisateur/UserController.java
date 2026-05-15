@@ -120,13 +120,15 @@ public class UserController {
   public ResponseEntity<Map<String, Object>> majIdentifiant(
       @RequestBody RequeteIdentifiant requete, Authentication auth) {
     String userId = utilisateur(auth).id();
-    String identifiant = requete.identifiant() == null ? "" : requete.identifiant().strip().toLowerCase();
+    String identifiant =
+        requete.identifiant() == null ? "" : requete.identifiant().strip().toLowerCase();
 
     if (identifiant.length() < 3 || identifiant.length() > 30) {
       return erreur(400, "L'identifiant doit contenir entre 3 et 30 caractères.");
     }
     if (!FORMAT_IDENTIFIANT.matcher(identifiant).matches()) {
-      return erreur(400, "L'identifiant ne peut contenir que des lettres, chiffres et underscores.");
+      return erreur(
+          400, "L'identifiant ne peut contenir que des lettres, chiffres et underscores.");
     }
 
     boolean dejaUtilise =
@@ -171,13 +173,15 @@ public class UserController {
 
     String nouveauHash = passwordEncoder.encode(requete.motDePasseNouveau());
     jdbc.update(
-        "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id = 'credential'",
+        "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id ="
+            + " 'credential'",
         Map.of("hash", nouveauHash, "userId", details.id()));
 
     return ResponseEntity.ok(Map.of("succes", "motDePasse"));
   }
 
-  /// Complète la première connexion : nom, identifiant, mot de passe, et lève {@code must_change_credentials}.
+  /// Complète la première connexion : nom, identifiant, mot de passe, et lève {@code
+  // must_change_credentials}.
   ///
   /// @param requete    corps JSON avec nom, identifiant, motDePasseActuel, motDePasseNouveau
   /// @param auth       contexte d'authentification
@@ -185,14 +189,18 @@ public class UserController {
   /// @return 200 si terminé, 400 si invalide
   @PostMapping("/first-login")
   public ResponseEntity<Map<String, Object>> premierLogin(
-      @RequestBody RequetePremierLogin requete, Authentication auth, HttpServletRequest httpRequest) {
+      @RequestBody RequetePremierLogin requete,
+      Authentication auth,
+      HttpServletRequest httpRequest) {
     UtilisateurDetails details = utilisateur(auth);
 
     if (!details.doitChangerCredentials()) {
       return erreur(403, "Accès refusé.");
     }
-    if (requete.nom() == null || requete.identifiant() == null
-        || requete.motDePasseActuel() == null || requete.motDePasseNouveau() == null) {
+    if (requete.nom() == null
+        || requete.identifiant() == null
+        || requete.motDePasseActuel() == null
+        || requete.motDePasseNouveau() == null) {
       return erreur(400, "Tous les champs sont obligatoires.");
     }
 
@@ -206,7 +214,8 @@ public class UserController {
       return erreur(400, "L'identifiant doit contenir entre 3 et 30 caractères.");
     }
     if (!FORMAT_IDENTIFIANT.matcher(identifiant).matches()) {
-      return erreur(400, "L'identifiant ne peut contenir que des lettres, chiffres et underscores.");
+      return erreur(
+          400, "L'identifiant ne peut contenir que des lettres, chiffres et underscores.");
     }
     if (requete.motDePasseNouveau().length() < 12) {
       return erreur(400, "Le mot de passe doit contenir au moins 12 caractères.");
@@ -234,7 +243,8 @@ public class UserController {
         """,
         Map.of("nom", nom, "ident", identifiant, "userId", details.id()));
     jdbc.update(
-        "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id = 'credential'",
+        "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id ="
+            + " 'credential'",
         Map.of("hash", nouveauHash, "userId", details.id()));
 
     // Invalider la session pour forcer une reconnexion avec le nouveau mot de passe

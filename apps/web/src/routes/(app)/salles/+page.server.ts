@@ -21,8 +21,18 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
   }
 
   const donnees = (await reponse.json()) as {
-    salles: { salleId: string; nom: string; tmVenueId: string | null; createdAt: string }[];
-    resultats: { salle: string; ville: string | null; tmVenueId: string | null; source: string }[];
+    salles: {
+      salleId: string;
+      nom: string;
+      tmVenueId: string | null;
+      createdAt: string;
+    }[];
+    resultats: {
+      salle: string;
+      ville: string | null;
+      tmVenueId: string | null;
+      source: string;
+    }[];
     dejaLaSuivie: boolean;
   };
 
@@ -45,7 +55,8 @@ export const actions: Actions = {
     const salleId = donnees.get("salleId")?.toString().trim() ?? "";
     const tmVenueId = donnees.get("tmVenueId")?.toString().trim() || null;
 
-    if (!salleId) return fail(400, { erreur: "Identifiant de salle invalide." });
+    if (!salleId)
+      return fail(400, { erreur: "Identifiant de salle invalide." });
 
     const session = cookies.get("SESSION");
     const rep = await fetch(`${JAVA_API_URL}/api/salles`, {
@@ -55,7 +66,11 @@ export const actions: Actions = {
     });
 
     if (!rep.ok) {
-      const corps = await rep.json().catch(() => ({ erreur: "Erreur inattendue." })) as { erreur?: string };
+      const corps = (await rep
+        .json()
+        .catch(() => ({ erreur: "Erreur inattendue." }))) as {
+        erreur?: string;
+      };
       return fail(rep.status, { erreur: corps.erreur ?? "Erreur inattendue." });
     }
 
@@ -69,10 +84,10 @@ export const actions: Actions = {
     if (!salleId) return fail(400, { erreur: "Identifiant manquant." });
 
     const session = cookies.get("SESSION");
-    await fetch(
-      `${JAVA_API_URL}/api/salles/${encodeURIComponent(salleId)}`,
-      { method: "DELETE", headers: entetesJava(session) },
-    );
+    await fetch(`${JAVA_API_URL}/api/salles/${encodeURIComponent(salleId)}`, {
+      method: "DELETE",
+      headers: entetesJava(session),
+    });
 
     return { succes: true };
   },

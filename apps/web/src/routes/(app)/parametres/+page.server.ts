@@ -63,7 +63,8 @@ export const actions: Actions = {
       body: JSON.stringify({ filtreDisponibles }),
     });
 
-    if (!rep.ok) return fail(rep.status, { erreur: "Erreur lors de la mise à jour." });
+    if (!rep.ok)
+      return fail(rep.status, { erreur: "Erreur lors de la mise à jour." });
     return { succes: "rechercheRapide" };
   },
 
@@ -74,7 +75,10 @@ export const actions: Actions = {
     type FrequenceNotifications = (typeof valeurs)[number];
 
     if (!valeurs.includes(valeur as FrequenceNotifications)) {
-      return fail(400, { erreur: "Valeur invalide.", section: "notifications" });
+      return fail(400, {
+        erreur: "Valeur invalide.",
+        section: "notifications",
+      });
     }
 
     const frequenceNotifications = valeur as FrequenceNotifications;
@@ -85,10 +89,18 @@ export const actions: Actions = {
     const rep = await fetch(`${JAVA_API_URL}/api/user/config/notifications`, {
       method: "PATCH",
       headers: entetesJava(session),
-      body: JSON.stringify({ frequenceNotifications, notifArtistes, notifSalles }),
+      body: JSON.stringify({
+        frequenceNotifications,
+        notifArtistes,
+        notifSalles,
+      }),
     });
 
-    if (!rep.ok) return fail(rep.status, { erreur: "Erreur lors de la mise à jour.", section: "notifications" });
+    if (!rep.ok)
+      return fail(rep.status, {
+        erreur: "Erreur lors de la mise à jour.",
+        section: "notifications",
+      });
     return { succes: "notifications" };
   },
 
@@ -97,7 +109,10 @@ export const actions: Actions = {
     const valeur = donnees.get("valeur")?.toString();
 
     if (!["auto", "clair", "sombre"].includes(valeur ?? "")) {
-      return fail(400, { erreur: "Valeur de thème invalide.", section: "theme" });
+      return fail(400, {
+        erreur: "Valeur de thème invalide.",
+        section: "theme",
+      });
     }
 
     const theme = valeur as "auto" | "clair" | "sombre";
@@ -123,8 +138,16 @@ export const actions: Actions = {
     const donnees = await request.formData();
     const nom = donnees.get("nom")?.toString().trim() ?? "";
 
-    if (!nom) return fail(400, { erreur: "Le nom ne peut pas être vide.", section: "compte" });
-    if (nom.length > 100) return fail(400, { erreur: "Nom trop long (100 caractères max).", section: "compte" });
+    if (!nom)
+      return fail(400, {
+        erreur: "Le nom ne peut pas être vide.",
+        section: "compte",
+      });
+    if (nom.length > 100)
+      return fail(400, {
+        erreur: "Nom trop long (100 caractères max).",
+        section: "compte",
+      });
 
     const session = cookies.get("SESSION");
     const rep = await fetch(`${JAVA_API_URL}/api/user/profile`, {
@@ -134,15 +157,23 @@ export const actions: Actions = {
     });
 
     if (!rep.ok) {
-      const corps = await rep.json().catch(() => ({ erreur: "Erreur inattendue." })) as { erreur?: string };
-      return fail(rep.status, { erreur: corps.erreur ?? "Erreur inattendue.", section: "compte" });
+      const corps = (await rep
+        .json()
+        .catch(() => ({ erreur: "Erreur inattendue." }))) as {
+        erreur?: string;
+      };
+      return fail(rep.status, {
+        erreur: corps.erreur ?? "Erreur inattendue.",
+        section: "compte",
+      });
     }
     return { succes: "compte" };
   },
 
   identifiant: async ({ request, cookies }) => {
     const donnees = await request.formData();
-    const identifiant = donnees.get("identifiant")?.toString().trim().toLowerCase() ?? "";
+    const identifiant =
+      donnees.get("identifiant")?.toString().trim().toLowerCase() ?? "";
 
     const session = cookies.get("SESSION");
     const rep = await fetch(`${JAVA_API_URL}/api/user/identifiant`, {
@@ -152,8 +183,15 @@ export const actions: Actions = {
     });
 
     if (!rep.ok) {
-      const corps = await rep.json().catch(() => ({ erreur: "Erreur inattendue." })) as { erreur?: string };
-      return fail(rep.status, { erreur: corps.erreur ?? "Erreur inattendue.", section: "identifiant" });
+      const corps = (await rep
+        .json()
+        .catch(() => ({ erreur: "Erreur inattendue." }))) as {
+        erreur?: string;
+      };
+      return fail(rep.status, {
+        erreur: corps.erreur ?? "Erreur inattendue.",
+        section: "identifiant",
+      });
     }
     return { succes: "identifiant" };
   },
@@ -170,8 +208,15 @@ export const actions: Actions = {
     });
 
     if (!rep.ok) {
-      const corps = await rep.json().catch(() => ({ erreur: "Erreur inattendue." })) as { erreur?: string };
-      return fail(rep.status, { erreur: corps.erreur ?? "Erreur inattendue.", section: "email" });
+      const corps = (await rep
+        .json()
+        .catch(() => ({ erreur: "Erreur inattendue." }))) as {
+        erreur?: string;
+      };
+      return fail(rep.status, {
+        erreur: corps.erreur ?? "Erreur inattendue.",
+        section: "email",
+      });
     }
     return { succes: "email" };
   },
@@ -189,17 +234,28 @@ export const actions: Actions = {
   motDePasse: async ({ request, cookies }) => {
     const donnees = await request.formData();
     const motDePasseActuel = donnees.get("motDePasseActuel")?.toString() ?? "";
-    const motDePasseNouveau = donnees.get("motDePasseNouveau")?.toString() ?? "";
-    const motDePasseConfirmation = donnees.get("motDePasseConfirmation")?.toString() ?? "";
+    const motDePasseNouveau =
+      donnees.get("motDePasseNouveau")?.toString() ?? "";
+    const motDePasseConfirmation =
+      donnees.get("motDePasseConfirmation")?.toString() ?? "";
 
     if (!motDePasseActuel || !motDePasseNouveau) {
-      return fail(400, { erreur: "Tous les champs sont obligatoires.", section: "motDePasse" });
+      return fail(400, {
+        erreur: "Tous les champs sont obligatoires.",
+        section: "motDePasse",
+      });
     }
     if (motDePasseNouveau.length < 12) {
-      return fail(400, { erreur: "Le nouveau mot de passe doit contenir au moins 12 caractères.", section: "motDePasse" });
+      return fail(400, {
+        erreur: "Le nouveau mot de passe doit contenir au moins 12 caractères.",
+        section: "motDePasse",
+      });
     }
     if (motDePasseNouveau !== motDePasseConfirmation) {
-      return fail(400, { erreur: "Les mots de passe ne correspondent pas.", section: "motDePasse" });
+      return fail(400, {
+        erreur: "Les mots de passe ne correspondent pas.",
+        section: "motDePasse",
+      });
     }
 
     const session = cookies.get("SESSION");
@@ -210,8 +266,15 @@ export const actions: Actions = {
     });
 
     if (!rep.ok) {
-      const corps = await rep.json().catch(() => ({ erreur: "Mot de passe actuel incorrect." })) as { erreur?: string };
-      return fail(rep.status, { erreur: corps.erreur ?? "Mot de passe actuel incorrect.", section: "motDePasse" });
+      const corps = (await rep
+        .json()
+        .catch(() => ({ erreur: "Mot de passe actuel incorrect." }))) as {
+        erreur?: string;
+      };
+      return fail(rep.status, {
+        erreur: corps.erreur ?? "Mot de passe actuel incorrect.",
+        section: "motDePasse",
+      });
     }
     return { succes: "motDePasse" };
   },

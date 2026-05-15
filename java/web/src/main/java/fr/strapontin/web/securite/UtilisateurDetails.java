@@ -54,8 +54,10 @@ public record UtilisateurDetails(
 
   @Override
   public boolean isCredentialsNonExpired() {
-    // Le redirect vers /first-login est géré par le frontend (mustChangeCredentials dans UtilisateurDto).
-    // Spring Security ne doit pas bloquer la connexion — sinon l'utilisateur ne peut jamais s'authentifier.
+    // Le redirect vers /first-login est géré par le frontend (mustChangeCredentials dans
+    // UtilisateurDto).
+    // Spring Security ne doit pas bloquer la connexion — sinon l'utilisateur ne peut jamais
+    // s'authentifier.
     return true;
   }
 }

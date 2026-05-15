@@ -11,10 +11,14 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
   const session = cookies.get("SESSION");
 
   const [repUsers, repJobs, repLogs, repConfig] = await Promise.all([
-    fetch(`${JAVA_API_URL}/api/admin/utilisateurs`, { headers: entetesJava(session) }),
+    fetch(`${JAVA_API_URL}/api/admin/utilisateurs`, {
+      headers: entetesJava(session),
+    }),
     fetch(`${JAVA_API_URL}/api/admin/jobs`, { headers: entetesJava(session) }),
     fetch(`${JAVA_API_URL}/api/admin/logs`, { headers: entetesJava(session) }),
-    fetch(`${JAVA_API_URL}/api/admin/config`, { headers: entetesJava(session) }),
+    fetch(`${JAVA_API_URL}/api/admin/config`, {
+      headers: entetesJava(session),
+    }),
   ]);
 
   const utilisateurs = repUsers.ok
@@ -44,7 +48,8 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 
 export const actions: Actions = {
   creerCompte: async ({ request, cookies, locals }) => {
-    if (locals.user?.role !== "admin") return fail(403, { erreur: "Accès refusé." });
+    if (locals.user?.role !== "admin")
+      return fail(403, { erreur: "Accès refusé." });
 
     const donnees = await request.formData();
     const email = donnees.get("email")?.toString().trim() ?? "";
@@ -61,57 +66,89 @@ export const actions: Actions = {
     });
 
     if (!rep.ok) {
-      const corps = await rep.json().catch(() => ({ erreur: "Erreur inattendue." })) as { erreur?: string };
-      return fail(rep.status, { erreur: corps.erreur ?? "Impossible de créer le compte." });
+      const corps = (await rep
+        .json()
+        .catch(() => ({ erreur: "Erreur inattendue." }))) as {
+        erreur?: string;
+      };
+      return fail(rep.status, {
+        erreur: corps.erreur ?? "Impossible de créer le compte.",
+      });
     }
     return { succes: "creerCompte" };
   },
 
   supprimerCompte: async ({ request, cookies, locals }) => {
-    if (locals.user?.role !== "admin") return fail(403, { erreur: "Accès refusé." });
+    if (locals.user?.role !== "admin")
+      return fail(403, { erreur: "Accès refusé." });
 
     const donnees = await request.formData();
     const userId = donnees.get("userId")?.toString() ?? "";
 
-    if (!userId) return fail(400, { erreur: "Identifiant utilisateur manquant." });
-    if (userId === locals.user.id) return fail(400, { erreur: "Impossible de supprimer son propre compte." });
+    if (!userId)
+      return fail(400, { erreur: "Identifiant utilisateur manquant." });
+    if (userId === locals.user.id)
+      return fail(400, {
+        erreur: "Impossible de supprimer son propre compte.",
+      });
 
     const session = cookies.get("SESSION");
-    const rep = await fetch(`${JAVA_API_URL}/api/admin/utilisateurs/${encodeURIComponent(userId)}`, {
-      method: "DELETE",
-      headers: entetesJava(session),
-    });
+    const rep = await fetch(
+      `${JAVA_API_URL}/api/admin/utilisateurs/${encodeURIComponent(userId)}`,
+      {
+        method: "DELETE",
+        headers: entetesJava(session),
+      },
+    );
 
     if (!rep.ok) {
-      const corps = await rep.json().catch(() => ({ erreur: "Erreur inattendue." })) as { erreur?: string };
-      return fail(rep.status, { erreur: corps.erreur ?? "Erreur lors de la suppression." });
+      const corps = (await rep
+        .json()
+        .catch(() => ({ erreur: "Erreur inattendue." }))) as {
+        erreur?: string;
+      };
+      return fail(rep.status, {
+        erreur: corps.erreur ?? "Erreur lors de la suppression.",
+      });
     }
     return { succes: "supprimerCompte" };
   },
 
   resetMdp: async ({ request, cookies, locals }) => {
-    if (locals.user?.role !== "admin") return fail(403, { erreur: "Accès refusé." });
+    if (locals.user?.role !== "admin")
+      return fail(403, { erreur: "Accès refusé." });
 
     const donnees = await request.formData();
     const userId = donnees.get("userId")?.toString() ?? "";
 
-    if (!userId) return fail(400, { erreur: "Identifiant utilisateur manquant." });
+    if (!userId)
+      return fail(400, { erreur: "Identifiant utilisateur manquant." });
 
     const session = cookies.get("SESSION");
-    const rep = await fetch(`${JAVA_API_URL}/api/admin/utilisateurs/${encodeURIComponent(userId)}/reset-mdp`, {
-      method: "POST",
-      headers: entetesJava(session),
-    });
+    const rep = await fetch(
+      `${JAVA_API_URL}/api/admin/utilisateurs/${encodeURIComponent(userId)}/reset-mdp`,
+      {
+        method: "POST",
+        headers: entetesJava(session),
+      },
+    );
 
     if (!rep.ok) {
-      const corps = await rep.json().catch(() => ({ erreur: "Erreur inattendue." })) as { erreur?: string };
-      return fail(rep.status, { erreur: corps.erreur ?? "Erreur lors du reset." });
+      const corps = (await rep
+        .json()
+        .catch(() => ({ erreur: "Erreur inattendue." }))) as {
+        erreur?: string;
+      };
+      return fail(rep.status, {
+        erreur: corps.erreur ?? "Erreur lors du reset.",
+      });
     }
     return { succes: "resetMdp" };
   },
 
   majConfig: async ({ request, cookies, locals }) => {
-    if (locals.user?.role !== "admin") return fail(403, { erreur: "Accès refusé." });
+    if (locals.user?.role !== "admin")
+      return fail(403, { erreur: "Accès refusé." });
 
     const donnees = await request.formData();
     const corps: Record<string, string> = {};
@@ -129,14 +166,21 @@ export const actions: Actions = {
     });
 
     if (!rep.ok) {
-      const corpsRep = await rep.json().catch(() => ({ erreur: "Erreur inattendue." })) as { erreur?: string };
-      return fail(rep.status, { erreur: corpsRep.erreur ?? "Erreur lors de la sauvegarde." });
+      const corpsRep = (await rep
+        .json()
+        .catch(() => ({ erreur: "Erreur inattendue." }))) as {
+        erreur?: string;
+      };
+      return fail(rep.status, {
+        erreur: corpsRep.erreur ?? "Erreur lors de la sauvegarde.",
+      });
     }
     return { succes: "majConfig" };
   },
 
   genererVapid: async ({ cookies, locals }) => {
-    if (locals.user?.role !== "admin") return fail(403, { erreur: "Accès refusé." });
+    if (locals.user?.role !== "admin")
+      return fail(403, { erreur: "Accès refusé." });
 
     const session = cookies.get("SESSION");
     const rep = await fetch(`${JAVA_API_URL}/api/admin/vapid/generer`, {
@@ -145,15 +189,21 @@ export const actions: Actions = {
     });
 
     if (!rep.ok) {
-      return fail(rep.status, { erreur: "Erreur lors de la génération VAPID." });
+      return fail(rep.status, {
+        erreur: "Erreur lors de la génération VAPID.",
+      });
     }
     return { succes: "genererVapid" };
   },
 
   fetchRegion: async ({ request, locals }) => {
-    if (locals.user?.role !== "admin") return fail(403, { erreur: "Accès refusé." });
+    if (locals.user?.role !== "admin")
+      return fail(403, { erreur: "Accès refusé." });
     // Déclenchement via worker — fonctionnalité disponible post-bascule
     void request;
-    return fail(501, { erreur: "Déclenchement de fetch non disponible en v2 depuis l'interface admin." });
+    return fail(501, {
+      erreur:
+        "Déclenchement de fetch non disponible en v2 depuis l'interface admin.",
+    });
   },
 };

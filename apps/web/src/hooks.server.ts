@@ -72,9 +72,7 @@ const gererAuth: Handle = async ({ event, resolve }) => {
     event.locals.theme = theme;
     return resolve(event, {
       transformPageChunk: ({ html }) =>
-        theme === "sombre"
-          ? html.replace("<html", '<html class="dark"')
-          : html,
+        theme === "sombre" ? html.replace("<html", '<html class="dark"') : html,
     });
   }
 
@@ -133,9 +131,7 @@ const gererAuth: Handle = async ({ event, resolve }) => {
 
   return resolve(event, {
     transformPageChunk: ({ html }) =>
-      theme === "sombre"
-        ? html.replace("<html", '<html class="dark"')
-        : html,
+      theme === "sombre" ? html.replace("<html", '<html class="dark"') : html,
   });
 };
 
