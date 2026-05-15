@@ -158,6 +158,12 @@ pct exec "$VMID" -- bash -c "
         unattended-upgrades
 "
 
+echo "[4] Nettoyage systemd (Debian 13 LXC)..."
+pct exec "$VMID" -- bash -c "
+    systemctl mask ssh.socket
+    systemctl mask systemd-networkd systemd-networkd.socket
+"
+
 echo "[4] Mises à jour automatiques (sécurité uniquement)..."
 pct exec "$VMID" -- bash -c "
     printf 'APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";\nAPT::Periodic::AutocleanInterval \"7\";\n' \
