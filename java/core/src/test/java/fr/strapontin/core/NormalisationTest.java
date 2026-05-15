@@ -1,0 +1,98 @@
+package fr.strapontin.core;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class NormalisationTest {
+
+    @Test
+    void normaliserTexte_majuscules_retourneMinuscules() {
+        assertEquals("radiohead", Normalisation.normaliserTexte("RADIOHEAD"));
+    }
+
+    @Test
+    void normaliserTexte_avecAccents_supprimeAccents() {
+        assertEquals("julien dore", Normalisation.normaliserTexte("Julien Doré"));
+        assertEquals("helena", Normalisation.normaliserTexte("Héléna"));
+    }
+
+    @Test
+    void normaliserTexte_avecApostrophes_remplaceeParEspace() {
+        assertEquals("n golo", Normalisation.normaliserTexte("N'Golo"));
+        assertEquals("l artiste", Normalisation.normaliserTexte("l'artiste"));
+    }
+
+    @Test
+    void normaliserTexte_avecTirets_remplacesParEspace() {
+        assertEquals("helene martin", Normalisation.normaliserTexte("Helene-Martin"));
+        assertEquals("test valeur", Normalisation.normaliserTexte("test—valeur"));
+        assertEquals("test valeur", Normalisation.normaliserTexte("test–valeur"));
+    }
+
+    @Test
+    void normaliserTexte_avecCaracteresSpeciaux_remplacesParEspace() {
+        assertEquals("ac dc", Normalisation.normaliserTexte("AC/DC"));
+        assertEquals("foo bar", Normalisation.normaliserTexte("foo.bar"));
+    }
+
+    @Test
+    void normaliserTexte_avecEspacesMultiples_normalises() {
+        assertEquals("foo bar", Normalisation.normaliserTexte("  foo   bar  "));
+    }
+
+    @Test
+    void normaliserTexte_chaineVide_retourneVide() {
+        assertEquals("", Normalisation.normaliserTexte(""));
+    }
+
+    @Test
+    void normaliserTexte_avecChiffres_conserveChiffres() {
+        assertEquals("blink 182", Normalisation.normaliserTexte("Blink-182"));
+    }
+
+    @Test
+    void normaliserVille_saintAvecTiret_abregeSt() {
+        assertEquals("st denis", Normalisation.normaliserVille("Saint-Denis"));
+        assertEquals("st denis", Normalisation.normaliserVille("Saint Denis"));
+    }
+
+    @Test
+    void normaliserVille_sainteAvecTiret_abregeSte() {
+        assertEquals("ste foy", Normalisation.normaliserVille("Sainte-Foy"));
+    }
+
+    @Test
+    void normaliserVille_sansSaint_inchangee() {
+        assertEquals("paris", Normalisation.normaliserVille("Paris"));
+        assertEquals("lyon", Normalisation.normaliserVille("Lyon"));
+    }
+
+    @Test
+    void normaliserVille_avecAccents_normalise() {
+        assertEquals("ile de france", Normalisation.normaliserVille("Île-de-France"));
+    }
+
+    @Test
+    void similarite_chainesIdentiques_retourne1() {
+        assertEquals(1.0, Normalisation.similarite("radiohead", "radiohead"));
+    }
+
+    @Test
+    void similarite_uneChainVide_retourne0() {
+        assertEquals(0.0, Normalisation.similarite("", "radiohead"));
+        assertEquals(0.0, Normalisation.similarite("radiohead", ""));
+    }
+
+    @Test
+    void similarite_variationsProches_superieurOuEgalA085() {
+        assertTrue(Normalisation.similarite("radiohead", "radioheads") >= 0.85);
+        assertTrue(Normalisation.similarite("julien clerc", "julien clere") >= 0.85);
+    }
+
+    @Test
+    void similarite_artistesDistincts_inferieurA085() {
+        assertTrue(Normalisation.similarite("radiohead", "coldplay") < 0.85);
+        assertTrue(Normalisation.similarite("beyonce", "adele") < 0.85);
+    }
+}
