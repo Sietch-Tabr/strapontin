@@ -34,6 +34,7 @@
         <commons-text.version>1.15.0</commons-text.version>
         <resend.version>4.13.0</resend.version>
         <springdoc.version>3.0.3</springdoc.version>
+        <bucket4j.version>8.10.1</bucket4j.version>
     </properties>
 
     <dependencyManagement>
@@ -89,6 +90,13 @@
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc.version}</version>
+            </dependency>
+
+            <!-- Rate limiting login (5 tentatives / 15 min) -->
+            <dependency>
+                <groupId>com.bucket4j</groupId>
+                <artifactId>bucket4j-core</artifactId>
+                <version>${bucket4j.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

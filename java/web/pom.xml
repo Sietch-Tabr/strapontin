@@ -46,7 +46,29 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Cache Caffeine (resolver nom canonique, quota TM) -->
+        <!-- Migrations Flyway (requis en Spring Boot 4.x) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- Sessions persistantes (survivent aux restarts) -->
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-jdbc</artifactId>
+        </dependency>
+
+        <!-- Health check, métriques -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Cache Caffeine (config chiffrée, résolveur nom canonique) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
@@ -56,10 +78,28 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
-        <!-- Hashage mots de passe scrypt (format Better-Auth) -->
+        <!-- Hashage mots de passe scrypt format Better-Auth -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
+        </dependency>
+
+        <!-- Rate limiting login (5 tentatives / 15 min) -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j-core</artifactId>
+        </dependency>
+
+        <!-- Notifications push VAPID -->
+        <dependency>
+            <groupId>nl.martijndwars</groupId>
+            <artifactId>web-push</artifactId>
+        </dependency>
+
+        <!-- Email transactionnel -->
+        <dependency>
+            <groupId>com.resend</groupId>
+            <artifactId>resend-java</artifactId>
         </dependency>
 
         <!-- Documentation API -->
@@ -82,6 +122,11 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

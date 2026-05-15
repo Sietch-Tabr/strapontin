@@ -160,7 +160,8 @@ Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de
 - Logging : pino 10, lazy `%s` (pas de template literals dans les appels logger), pas de `console.log`
 - **tsconfig packages Node** : `"types": ["node"]` — requis depuis TypeScript 6
 - **`<button>` hors formulaire** : toujours `type="button"` (défaut HTML `submit` déclenche le formulaire parent sur mobile)
-- **Tests** : unitaires (`pnpm -r test`), fonctionnels (`test:fonctionnel`), intégration (`test:integration`, tunnel SSH requis), E2E Playwright (`test:e2e`, LXC dev requis)
+- **Tests TS** : unitaires (`pnpm -r test`), fonctionnels (`test:fonctionnel`), intégration (`test:integration`, tunnel SSH requis), E2E Playwright (`test:e2e`, LXC dev requis)
+- **Tests Java** : `mvn -pl core,sources test` (unitaires, pas de Docker). `mvn -pl worker test -am` requiert **Docker** (Testcontainers PostgreSQL pour `PersisterConcertsIntegrationTest`).
 - **Nommage tests** : `<fonction>_<scenario>_<attendu>`. Header `Origin` obligatoire avec Better Auth depuis Node.js (sinon 403).
 
 ## Outils Claude Code
