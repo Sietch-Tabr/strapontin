@@ -16,6 +16,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,7 +35,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class SpectacleController {
 
   private static final int CONCERTS_PAR_PAGE = 100;
-  private static final long SEUIL_NEW_MS = 7L * 24 * 3600 * 1000;
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -66,6 +66,8 @@ public class SpectacleController {
       List<String> moisDisponibles) {}
 
   record RequeteMasque(boolean masquer) {}
+
+  record RequeteMasquerArtiste(String artisteNorm) {}
 
   /// Liste les spectacles selon les filtres fournis.
   ///
@@ -194,7 +196,8 @@ public class SpectacleController {
     String selectSql =
         """
         SELECT c.id, c.artiste, c.date::text, c.heure::text, c.salle, c.ville,
-               c.url, c.prix_min, c.prix_max, c.classification, c.first_seen, c.statut
+               c.url, c.prix_min, c.prix_max, c.classification, c.first_seen, c.statut,
+               um.notifie_le
         FROM user_matches um
         INNER JOIN concerts c ON um.concert_id = c.id
         WHERE %s
@@ -206,8 +209,6 @@ public class SpectacleController {
     params.put("limit", CONCERTS_PAR_PAGE);
     params.put("offset", pageNum * CONCERTS_PAR_PAGE);
 
-    Instant seuilNew = Instant.ofEpochMilli(System.currentTimeMillis() - SEUIL_NEW_MS);
-
     List<SpectacleDto> concerts =
         jdbc.query(
             selectSql,
@@ -217,6 +218,7 @@ public class SpectacleController {
                   rs.getTimestamp("first_seen") != null
                       ? rs.getTimestamp("first_seen").toInstant()
                       : null;
+              boolean estNew = rs.getTimestamp("notifie_le") == null;
               return new SpectacleDto(
                   rs.getString("id"),
                   rs.getString("artiste"),
@@ -230,7 +232,7 @@ public class SpectacleController {
                   rs.getString("classification"),
                   firstSeen,
                   rs.getString("statut"),
-                  firstSeen != null && firstSeen.isAfter(seuilNew));
+                  estNew);
             });
 
     // Total sans LIMIT
@@ -317,6 +319,36 @@ public class SpectacleController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
+  /// Masque tous les concerts d'un artiste pour l'utilisateur courant.
+  ///
+  /// @param requete corps JSON avec {@code artisteNorm} l'identifiant normalisé de l'artiste
+  /// @param auth    contexte d'authentification
+  /// @return 200 si mis à jour
+  @PostMapping("/masquer-artiste")
+  public ResponseEntity<Map<String, Object>> masquerArtiste(
+      @RequestBody RequeteMasquerArtiste requete, Authentication auth) {
+    String userId = utilisateur(auth).id();
+    String aujourd8 = LocalDate.now().toString();
+
+    if (requete.artisteNorm() == null || requete.artisteNorm().isBlank()) {
+      return erreur(400, "Identifiant artiste manquant.");
+    }
+
+    jdbc.update(
+        """
+        UPDATE user_matches SET masque_le = now()
+        WHERE user_id = :userId
+          AND masque_le IS NULL
+          AND concert_id IN (
+            SELECT id FROM concerts
+            WHERE artiste_norm = :artisteNorm AND date >= :aujourd8
+          )
+        """,
+        Map.of("userId", userId, "artisteNorm", requete.artisteNorm(), "aujourd8", aujourd8));
+
+    return ResponseEntity.ok(Map.of("succes", true));
+  }
+
   private boolean lireFiltreDisponibles(String userId) {
     List<Boolean> lignes =
         jdbc.queryForList(
@@ -328,5 +360,11 @@ public class SpectacleController {
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
+  }
+
+  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
+    Map<String, Object> corps = new HashMap<>();
+    corps.put("erreur", message);
+    return ResponseEntity.status(status).body(corps);
   }
 }

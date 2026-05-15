@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 ///
 /// @param id                    l'identifiant unique de l'utilisateur
 /// @param identifiant           le nom d'utilisateur (login, insensible à la casse)
+/// @param nom                   le nom d'affichage
 /// @param email                 l'adresse email
 /// @param motDePasse            le hash du mot de passe (bcrypt ou format Better-Auth)
 /// @param role                  le rôle ({@code user} ou {@code admin})
@@ -28,6 +29,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 public record UtilisateurDetails(
     String id,
     String identifiant,
+    String nom,
     String email,
     String motDePasse,
     String role,
@@ -52,6 +54,8 @@ public record UtilisateurDetails(
 
   @Override
   public boolean isCredentialsNonExpired() {
-    return !doitChangerCredentials;
+    // Le redirect vers /first-login est géré par le frontend (mustChangeCredentials dans UtilisateurDto).
+    // Spring Security ne doit pas bloquer la connexion — sinon l'utilisateur ne peut jamais s'authentifier.
+    return true;
   }
 }

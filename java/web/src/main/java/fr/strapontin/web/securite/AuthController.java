@@ -49,10 +49,19 @@ public class AuthController {
 
   /// Représentation publique d'un utilisateur authentifié.
   ///
-  /// @param id          l'identifiant unique
-  /// @param identifiant le nom d'utilisateur
-  /// @param role        le rôle ({@code user} ou {@code admin})
-  public record UtilisateurDto(String id, String identifiant, String role) {}
+  /// @param id                    l'identifiant unique
+  /// @param identifiant           le nom d'utilisateur
+  /// @param nom                   le nom d'affichage
+  /// @param email                 l'adresse email
+  /// @param role                  le rôle ({@code user} ou {@code admin})
+  /// @param mustChangeCredentials indique si l'utilisateur doit changer ses credentials
+  public record UtilisateurDto(
+      String id,
+      String identifiant,
+      String nom,
+      String email,
+      String role,
+      boolean mustChangeCredentials) {}
 
   /// Authentifie un utilisateur et crée une session persistante.
   ///
@@ -81,7 +90,13 @@ public class AuthController {
     UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
     log.debug("Connexion réussie : {}", details.identifiant());
     return ResponseEntity.ok(
-        new UtilisateurDto(details.id(), details.identifiant(), details.role()));
+        new UtilisateurDto(
+            details.id(),
+            details.identifiant(),
+            details.nom(),
+            details.email(),
+            details.role(),
+            details.doitChangerCredentials()));
   }
 
   /// Invalide la session courante et déconnecte l'utilisateur.
@@ -109,6 +124,12 @@ public class AuthController {
     }
     UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
     return ResponseEntity.ok(
-        new UtilisateurDto(details.id(), details.identifiant(), details.role()));
+        new UtilisateurDto(
+            details.id(),
+            details.identifiant(),
+            details.nom(),
+            details.email(),
+            details.role(),
+            details.doitChangerCredentials()));
   }
 }
