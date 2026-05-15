@@ -5,6 +5,12 @@
 package fr.strapontin.web.push;
 
 import fr.strapontin.web.config.ConfigService;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
@@ -13,13 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
-
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 
 /// Service de notifications Web Push VAPID (portage de {@code push.ts}).
 ///
@@ -51,13 +50,7 @@ public class NotificationPushService {
   /// @param salle   le nom de la salle
   /// @param ville   la ville (peut être nulle)
   /// @param url     l'URL de billetterie (peut être nulle)
-  public record ConcertPush(
-      String artiste,
-      String date,
-      String salle,
-      String ville,
-      String url
-  ) {}
+  public record ConcertPush(String artiste, String date, String salle, String ville, String url) {}
 
   /// Retourne la clé VAPID publique pour l'inscription côté navigateur.
   ///
@@ -81,28 +74,24 @@ public class NotificationPushService {
       return false;
     }
 
-    List<Map<String, Object>> abonnements = jdbc.queryForList(
-        """
-        SELECT id, endpoint, p256dh, auth
-        FROM push_abonnements
-        WHERE user_id = :userId
-        """,
-        Map.of("userId", userId)
-    );
+    List<Map<String, Object>> abonnements =
+        jdbc.queryForList(
+            """
+            SELECT id, endpoint, p256dh, auth
+            FROM push_abonnements
+            WHERE user_id = :userId
+            """,
+            Map.of("userId", userId));
     if (abonnements.isEmpty()) return false;
 
     String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse(BASE_URL_DEFAUT);
-    String contactEmail = configService.lireConfig("CONTACT_EMAIL")
-        .orElse("admin@strapontin.kwaite.fr");
+    String contactEmail =
+        configService.lireConfig("CONTACT_EMAIL").orElse("admin@strapontin.kwaite.fr");
     String payload = construirePayload(concerts, baseUrl);
 
     PushService pushService;
     try {
-      pushService = new PushService(
-          cléPublique.get(),
-          cléPrivée.get(),
-          "mailto:" + contactEmail
-      );
+      pushService = new PushService(cléPublique.get(), cléPrivée.get(), "mailto:" + contactEmail);
     } catch (Exception e) {
       log.error("Impossible d'initialiser le service VAPID", e);
       return false;
@@ -111,10 +100,10 @@ public class NotificationPushService {
     int nbEnvoyes = 0;
     for (Map<String, Object> ab : abonnements) {
       try {
-        Subscription subscription = new Subscription(
-            (String) ab.get("endpoint"),
-            new Subscription.Keys((String) ab.get("p256dh"), (String) ab.get("auth"))
-        );
+        Subscription subscription =
+            new Subscription(
+                (String) ab.get("endpoint"),
+                new Subscription.Keys((String) ab.get("p256dh"), (String) ab.get("auth")));
         Notification notification = new Notification(subscription, payload);
         HttpResponse response = pushService.send(notification);
         int status = response.getStatusLine().getStatusCode();
@@ -140,45 +129,40 @@ public class NotificationPushService {
   }
 
   private void supprimerAbonnement(UUID id, String userId, String endpoint) {
-    jdbc.update(
-        "DELETE FROM push_abonnements WHERE id = :id",
-        Map.of("id", id)
-    );
+    jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", id));
     log.info("Abonnement push révoqué, supprimé : {} — {}", userId, endpoint);
   }
 
   private static String construirePayload(List<ConcertPush> concerts, String baseUrl) {
     ConcertPush premier = concerts.get(0);
-    String titre = concerts.size() == 1
-        ? premier.artiste() + " — " + premier.salle()
-        : concerts.size() + " nouveaux concerts";
+    String titre =
+        concerts.size() == 1
+            ? premier.artiste() + " — " + premier.salle()
+            : concerts.size() + " nouveaux concerts";
 
-    String corps = concerts.size() == 1
-        ? premier.date() + (premier.ville() != null ? " · " + premier.ville() : "")
-        : concerts.stream()
-            .map(c -> c.artiste() + " · " + c.date())
-            .collect(java.util.stream.Collectors.joining("\n"));
+    String corps =
+        concerts.size() == 1
+            ? premier.date() + (premier.ville() != null ? " · " + premier.ville() : "")
+            : concerts.stream()
+                .map(c -> c.artiste() + " · " + c.date())
+                .collect(java.util.stream.Collectors.joining("\n"));
 
-    String url = concerts.size() == 1
-        ? baseUrl + "/spectacles?artiste=" + URLEncoder.encode(premier.artiste(), StandardCharsets.UTF_8)
-        : baseUrl + "/spectacles";
+    String url =
+        concerts.size() == 1
+            ? baseUrl
+                + "/spectacles?artiste="
+                + URLEncoder.encode(premier.artiste(), StandardCharsets.UTF_8)
+            : baseUrl + "/spectacles";
 
     // JSON construit manuellement (pas de dépendance Jackson pour ce payload simple)
     return """
-        {"title":"%s","body":"%s","icon":"%s/icon-192.png","url":"%s"}"""
-        .formatted(
-            echapperJson(titre),
-            echapperJson(corps),
-            baseUrl,
-            echapperJson(url)
-        );
+    {"title":"%s","body":"%s","icon":"%s/icon-192.png","url":"%s"}\
+    """
+        .formatted(echapperJson(titre), echapperJson(corps), baseUrl, echapperJson(url));
   }
 
   private static String echapperJson(String s) {
-    return s.replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r");
+    return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
 
   private static int extraireCodeHttp(Exception e) {

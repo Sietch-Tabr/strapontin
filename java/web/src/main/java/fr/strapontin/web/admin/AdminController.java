@@ -195,9 +195,7 @@ public class AdminController {
 
     boolean emailExistant =
         !jdbc.queryForList(
-                "SELECT 1 FROM users WHERE email = :email",
-                Map.of("email", email),
-                Integer.class)
+                "SELECT 1 FROM users WHERE email = :email", Map.of("email", email), Integer.class)
             .isEmpty();
     if (emailExistant) {
       return erreur(400, "Impossible de créer le compte. Email déjà utilisé ?");
@@ -207,7 +205,8 @@ public class AdminController {
     String usernameTemp = "u_" + genererHex(4);
     String motDePasseTemp = genererToken(12);
     String hashMdp = bcrypt.encode(motDePasseTemp);
-    String nomInitial = email.split("@")[0].substring(0, Math.min(email.split("@")[0].length(), 100));
+    String nomInitial =
+        email.split("@")[0].substring(0, Math.min(email.split("@")[0].length(), 100));
 
     Map<String, Object> paramsUser = new HashMap<>();
     paramsUser.put("id", userId);
@@ -282,8 +281,7 @@ public class AdminController {
     }
 
     String nom = requete.nom() == null ? "" : requete.nom().strip();
-    String email =
-        requete.email() == null ? "" : requete.email().strip().toLowerCase();
+    String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
 
     if (!nom.isEmpty() && nom.length() > 100) {
       return erreur(400, "Nom trop long (100 caractères max).");
@@ -314,9 +312,7 @@ public class AdminController {
     if (!nom.isEmpty()) setClauses.append(", name = :nom");
     if (!email.isEmpty()) setClauses.append(", email = :email");
 
-    jdbc.update(
-        "UPDATE users SET " + setClauses + " WHERE id = :userId",
-        miseAJour);
+    jdbc.update("UPDATE users SET " + setClauses + " WHERE id = :userId", miseAJour);
 
     if (!email.isEmpty()) {
       logAdminService.logAdmin(
@@ -364,8 +360,7 @@ public class AdminController {
 
     List<Map<String, Object>> cible =
         jdbc.queryForList(
-            "SELECT id, email, name FROM users WHERE id = :userId",
-            Map.of("userId", userId));
+            "SELECT id, email, name FROM users WHERE id = :userId", Map.of("userId", userId));
     if (cible.isEmpty()) {
       return erreur(404, "Utilisateur introuvable.");
     }
@@ -377,9 +372,7 @@ public class AdminController {
     }
 
     // Supprimer les anciens tokens pour cet email
-    jdbc.update(
-        "DELETE FROM verifications WHERE identifier = :email",
-        Map.of("email", email));
+    jdbc.update("DELETE FROM verifications WHERE identifier = :email", Map.of("email", email));
 
     String token = genererToken(32);
     String tokenId = UUID.randomUUID().toString();
@@ -404,13 +397,13 @@ public class AdminController {
         "mot de passe réinitialisé",
         Map.of("userId", userId, "parAdmin", adminId));
 
-    return ResponseEntity.ok(
-        Map.of("succes", true, "action", "reinitialiserMdp", "email", email));
+    return ResponseEntity.ok(Map.of("succes", true, "action", "reinitialiserMdp", "email", email));
   }
 
   // --- Endpoints configuration ---
 
-  /// Retourne le statut des clés de configuration (présence + valeur en clair pour CONTACT_EMAIL et PUBLIC_BASE_URL).
+  /// Retourne le statut des clés de configuration (présence + valeur en clair pour CONTACT_EMAIL et
+  // PUBLIC_BASE_URL).
   ///
   /// @return la liste des statuts de configuration
   @GetMapping("/config")
@@ -474,8 +467,7 @@ public class AdminController {
       byte[] y = vers32Octets(w.getAffineY());
       System.arraycopy(x, 0, uncompressed, 1, 32);
       System.arraycopy(y, 0, uncompressed, 33, 32);
-      String clePublique =
-          Base64.getUrlEncoder().withoutPadding().encodeToString(uncompressed);
+      String clePublique = Base64.getUrlEncoder().withoutPadding().encodeToString(uncompressed);
 
       ECPrivateKey privKey = (ECPrivateKey) paire.getPrivate();
       byte[] d = vers32Octets(privKey.getS());
@@ -550,10 +542,12 @@ public class AdminController {
 
   private ResponseEntity<Map<String, Object>> validerConfig(String cle, String valeur) {
     if ("TICKETMASTER_API_KEY".equals(cle) && !FORMAT_TM_KEY.matcher(valeur).matches()) {
-      return erreur(400, "Format de clé Ticketmaster invalide (16 à 64 caractères alphanumériques).");
+      return erreur(
+          400, "Format de clé Ticketmaster invalide (16 à 64 caractères alphanumériques).");
     }
     if ("RESEND_API_KEY".equals(cle) && !FORMAT_RESEND_KEY.matcher(valeur).matches()) {
-      return erreur(400, "La clé Resend doit commencer par re_ suivi de caractères alphanumériques.");
+      return erreur(
+          400, "La clé Resend doit commencer par re_ suivi de caractères alphanumériques.");
     }
     if ("PUBLIC_BASE_URL".equals(cle)) {
       try {

@@ -68,9 +68,7 @@ public class SalleController {
   record ResultatSalle(String salle, String ville, String tmVenueId, String source) {}
 
   record ReponseSalles(
-      List<SalleUtilisateur> salles,
-      List<ResultatSalle> resultats,
-      boolean dejaLaSuivie) {}
+      List<SalleUtilisateur> salles, List<ResultatSalle> resultats, boolean dejaLaSuivie) {}
 
   record RequeteAjouter(String nom, String tmVenueId) {}
 
@@ -121,14 +119,12 @@ public class SalleController {
 
       List<ResultatSalle> listeResultats =
           enBase.stream()
-              .filter(r -> !sallesDejaAjoutees.contains(normaliserSalleCle((String) r.get("salle"))))
+              .filter(
+                  r -> !sallesDejaAjoutees.contains(normaliserSalleCle((String) r.get("salle"))))
               .map(
                   r ->
                       new ResultatSalle(
-                          (String) r.get("salle"),
-                          (String) r.get("ville"),
-                          null,
-                          "base"))
+                          (String) r.get("salle"), (String) r.get("ville"), null, "base"))
               .collect(Collectors.toCollection(ArrayList::new));
 
       if (listeResultats.size() < 3) {
@@ -149,9 +145,7 @@ public class SalleController {
       }
 
       resultats = listeResultats;
-      dejaLaSuivie =
-          salles.stream()
-              .anyMatch(s -> s.nom().equalsIgnoreCase(recherche));
+      dejaLaSuivie = salles.stream().anyMatch(s -> s.nom().equalsIgnoreCase(recherche));
     }
 
     return ResponseEntity.ok(new ReponseSalles(salles, resultats, dejaLaSuivie));
@@ -168,7 +162,9 @@ public class SalleController {
     String userId = utilisateur(auth).id();
     String nom = requete.nom() == null ? "" : requete.nom().strip();
     String tmVenueId =
-        requete.tmVenueId() == null || requete.tmVenueId().isBlank() ? null : requete.tmVenueId().strip();
+        requete.tmVenueId() == null || requete.tmVenueId().isBlank()
+            ? null
+            : requete.tmVenueId().strip();
 
     if (nom.isEmpty() || nom.length() > 200) {
       return erreur(400, "Identifiant de salle invalide.");
@@ -236,8 +232,7 @@ public class SalleController {
   /// @param auth    contexte d'authentification
   /// @return 204 si supprimée
   @DeleteMapping("/{salleId}")
-  public ResponseEntity<Void> supprimerSalle(
-      @PathVariable String salleId, Authentication auth) {
+  public ResponseEntity<Void> supprimerSalle(@PathVariable String salleId, Authentication auth) {
     String userId = utilisateur(auth).id();
     jdbc.update(
         """

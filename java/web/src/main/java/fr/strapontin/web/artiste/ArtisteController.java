@@ -34,7 +34,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Contrôleur REST pour la gestion des artistes suivis (portage de {@code artistes/+page.server.ts}).
+/// Contrôleur REST pour la gestion des artistes suivis (portage de {@code
+// artistes/+page.server.ts}).
 ///
 /// <p>Complète la recherche DB avec l'API Deezer si moins de 3 résultats en base.
 /// Limite à 500 artistes par utilisateur.
@@ -54,8 +55,7 @@ public class ArtisteController {
 
   public ArtisteController(NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
-    this.httpClient =
-        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+    this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
   }
 
   record ArtisteUtilisateur(String artisteNormalise, String artisteAffiche, Instant createdAt) {}

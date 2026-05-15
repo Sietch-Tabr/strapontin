@@ -5,7 +5,6 @@
 package fr.strapontin.web.utilisateur;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
-import java.text.Normalizer;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -22,7 +21,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Contrôleur REST pour la configuration utilisateur (portage de {@code parametres/+page.server.ts}).
+/// Contrôleur REST pour la configuration utilisateur (portage de {@code
+// parametres/+page.server.ts}).
 ///
 /// <p>Gère les départements, filtres de disponibilité, préférences de notification et thème.
 ///
@@ -33,8 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserConfigController {
 
   private static final Pattern FORMAT_DEPT = Pattern.compile("^\\d{2,3}$");
-  private static final Set<String> FREQUENCES_VALIDES =
-      Set.of("jamais", "temps_reel", "quotidien");
+  private static final Set<String> FREQUENCES_VALIDES = Set.of("jamais", "temps_reel", "quotidien");
   private static final Set<String> THEMES_VALIDES = Set.of("auto", "clair", "sombre");
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -184,8 +183,10 @@ public class UserConfigController {
     }
 
     // Pour le INSERT, on construit la liste des colonnes aussi
-    List<String> colonnes = champs.keySet().stream().map(this::versColonne).collect(Collectors.toList());
-    List<String> placeholders = champs.keySet().stream().map(c -> ":" + c).collect(Collectors.toList());
+    List<String> colonnes =
+        champs.keySet().stream().map(this::versColonne).collect(Collectors.toList());
+    List<String> placeholders =
+        champs.keySet().stream().map(c -> ":" + c).collect(Collectors.toList());
 
     colonnes.add(0, "user_id");
     placeholders.add(0, ":userId");
@@ -196,10 +197,7 @@ public class UserConfigController {
         VALUES (%s)
         ON CONFLICT (user_id) DO UPDATE SET %s, updated_at = now()
         """
-            .formatted(
-                String.join(", ", colonnes),
-                String.join(", ", placeholders),
-                setClauses);
+            .formatted(String.join(", ", colonnes), String.join(", ", placeholders), setClauses);
 
     jdbc.update(sql, params);
   }

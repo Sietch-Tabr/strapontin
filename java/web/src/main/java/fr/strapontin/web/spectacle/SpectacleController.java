@@ -8,7 +8,6 @@ import fr.strapontin.web.securite.UtilisateurDetails;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -113,12 +112,14 @@ public class SpectacleController {
     boolean sourceSalles = sources == null || sources.isEmpty() || sources.contains("salles");
 
     // Construction dynamique du WHERE
-    StringBuilder whereClause = new StringBuilder(
-        """
-        um.user_id = :userId
-        AND c.date >= :aujourd8
-        AND um.masque_le IS %s
-        """.formatted(masques ? "NOT NULL" : "NULL"));
+    StringBuilder whereClause =
+        new StringBuilder(
+            """
+            um.user_id = :userId
+            AND c.date >= :aujourd8
+            AND um.masque_le IS %s
+            """
+                .formatted(masques ? "NOT NULL" : "NULL"));
 
     Map<String, Object> params = new HashMap<>();
     params.put("userId", userId);
@@ -130,8 +131,7 @@ public class SpectacleController {
     }
 
     if (!inclureIndisponibles) {
-      whereClause.append(
-          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled'))");
+      whereClause.append(" AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled'))");
     }
 
     String recherche = q.strip().substring(0, Math.min(q.strip().length(), 100));
@@ -200,7 +200,8 @@ public class SpectacleController {
         WHERE %s
         ORDER BY %s
         LIMIT :limit OFFSET :offset
-        """.formatted(whereClause, orderBy);
+        """
+            .formatted(whereClause, orderBy);
 
     params.put("limit", CONCERTS_PAR_PAGE);
     params.put("offset", pageNum * CONCERTS_PAR_PAGE);
@@ -239,18 +240,19 @@ public class SpectacleController {
         FROM user_matches um
         INNER JOIN concerts c ON um.concert_id = c.id
         WHERE %s
-        """.formatted(whereClause);
+        """
+            .formatted(whereClause);
     Map<String, Object> countParams = new HashMap<>(params);
     countParams.remove("limit");
     countParams.remove("offset");
-    int total =
-        jdbc.queryForObject(countSql, countParams, Integer.class);
+    int total = jdbc.queryForObject(countSql, countParams, Integer.class);
 
     // Genres et mois disponibles (sans filtre genre/mois/classification/recherche)
     String whereBase =
         """
         um.user_id = :userId AND c.date >= :aujourd8 AND um.masque_le IS %s
-        """.formatted(masques ? "NOT NULL" : "NULL");
+        """
+            .formatted(masques ? "NOT NULL" : "NULL");
     Map<String, Object> baseParams = Map.of("userId", userId, "aujourd8", aujourd8);
 
     List<String> genresDisponibles =
@@ -261,7 +263,8 @@ public class SpectacleController {
             INNER JOIN concerts c ON um.concert_id = c.id
             WHERE %s AND c.genre IS NOT NULL
             ORDER BY c.genre
-            """.formatted(whereBase),
+            """
+                .formatted(whereBase),
             baseParams,
             String.class);
 
@@ -273,13 +276,15 @@ public class SpectacleController {
             INNER JOIN concerts c ON um.concert_id = c.id
             WHERE %s
             ORDER BY mois
-            """.formatted(whereBase),
+            """
+                .formatted(whereBase),
             baseParams,
             String.class);
 
     int totalPages = Math.max(1, (int) Math.ceil((double) total / CONCERTS_PAR_PAGE));
     return ResponseEntity.ok(
-        new ReponseSpectacles(concerts, pageNum, totalPages, total, genresDisponibles, moisDisponibles));
+        new ReponseSpectacles(
+            concerts, pageNum, totalPages, total, genresDisponibles, moisDisponibles));
   }
 
   /// Masque ou démasque un concert pour l'utilisateur courant.
@@ -290,9 +295,7 @@ public class SpectacleController {
   /// @return 200 si mis à jour
   @PatchMapping("/matches/{concertId}")
   public ResponseEntity<Map<String, Object>> modifierMatch(
-      @PathVariable String concertId,
-      @RequestBody RequeteMasque requete,
-      Authentication auth) {
+      @PathVariable String concertId, @RequestBody RequeteMasque requete, Authentication auth) {
     String userId = utilisateur(auth).id();
 
     if (requete.masquer()) {

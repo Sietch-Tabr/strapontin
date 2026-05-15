@@ -44,7 +44,8 @@ public class LogAdminService {
   /// @param source   module source
   /// @param message  message
   /// @param meta     métadonnées JSON brut (peut être nul)
-  public record EntreeLogAdmin(long ts, String niveau, String source, String message, String meta) {}
+  public record EntreeLogAdmin(
+      long ts, String niveau, String source, String message, String meta) {}
 
   /// Journalise un événement admin sans métadonnées.
   ///

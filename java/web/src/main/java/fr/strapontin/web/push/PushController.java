@@ -62,8 +62,7 @@ public class PushController {
   /// @return la clé publique ou {@code disponible: false} si non configurée
   @GetMapping
   public ResponseEntity<ReponseVapid> obtenirCleVapid() {
-    String clePublique =
-        configService.lireConfig("VAPID_PUBLIC_KEY").orElse(null);
+    String clePublique = configService.lireConfig("VAPID_PUBLIC_KEY").orElse(null);
     if (clePublique == null) {
       return ResponseEntity.ok(new ReponseVapid(false, null));
     }
@@ -80,8 +79,10 @@ public class PushController {
       @RequestBody RequeteAbonnement requete, Authentication auth) {
     String userId = utilisateur(auth).id();
 
-    if (requete.endpoint() == null || requete.keys() == null
-        || requete.keys().p256dh() == null || requete.keys().auth() == null) {
+    if (requete.endpoint() == null
+        || requete.keys() == null
+        || requete.keys().p256dh() == null
+        || requete.keys().auth() == null) {
       return erreur(400, "Abonnement incomplet.");
     }
     if (requete.endpoint().length() > 2048
