@@ -35,7 +35,7 @@ export const actions: Actions = {
       type,
       message,
       expediteurEmail: utilisateur.email,
-      expediteurNom: utilisateur.name,
+      expediteurNom: utilisateur.nom,
     });
 
     return { succes: true };

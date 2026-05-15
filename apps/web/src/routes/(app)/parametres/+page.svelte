@@ -16,9 +16,9 @@
 	let frequenceNotifications = $state<string>(untrack(() => data.config?.frequenceNotifications ?? 'jamais'));
 	let notifArtistes = $state<boolean>(untrack(() => data.config?.notifArtistes ?? true));
 	let notifSalles = $state<boolean>(untrack(() => data.config?.notifSalles ?? false));
-	let nom = $state<string>(untrack(() => data.utilisateur?.name ?? ''));
+	let nom = $state<string>(untrack(() => data.utilisateur?.nom ?? ''));
 	let email = $state<string>(untrack(() => data.utilisateur?.email ?? ''));
-	let identifiant = $state<string>(untrack(() => (data.utilisateur as { username?: string | null } & typeof data.utilisateur)?.username ?? ''));
+	let identifiant = $state<string>(untrack(() => data.utilisateur?.identifiant ?? ''));
 	let theme = $state<string>(untrack(() => data.theme));
 
 	$effect(() => {
@@ -27,9 +27,9 @@
 		frequenceNotifications = data.config?.frequenceNotifications ?? 'jamais';
 		notifArtistes = data.config?.notifArtistes ?? true;
 		notifSalles = data.config?.notifSalles ?? false;
-		nom = data.utilisateur?.name ?? '';
+		nom = data.utilisateur?.nom ?? '';
 		email = data.utilisateur?.email ?? '';
-		identifiant = (data.utilisateur as { username?: string | null } & typeof data.utilisateur)?.username ?? '';
+		identifiant = data.utilisateur?.identifiant ?? '';
 	});
 
 	let enregistrementConfig = $state(false);
@@ -788,7 +788,7 @@
 					<h2 class="text-base font-semibold text-foreground">Double authentification (2FA)</h2>
 				</div>
 
-				{#if data.utilisateur?.twoFactorEnabled}
+				{#if false}
 					<!-- 2FA activée -->
 					<div class="mb-4 flex items-center gap-2">
 						<span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>

@@ -15,7 +15,7 @@
 		HelpCircle
 	} from '@lucide/svelte';
 
-	let { utilisateur }: { utilisateur: { name: string; role?: string } } = $props();
+	let { utilisateur }: { utilisateur: { nom: string; role?: string } } = $props();
 
 	const elementsNav = [
 		{ label: 'Accueil', icone: Home, route: '/' },
@@ -125,7 +125,7 @@
 		</a>
 
 		<div class="mt-1 flex items-center justify-between rounded-md px-3 py-2">
-			<span class="truncate text-sm text-sidebar-foreground">{utilisateur.name}</span>
+			<span class="truncate text-sm text-sidebar-foreground">{utilisateur.nom}</span>
 			<button
 				type="button"
 				onclick={seDeconnecter}

@@ -17,7 +17,7 @@
 
 <div class="p-6 lg:p-8">
 	<div class="mb-8">
-		<p class="text-sm text-muted-foreground">Bonjour, {data.utilisateur?.name}</p>
+		<p class="text-sm text-muted-foreground">Bonjour, {data.utilisateur?.nom}</p>
 		<h1 class="text-2xl font-semibold text-foreground">Mes prochains concerts</h1>
 	</div>
 

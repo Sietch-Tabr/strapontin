@@ -1,190 +1,109 @@
-import { db } from "$lib/server/db";
-import {
-  userMatches,
-  concerts,
-  userArtistes,
-  userSalles,
-} from "@strapontin/core/schema";
-import { eq, gte, and, count, isNull, isNotNull, inArray } from "drizzle-orm";
-import type { SQL } from "drizzle-orm";
+import { JAVA_API_URL, entetesJava } from "$lib/server/api-java";
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
-import {
-  lireFiltresStatut,
-  construireConditionStatut,
-} from "$lib/server/filtres";
 
-export const load: PageServerLoad = async ({ locals, url }) => {
-  const aujourdhui = new Date().toISOString().split("T")[0];
+export const load: PageServerLoad = async ({ cookies, url }) => {
+  const session = cookies.get("SESSION");
   const afficherMasques = url.searchParams.get("masques") === "1";
+  const indisponibles = url.searchParams.get("indisponibles");
 
-  const { inclureIndisponibles } = await lireFiltresStatut(
-    url,
-    locals.user!.id,
+  const params = new URLSearchParams();
+  if (afficherMasques) params.set("masques", "true");
+  if (indisponibles) params.set("indisponibles", indisponibles);
+
+  const reponse = await fetch(
+    `${JAVA_API_URL}/api/accueil?${params.toString()}`,
+    { headers: entetesJava(session) },
   );
 
-  const conditions: SQL[] = [
-    eq(userMatches.userId, locals.user!.id),
-    gte(concerts.date, aujourdhui),
-    afficherMasques
-      ? isNotNull(userMatches.masqueLe)
-      : isNull(userMatches.masqueLe),
-  ];
-
-  const conditionStatut = construireConditionStatut(inclureIndisponibles);
-  if (conditionStatut) conditions.push(conditionStatut);
-
-  const joinUserArtistes = and(
-    eq(userArtistes.userId, userMatches.userId),
-    eq(userArtistes.artisteNormalise, concerts.artisteNorm),
-  );
-
-  const [prochainsConcerts, [{ total: totalConcerts }]] = await Promise.all([
-    db
-      .select({
-        id: concerts.id,
-        artiste: concerts.artiste,
-        artisteNorm: concerts.artisteNorm,
-        date: concerts.date,
-        heure: concerts.heure,
-        salle: concerts.salle,
-        ville: concerts.ville,
-        url: concerts.url,
-        statut: concerts.statut,
-        notifieLe: userMatches.notifieLe,
-      })
-      .from(userMatches)
-      .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
-      .innerJoin(userArtistes, joinUserArtistes)
-      .where(and(...conditions))
-      .orderBy(concerts.date)
-      .limit(50),
-    db
-      .select({ total: count() })
-      .from(userMatches)
-      .innerJoin(concerts, eq(userMatches.concertId, concerts.id))
-      .innerJoin(userArtistes, joinUserArtistes)
-      .where(and(...conditions)),
-  ]);
-
-  // Regrouper par artiste pour détecter les tournées (≥ 2 concerts)
-  const groupesMap = new Map<
-    string,
-    {
-      id: string;
-      artiste: string;
-      artisteNorm: string;
-      date: string;
-      heure: string | null;
-      salle: string;
-      ville: string | null;
-      url: string | null;
-      statut: string | null;
-      notifieLe: Date | null;
-    }[]
-  >();
-  for (const concert of prochainsConcerts) {
-    const liste = groupesMap.get(concert.artiste) ?? [];
-    liste.push(concert);
-    groupesMap.set(concert.artiste, liste);
+  if (!reponse.ok) {
+    return {
+      artistesGroupes: [],
+      nbArtistes: 0,
+      nbSalles: 0,
+      inclureIndisponibles: false,
+      afficherMasques,
+      totalConcerts: 0,
+      tronque: false,
+    };
   }
 
-  const artistesGroupes = [...groupesMap.entries()].map(([artiste, dates]) => ({
-    artiste,
-    artisteNorm: dates[0]!.artisteNorm,
-    estTournee: dates.length >= 2,
-    estNew: dates.some((c) => c.notifieLe === null),
-    concerts: dates.map((c) => ({
-      ...c,
-      estNew: c.notifieLe === null,
-    })),
-  }));
-
-  const [{ valeur: nbArtistes }] = await db
-    .select({ valeur: count() })
-    .from(userArtistes)
-    .where(eq(userArtistes.userId, locals.user!.id));
-
-  const [{ valeur: nbSalles }] = await db
-    .select({ valeur: count() })
-    .from(userSalles)
-    .where(eq(userSalles.userId, locals.user!.id));
+  const donnees = (await reponse.json()) as {
+    artistesGroupes: {
+      artiste: string;
+      artisteNorm: string;
+      estTournee: boolean;
+      estNew: boolean;
+      concerts: {
+        id: string;
+        artiste: string;
+        artisteNorm: string;
+        date: string;
+        heure: string | null;
+        salle: string;
+        ville: string | null;
+        url: string | null;
+        statut: string | null;
+        estNew: boolean;
+      }[];
+    }[];
+    nbArtistes: number;
+    nbSalles: number;
+    totalConcerts: number;
+    tronque: boolean;
+  };
 
   return {
-    artistesGroupes,
-    nbArtistes,
-    nbSalles,
-    inclureIndisponibles,
+    artistesGroupes: donnees.artistesGroupes ?? [],
+    nbArtistes: donnees.nbArtistes ?? 0,
+    nbSalles: donnees.nbSalles ?? 0,
+    inclureIndisponibles: indisponibles === "1",
     afficherMasques,
-    totalConcerts,
-    tronque: totalConcerts > 50,
+    totalConcerts: donnees.totalConcerts ?? 0,
+    tronque: donnees.tronque ?? false,
   };
 };
 
 export const actions: Actions = {
-  masquer: async ({ request, locals }) => {
+  masquer: async ({ request, cookies }) => {
     const donnees = await request.formData();
     const concertId = donnees.get("concertId");
     if (!concertId || typeof concertId !== "string") {
       error(400, "Concert manquant");
     }
-    await db
-      .update(userMatches)
-      .set({ masqueLe: new Date() })
-      .where(
-        and(
-          eq(userMatches.userId, locals.user!.id),
-          eq(userMatches.concertId, concertId),
-        ),
-      );
+    const session = cookies.get("SESSION");
+    await fetch(`${JAVA_API_URL}/api/spectacles/matches/${encodeURIComponent(concertId)}`, {
+      method: "PATCH",
+      headers: entetesJava(session),
+      body: JSON.stringify({ masquer: true }),
+    });
   },
 
-  masquerSerie: async ({ request, locals }) => {
+  masquerSerie: async ({ request, cookies }) => {
     const donnees = await request.formData();
     const artisteNorm = donnees.get("artisteNorm");
     if (!artisteNorm || typeof artisteNorm !== "string") {
       error(400, "Artiste manquant");
     }
-    const aujourdhui = new Date().toISOString().split("T")[0];
-    const concertsArtiste = await db
-      .select({ id: concerts.id })
-      .from(concerts)
-      .where(
-        and(
-          eq(concerts.artisteNorm, artisteNorm),
-          gte(concerts.date, aujourdhui),
-        ),
-      );
-    if (concertsArtiste.length === 0) return;
-    await db
-      .update(userMatches)
-      .set({ masqueLe: new Date() })
-      .where(
-        and(
-          eq(userMatches.userId, locals.user!.id),
-          inArray(
-            userMatches.concertId,
-            concertsArtiste.map((c) => c.id),
-          ),
-          isNull(userMatches.masqueLe),
-        ),
-      );
+    const session = cookies.get("SESSION");
+    await fetch(`${JAVA_API_URL}/api/spectacles/masquer-artiste`, {
+      method: "POST",
+      headers: entetesJava(session),
+      body: JSON.stringify({ artisteNorm }),
+    });
   },
 
-  demasquer: async ({ request, locals }) => {
+  demasquer: async ({ request, cookies }) => {
     const donnees = await request.formData();
     const concertId = donnees.get("concertId");
     if (!concertId || typeof concertId !== "string") {
       error(400, "Concert manquant");
     }
-    await db
-      .update(userMatches)
-      .set({ masqueLe: null })
-      .where(
-        and(
-          eq(userMatches.userId, locals.user!.id),
-          eq(userMatches.concertId, concertId),
-        ),
-      );
+    const session = cookies.get("SESSION");
+    await fetch(`${JAVA_API_URL}/api/spectacles/matches/${encodeURIComponent(concertId)}`, {
+      method: "PATCH",
+      headers: entetesJava(session),
+      body: JSON.stringify({ masquer: false }),
+    });
   },
 };

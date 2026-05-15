@@ -5,15 +5,14 @@ declare global {
     // interface Error {}
     interface Locals {
       theme: "auto" | "clair" | "sombre";
-      session: import("better-auth").Session | null;
-      user:
-        | (import("better-auth").User & {
-            role: string;
-            username?: string | null;
-            mustChangeCredentials: boolean;
-            twoFactorEnabled?: boolean | null;
-          })
-        | null;
+      user: {
+        id: string;
+        identifiant: string;
+        nom: string;
+        email: string;
+        role: string;
+        mustChangeCredentials: boolean;
+      } | null;
     }
     // interface PageData {}
     // interface PageState {}
