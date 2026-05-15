@@ -309,8 +309,14 @@ public class PersisterConcerts {
   /// @param liste concerts à persister
   /// @return liste des IDs insérés ou mis à jour
   @Transactional
-  public List<String> persisterConcerts(List<ConcertBrut> liste) {
-    if (liste.isEmpty()) return List.of();
+  /// Résultat de la persistance d'un lot de concerts.
+  ///
+  /// @param nbInseres nombre de concerts insérés
+  /// @param nbMisAJour nombre de concerts mis à jour
+  public record ResultatPersistance(int nbInseres, int nbMisAJour) {}
+
+  public ResultatPersistance persisterConcerts(List<ConcertBrut> liste) {
+    if (liste.isEmpty()) return new ResultatPersistance(0, 0);
 
     List<ConcertBrut> apresDedup = deduplicerParCleConflit(liste);
     List<ConcertBrut> listeFiltree =
@@ -329,7 +335,6 @@ public class PersisterConcerts {
                 })
             .toList();
 
-    List<String> ids = new ArrayList<>();
     int totalInserts = 0;
     int totalUpdates = 0;
 
@@ -364,7 +369,6 @@ public class PersisterConcerts {
       for (ValeurConcert v : valeurs) {
         List<Map<String, Object>> lignes = jdbc.queryForList(SQL_UPSERT, parametresUpsert(v));
         for (Map<String, Object> ligne : lignes) {
-          ids.add(ligne.get("id").toString());
           if (Boolean.TRUE.equals(ligne.get("est_insertion"))) totalInserts++;
           else totalUpdates++;
         }
@@ -375,10 +379,10 @@ public class PersisterConcerts {
 
     log.info(
         "concerts persistés total={} inserts={} updates={}",
-        ids.size(),
+        totalInserts + totalUpdates,
         totalInserts,
         totalUpdates);
-    return ids;
+    return new ResultatPersistance(totalInserts, totalUpdates);
   }
 
   private void supprimerDoublonsParUrl() {

@@ -65,9 +65,9 @@ class PersisterConcertsIntegrationTest {
     List<ConcertBrut> liste =
         List.of(concert("Julien Clerc", "2026-09-15", "Accor Arena", "ticketmaster"));
 
-    List<String> ids = persisterConcerts.persisterConcerts(liste);
+    PersisterConcerts.ResultatPersistance res = persisterConcerts.persisterConcerts(liste);
 
-    assertEquals(1, ids.size());
+    assertEquals(1, res.nbInseres());
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count);
   }
@@ -143,8 +143,8 @@ class PersisterConcertsIntegrationTest {
 
   @Test
   void persisterConcerts_listeVide_retourneIdsVides() {
-    List<String> ids = persisterConcerts.persisterConcerts(List.of());
-    assertTrue(ids.isEmpty());
+    PersisterConcerts.ResultatPersistance res = persisterConcerts.persisterConcerts(List.of());
+    assertEquals(0, res.nbInseres() + res.nbMisAJour());
   }
 
   @Test
@@ -165,9 +165,9 @@ class PersisterConcertsIntegrationTest {
             null,
             null);
 
-    List<String> ids = persisterConcerts.persisterConcerts(List.of(concert));
+    PersisterConcerts.ResultatPersistance res = persisterConcerts.persisterConcerts(List.of(concert));
 
-    assertTrue(ids.isEmpty());
+    assertEquals(0, res.nbInseres() + res.nbMisAJour());
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(0L, count);
   }

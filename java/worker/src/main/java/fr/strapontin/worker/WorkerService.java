@@ -11,8 +11,11 @@ import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
+import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -68,43 +71,54 @@ public class WorkerService {
   /// <p>Suspendu si le quota TM est inférieur à {@link GestionQuotaTM#SEUIL_QUOTA_CRON}.
   public void executerFetchArtistesBatch() {
     log.info("fetch:artistes:batch démarré");
-    if (!gestionQuotaTM.cronAutorise()) {
-      log.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
-      return;
-    }
-
-    List<Map<String, Object>> rows =
-        jdbc.queryForList(
-            "SELECT DISTINCT artiste_affiche, artiste_normalise FROM user_artistes", Map.of());
-
-    if (rows.isEmpty()) {
-      log.info("fetch:artistes:batch — aucun artiste suivi");
-      return;
-    }
-
-    List<ConcertBrut> concertsTM = fetchTMParArtistes(rows);
-    sauvegarderQuota();
-
-    List<ConcertBrut> concertsEventim = new ArrayList<>();
-    for (Map<String, Object> row : rows) {
-      String nom = (String) row.get("artiste_affiche");
-      try {
-        concertsEventim.addAll(eventim.fetchArtiste(nom));
-      } catch (Exception e) {
-        log.warn("Eventim échoué pour artiste={} : {}", nom, e.getMessage());
+    long debut = System.currentTimeMillis();
+    String erreur = null;
+    ResultatPersistance resultat = new ResultatPersistance(0, 0);
+    try {
+      if (!gestionQuotaTM.cronAutorise()) {
+        log.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
+        erreur = "quota insuffisant";
+        return;
       }
-      attendreRateLimit();
+
+      List<Map<String, Object>> rows =
+          jdbc.queryForList(
+              "SELECT DISTINCT artiste_affiche, artiste_normalise FROM user_artistes", Map.of());
+
+      if (rows.isEmpty()) {
+        log.info("fetch:artistes:batch — aucun artiste suivi");
+        return;
+      }
+
+      List<ConcertBrut> concertsTM = fetchTMParArtistes(rows);
+      sauvegarderQuota();
+
+      List<ConcertBrut> concertsEventim = new ArrayList<>();
+      for (Map<String, Object> row : rows) {
+        String nom = (String) row.get("artiste_affiche");
+        try {
+          concertsEventim.addAll(eventim.fetchArtiste(nom));
+        } catch (Exception e) {
+          log.warn("Eventim échoué pour artiste={} : {}", nom, e.getMessage());
+        }
+        attendreRateLimit();
+      }
+
+      List<ConcertBrut> tous = new ArrayList<>(concertsTM);
+      tous.addAll(concertsEventim);
+
+      List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
+      log.info("fetch:artistes:batch bruts={} dédoublonnés={}", tous.size(), dedoublonnes.size());
+
+      resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+      recalculerMatchesService.recalculerMatches(null);
+      log.info("fetch:artistes:batch terminé");
+    } catch (Exception e) {
+      erreur = e.getMessage();
+      log.error("fetch:artistes:batch échoué", e);
+    } finally {
+      enregistrerStatJob("fetch:artistes:batch", System.currentTimeMillis() - debut, resultat, erreur);
     }
-
-    List<ConcertBrut> tous = new ArrayList<>(concertsTM);
-    tous.addAll(concertsEventim);
-
-    List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
-    log.info("fetch:artistes:batch bruts={} dédoublonnés={}", tous.size(), dedoublonnes.size());
-
-    persisterConcerts.persisterConcerts(dedoublonnes);
-    recalculerMatchesService.recalculerMatches(null);
-    log.info("fetch:artistes:batch terminé");
   }
 
   private List<ConcertBrut> fetchTMParArtistes(List<Map<String, Object>> rows) {
@@ -132,55 +146,66 @@ public class WorkerService {
   /// <p>Suspendu si le quota TM est insuffisant.
   public void executerFetchRegion() {
     log.info("fetch:region démarré");
-    if (!gestionQuotaTM.cronAutorise()) {
-      log.warn("fetch:region suspendu — quota TM insuffisant");
-      return;
-    }
+    long debut = System.currentTimeMillis();
+    String erreur = null;
+    ResultatPersistance resultat = new ResultatPersistance(0, 0);
+    try {
+      if (!gestionQuotaTM.cronAutorise()) {
+        log.warn("fetch:region suspendu — quota TM insuffisant");
+        erreur = "quota insuffisant";
+        return;
+      }
 
-    List<String[]> allDepts =
-        jdbc.query(
-            "SELECT departements FROM user_config",
-            Map.of(),
-            (rs, _) -> (String[]) rs.getArray("departements").getArray());
+      List<String[]> allDepts =
+          jdbc.query(
+              "SELECT departements FROM user_config",
+              Map.of(),
+              (rs, _) -> (String[]) rs.getArray("departements").getArray());
 
-    java.util.Set<String> tousLesDepts = new java.util.LinkedHashSet<>();
-    for (String[] depts : allDepts) {
-      if (depts != null) {
-        for (String d : depts) {
-          if (d != null && !d.isBlank()) tousLesDepts.add(d.trim());
+      java.util.Set<String> tousLesDepts = new java.util.LinkedHashSet<>();
+      for (String[] depts : allDepts) {
+        if (depts != null) {
+          for (String d : depts) {
+            if (d != null && !d.isBlank()) tousLesDepts.add(d.trim());
+          }
         }
       }
-    }
 
-    if (tousLesDepts.isEmpty()) {
-      log.info("fetch:region — aucun département configuré");
-      return;
-    }
+      if (tousLesDepts.isEmpty()) {
+        log.info("fetch:region — aucun département configuré");
+        return;
+      }
 
-    List<String> deptsListe = new ArrayList<>(tousLesDepts);
-    List<ConcertBrut> tous = new ArrayList<>();
-    try {
-      tous.addAll(tm.fetchRegion(deptsListe, CLASSIFICATIONS));
+      List<String> deptsListe = new ArrayList<>(tousLesDepts);
+      List<ConcertBrut> tous = new ArrayList<>();
+      try {
+        tous.addAll(tm.fetchRegion(deptsListe, CLASSIFICATIONS));
+      } catch (Exception e) {
+        log.warn("TM fetchRegion échoué : {}", e.getMessage());
+      }
+      sauvegarderQuota();
+
+      try {
+        tous.addAll(eventim.fetchRegion(deptsListe, CLASSIFICATIONS));
+      } catch (Exception e) {
+        log.warn("Eventim fetchRegion échoué : {}", e.getMessage());
+      }
+
+      List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
+      log.info(
+          "fetch:region depts={} bruts={} dédoublonnés={}",
+          tousLesDepts.size(),
+          tous.size(),
+          dedoublonnes.size());
+
+      resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+      log.info("fetch:region terminé");
     } catch (Exception e) {
-      log.warn("TM fetchRegion échoué : {}", e.getMessage());
+      erreur = e.getMessage();
+      log.error("fetch:region échoué", e);
+    } finally {
+      enregistrerStatJob("fetch:region", System.currentTimeMillis() - debut, resultat, erreur);
     }
-    sauvegarderQuota();
-
-    try {
-      tous.addAll(eventim.fetchRegion(deptsListe, CLASSIFICATIONS));
-    } catch (Exception e) {
-      log.warn("Eventim fetchRegion échoué : {}", e.getMessage());
-    }
-
-    List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
-    log.info(
-        "fetch:region depts={} bruts={} dédoublonnés={}",
-        tousLesDepts.size(),
-        tous.size(),
-        dedoublonnes.size());
-
-    persisterConcerts.persisterConcerts(dedoublonnes);
-    log.info("fetch:region terminé");
   }
 
   /// Fetch les concerts d'une salle identifiée par son {@code venueId} Ticketmaster.
@@ -267,6 +292,32 @@ public class WorkerService {
                   c.statut());
             })
         .toList();
+  }
+
+  private void enregistrerStatJob(
+      String typeJob, long dureeMs, ResultatPersistance resultat, String erreur) {
+    try {
+      jdbc.update(
+          """
+          INSERT INTO fetch_jobs (type_job, derniere_exec, duree_ms, nb_inseres, nb_mis_a_jour, erreur)
+          VALUES (:typeJob, :now, :dureeMs, :nbInseres, :nbMisAJour, :erreur)
+          ON CONFLICT (type_job) DO UPDATE SET
+            derniere_exec  = EXCLUDED.derniere_exec,
+            duree_ms       = EXCLUDED.duree_ms,
+            nb_inseres     = EXCLUDED.nb_inseres,
+            nb_mis_a_jour  = EXCLUDED.nb_mis_a_jour,
+            erreur         = EXCLUDED.erreur
+          """,
+          Map.of(
+              "typeJob", typeJob,
+              "now", Timestamp.from(Instant.now()),
+              "dureeMs", (int) Math.min(dureeMs, Integer.MAX_VALUE),
+              "nbInseres", resultat.nbInseres(),
+              "nbMisAJour", resultat.nbMisAJour(),
+              "erreur", erreur != null ? erreur : ""));
+    } catch (Exception e) {
+      log.warn("Impossible d'enregistrer stat job {} : {}", typeJob, e.getMessage());
+    }
   }
 
   private void sauvegarderQuota() {
