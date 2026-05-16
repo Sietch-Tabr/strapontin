@@ -1,1 +1,0 @@
-ALTER TABLE "user_config" DROP COLUMN "rayon_km";
