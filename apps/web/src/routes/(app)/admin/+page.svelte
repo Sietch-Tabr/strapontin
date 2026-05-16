@@ -325,11 +325,10 @@
 						relancerEnCours = true;
 						relancerSucces = false;
 						relancerErreur = null;
-						return async ({ result, update }) => {
+						return async ({ result }) => {
 							relancerEnCours = false;
 							if (result.type === 'success') relancerSucces = true;
 							else if (result.type === 'failure' && typeof result.data?.erreur === 'string') relancerErreur = result.data.erreur;
-							await update({ reset: false });
 						};
 					}}
 				>
