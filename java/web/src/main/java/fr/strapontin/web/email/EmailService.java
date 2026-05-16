@@ -136,7 +136,7 @@ public class EmailService {
               Créer mon mot de passe →
             </a>
             <p style="color:#aaa;font-size:13px;margin:16px 0 0">
-              Ce lien est valable 1 heure. Une fois votre mot de passe créé, connectez-vous avec votre identifiant temporaire :
+              Ce lien est valable 24 heures. Une fois votre mot de passe créé, connectez-vous avec votre identifiant temporaire :
               <code style="font-family:monospace;background:#f5f5f5;padding:2px 6px;border-radius:4px">%s</code>
             </p>
             <p style="color:#aaa;font-size:13px;margin:8px 0 0">
@@ -150,7 +150,7 @@ public class EmailService {
         """
         Bienvenue sur Strapontin
 
-        Votre compte a été créé. Commencez par choisir votre mot de passe (lien valable 1 heure) :
+        Votre compte a été créé. Commencez par choisir votre mot de passe (lien valable 24 heures) :
 
         %s
 

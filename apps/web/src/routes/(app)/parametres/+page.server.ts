@@ -18,7 +18,15 @@ export const load: PageServerLoad = async ({ cookies }) => {
     headers: entetesJava(session),
   });
 
-  let config = null;
+  let config: {
+    departements?: string[];
+    filtreDisponibles?: boolean;
+    frequenceNotifications?: string;
+    notifArtistes?: boolean;
+    notifSalles?: boolean;
+    theme?: string;
+    resendDisponible?: boolean;
+  } | null = null;
   if (reponse.ok) {
     config = await reponse.json();
   }
@@ -26,7 +34,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
   return {
     config,
     theme: (cookies.get("theme") ?? "auto") as "auto" | "clair" | "sombre",
-    resendDisponible: false,
+    resendDisponible: config?.resendDisponible ?? false,
   };
 };
 

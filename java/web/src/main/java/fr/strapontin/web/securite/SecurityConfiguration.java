@@ -55,7 +55,7 @@ public class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                     .permitAll()
-                    .requestMatchers("/api/auth/login")
+                    .requestMatchers("/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password")
                     .permitAll()
                     .requestMatchers("/api/admin/**")
                     .hasRole("ADMIN")

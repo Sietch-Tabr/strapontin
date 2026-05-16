@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,9 +38,11 @@ public class UserConfigController {
   private static final Set<String> THEMES_VALIDES = Set.of("auto", "clair", "sombre");
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final ConfigService configService;
 
-  public UserConfigController(NamedParameterJdbcTemplate jdbc) {
+  public UserConfigController(NamedParameterJdbcTemplate jdbc, ConfigService configService) {
     this.jdbc = jdbc;
+    this.configService = configService;
   }
 
   record ConfigUtilisateur(
@@ -48,7 +51,8 @@ public class UserConfigController {
       String frequenceNotifications,
       boolean notifArtistes,
       boolean notifSalles,
-      String theme) {}
+      String theme,
+      boolean resendDisponible) {}
 
   record RequeteDepartements(String departements) {}
 
@@ -84,13 +88,23 @@ public class UserConfigController {
                   rs.getString("frequence_notifications"),
                   rs.getBoolean("notif_artistes"),
                   rs.getBoolean("notif_salles"),
-                  rs.getString("theme"));
+                  rs.getString("theme"),
+                  false);
             });
+
+    boolean resendDisponible = configService.lireConfig("RESEND_API_KEY").isPresent();
 
     ConfigUtilisateur config =
         lignes.isEmpty()
-            ? new ConfigUtilisateur(List.of(), true, "jamais", true, false, "auto")
-            : lignes.get(0);
+            ? new ConfigUtilisateur(List.of(), true, "jamais", true, false, "auto", resendDisponible)
+            : new ConfigUtilisateur(
+                lignes.get(0).departements(),
+                lignes.get(0).filtreDisponibles(),
+                lignes.get(0).frequenceNotifications(),
+                lignes.get(0).notifArtistes(),
+                lignes.get(0).notifSalles(),
+                lignes.get(0).theme(),
+                resendDisponible);
 
     return ResponseEntity.ok(config);
   }

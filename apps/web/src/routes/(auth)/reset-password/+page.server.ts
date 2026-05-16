@@ -1,4 +1,4 @@
-import { auth } from "$lib/auth";
+import { JAVA_API_URL } from "$lib/server/api-java";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -25,12 +25,17 @@ export const actions: Actions = {
       return fail(400, { erreur: "Les mots de passe ne correspondent pas." });
     }
 
-    const resultat = await auth.api
-      .resetPassword({ body: { token, newPassword: motDePasse } })
-      .catch(() => null);
+    const rep = await fetch(`${JAVA_API_URL}/api/auth/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, motDePasse }),
+    }).catch(() => null);
 
-    if (!resultat) {
-      return fail(400, { erreur: "Lien invalide ou expiré. Recommencez depuis le formulaire." });
+    if (!rep || !rep.ok) {
+      const corps = (await rep?.json().catch(() => ({}))) as { erreur?: string };
+      return fail(400, {
+        erreur: corps.erreur ?? "Lien invalide ou expiré. Recommencez depuis le formulaire.",
+      });
     }
 
     redirect(302, "/login?reset=ok");
