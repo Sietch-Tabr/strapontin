@@ -624,9 +624,20 @@
 				<h2 class="mb-4 text-base font-medium text-foreground">Créer un compte</h2>
 
 				{#if form?.succes === 'creerCompte'}
-					<p class="mb-4 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-						Compte créé. Un email d'invitation a été envoyé.
-					</p>
+					<div class="mb-4 rounded-xl border border-green-500/30 bg-green-500/10 p-4">
+						<p class="mb-2 text-sm font-medium text-green-700 dark:text-green-400">
+							Compte créé pour <strong>{form.email}</strong>
+						</p>
+						<p class="text-sm text-green-700 dark:text-green-400">
+							Identifiant temporaire :
+							<code class="rounded bg-green-500/20 px-2 py-0.5 font-mono font-semibold">
+								{form.identifiant}
+							</code>
+						</p>
+						<p class="mt-2 text-xs text-muted-foreground">
+							Un email d'invitation avec le lien de création de mot de passe a été envoyé. Communiquez l'identifiant à l'utilisateur en cas de non-réception.
+						</p>
+					</div>
 				{/if}
 
 				{#if erreurGlobale}

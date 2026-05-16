@@ -143,7 +143,15 @@ export const actions: Actions = {
         erreur: corps.erreur ?? "Impossible de créer le compte.",
       });
     }
-    return { succes: "creerCompte" };
+    const corps = (await rep.json().catch(() => ({}))) as {
+      email?: string;
+      identifiant?: string;
+    };
+    return {
+      succes: "creerCompte",
+      email: corps.email ?? email,
+      identifiant: corps.identifiant ?? "",
+    };
   },
 
   supprimerCompte: async ({ request, cookies, locals }) => {
