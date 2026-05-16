@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Set;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -33,7 +34,7 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
 
   private static final int MAX_TENTATIVES = 5;
   private static final Duration FENETRE = Duration.ofMinutes(15);
-  private static final String URL_LOGIN = "/api/auth/login";
+  private static final Set<String> URLS_LOGIN = Set.of("/api/auth/login", "/login");
 
   private final Cache<String, Bucket> buckets =
       Caffeine.newBuilder().expireAfterWrite(FENETRE.plusMinutes(1)).maximumSize(10_000).build();
@@ -43,7 +44,7 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain chain)
       throws ServletException, IOException {
     if (!HttpMethod.POST.matches(request.getMethod())
-        || !URL_LOGIN.equals(request.getServletPath())) {
+        || !URLS_LOGIN.contains(request.getServletPath())) {
       chain.doFilter(request, response);
       return;
     }

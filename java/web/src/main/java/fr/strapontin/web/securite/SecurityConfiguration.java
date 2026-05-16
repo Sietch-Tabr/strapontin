@@ -20,11 +20,12 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
-/// Configuration Spring Security 7 pour l'API REST Strapontin.
+/// Configuration Spring Security 7 pour les vues Thymeleaf et l'API REST.
 ///
 /// <p>Sessions persistantes JDBC (survivent aux redémarrages). Rate limiting login
-/// via {@link RateLimitingLoginFilter}. Accès direct par IP bloqué via
-/// {@link BloquerAccesDirectIpFilter}. CSRF désactivé (API REST + SameSite=Strict).
+/// via {@link RateLimitingLoginFilter} (intercepte {@code /login} et {@code /api/auth/login}).
+/// Accès direct par IP bloqué via {@link BloquerAccesDirectIpFilter}.
+/// CSRF désactivé (sessions SameSite=Strict). Form login Spring Security sur {@code /login}.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -49,7 +50,15 @@ public class SecurityConfiguration {
         .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers(HttpMethod.GET, "/api/push")
+                auth.requestMatchers(
+                        "/css/**",
+                        "/js/**",
+                        "/images/**",
+                        "/favicon.ico",
+                        "/manifest.json",
+                        "/sw.js")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/push")
                     .permitAll()
                     .requestMatchers("/actuator/health")
                     .permitAll()
@@ -58,12 +67,34 @@ public class SecurityConfiguration {
                     .requestMatchers(
                         "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password")
                     .permitAll()
-                    .requestMatchers("/api/admin/**")
+                    .requestMatchers("/forgot-password", "/reset-password", "/setup")
+                    .permitAll()
+                    .requestMatchers("/api/setup")
+                    .permitAll()
+                    .requestMatchers("/api/admin/**", "/admin")
                     .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())
-        // CSRF désactivé : API REST avec sessions SameSite=Strict
+        // CSRF désactivé : sessions SameSite=Strict (identique v1)
         .csrf(AbstractHttpConfigurer::disable)
+        // Form login Thymeleaf
+        .formLogin(
+            form ->
+                form.loginPage("/login")
+                    .loginProcessingUrl("/login")
+                    .usernameParameter("identifiant")
+                    .passwordParameter("motDePasse")
+                    .defaultSuccessUrl("/", true)
+                    .failureUrl("/login?erreur=true")
+                    .permitAll())
+        // Logout
+        .logout(
+            logout ->
+                logout
+                    .logoutUrl("/logout")
+                    .logoutSuccessUrl("/login?deconnecte=true")
+                    .deleteCookies("SESSION")
+                    .permitAll())
         .sessionManagement(
             session ->
                 session
@@ -73,15 +104,24 @@ public class SecurityConfiguration {
             ex ->
                 ex.authenticationEntryPoint(
                         (request, response, _) -> {
-                          response.setStatus(401);
-                          response.setContentType("application/json;charset=UTF-8");
-                          response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
+                          // API → 401 JSON ; pages Thymeleaf → redirect /login
+                          if (request.getServletPath().startsWith("/api/")) {
+                            response.setStatus(401);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
+                          } else {
+                            response.sendRedirect("/login");
+                          }
                         })
                     .accessDeniedHandler(
                         (request, response, _) -> {
-                          response.setStatus(403);
-                          response.setContentType("application/json;charset=UTF-8");
-                          response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
+                          if (request.getServletPath().startsWith("/api/")) {
+                            response.setStatus(403);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
+                          } else {
+                            response.sendRedirect("/login");
+                          }
                         }));
 
     return http.build();

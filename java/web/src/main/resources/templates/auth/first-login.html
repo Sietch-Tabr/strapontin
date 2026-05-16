@@ -1,0 +1,80 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/auth}"
+  th:lang="fr"
+>
+  <head>
+    <title>Première connexion — Strapontin</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contenu">
+      <h1 class="auth-title">Bienvenue sur Strapontin</h1>
+      <p class="auth-subtitle">
+        Veuillez personnaliser vos identifiants avant de continuer.
+      </p>
+
+      <div
+        th:if="${erreur}"
+        class="alerte alerte-erreur"
+        th:text="${erreur}"
+      ></div>
+
+      <form method="post" th:action="@{/first-login}" class="form-vertical">
+        <div class="form-group">
+          <label for="nom">Nom d'affichage</label>
+          <input
+            id="nom"
+            type="text"
+            name="nom"
+            required
+            maxlength="100"
+            autocomplete="name"
+            placeholder="Votre prénom ou pseudo"
+          />
+        </div>
+        <div class="form-group">
+          <label for="identifiant">Identifiant de connexion</label>
+          <input
+            id="identifiant"
+            type="text"
+            name="identifiant"
+            required
+            minlength="3"
+            maxlength="30"
+            pattern="[a-zA-Z0-9_]+"
+            autocomplete="username"
+            placeholder="Entre 3 et 30 caractères (lettres, chiffres, _)"
+          />
+        </div>
+        <div class="form-group">
+          <label for="motDePasseActuel">Mot de passe temporaire</label>
+          <input
+            id="motDePasseActuel"
+            type="password"
+            name="motDePasseActuel"
+            required
+            autocomplete="current-password"
+            placeholder="Votre mot de passe temporaire"
+          />
+        </div>
+        <div class="form-group">
+          <label for="motDePasseNouveau">Nouveau mot de passe</label>
+          <input
+            id="motDePasseNouveau"
+            type="password"
+            name="motDePasseNouveau"
+            required
+            minlength="12"
+            autocomplete="new-password"
+            placeholder="12 caractères minimum"
+          />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">
+          Valider et continuer
+        </button>
+      </form>
+    </th:block>
+  </body>
+</html>

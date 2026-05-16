@@ -1,0 +1,188 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/base}"
+  th:lang="fr"
+>
+  <head>
+    <title>Aide — Strapontin</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contenu">
+      <div class="page-header">
+        <h1>Aide</h1>
+      </div>
+
+      <div
+        th:if="${succesSignalement}"
+        class="alerte alerte-succes"
+      >Signalement envoyé. Merci !</div>
+      <div
+        th:if="${erreurSignalement}"
+        class="alerte alerte-erreur"
+        th:text="${erreurSignalement}"
+      ></div>
+
+      <div class="max-w-2xl">
+        <section class="aide-section" aria-labelledby="titre-usage">
+          <p id="titre-usage" class="aide-label">Usage courant</p>
+          <div class="aide-grille">
+            <div class="carte">
+              <h2 class="carte-titre">Artistes &amp; salles</h2>
+              <ul>
+                <li>Recherchez et ajoutez les artistes et salles à suivre.</li>
+                <li>
+                  Les concerts sont mis à jour automatiquement toutes les 2
+                  heures depuis Ticketmaster et Eventim.
+                </li>
+                <li>
+                  Le badge <strong>Nouveau</strong> signale les concerts apparus
+                  depuis votre dernière notification.
+                </li>
+              </ul>
+            </div>
+
+            <div class="carte">
+              <h2 class="carte-titre">Notifications</h2>
+              <ul>
+                <li>
+                  <strong>Email</strong> : récapitulatif quotidien à 8h ou à
+                  chaque mise à jour. À activer dans
+                  <a th:href="@{/parametres}">Paramètres</a>.
+                </li>
+                <li>
+                  <strong>Push</strong> : notification instantanée sur votre
+                  appareil. Désactivé par défaut.
+                </li>
+              </ul>
+            </div>
+
+            <div class="carte">
+              <h2 class="carte-titre">Installer l'application</h2>
+              <ul>
+                <li>
+                  <strong>iOS</strong> : Safari → Partager → « Sur l'écran
+                  d'accueil ».
+                </li>
+                <li>
+                  <strong>Android</strong> : Chrome → menu ⋮ → « Installer
+                  l'application ».
+                </li>
+                <li>
+                  <strong>Desktop</strong> : icône d'installation dans la barre
+                  d'adresse.
+                </li>
+              </ul>
+            </div>
+
+            <div class="carte">
+              <h2 class="carte-titre">Paramètres</h2>
+              <ul>
+                <li>
+                  Configurez vos départements de recherche et le filtre des
+                  billets indisponibles.
+                </li>
+                <li>
+                  Thème Automatique, Clair ou Sombre — synchronisé sur tous vos
+                  appareils.
+                </li>
+                <li>Export et import de vos préférences au format JSON.</li>
+              </ul>
+            </div>
+
+            <div class="carte carte-large">
+              <h2 class="carte-titre">Mes spectacles &amp; Découverte</h2>
+              <ul>
+                <li>
+                  <strong>Mes spectacles</strong> : vos prochains concerts
+                  filtrables par catégorie, mois ou budget. Paginé par 100.
+                </li>
+                <li>
+                  <strong>Découverte</strong> : tous les concerts en base,
+                  filtrables par département.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="aide-section" aria-labelledby="titre-infos">
+          <p id="titre-infos" class="aide-label">Informations</p>
+          <div class="aide-grille">
+            <div class="carte">
+              <h2 class="carte-titre">Données personnelles</h2>
+              <ul>
+                <li>
+                  Données collectées : nom, identifiant, email, préférences et
+                  sessions. Utilisées uniquement pour le fonctionnement de
+                  l'application, jamais partagées.
+                </li>
+                <li>
+                  Hébergement sur serveur privé en France. Données conservées
+                  tant que le compte est actif.
+                </li>
+                <li>
+                  Export intégral depuis
+                  <a th:href="@{/parametres}">Paramètres</a>.
+                </li>
+              </ul>
+            </div>
+
+            <div class="carte">
+              <h2 class="carte-titre">Licence</h2>
+              <p>
+                Strapontin est distribué sous licence <strong>MIT</strong> —
+                logiciel libre, utilisation, modification et redistribution
+                autorisées sous réserve de conserver la mention de copyright.
+              </p>
+            </div>
+
+            <div class="carte">
+              <h2 class="carte-titre">Code source</h2>
+              <p>
+                Le code source est disponible sur
+                <a
+                  href="https://codeberg.org/Kwaite/strapontin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Codeberg</a
+                >.
+              </p>
+            </div>
+
+            <div class="carte carte-large">
+              <h2 class="carte-titre">Signaler un problème</h2>
+              <form method="post" th:action="@{/aide/signalement}" class="form-vertical form-compact">
+                <div class="form-group">
+                  <label for="type-signal">Type</label>
+                  <select id="type-signal" name="type">
+                    <option value="bug">Bug</option>
+                    <option value="suggestion">Suggestion d'amélioration</option>
+                    <option value="question">Question</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="message-signal">Message</label>
+                  <textarea
+                    id="message-signal"
+                    name="message"
+                    rows="4"
+                    maxlength="2000"
+                    placeholder="Décrivez le problème ou votre suggestion…"
+                    required
+                  ></textarea>
+                </div>
+                <button type="submit" class="btn btn-secondary">Envoyer</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <p class="aide-footer">
+          <a th:href="@{/changelog}">Voir les nouveautés →</a>
+        </p>
+      </div>
+    </th:block>
+  </body>
+</html>

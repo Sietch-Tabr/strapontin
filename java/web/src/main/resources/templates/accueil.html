@@ -1,0 +1,222 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/base}"
+  th:lang="fr"
+>
+  <head>
+    <title>Accueil — Strapontin</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contenu">
+      <div class="page-header">
+        <p class="page-subtitle" th:text="'Bonjour, ' + ${utilisateur?.nom}">
+          Bonjour
+        </p>
+        <h1>Mes prochains concerts</h1>
+      </div>
+
+      <!-- Chips de filtre -->
+      <div class="chips" th:if="${donnees != null}">
+        <a
+          th:href="@{/(indisponibles=${indisponibles ? '0' : '1'})}"
+          th:classappend="${indisponibles ? ' actif' : ''}"
+        >
+          Indisponibles
+        </a>
+        <a
+          th:href="@{/(masques=${masques ? 'false' : 'true'})}"
+          th:classappend="${masques ? ' actif' : ''}"
+        >
+          Masqués
+        </a>
+      </div>
+
+      <!-- État vide -->
+      <div
+        th:if="${donnees != null and donnees.artistesGroupes.isEmpty()}"
+        class="etat-vide"
+      >
+        <div th:if="${donnees.nbArtistes == 0 and donnees.nbSalles == 0}">
+          <p class="etat-vide-titre">Bienvenue sur Strapontin !</p>
+          <p class="etat-vide-texte">
+            Ajoutez des artistes ou des salles pour découvrir vos prochains
+            concerts.
+          </p>
+          <div class="etat-vide-actions">
+            <a th:href="@{/artistes}" class="btn btn-primary"
+              >Ajouter des artistes</a
+            >
+            <a th:href="@{/salles}" class="btn btn-secondary"
+              >Ajouter des salles</a
+            >
+          </div>
+        </div>
+        <div th:unless="${donnees.nbArtistes == 0 and donnees.nbSalles == 0}">
+          <p class="etat-vide-titre" th:if="${!indisponibles}">
+            Aucun concert avec ces filtres.
+          </p>
+          <p class="etat-vide-texte" th:if="${!indisponibles}">
+            Essayez d'inclure les concerts indisponibles ci-dessus.
+          </p>
+          <p class="etat-vide-titre" th:unless="${!indisponibles}">
+            Aucun concert pour l'instant.
+          </p>
+          <p class="etat-vide-texte" th:unless="${!indisponibles}">
+            Vos artistes et salles sont suivis — les concerts apparaîtront au
+            prochain rafraîchissement.
+          </p>
+        </div>
+      </div>
+
+      <!-- Liste des groupes d'artistes -->
+      <div
+        class="concert-groupes"
+        th:if="${donnees != null and !donnees.artistesGroupes.isEmpty()}"
+      >
+        <div
+          class="concert-groupe"
+          th:each="groupe : ${donnees.artistesGroupes}"
+        >
+          <!-- En-tête du groupe artiste -->
+          <div class="groupe-header">
+            <span class="groupe-artiste" th:text="${groupe.artiste}"
+              >Artiste</span
+            >
+            <span
+              class="badge badge-tournee"
+              th:if="${groupe.estTournee}"
+              th:text="'Tournée · ' + ${groupe.concerts.size()} + ' dates'"
+              >Tournée</span
+            >
+            <span class="badge badge-nouveau" th:if="${groupe.estNew}"
+              >Nouveau</span
+            >
+            <form
+              th:unless="${masques}"
+              method="post"
+              th:action="@{/masquer-artiste}"
+              class="masquer-artiste-form"
+            >
+              <input
+                type="hidden"
+                name="artisteNorm"
+                th:value="${groupe.artisteNorm}"
+              />
+              <button
+                type="submit"
+                class="btn-texte"
+                th:attr="aria-label='Masquer tous les concerts de ' + ${groupe.artiste}"
+              >
+                Masquer
+              </button>
+            </form>
+          </div>
+
+          <!-- Dates du groupe -->
+          <div class="groupe-dates">
+            <div class="concert-ligne" th:each="concert : ${groupe.concerts}">
+              <div class="concert-info">
+                <p class="concert-date-principale" th:if="${groupe.estTournee}">
+                  <span th:text="${concert.date}">date</span>
+                  <span class="badge badge-nouveau" th:if="${concert.estNew}"
+                    >Nouveau</span
+                  >
+                  <span
+                    class="badge badge-annule"
+                    th:if="${concert.statut == 'cancelled'}"
+                    >Annulé</span
+                  >
+                  <span
+                    class="badge badge-reporte"
+                    th:if="${concert.statut == 'rescheduled'}"
+                    >Reporté</span
+                  >
+                  <span
+                    class="badge badge-complet"
+                    th:if="${concert.statut == 'offsale'}"
+                    >Complet</span
+                  >
+                </p>
+                <p
+                  class="concert-date-secondaire"
+                  th:unless="${groupe.estTournee}"
+                >
+                  <span th:text="${concert.date}">date</span>
+                  <span class="badge badge-nouveau" th:if="${concert.estNew}"
+                    >Nouveau</span
+                  >
+                  <span
+                    class="badge badge-annule"
+                    th:if="${concert.statut == 'cancelled'}"
+                    >Annulé</span
+                  >
+                  <span
+                    class="badge badge-reporte"
+                    th:if="${concert.statut == 'rescheduled'}"
+                    >Reporté</span
+                  >
+                  <span
+                    class="badge badge-complet"
+                    th:if="${concert.statut == 'offsale'}"
+                    >Complet</span
+                  >
+                </p>
+                <p
+                  class="concert-lieu"
+                  th:text="${concert.salle + (concert.ville != null ? ' · ' + concert.ville : '')}"
+                >
+                  Salle · Ville
+                </p>
+              </div>
+              <div class="concert-actions">
+                <a
+                  th:if="${concert.url}"
+                  th:href="${concert.url}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn btn-sm btn-secondary"
+                  >Billets</a
+                >
+                <form
+                  th:if="${masques}"
+                  method="post"
+                  th:action="@{/demasquer/{id}(id=${concert.id})}"
+                >
+                  <button
+                    type="submit"
+                    class="btn-texte btn-sm"
+                    aria-label="Réafficher ce concert"
+                  >
+                    Réafficher
+                  </button>
+                </form>
+                <form
+                  th:unless="${masques}"
+                  method="post"
+                  th:action="@{/masquer/{id}(id=${concert.id})}"
+                >
+                  <button
+                    type="submit"
+                    class="btn-texte btn-sm"
+                    aria-label="Masquer ce concert"
+                  >
+                    Masquer
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Avertissement tronquage -->
+        <p class="tronque-info" th:if="${donnees.tronque}">
+          <span th:text="${donnees.totalConcerts}">0</span> concerts à venir au
+          total —
+          <a th:href="@{/spectacles}">voir tous dans Mes spectacles</a>
+        </p>
+      </div>
+    </th:block>
+  </body>
+</html>

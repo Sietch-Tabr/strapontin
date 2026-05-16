@@ -1,0 +1,24 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  th:lang="fr"
+  th:class="${theme == 'sombre' ? 'dark' : ''}"
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" th:href="@{/images/favicon.svg}" />
+    <link rel="stylesheet" th:href="@{/css/app.css}" />
+    <title layout:title-pattern="$CONTENT_TITLE — Strapontin">Strapontin</title>
+  </head>
+  <body th:class="${theme == 'sombre' ? 'dark' : ''}">
+    <div class="auth-layout">
+      <div class="auth-card">
+        <div layout:fragment="contenu">
+          <!-- contenu injecté -->
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -105,26 +105,26 @@ Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL`, `
 
 ## Sources de données
 
-| Source                    | Statut                                                                         |
-| ------------------------- | ------------------------------------------------------------------------------ |
-| Ticketmaster Discovery v2 | Core                                                                           |
-| Eventim France            | Core                                                                           |
+| Source                    | Statut                                                                        |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| Ticketmaster Discovery v2 | Core                                                                          |
+| Eventim France            | Core                                                                          |
 | Deezer Search API         | Autocomplete artiste (`/artistes`) — sans clé. Remplace MusicBrainz (bloqué). |
-| Bandsintown               | Abandonné — HTTP 401 depuis 2026-04-10 (#65)                                   |
-| MusicBrainz               | Bloqué — IP SFR blacklistée par Cloudflare (#293)                              |
+| Bandsintown               | Abandonné — HTTP 401 depuis 2026-04-10 (#65)                                  |
+| MusicBrainz               | Bloqué — IP SFR blacklistée par Cloudflare (#293)                             |
 
 ## Jobs background (Quartz)
 
 Paradigme : **pré-fetch en arrière-plan, jamais d'appel API depuis le browser**.
 
-| Job                      | Déclenchement           | Description                                  |
-| ------------------------ | ----------------------- | -------------------------------------------- |
-| `FetchArtisteJob`        | Ajout artiste + cron 2h | Fetch TM + Eventim par nom artiste           |
-| `FetchArtistesBatchJob`  | Cron 2h                 | Fetch TM en lots de 20 attractionIds         |
-| `FetchRegionJob`         | Cron 2h + manuel        | Fetch TM + Eventim par département           |
-| `FetchSalleJob`          | Ajout salle + cron 2h   | Fetch TM par `venueId`                       |
-| `RecalculerMatchesJob`   | Après fetch             | Recalcule `user_matches` pour tous les users |
-| `PurgerConcertsJob`      | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours    |
+| Job                     | Déclenchement           | Description                                  |
+| ----------------------- | ----------------------- | -------------------------------------------- |
+| `FetchArtisteJob`       | Ajout artiste + cron 2h | Fetch TM + Eventim par nom artiste           |
+| `FetchArtistesBatchJob` | Cron 2h                 | Fetch TM en lots de 20 attractionIds         |
+| `FetchRegionJob`        | Cron 2h + manuel        | Fetch TM + Eventim par département           |
+| `FetchSalleJob`         | Ajout salle + cron 2h   | Fetch TM par `venueId`                       |
+| `RecalculerMatchesJob`  | Après fetch             | Recalcule `user_matches` pour tous les users |
+| `PurgerConcertsJob`     | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours    |
 
 Rate limiting TM : max 2 jobs simultanés (3 → HTTP 429). Quota TM persisté dans `app_config` (`TM_QUOTA_JSON`).
 

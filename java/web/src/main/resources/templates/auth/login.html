@@ -1,0 +1,60 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/auth}"
+>
+  <head>
+    <title>Connexion</title>
+  </head>
+  <body>
+    <div layout:fragment="contenu">
+      <h1 class="auth-title">Strapontin</h1>
+      <p class="auth-subtitle">Connectez-vous à votre compte</p>
+
+      <div class="alerte alerte-erreur" th:if="${param.erreur}">
+        Identifiant ou mot de passe incorrect.
+      </div>
+      <div class="alerte alerte-succes" th:if="${param.deconnecte}">
+        Vous avez été déconnecté.
+      </div>
+      <div class="alerte alerte-succes" th:if="${param.reset}">
+        Mot de passe mis à jour. Connectez-vous avec votre nouveau mot de passe.
+      </div>
+      <div class="alerte alerte-succes" th:if="${param.configure}">
+        Application configurée. Connectez-vous avec le compte administrateur.
+      </div>
+
+      <form method="post" th:action="@{/login}">
+        <div class="form-group">
+          <label for="identifiant">Identifiant</label>
+          <input
+            id="identifiant"
+            name="identifiant"
+            type="text"
+            autocomplete="username"
+            autofocus
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="motDePasse">Mot de passe</label>
+          <input
+            id="motDePasse"
+            name="motDePasse"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">
+          Se connecter
+        </button>
+      </form>
+
+      <p class="mt-4 text-sm text-muted" style="text-align: center">
+        <a th:href="@{/forgot-password}">Mot de passe oublié ?</a>
+      </p>
+    </div>
+  </body>
+</html>

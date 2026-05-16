@@ -1,0 +1,367 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/base}"
+  th:lang="fr"
+>
+  <head>
+    <title>Paramètres — Strapontin</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contenu">
+      <div class="page-header">
+        <h1>Paramètres</h1>
+      </div>
+
+      <div
+        th:if="${succes}"
+        class="alerte alerte-succes"
+        th:text="'Paramètres enregistrés.'"
+      ></div>
+      <div
+        th:if="${erreur}"
+        class="alerte alerte-erreur"
+        th:text="${erreur}"
+      ></div>
+
+      <div class="parametres-sections">
+        <!-- Section Préférences -->
+        <section id="preferences" class="parametres-section">
+          <h2 class="section-titre">Préférences</h2>
+
+          <!-- Départements -->
+          <div class="param-bloc">
+            <h3 class="param-label">Départements de découverte</h3>
+            <p class="param-aide">
+              Séparés par des virgules (ex. : 75, 92, 93). Utilisés par la page
+              Découverte.
+            </p>
+            <form
+              method="post"
+              th:action="@{/parametres/departements}"
+              class="form-inline"
+            >
+              <input
+                type="text"
+                name="departements"
+                th:value="${config?.departements != null ? #strings.listJoin(config.departements, ', ') : ''}"
+                placeholder="75, 92, 93…"
+                autocomplete="off"
+              />
+              <button type="submit" class="btn btn-secondary">
+                Enregistrer
+              </button>
+            </form>
+          </div>
+
+          <!-- Filtre disponibles -->
+          <div class="param-bloc">
+            <h3 class="param-label">Concerts disponibles uniquement</h3>
+            <p class="param-aide">
+              Masque les concerts dont la billetterie est fermée (annulés,
+              complets…).
+            </p>
+            <form
+              method="post"
+              th:action="@{/parametres/filtres}"
+              class="form-toggle"
+            >
+              <label class="switch">
+                <input type="hidden" name="filtreDisponibles" value="false" />
+                <input
+                  type="checkbox"
+                  name="filtreDisponibles"
+                  value="true"
+                  th:checked="${config?.filtreDisponibles}"
+                  onchange="this.form.submit()"
+                />
+                <span class="switch-curseur"></span>
+              </label>
+            </form>
+          </div>
+
+          <!-- Thème -->
+          <div class="param-bloc">
+            <h3 class="param-label">Thème de l'interface</h3>
+            <form
+              method="post"
+              th:action="@{/parametres/theme}"
+              class="form-inline"
+            >
+              <select name="valeur">
+                <option
+                  value="auto"
+                  th:selected="${config?.theme == 'auto' or config?.theme == null}"
+                >
+                  Automatique (système)
+                </option>
+                <option value="clair" th:selected="${config?.theme == 'clair'}">
+                  Clair
+                </option>
+                <option
+                  value="sombre"
+                  th:selected="${config?.theme == 'sombre'}"
+                >
+                  Sombre
+                </option>
+              </select>
+              <button type="submit" class="btn btn-secondary">Appliquer</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- Section Notifications -->
+        <section id="notifications" class="parametres-section">
+          <h2 class="section-titre">Notifications</h2>
+
+          <form
+            method="post"
+            th:action="@{/parametres/notifications}"
+            class="form-vertical"
+          >
+            <div class="form-group">
+              <label for="frequence">Fréquence des emails</label>
+              <select
+                id="frequence"
+                name="frequenceNotifications"
+                th:disabled="${config == null or !config.resendDisponible}"
+              >
+                <option
+                  value="jamais"
+                  th:selected="${config?.frequenceNotifications == 'jamais' or config?.frequenceNotifications == null}"
+                >
+                  Jamais
+                </option>
+                <option
+                  value="quotidien"
+                  th:selected="${config?.frequenceNotifications == 'quotidien'}"
+                >
+                  Récapitulatif quotidien (8h)
+                </option>
+                <option
+                  value="temps_reel"
+                  th:selected="${config?.frequenceNotifications == 'temps_reel'}"
+                >
+                  À chaque nouveau concert
+                </option>
+              </select>
+              <p class="form-aide" th:unless="${config?.resendDisponible}">
+                Les emails ne sont pas disponibles (clé Resend non configurée).
+              </p>
+            </div>
+
+            <div class="form-group form-checkboxes">
+              <label>
+                <input
+                  type="checkbox"
+                  name="notifArtistes"
+                  value="true"
+                  th:checked="${config?.notifArtistes}"
+                  th:disabled="${config == null or !config.resendDisponible}"
+                />
+                Artistes suivis
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  name="notifSalles"
+                  value="true"
+                  th:checked="${config?.notifSalles}"
+                  th:disabled="${config == null or !config.resendDisponible}"
+                />
+                Salles suivies
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              class="btn btn-secondary"
+              th:disabled="${config == null or !config.resendDisponible}"
+            >
+              Enregistrer
+            </button>
+          </form>
+        </section>
+
+        <!-- Section Compte -->
+        <section id="compte" class="parametres-section">
+          <h2 class="section-titre">Compte</h2>
+
+          <!-- Nom et email -->
+          <div class="param-bloc">
+            <h3 class="param-label">Profil</h3>
+            <form
+              method="post"
+              th:action="@{/parametres/compte}"
+              class="form-vertical form-compact"
+            >
+              <div class="form-group">
+                <label for="nom">Nom d'affichage</label>
+                <input
+                  id="nom"
+                  type="text"
+                  name="nom"
+                  th:value="${profil?.nom}"
+                  maxlength="100"
+                  autocomplete="name"
+                />
+              </div>
+              <div class="form-group">
+                <label for="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  th:value="${profil?.email}"
+                  maxlength="254"
+                  autocomplete="email"
+                />
+              </div>
+              <button type="submit" class="btn btn-secondary">
+                Enregistrer
+              </button>
+            </form>
+          </div>
+
+          <!-- Identifiant -->
+          <div class="param-bloc">
+            <h3 class="param-label">Identifiant de connexion</h3>
+            <form
+              method="post"
+              th:action="@{/parametres/identifiant}"
+              class="form-inline"
+            >
+              <input
+                type="text"
+                name="identifiant"
+                th:value="${profil?.identifiant}"
+                minlength="3"
+                maxlength="30"
+                pattern="[a-zA-Z0-9_]+"
+                autocomplete="username"
+              />
+              <button type="submit" class="btn btn-secondary">Modifier</button>
+            </form>
+          </div>
+
+          <!-- Mot de passe -->
+          <div class="param-bloc">
+            <h3 class="param-label">Mot de passe</h3>
+            <p class="param-aide">
+              La session sera invalidée après le changement.
+            </p>
+            <form
+              method="post"
+              th:action="@{/parametres/motdepasse}"
+              class="form-vertical form-compact"
+            >
+              <div class="form-group">
+                <label for="mdp-actuel">Mot de passe actuel</label>
+                <input
+                  id="mdp-actuel"
+                  type="password"
+                  name="motDePasseActuel"
+                  required
+                  autocomplete="current-password"
+                />
+              </div>
+              <div class="form-group">
+                <label for="mdp-nouveau">Nouveau mot de passe</label>
+                <input
+                  id="mdp-nouveau"
+                  type="password"
+                  name="motDePasseNouveau"
+                  required
+                  minlength="12"
+                  autocomplete="new-password"
+                  placeholder="12 caractères minimum"
+                />
+              </div>
+              <button type="submit" class="btn btn-secondary">Changer</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- Section Données -->
+        <section id="donnees" class="parametres-section">
+          <h2 class="section-titre">Données</h2>
+
+          <!-- Export -->
+          <div class="param-bloc">
+            <h3 class="param-label">Exporter mes préférences</h3>
+            <p class="param-aide">
+              Télécharge un fichier JSON avec vos artistes, salles et
+              configuration.
+            </p>
+            <a th:href="@{/api/preferences}" class="btn btn-secondary"
+              >Télécharger (JSON)</a
+            >
+          </div>
+
+          <!-- Import -->
+          <div class="param-bloc">
+            <h3 class="param-label">Importer des préférences</h3>
+            <p class="param-aide">
+              Importez un fichier JSON exporté par Strapontin. Mode Fusionner
+              conserve vos données existantes ; mode Écraser les remplace.
+            </p>
+            <form
+              method="post"
+              th:action="@{/parametres/importer}"
+              enctype="multipart/form-data"
+              class="form-vertical form-compact"
+            >
+              <div class="form-group">
+                <label for="import-fichier">Fichier JSON</label>
+                <input
+                  id="import-fichier"
+                  type="file"
+                  name="fichier"
+                  accept=".json,application/json"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="import-mode">Mode</label>
+                <select id="import-mode" name="mode">
+                  <option value="fusionner">Fusionner (conserver les données existantes)</option>
+                  <option value="ecraser">Écraser (remplacer artistes et salles)</option>
+                </select>
+              </div>
+              <div class="form-group form-checkboxes">
+                <label>
+                  <input type="checkbox" name="importerConfig" value="true" />
+                  Importer la configuration (départements, notifications, thème)
+                </label>
+              </div>
+              <button type="submit" class="btn btn-secondary">Importer</button>
+            </form>
+          </div>
+
+          <!-- Suppression de compte -->
+          <div class="param-bloc param-bloc-danger">
+            <h3 class="param-label">Supprimer mon compte</h3>
+            <p class="param-aide">
+              Supprime définitivement votre compte et toutes vos données. Cette
+              action est irréversible.
+            </p>
+            <form
+              method="post"
+              th:action="@{/parametres/supprimer-compte}"
+              onsubmit="
+                return confirm(
+                  'Supprimer définitivement votre compte ? Cette action est irréversible.',
+                );
+              "
+            >
+              <button type="submit" class="btn btn-danger">
+                Supprimer mon compte
+              </button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </th:block>
+  </body>
+</html>

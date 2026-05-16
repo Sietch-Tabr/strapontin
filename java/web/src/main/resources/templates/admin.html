@@ -1,0 +1,298 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/base}"
+  th:lang="fr"
+>
+  <head>
+    <title>Administration — Strapontin</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contenu">
+      <div class="page-header">
+        <h1>Administration</h1>
+      </div>
+
+      <div th:if="${succes}" class="alerte alerte-succes">
+        <span th:if="${succes == 'creerUtilisateur'}">
+          Compte créé.
+          <span th:if="${lienReset != null}">
+            Lien d'invitation :
+            <a
+              th:href="${lienReset}"
+              th:text="${lienReset}"
+              target="_blank"
+              rel="noopener"
+              >lien</a
+            >
+          </span>
+        </span>
+        <span th:if="${succes == 'supprimerUtilisateur'}"
+          >Compte supprimé.</span
+        >
+        <span th:if="${succes == 'reinitialiserMdp'}"
+          >Email de réinitialisation envoyé.</span
+        >
+        <span th:if="${succes == 'config'}">Configuration sauvegardée.</span>
+        <span th:if="${succes == 'vapid'}">Clés VAPID régénérées.</span>
+        <span th:if="${succes == 'relancer'}">Fetches déclenchés.</span>
+      </div>
+      <div
+        th:if="${erreur}"
+        class="alerte alerte-erreur"
+        th:text="${erreur}"
+      ></div>
+
+      <div class="admin-sections">
+        <!-- Section Utilisateurs -->
+        <section id="utilisateurs" class="admin-section">
+          <h2 class="section-titre">Utilisateurs</h2>
+
+          <!-- Créer un utilisateur -->
+          <div class="param-bloc">
+            <h3 class="param-label">Inviter un utilisateur</h3>
+            <form
+              method="post"
+              th:action="@{/admin/utilisateurs/creer}"
+              class="form-inline"
+            >
+              <input
+                type="email"
+                name="email"
+                required
+                placeholder="adresse@email.fr"
+                autocomplete="off"
+              />
+              <button type="submit" class="btn btn-secondary">Créer</button>
+            </form>
+          </div>
+
+          <!-- Tableau des utilisateurs -->
+          <div
+            class="table-wrapper"
+            th:if="${utilisateurs != null and !utilisateurs.isEmpty()}"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>Identifiant</th>
+                  <th>Email</th>
+                  <th>Rôle</th>
+                  <th>Dernière activité</th>
+                  <th><span class="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="u : ${utilisateurs}">
+                  <td>
+                    <span th:text="${u.name}">Nom</span>
+                    <span
+                      class="badge badge-info"
+                      th:if="${u.mustChangeCredentials}"
+                      >Invitation</span
+                    >
+                  </td>
+                  <td th:text="${u.username}">identifiant</td>
+                  <td th:text="${u.email}">email</td>
+                  <td th:text="${u.role}">rôle</td>
+                  <td
+                    th:text="${u.derniereActivite != null ? u.derniereActivite.toString().substring(0, 10) : '—'}"
+                  >
+                    date
+                  </td>
+                  <td class="actions-cellule">
+                    <form
+                      method="post"
+                      th:action="@{/admin/utilisateurs/{id}/reset-mdp(id=${u.id})}"
+                      style="display: inline"
+                    >
+                      <button type="submit" class="btn btn-sm btn-secondary">
+                        Réinit. MDP
+                      </button>
+                    </form>
+                    <form
+                      method="post"
+                      th:action="@{/admin/utilisateurs/{id}/supprimer(id=${u.id})}"
+                      style="display: inline"
+                      th:if="${u.id != utilisateur?.id}"
+                      onsubmit="return confirm('Supprimer ce compte ?');"
+                    >
+                      <button type="submit" class="btn btn-sm btn-danger">
+                        Supprimer
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Section Configuration -->
+        <section id="configuration" class="admin-section">
+          <h2 class="section-titre">Configuration</h2>
+
+          <div th:each="statut : ${configStatuts}" class="param-bloc">
+            <h3 class="param-label" th:text="${statut.cle}">CLE</h3>
+            <p class="param-aide">
+              <span th:if="${statut.presente}" class="badge badge-succes"
+                >Configurée</span
+              >
+              <span th:unless="${statut.presente}" class="badge badge-manquant"
+                >Non configurée</span
+              >
+              <span
+                th:if="${!statut.secret and statut.valeur != null}"
+                th:text="' — ' + ${statut.valeur}"
+              ></span>
+            </p>
+            <form
+              method="post"
+              th:action="@{/admin/config}"
+              class="form-inline"
+              th:if="${statut.cle != 'VAPID_PUBLIC_KEY' and statut.cle != 'VAPID_PRIVATE_KEY'}"
+            >
+              <input type="hidden" name="cle" th:value="${statut.cle}" />
+              <input
+                th:if="${statut.secret}"
+                type="password"
+                name="valeur"
+                autocomplete="new-password"
+                placeholder="Nouvelle valeur…"
+              />
+              <input
+                th:unless="${statut.secret}"
+                type="text"
+                name="valeur"
+                th:value="${statut.valeur}"
+                autocomplete="off"
+              />
+              <button type="submit" class="btn btn-secondary">
+                Enregistrer
+              </button>
+            </form>
+          </div>
+
+          <!-- Régénération VAPID -->
+          <div class="param-bloc param-bloc-danger">
+            <h3 class="param-label">Clés VAPID (Push)</h3>
+            <p class="param-aide">
+              Régénérer les clés invalide tous les abonnements push existants.
+            </p>
+            <form
+              method="post"
+              th:action="@{/admin/vapid}"
+              onsubmit="
+                return confirm(
+                  'Régénérer les clés VAPID ? Les abonnements push existants seront invalidés.',
+                );
+              "
+            >
+              <button type="submit" class="btn btn-secondary">Régénérer</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- Section Jobs -->
+        <section id="jobs" class="admin-section">
+          <h2 class="section-titre">Jobs &amp; synchronisation</h2>
+
+          <div class="param-bloc">
+            <form method="post" th:action="@{/admin/relancer}">
+              <button type="submit" class="btn btn-secondary">
+                Déclencher les fetches maintenant
+              </button>
+            </form>
+          </div>
+
+          <div class="table-wrapper" th:if="${statsJobs != null}">
+            <table>
+              <thead>
+                <tr>
+                  <th>Job</th>
+                  <th>Dernière exécution</th>
+                  <th>Durée (ms)</th>
+                  <th>Insérés</th>
+                  <th>Mis à jour</th>
+                  <th>Erreur</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="stat : ${statsJobs}">
+                  <td th:text="${stat.typeJob}">job</td>
+                  <td
+                    th:text="${stat.derniereExec != null ? stat.derniereExec.toString().substring(0, 16).replace('T', ' ') : '—'}"
+                  >
+                    date
+                  </td>
+                  <td th:text="${stat.dureeMs != null ? stat.dureeMs : '—'}">
+                    —
+                  </td>
+                  <td
+                    th:text="${stat.nbInseres != null ? stat.nbInseres : '—'}"
+                  >
+                    —
+                  </td>
+                  <td
+                    th:text="${stat.nbMisAJour != null ? stat.nbMisAJour : '—'}"
+                  >
+                    —
+                  </td>
+                  <td>
+                    <span
+                      class="badge badge-erreur"
+                      th:if="${stat.erreur != null}"
+                      th:text="${#strings.abbreviate(stat.erreur, 60)}"
+                      >erreur</span
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Section Logs -->
+        <section id="logs" class="admin-section">
+          <h2 class="section-titre">Logs récents</h2>
+
+          <div
+            class="table-wrapper"
+            th:if="${logs != null and !logs.isEmpty()}"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th>Horodatage</th>
+                  <th>Niveau</th>
+                  <th>Source</th>
+                  <th>Message</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  th:each="entree : ${logs}"
+                  th:classappend="${entree.niveau == 'error' ? ' log-error' : (entree.niveau == 'warn' ? ' log-warn' : '')}"
+                >
+                  <td
+                    th:text="${new java.util.Date(entree.ts).toString().substring(0, 19)}"
+                  >
+                    date
+                  </td>
+                  <td th:text="${entree.niveau}">niveau</td>
+                  <td th:text="${entree.source}">source</td>
+                  <td th:text="${entree.message}">message</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p th:if="${logs == null or logs.isEmpty()}" class="etat-vide-texte">
+            Aucun log pour l'instant.
+          </p>
+        </section>
+      </div>
+    </th:block>
+  </body>
+</html>
