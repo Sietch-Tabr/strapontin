@@ -1,0 +1,125 @@
+import { test, expect } from "@playwright/test";
+
+test.describe("Scénario: navigation et chargement des pages", () => {
+  test("accueil_charge_sans_erreur_500", async ({ page }) => {
+    const response = await page.goto("/");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("spectacles_charge_sans_erreur_500", async ({ page }) => {
+    const response = await page.goto("/spectacles");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("decouverte_charge_sans_erreur_500", async ({ page }) => {
+    const response = await page.goto("/decouverte");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("artistes_charge_sans_erreur_500", async ({ page }) => {
+    const response = await page.goto("/artistes");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("salles_charge_sans_erreur_500", async ({ page }) => {
+    const response = await page.goto("/salles");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("parametres_charge_sans_erreur_500", async ({ page }) => {
+    const response = await page.goto("/parametres");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("admin_charge_sans_erreur_500", async ({ page }) => {
+    const response = await page.goto("/admin");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("aide_charge_sans_erreur_500", async ({ page }) => {
+    const response = await page.goto("/aide");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("changelog_charge_sans_erreur_500", async ({ page }) => {
+    const response = await page.goto("/changelog");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("health_actuator_retourne_status_up", async ({ request }) => {
+    const rep = await request.get("/actuator/health");
+    expect(rep.status()).toBe(200);
+    const corps = await rep.json();
+    expect(corps.status).toBe("UP");
+  });
+});
+
+test.describe("Scénario: découverte — robustesse des filtres", () => {
+  test("filtres_complets_charge_sans_erreur", async ({ page }) => {
+    const response = await page.goto(
+      "/decouverte?dept=75&genre=Pop&mois=2026-10&budget=50&tri=nouveaute",
+    );
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("filtre_q_long_sans_erreur", async ({ page }) => {
+    const q = "a".repeat(150);
+    const response = await page.goto(`/decouverte?q=${encodeURIComponent(q)}`);
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("filtre_budget_invalide_ignore_sans_erreur", async ({ page }) => {
+    const response = await page.goto("/decouverte?budget=abc");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("filtre_tri_invalide_ignore_sans_erreur", async ({ page }) => {
+    const response = await page.goto("/decouverte?tri=valeur_inconnue");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("filtre_mois_format_invalide_sans_erreur", async ({ page }) => {
+    const response = await page.goto("/decouverte?mois=pas-une-date");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+});
+
+test.describe("Scénario: spectacles — robustesse des filtres", () => {
+  test("spectacles_chip_indisponibles_sans_erreur", async ({ page }) => {
+    const response = await page.goto("/spectacles?indisponibles=1");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("spectacles_chip_masques_sans_erreur", async ({ page }) => {
+    const response = await page.goto("/spectacles?masques=1");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("spectacles_chip_quinzaine_sans_erreur", async ({ page }) => {
+    const response = await page.goto("/spectacles?quinzaine=1");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("spectacles_tri_nouveaute_sans_erreur", async ({ page }) => {
+    const response = await page.goto("/spectacles?tri=nouveaute");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+});
