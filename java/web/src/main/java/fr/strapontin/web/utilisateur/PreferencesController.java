@@ -121,9 +121,12 @@ public class PreferencesController {
             ON CONFLICT (user_id, salle_id) DO NOTHING
             """,
             Map.of(
-                "userId", userId,
-                "salleId", s.salleId(),
-                "tmVenueId", s.tmVenueId() != null ? s.tmVenueId() : ""));
+                "userId",
+                userId,
+                "salleId",
+                s.salleId(),
+                "tmVenueId",
+                s.tmVenueId() != null ? s.tmVenueId() : ""));
       }
     }
 
@@ -148,14 +151,20 @@ public class PreferencesController {
               updated_at              = now()
           """,
           Map.of(
-              "userId", userId,
-              "depts", depts,
-              "filtreDisponibles", c.filtreDisponibles(),
+              "userId",
+              userId,
+              "depts",
+              depts,
+              "filtreDisponibles",
+              c.filtreDisponibles(),
               "frequence",
-                  c.frequenceNotifications() != null ? c.frequenceNotifications() : "jamais",
-              "notifArtistes", c.notifArtistes(),
-              "notifSalles", c.notifSalles(),
-              "theme", c.theme() != null ? c.theme() : "auto"));
+              c.frequenceNotifications() != null ? c.frequenceNotifications() : "jamais",
+              "notifArtistes",
+              c.notifArtistes(),
+              "notifSalles",
+              c.notifSalles(),
+              "theme",
+              c.theme() != null ? c.theme() : "auto"));
     } else if (!ecraser && export.config() != null && export.config().departements() != null) {
       // Mode fusionner sans importerConfig : on fusionne uniquement les départements
       String[] nouveauxDepts = export.config().departements().toArray(String[]::new);

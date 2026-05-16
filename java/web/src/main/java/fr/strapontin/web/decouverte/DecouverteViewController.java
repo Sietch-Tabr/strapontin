@@ -78,8 +78,7 @@ public class DecouverteViewController {
     if (donnees != null) {
       for (DecouverteController.SyncDept s : donnees.syncParDept()) {
         if (s.derniereExec() != null) {
-          syncDepts.put(
-              s.dept(), s.derniereExec().toString().substring(0, 16).replace('T', ' '));
+          syncDepts.put(s.dept(), s.derniereExec().toString().substring(0, 16).replace('T', ' '));
         }
       }
     }

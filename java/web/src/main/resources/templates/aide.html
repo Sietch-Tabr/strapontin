@@ -14,10 +14,9 @@
         <h1>Aide</h1>
       </div>
 
-      <div
-        th:if="${succesSignalement}"
-        class="alerte alerte-succes"
-      >Signalement envoyé. Merci !</div>
+      <div th:if="${succesSignalement}" class="alerte alerte-succes">
+        Signalement envoyé. Merci !
+      </div>
       <div
         th:if="${erreurSignalement}"
         class="alerte alerte-erreur"
@@ -153,12 +152,18 @@
 
             <div class="carte carte-large">
               <h2 class="carte-titre">Signaler un problème</h2>
-              <form method="post" th:action="@{/aide/signalement}" class="form-vertical form-compact">
+              <form
+                method="post"
+                th:action="@{/aide/signalement}"
+                class="form-vertical form-compact"
+              >
                 <div class="form-group">
                   <label for="type-signal">Type</label>
                   <select id="type-signal" name="type">
                     <option value="bug">Bug</option>
-                    <option value="suggestion">Suggestion d'amélioration</option>
+                    <option value="suggestion">
+                      Suggestion d'amélioration
+                    </option>
                     <option value="question">Question</option>
                   </select>
                 </div>
