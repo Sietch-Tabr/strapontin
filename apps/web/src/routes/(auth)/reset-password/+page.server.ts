@@ -18,7 +18,9 @@ export const actions: Actions = {
     const confirmation = donnees.get("confirmation")?.toString() ?? "";
 
     if (motDePasse.length < 12) {
-      return fail(400, { erreur: "Le mot de passe doit contenir au moins 12 caractères." });
+      return fail(400, {
+        erreur: "Le mot de passe doit contenir au moins 12 caractères.",
+      });
     }
 
     if (motDePasse !== confirmation) {
@@ -32,9 +34,13 @@ export const actions: Actions = {
     }).catch(() => null);
 
     if (!rep || !rep.ok) {
-      const corps = (await rep?.json().catch(() => ({}))) as { erreur?: string };
+      const corps = (await rep?.json().catch(() => ({}))) as {
+        erreur?: string;
+      };
       return fail(400, {
-        erreur: corps.erreur ?? "Lien invalide ou expiré. Recommencez depuis le formulaire.",
+        erreur:
+          corps.erreur ??
+          "Lien invalide ou expiré. Recommencez depuis le formulaire.",
       });
     }
 

@@ -96,7 +96,8 @@ public class UserConfigController {
 
     ConfigUtilisateur config =
         lignes.isEmpty()
-            ? new ConfigUtilisateur(List.of(), true, "jamais", true, false, "auto", resendDisponible)
+            ? new ConfigUtilisateur(
+                List.of(), true, "jamais", true, false, "auto", resendDisponible)
             : new ConfigUtilisateur(
                 lignes.get(0).departements(),
                 lignes.get(0).filtreDisponibles(),

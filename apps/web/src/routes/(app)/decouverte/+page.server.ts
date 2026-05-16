@@ -82,28 +82,31 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     conditions.push(sql`to_char(${concerts.date}, 'YYYY-MM') = ${mois}`);
   }
 
-  const [tousDepts, tousGenres, tousClassifications, moisDispo] = await Promise.all([
-    db
-      .selectDistinct({ dept: concerts.dept })
-      .from(concerts)
-      .where(and(gte(concerts.date, aujourdhui), eq(concerts.disponible, true)))
-      .orderBy(concerts.dept),
-    db
-      .selectDistinct({ genre: concerts.genre })
-      .from(concerts)
-      .where(and(...conditionsBase, isNotNull(concerts.genre)))
-      .orderBy(concerts.genre),
-    db
-      .selectDistinct({ classification: concerts.classification })
-      .from(concerts)
-      .where(and(...conditionsBase, isNotNull(concerts.classification)))
-      .orderBy(concerts.classification),
-    db
-      .selectDistinct({ mois: sql<string>`left(${concerts.date}::text, 7)` })
-      .from(concerts)
-      .where(and(...conditionsSansMois))
-      .orderBy(sql`left(${concerts.date}::text, 7)`),
-  ]);
+  const [tousDepts, tousGenres, tousClassifications, moisDispo] =
+    await Promise.all([
+      db
+        .selectDistinct({ dept: concerts.dept })
+        .from(concerts)
+        .where(
+          and(gte(concerts.date, aujourdhui), eq(concerts.disponible, true)),
+        )
+        .orderBy(concerts.dept),
+      db
+        .selectDistinct({ genre: concerts.genre })
+        .from(concerts)
+        .where(and(...conditionsBase, isNotNull(concerts.genre)))
+        .orderBy(concerts.genre),
+      db
+        .selectDistinct({ classification: concerts.classification })
+        .from(concerts)
+        .where(and(...conditionsBase, isNotNull(concerts.classification)))
+        .orderBy(concerts.classification),
+      db
+        .selectDistinct({ mois: sql<string>`left(${concerts.date}::text, 7)` })
+        .from(concerts)
+        .where(and(...conditionsSansMois))
+        .orderBy(sql`left(${concerts.date}::text, 7)`),
+    ]);
 
   const deptsDisponibles = tousDepts
     .map((d) => d.dept?.trim())

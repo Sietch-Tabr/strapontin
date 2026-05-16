@@ -260,7 +260,16 @@ public class AdminController {
         "info", "admin", "compte créé", Map.of("email", email, "parAdmin", adminId));
 
     return ResponseEntity.status(201)
-        .body(Map.of("succes", true, "email", email, "identifiant", usernameTemp, "lienReset", lienReset));
+        .body(
+            Map.of(
+                "succes",
+                true,
+                "email",
+                email,
+                "identifiant",
+                usernameTemp,
+                "lienReset",
+                lienReset));
   }
 
   /// Modifie le nom et/ou l'email d'un utilisateur.

@@ -186,8 +186,7 @@ public class AuthController {
         jdbc.queryForList("SELECT id FROM users WHERE email = :email", Map.of("email", email));
 
     if (!utilisateurs.isEmpty()) {
-      jdbc.update(
-          "DELETE FROM verifications WHERE identifier = :email", Map.of("email", email));
+      jdbc.update("DELETE FROM verifications WHERE identifier = :email", Map.of("email", email));
 
       String token = genererToken(32);
       String tokenId = UUID.randomUUID().toString();
@@ -235,10 +234,7 @@ public class AuthController {
 
     if (verifs.isEmpty()) {
       return ResponseEntity.badRequest()
-          .body(
-              Map.of(
-                  "erreur",
-                  "Lien invalide ou expiré. Recommencez depuis le formulaire."));
+          .body(Map.of("erreur", "Lien invalide ou expiré. Recommencez depuis le formulaire."));
     }
 
     String email = (String) verifs.get(0).get("identifier");
@@ -255,8 +251,7 @@ public class AuthController {
         "UPDATE users SET must_change_credentials = false, updated_at = NOW() WHERE email = :email",
         Map.of("email", email));
 
-    jdbc.update(
-        "DELETE FROM verifications WHERE value = :token", Map.of("token", req.token()));
+    jdbc.update("DELETE FROM verifications WHERE value = :token", Map.of("token", req.token()));
 
     return ResponseEntity.ok(Map.of("succes", true));
   }

@@ -104,7 +104,7 @@ pct create "$VMID" "$TEMPLATE_PATH" \
     --unprivileged 1 \
     --features nesting=1 \
     --ostype debian \
-    --onboot 0 \
+    --onboot 1 \
     --start 0
 
 echo "[2] Montage NAS /mnt/backup..."

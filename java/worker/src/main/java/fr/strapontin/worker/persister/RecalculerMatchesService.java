@@ -140,9 +140,7 @@ public class RecalculerMatchesService {
     String sql;
     if (departements.isEmpty()) {
       sql =
-          "SELECT DISTINCT id::text FROM concerts WHERE "
-              + matchCond
-              + " AND date >= :aujourdhui";
+          "SELECT DISTINCT id::text FROM concerts WHERE " + matchCond + " AND date >= :aujourdhui";
     } else {
       params.put("departements", departements);
       sql =

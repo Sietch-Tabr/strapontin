@@ -1,49 +1,63 @@
 # CLAUDE.md — strapontin (strapontin.kwaite.fr)
 
-## Lancer l'application (développement)
+## Lancer l'application (v2 — LXC dev)
 
-L'app démarre automatiquement au démarrage du LXC dev (`pct start 114`).
-Accès : `http://192.168.20.78:3000`
+L'app Java démarre automatiquement au démarrage du LXC dev (`pct start 114`).
+Accès : `http://192.168.20.78:8080` (Java + Thymeleaf, Phase 8+)
 
 ```bash
-journalctl -fu strapontin-dev-web
-journalctl -fu strapontin-dev-worker
-systemctl restart strapontin-dev-web strapontin-dev-worker
+journalctl -fu strapontin-java-web
+journalctl -fu strapontin-java-worker
+systemctl restart strapontin-java-web strapontin-java-worker
 ```
 
-## Architecture — monorepo pnpm workspaces
+## Architecture — monorepo Maven
 
 ```
 strapontin/
-├── apps/
-│   ├── web/              ← SvelteKit (UI + API routes)
-│   └── worker/           ← BullMQ worker (fetch + normalisation)
-├── packages/
-│   ├── core/             ← Dédoublonnage, normalisation, filtres (logique pure)
-│   └── sources/          ← Clients API : TM, Eventim
+├── java/
+│   ├── pom.xml       ← parent BOM (Java 25, Spring Boot 4.0.6)
+│   ├── core/         ← normalisation, dédup, types partagés
+│   ├── sources/      ← clients TM, Eventim, Deezer
+│   ├── web/          ← Spring Boot (REST API + Thymeleaf UI, port 8080)
+│   └── worker/       ← Spring Boot + Quartz (port 8081)
 └── scripts/
-    ├── update.sh         ← backup → pull → build → migrate → restart → healthcheck
-    └── update-dev.sh     ← déploie la branche courante sur le LXC dev (Mac → SSH)
+    ├── provision-java.sh  ← provisionnement LXC (Proxmox)
+    ├── migrate_data.sql   ← migration données prod (dblink LXC 115 → 113)
+    └── update.sh          ← backup → pull → build → restart (v1 prod Node.js)
 ```
 
-## Stack technique
+## Stack technique (v2.0.0)
 
-- **SvelteKit** + TypeScript — frontend SSR + API routes
-- **Drizzle ORM** + PostgreSQL 18 — données persistantes
-- **BullMQ** + Redis 8 — jobs background (fetch concerts toutes les 2h)
-- **Better-Auth** — auth username/password, invite-only (plugin `username` activé)
+- **Spring Boot 4.0.6** + Thymeleaf — UI SSR + REST API (port 8080)
+- **Spring Security 7** — auth session, form login, TOTP admin (bucket4j rate-limiting)
+- **Spring Data JDBC** + PostgreSQL 18 — données persistantes
+- **Quartz** — jobs background (fetch concerts)
+- **Flyway 12** — migrations DB (`java/web/src/main/resources/db/migration/`)
 - **Resend** — notifications email (tier gratuit 3 000/mois)
-- **pnpm workspaces** — monorepo sans Turborepo
+- **web-push (VAPID)** — notifications push PWA
+- **Maven** — build (`mvn -f java/pom.xml -pl web -am package -DskipTests`)
 
 ## Workflow de développement
 
-### Dev quotidien (LXC dev)
-
-LXC dev : VMID 114, `192.168.20.78`, VLAN 20. LXC prod : VMID 113, `192.168.20.79`.
+### LXC dev (VMID 114, 192.168.20.78) / prod v1 (VMID 113, 192.168.20.79)
 
 ```bash
-ssh root@192.168.20.78                                          # dev (accès direct)
-ssh root@192.168.1.99 "pct exec 113 -- journalctl -u strapontin-web --no-pager -n 50"  # prod
+ssh root@192.168.20.78                                                                 # dev
+ssh root@192.168.1.99 "pct exec 113 -- journalctl -u strapontin-web --no-pager -n 50" # prod v1
+```
+
+### Build et déploiement LXC dev
+
+```bash
+# Build
+mvn -f java/pom.xml -pl web -am package -DskipTests
+# → java/web/target/web-2.0.0-SNAPSHOT.jar
+
+# Déploiement manuel (Mac → LXC 114)
+scp java/web/target/web-2.0.0-SNAPSHOT.jar root@192.168.20.78:/opt/strapontin-java/web.jar
+ssh root@192.168.20.78 "systemctl restart strapontin-java-web"
+curl -sf http://192.168.20.78:8080/actuator/health | grep UP
 ```
 
 ### Gestion des issues (Codeberg)
@@ -63,114 +77,97 @@ EOF
 ```
 
 `tea issue view N` → toujours passer `-f "index,title,body"` (body absent par défaut).
-Jalons actifs : **v1.2.3**, **v1.3.0**, **v1.4.0**. Labels : `bug`, `enhancement`, `question`.
+Labels : `Bug`, `Feature`, `Question`, `Task`, `Duplicate`, `Invalid`.
 
-### Workflow Git
+### Workflow Git (v2)
 
-- **Toujours sur une branche feature** — jamais de commit direct sur `main`
-- Nommage : `feature/`, `fix/`, `chore/`
-- `push main` → Woodpecker → `update.sh` sur LXC prod
+- `main` : prod v1 Node.js (Woodpecker déploie sur push — **ne jamais pousser manuellement**)
+- `v2` : intégration — CI uniquement, pas de deploy auto
+- Features mergées dans `v2`, `v2` → `main` au jour J uniquement (Phase 9)
 
 ### Pipeline Woodpecker (.woodpecker.yaml)
 
-Trois steps : `test` → `typecheck` (`depends_on: [test]`) → `deploy` (main uniquement).
+Actuellement ciblé v1 (Node.js). Sera mis à jour en Phase 10 pour Maven.
 
-- `test` : `pnpm -r test` (unitaires, mocks DB)
-- `typecheck` : svelte-check + `tsc --noEmit` + `pnpm audit --audit-level=high`
+## Variables d'environnement — java/web/.env
 
-**Piège pnpm store** : `--store-dir ./.pnpm-store` en flag CLI — `PNPM_STORE_DIR` non fiable sur pnpm@11. `depends_on: [test]` sérialise les steps pour éviter race condition ENOENT sur le store partagé.
-
-**pnpm 11** : `packageManager: "pnpm@11.0.8"` dans `package.json` (corepack). `allowBuilds: true` dans `pnpm-workspace.yaml` (esbuild, msgpackr-extract). `confirmModulesPurge: false` (sinon abort sans TTY en deploy SSH).
-
-## Scripts d'exploitation
-
-`update.sh` (prod) : backup → pull → install → build → migrate → restart → healthcheck (10×3s). Rollback auto sur `trap ERR` étapes 3–5.
-`system-update.sh` : depuis host Proxmox uniquement (`ssh root@192.168.1.99 "bash -s" < scripts/system-update.sh`).
-Détails : [wiki Exploitation](https://codeberg.org/Kwaite/strapontin/wiki/Exploitation)
-
-## Variables d'environnement (.env)
-
-`.env` serveur : `DATABASE_URL`, `REDIS_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`.
-Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_*`) dans `app_config` (DB), configurables depuis `/admin`.
+```
+DATABASE_URL=jdbc:postgresql://localhost/strapontin_v2
+APP_CONFIG_SECRET=<valeur de BETTER_AUTH_SECRET LXC 113>
+```
 
 ## Configuration applicative (`app_config`)
 
-Chiffrement AES-256-GCM, clé dérivée de `BETTER_AUTH_SECRET` via `scryptSync`.
-⚠️ `BETTER_AUTH_SECRET` obligatoire au démarrage (fail-fast dans `config.ts` des deux apps).
-⚠️ Changer `BETTER_AUTH_SECRET` en prod → toutes les valeurs `app_config` illisibles.
-⚠️ Changer les clés VAPID → supprimer `push_abonnements` d'abord (anciens endpoints invalides).
+Chiffrement AES-256-GCM, clé = `APP_CONFIG_SECRET`.
+⚠️ Changer `APP_CONFIG_SECRET` → toutes les valeurs `app_config` illisibles.
+⚠️ Changer les clés VAPID → supprimer `push_abonnements` d'abord.
+Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_*`) configurables depuis `/admin`.
 
 ## Sources de données
 
-Détails : [wiki Sources de données](https://codeberg.org/Kwaite/strapontin/wiki/Sources-de-données)
-
-| Source                    | Statut                                                                        |
-| ------------------------- | ----------------------------------------------------------------------------- |
-| Ticketmaster Discovery v2 | Core                                                                          |
-| Eventim France            | Core                                                                          |
+| Source                    | Statut                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| Ticketmaster Discovery v2 | Core                                                                           |
+| Eventim France            | Core                                                                           |
 | Deezer Search API         | Autocomplete artiste (`/artistes`) — sans clé. Remplace MusicBrainz (bloqué). |
-| Bandsintown               | Abandonné — HTTP 401 depuis 2026-04-10 (#65)                                  |
-| MusicBrainz               | Bloqué — IP SFR blacklistée par Cloudflare (#293)                             |
-| Fnac / Shotgun / Dice.fm  | Abandonnés                                                                    |
+| Bandsintown               | Abandonné — HTTP 401 depuis 2026-04-10 (#65)                                   |
+| MusicBrainz               | Bloqué — IP SFR blacklistée par Cloudflare (#293)                              |
 
-## Pattern workers (BullMQ)
+## Jobs background (Quartz)
 
 Paradigme : **pré-fetch en arrière-plan, jamais d'appel API depuis le browser**.
-→ Pièges détaillés, Redis, classifications TM : `.claude/rules/bullmq.md`
 
-| Type                   | Déclenchement           | Description                                  |
-| ---------------------- | ----------------------- | -------------------------------------------- |
-| `fetch:artiste`        | Ajout artiste + cron 2h | Fetch TM + Eventim par nom artiste           |
-| `fetch:artistes:batch` | Cron 2h                 | Fetch TM en lots de 20 attractionIds         |
-| `fetch:region`         | Cron 2h + manuel        | Fetch TM + Eventim par département           |
-| `fetch:salle`          | Ajout salle + cron 2h   | Fetch TM par `venueId`                       |
-| `recalculer:matches`   | Après fetch             | Recalcule `user_matches` pour tous les users |
-| `purger:concerts`      | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours    |
+| Job                      | Déclenchement           | Description                                  |
+| ------------------------ | ----------------------- | -------------------------------------------- |
+| `FetchArtisteJob`        | Ajout artiste + cron 2h | Fetch TM + Eventim par nom artiste           |
+| `FetchArtistesBatchJob`  | Cron 2h                 | Fetch TM en lots de 20 attractionIds         |
+| `FetchRegionJob`         | Cron 2h + manuel        | Fetch TM + Eventim par département           |
+| `FetchSalleJob`          | Ajout salle + cron 2h   | Fetch TM par `venueId`                       |
+| `RecalculerMatchesJob`   | Après fetch             | Recalcule `user_matches` pour tous les users |
+| `PurgerConcertsJob`      | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours    |
+
+Rate limiting TM : max 2 jobs simultanés (3 → HTTP 429). Quota TM persisté dans `app_config` (`TM_QUOTA_JSON`).
 
 ## Authentification
 
 Invite-only. Login par identifiant (insensible à la casse). Rôles : `user` | `admin`.
 2FA TOTP obligatoire pour les admins. Cap : 500 artistes / 200 salles par user.
-→ Invite flow, TOTP, rate limiting, logs auth : `.claude/rules/auth.md`
+Spring Security form login → cookie `SESSION` (JDBC-backed, survit aux restarts).
+`BetterAuthPasswordEncoder` : scrypt hérité de v1 → re-hash bcrypt transparent au premier login.
 Détails : [wiki Authentification](https://codeberg.org/Kwaite/strapontin/wiki/Authentification)
 
 ## Dédoublonnage inter-sources
 
-Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy ≥ 0.85.
-→ Casse TM, resolver, `persisterConcerts` : `.claude/rules/dedup.md`
+Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein normalisé ≥ 0.85.
+→ Détails : `.claude/rules/dedup.md`
 
-## UI / Design system
+## UI / Design system (v2 — Thymeleaf)
 
-- **shadcn-svelte** (Svelte 5 + Tailwind v4) — composants dans le repo, pas de mise à jour externe
-- **Thème** : `auto`/`clair`/`sombre` — cookie (1 an) + DB → pas de FOUC
-- **PWA** : service worker + push. Cap 10 abonnements/user. `GET /api/push` intentionnellement public.
+- **Thymeleaf** + Layout Dialect — templates dans `java/web/src/main/resources/templates/`
+- **CSS vanilla** — variables CSS pour thème clair/sombre, dans `static/css/`
+- **PWA** : service worker JS vanilla + push. Cap 10 abonnements/user.
 - **Badge "Nouveau"** : basé sur `user_matches.notifie_le IS NULL`
-- **Headers sécurité** : NPM pose HSTS/X-Frame/CSP-base. SvelteKit pose COOP/CORP/X-Robots. CSP nonce dans `svelte.config.js` (`mode: "nonce"` — pas d'`unsafe-inline`).
+- **Thème** : cookie `theme` (1 an) + `user_config.theme` → pas de FOUC
 
 ## Schéma PostgreSQL
 
-Migrations dans `packages/core/migrations/` — via `pnpm --filter @strapontin/core db:generate`, jamais à la main.
-`users.id` est de type `text` (Better Auth génère ses propres IDs).
+Migrations Flyway dans `java/web/src/main/resources/db/migration/` — ne jamais modifier à la main.
+`users.id` : type `text` (UUID généré par Java).
 Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de-base-de-données)
 
-## Conventions
+## Conventions Java
 
-- TypeScript strict, pas de `any`
-- Noms de variables en français
-- Logging : pino 10, lazy `%s` (pas de template literals dans les appels logger), pas de `console.log`
-- **tsconfig packages Node** : `"types": ["node"]` — requis depuis TypeScript 6
-- **`<button>` hors formulaire** : toujours `type="button"` (défaut HTML `submit` déclenche le formulaire parent sur mobile)
-- **Tests TS** : unitaires (`pnpm -r test`), fonctionnels (`test:fonctionnel`), intégration (`test:integration`, tunnel SSH requis), E2E Playwright (`test:e2e`, LXC dev requis)
-- **Tests Java** : `mvn -pl core,sources test` (unitaires, pas de Docker). `mvn -pl worker test -am` requiert **Docker** (Testcontainers PostgreSQL pour `PersisterConcertsIntegrationTest`).
-- **Nommage tests** : `<fonction>_<scenario>_<attendu>`. Header `Origin` obligatoire avec Better Auth depuis Node.js (sinon 403).
+- Identifiants en français (`nombreUtilisateurs`, `calculerTotal`)
+- Logging : SLF4J, jamais `System.out`
+- **Tests Java** : `mvn -pl core,sources test` (unitaires). `mvn -pl worker test -am` requiert Docker (Testcontainers).
+- **Tests E2E** : Playwright (`apps/web/tests/e2e/`) — nécessite LXC dev actif
+- Nommage tests : `<methode>_<scenario>_<resultatAttendu>`
 
 ## Outils Claude Code
 
 - **Understand-Anything** (`/understand`) — graphe de connaissance du codebase
 - **code-review-graph** — MCP ; analyse d'impact et blast-radius sur les modifications
 - **everything-search** — MCP recherche fichiers via Spotlight (évite le bruit `node_modules/`)
-
-<!-- code-review-graph MCP tools -->
 
 ## MCP Tools: code-review-graph
 
