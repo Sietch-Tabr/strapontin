@@ -146,11 +146,13 @@ export const actions: Actions = {
     const corps = (await rep.json().catch(() => ({}))) as {
       email?: string;
       identifiant?: string;
+      lienReset?: string;
     };
     return {
       succes: "creerCompte",
       email: corps.email ?? email,
       identifiant: corps.identifiant ?? "",
+      lienReset: corps.lienReset ?? "",
     };
   },
 
@@ -282,7 +284,8 @@ export const actions: Actions = {
     const nom = donnees.get("nom")?.toString().trim() ?? "";
     const email = donnees.get("email")?.toString().trim().toLowerCase() ?? "";
 
-    if (!userId) return fail(400, { erreur: "Identifiant utilisateur manquant." });
+    if (!userId)
+      return fail(400, { erreur: "Identifiant utilisateur manquant." });
 
     const session = cookies.get("SESSION");
     const rep = await fetch(

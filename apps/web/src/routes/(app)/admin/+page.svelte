@@ -15,6 +15,8 @@
 	let emailModification = $state('');
 
 	let relancerEnCours = $state(false);
+	let relancerSucces = $state(false);
+	let relancerErreur = $state<string | null>(null);
 	let configEditionCle = $state<string | null>(null);
 	let configValeur = $state('');
 
@@ -265,9 +267,14 @@
 					Actualisations
 				</h2>
 
-				{#if form?.succes === 'relancerFetches'}
+				{#if relancerSucces}
 					<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
 						Fetches relancés — ils démarreront dans quelques secondes.
+					</p>
+				{/if}
+				{#if relancerErreur}
+					<p class="mb-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+						{relancerErreur}
 					</p>
 				{/if}
 
@@ -316,9 +323,13 @@
 					class="mt-3"
 					use:enhance={() => {
 						relancerEnCours = true;
-						return async ({ update }) => {
+						relancerSucces = false;
+						relancerErreur = null;
+						return async ({ result, update }) => {
 							relancerEnCours = false;
-							await update();
+							if (result.type === 'success') relancerSucces = true;
+							else if (result.type === 'failure' && typeof result.data?.erreur === 'string') relancerErreur = result.data.erreur;
+							await update({ reset: false });
 						};
 					}}
 				>
@@ -624,18 +635,25 @@
 				<h2 class="mb-4 text-base font-medium text-foreground">Créer un compte</h2>
 
 				{#if form?.succes === 'creerCompte'}
-					<div class="mb-4 rounded-xl border border-green-500/30 bg-green-500/10 p-4">
-						<p class="mb-2 text-sm font-medium text-green-700 dark:text-green-400">
+					<div class="mb-4 rounded-xl border border-green-500/30 bg-green-500/10 p-4 space-y-2">
+						<p class="text-sm font-medium text-green-700 dark:text-green-400">
 							Compte créé pour <strong>{form.email}</strong>
 						</p>
 						<p class="text-sm text-green-700 dark:text-green-400">
-							Identifiant temporaire :
-							<code class="rounded bg-green-500/20 px-2 py-0.5 font-mono font-semibold">
-								{form.identifiant}
-							</code>
+							Identifiant :
+							<code class="rounded bg-green-500/20 px-2 py-0.5 font-mono font-semibold">{form.identifiant}</code>
 						</p>
-						<p class="mt-2 text-xs text-muted-foreground">
-							Un email d'invitation avec le lien de création de mot de passe a été envoyé. Communiquez l'identifiant à l'utilisateur en cas de non-réception.
+						{#if form.lienReset}
+							<p class="text-sm text-green-700 dark:text-green-400">
+								Lien d'activation <span class="text-xs text-muted-foreground">(valable 24h)</span> :
+							</p>
+							<a
+								href={form.lienReset}
+								class="block break-all rounded bg-green-500/20 px-2 py-1.5 font-mono text-xs text-green-800 underline dark:text-green-300"
+							>{form.lienReset}</a>
+						{/if}
+						<p class="text-xs text-muted-foreground">
+							Un email d'invitation a été envoyé. Communiquez l'identifiant et le lien ci-dessus à l'utilisateur en cas de non-réception.
 						</p>
 					</div>
 				{/if}
