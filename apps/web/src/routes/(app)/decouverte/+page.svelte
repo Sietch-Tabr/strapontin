@@ -3,7 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { goto, invalidateAll } from '$app/navigation';
 	import ComboboxDepts from '$lib/components/ui/combobox-depts.svelte';
-	import { Compass, Search, X, Check, Info, RefreshCw, Plus, Loader } from '@lucide/svelte';
+	import { Compass, Search, X, Check, Info, RefreshCw, Plus } from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
 	import { formaterDate } from '$lib/formats';
 
@@ -12,33 +12,6 @@
 	// Depts pour lesquels un fetch vient d'être lancé dans cette session — bannière masquée
 	let deptsActualises = $state(new Set<string>());
 
-	// État du SSE fetch:region en cours
-	let etatFetch = $state<'idle' | 'en-cours' | 'termine' | 'erreur'>('idle');
-	let sourceEvenements: EventSource | null = null;
-
-	function ouvrirSse(jobId: string) {
-		etatFetch = 'en-cours';
-		sourceEvenements?.close();
-		sourceEvenements = new EventSource(
-			`/api/fetch-region-status?jobId=${encodeURIComponent(jobId)}`
-		);
-		sourceEvenements.onmessage = (evt) => {
-			const msg = JSON.parse(evt.data as string) as { type: string };
-			etatFetch = msg.type === 'completed' ? 'termine' : 'erreur';
-			sourceEvenements?.close();
-			sourceEvenements = null;
-		};
-		sourceEvenements.onerror = () => {
-			etatFetch = 'erreur';
-			sourceEvenements?.close();
-			sourceEvenements = null;
-		};
-	}
-
-	async function actualiserDonnees() {
-		etatFetch = 'idle';
-		await invalidateAll();
-	}
 	const deptsASignaler = $derived(
 		data.deptsHorsListe.filter((d) => !deptsActualises.has(d))
 	);
@@ -360,8 +333,8 @@
 						action="?/fetcherRegion"
 						use:enhance={() => async ({ result }) => {
 							deptsActualises = new Set([...deptsActualises, ...deptsASignaler]);
-							if (result.type === 'success' && result.data?.jobId) {
-								ouvrirSse(result.data.jobId as string);
+							if (result.type === 'success') {
+								await invalidateAll();
 							}
 						}}
 					>
@@ -380,8 +353,8 @@
 						method="POST"
 						action="?/ajouterDepts"
 						use:enhance={() => async ({ result }) => {
-							if (result.type === 'success' && result.data?.jobId) {
-								ouvrirSse(result.data.jobId as string);
+							if (result.type === 'success') {
+								await invalidateAll();
 							}
 						}}
 					>
@@ -397,43 +370,6 @@
 						</button>
 					</form>
 				</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- Bannière SSE : état du job fetch:region en cours -->
-	{#if etatFetch !== 'idle'}
-		<div class="mb-4 rounded-lg border px-4 py-3 {etatFetch === 'termine'
-			? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/40'
-			: etatFetch === 'erreur'
-			? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40'
-			: 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/40'}">
-			<div class="flex items-center justify-between gap-3">
-				<div class="flex items-center gap-2">
-					{#if etatFetch === 'en-cours'}
-						<Loader size={14} class="animate-spin text-blue-600 dark:text-blue-400" aria-hidden="true" />
-						<p class="text-sm text-blue-900 dark:text-blue-200">Récupération des concerts en cours...</p>
-					{:else if etatFetch === 'termine'}
-						<Check size={14} class="text-green-600 dark:text-green-400" aria-hidden="true" />
-						<p class="text-sm text-green-900 dark:text-green-200">Résultats disponibles.</p>
-					{:else}
-						<Info size={14} class="text-amber-600 dark:text-amber-400" aria-hidden="true" />
-						<p class="text-sm text-amber-900 dark:text-amber-200">Récupération terminée (avec avertissements).</p>
-					{/if}
-				</div>
-				{#if etatFetch === 'termine' || etatFetch === 'erreur'}
-					<button
-						type="button"
-						onclick={actualiserDonnees}
-						class="shrink-0 flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors
-							{etatFetch === 'termine'
-								? 'border-green-300 bg-white text-green-700 hover:bg-green-50 dark:border-green-700 dark:bg-transparent dark:text-green-300 dark:hover:bg-green-900/40'
-								: 'border-amber-300 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:bg-transparent dark:text-amber-300 dark:hover:bg-amber-900/40'}"
-					>
-						<RefreshCw size={12} aria-hidden="true" />
-						Actualiser la page
-					</button>
-				{/if}
 			</div>
 		</div>
 	{/if}

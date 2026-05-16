@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import { db } from "$lib/server/db";
 import { concerts, userArtistes, userConfig } from "@strapontin/core/schema";
 import {
@@ -13,7 +12,6 @@ import {
   asc,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
-import { queue } from "$lib/server/queue";
 import {
   redis,
   cleRegionFetchee,
@@ -195,8 +193,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 export const actions: Actions = {
-  // Déclenche un fetch:region immédiat pour les depts sélectionnés, sans modifier les préférences
-  fetcherRegion: async ({ locals, request }) => {
+  // Marque les depts comme récemment synchronisés (fetch Quartz en arrière-plan)
+  fetcherRegion: async ({ request }) => {
     const formData = await request.formData();
     const depts = formData
       .getAll("dept")
@@ -205,22 +203,6 @@ export const actions: Actions = {
     if (depts.length === 0)
       return fail(400, { message: "Aucun département sélectionné" });
 
-    const deptsALancer = [...depts].sort();
-    await queue
-      .add(
-        "fetch:region",
-        { type: "fetch:region", depts: deptsALancer, userId: locals.user!.id, correlationId: randomUUID() },
-        {
-          jobId: `region__manuel__${deptsALancer.join("_")}`,
-          removeOnComplete: true,
-          removeOnFail: true,
-        },
-      )
-      .catch(() => {
-        /* worker arrêté en dev */
-      });
-
-    // Timestamp immédiat — le job est en queue, données bientôt à jour
     const now = new Date().toISOString();
     await Promise.all(
       depts.map((d) =>
@@ -230,14 +212,10 @@ export const actions: Actions = {
       ),
     );
 
-    return {
-      success: true,
-      message: `Actualisation lancée pour ${depts.join(", ")}`,
-      jobId: `region__manuel__${deptsALancer.join("_")}`,
-    };
+    return { success: true };
   },
 
-  // Ajoute les depts hors liste aux préférences user ET déclenche un fetch:region
+  // Ajoute les depts hors liste aux préférences user et marque comme synchronisés
   ajouterDepts: async ({ locals, request }) => {
     const formData = await request.formData();
     const depts = formData
@@ -263,21 +241,6 @@ export const actions: Actions = {
         set: { departements: nouveaux, updatedAt: new Date() },
       });
 
-    const deptsALancer = [...depts].sort();
-    await queue
-      .add(
-        "fetch:region",
-        { type: "fetch:region", depts: deptsALancer, userId: locals.user!.id, correlationId: randomUUID() },
-        {
-          jobId: `region__manuel__${deptsALancer.join("_")}`,
-          removeOnComplete: true,
-          removeOnFail: true,
-        },
-      )
-      .catch(() => {
-        /* worker arrêté en dev */
-      });
-
     const now = new Date().toISOString();
     await Promise.all(
       depts.map((d) =>
@@ -287,10 +250,6 @@ export const actions: Actions = {
       ),
     );
 
-    return {
-      success: true,
-      message: `${depts.join(", ")} ajouté${depts.length > 1 ? "s" : ""} à vos préférences`,
-      jobId: `region__manuel__${deptsALancer.join("_")}`,
-    };
+    return { success: true };
   },
 };

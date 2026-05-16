@@ -946,11 +946,6 @@
 				<div>
 					<h3 class="mb-3 text-sm font-medium text-muted-foreground">Importer des préférences</h3>
 
-					{#if form?.succes === 'import'}
-						<p class="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-							{form.message}
-						</p>
-					{/if}
 					{#if form?.erreur && form?.section === 'import'}
 						<p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
 							{form.erreur}

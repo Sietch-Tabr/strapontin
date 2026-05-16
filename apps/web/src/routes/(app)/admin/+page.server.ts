@@ -41,8 +41,18 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
     erreur: string | null;
   };
 
+  type QuotaTMJava = {
+    dispo: number;
+    total: number;
+    reset: number;
+    misAJour: string;
+  };
+
   const jobsReponse = repJobs.ok
-    ? ((await repJobs.json()) as { statsJobs: StatJobJava[]; quotaTM: unknown })
+    ? ((await repJobs.json()) as {
+        statsJobs: StatJobJava[];
+        quotaTM: QuotaTMJava | null;
+      })
     : null;
 
   const statsJobsArr: StatJobJava[] = jobsReponse?.statsJobs ?? [];
@@ -79,8 +89,18 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
       .sort()
       .pop() ?? null;
 
+  type EntreeLogAdmin = {
+    ts: string;
+    niveau: string;
+    source: string;
+    message: string;
+    meta?: Record<string, unknown>;
+  };
+
   const quotaTM = jobsReponse?.quotaTM ?? null;
-  const logsAdmin = repLogs.ok ? await repLogs.json() : [];
+  const logsAdmin: EntreeLogAdmin[] = repLogs.ok
+    ? ((await repLogs.json()) as EntreeLogAdmin[])
+    : [];
   const configStatuts = repConfig.ok ? await repConfig.json() : [];
 
   return {

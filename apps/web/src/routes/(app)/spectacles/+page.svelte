@@ -55,12 +55,10 @@
 		return `/spectacles?${params}`;
 	}
 
-	function formaterPrix(min: string | null, max: string | null): string {
+	function formaterPrix(min: number | null, max: number | null): string {
 		if (!min) return '';
-		const pMin = parseFloat(min);
-		const pMax = max ? parseFloat(max) : null;
-		if (pMax && pMax !== pMin) return `${pMin}–${pMax} €`;
-		return `${pMin} €`;
+		if (max && max !== min) return `${min}–${max} €`;
+		return `${min} €`;
 	}
 
 	function labelMois(m: string): string {
