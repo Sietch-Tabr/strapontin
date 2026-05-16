@@ -1,5 +1,6 @@
 import { JAVA_API_URL, entetesJava } from "$lib/server/api-java";
 import { fail, redirect } from "@sveltejs/kit";
+import { dev } from "$app/environment";
 import type { PageServerLoad, Actions } from "./$types";
 import { FORMAT_DEPT } from "$lib/constantes/validations";
 
@@ -120,7 +121,7 @@ export const actions: Actions = {
       path: "/",
       maxAge: 60 * 60 * 24 * 365,
       httpOnly: false,
-      secure: true,
+      secure: !dev,
       sameSite: "lax",
     });
 

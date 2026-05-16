@@ -538,6 +538,31 @@ public class AdminController {
     return ResponseEntity.ok(reponse);
   }
 
+  /// Déclenche immédiatement les fetches (appel au worker via HTTP interne).
+  ///
+  /// @return 200 si déclenché, 503 si le worker est inaccessible
+  @PostMapping("/relancer")
+  public ResponseEntity<Map<String, Object>> relancerFetches() {
+    try {
+      java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+      java.net.http.HttpRequest req =
+          java.net.http.HttpRequest.newBuilder()
+              .uri(java.net.URI.create("http://localhost:8081/trigger/tout"))
+              .POST(java.net.http.HttpRequest.BodyPublishers.noBody())
+              .build();
+      java.net.http.HttpResponse<String> rep =
+          client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+      if (rep.statusCode() == 200) {
+        logAdminService.logAdmin("info", "admin", "Fetches relancés manuellement");
+        return ResponseEntity.ok(Map.of("statut", "déclenché"));
+      }
+      return erreur(503, "Worker inaccessible (statut " + rep.statusCode() + ").");
+    } catch (Exception e) {
+      log.warn("Erreur appel worker trigger", e);
+      return erreur(503, "Worker inaccessible : " + e.getMessage());
+    }
+  }
+
   // --- Utilitaires ---
 
   private ResponseEntity<Map<String, Object>> validerConfig(String cle, String valeur) {

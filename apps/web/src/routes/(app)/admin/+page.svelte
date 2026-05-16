@@ -265,7 +265,7 @@
 					Actualisations
 				</h2>
 
-				{#if form?.action === 'relancerFetches' && form?.succes}
+				{#if form?.succes === 'relancerFetches'}
 					<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
 						Fetches relancés — ils démarreront dans quelques secondes.
 					</p>
@@ -504,12 +504,12 @@
 					Configuration
 				</h2>
 
-				{#if form?.action === 'sauvegarderConfig' && form?.succes}
+				{#if form?.succes === 'majConfig'}
 					<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
 						Clé <strong>{form.cle}</strong> mise à jour.
 					</p>
 				{/if}
-				{#if form?.action === 'genererVapid' && form?.succes}
+				{#if form?.succes === 'genererVapid'}
 					<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
 						Clés VAPID générées et enregistrées.
 					</p>
@@ -558,7 +558,7 @@
 							{#if configEditionCle === config.cle}
 								<form
 									method="POST"
-									action="?/sauvegarderConfig"
+									action="?/majConfig"
 									class="border-t border-border px-4 py-3 space-y-3"
 									use:enhance={() => async ({ result, update }) => {
 										if (result.type !== 'failure') {
@@ -690,12 +690,12 @@
 					Utilisateurs ({data.utilisateurs.length})
 				</h2>
 
-				{#if form?.action === 'reinitialiserMdp' && form?.succes}
+				{#if form?.succes === 'resetMdp'}
 					<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
 						Email de réinitialisation envoyé à <strong>{form.email}</strong>.
 					</p>
 				{/if}
-				{#if form?.action === 'modifierCompte' && form?.succes}
+				{#if form?.succes === 'modifierCompte'}
 					<p class="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
 						Compte mis à jour.
 					</p>
@@ -758,7 +758,7 @@
 											<span class="text-xs text-muted-foreground mr-1">
 												{utilisateur.mustChangeCredentials ? 'Renvoyer l\'invitation ?' : 'Envoyer lien reset ?'}
 											</span>
-											<form method="POST" action="?/reinitialiserMdp" use:enhance={() => async ({ update }) => {
+											<form method="POST" action="?/resetMdp" use:enhance={() => async ({ update }) => {
 												confirmationReset = null;
 												await update();
 											}}>

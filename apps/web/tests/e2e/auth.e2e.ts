@@ -19,9 +19,8 @@ test.describe("Scénario: authentification et gardes de route", () => {
   });
 
   test("route_admin_accessible_avec_compte_admin", async ({ page }) => {
-    await page.goto("/admin");
+    await page.goto("/admin?tab=utilisateurs");
     await expect(page).not.toHaveURL(/login/);
-    // La page admin contient l'en-tête de la liste des utilisateurs
     await expect(page.getByRole("heading", { name: /Utilisateurs/ })).toBeVisible();
   });
 

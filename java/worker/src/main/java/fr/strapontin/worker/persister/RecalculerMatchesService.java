@@ -127,17 +127,28 @@ public class RecalculerMatchesService {
     params.put("artistesNorms", artistesNorms);
     params.put("aujourdhui", LocalDate.parse(aujourdhui));
 
+    // Correspondance exacte OU préfixe espace : "slimane" matche "slimane symphonique"
+    // (TM peut renommer l'attraction avec un sous-titre de tournée entre deux fetches).
+    StringBuilder matchCond = new StringBuilder("(artiste_norm IN (:artistesNorms)");
+    for (int i = 0; i < artistesNorms.size(); i++) {
+      String paramPref = "pref" + i;
+      params.put(paramPref, artistesNorms.get(i) + " %");
+      matchCond.append(" OR artiste_norm LIKE :").append(paramPref);
+    }
+    matchCond.append(")");
+
     String sql;
     if (departements.isEmpty()) {
       sql =
-          "SELECT id::text FROM concerts"
-              + " WHERE artiste_norm IN (:artistesNorms) AND date >= :aujourdhui";
+          "SELECT DISTINCT id::text FROM concerts WHERE "
+              + matchCond
+              + " AND date >= :aujourdhui";
     } else {
       params.put("departements", departements);
       sql =
-          "SELECT id::text FROM concerts"
-              + " WHERE artiste_norm IN (:artistesNorms) AND date >= :aujourdhui"
-              + " AND dept = ANY(ARRAY[:departements])";
+          "SELECT DISTINCT id::text FROM concerts WHERE "
+              + matchCond
+              + " AND date >= :aujourdhui AND dept = ANY(ARRAY[:departements])";
     }
     return jdbc.queryForList(sql, params, String.class);
   }

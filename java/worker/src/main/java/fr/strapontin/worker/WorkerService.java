@@ -117,7 +117,8 @@ public class WorkerService {
       erreur = e.getMessage();
       log.error("fetch:artistes:batch échoué", e);
     } finally {
-      enregistrerStatJob("fetch:artistes:batch", System.currentTimeMillis() - debut, resultat, erreur);
+      enregistrerStatJob(
+          "fetch:artistes:batch", System.currentTimeMillis() - debut, resultat, erreur);
     }
   }
 
@@ -309,12 +310,18 @@ public class WorkerService {
             erreur         = EXCLUDED.erreur
           """,
           Map.of(
-              "typeJob", typeJob,
-              "now", Timestamp.from(Instant.now()),
-              "dureeMs", (int) Math.min(dureeMs, Integer.MAX_VALUE),
-              "nbInseres", resultat.nbInseres(),
-              "nbMisAJour", resultat.nbMisAJour(),
-              "erreur", erreur != null ? erreur : ""));
+              "typeJob",
+              typeJob,
+              "now",
+              Timestamp.from(Instant.now()),
+              "dureeMs",
+              (int) Math.min(dureeMs, Integer.MAX_VALUE),
+              "nbInseres",
+              resultat.nbInseres(),
+              "nbMisAJour",
+              resultat.nbMisAJour(),
+              "erreur",
+              erreur != null ? erreur : ""));
     } catch (Exception e) {
       log.warn("Impossible d'enregistrer stat job {} : {}", typeJob, e.getMessage());
     }

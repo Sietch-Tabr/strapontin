@@ -165,7 +165,8 @@ class PersisterConcertsIntegrationTest {
             null,
             null);
 
-    PersisterConcerts.ResultatPersistance res = persisterConcerts.persisterConcerts(List.of(concert));
+    PersisterConcerts.ResultatPersistance res =
+        persisterConcerts.persisterConcerts(List.of(concert));
 
     assertEquals(0, res.nbInseres() + res.nbMisAJour());
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
