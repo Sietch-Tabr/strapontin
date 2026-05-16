@@ -24,7 +24,7 @@ strapontin/
 └── scripts/
     ├── provision-java.sh  ← provisionnement LXC (Proxmox)
     ├── migrate_data.sql   ← migration données prod (dblink LXC 115 → 113)
-    └── update.sh          ← backup → pull → build → restart (v1 prod Node.js)
+    └── update.sh          ← script v1 Node.js (inutilisable pour v2)
 ```
 
 ## Stack technique (v2.0.0)
@@ -131,7 +131,7 @@ Rate limiting TM : max 2 jobs simultanés (3 → HTTP 429). Quota TM persisté d
 ## Authentification
 
 Invite-only. Login par identifiant (insensible à la casse). Rôles : `user` | `admin`.
-2FA TOTP obligatoire pour les admins. Cap : 500 artistes / 200 salles par user.
+2FA TOTP prévu pour les admins — **désactivé** (`totp.guard.enabled=false`) jusqu'à migration prod. Cap : 500 artistes / 200 salles par user.
 Spring Security form login → cookie `SESSION` (JDBC-backed, survit aux restarts).
 `BetterAuthPasswordEncoder` : scrypt hérité de v1 → re-hash bcrypt transparent au premier login.
 Détails : [wiki Authentification](https://codeberg.org/Kwaite/strapontin/wiki/Authentification)
