@@ -12,10 +12,7 @@ export default defineConfig({
 
   globalSetup: "./tests/e2e/global-setup.ts",
 
-  reporter: [
-    ["list"],
-    ["json", { outputFile: "test-results/results.json" }],
-  ],
+  reporter: [["list"], ["json", { outputFile: "test-results/results.json" }]],
 
   use: {
     baseURL: BASE_URL,
