@@ -63,8 +63,6 @@ public class ManifestController {
                 "type", "image/png",
                 "purpose", "any maskable")));
 
-    return ResponseEntity.ok()
-        .cacheControl(CacheControl.noCache())
-        .body(manifest);
+    return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(manifest);
   }
 }
