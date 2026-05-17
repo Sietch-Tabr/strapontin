@@ -68,7 +68,7 @@ public class NotificationDigestService {
   public record ConcertNotif(
       String artiste, String date, String salle, String ville, String url, String concertId) {}
 
-  /// Parcourt les matches non notifiés, envoie le digest, met à jour {@code notifie_le}.
+  /// Parcourt les matches non notifiés, envoie le digest, met à jour `notifie_le`.
   public void executerDigest() {
     log.info("notifier:digest démarré");
     long debut = System.currentTimeMillis();

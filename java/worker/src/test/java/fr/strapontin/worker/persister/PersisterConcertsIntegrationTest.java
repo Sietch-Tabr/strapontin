@@ -18,7 +18,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-/// Tests d'intégration de {@link PersisterConcerts} avec PostgreSQL réel (Testcontainers).
+/// Tests d'intégration de [PersisterConcerts] avec PostgreSQL réel (Testcontainers).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -27,7 +27,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 class PersisterConcertsIntegrationTest {
 
   @ServiceConnection
-  static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
+  static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18");
 
   static {
     postgres.start();

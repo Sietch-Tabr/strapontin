@@ -18,7 +18,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /// Contrôleur MVC Thymeleaf pour la page de découverte.
 ///
-/// <p>Délègue le chargement des données à {@link DecouverteController}.
+/// Délègue le chargement des données à [DecouverteController].
 /// Le déclenchement du fetch passe par un formulaire POST (PRG pattern).
 ///
 /// @since 2.0.0
@@ -40,7 +40,7 @@ public class DecouverteViewController {
   /// @param genre          filtre genre
   /// @param classification filtre classification
   /// @param budget         budget maximum
-  /// @param tri            critère de tri ({@code date} ou {@code nouveaute})
+  /// @param tri            critère de tri (`date` ou `nouveaute`)
   /// @param page           numéro de page (0-indexé)
   /// @param modele         le modèle Thymeleaf
   /// @param auth           contexte d'authentification
@@ -95,7 +95,7 @@ public class DecouverteViewController {
     var requete = new DecouverteController.RequeteFetch(List.of());
     var rep = decouverteController.fetcher(requete);
     if (rep.getStatusCode().isError()) {
-      var corps = (java.util.Map<?, ?>) rep.getBody();
+      var corps = rep.getBody();
       redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
     } else {
       redirects.addFlashAttribute("succes", "fetch");

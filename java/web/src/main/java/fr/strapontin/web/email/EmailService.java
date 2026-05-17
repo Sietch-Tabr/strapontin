@@ -22,15 +22,15 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-/// Service d'email transactionnel via Resend (portage de {@code email.ts}).
+/// Service d'email transactionnel via Resend (portage de `email.ts`).
 ///
-/// <p>Si {@code RESEND_API_KEY} est absent de la configuration, toutes les méthodes
+/// Si `RESEND_API_KEY` est absent de la configuration, toutes les méthodes
 /// retournent silencieusement sans erreur (comportement identique au TypeScript).
 ///
-/// <p>Les corps d'emails sont rendus depuis des templates Thymeleaf situés dans
-/// {@code classpath:/templates/email/}.
+/// Les corps d'emails sont rendus depuis des templates Thymeleaf situés dans
+/// `classpath:/templates/email/`.
 ///
-/// <p>Couvre l'ensemble des emails : invitation, reset MDP, signalement,
+/// Couvre l'ensemble des emails : invitation, reset MDP, signalement,
 /// digest concerts, alerte worker inactif.
 ///
 /// @since 2.0.0
@@ -40,6 +40,7 @@ public class EmailService {
 
   private static final Logger log = LoggerFactory.getLogger(EmailService.class);
   private static final String EXPEDITEUR = "Strapontin <noreply@strapontin.kwaite.fr>";
+  private static final String CLE_BASE_URL = "baseUrl";
 
   private final ConfigService configService;
   private final TemplateEngine templateEngine;
@@ -116,7 +117,7 @@ public class EmailService {
     Map<String, Object> vars = new HashMap<>();
     vars.put("identifiant", identifiant);
     vars.put("lienReset", lienReset);
-    vars.put("baseUrl", ctx.get().baseUrl());
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
     String corps = rendreCours("invitation", vars);
 
     String texte =
@@ -154,7 +155,7 @@ public class EmailService {
 
     Map<String, Object> vars = new HashMap<>();
     vars.put("lienReset", lienReset);
-    vars.put("baseUrl", ctx.get().baseUrl());
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
     String corps = rendreCours("reset-mdp", vars);
 
     String texte =
@@ -185,7 +186,7 @@ public class EmailService {
 
   /// Envoie un signalement d'utilisateur à l'adresse de contact.
   ///
-  /// @param type            le type ({@code bug}, {@code suggestion}, {@code question})
+  /// @param type            le type (`bug`, `suggestion`, `question`)
   /// @param message         le message
   /// @param expediteurEmail l'email de l'expéditeur
   /// @param expediteurNom   le nom de l'expéditeur
@@ -210,11 +211,11 @@ public class EmailService {
     vars.put("expediteurNom", expediteurNom);
     vars.put("expediteurEmail", expediteurEmail);
     vars.put("message", message);
-    vars.put("baseUrl", ctx.get().baseUrl());
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
     String corps = rendreCours("signalement", vars);
 
     String texte =
-        "Signalement — %s\n\nUtilisateur : %s\nEmail : %s\n\n%s"
+        "Signalement — %s%n%nUtilisateur : %s%nEmail : %s%n%n%s"
             .formatted(typeLabel, expediteurNom, expediteurEmail, message);
 
     try {
@@ -235,7 +236,7 @@ public class EmailService {
   ///
   /// @param email    l'adresse email du destinataire
   /// @param concerts la liste des concerts à notifier (doit être non vide)
-  /// @return {@code true} si l'email a été envoyé avec succès
+  /// @return `true` si l'email a été envoyé avec succès
   public boolean envoyerDigestConcerts(String email, List<ConcertDigest> concerts) {
     if (concerts.isEmpty()) return false;
 
@@ -267,7 +268,7 @@ public class EmailService {
     Map<String, Object> vars = new HashMap<>();
     vars.put("sujet", sujet);
     vars.put("lignes", lignes);
-    vars.put("baseUrl", ctx.get().baseUrl());
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
     String corps = rendreCours("digest-concerts", vars);
 
     try {
@@ -283,7 +284,7 @@ public class EmailService {
   /// Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3 heures.
   ///
   /// @param email               l'adresse email de l'administrateur
-  /// @param derniereActiviteIso la date ISO du dernier job complété, ou {@code null}
+  /// @param derniereActiviteIso la date ISO du dernier job complété, ou null
   public void envoyerAlerteWorkerInactif(String email, String derniereActiviteIso) {
     Optional<ContexteEmail> ctx = obtenirContexte();
     if (ctx.isEmpty()) {
@@ -298,7 +299,7 @@ public class EmailService {
 
     Map<String, Object> vars = new HashMap<>();
     vars.put("detail", detail);
-    vars.put("baseUrl", ctx.get().baseUrl());
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
     String corps = rendreCours("alerte-worker", vars);
 
     String sujet = "Strapontin — worker inactif";

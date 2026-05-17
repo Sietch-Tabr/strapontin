@@ -118,6 +118,9 @@ public class AccueilViewController {
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
-    return (UtilisateurDetails) auth.getPrincipal();
+    if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
+      throw new IllegalStateException("Principal inattendu");
+    }
+    return ud;
   }
 }

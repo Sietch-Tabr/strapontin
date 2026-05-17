@@ -61,7 +61,9 @@ public class AideViewController {
       @RequestParam String message,
       RedirectAttributes redirects,
       Authentication auth) {
-    UtilisateurDetails utilisateur = (UtilisateurDetails) auth.getPrincipal();
+    if (!(auth.getPrincipal() instanceof UtilisateurDetails utilisateur)) {
+      throw new IllegalStateException("Principal inattendu");
+    }
     String msg = message == null ? "" : message.strip();
     if (msg.isEmpty()) {
       redirects.addFlashAttribute("erreurSignalement", "Le message est requis.");

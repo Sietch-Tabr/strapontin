@@ -103,8 +103,8 @@ public class PersisterConcerts {
     if (a.equals(b)) return true;
     if (Normalisation.similarite(a, b) >= SEUIL_SIMILARITE_SALLE) return true;
     String court = a.length() <= b.length() ? a : b;
-    String long_ = a.length() <= b.length() ? b : a;
-    return court.length() >= LONGUEUR_MIN_CONTAINMENT && long_.contains(court);
+    String plusLong = a.length() <= b.length() ? b : a;
+    return court.length() >= LONGUEUR_MIN_CONTAINMENT && plusLong.contains(court);
   }
 
   private static int scoreArtisteSalle(String artiste, String salle) {
@@ -199,20 +199,23 @@ public class PersisterConcerts {
       if (!groupe.contains(concert.salleNorm())) groupe.add(concert.salleNorm());
     }
     for (List<String> sallesNorm : parGroupe.values()) {
-      if (sallesNorm.size() <= 1) continue;
-      for (int i = 0; i < sallesNorm.size(); i++) {
-        for (int j = i + 1; j < sallesNorm.size(); j++) {
-          String a = sallesNorm.get(i);
-          String b = sallesNorm.get(j);
-          if (estDoublonSalle(a, b)) {
-            String canonique = a.length() >= b.length() ? a : b;
-            remplacements.put(a, canonique);
-            remplacements.put(b, canonique);
-          }
+      if (sallesNorm.size() > 1) ajouterDoublonsSalle(sallesNorm, remplacements);
+    }
+    return remplacements;
+  }
+
+  private void ajouterDoublonsSalle(List<String> sallesNorm, Map<String, String> remplacements) {
+    for (int i = 0; i < sallesNorm.size(); i++) {
+      for (int j = i + 1; j < sallesNorm.size(); j++) {
+        String a = sallesNorm.get(i);
+        String b = sallesNorm.get(j);
+        if (estDoublonSalle(a, b)) {
+          String canonique = a.length() >= b.length() ? a : b;
+          remplacements.put(a, canonique);
+          remplacements.put(b, canonique);
         }
       }
     }
-    return remplacements;
   }
 
   private ValeurConcert appliquerRemplacementSalle(

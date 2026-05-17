@@ -9,7 +9,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /// Point d'entrée du worker Strapontin.
 ///
-/// <p>Application Spring Boot non-web. Exécute les jobs Quartz planifiés :
+/// Application Spring Boot non-web. Exécute les jobs Quartz planifiés :
 /// fetch concerts (artistes, régions, salles), dédoublonnage, persistance,
 /// recalcul des matches et notifications.
 ///

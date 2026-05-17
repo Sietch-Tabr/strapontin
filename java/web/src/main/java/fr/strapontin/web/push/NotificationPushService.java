@@ -34,6 +34,7 @@ public class NotificationPushService {
 
   private static final Logger log = LoggerFactory.getLogger(NotificationPushService.class);
   private static final String BASE_URL_DEFAUT = "https://strapontin.kwaite.fr";
+  private static final String CLE_ENDPOINT = "endpoint";
 
   private final ConfigService configService;
   private final NamedParameterJdbcTemplate jdbc;
@@ -67,9 +68,9 @@ public class NotificationPushService {
   public boolean envoyerPushDigest(String userId, List<ConcertPush> concerts) {
     if (concerts.isEmpty()) return false;
 
-    Optional<String> cléPublique = configService.lireConfig("VAPID_PUBLIC_KEY");
-    Optional<String> cléPrivée = configService.lireConfig("VAPID_PRIVATE_KEY");
-    if (cléPublique.isEmpty() || cléPrivée.isEmpty()) {
+    Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
+    Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
+    if (clePublique.isEmpty() || clePrivee.isEmpty()) {
       log.warn("VAPID non configuré — push ignoré pour {}", userId);
       return false;
     }
@@ -91,7 +92,7 @@ public class NotificationPushService {
 
     PushService pushService;
     try {
-      pushService = new PushService(cléPublique.get(), cléPrivée.get(), "mailto:" + contactEmail);
+      pushService = new PushService(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
     } catch (Exception e) {
       log.error("Impossible d'initialiser le service VAPID", e);
       return false;
@@ -99,33 +100,39 @@ public class NotificationPushService {
 
     int nbEnvoyes = 0;
     for (Map<String, Object> ab : abonnements) {
-      try {
-        Subscription subscription =
-            new Subscription(
-                (String) ab.get("endpoint"),
-                new Subscription.Keys((String) ab.get("p256dh"), (String) ab.get("auth")));
-        Notification notification = new Notification(subscription, payload);
-        HttpResponse response = pushService.send(notification);
-        int status = response.getStatusLine().getStatusCode();
-        if (status == 404 || status == 410) {
-          supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get("endpoint"));
-        } else {
-          nbEnvoyes++;
-        }
-      } catch (Exception e) {
-        int status = extraireCodeHttp(e);
-        if (status == 404 || status == 410) {
-          supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get("endpoint"));
-        } else {
-          log.warn("Push: échec envoi pour {} — {}", userId, ab.get("endpoint"), e);
-        }
-      }
+      nbEnvoyes += envoyerAUnAbonnement(ab, pushService, userId, payload);
     }
 
     if (nbEnvoyes > 0) {
       log.info("Push digest envoyé : {} ({} abonnement(s))", userId, nbEnvoyes);
     }
     return nbEnvoyes > 0;
+  }
+
+  private int envoyerAUnAbonnement(
+      Map<String, Object> ab, PushService pushService, String userId, String payload) {
+    try {
+      Subscription subscription =
+          new Subscription(
+              (String) ab.get(CLE_ENDPOINT),
+              new Subscription.Keys((String) ab.get("p256dh"), (String) ab.get("auth")));
+      Notification notification = new Notification(subscription, payload);
+      HttpResponse response = pushService.send(notification);
+      int status = response.getStatusLine().getStatusCode();
+      if (status == 404 || status == 410) {
+        supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
+        return 0;
+      }
+      return 1;
+    } catch (Exception e) {
+      int status = extraireCodeHttp(e);
+      if (status == 404 || status == 410) {
+        supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
+      } else {
+        log.warn("Push: échec envoi pour {} — {}", userId, ab.get(CLE_ENDPOINT), e);
+      }
+      return 0;
+    }
   }
 
   private void supprimerAbonnement(UUID id, String userId, String endpoint) {

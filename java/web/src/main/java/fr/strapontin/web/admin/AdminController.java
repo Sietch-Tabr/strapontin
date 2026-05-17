@@ -65,6 +65,7 @@ public class AdminController {
   private static final String CLE_SUCCES = "succes";
   private static final String CLE_ACTION = "action";
   private static final String CLE_PAR_ADMIN = "parAdmin";
+  private static final String SOURCE_ADMIN = "admin";
   private static final String CLE_PUBLIC_BASE_URL = "PUBLIC_BASE_URL";
   private static final Set<String> CLES_AUTORISEES =
       Set.of(
@@ -269,7 +270,7 @@ public class AdminController {
     emailService.envoyerInvitation(email, usernameTemp, lienReset);
 
     logAdminService.logAdmin(
-        "info", "admin", "compte créé", Map.of(CLE_EMAIL, email, CLE_PAR_ADMIN, adminId));
+        "info", SOURCE_ADMIN, "compte créé", Map.of(CLE_EMAIL, email, CLE_PAR_ADMIN, adminId));
 
     return ResponseEntity.status(201)
         .body(
@@ -315,14 +316,14 @@ public class AdminController {
     if (!email.isEmpty()) {
       logAdminService.logAdmin(
           "warn",
-          "admin",
+          SOURCE_ADMIN,
           "email modifié",
           Map.of(CLE_USER_ID, userId, "nouvelEmail", email, CLE_PAR_ADMIN, adminId));
     }
     if (!role.isEmpty()) {
       logAdminService.logAdmin(
           "warn",
-          "admin",
+          SOURCE_ADMIN,
           "rôle modifié",
           Map.of(CLE_USER_ID, userId, "nouveauRole", role, CLE_PAR_ADMIN, adminId));
     }
@@ -387,7 +388,7 @@ public class AdminController {
 
     jdbc.update("DELETE FROM users WHERE id = :userId", Map.of(CLE_USER_ID, userId));
     logAdminService.logAdmin(
-        "warn", "admin", "compte supprimé", Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId));
+        "warn", SOURCE_ADMIN, "compte supprimé", Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId));
     return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 
@@ -440,7 +441,7 @@ public class AdminController {
 
     logAdminService.logAdmin(
         "warn",
-        "admin",
+        SOURCE_ADMIN,
         "mot de passe réinitialisé",
         Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId));
 
@@ -473,7 +474,7 @@ public class AdminController {
 
   /// Sauvegarde une valeur de configuration applicative.
   ///
-  /// @param requete corps JSON avec {@code cle} et {@code valeur}
+  /// @param requete corps JSON avec `cle` et `valeur`
   /// @param auth    contexte d'authentification admin
   /// @return 200 si sauvegardé, 400 si clé non autorisée ou format invalide
   @PatchMapping("/config")
@@ -575,7 +576,7 @@ public class AdminController {
     if (!quotaJson.isEmpty()) {
       try {
         quotaTM = objectMapper.readValue(quotaJson.get(0), Object.class);
-      } catch (Exception e) {
+      } catch (Exception _) {
         log.warn("Quota TM malformé — ignoré");
       }
     }
@@ -600,7 +601,7 @@ public class AdminController {
       java.net.http.HttpResponse<String> rep =
           client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
       if (rep.statusCode() == 200) {
-        logAdminService.logAdmin("info", "admin", "Fetches relancés manuellement");
+        logAdminService.logAdmin("info", SOURCE_ADMIN, "Fetches relancés manuellement");
         return ResponseEntity.ok(Map.of("statut", "déclenché"));
       }
       return erreur(503, "Worker inaccessible (statut " + rep.statusCode() + ").");
@@ -624,7 +625,7 @@ public class AdminController {
       return erreur(
           400, "La clé Resend doit commencer par re_ suivi de caractères alphanumériques.");
     }
-    if ("PUBLIC_BASE_URL".equals(cle)) {
+    if (CLE_PUBLIC_BASE_URL.equals(cle)) {
       try {
         java.net.URI uri = java.net.URI.create(valeur);
         String host = uri.getHost();
@@ -673,7 +674,10 @@ public class AdminController {
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
-    return (UtilisateurDetails) auth.getPrincipal();
+    if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
+      throw new IllegalStateException("Principal inattendu");
+    }
+    return ud;
   }
 
   private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {

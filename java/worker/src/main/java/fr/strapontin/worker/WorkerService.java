@@ -162,14 +162,7 @@ public class WorkerService {
               Map.of(),
               (rs, _) -> (String[]) rs.getArray("departements").getArray());
 
-      java.util.Set<String> tousLesDepts = new java.util.LinkedHashSet<>();
-      for (String[] depts : allDepts) {
-        if (depts != null) {
-          for (String d : depts) {
-            if (d != null && !d.isBlank()) tousLesDepts.add(d.trim());
-          }
-        }
-      }
+      java.util.Set<String> tousLesDepts = collecterTousLesDepts(allDepts);
 
       if (tousLesDepts.isEmpty()) {
         log.info("fetch:region — aucun département configuré");
@@ -251,6 +244,18 @@ public class WorkerService {
         jdbc.update(
             "DELETE FROM concerts WHERE date < :dateLimite", Map.of("dateLimite", dateLimite));
     log.info("purger:concerts terminé supprimes={}", supprimes);
+  }
+
+  private static java.util.Set<String> collecterTousLesDepts(List<String[]> allDepts) {
+    java.util.Set<String> tousLesDepts = new java.util.LinkedHashSet<>();
+    for (String[] depts : allDepts) {
+      if (depts != null) {
+        for (String d : depts) {
+          if (d != null && !d.isBlank()) tousLesDepts.add(d.trim());
+        }
+      }
+    }
+    return tousLesDepts;
   }
 
   private List<ConcertBrut> resoudreEtDeduplicer(List<ConcertBrut> concerts) {

@@ -23,14 +23,20 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /// Contrôleur MVC Thymeleaf pour la page des paramètres.
 ///
-/// <p>Délègue la logique à {@link UserConfigController} et {@link UserController}.
-/// Le changement de thème positionne également le cookie {@code theme}.
-/// Le changement de mot de passe invalide la session puis redirige vers {@code /login}.
+/// Délègue la logique à [UserConfigController] et [UserController].
+/// Le changement de thème positionne également le cookie `theme`.
+/// Le changement de mot de passe invalide la session puis redirige vers `/login`.
 ///
 /// @since 2.0.0
 /// @author Kwaite
 @Controller
 public class ParametresViewController {
+
+  private static final String CLE_ERREUR = "erreur";
+  private static final String ERREUR_DEFAUT = "Erreur.";
+  private static final String CLE_SUCCES = "succes";
+  private static final String REDIRECT_PREFS = "redirect:/parametres#preferences";
+  private static final String REDIRECT_COMPTE = "redirect:/parametres#compte";
 
   private final UserConfigController userConfigController;
   private final UserController userController;
@@ -76,12 +82,12 @@ public class ParametresViewController {
     var requete = new UserConfigController.RequeteDepartements(departements);
     ResponseEntity<Map<String, Object>> rep = userConfigController.majDepartements(requete, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
-      redirects.addFlashAttribute("succes", "departements");
+      redirects.addFlashAttribute(CLE_SUCCES, "departements");
     }
-    return "redirect:/parametres#preferences";
+    return REDIRECT_PREFS;
   }
 
   /// Met à jour les préférences de notification.
@@ -104,10 +110,10 @@ public class ParametresViewController {
             frequenceNotifications, notifArtistes, notifSalles);
     ResponseEntity<Map<String, Object>> rep = userConfigController.majNotifications(requete, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
-      redirects.addFlashAttribute("succes", "notifications");
+      redirects.addFlashAttribute(CLE_SUCCES, "notifications");
     }
     return "redirect:/parametres#notifications";
   }
@@ -125,13 +131,13 @@ public class ParametresViewController {
       Authentication auth) {
     var requete = new UserConfigController.RequeteFiltres(filtreDisponibles);
     userConfigController.majFiltres(requete, auth);
-    redirects.addFlashAttribute("succes", "filtres");
-    return "redirect:/parametres#preferences";
+    redirects.addFlashAttribute(CLE_SUCCES, "filtres");
+    return REDIRECT_PREFS;
   }
 
   /// Met à jour le thème et positionne le cookie {@code theme}.
   ///
-  /// @param valeur    la valeur du thème ({@code auto}, {@code clair} ou {@code sombre})
+  /// @param valeur    la valeur du thème (`auto`, `clair` ou `sombre`)
   /// @param redirects attributs de redirection
   /// @param response  la réponse HTTP (pour poser le cookie)
   /// @param auth      contexte d'authentification
@@ -145,18 +151,19 @@ public class ParametresViewController {
     var requete = new UserConfigController.RequeteTheme(valeur);
     ResponseEntity<Map<String, Object>> rep = userConfigController.majTheme(requete, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       Cookie cookie = new Cookie("theme", valeur);
       cookie.setMaxAge(365 * 24 * 3600);
       cookie.setPath("/");
       cookie.setHttpOnly(false);
+      cookie.setSecure(true);
       cookie.setAttribute("SameSite", "Strict");
       response.addCookie(cookie);
-      redirects.addFlashAttribute("succes", "theme");
+      redirects.addFlashAttribute(CLE_SUCCES, "theme");
     }
-    return "redirect:/parametres#preferences";
+    return REDIRECT_PREFS;
   }
 
   /// Met à jour le nom et/ou l'email.
@@ -175,12 +182,12 @@ public class ParametresViewController {
     var requete = new UserController.RequeteProfil(nom, email);
     ResponseEntity<Map<String, Object>> rep = userController.majProfil(requete, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
-      redirects.addFlashAttribute("succes", "compte");
+      redirects.addFlashAttribute(CLE_SUCCES, "compte");
     }
-    return "redirect:/parametres#compte";
+    return REDIRECT_COMPTE;
   }
 
   /// Met à jour l'identifiant.
@@ -195,12 +202,12 @@ public class ParametresViewController {
     var requete = new UserController.RequeteIdentifiant(identifiant);
     ResponseEntity<Map<String, Object>> rep = userController.majIdentifiant(requete, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
-      redirects.addFlashAttribute("succes", "identifiant");
+      redirects.addFlashAttribute(CLE_SUCCES, "identifiant");
     }
-    return "redirect:/parametres#compte";
+    return REDIRECT_COMPTE;
   }
 
   /// Change le mot de passe, invalide la session et redirige vers /login.
@@ -221,9 +228,9 @@ public class ParametresViewController {
     var requete = new UserController.RequeteMotDePasse(motDePasseActuel, motDePasseNouveau);
     ResponseEntity<Map<String, Object>> rep = userController.changerMotDePasse(requete, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
-      return "redirect:/parametres#compte";
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      return REDIRECT_COMPTE;
     }
     HttpSession session = request.getSession(false);
     if (session != null) session.invalidate();
@@ -234,7 +241,7 @@ public class ParametresViewController {
   /// Importe les préférences depuis un fichier JSON.
   ///
   /// @param fichier        le fichier JSON exporté par Strapontin
-  /// @param mode           {@code fusionner} ou {@code ecraser}
+  /// @param mode           `fusionner` ou `ecraser`
   /// @param importerConfig importer également la configuration
   /// @param redirects      attributs de redirection
   /// @param auth           contexte d'authentification
@@ -249,10 +256,10 @@ public class ParametresViewController {
     ResponseEntity<Map<String, Object>> rep =
         preferencesController.importer(fichier, mode, importerConfig, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
-      redirects.addFlashAttribute("succes", "import");
+      redirects.addFlashAttribute(CLE_SUCCES, "import");
     }
     return "redirect:/parametres#donnees";
   }

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -51,6 +52,7 @@ public class ArtisteController {
   private static final Logger log = LoggerFactory.getLogger(ArtisteController.class);
   private static final String DEEZER_URL = "https://api.deezer.com/search/artist";
   private static final int CAP_ARTISTES = 500;
+  private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final HttpClient httpClient;
@@ -93,7 +95,7 @@ public class ArtisteController {
             WHERE user_id = :userId
             ORDER BY lower(artiste_affiche)
             """,
-            Map.of("userId", userId),
+            Map.of(CLE_USER_ID, userId),
             (rs, _) ->
                 new ArtisteUtilisateur(
                     rs.getString("artiste_normalise"),
@@ -175,7 +177,7 @@ public class ArtisteController {
                 SELECT 1 FROM user_artistes
                 WHERE user_id = :userId AND artiste_normalise = :normalise
                 """,
-                Map.of("userId", userId, "normalise", normalise),
+                Map.of(CLE_USER_ID, userId, "normalise", normalise),
                 Integer.class)
             .isEmpty();
 
@@ -184,10 +186,12 @@ public class ArtisteController {
     }
 
     int total =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
-            Map.of("userId", userId),
-            Integer.class);
+        Objects.requireNonNullElse(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
+                Map.of(CLE_USER_ID, userId),
+                Integer.class),
+            0);
 
     if (total >= CAP_ARTISTES) {
       return erreur(400, "Limite de 500 artistes atteinte.");
@@ -198,7 +202,7 @@ public class ArtisteController {
         INSERT INTO user_artistes (user_id, artiste_normalise, artiste_affiche)
         VALUES (:userId, :normalise, :nom)
         """,
-        Map.of("userId", userId, "normalise", normalise, "nom", nom));
+        Map.of(CLE_USER_ID, userId, "normalise", normalise, "nom", nom));
 
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }
@@ -217,7 +221,7 @@ public class ArtisteController {
         DELETE FROM user_artistes
         WHERE user_id = :userId AND artiste_normalise = :artisteNormalise
         """,
-        Map.of("userId", userId, "artisteNormalise", artisteNormalise));
+        Map.of(CLE_USER_ID, userId, "artisteNormalise", artisteNormalise));
     return ResponseEntity.noContent().build();
   }
 
@@ -276,7 +280,10 @@ public class ArtisteController {
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
-    return (UtilisateurDetails) auth.getPrincipal();
+    if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
+      throw new IllegalStateException("Principal inattendu");
+    }
+    return ud;
   }
 
   private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {

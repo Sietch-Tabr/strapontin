@@ -9,6 +9,7 @@ import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -32,6 +33,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class PushController {
 
   private static final int CAP_ABONNEMENTS = 10;
+  private static final String CLE_USER_ID = "userId";
+  private static final String CLE_ENDPOINT = "endpoint";
 
   private final ConfigService configService;
   private final NamedParameterJdbcTemplate jdbc;
@@ -56,7 +59,7 @@ public class PushController {
 
   /// Retourne la clé VAPID publique (endpoint public — pas d'authentification requise).
   ///
-  /// @return la clé publique ou {@code disponible: false} si non configurée
+  /// @return la clé publique ou `disponible: false` si non configurée
   @GetMapping
   public ResponseEntity<ReponseVapid> obtenirCleVapid() {
     String clePublique = configService.lireConfig("VAPID_PUBLIC_KEY").orElse(null);
@@ -89,10 +92,12 @@ public class PushController {
     }
 
     int total =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM push_abonnements WHERE user_id = :userId",
-            Map.of("userId", userId),
-            Integer.class);
+        Objects.requireNonNullElse(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM push_abonnements WHERE user_id = :userId",
+                Map.of(CLE_USER_ID, userId),
+                Integer.class),
+            0);
 
     if (total >= CAP_ABONNEMENTS) {
       return erreur(429, "Trop d'abonnements push pour cet utilisateur.");
@@ -105,12 +110,12 @@ public class PushController {
         ON CONFLICT (user_id, endpoint) DO NOTHING
         """,
         Map.of(
-            "userId", userId,
-            "endpoint", requete.endpoint(),
+            CLE_USER_ID, userId,
+            CLE_ENDPOINT, requete.endpoint(),
             "p256dh", requete.keys().p256dh(),
             "auth", requete.keys().auth()));
 
-    logAdminService.logAdmin("info", "push", "abonnement push créé", Map.of("userId", userId));
+    logAdminService.logAdmin("info", "push", "abonnement push créé", Map.of(CLE_USER_ID, userId));
     return ResponseEntity.status(201).body(Map.of("ok", true));
   }
 
@@ -133,14 +138,17 @@ public class PushController {
         DELETE FROM push_abonnements
         WHERE user_id = :userId AND endpoint = :endpoint
         """,
-        Map.of("userId", userId, "endpoint", requete.endpoint()));
+        Map.of(CLE_USER_ID, userId, CLE_ENDPOINT, requete.endpoint()));
 
-    logAdminService.logAdmin("info", "push", "abonnement push révoqué", Map.of("userId", userId));
+    logAdminService.logAdmin("info", "push", "abonnement push révoqué", Map.of(CLE_USER_ID, userId));
     return ResponseEntity.ok(Map.of("ok", true));
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
-    return (UtilisateurDetails) auth.getPrincipal();
+    if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
+      throw new IllegalStateException("Principal inattendu");
+    }
+    return ud;
   }
 
   private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {

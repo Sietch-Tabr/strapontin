@@ -30,6 +30,7 @@ public class AdminViewController {
   private static final String CLE_ERREUR = "erreur";
   private static final String CLE_SUCCES = "succes";
   private static final String ERREUR_DEFAUT = "Erreur.";
+  private static final String REDIRECT_ADMIN_UTILISATEURS = "redirect:/admin#utilisateurs";
 
   public AdminViewController(AdminController adminController) {
     this.adminController = adminController;
@@ -81,7 +82,7 @@ public class AdminViewController {
       redirects.addFlashAttribute("lienReset", corps != null ? corps.get("lienReset") : null);
       redirects.addFlashAttribute("nouvelEmail", corps != null ? corps.get("email") : null);
     }
-    return "redirect:/admin#utilisateurs";
+    return REDIRECT_ADMIN_UTILISATEURS;
   }
 
   /// Supprime un compte utilisateur.
@@ -103,7 +104,7 @@ public class AdminViewController {
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "supprimerUtilisateur");
     }
-    return "redirect:/admin#utilisateurs";
+    return REDIRECT_ADMIN_UTILISATEURS;
   }
 
   /// Envoie un email de réinitialisation de mot de passe.
@@ -125,7 +126,7 @@ public class AdminViewController {
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "reinitialiserMdp");
     }
-    return "redirect:/admin#utilisateurs";
+    return REDIRECT_ADMIN_UTILISATEURS;
   }
 
   /// Sauvegarde une valeur de configuration applicative.

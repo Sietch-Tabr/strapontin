@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// API interne de déclenchement manuel des jobs Quartz.
 ///
-/// <p>Accessible uniquement depuis {@code localhost} (filtrée par le pare-feu ou
+/// Accessible uniquement depuis `localhost` (filtrée par le pare-feu ou
 /// le proxy web). N'expose pas de données sensibles.
 ///
 /// @since 2.0.0

@@ -40,10 +40,10 @@ public class LogAdminService {
   /// Entrée de log admin.
   ///
   /// @param ts       horodatage Unix en millisecondes
-  /// @param niveau   niveau de log ({@code debug}, {@code info}, {@code warn}, {@code error})
+  /// @param niveau   niveau de log (`debug`, `info`, `warn`, `error`)
   /// @param source   module source
   /// @param message  message
-  /// @param meta     métadonnées JSON brut (peut être nul)
+  /// @param meta     métadonnées JSON brut (peut être null)
   public record EntreeLogAdmin(
       long ts, String niveau, String source, String message, String meta) {}
 
@@ -61,7 +61,7 @@ public class LogAdminService {
   /// @param niveau  niveau de log
   /// @param source  module source
   /// @param message message
-  /// @param meta    métadonnées (sérialisées en JSON), ou {@code null}
+  /// @param meta    métadonnées (sérialisées en JSON), ou null
   public void logAdmin(String niveau, String source, String message, Map<String, Object> meta) {
     try {
       PGobject pgMeta = new PGobject();

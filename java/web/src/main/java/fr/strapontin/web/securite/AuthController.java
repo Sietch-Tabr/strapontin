@@ -102,7 +102,7 @@ public class AuthController {
 
   /// Authentifie un utilisateur et crée une session persistante.
   ///
-  /// @param req         les credentials ({@code identifiant} + {@code motDePasse})
+  /// @param req         les credentials (`identifiant` + `motDePasse`)
   /// @param httpRequest la requête HTTP (pour créer la session)
   /// @return l'utilisateur authentifié ou 401 si les credentials sont invalides
   @PostMapping("/api/auth/login")
@@ -124,7 +124,9 @@ public class AuthController {
     session.setAttribute(
         HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, contexte);
 
-    UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
+    if (!(auth.getPrincipal() instanceof UtilisateurDetails details)) {
+      throw new IllegalStateException("Principal inattendu après authentification");
+    }
     log.debug("Connexion réussie : {}", details.identifiant());
     return ResponseEntity.ok(
         new UtilisateurDto(
@@ -156,10 +158,10 @@ public class AuthController {
   /// @return l'utilisateur courant ou 401 si non authentifié
   @GetMapping("/api/auth/me")
   public ResponseEntity<UtilisateurDto> moi(Authentication auth) {
-    if (auth == null || !auth.isAuthenticated()) {
+    if (!(auth != null && auth.isAuthenticated()
+        && auth.getPrincipal() instanceof UtilisateurDetails details)) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
-    UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
     return ResponseEntity.ok(
         new UtilisateurDto(
             details.id(),

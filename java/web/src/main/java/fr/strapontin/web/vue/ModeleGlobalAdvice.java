@@ -24,7 +24,7 @@ public class ModeleGlobalAdvice {
   /// Injecte le thème courant depuis le cookie.
   ///
   /// @param request la requête HTTP
-  /// @return la valeur du thème ({@code auto}, {@code clair} ou {@code sombre})
+  /// @return la valeur du thème (`auto`, `clair` ou `sombre`)
   @ModelAttribute("theme")
   public String theme(HttpServletRequest request) {
     if (request.getCookies() != null) {
@@ -43,7 +43,7 @@ public class ModeleGlobalAdvice {
   /// Injecte l'utilisateur courant dans le modèle.
   ///
   /// @param auth l'authentification Spring Security (peut être {@code null})
-  /// @return les détails de l'utilisateur ou {@code null} si non connecté
+  /// @return les détails de l'utilisateur ou null si non connecté
   @ModelAttribute("utilisateur")
   public UtilisateurDetails utilisateur(Authentication auth) {
     if (auth != null
