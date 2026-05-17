@@ -171,7 +171,7 @@ public class PersisterConcerts {
 
     for (ValeurConcert concert : lot) {
       String cle = concert.artisteNorm() + "|" + concert.date();
-      parGroupe.computeIfAbsent(cle, k -> new ArrayList<>());
+      parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>());
       List<String> groupe = parGroupe.get(cle);
       if (!groupe.contains(concert.salleNorm())) groupe.add(concert.salleNorm());
     }
@@ -236,7 +236,7 @@ public class PersisterConcerts {
     Map<String, List<String>> indexExistants = new HashMap<>();
     for (Map<String, Object> e : existants) {
       String cle = e.get("artiste_norm") + "|" + e.get("date");
-      indexExistants.computeIfAbsent(cle, k -> new ArrayList<>()).add((String) e.get("salle_norm"));
+      indexExistants.computeIfAbsent(cle, _ -> new ArrayList<>()).add((String) e.get("salle_norm"));
     }
 
     return lotApresIntraLot.stream()

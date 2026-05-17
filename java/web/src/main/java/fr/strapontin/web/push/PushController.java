@@ -9,8 +9,6 @@ import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.HashMap;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -33,7 +31,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/push")
 public class PushController {
 
-  private static final Logger log = LoggerFactory.getLogger(PushController.class);
   private static final int CAP_ABONNEMENTS = 10;
 
   private final ConfigService configService;

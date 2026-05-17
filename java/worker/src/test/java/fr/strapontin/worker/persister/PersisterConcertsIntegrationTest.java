@@ -27,7 +27,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 class PersisterConcertsIntegrationTest {
 
   @ServiceConnection
-  static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18");
+  static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
 
   static {
     postgres.start();

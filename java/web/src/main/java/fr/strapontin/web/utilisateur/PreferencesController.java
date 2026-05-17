@@ -75,7 +75,7 @@ public class PreferencesController {
   @Transactional
   @PostMapping(value = "/importer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Map<String, Object>> importer(
-      @RequestParam("fichier") MultipartFile fichier,
+      @RequestParam MultipartFile fichier,
       @RequestParam(defaultValue = "fusionner") String mode,
       @RequestParam(defaultValue = "false") boolean importerConfig,
       Authentication auth) {

@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.utilisateur;
 
-import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -242,7 +241,7 @@ public class ParametresViewController {
   /// @return redirect vers /parametres#donnees
   @PostMapping(value = "/parametres/importer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public String importer(
-      @RequestParam("fichier") MultipartFile fichier,
+      @RequestParam MultipartFile fichier,
       @RequestParam(defaultValue = "fusionner") String mode,
       @RequestParam(defaultValue = "false") boolean importerConfig,
       RedirectAttributes redirects,
@@ -272,7 +271,4 @@ public class ParametresViewController {
     return "redirect:/login";
   }
 
-  private static UtilisateurDetails utilisateur(Authentication auth) {
-    return (UtilisateurDetails) auth.getPrincipal();
-  }
 }

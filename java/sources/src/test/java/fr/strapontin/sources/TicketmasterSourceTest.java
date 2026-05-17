@@ -25,7 +25,6 @@ class TicketmasterSourceTest {
     return evenementTMRaw(Map.of());
   }
 
-  @SuppressWarnings("unchecked")
   private static Map<String, Object> evenementTMRaw(Map<String, Object> surcharge) {
     Map<String, Object> base = new HashMap<>();
     base.put("name", "Julien Clerc — Tournée 2025");

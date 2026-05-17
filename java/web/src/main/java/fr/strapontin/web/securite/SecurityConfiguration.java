@@ -41,7 +41,7 @@ public class SecurityConfiguration {
   /// @return la SecurityFilterChain configurée
   /// @throws Exception en cas d'erreur de configuration
   @Bean
-  public SecurityFilterChain securityFilterChain(
+  SecurityFilterChain securityFilterChain(
       HttpSecurity http,
       RateLimitingLoginFilter rateLimitingFilter,
       BloquerAccesDirectIpFilter bloquerIpFilter)
@@ -131,7 +131,7 @@ public class SecurityConfiguration {
   ///
   /// @return l'encodeur de mots de passe
   @Bean
-  public PasswordEncoder passwordEncoder() {
+  PasswordEncoder passwordEncoder() {
     return new BetterAuthPasswordEncoder();
   }
 
@@ -141,7 +141,7 @@ public class SecurityConfiguration {
   /// @param passwordEncoder    l'encodeur de mots de passe
   /// @return l'AuthenticationManager configuré
   @Bean
-  public AuthenticationManager authenticationManager(
+  AuthenticationManager authenticationManager(
       UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
     DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
     provider.setPasswordEncoder(passwordEncoder);
@@ -152,7 +152,7 @@ public class SecurityConfiguration {
   ///
   /// @return le publisher d'événements de session
   @Bean
-  public HttpSessionEventPublisher httpSessionEventPublisher() {
+  HttpSessionEventPublisher httpSessionEventPublisher() {
     return new HttpSessionEventPublisher();
   }
 }

@@ -9,7 +9,6 @@ import fr.strapontin.web.config.ConfigService;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.SecureRandom;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
@@ -47,7 +46,6 @@ public class SetupController {
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigService configService;
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
-  private final SecureRandom rng = new SecureRandom();
 
   public SetupController(NamedParameterJdbcTemplate jdbc, ConfigService configService) {
     this.jdbc = jdbc;

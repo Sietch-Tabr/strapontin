@@ -6,7 +6,6 @@ package fr.strapontin.worker;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Dedoublonner;
-import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.TicketmasterSource;
@@ -266,7 +265,6 @@ public class WorkerService {
     List<String> noms = dedoublonnes.stream().map(ConcertBrut::artiste).distinct().toList();
 
     for (String nom : noms) {
-      String norm = Normalisation.normaliserTexte(nom);
       ResolveurNomCanonique.ResultatResolution resultat =
           resolveur.resoudreNomCanonique("artiste", nom);
       tableauResolution.put(nom, resultat.nom());

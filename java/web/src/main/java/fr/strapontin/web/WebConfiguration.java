@@ -16,7 +16,7 @@ public class WebConfiguration {
 
   /// ObjectMapper partagé : dates ISO-8601, module java.time.
   @Bean
-  public ObjectMapper objectMapper() {
+  ObjectMapper objectMapper() {
     return new ObjectMapper()
         .registerModule(new JavaTimeModule())
         .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);

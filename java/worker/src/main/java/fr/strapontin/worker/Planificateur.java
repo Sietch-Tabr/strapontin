@@ -37,7 +37,7 @@ import org.springframework.context.annotation.Configuration;
 public class Planificateur {
 
   @Bean
-  public JobDetail jobDetailFetchArtistesBatch() {
+  JobDetail jobDetailFetchArtistesBatch() {
     return JobBuilder.newJob(FetchArtistesBatchJob.class)
         .withIdentity("fetchArtistesBatch")
         .storeDurably()
@@ -45,7 +45,7 @@ public class Planificateur {
   }
 
   @Bean
-  public Trigger triggerFetchArtistesBatch(JobDetail jobDetailFetchArtistesBatch) {
+  Trigger triggerFetchArtistesBatch(JobDetail jobDetailFetchArtistesBatch) {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetailFetchArtistesBatch)
         .withIdentity("triggerFetchArtistesBatch")
@@ -54,7 +54,7 @@ public class Planificateur {
   }
 
   @Bean
-  public JobDetail jobDetailFetchRegion() {
+  JobDetail jobDetailFetchRegion() {
     return JobBuilder.newJob(FetchRegionJob.class)
         .withIdentity("fetchRegion")
         .storeDurably()
@@ -62,7 +62,7 @@ public class Planificateur {
   }
 
   @Bean
-  public Trigger triggerFetchRegion(JobDetail jobDetailFetchRegion) {
+  Trigger triggerFetchRegion(JobDetail jobDetailFetchRegion) {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetailFetchRegion)
         .withIdentity("triggerFetchRegion")
@@ -71,7 +71,7 @@ public class Planificateur {
   }
 
   @Bean
-  public JobDetail jobDetailRecalculerMatches() {
+  JobDetail jobDetailRecalculerMatches() {
     return JobBuilder.newJob(RecalculerMatchesJob.class)
         .withIdentity("recalculerMatches")
         .storeDurably()
@@ -79,7 +79,7 @@ public class Planificateur {
   }
 
   @Bean
-  public Trigger triggerRecalculerMatches(JobDetail jobDetailRecalculerMatches) {
+  Trigger triggerRecalculerMatches(JobDetail jobDetailRecalculerMatches) {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetailRecalculerMatches)
         .withIdentity("triggerRecalculerMatches")
@@ -88,7 +88,7 @@ public class Planificateur {
   }
 
   @Bean
-  public JobDetail jobDetailPurgerConcerts() {
+  JobDetail jobDetailPurgerConcerts() {
     return JobBuilder.newJob(PurgerConcertsJob.class)
         .withIdentity("purgerConcerts")
         .storeDurably()
@@ -96,7 +96,7 @@ public class Planificateur {
   }
 
   @Bean
-  public Trigger triggerPurgerConcerts(JobDetail jobDetailPurgerConcerts) {
+  Trigger triggerPurgerConcerts(JobDetail jobDetailPurgerConcerts) {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetailPurgerConcerts)
         .withIdentity("triggerPurgerConcerts")
@@ -105,7 +105,7 @@ public class Planificateur {
   }
 
   @Bean
-  public JobDetail jobDetailNotifierDigest() {
+  JobDetail jobDetailNotifierDigest() {
     return JobBuilder.newJob(NotifierDigestJob.class)
         .withIdentity("notifierDigest")
         .storeDurably()
@@ -113,7 +113,7 @@ public class Planificateur {
   }
 
   @Bean
-  public Trigger triggerNotifierDigest(JobDetail jobDetailNotifierDigest) {
+  Trigger triggerNotifierDigest(JobDetail jobDetailNotifierDigest) {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetailNotifierDigest)
         .withIdentity("triggerNotifierDigest")

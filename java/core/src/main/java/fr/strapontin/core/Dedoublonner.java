@@ -31,7 +31,7 @@ public final class Dedoublonner {
     Map<String, List<ConcertEnrichi>> groupesExacts = new LinkedHashMap<>();
     for (ConcertEnrichi c : enrichis) {
       String cle = c.artisteNorm() + "|" + c.concert().date() + "|" + c.villeNorm();
-      groupesExacts.computeIfAbsent(cle, k -> new ArrayList<>()).add(c);
+      groupesExacts.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
     }
 
     List<ConcertEnrichi> apresPasseExacte = new ArrayList<>();
@@ -43,7 +43,7 @@ public final class Dedoublonner {
     Map<String, List<ConcertEnrichi>> groupesDateVille = new LinkedHashMap<>();
     for (ConcertEnrichi c : apresPasseExacte) {
       String cle = c.concert().date() + "|" + c.villeNorm();
-      groupesDateVille.computeIfAbsent(cle, k -> new ArrayList<>()).add(c);
+      groupesDateVille.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
     }
 
     List<ConcertEnrichi> apresPasseFuzzy = new ArrayList<>();
@@ -59,7 +59,7 @@ public final class Dedoublonner {
     Map<String, List<ConcertEnrichi>> groupesDateSalle = new LinkedHashMap<>();
     for (ConcertEnrichi c : apresPasseFuzzy) {
       String cle = c.concert().date() + "|" + c.salleNorm();
-      groupesDateSalle.computeIfAbsent(cle, k -> new ArrayList<>()).add(c);
+      groupesDateSalle.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
     }
 
     List<ConcertBrut> resultat = new ArrayList<>();

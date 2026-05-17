@@ -29,7 +29,7 @@ public class WorkerConfiguration {
   ///
   /// @return instance partagée
   @Bean
-  public ObjectMapper objectMapper() {
+  ObjectMapper objectMapper() {
     return new ObjectMapper();
   }
 
@@ -37,7 +37,7 @@ public class WorkerConfiguration {
   ///
   /// @return instance configurée avec la clé API
   @Bean
-  public TicketmasterSource ticketmasterSource() {
+  TicketmasterSource ticketmasterSource() {
     return new TicketmasterSource(tmApiKey);
   }
 
@@ -45,7 +45,7 @@ public class WorkerConfiguration {
   ///
   /// @return instance avec User-Agent par défaut
   @Bean
-  public EventimSource eventimSource() {
+  EventimSource eventimSource() {
     return new EventimSource();
   }
 
@@ -53,7 +53,7 @@ public class WorkerConfiguration {
   ///
   /// @return instance configurée avec l'email de contact pour le User-Agent MusicBrainz
   @Bean
-  public ResolveurNomCanonique resolveurNomCanonique() {
+  ResolveurNomCanonique resolveurNomCanonique() {
     return new ResolveurNomCanonique(contactEmail);
   }
 }

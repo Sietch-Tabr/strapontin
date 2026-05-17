@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.artiste;
 
-import fr.strapontin.web.securite.UtilisateurDetails;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -76,7 +75,4 @@ public class ArtisteViewController {
     return "redirect:/artistes";
   }
 
-  private static UtilisateurDetails utilisateur(Authentication auth) {
-    return (UtilisateurDetails) auth.getPrincipal();
-  }
 }

@@ -10,8 +10,6 @@ import fr.strapontin.core.Normalisation;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
 /// Résolution des noms canoniques d'artistes et de salles via MusicBrainz et Deezer.
@@ -25,8 +23,6 @@ import org.springframework.web.client.RestClient;
 /// @since 2.0.0
 /// @author Kwaite
 public class ResolveurNomCanonique {
-
-  private static final Logger log = LoggerFactory.getLogger(ResolveurNomCanonique.class);
 
   private static final String MUSICBRAINZ_BASE = "https://musicbrainz.org/ws/2";
   private static final String DEEZER_BASE = "https://api.deezer.com";
