@@ -98,23 +98,22 @@ public final class Dedoublonner {
     return fusionnes;
   }
 
+  private static ConcertEnrichi choisirMeilleur(ConcertEnrichi meilleur, ConcertEnrichi candidat) {
+    int scoreM = scoreCompletude(meilleur.concert());
+    int scoreC = scoreCompletude(candidat.concert());
+    if (scoreC > scoreM) return candidat;
+    if (scoreC == scoreM) {
+      return scoreNomRiche(candidat.concert().artiste())
+              > scoreNomRiche(meilleur.concert().artiste())
+          ? candidat
+          : meilleur;
+    }
+    return meilleur;
+  }
+
   private static ConcertEnrichi fusionner(List<ConcertEnrichi> concerts) {
     ConcertEnrichi gagnant =
-        concerts.stream()
-            .reduce(
-                (meilleur, candidat) -> {
-                  int scoreM = scoreCompletude(meilleur.concert());
-                  int scoreC = scoreCompletude(candidat.concert());
-                  if (scoreC > scoreM) return candidat;
-                  if (scoreC == scoreM) {
-                    return scoreNomRiche(candidat.concert().artiste())
-                            > scoreNomRiche(meilleur.concert().artiste())
-                        ? candidat
-                        : meilleur;
-                  }
-                  return meilleur;
-                })
-            .orElseThrow();
+        concerts.stream().reduce(Dedoublonner::choisirMeilleur).orElseThrow();
 
     String meilleureSalle = gagnant.concert().salle();
     for (ConcertEnrichi c : concerts) {
