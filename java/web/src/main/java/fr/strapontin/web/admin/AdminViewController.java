@@ -17,8 +17,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /// Contrôleur MVC Thymeleaf pour la page d'administration.
 ///
-/// <p>Charge les quatre sources de données en parallèle et délègue toutes les mutations
-/// à {@link AdminController}. Pattern PRG sur toutes les actions.
+/// Charge les quatre sources de données en parallèle et délègue toutes les mutations
+/// à [AdminController]. Pattern PRG sur toutes les actions.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -26,6 +26,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AdminViewController {
 
   private final AdminController adminController;
+
+  private static final String CLE_ERREUR = "erreur";
+  private static final String CLE_SUCCES = "succes";
+  private static final String ERREUR_DEFAUT = "Erreur.";
 
   public AdminViewController(AdminController adminController) {
     this.adminController = adminController;
@@ -48,8 +52,8 @@ public class AdminViewController {
     modele.addAttribute("utilisateurs", repUsers.getBody());
     modele.addAttribute("configStatuts", repConfig.getBody());
     modele.addAttribute("logs", repLogs.getBody());
-    modele.addAttribute(
-        "statsJobs", repJobs.getBody() != null ? repJobs.getBody().get("statsJobs") : null);
+    var corpsJobs = repJobs.getBody();
+    modele.addAttribute("statsJobs", corpsJobs != null ? corpsJobs.get("statsJobs") : null);
     modele.addAttribute("currentPage", "admin");
     return "admin";
   }
@@ -68,11 +72,11 @@ public class AdminViewController {
     var requete = new AdminController.RequeteCreerUtilisateur(email);
     ResponseEntity<Map<String, Object>> rep = adminController.creerUtilisateur(requete, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       var corps = rep.getBody();
-      redirects.addFlashAttribute("succes", "creerUtilisateur");
+      redirects.addFlashAttribute(CLE_SUCCES, "creerUtilisateur");
       redirects.addFlashAttribute("lienReset", corps != null ? corps.get("lienReset") : null);
       redirects.addFlashAttribute("nouvelEmail", corps != null ? corps.get("email") : null);
     }
@@ -92,10 +96,10 @@ public class AdminViewController {
       org.springframework.security.core.Authentication auth) {
     ResponseEntity<Map<String, Object>> rep = adminController.supprimerUtilisateur(userId, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
-      redirects.addFlashAttribute("succes", "supprimerUtilisateur");
+      redirects.addFlashAttribute(CLE_SUCCES, "supprimerUtilisateur");
     }
     return "redirect:/admin#utilisateurs";
   }
@@ -113,10 +117,10 @@ public class AdminViewController {
       org.springframework.security.core.Authentication auth) {
     ResponseEntity<Map<String, Object>> rep = adminController.reinitialiserMdp(userId, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
-      redirects.addFlashAttribute("succes", "reinitialiserMdp");
+      redirects.addFlashAttribute(CLE_SUCCES, "reinitialiserMdp");
     }
     return "redirect:/admin#utilisateurs";
   }
@@ -137,10 +141,10 @@ public class AdminViewController {
     var requete = new AdminController.RequeteConfig(cle, valeur);
     ResponseEntity<Map<String, Object>> rep = adminController.sauvegarderConfig(requete, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
-      redirects.addFlashAttribute("succes", "config");
+      redirects.addFlashAttribute(CLE_SUCCES, "config");
     }
     return "redirect:/admin#configuration";
   }
@@ -153,10 +157,10 @@ public class AdminViewController {
   public String genererVapid(RedirectAttributes redirects) {
     ResponseEntity<Map<String, Object>> rep = adminController.genererVapid();
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
-      redirects.addFlashAttribute("succes", "vapid");
+      redirects.addFlashAttribute(CLE_SUCCES, "vapid");
     }
     return "redirect:/admin#configuration";
   }
@@ -169,10 +173,10 @@ public class AdminViewController {
   public String relancerFetches(RedirectAttributes redirects) {
     ResponseEntity<Map<String, Object>> rep = adminController.relancerFetches();
     if (rep.getStatusCode().isError()) {
-      var corps = (Map<?, ?>) rep.getBody();
-      redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+      var corps = rep.getBody();
+      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
-      redirects.addFlashAttribute("succes", "relancer");
+      redirects.addFlashAttribute(CLE_SUCCES, "relancer");
     }
     return "redirect:/admin#jobs";
   }

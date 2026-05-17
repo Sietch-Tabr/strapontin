@@ -24,11 +24,11 @@ import org.springframework.stereotype.Service;
 
 /// Service de lecture de configuration chiffrée pour le worker.
 ///
-/// <p>Déchiffre les valeurs AES-256-GCM stockées dans {@code app_config},
+/// Déchiffre les valeurs AES-256-GCM stockées dans `app_config`,
 /// en utilisant la même clé dérivée via SCrypt que le module web.
 ///
-/// <p>Ce service est en lecture seule : les écritures de configuration sont
-/// effectuées par le module web via son propre {@code ConfigService}.
+/// Ce service est en lecture seule : les écritures de configuration sont
+/// effectuées par le module web via son propre `ConfigService`.
 ///
 /// @since 2.0.0
 /// @author Kwaite

@@ -13,17 +13,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 /// Encodeur de mots de passe compatible avec Better-Auth (scrypt Node.js).
 ///
-/// <p>Deux formats sont supportés :
-/// <ul>
-///   <li>Format Better-Auth {@code saltHex:hashHex} — vérifié via BouncyCastle SCrypt</li>
-///   <li>Format bcrypt {@code $2...} — délégué à {@link BCryptPasswordEncoder}</li>
-/// </ul>
+/// Deux formats sont supportés :
+/// - Format Better-Auth `saltHex:hashHex` — vérifié via BouncyCastle SCrypt
+/// - Format bcrypt `$2...` — délégué à [BCryptPasswordEncoder]
 ///
-/// <p>{@link #encode} produit toujours du bcrypt. {@link #upgradeEncoding} retourne
-/// {@code true} pour le format Better-Auth, ce qui déclenche un re-hashage transparent
+/// [encode] produit toujours du bcrypt. [upgradeEncoding] retourne
+/// `true` pour le format Better-Auth, ce qui déclenche un re-hashage transparent
 /// en bcrypt au prochain login — aucune action requise de la part des utilisateurs.
 ///
-/// <p>Paramètres scrypt Better-Auth (oslo/oslojs) : N=16 384, r=16, p=1, dkLen=64.
+/// Paramètres scrypt Better-Auth (oslo/oslojs) : N=16 384, r=16, p=1, dkLen=64.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -63,11 +61,11 @@ public class BetterAuthPasswordEncoder implements PasswordEncoder {
 
   /// Indique si le hash nécessite un ré-encodage.
   ///
-  /// <p>Retourne {@code true} pour le format Better-Auth ({@code saltHex:hashHex}),
+  /// Retourne `true` pour le format Better-Auth (`saltHex:hashHex`),
   /// ce qui déclenche un re-hashage transparent en bcrypt lors du prochain login.
   ///
   /// @param hashStocke le hash stocké en base de données
-  /// @return {@code true} si le format n'est pas bcrypt
+  /// @return `true` si le format n'est pas bcrypt
   @Override
   public boolean upgradeEncoding(String hashStocke) {
     return hashStocke == null || !hashStocke.startsWith("$2");
@@ -75,10 +73,9 @@ public class BetterAuthPasswordEncoder implements PasswordEncoder {
 
   /// Vérifie un mot de passe avec SCrypt (BouncyCastle) selon les paramètres Better-Auth.
   ///
-  /// <p>PIÈGE CRITIQUE : Better-Auth passe le sel à {@code node:crypto.scrypt()} comme
+  /// PIÈGE CRITIQUE : Better-Auth passe le sel à `node:crypto.scrypt()` comme
   /// string hexadécimal UTF-8 (32 bytes), jamais comme bytes décodés (16 bytes).
-  /// {@code saltHex.getBytes(UTF_8)} est correct — {@code HexFormat.parseHex(saltHex)} ne l'est
-  // pas.
+  /// `saltHex.getBytes(UTF_8)` est correct — `HexFormat.parseHex(saltHex)` ne l'est pas.
   ///
   /// @param motDePasse le mot de passe en clair
   /// @param hashStocke le hash au format {@code saltHex:hashHex}

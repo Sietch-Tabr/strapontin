@@ -19,7 +19,12 @@ public class FetchRegionJob extends QuartzJobBean {
 
   private static final Logger log = LoggerFactory.getLogger(FetchRegionJob.class);
 
-  @Autowired private WorkerService workerService;
+  private WorkerService workerService;
+
+  @Autowired
+  public void setWorkerService(WorkerService workerService) {
+    this.workerService = workerService;
+  }
 
   @Override
   protected void executeInternal(JobExecutionContext context) {

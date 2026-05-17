@@ -37,10 +37,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Contrôleur REST pour la gestion des artistes suivis (portage de {@code
-// artistes/+page.server.ts}).
+/// Contrôleur REST pour la gestion des artistes suivis (portage de `artistes/+page.server.ts`).
 ///
-/// <p>Complète la recherche DB avec l'API Deezer si moins de 3 résultats en base.
+/// Complète la recherche DB avec l'API Deezer si moins de 3 résultats en base.
 /// Limite à 500 artistes par utilisateur.
 ///
 /// @since 2.0.0
@@ -239,6 +238,9 @@ public class ArtisteController {
         return List.of();
       }
       return parseDeezerResultats(response.body());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return List.of();
     } catch (Exception e) {
       log.warn("Deezer recherche artiste échouée pour '{}'", terme, e);
       return List.of();
@@ -267,8 +269,8 @@ public class ArtisteController {
           .filter(name -> name != null && !name.isBlank())
           .distinct()
           .forEach(name -> resultats.add(new SuggestionArtiste(name, "deezer")));
-    } catch (Exception e) {
-      log.warn("Deezer parsing JSON échoué", e);
+    } catch (Exception _) {
+      log.warn("Deezer parsing JSON échoué");
     }
     return resultats;
   }

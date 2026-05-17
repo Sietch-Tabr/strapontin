@@ -20,13 +20,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 /// Contrôleur MVC Thymeleaf pour la page d'accueil.
 ///
-/// <p>Délègue le chargement des données à {@link AccueilController}.
+/// Délègue le chargement des données à [AccueilController].
 /// Gère les actions de masquage via des formulaires POST (PRG pattern).
 ///
 /// @since 2.0.0
 /// @author Kwaite
 @Controller
 public class AccueilViewController {
+
+  private static final String REDIRECT_ACCUEIL = "redirect:/";
 
   private final AccueilController accueilController;
   private final NamedParameterJdbcTemplate jdbc;
@@ -39,7 +41,7 @@ public class AccueilViewController {
 
   /// Affiche la page d'accueil avec les concerts groupés par artiste.
   ///
-  /// @param masques       {@code true} pour inclure les concerts masqués
+  /// @param masques       `true` pour inclure les concerts masqués
   /// @param indisponibles {@code "1"} pour inclure les concerts non disponibles
   /// @param modele        le modèle Thymeleaf
   /// @param auth          contexte d'authentification
@@ -71,7 +73,7 @@ public class AccueilViewController {
         WHERE concert_id = :concertId AND user_id = :userId AND masque_le IS NULL
         """,
         Map.of("concertId", concertId, "userId", utilisateur(auth).id()));
-    return "redirect:/";
+    return REDIRECT_ACCUEIL;
   }
 
   /// Masque tous les concerts d'un artiste pour l'utilisateur courant.
@@ -96,7 +98,7 @@ public class AccueilViewController {
           )
         """,
         params);
-    return "redirect:/";
+    return REDIRECT_ACCUEIL;
   }
 
   /// Démasque un concert pour l'utilisateur courant.
@@ -112,7 +114,7 @@ public class AccueilViewController {
         WHERE concert_id = :concertId AND user_id = :userId
         """,
         Map.of("concertId", concertId, "userId", utilisateur(auth).id()));
-    return "redirect:/";
+    return REDIRECT_ACCUEIL;
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {

@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 
 /// Orchestration des jobs : fetch → dédoublonnage → résolution → persistance → recalcul.
 ///
-/// <p>Délégué par les {@link fr.strapontin.worker.jobs} Quartz. Chaque méthode correspond
+/// Délégué par les jobs Quartz du package `jobs`. Chaque méthode correspond
 /// à un type de job BullMQ porté en Java.
 ///
 /// @since 2.0.0
@@ -67,7 +67,7 @@ public class WorkerService {
 
   /// Fetch global de tous les artistes suivis (TM par attraction ID + Eventim individuel).
   ///
-  /// <p>Suspendu si le quota TM est inférieur à {@link GestionQuotaTM#SEUIL_QUOTA_CRON}.
+  /// Suspendu si le quota TM est inférieur à 500 (SEUIL_QUOTA_CRON).
   public void executerFetchArtistesBatch() {
     log.info("fetch:artistes:batch démarré");
     long debut = System.currentTimeMillis();
@@ -143,7 +143,7 @@ public class WorkerService {
 
   /// Fetch par région pour tous les départements configurés.
   ///
-  /// <p>Suspendu si le quota TM est insuffisant.
+  /// Suspendu si le quota TM est insuffisant.
   public void executerFetchRegion() {
     log.info("fetch:region démarré");
     long debut = System.currentTimeMillis();
@@ -236,7 +236,7 @@ public class WorkerService {
 
   /// Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
   ///
-  /// @param userIds IDs à recalculer, ou {@code null} pour tous
+  /// @param userIds IDs à recalculer, ou `null` pour tous
   public void executerRecalculerMatches(List<String> userIds) {
     log.info("recalculer:matches démarré userIds={}", userIds);
     recalculerMatchesService.recalculerMatches(userIds);

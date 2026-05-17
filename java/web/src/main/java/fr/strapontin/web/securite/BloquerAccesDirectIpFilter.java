@@ -18,10 +18,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 /// Filtre bloquant les accès directs par adresse IP.
 ///
-/// <p>Rejette les requêtes dont le header {@code Host} est une adresse IP
+/// Rejette les requêtes dont le header `Host` est une adresse IP
 /// (IPv4 avec port optionnel, ou IPv6 entre crochets).
 ///
-/// <p>En profil {@code dev}, la vérification est ignorée pour faciliter le
+/// En profil `dev`, la vérification est ignorée pour faciliter le
 /// développement local et les tests E2E depuis une IP privée.
 ///
 /// @since 2.0.0
@@ -29,10 +29,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
 
-  // IPv4 avec port optionnel : 192.168.1.1 ou 192.168.1.1:8080
-  // IPv6 entre crochets avec port optionnel : [::1] ou [::1]:8080
-  private static final Pattern PATTERN_IP =
-      Pattern.compile("^(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d+)?$|^\\[?[0-9a-fA-F:]+]?(?::\\d+)?$");
+  private static final Pattern PATTERN_IPV4 =
+      Pattern.compile("^(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d+)?$");
+  private static final Pattern PATTERN_IPV6 =
+      Pattern.compile("^\\[?[0-9a-fA-F:]+]?(?::\\d+)?$");
 
   private final boolean actif;
 
@@ -49,7 +49,7 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
       return;
     }
     String host = request.getHeader("Host");
-    if (host != null && PATTERN_IP.matcher(host).matches()) {
+    if (host != null && (PATTERN_IPV4.matcher(host).matches() || PATTERN_IPV6.matcher(host).matches())) {
       response.setStatus(HttpStatus.FORBIDDEN.value());
       response.setContentType("application/json;charset=UTF-8");
       response.getWriter().write("{\"erreur\":\"Accès direct par IP non autorisé\"}");

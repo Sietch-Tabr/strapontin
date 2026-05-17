@@ -21,16 +21,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Service de configuration chiffrée (portage de {@code config.ts}).
+/// Service de configuration chiffrée (portage de `config.ts`).
 ///
-/// <p>La clé AES-256 est dérivée de {@code APP_CONFIG_SECRET} via SCrypt
+/// La clé AES-256 est dérivée de `APP_CONFIG_SECRET` via SCrypt
 /// (paramètres par défaut Node.js : N=16 384, r=8, p=1, dkLen=32).
 ///
-/// <p>Format de stockage : {@code base64(IV(12) || TAG(16) || données_chiffrées)}.
+/// Format de stockage : `base64(IV(12) || TAG(16) || données_chiffrées)`.
 /// Compatible avec les valeurs chiffrées par le module TypeScript.
 ///
-/// <p>Les valeurs sont mises en cache Caffeine 5 minutes.
-/// {@link #sauvegarderConfig} invalide immédiatement le cache de la clé modifiée.
+/// Les valeurs sont mises en cache Caffeine 5 minutes.
+/// [sauvegarderConfig] invalide immédiatement le cache de la clé modifiée.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -38,6 +38,7 @@ import org.springframework.stereotype.Service;
 public class ConfigService {
 
   private static final Logger log = LoggerFactory.getLogger(ConfigService.class);
+  private static final SecureRandom rng = new SecureRandom();
 
   // Paramètres scrypt pour la dérivation de clé AES (Node.js crypto.scryptSync defaults)
   // DIFFÉRENT de BetterAuthPasswordEncoder : r=8 (Node.js default), r=16 (Better-Auth)
@@ -76,10 +77,10 @@ public class ConfigService {
 
   /// Sauvegarde une valeur de configuration chiffrée en base de données.
   ///
-  /// <p>Si {@code valeur} est vide, la clé est supprimée.
+  /// Si `valeur` est vide, la clé est supprimée.
   ///
   /// @param cle   la clé de configuration
-  /// @param valeur la valeur en clair, ou {@code null} pour supprimer
+  /// @param valeur la valeur en clair, ou `null` pour supprimer
   public void sauvegarderConfig(String cle, String valeur) {
     Objects.requireNonNull(cle, "La clé de configuration est requise");
     cache.invalidate(cle);
@@ -127,11 +128,11 @@ public class ConfigService {
 
   /// Chiffre une valeur en AES-256-GCM.
   ///
-  /// <p>Format de sortie : {@code base64(IV(12) || TAG(16) || données_chiffrées)}
+  /// Format de sortie : `base64(IV(12) || TAG(16) || données_chiffrées)`
   private String chiffrer(String valeur) {
     try {
       byte[] iv = new byte[12];
-      new SecureRandom().nextBytes(iv);
+      rng.nextBytes(iv);
 
       Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
       cipher.init(
@@ -156,7 +157,7 @@ public class ConfigService {
 
   /// Déchiffre une valeur AES-256-GCM.
   ///
-  /// <p>Format attendu : {@code base64(IV(12) || TAG(16) || données_chiffrées)}
+  /// Format attendu : `base64(IV(12) || TAG(16) || données_chiffrées)`
   private String dechiffrer(String chiffre) {
     try {
       byte[] buf = Base64.getDecoder().decode(chiffre);

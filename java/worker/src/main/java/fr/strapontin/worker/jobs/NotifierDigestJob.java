@@ -19,7 +19,12 @@ public class NotifierDigestJob extends QuartzJobBean {
 
   private static final Logger log = LoggerFactory.getLogger(NotifierDigestJob.class);
 
-  @Autowired private NotificationDigestService notificationDigestService;
+  private NotificationDigestService notificationDigestService;
+
+  @Autowired
+  public void setNotificationDigestService(NotificationDigestService notificationDigestService) {
+    this.notificationDigestService = notificationDigestService;
+  }
 
   @Override
   protected void executeInternal(JobExecutionContext context) {

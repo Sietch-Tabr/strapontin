@@ -33,10 +33,10 @@ import org.springframework.stereotype.Service;
 
 /// Service de notification digest (email + push VAPID) pour le worker.
 ///
-/// <p>Lit les {@code user_matches} non notifiés, groupe par utilisateur, envoie
-/// email via Resend et push VAPID, puis met à jour {@code notifie_le}.
+/// Lit les `user_matches` non notifiés, groupe par utilisateur, envoie
+/// email via Resend et push VAPID, puis met à jour `notifie_le`.
 ///
-/// <p>Si {@code RESEND_API_KEY} ou les clés VAPID sont absentes de {@code app_config},
+/// Si `RESEND_API_KEY` ou les clés VAPID sont absentes de `app_config`,
 /// la notification correspondante est ignorée sans erreur.
 ///
 /// @since 2.0.0
@@ -51,7 +51,8 @@ public class NotificationDigestService {
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
 
-  public NotificationDigestService(ConfigServiceWorker configService, NamedParameterJdbcTemplate jdbc) {
+  public NotificationDigestService(
+      ConfigServiceWorker configService, NamedParameterJdbcTemplate jdbc) {
     this.configService = configService;
     this.jdbc = jdbc;
   }
@@ -142,8 +143,7 @@ public class NotificationDigestService {
       log.error("notifier:digest échoué", e);
     } finally {
       enregistrerStat(System.currentTimeMillis() - debut, nbMatchesNotifies, erreur);
-      log.info(
-          "notifier:digest terminé users={} concerts={}", nbUtilisateurs, nbMatchesNotifies);
+      log.info("notifier:digest terminé users={} concerts={}", nbUtilisateurs, nbMatchesNotifies);
     }
   }
 
@@ -159,8 +159,7 @@ public class NotificationDigestService {
       log.debug("RESEND_API_KEY absent — digest email ignoré");
       return false;
     }
-    String replyTo =
-        configService.lireConfig("CONTACT_EMAIL").orElse("admin@strapontin.kwaite.fr");
+    String replyTo = configService.lireConfig("CONTACT_EMAIL").orElse("admin@strapontin.kwaite.fr");
     String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse(BASE_URL_DEFAUT);
 
     int nb = concerts.size();
@@ -257,8 +256,8 @@ public class NotificationDigestService {
                 + URLEncoder.encode(premier.artiste(), StandardCharsets.UTF_8)
             : baseUrl + "/spectacles";
     return """
-        {"title":"%s","body":"%s","icon":"%s/images/icon-192.png","url":"%s"}\
-        """
+    {"title":"%s","body":"%s","icon":"%s/images/icon-192.png","url":"%s"}\
+    """
         .formatted(echapperJson(titre), echapperJson(corps), baseUrl, echapperJson(url));
   }
 
@@ -268,49 +267,48 @@ public class NotificationDigestService {
         concerts.stream()
             .map(
                 c -> {
-                  String lieu =
-                      c.ville() != null ? c.salle() + " · " + c.ville() : c.salle();
+                  String lieu = c.ville() != null ? c.salle() + " · " + c.ville() : c.salle();
                   String lien =
                       c.url() != null
                           ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
                               .formatted(c.url())
                           : "";
                   return """
-                      <tr>
-                        <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top">
-                          <div style="font-weight:600;color:#111;font-size:14px">%s</div>
-                          <div style="color:#666;font-size:13px;margin-top:2px">%s%s</div>
-                          <div style="color:#999;font-size:12px;margin-top:2px">%s</div>
-                        </td>
-                      </tr>\
-                      """
+                  <tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top">
+                      <div style="font-weight:600;color:#111;font-size:14px">%s</div>
+                      <div style="color:#666;font-size:13px;margin-top:2px">%s%s</div>
+                      <div style="color:#999;font-size:12px;margin-top:2px">%s</div>
+                    </td>
+                  </tr>\
+                  """
                       .formatted(c.artiste(), formaterDate(c.date()), lien, lieu);
                 })
             .collect(Collectors.joining("\n"));
     return """
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head><meta charset="utf-8"><title>%s</title></head>
-        <body style="font-family:system-ui,sans-serif;background:#f9f9f9;margin:0;padding:32px 16px">
-        <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;border:1px solid #e5e5e5">
-        <h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px">%s</h2>
-        <p style="color:#555;font-size:14px;margin:0 0 24px">Voici les nouveaux concerts ajoutés :</p>
-        <table style="border-collapse:collapse;width:100%%">
-        %s
-        </table>
-        <p style="margin-top:24px">
-          <a href="%s/spectacles"
-             style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
-            Voir mes spectacles →
-          </a>
-        </p>
-        </div>
-        <p style="text-align:center;color:#aaa;font-size:12px;margin-top:24px">
-          Strapontin — <a href="%s/parametres" style="color:#aaa">Gérer mes préférences</a>
-        </p>
-        </body>
-        </html>
-        """
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head><meta charset="utf-8"><title>%s</title></head>
+    <body style="font-family:system-ui,sans-serif;background:#f9f9f9;margin:0;padding:32px 16px">
+    <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;border:1px solid #e5e5e5">
+    <h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px">%s</h2>
+    <p style="color:#555;font-size:14px;margin:0 0 24px">Voici les nouveaux concerts ajoutés :</p>
+    <table style="border-collapse:collapse;width:100%%">
+    %s
+    </table>
+    <p style="margin-top:24px">
+      <a href="%s/spectacles"
+         style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
+        Voir mes spectacles →
+      </a>
+    </p>
+    </div>
+    <p style="text-align:center;color:#aaa;font-size:12px;margin-top:24px">
+      Strapontin — <a href="%s/parametres" style="color:#aaa">Gérer mes préférences</a>
+    </p>
+    </body>
+    </html>
+    """
         .formatted(sujet, sujet, lignes, baseUrl, baseUrl);
   }
 
@@ -328,11 +326,16 @@ public class NotificationDigestService {
             erreur         = EXCLUDED.erreur
           """,
           Map.of(
-              "typeJob", "notifier:digest",
-              "now", Timestamp.from(Instant.now()),
-              "dureeMs", (int) Math.min(dureeMs, Integer.MAX_VALUE),
-              "nbNotifies", nbNotifies,
-              "erreur", erreur != null ? erreur : ""));
+              "typeJob",
+              "notifier:digest",
+              "now",
+              Timestamp.from(Instant.now()),
+              "dureeMs",
+              (int) Math.min(dureeMs, Integer.MAX_VALUE),
+              "nbNotifies",
+              nbNotifies,
+              "erreur",
+              erreur != null ? erreur : ""));
     } catch (Exception e) {
       log.warn("Impossible d'enregistrer stat notifier:digest : {}", e.getMessage());
     }
@@ -346,9 +349,6 @@ public class NotificationDigestService {
   }
 
   private static String echapperJson(String s) {
-    return s.replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r");
+    return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
 }

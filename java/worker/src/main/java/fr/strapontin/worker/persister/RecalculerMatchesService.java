@@ -19,11 +19,11 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Service de recalcul des correspondances utilisateurs (table {@code user_matches}).
+/// Service de recalcul des correspondances utilisateurs (table `user_matches`).
 ///
-/// <p>Pour chaque utilisateur, calcule l'intersection entre ses artistes/salles suivis
-/// et les concerts futurs. Met à jour {@code user_matches} en conséquence.
-/// Les concerts indisponibles sont marqués {@code notifie_le = now()} immédiatement
+/// Pour chaque utilisateur, calcule l'intersection entre ses artistes/salles suivis
+/// et les concerts futurs. Met à jour `user_matches` en conséquence.
+/// Les concerts indisponibles sont marqués `notifie_le = now()` immédiatement
 /// pour ne pas déclencher de badge "Nouveau".
 ///
 /// @since 2.0.0
@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RecalculerMatchesService {
 
   private static final Logger log = LoggerFactory.getLogger(RecalculerMatchesService.class);
+  private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -41,7 +42,7 @@ public class RecalculerMatchesService {
 
   /// Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
   ///
-  /// @param userIds liste d'IDs à recalculer, ou {@code null} pour tous les utilisateurs
+  /// @param userIds liste d'IDs à recalculer, ou `null` pour tous les utilisateurs
   @Transactional
   public void recalculerMatches(List<String> userIds) {
     Set<String> usersAvecArtistes =
@@ -74,13 +75,13 @@ public class RecalculerMatchesService {
     List<String> artistesNorms =
         jdbc.queryForList(
             "SELECT artiste_normalise FROM user_artistes WHERE user_id = :userId",
-            Map.of("userId", userId),
+            Map.of(CLE_USER_ID, userId),
             String.class);
 
     List<String> salleIds =
         jdbc.queryForList(
             "SELECT salle_id FROM user_salles WHERE user_id = :userId",
-            Map.of("userId", userId),
+            Map.of(CLE_USER_ID, userId),
             String.class);
 
     if (artistesNorms.isEmpty() && salleIds.isEmpty()) return;
@@ -97,7 +98,7 @@ public class RecalculerMatchesService {
     }
 
     if (concertIds.isEmpty()) {
-      jdbc.update("DELETE FROM user_matches WHERE user_id = :userId", Map.of("userId", userId));
+      jdbc.update("DELETE FROM user_matches WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
       return;
     }
 
@@ -113,10 +114,10 @@ public class RecalculerMatchesService {
       String[] depts =
           jdbc.queryForObject(
               "SELECT departements FROM user_config WHERE user_id = :userId",
-              Map.of("userId", userId),
+              Map.of(CLE_USER_ID, userId),
               (rs, _) -> (String[]) rs.getArray("departements").getArray());
-      return depts != null ? List.of(depts) : List.of();
-    } catch (Exception e) {
+      return List.of(depts);
+    } catch (Exception _) {
       return List.of();
     }
   }
@@ -162,7 +163,7 @@ public class RecalculerMatchesService {
     jdbc.update(
         "DELETE FROM user_matches WHERE user_id = :userId AND concert_id::text NOT IN"
             + " (:concertIds)",
-        Map.of("userId", userId, "concertIds", concertIds));
+        Map.of(CLE_USER_ID, userId, "concertIds", concertIds));
   }
 
   private void insererNouveauxMatches(String userId, Set<String> concertIds) {
@@ -174,7 +175,7 @@ public class RecalculerMatchesService {
             .map(
                 id ->
                     new MapSqlParameterSource()
-                        .addValue("userId", userId)
+                        .addValue(CLE_USER_ID, userId)
                         .addValue("concertId", id))
             .toArray(SqlParameterSource[]::new);
     if (params.length > 0) {
@@ -195,7 +196,7 @@ public class RecalculerMatchesService {
               AND c.disponible = false
           )
         """,
-        Map.of("userId", userId, "concertIds", concertIds));
+        Map.of(CLE_USER_ID, userId, "concertIds", concertIds));
   }
 
   private void purgerMatchesOrphelins(Set<String> usersAvecAbonnements) {

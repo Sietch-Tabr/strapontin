@@ -50,7 +50,7 @@ public class AideViewController {
 
   /// Envoie un signalement à l'adresse de contact.
   ///
-  /// @param type      le type ({@code bug}, {@code suggestion}, {@code question})
+  /// @param type      le type (`bug`, `suggestion`, `question`)
   /// @param message   le message de l'utilisateur
   /// @param redirects attributs de redirection
   /// @param auth      contexte d'authentification

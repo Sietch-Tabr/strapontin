@@ -10,7 +10,7 @@ import java.time.LocalTime;
 
 /// Valeurs normalisées d'un concert prêtes pour l'upsert en base.
 ///
-/// <p>La colonne {@code disponible} est exclue : elle est {@code GENERATED ALWAYS AS}
+/// La colonne `disponible` est exclue : elle est `GENERATED ALWAYS AS`
 /// dans le schéma PostgreSQL et ne doit jamais être insérée ni mise à jour.
 ///
 /// @since 2.0.0

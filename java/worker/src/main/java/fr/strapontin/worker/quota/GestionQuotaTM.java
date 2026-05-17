@@ -17,12 +17,13 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Gestion du quota journalier Ticketmaster stocké dans {@code app_config}.
+/// Gestion du quota journalier Ticketmaster stocké dans `app_config`.
 ///
-/// <p>Les seuils de protection sont :<br>
-/// — {@code SEUIL_QUOTA_CRON = 500} : les jobs cron sont suspendus en dessous.<br>
-/// — {@code SEUIL_QUOTA_ABORT = 50} : tous les jobs TM sont annulés en dessous.<br>
-/// — {@code SEUIL_QUOTA_WARN = 200} : un avertissement est émis en dessous.
+/// Seuils de protection :
+///
+/// - `SEUIL_QUOTA_CRON = 500` : les jobs cron sont suspendus en dessous.
+/// - `SEUIL_QUOTA_ABORT = 50` : tous les jobs TM sont annulés en dessous.
+/// - `SEUIL_QUOTA_WARN = 200` : un avertissement est émis en dessous.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -36,6 +37,8 @@ public class GestionQuotaTM {
   static final int SEUIL_QUOTA_WARN = 200;
 
   private static final String CLE_QUOTA = "TM_QUOTA_JSON";
+  private static final String CLE_DISPO = "dispo";
+  private static final String CLE_TOTAL = "total";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
@@ -83,10 +86,10 @@ public class GestionQuotaTM {
     }
   }
 
-  /// Vérifie le quota avant un job TM. Retourne {@code false} si le job doit être annulé.
+  /// Vérifie le quota avant un job TM. Retourne `false` si le job doit être annulé.
   ///
   /// @param nomJob nom du job pour les logs
-  /// @return {@code true} si le job peut continuer
+  /// @return `true` si le job peut continuer
   public boolean verifier(String nomJob) {
     Optional<QuotaTM> quotaOpt = lireQuota();
     if (quotaOpt.isEmpty()) return true;
@@ -98,29 +101,35 @@ public class GestionQuotaTM {
           quota.dispo(),
           quota.total(),
           nomJob);
-      logAdmin("error", "Quota TM épuisé — job annulé : " + nomJob,
-          Map.of("dispo", quota.dispo(), "total", quota.total(), "job", nomJob));
+      logAdmin(
+          "error",
+          "Quota TM épuisé — job annulé : " + nomJob,
+          Map.of(CLE_DISPO, quota.dispo(), CLE_TOTAL, quota.total(), "job", nomJob));
       return false;
     }
     if (quota.dispo() < SEUIL_QUOTA_WARN) {
       log.warn("quota TM faible dispo={} total={} job={}", quota.dispo(), quota.total(), nomJob);
-      logAdmin("warn", "Quota TM faible",
-          Map.of("dispo", quota.dispo(), "total", quota.total(), "job", nomJob));
+      logAdmin(
+          "warn",
+          "Quota TM faible",
+          Map.of(CLE_DISPO, quota.dispo(), CLE_TOTAL, quota.total(), "job", nomJob));
     }
     return true;
   }
 
-  /// Vérifie si les jobs cron sont autorisés (quota ≥ {@value #SEUIL_QUOTA_CRON}).
+  /// Vérifie si les jobs cron sont autorisés (quota ≥ 500).
   ///
-  /// @return {@code true} si le cron peut s'exécuter
+  /// @return `true` si le cron peut s'exécuter
   public boolean cronAutorise() {
     Optional<QuotaTM> quotaOpt = lireQuota();
     if (quotaOpt.isEmpty()) return true;
     QuotaTM quota = quotaOpt.get();
     if (quota.dispo() < SEUIL_QUOTA_CRON) {
       log.warn("cron TM suspendu — quota insuffisant dispo={}", quota.dispo());
-      logAdmin("warn", "Cron TM suspendu — quota insuffisant",
-          Map.of("dispo", quota.dispo(), "total", quota.total()));
+      logAdmin(
+          "warn",
+          "Cron TM suspendu — quota insuffisant",
+          Map.of(CLE_DISPO, quota.dispo(), CLE_TOTAL, quota.total()));
       return false;
     }
     return true;
@@ -143,8 +152,8 @@ public class GestionQuotaTM {
           params);
     } catch (JsonProcessingException e) {
       log.warn("Erreur sérialisation meta log quota : {}", e.getMessage());
-    } catch (Exception e) {
-      log.warn("Impossible d'insérer log quota admin : {}", e.getMessage());
+    } catch (Exception _) {
+      log.warn("Impossible d'insérer log quota admin");
     }
   }
 }

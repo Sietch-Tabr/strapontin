@@ -14,7 +14,7 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /// Job Quartz : fetch d'une salle par son venueId Ticketmaster, toutes les 2 heures.
 ///
-/// <p>Le {@code venueId} est transmis via la {@link JobDataMap} lors de la planification.
+/// Le `venueId` est transmis via la `JobDataMap` lors de la planification.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -24,7 +24,12 @@ public class FetchSalleJob extends QuartzJobBean {
 
   private static final Logger log = LoggerFactory.getLogger(FetchSalleJob.class);
 
-  @Autowired private WorkerService workerService;
+  private WorkerService workerService;
+
+  @Autowired
+  public void setWorkerService(WorkerService workerService) {
+    this.workerService = workerService;
+  }
 
   @Override
   protected void executeInternal(JobExecutionContext context) {

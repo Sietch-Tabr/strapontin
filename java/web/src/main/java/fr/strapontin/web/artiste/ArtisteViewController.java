@@ -15,7 +15,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /// Contrôleur MVC Thymeleaf pour la page des artistes suivis.
 ///
-/// <p>Délègue la logique à {@link ArtisteController} et applique le PRG pattern.
+/// Délègue la logique à [ArtisteController] et applique le PRG pattern.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -58,7 +58,7 @@ public class ArtisteViewController {
     var requete = new ArtisteController.RequeteAjouter(nom);
     var rep = artisteController.ajouterArtiste(requete, auth);
     if (rep.getStatusCode().isError()) {
-      var corps = (java.util.Map<?, ?>) rep.getBody();
+      var corps = rep.getBody();
       redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
     } else {
       redirects.addFlashAttribute("fetchEnCours", nom);

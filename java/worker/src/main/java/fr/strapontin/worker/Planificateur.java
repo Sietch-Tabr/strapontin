@@ -19,16 +19,15 @@ import org.springframework.context.annotation.Configuration;
 
 /// Planification Quartz des jobs récurrents.
 ///
-/// <p>Déclencheurs configurés :
-/// <ul>
-///   <li>{@code fetch:artistes:batch} — toutes les 2 heures
-///   <li>{@code fetch:region} — toutes les 2 heures
-///   <li>{@code recalculer:matches} — toutes les 2 heures
-///   <li>{@code purger:concerts} — tous les jours à minuit
-///   <li>{@code notifier:digest} — tous les jours à 8h
-/// </ul>
+/// Déclencheurs configurés :
 ///
-/// <p>Le job {@code fetch:salle} est planifié dynamiquement par {@link WorkerService}
+/// - `fetch:artistes:batch` — toutes les 2 heures
+/// - `fetch:region` — toutes les 2 heures
+/// - `recalculer:matches` — toutes les 2 heures
+/// - `purger:concerts` — tous les jours à minuit
+/// - `notifier:digest` — tous les jours à 8h
+///
+/// Le job `fetch:salle` est planifié dynamiquement par [WorkerService]
 /// selon les salles configurées.
 ///
 /// @since 2.0.0

@@ -26,8 +26,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 /// Contrôleur MVC Thymeleaf pour les pages d'authentification.
 ///
-/// <p>Gère les vues {@code /login}, {@code /forgot-password} et {@code /reset-password}.
-/// Le traitement du formulaire {@code POST /login} est délégué à Spring Security.
+/// Gère les vues `/login`, `/forgot-password` et `/reset-password`.
+/// Le traitement du formulaire `POST /login` est délégué à Spring Security.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -35,6 +35,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class AuthViewController {
 
   private static final SecureRandom rng = new SecureRandom();
+  private static final String VUE_FORGOT_PASSWORD = "auth/forgot-password";
+  private static final String VUE_RESET_PASSWORD = "auth/reset-password";
+  private static final String CLE_EMAIL = "email";
+  private static final String CLE_ERREUR = "erreur";
+  private static final String CLE_TOKEN = "token";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigService configService;
@@ -65,12 +70,12 @@ public class AuthViewController {
   /// @return le nom du template Thymeleaf
   @GetMapping("/forgot-password")
   public String formulaireMotDePasseOublie() {
-    return "auth/forgot-password";
+    return VUE_FORGOT_PASSWORD;
   }
 
   /// Traite la soumission du formulaire de mot de passe oublié.
   ///
-  /// <p>Retourne toujours la même vue avec {@code succes=true} pour éviter l'énumération.
+  /// Retourne toujours la même vue avec `succes=true` pour éviter l'énumération.
   ///
   /// @param email  l'adresse email soumise
   /// @param modele le modèle Thymeleaf
@@ -82,11 +87,11 @@ public class AuthViewController {
       String emailNorm = email.strip().toLowerCase();
       List<Map<String, Object>> utilisateurs =
           jdbc.queryForList(
-              "SELECT id FROM users WHERE email = :email", Map.of("email", emailNorm));
+              "SELECT id FROM users WHERE email = :email", Map.of(CLE_EMAIL, emailNorm));
 
       if (!utilisateurs.isEmpty()) {
         jdbc.update(
-            "DELETE FROM verifications WHERE identifier = :email", Map.of("email", emailNorm));
+            "DELETE FROM verifications WHERE identifier = :email", Map.of(CLE_EMAIL, emailNorm));
 
         String token = genererToken(32);
         String tokenId = UUID.randomUUID().toString();
@@ -110,7 +115,7 @@ public class AuthViewController {
     }
 
     modele.addAttribute("succes", true);
-    return "auth/forgot-password";
+    return VUE_FORGOT_PASSWORD;
   }
 
   /// Affiche le formulaire de réinitialisation de mot de passe.
@@ -127,13 +132,13 @@ public class AuthViewController {
     List<Map<String, Object>> verifs =
         jdbc.queryForList(
             "SELECT id FROM verifications WHERE value = :token AND expires_at > NOW()",
-            Map.of("token", token));
+            Map.of(CLE_TOKEN, token));
     if (verifs.isEmpty()) {
-      modele.addAttribute("erreur", "Lien invalide ou expiré. Recommencez depuis le formulaire.");
-      return "auth/forgot-password";
+      modele.addAttribute(CLE_ERREUR, "Lien invalide ou expiré. Recommencez depuis le formulaire.");
+      return VUE_FORGOT_PASSWORD;
     }
-    modele.addAttribute("token", token);
-    return "auth/reset-password";
+    modele.addAttribute(CLE_TOKEN, token);
+    return VUE_RESET_PASSWORD;
   }
 
   /// Traite la soumission du formulaire de réinitialisation de mot de passe.
@@ -153,19 +158,19 @@ public class AuthViewController {
       HttpServletResponse response) {
 
     if (motDePasse.length() < 12) {
-      modele.addAttribute("erreur", "Le mot de passe doit contenir au moins 12 caractères.");
-      modele.addAttribute("token", token);
-      return "auth/reset-password";
+      modele.addAttribute(CLE_ERREUR, "Le mot de passe doit contenir au moins 12 caractères.");
+      modele.addAttribute(CLE_TOKEN, token);
+      return VUE_RESET_PASSWORD;
     }
 
     List<Map<String, Object>> verifs =
         jdbc.queryForList(
             "SELECT identifier FROM verifications WHERE value = :token AND expires_at > NOW()",
-            Map.of("token", token));
+            Map.of(CLE_TOKEN, token));
 
     if (verifs.isEmpty()) {
-      modele.addAttribute("erreur", "Lien invalide ou expiré. Recommencez depuis le formulaire.");
-      return "auth/forgot-password";
+      modele.addAttribute(CLE_ERREUR, "Lien invalide ou expiré. Recommencez depuis le formulaire.");
+      return VUE_FORGOT_PASSWORD;
     }
 
     String email = (String) verifs.get(0).get("identifier");
@@ -176,13 +181,13 @@ public class AuthViewController {
         UPDATE accounts SET password = :hash, updated_at = NOW()
         WHERE user_id = (SELECT id FROM users WHERE email = :email)
         """,
-        Map.of("hash", hash, "email", email));
+        Map.of("hash", hash, CLE_EMAIL, email));
 
     jdbc.update(
         "UPDATE users SET must_change_credentials = false, updated_at = NOW() WHERE email = :email",
-        Map.of("email", email));
+        Map.of(CLE_EMAIL, email));
 
-    jdbc.update("DELETE FROM verifications WHERE value = :token", Map.of("token", token));
+    jdbc.update("DELETE FROM verifications WHERE value = :token", Map.of(CLE_TOKEN, token));
 
     HttpSession session = request.getSession(false);
     if (session != null) session.invalidate();
@@ -190,6 +195,7 @@ public class AuthViewController {
     Cookie sessionCookie = new Cookie("SESSION", "");
     sessionCookie.setMaxAge(0);
     sessionCookie.setPath("/");
+    sessionCookie.setSecure(true);
     response.addCookie(sessionCookie);
 
     return "redirect:/login?reset=true";

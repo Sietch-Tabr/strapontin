@@ -45,12 +45,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Contrôleur REST d'administration (portage de {@code admin/+page.server.ts}).
+/// Contrôleur REST d'administration (portage de `admin/+page.server.ts`).
 ///
-/// <p>Accessible uniquement aux utilisateurs avec le rôle {@code ADMIN}
-/// (filtre Spring Security dans {@link fr.strapontin.web.securite.SecurityConfiguration}).
+/// Accessible uniquement aux utilisateurs avec le rôle `ADMIN`
+/// (filtre Spring Security dans [fr.strapontin.web.securite.SecurityConfiguration]).
 ///
-/// <p>Couvre : gestion des utilisateurs, configuration applicative,
+/// Couvre : gestion des utilisateurs, configuration applicative,
 /// génération des clés VAPID, lecture des logs et des stats de jobs.
 ///
 /// @since 2.0.0
@@ -60,6 +60,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminController {
 
   private static final Logger log = LoggerFactory.getLogger(AdminController.class);
+  private static final String CLE_USER_ID = "userId";
+  private static final String CLE_EMAIL = "email";
+  private static final String CLE_SUCCES = "succes";
+  private static final String CLE_ACTION = "action";
+  private static final String CLE_PAR_ADMIN = "parAdmin";
+  private static final String CLE_PUBLIC_BASE_URL = "PUBLIC_BASE_URL";
   private static final Set<String> CLES_AUTORISEES =
       Set.of(
           "TICKETMASTER_API_KEY",
@@ -205,7 +211,7 @@ public class AdminController {
 
     boolean emailExistant =
         !jdbc.queryForList(
-                "SELECT 1 FROM users WHERE email = :email", Map.of("email", email), Integer.class)
+                "SELECT 1 FROM users WHERE email = :email", Map.of(CLE_EMAIL, email), Integer.class)
             .isEmpty();
     if (emailExistant) {
       return erreur(400, "Impossible de créer le compte. Email déjà utilisé ?");
@@ -221,7 +227,7 @@ public class AdminController {
     Map<String, Object> paramsUser = new HashMap<>();
     paramsUser.put("id", userId);
     paramsUser.put("name", nomInitial);
-    paramsUser.put("email", email);
+    paramsUser.put(CLE_EMAIL, email);
     paramsUser.put("username", usernameTemp);
     paramsUser.put("displayUsername", usernameTemp);
     jdbc.update(
@@ -242,7 +248,7 @@ public class AdminController {
         Map.of(
             "id", accountId,
             "accountId", userId,
-            "userId", userId,
+            CLE_USER_ID, userId,
             "password", hashMdp));
 
     // Token de reset MDP (invitation = 24h)
@@ -262,30 +268,26 @@ public class AdminController {
             "expiresAt", java.sql.Timestamp.from(expiresAt)));
 
     String baseUrl =
-        configService.lireConfig("PUBLIC_BASE_URL").orElse("https://strapontin.kwaite.fr");
+        configService.lireConfig(CLE_PUBLIC_BASE_URL).orElse("https://strapontin.kwaite.fr");
     String lienReset = baseUrl + "/reset-password?token=" + token;
     emailService.envoyerInvitation(email, usernameTemp, lienReset);
 
     logAdminService.logAdmin(
-        "info", "admin", "compte créé", Map.of("email", email, "parAdmin", adminId));
+        "info", "admin", "compte créé", Map.of(CLE_EMAIL, email, CLE_PAR_ADMIN, adminId));
 
     return ResponseEntity.status(201)
         .body(
             Map.of(
-                "succes",
-                true,
-                "email",
-                email,
-                "identifiant",
-                usernameTemp,
-                "lienReset",
-                lienReset));
+                CLE_SUCCES, true,
+                CLE_EMAIL, email,
+                "identifiant", usernameTemp,
+                "lienReset", lienReset));
   }
 
   /// Modifie le nom et/ou l'email d'un utilisateur.
   ///
   /// @param userId  identifiant de l'utilisateur à modifier
-  /// @param requete corps JSON avec {@code nom} et/ou {@code email}
+  /// @param requete corps JSON avec `nom` et/ou `email`
   /// @param auth    contexte d'authentification admin
   /// @return 200 si modifié, 400 en cas d'erreur
   @PatchMapping("/utilisateurs/{userId}")
@@ -294,66 +296,72 @@ public class AdminController {
       @Valid @RequestBody RequeteModifierUtilisateur requete,
       Authentication auth) {
     String adminId = utilisateur(auth).id();
-
     if (userId.equals(adminId)) {
       return erreur(400, "Utilisez /parametres pour modifier votre propre compte.");
     }
-
     String nom = requete.nom() == null ? "" : requete.nom().strip();
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
     String role = requete.role() == null ? "" : requete.role().strip().toLowerCase();
 
+    ResponseEntity<Map<String, Object>> erreurValidation =
+        validerChampsModification(nom, email, role, userId);
+    if (erreurValidation != null) return erreurValidation;
+
+    Map<String, Object> miseAJour = construireMiseAJourUser(nom, email, role, userId);
+    jdbc.update("UPDATE users SET " + construireSetClauses(nom, email, role) + " WHERE id = :userId",
+        miseAJour);
+
+    if (!email.isEmpty()) {
+      logAdminService.logAdmin("warn", "admin", "email modifié",
+          Map.of(CLE_USER_ID, userId, "nouvelEmail", email, CLE_PAR_ADMIN, adminId));
+    }
+    if (!role.isEmpty()) {
+      logAdminService.logAdmin("warn", "admin", "rôle modifié",
+          Map.of(CLE_USER_ID, userId, "nouveauRole", role, CLE_PAR_ADMIN, adminId));
+    }
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "modifierCompte"));
+  }
+
+  private ResponseEntity<Map<String, Object>> validerChampsModification(
+      String nom, String email, String role, String userId) {
     if (!nom.isEmpty() && nom.length() > 100) {
       return erreur(400, "Nom trop long (100 caractères max).");
     }
     if (!email.isEmpty() && !FORMAT_EMAIL.matcher(email).matches()) {
       return erreur(400, "Format d'email invalide.");
     }
-    if (!role.isEmpty() && !java.util.Set.of("user", "admin").contains(role)) {
+    if (!role.isEmpty() && !Set.of("user", "admin").contains(role)) {
       return erreur(400, "Rôle invalide. Valeurs acceptées : user, admin.");
     }
-
     if (!email.isEmpty()) {
       boolean emailPris =
           !jdbc.queryForList(
                   "SELECT 1 FROM users WHERE email = :email AND id != :id",
-                  Map.of("email", email, "id", userId),
+                  Map.of(CLE_EMAIL, email, "id", userId),
                   Integer.class)
               .isEmpty();
-      if (emailPris) {
-        return erreur(400, "Cette adresse email est déjà utilisée.");
-      }
+      if (emailPris) return erreur(400, "Cette adresse email est déjà utilisée.");
     }
+    return null;
+  }
 
+  private Map<String, Object> construireMiseAJourUser(
+      String nom, String email, String role, String userId) {
     Map<String, Object> miseAJour = new HashMap<>();
     miseAJour.put("updatedAt", java.sql.Timestamp.from(Instant.now()));
-    miseAJour.put("userId", userId);
+    miseAJour.put(CLE_USER_ID, userId);
     if (!nom.isEmpty()) miseAJour.put("nom", nom);
-    if (!email.isEmpty()) miseAJour.put("email", email);
+    if (!email.isEmpty()) miseAJour.put(CLE_EMAIL, email);
     if (!role.isEmpty()) miseAJour.put("role", role);
+    return miseAJour;
+  }
 
+  private static String construireSetClauses(String nom, String email, String role) {
     StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
     if (!nom.isEmpty()) setClauses.append(", name = :nom");
     if (!email.isEmpty()) setClauses.append(", email = :email");
     if (!role.isEmpty()) setClauses.append(", role = :role::user_role");
-
-    jdbc.update("UPDATE users SET " + setClauses + " WHERE id = :userId", miseAJour);
-
-    if (!email.isEmpty()) {
-      logAdminService.logAdmin(
-          "warn",
-          "admin",
-          "email modifié",
-          Map.of("userId", userId, "nouvelEmail", email, "parAdmin", adminId));
-    }
-    if (!role.isEmpty()) {
-      logAdminService.logAdmin(
-          "warn",
-          "admin",
-          "rôle modifié",
-          Map.of("userId", userId, "nouveauRole", role, "parAdmin", adminId));
-    }
-    return ResponseEntity.ok(Map.of("succes", true, "action", "modifierCompte"));
+    return setClauses.toString();
   }
 
   /// Supprime un compte utilisateur.
@@ -370,10 +378,10 @@ public class AdminController {
       return erreur(400, "Impossible de supprimer ce compte.");
     }
 
-    jdbc.update("DELETE FROM users WHERE id = :userId", Map.of("userId", userId));
+    jdbc.update("DELETE FROM users WHERE id = :userId", Map.of(CLE_USER_ID, userId));
     logAdminService.logAdmin(
-        "warn", "admin", "compte supprimé", Map.of("userId", userId, "parAdmin", adminId));
-    return ResponseEntity.ok(Map.of("succes", true));
+        "warn", "admin", "compte supprimé", Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 
   /// Envoie un email de réinitialisation de mot de passe à un utilisateur.
@@ -392,19 +400,19 @@ public class AdminController {
 
     List<Map<String, Object>> cible =
         jdbc.queryForList(
-            "SELECT id, email, name FROM users WHERE id = :userId", Map.of("userId", userId));
+            "SELECT id, email, name FROM users WHERE id = :userId", Map.of(CLE_USER_ID, userId));
     if (cible.isEmpty()) {
       return erreur(404, "Utilisateur introuvable.");
     }
 
-    String email = (String) cible.get(0).get("email");
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
+    String email = (String) cible.get(0).get(CLE_EMAIL);
+    String baseUrl = configService.lireConfig(CLE_PUBLIC_BASE_URL).orElse("");
     if (baseUrl.isEmpty()) {
       return erreur(400, "PUBLIC_BASE_URL n'est pas configurée.");
     }
 
     // Supprimer les anciens tokens pour cet email
-    jdbc.update("DELETE FROM verifications WHERE identifier = :email", Map.of("email", email));
+    jdbc.update("DELETE FROM verifications WHERE identifier = :email", Map.of(CLE_EMAIL, email));
 
     String token = genererToken(32);
     String tokenId = UUID.randomUUID().toString();
@@ -424,18 +432,17 @@ public class AdminController {
     emailService.envoyerResetMotDePasse(email, lienReset);
 
     logAdminService.logAdmin(
-        "warn",
-        "admin",
-        "mot de passe réinitialisé",
-        Map.of("userId", userId, "parAdmin", adminId));
+        "warn", "admin", "mot de passe réinitialisé",
+        Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId));
 
-    return ResponseEntity.ok(Map.of("succes", true, "action", "reinitialiserMdp", "email", email));
+    return ResponseEntity.ok(
+        Map.of(CLE_SUCCES, true, CLE_ACTION, "reinitialiserMdp", CLE_EMAIL, email));
   }
 
   // --- Endpoints configuration ---
 
   /// Retourne le statut des clés de configuration (présence + valeur en clair pour CONTACT_EMAIL et
-  // PUBLIC_BASE_URL).
+  /// PUBLIC_BASE_URL).
   ///
   /// @return la liste des statuts de configuration
   @GetMapping("/config")
@@ -476,7 +483,7 @@ public class AdminController {
     }
 
     configService.sauvegarderConfig(cle, valeur.isEmpty() ? null : valeur);
-    return ResponseEntity.ok(Map.of("succes", true, "action", "sauvegarderConfig", "cle", cle));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "sauvegarderConfig", "cle", cle));
   }
 
   // --- Endpoints VAPID ---
@@ -508,7 +515,7 @@ public class AdminController {
       configService.sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique);
       configService.sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee);
 
-      return ResponseEntity.ok(Map.of("succes", true, "action", "genererVapid"));
+      return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "genererVapid"));
     } catch (Exception e) {
       log.error("Erreur génération clés VAPID", e);
       return erreur(500, "Erreur lors de la génération des clés VAPID.");
@@ -575,8 +582,7 @@ public class AdminController {
   /// @return 200 si déclenché, 503 si le worker est inaccessible
   @PostMapping("/relancer")
   public ResponseEntity<Map<String, Object>> relancerFetches() {
-    try {
-      java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+    try (java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient()) {
       java.net.http.HttpRequest req =
           java.net.http.HttpRequest.newBuilder()
               .uri(java.net.URI.create("http://localhost:8081/trigger/tout"))
@@ -589,6 +595,9 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("statut", "déclenché"));
       }
       return erreur(503, "Worker inaccessible (statut " + rep.statusCode() + ").");
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return erreur(503, "Requête interrompue.");
     } catch (Exception e) {
       log.warn("Erreur appel worker trigger", e);
       return erreur(503, "Worker inaccessible : " + e.getMessage());
@@ -617,7 +626,7 @@ public class AdminController {
         if (!estIp && !"https".equals(uri.getScheme())) {
           return erreur(400, "L'URL doit commencer par https:// pour un domaine public.");
         }
-      } catch (Exception e) {
+      } catch (Exception _) {
         return erreur(400, "Format d'URL invalide.");
       }
     }

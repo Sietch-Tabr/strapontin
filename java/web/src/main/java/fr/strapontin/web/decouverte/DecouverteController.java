@@ -6,12 +6,17 @@ package fr.strapontin.web.decouverte;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Contrôleur REST pour la découverte de concerts par département.
 ///
-/// <p>Retourne les concerts disponibles filtrés par département(s),
+/// Retourne les concerts disponibles filtrés par département(s),
 /// avec les filtres habituels (q, mois, genre, classification, budget, tri).
 /// Pré-sélectionne les départements de l'utilisateur si aucun n'est fourni.
 ///
@@ -39,6 +44,7 @@ public class DecouverteController {
 
   private static final Logger log = LoggerFactory.getLogger(DecouverteController.class);
   private static final int CONCERTS_PAR_PAGE = 100;
+  private static final String CLE_DEPTS = "depts";
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -86,7 +92,7 @@ public class DecouverteController {
   /// @param genre          filtre genre
   /// @param classification filtre classification
   /// @param budget         prix max
-  /// @param tri            {@code "date"} ou {@code "nouveaute"}
+  /// @param tri            `"date"` ou `"nouveaute"`
   /// @param page           numéro de page (0-indexé)
   /// @param auth           contexte d'authentification
   /// @return les concerts et les filtres disponibles
@@ -106,50 +112,16 @@ public class DecouverteController {
     LocalDate aujourd8 = LocalDate.now();
     int pageNum = Math.max(0, page);
 
-    // Départements de l'utilisateur (pré-sélection)
     List<String> deptsUtilisateur = lireDeptsUtilisateur(userId);
-
-    // Si aucun département fourni → utiliser les depts de l'user
     List<String> deptsActifs = (depts == null || depts.isEmpty()) ? deptsUtilisateur : depts;
 
-    // Construction du WHERE dynamique
-    StringBuilder where = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
     Map<String, Object> params = new HashMap<>();
-    params.put("aujourd8", aujourd8);
     params.put("limit", CONCERTS_PAR_PAGE);
     params.put("offset", pageNum * CONCERTS_PAR_PAGE);
-
-    if (!deptsActifs.isEmpty()) {
-      where.append(" AND c.dept = ANY(:depts)");
-      params.put("depts", deptsActifs.toArray(String[]::new));
-    }
-
     String rechercheNorm = q.strip().substring(0, Math.min(q.strip().length(), 100));
-    if (!rechercheNorm.isEmpty()) {
-      where.append(" AND c.artiste ILIKE :q");
-      params.put("q", "%" + rechercheNorm + "%");
-    }
-
-    if (!mois.isBlank() && mois.matches("\\d{4}-\\d{2}")) {
-      where.append(" AND to_char(c.date, 'YYYY-MM') = :mois");
-      params.put("mois", mois);
-    }
-
     String genreStr = genre.strip().substring(0, Math.min(genre.strip().length(), 50));
-    if (!genreStr.isEmpty()) {
-      where.append(" AND c.genre ILIKE :genre");
-      params.put("genre", genreStr);
-    }
-
-    if (!classification.isBlank()) {
-      where.append(" AND c.classification = :classification");
-      params.put("classification", classification);
-    }
-
-    if (!budget.isBlank() && budget.matches("\\d+")) {
-      where.append(" AND c.prix_min::numeric <= :budget");
-      params.put("budget", new BigDecimal(budget));
-    }
+    StringBuilder where =
+        construireFiltresWhere(deptsActifs, rechercheNorm, mois, genreStr, classification, budget, aujourd8, params);
 
     String orderBy =
         "nouveaute".equals(tri) ? "c.first_seen DESC, c.date ASC" : "c.date ASC, c.artiste ASC";
@@ -189,20 +161,18 @@ public class DecouverteController {
                         ? rs.getTimestamp("first_seen").toInstant()
                         : null));
 
-    // Total sans LIMIT
     String countSql = "SELECT COUNT(*) FROM concerts c WHERE " + where;
     Map<String, Object> countParams = new HashMap<>(params);
     countParams.remove("limit");
     countParams.remove("offset");
-    int total = jdbc.queryForObject(countSql, countParams, Integer.class);
+    int total = Objects.requireNonNullElse(jdbc.queryForObject(countSql, countParams, Integer.class), 0);
 
-    // Genres et classifications disponibles (base = même WHERE sans genre/classif)
     Map<String, Object> baseParams = new HashMap<>();
     baseParams.put("aujourd8", aujourd8);
     StringBuilder whereBase = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
     if (!deptsActifs.isEmpty()) {
       whereBase.append(" AND c.dept = ANY(:depts)");
-      baseParams.put("depts", deptsActifs.toArray(String[]::new));
+      baseParams.put(CLE_DEPTS, deptsActifs.toArray(String[]::new));
     }
 
     List<String> genresDisponibles =
@@ -229,7 +199,6 @@ public class DecouverteController {
             baseParams,
             String.class);
 
-    // Dernière synchro région
     List<Instant> syncLignes =
         jdbc
             .queryForList(
@@ -242,14 +211,13 @@ public class DecouverteController {
             .collect(Collectors.toList());
     Instant derniereSyncRegion = syncLignes.isEmpty() ? null : syncLignes.get(0);
 
-    // Dernière mise à jour par département (depuis concerts.updated_at)
     List<SyncDept> syncParDept = List.of();
     if (!deptsActifs.isEmpty()) {
       syncParDept =
           jdbc.query(
               "SELECT dept, MAX(updated_at) AS derniere_sync FROM concerts"
                   + " WHERE dept = ANY(:depts) GROUP BY dept",
-              Map.of("depts", deptsActifs.toArray(String[]::new)),
+              Map.of(CLE_DEPTS, deptsActifs.toArray(String[]::new)),
               (rs, _) -> {
                 java.sql.Timestamp ts = rs.getTimestamp("derniere_sync");
                 return new SyncDept(rs.getString("dept"), ts != null ? ts.toInstant() : null);
@@ -277,20 +245,23 @@ public class DecouverteController {
   /// @return 200 si déclenché, 503 si le worker est inaccessible
   @PostMapping("/fetcher")
   public ResponseEntity<Map<String, Object>> fetcher(@RequestBody RequeteFetch requete) {
-    try {
-      java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-      java.net.http.HttpRequest req =
-          java.net.http.HttpRequest.newBuilder()
-              .uri(java.net.URI.create("http://localhost:8081/trigger/tout"))
-              .POST(java.net.http.HttpRequest.BodyPublishers.noBody())
+    try (HttpClient client = HttpClient.newHttpClient()) {
+      HttpRequest req =
+          HttpRequest.newBuilder()
+              .uri(URI.create("http://localhost:8081/trigger/tout"))
+              .POST(HttpRequest.BodyPublishers.noBody())
               .build();
-      java.net.http.HttpResponse<String> rep =
-          client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+      HttpResponse<String> rep = client.send(req, HttpResponse.BodyHandlers.ofString());
       if (rep.statusCode() == 200) {
         return ResponseEntity.ok(Map.of("statut", "déclenché"));
       }
       Map<String, Object> erreur = new HashMap<>();
       erreur.put("erreur", "Worker inaccessible (statut " + rep.statusCode() + ").");
+      return ResponseEntity.status(503).body(erreur);
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      Map<String, Object> erreur = new HashMap<>();
+      erreur.put("erreur", "Requête interrompue.");
       return ResponseEntity.status(503).body(erreur);
     } catch (Exception e) {
       log.warn("Erreur appel worker trigger (découverte)", e);
@@ -298,6 +269,44 @@ public class DecouverteController {
       erreur.put("erreur", "Worker inaccessible : " + e.getMessage());
       return ResponseEntity.status(503).body(erreur);
     }
+  }
+
+  private StringBuilder construireFiltresWhere(
+      List<String> deptsActifs,
+      String rechercheNorm,
+      String mois,
+      String genreStr,
+      String classification,
+      String budget,
+      LocalDate aujourd8,
+      Map<String, Object> params) {
+    StringBuilder where = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
+    params.put("aujourd8", aujourd8);
+    if (!deptsActifs.isEmpty()) {
+      where.append(" AND c.dept = ANY(:depts)");
+      params.put(CLE_DEPTS, deptsActifs.toArray(String[]::new));
+    }
+    if (!rechercheNorm.isEmpty()) {
+      where.append(" AND c.artiste ILIKE :q");
+      params.put("q", "%" + rechercheNorm + "%");
+    }
+    if (!mois.isBlank() && mois.matches("\\d{4}-\\d{2}")) {
+      where.append(" AND to_char(c.date, 'YYYY-MM') = :mois");
+      params.put("mois", mois);
+    }
+    if (!genreStr.isEmpty()) {
+      where.append(" AND c.genre ILIKE :genre");
+      params.put("genre", genreStr);
+    }
+    if (!classification.isBlank()) {
+      where.append(" AND c.classification = :classification");
+      params.put("classification", classification);
+    }
+    if (!budget.isBlank() && budget.matches("\\d+")) {
+      where.append(" AND c.prix_min::numeric <= :budget");
+      params.put("budget", new BigDecimal(budget));
+    }
+    return where;
   }
 
   private List<String> lireDeptsUtilisateur(String userId) {
@@ -310,7 +319,7 @@ public class DecouverteController {
                 return rs.getArray("departements") != null
                     ? (String[]) rs.getArray("departements").getArray()
                     : new String[0];
-              } catch (Exception e) {
+              } catch (Exception _) {
                 return new String[0];
               }
             });

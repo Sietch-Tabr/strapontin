@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Endpoints d'authentification de l'API REST.
 ///
-/// <p>Gère le login, le logout, la récupération de l'utilisateur courant,
+/// Gère le login, le logout, la récupération de l'utilisateur courant,
 /// et la réinitialisation de mot de passe (forgot-password + reset-password).
 ///
 /// @since 2.0.0
@@ -44,6 +44,9 @@ public class AuthController {
 
   private static final Logger log = LoggerFactory.getLogger(AuthController.class);
   private static final SecureRandom rng = new SecureRandom();
+  private static final String CLE_EMAIL = "email";
+  private static final String CLE_SUCCES = "succes";
+  private static final String CLE_ERREUR = "erreur";
 
   private final AuthenticationManager authenticationManager;
   private final NamedParameterJdbcTemplate jdbc;
@@ -87,7 +90,7 @@ public class AuthController {
   /// @param identifiant           le nom d'utilisateur
   /// @param nom                   le nom d'affichage
   /// @param email                 l'adresse email
-  /// @param role                  le rôle ({@code user} ou {@code admin})
+  /// @param role                  le rôle (`user` ou `admin`)
   /// @param mustChangeCredentials indique si l'utilisateur doit changer ses credentials
   public record UtilisateurDto(
       String id,
@@ -169,7 +172,7 @@ public class AuthController {
 
   /// Déclenche l'envoi d'un email de réinitialisation de mot de passe.
   ///
-  /// <p>Retourne toujours 200 pour éviter l'énumération de comptes.
+  /// Retourne toujours 200 pour éviter l'énumération de comptes.
   ///
   /// @param req le corps contenant l'adresse email
   /// @return 200 dans tous les cas
@@ -177,16 +180,16 @@ public class AuthController {
   public ResponseEntity<Map<String, Object>> motDePasseOublie(
       @RequestBody ForgotPasswordRequest req) {
     if (req.email() == null || req.email().isBlank()) {
-      return ResponseEntity.ok(Map.of("succes", true));
+      return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
     }
 
     String email = req.email().strip().toLowerCase();
 
     List<Map<String, Object>> utilisateurs =
-        jdbc.queryForList("SELECT id FROM users WHERE email = :email", Map.of("email", email));
+        jdbc.queryForList("SELECT id FROM users WHERE email = :email", Map.of(CLE_EMAIL, email));
 
     if (!utilisateurs.isEmpty()) {
-      jdbc.update("DELETE FROM verifications WHERE identifier = :email", Map.of("email", email));
+      jdbc.update("DELETE FROM verifications WHERE identifier = :email", Map.of(CLE_EMAIL, email));
 
       String token = genererToken(32);
       String tokenId = UUID.randomUUID().toString();
@@ -209,7 +212,7 @@ public class AuthController {
       emailService.envoyerResetMotDePasse(email, lienReset);
     }
 
-    return ResponseEntity.ok(Map.of("succes", true));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 
   /// Réinitialise le mot de passe via un token de vérification.
@@ -220,11 +223,11 @@ public class AuthController {
   public ResponseEntity<Map<String, Object>> reinitialiserMotDePasse(
       @RequestBody ResetPasswordRequest req) {
     if (req.token() == null || req.motDePasse() == null) {
-      return ResponseEntity.badRequest().body(Map.of("erreur", "Token et mot de passe requis."));
+      return ResponseEntity.badRequest().body(Map.of(CLE_ERREUR, "Token et mot de passe requis."));
     }
     if (req.motDePasse().length() < 12) {
       return ResponseEntity.badRequest()
-          .body(Map.of("erreur", "Le mot de passe doit contenir au moins 12 caractères."));
+          .body(Map.of(CLE_ERREUR, "Le mot de passe doit contenir au moins 12 caractères."));
     }
 
     List<Map<String, Object>> verifs =
@@ -234,7 +237,7 @@ public class AuthController {
 
     if (verifs.isEmpty()) {
       return ResponseEntity.badRequest()
-          .body(Map.of("erreur", "Lien invalide ou expiré. Recommencez depuis le formulaire."));
+          .body(Map.of(CLE_ERREUR, "Lien invalide ou expiré. Recommencez depuis le formulaire."));
     }
 
     String email = (String) verifs.get(0).get("identifier");
@@ -245,15 +248,15 @@ public class AuthController {
         UPDATE accounts SET password = :hash, updated_at = NOW()
         WHERE user_id = (SELECT id FROM users WHERE email = :email)
         """,
-        Map.of("hash", hash, "email", email));
+        Map.of("hash", hash, CLE_EMAIL, email));
 
     jdbc.update(
         "UPDATE users SET must_change_credentials = false, updated_at = NOW() WHERE email = :email",
-        Map.of("email", email));
+        Map.of(CLE_EMAIL, email));
 
     jdbc.update("DELETE FROM verifications WHERE value = :token", Map.of("token", req.token()));
 
-    return ResponseEntity.ok(Map.of("succes", true));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 
   private String genererToken(int nbOctets) {

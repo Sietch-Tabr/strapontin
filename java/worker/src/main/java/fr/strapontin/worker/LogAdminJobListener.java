@@ -17,9 +17,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
-/// Listener Quartz global : alimente {@code logs_admin} à chaque démarrage et fin de job.
+/// Listener Quartz global : alimente `logs_admin` à chaque démarrage et fin de job.
 ///
-/// <p>Permet d'observer en temps réel les exécutions Quartz depuis la page d'administration,
+/// Permet d'observer en temps réel les exécutions Quartz depuis la page d'administration,
 /// au même titre que les actions manuelles de l'interface web.
 ///
 /// @since 2.0.0
@@ -57,7 +57,9 @@ public class LogAdminJobListener implements JobListener {
   }
 
   @Override
-  public void jobExecutionVetoed(JobExecutionContext context) {}
+  public void jobExecutionVetoed(JobExecutionContext context) {
+    // job annulé par un trigger listener — aucune action requise
+  }
 
   @Override
   public void jobWasExecuted(JobExecutionContext context, JobExecutionException ex) {

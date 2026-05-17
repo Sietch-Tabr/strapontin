@@ -26,9 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /// Service de persistance des concerts dédoublonnés.
 ///
-/// <p>Effectue l'upsert par lot en base avec la stratégie ON CONFLICT sur
-/// {@code (artiste_norm, date, salle_norm)}. Préfère les noms avec diacritiques
-/// et la casse mixte. Supprime les doublons par {@code (source, url)} introduits
+/// Effectue l'upsert par lot en base avec la stratégie ON CONFLICT sur
+/// `(artiste_norm, date, salle_norm)`. Préfère les noms avec diacritiques
+/// et la casse mixte. Supprime les doublons par `(source, url)` introduits
 /// lors d'une résolution de nom canonique entre deux fetches.
 ///
 /// @since 2.0.0
@@ -90,16 +90,15 @@ public class PersisterConcerts {
 
   /// Vérifie si deux noms de salle normalisés désignent la même salle.
   ///
-  /// <p>Trois critères (union) :
-  /// <ol>
-  ///   <li>égalité exacte
-  ///   <li>similarité Levenshtein ≥ 0.5
-  ///   <li>containment : la chaîne la plus courte (≥ 4 chars) est contenue dans la plus longue
-  /// </ol>
+  /// Trois critères (union) :
+  ///
+  /// 1. égalité exacte
+  /// 2. similarité Levenshtein ≥ 0.5
+  /// 3. containment : la chaîne la plus courte (≥ 4 chars) est contenue dans la plus longue
   ///
   /// @param a premier nom normalisé
   /// @param b deuxième nom normalisé
-  /// @return {@code true} si les salles sont considérées identiques
+  /// @return `true` si les salles sont considérées identiques
   public static boolean estDoublonSalle(String a, String b) {
     if (a.equals(b)) return true;
     if (Normalisation.similarite(a, b) >= SEUIL_SIMILARITE_SALLE) return true;
@@ -117,9 +116,9 @@ public class PersisterConcerts {
     return artisteDiacr * 10 + artisteCasseMixte + salleDiacr + salleCasseMixte;
   }
 
-  /// Dédoublonne par clé de conflit {@code (artiste_norm, date, salle_norm)}.
+  /// Dédoublonne par clé de conflit `(artiste_norm, date, salle_norm)`.
   ///
-  /// <p>En cas de doublon, conserve la version avec le meilleur score
+  /// En cas de doublon, conserve la version avec le meilleur score
   /// (diacritiques et casse mixte préférés).
   ///
   /// @param liste concerts bruts à dédoublonner
@@ -143,9 +142,9 @@ public class PersisterConcerts {
     return new ArrayList<>(parCle.values());
   }
 
-  /// Dédoublonne un lot réconcilié par {@code (artisteNorm, date, salleNorm)}.
+  /// Dédoublonne un lot réconcilié par `(artisteNorm, date, salleNorm)`.
   ///
-  /// <p>Les réécritures de {@code salleNorm} par {@code reconcilierSalles} peuvent créer
+  /// Les réécritures de `salleNorm` par `reconcilierSalles` peuvent créer
   /// de nouveaux doublons intra-lot. Cette passe les élimine.
   ///
   /// @param lot valeurs de concerts après réconciliation des salles
@@ -165,64 +164,12 @@ public class PersisterConcerts {
   }
 
   private List<ValeurConcert> reconcilierSalles(List<ValeurConcert> lot) {
-    // Passe 1 — intra-lot : unifie les noms de salle pour le même (artisteNorm, date)
-    Map<String, String> remplacementsIntraLot = new HashMap<>();
-    Map<String, List<String>> parGroupe = new LinkedHashMap<>();
-
-    for (ValeurConcert concert : lot) {
-      String cle = concert.artisteNorm() + "|" + concert.date();
-      parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>());
-      List<String> groupe = parGroupe.get(cle);
-      if (!groupe.contains(concert.salleNorm())) groupe.add(concert.salleNorm());
-    }
-
-    for (List<String> sallesNorm : parGroupe.values()) {
-      if (sallesNorm.size() <= 1) continue;
-      for (int i = 0; i < sallesNorm.size(); i++) {
-        for (int j = i + 1; j < sallesNorm.size(); j++) {
-          String a = sallesNorm.get(i);
-          String b = sallesNorm.get(j);
-          if (estDoublonSalle(a, b)) {
-            String canonique = a.length() >= b.length() ? a : b;
-            remplacementsIntraLot.put(a, canonique);
-            remplacementsIntraLot.put(b, canonique);
-          }
-        }
-      }
-    }
-
+    Map<String, String> remplacementsIntraLot = construireRemplacementsIntraLot(lot);
     List<ValeurConcert> lotApresIntraLot =
         remplacementsIntraLot.isEmpty()
             ? lot
-            : lot.stream()
-                .map(
-                    c -> {
-                      String canonique = remplacementsIntraLot.get(c.salleNorm());
-                      if (canonique == null || canonique.equals(c.salleNorm())) return c;
-                      log.debug(
-                          "doublon salle intra-lot réconcilié entrant={} canonique={}",
-                          c.salleNorm(),
-                          canonique);
-                      return new ValeurConcert(
-                          c.artiste(),
-                          c.artisteNorm(),
-                          c.date(),
-                          c.heure(),
-                          c.salle(),
-                          canonique,
-                          c.ville(),
-                          c.dept(),
-                          c.prixMin(),
-                          c.prixMax(),
-                          c.url(),
-                          c.source(),
-                          c.classification(),
-                          c.genre(),
-                          c.statut());
-                    })
-                .toList();
+            : lot.stream().map(c -> appliquerRemplacementSalle(c, remplacementsIntraLot)).toList();
 
-    // Passe 2 — contre la base
     Set<String> artistesNorms =
         new java.util.HashSet<>(lotApresIntraLot.stream().map(ValeurConcert::artisteNorm).toList());
     if (artistesNorms.isEmpty()) return lotApresIntraLot;
@@ -239,41 +186,73 @@ public class PersisterConcerts {
       indexExistants.computeIfAbsent(cle, _ -> new ArrayList<>()).add((String) e.get("salle_norm"));
     }
 
-    return lotApresIntraLot.stream()
-        .map(
-            concert -> {
-              String cle = concert.artisteNorm() + "|" + concert.date();
-              List<String> sallesExistantes = indexExistants.get(cle);
-              if (sallesExistantes == null) return concert;
+    return reconcilierContreBase(lotApresIntraLot, indexExistants);
+  }
 
-              for (String salleNormExistante : sallesExistantes) {
-                if (salleNormExistante.equals(concert.salleNorm())) return concert;
-                if (estDoublonSalle(concert.salleNorm(), salleNormExistante)) {
-                  log.debug(
-                      "doublon salle inter-jobs réconcilié entrant={} existant={}",
-                      concert.salleNorm(),
-                      salleNormExistante);
-                  return new ValeurConcert(
-                      concert.artiste(),
-                      concert.artisteNorm(),
-                      concert.date(),
-                      concert.heure(),
-                      concert.salle(),
-                      salleNormExistante,
-                      concert.ville(),
-                      concert.dept(),
-                      concert.prixMin(),
-                      concert.prixMax(),
-                      concert.url(),
-                      concert.source(),
-                      concert.classification(),
-                      concert.genre(),
-                      concert.statut());
-                }
-              }
-              return concert;
-            })
+  private Map<String, String> construireRemplacementsIntraLot(List<ValeurConcert> lot) {
+    Map<String, String> remplacements = new HashMap<>();
+    Map<String, List<String>> parGroupe = new LinkedHashMap<>();
+    for (ValeurConcert concert : lot) {
+      String cle = concert.artisteNorm() + "|" + concert.date();
+      parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>());
+      List<String> groupe = parGroupe.get(cle);
+      if (!groupe.contains(concert.salleNorm())) groupe.add(concert.salleNorm());
+    }
+    for (List<String> sallesNorm : parGroupe.values()) {
+      if (sallesNorm.size() <= 1) continue;
+      for (int i = 0; i < sallesNorm.size(); i++) {
+        for (int j = i + 1; j < sallesNorm.size(); j++) {
+          String a = sallesNorm.get(i);
+          String b = sallesNorm.get(j);
+          if (estDoublonSalle(a, b)) {
+            String canonique = a.length() >= b.length() ? a : b;
+            remplacements.put(a, canonique);
+            remplacements.put(b, canonique);
+          }
+        }
+      }
+    }
+    return remplacements;
+  }
+
+  private ValeurConcert appliquerRemplacementSalle(
+      ValeurConcert c, Map<String, String> remplacements) {
+    String canonique = remplacements.get(c.salleNorm());
+    if (canonique == null || canonique.equals(c.salleNorm())) return c;
+    log.debug(
+        "doublon salle intra-lot réconcilié entrant={} canonique={}", c.salleNorm(), canonique);
+    return new ValeurConcert(
+        c.artiste(), c.artisteNorm(), c.date(), c.heure(), c.salle(), canonique,
+        c.ville(), c.dept(), c.prixMin(), c.prixMax(), c.url(), c.source(),
+        c.classification(), c.genre(), c.statut());
+  }
+
+  private List<ValeurConcert> reconcilierContreBase(
+      List<ValeurConcert> lot, Map<String, List<String>> indexExistants) {
+    return lot.stream()
+        .map(concert -> reconcilierUnConcert(concert, indexExistants))
         .toList();
+  }
+
+  private ValeurConcert reconcilierUnConcert(
+      ValeurConcert concert, Map<String, List<String>> indexExistants) {
+    String cle = concert.artisteNorm() + "|" + concert.date();
+    List<String> sallesExistantes = indexExistants.get(cle);
+    if (sallesExistantes == null) return concert;
+    for (String salleNormExistante : sallesExistantes) {
+      if (salleNormExistante.equals(concert.salleNorm())) return concert;
+      if (estDoublonSalle(concert.salleNorm(), salleNormExistante)) {
+        log.debug(
+            "doublon salle inter-jobs réconcilié entrant={} existant={}",
+            concert.salleNorm(), salleNormExistante);
+        return new ValeurConcert(
+            concert.artiste(), concert.artisteNorm(), concert.date(), concert.heure(),
+            concert.salle(), salleNormExistante, concert.ville(), concert.dept(),
+            concert.prixMin(), concert.prixMax(), concert.url(), concert.source(),
+            concert.classification(), concert.genre(), concert.statut());
+      }
+    }
+    return concert;
   }
 
   private MapSqlParameterSource parametresUpsert(ValeurConcert v) {
@@ -298,16 +277,15 @@ public class PersisterConcerts {
 
   /// Persiste les concerts dédoublonnés en base via upsert.
   ///
-  /// <p>Traitement par lots de {@value #TAILLE_LOT}. Pour chaque lot :
-  /// <ol>
-  ///   <li>Réconciliation des noms de salle (intra-lot puis contre la base)
-  ///   <li>Déduplication sur la clé de conflit finale
-  ///   <li>Upsert ON CONFLICT avec préférence pour les diacritiques et la casse mixte
-  ///   <li>Suppression des doublons par {@code (source, url)}
-  /// </ol>
+  /// Traitement par lots de 500. Pour chaque lot :
+  ///
+  /// 1. Réconciliation des noms de salle (intra-lot puis contre la base)
+  /// 2. Déduplication sur la clé de conflit finale
+  /// 3. Upsert ON CONFLICT avec préférence pour les diacritiques et la casse mixte
+  /// 4. Suppression des doublons par `(source, url)`
   ///
   /// @param liste concerts à persister
-  /// @return liste des IDs insérés ou mis à jour
+  /// @return résultat avec nombre d'insertions et de mises à jour
   @Transactional
   /// Résultat de la persistance d'un lot de concerts.
   ///

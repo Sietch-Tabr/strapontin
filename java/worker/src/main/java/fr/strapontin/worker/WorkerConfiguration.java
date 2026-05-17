@@ -23,7 +23,7 @@ public class WorkerConfiguration {
   @Value("${contact.email}")
   private String contactEmail;
 
-  /// Sérialiseur JSON (quota TM dans {@code app_config}).
+  /// Sérialiseur JSON (quota TM dans `app_config`).
   ///
   /// @return instance partagée
   @Bean
@@ -31,7 +31,7 @@ public class WorkerConfiguration {
     return new ObjectMapper();
   }
 
-  /// Enregistre {@link LogAdminJobListener} comme listener global sur tous les jobs Quartz.
+  /// Enregistre [LogAdminJobListener] comme listener global sur tous les jobs Quartz.
   ///
   /// @param listener le listener à enregistrer
   /// @return le customizer Spring Boot
@@ -42,8 +42,8 @@ public class WorkerConfiguration {
 
   /// Client Ticketmaster Discovery v2.
   ///
-  /// <p>Lit {@code TICKETMASTER_API_KEY} depuis {@code app_config} (AES-256-GCM).
-  /// Lève une {@link IllegalStateException} au démarrage si la clé est absente.
+  /// Lit `TICKETMASTER_API_KEY` depuis `app_config` (AES-256-GCM).
+  /// Lève une `IllegalStateException` au démarrage si la clé est absente.
   ///
   /// @param configService service de configuration chiffrée
   /// @return instance configurée avec la clé API

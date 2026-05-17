@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -21,9 +22,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Contrôleur REST pour la page d'accueil — concerts groupés par artiste suivi.
 ///
-/// <p>Retourne les prochains concerts des artistes suivis par l'utilisateur,
-/// groupés par artiste. Limite à 50 concerts. {@code estNew} basé sur
-/// {@code user_matches.notifie_le IS NULL}.
+/// Retourne les prochains concerts des artistes suivis par l'utilisateur,
+/// groupés par artiste. Limite à 50 concerts. `estNew` basé sur
+/// `user_matches.notifie_le IS NULL`.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AccueilController {
 
   private static final int LIMITE_CONCERTS = 50;
+  private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -97,7 +99,7 @@ public class AccueilController {
     }
 
     Map<String, Object> params = new HashMap<>();
-    params.put("userId", userId);
+    params.put(CLE_USER_ID, userId);
     params.put("aujourd8", aujourd8);
     params.put("limite", LIMITE_CONCERTS);
 
@@ -144,7 +146,8 @@ public class AccueilController {
             .formatted(where);
     Map<String, Object> countParams = new HashMap<>(params);
     countParams.remove("limite");
-    int totalConcerts = jdbc.queryForObject(countSql, countParams, Integer.class);
+    int totalConcerts =
+        Objects.requireNonNullElse(jdbc.queryForObject(countSql, countParams, Integer.class), 0);
 
     // Grouper par artiste en conservant l'ordre
     Map<String, List<ConcertAccueil>> groupes = new LinkedHashMap<>();
@@ -164,16 +167,20 @@ public class AccueilController {
             .toList();
 
     int nbArtistes =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
-            Map.of("userId", userId),
-            Integer.class);
+        Objects.requireNonNullElse(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
+                Map.of(CLE_USER_ID, userId),
+                Integer.class),
+            0);
 
     int nbSalles =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
-            Map.of("userId", userId),
-            Integer.class);
+        Objects.requireNonNullElse(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
+                Map.of(CLE_USER_ID, userId),
+                Integer.class),
+            0);
 
     return ResponseEntity.ok(
         new ReponseAccueil(
@@ -184,9 +191,9 @@ public class AccueilController {
     List<Boolean> lignes =
         jdbc.queryForList(
             "SELECT filtre_disponibles FROM user_config WHERE user_id = :userId",
-            Map.of("userId", userId),
+            Map.of(CLE_USER_ID, userId),
             Boolean.class);
-    return lignes.isEmpty() ? true : lignes.get(0);
+    return lignes.isEmpty() || lignes.get(0);
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
