@@ -11,18 +11,24 @@ import fr.strapontin.web.config.ConfigService;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.HtmlUtils;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 /// Service d'email transactionnel via Resend (portage de {@code email.ts}).
 ///
 /// <p>Si {@code RESEND_API_KEY} est absent de la configuration, toutes les méthodes
 /// retournent silencieusement sans erreur (comportement identique au TypeScript).
+///
+/// <p>Les corps d'emails sont rendus depuis des templates Thymeleaf situés dans
+/// {@code classpath:/templates/email/}.
 ///
 /// <p>Couvre l'ensemble des emails : invitation, reset MDP, signalement,
 /// digest concerts, alerte worker inactif.
@@ -36,9 +42,11 @@ public class EmailService {
   private static final String EXPEDITEUR = "Strapontin <noreply@strapontin.kwaite.fr>";
 
   private final ConfigService configService;
+  private final TemplateEngine templateEngine;
 
-  public EmailService(ConfigService configService) {
+  public EmailService(ConfigService configService, TemplateEngine templateEngine) {
     this.configService = configService;
+    this.templateEngine = templateEngine;
   }
 
   /// Paramètres d'un concert pour le digest email.
@@ -64,31 +72,10 @@ public class EmailService {
     return Optional.of(new ContexteEmail(new Resend(cle.get()), replyTo, baseUrl));
   }
 
-  private static String enTeteHtml(String titre) {
-    return """
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>%s</title>
-    </head>
-    <body style="font-family:system-ui,sans-serif;background:#f9f9f9;margin:0;padding:32px 16px">
-    <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;border:1px solid #e5e5e5">
-    """
-        .formatted(titre);
-  }
-
-  private static String piedHtml(String baseUrl) {
-    return """
-    </div>
-    <p style="text-align:center;color:#aaa;font-size:12px;margin-top:24px">
-      Strapontin — <a href="%s/parametres" style="color:#aaa">Gérer mes préférences</a>
-    </p>
-    </body>
-    </html>
-    """
-        .formatted(baseUrl);
+  private String rendreCours(String nomTemplate, Map<String, Object> variables) {
+    Context ctx = new Context(Locale.FRANCE);
+    ctx.setVariables(variables);
+    return templateEngine.process("email/" + nomTemplate, ctx);
   }
 
   private void envoyer(
@@ -116,9 +103,9 @@ public class EmailService {
 
   /// Envoie un email d'invitation à un nouvel utilisateur.
   ///
-  /// @param email      l'adresse email du destinataire
+  /// @param email       l'adresse email du destinataire
   /// @param identifiant l'identifiant temporaire
-  /// @param lienReset  le lien de création de mot de passe (valable 1 heure)
+  /// @param lienReset   le lien de création de mot de passe (valable 24 heures)
   public void envoyerInvitation(String email, String identifiant, String lienReset) {
     Optional<ContexteEmail> ctx = obtenirContexte();
     if (ctx.isEmpty()) {
@@ -126,25 +113,11 @@ public class EmailService {
       return;
     }
 
-    String corps =
-        enTeteHtml("Votre invitation Strapontin")
-            + """
-            <h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px">Bienvenue sur Strapontin</h2>
-            <p style="color:#555;margin:0 0 24px">Votre compte a été créé. Commencez par choisir votre mot de passe :</p>
-            <a href="%s"
-               style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500;margin-bottom:24px">
-              Créer mon mot de passe →
-            </a>
-            <p style="color:#aaa;font-size:13px;margin:16px 0 0">
-              Ce lien est valable 24 heures. Une fois votre mot de passe créé, connectez-vous avec votre identifiant temporaire :
-              <code style="font-family:monospace;background:#f5f5f5;padding:2px 6px;border-radius:4px">%s</code>
-            </p>
-            <p style="color:#aaa;font-size:13px;margin:8px 0 0">
-              Il vous sera demandé de choisir un identifiant définitif à la première connexion.
-            </p>
-            """
-                .formatted(lienReset, HtmlUtils.htmlEscape(identifiant))
-            + piedHtml(ctx.get().baseUrl());
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("identifiant", identifiant);
+    vars.put("lienReset", lienReset);
+    vars.put("baseUrl", ctx.get().baseUrl());
+    String corps = rendreCours("invitation", vars);
 
     String texte =
         """
@@ -179,24 +152,10 @@ public class EmailService {
       return;
     }
 
-    String corps =
-        enTeteHtml("Réinitialisation de votre mot de passe")
-            + """
-            <h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px">Réinitialisation du mot de passe</h2>
-            <p style="color:#555;margin:0 0 24px">
-              Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous.
-              Ce lien est valable 1 heure.
-            </p>
-            <a href="%s"
-               style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
-              Réinitialiser mon mot de passe →
-            </a>
-            <p style="color:#aaa;font-size:13px;margin-top:24px">
-              Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
-            </p>
-            """
-                .formatted(lienReset)
-            + piedHtml(ctx.get().baseUrl());
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("lienReset", lienReset);
+    vars.put("baseUrl", ctx.get().baseUrl());
+    String corps = rendreCours("reset-mdp", vars);
 
     String texte =
         """
@@ -226,10 +185,10 @@ public class EmailService {
 
   /// Envoie un signalement d'utilisateur à l'adresse de contact.
   ///
-  /// @param type             le type ({@code bug}, {@code suggestion}, {@code question})
-  /// @param message          le message
-  /// @param expediteurEmail  l'email de l'expéditeur
-  /// @param expediteurNom    le nom de l'expéditeur
+  /// @param type            le type ({@code bug}, {@code suggestion}, {@code question})
+  /// @param message         le message
+  /// @param expediteurEmail l'email de l'expéditeur
+  /// @param expediteurNom   le nom de l'expéditeur
   public void envoyerSignalement(
       String type, String message, String expediteurEmail, String expediteurNom) {
     Optional<ContexteEmail> ctx = obtenirContexte();
@@ -246,28 +205,13 @@ public class EmailService {
           default -> type;
         };
 
-    String corps =
-        enTeteHtml("Signalement — " + typeLabel)
-            + """
-            <h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px">Signalement — %s</h2>
-            <table style="border-collapse:collapse;width:100%%;margin-bottom:24px">
-              <tr>
-                <td style="padding:8px 0;color:#888;font-size:14px;width:130px">Utilisateur</td>
-                <td style="padding:8px 0;font-size:14px;color:#111">%s</td>
-              </tr>
-              <tr>
-                <td style="padding:8px 0;color:#888;font-size:14px">Email</td>
-                <td style="padding:8px 0;font-size:14px;color:#111">%s</td>
-              </tr>
-            </table>
-            <p style="color:#555;font-size:14px;white-space:pre-wrap;border-left:3px solid #e5e5e5;padding-left:12px;margin:0">%s</p>
-            """
-                .formatted(
-                    typeLabel,
-                    HtmlUtils.htmlEscape(expediteurNom),
-                    HtmlUtils.htmlEscape(expediteurEmail),
-                    HtmlUtils.htmlEscape(message))
-            + piedHtml(ctx.get().baseUrl());
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("typeLabel", typeLabel);
+    vars.put("expediteurNom", expediteurNom);
+    vars.put("expediteurEmail", expediteurEmail);
+    vars.put("message", message);
+    vars.put("baseUrl", ctx.get().baseUrl());
+    String corps = rendreCours("signalement", vars);
 
     String texte =
         "Signalement — %s\n\nUtilisateur : %s\nEmail : %s\n\n%s"
@@ -307,46 +251,26 @@ public class EmailService {
             ? "1 nouveau concert correspond à vos préférences"
             : "%d nouveaux concerts correspondent à vos préférences".formatted(nb);
 
-    String lignes =
+    List<Map<String, Object>> lignes =
         concerts.stream()
             .map(
                 c -> {
-                  String lieu = c.ville() != null ? c.salle() + " · " + c.ville() : c.salle();
-                  String lien =
-                      c.url() != null
-                          ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
-                              .formatted(c.url())
-                          : "";
-                  return """
-                  <tr>
-                    <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top">
-                      <div style="font-weight:600;color:#111;font-size:14px">%s</div>
-                      <div style="color:#666;font-size:13px;margin-top:2px">%s%s</div>
-                      <div style="color:#999;font-size:12px;margin-top:2px">%s</div>
-                    </td>
-                  </tr>\
-                  """
-                      .formatted(c.artiste(), formaterDate(c.date()), lien, lieu);
+                  Map<String, Object> ligne = new HashMap<>();
+                  ligne.put("artiste", c.artiste());
+                  ligne.put("dateFormatee", formaterDate(c.date()));
+                  ligne.put(
+                      "lieu",
+                      c.ville() != null ? c.salle() + " · " + c.ville() : c.salle());
+                  ligne.put("url", c.url());
+                  return ligne;
                 })
-            .collect(java.util.stream.Collectors.joining("\n"));
+            .toList();
 
-    String corps =
-        enTeteHtml(sujet)
-            + """
-            <h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px">%s</h2>
-            <p style="color:#555;font-size:14px;margin:0 0 24px">Voici les nouveaux concerts ajoutés :</p>
-            <table style="border-collapse:collapse;width:100%%">
-            %s
-            </table>
-            <p style="margin-top:24px">
-              <a href="%s/spectacles"
-                 style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
-                Voir mes spectacles →
-              </a>
-            </p>
-            """
-                .formatted(sujet, lignes, ctx.get().baseUrl())
-            + piedHtml(ctx.get().baseUrl());
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("sujet", sujet);
+    vars.put("lignes", lignes);
+    vars.put("baseUrl", ctx.get().baseUrl());
+    String corps = rendreCours("digest-concerts", vars);
 
     try {
       envoyer(ctx.get(), email, ctx.get().replyTo(), sujet, corps, sujet);
@@ -360,8 +284,8 @@ public class EmailService {
 
   /// Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3 heures.
   ///
-  /// @param email                l'adresse email de l'administrateur
-  /// @param derniereActiviteIso  la date ISO du dernier job complété, ou {@code null}
+  /// @param email               l'adresse email de l'administrateur
+  /// @param derniereActiviteIso la date ISO du dernier job complété, ou {@code null}
   public void envoyerAlerteWorkerInactif(String email, String derniereActiviteIso) {
     Optional<ContexteEmail> ctx = obtenirContexte();
     if (ctx.isEmpty()) {
@@ -374,23 +298,12 @@ public class EmailService {
             ? "Dernier job complété : %s.".formatted(derniereActiviteIso)
             : "Aucun job complété enregistré.";
 
-    String sujet = "Strapontin — worker inactif";
-    String corps =
-        enTeteHtml(sujet)
-            + """
-            <h2 style="font-size:20px;font-weight:600;color:#c00;margin:0 0 8px">Worker inactif</h2>
-            <p style="color:#555;font-size:14px;margin:0 0 16px">%s</p>
-            <p style="color:#555;font-size:14px;margin:0 0 24px">Les fetches Ticketmaster et les notifications n'ont pas été traités depuis plus de 3 heures.</p>
-            <p style="margin-top:24px">
-              <a href="%s/admin"
-                 style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
-                Aller à l'administration →
-              </a>
-            </p>
-            """
-                .formatted(detail, ctx.get().baseUrl())
-            + piedHtml(ctx.get().baseUrl());
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("detail", detail);
+    vars.put("baseUrl", ctx.get().baseUrl());
+    String corps = rendreCours("alerte-worker", vars);
 
+    String sujet = "Strapontin — worker inactif";
     try {
       envoyer(
           ctx.get(),

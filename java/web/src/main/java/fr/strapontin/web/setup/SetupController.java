@@ -6,6 +6,10 @@ package fr.strapontin.web.setup;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import fr.strapontin.web.config.ConfigService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -57,10 +61,14 @@ public class SetupController {
   record ReponseSetup(@JsonProperty("deja_configure") boolean dejaConfiguree) {}
 
   record RequeteSetup(
-      String nom,
-      String identifiant,
-      String email,
-      String motDePasse,
+      @NotBlank(message = "Le nom est requis.") @Size(max = 100) String nom,
+      @NotBlank(message = "L'identifiant est requis.")
+          @Size(min = 3, message = "L'identifiant doit contenir au moins 3 caractères.")
+          String identifiant,
+      @NotBlank(message = "L'adresse email est invalide.") @Email(message = "L'adresse email est invalide.") String email,
+      @NotBlank(message = "Le mot de passe est requis.")
+          @Size(min = 12, message = "Le mot de passe doit contenir au moins 12 caractères.")
+          String motDePasse,
       String baseUrl,
       String contactEmail) {}
 
@@ -83,7 +91,7 @@ public class SetupController {
   /// @param requete les données d'initialisation
   /// @return 201 si créé, 400 si validation échoue, 409 si déjà configuré
   @PostMapping
-  public ResponseEntity<Map<String, Object>> initialiser(@RequestBody RequeteSetup requete) {
+  public ResponseEntity<Map<String, Object>> initialiser(@Valid @RequestBody RequeteSetup requete) {
     Integer nbUsers = jdbc.queryForObject("SELECT COUNT(*) FROM users", Map.of(), Integer.class);
     if (nbUsers != null && nbUsers > 0) {
       return erreur(409, "L'application est déjà configurée.");

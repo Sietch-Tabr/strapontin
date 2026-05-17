@@ -22,6 +22,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -67,7 +70,10 @@ public class ArtisteController {
       List<SuggestionArtiste> suggestions,
       boolean dejaLeSuivi) {}
 
-  record RequeteAjouter(String nom) {}
+  record RequeteAjouter(
+      @NotBlank(message = "Le nom de l'artiste est obligatoire.")
+          @Size(max = 200, message = "Nom trop long (200 caractères max).")
+          String nom) {}
 
   /// Liste les artistes suivis, avec suggestions de recherche si {@code q} est fourni.
   ///
@@ -151,7 +157,7 @@ public class ArtisteController {
   /// @return 201 si créé, 400/409 en cas d'erreur
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterArtiste(
-      @RequestBody RequeteAjouter requete, Authentication auth) {
+      @Valid @RequestBody RequeteAjouter requete, Authentication auth) {
     String userId = utilisateur(auth).id();
     String nom = requete.nom() == null ? "" : requete.nom().strip();
 

@@ -8,6 +8,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -119,11 +123,18 @@ public class AdminController {
       List<ConfigStatut> configStatuts,
       List<LogAdminService.EntreeLogAdmin> logsAdmin) {}
 
-  record RequeteCreerUtilisateur(String email) {}
+  record RequeteCreerUtilisateur(
+      @NotBlank(message = "Format d'email invalide.")
+          @Email(message = "Format d'email invalide.")
+          String email) {}
 
-  record RequeteModifierUtilisateur(String nom, String email, String role) {}
+  record RequeteModifierUtilisateur(
+      @Size(max = 100, message = "Nom trop long (100 caractères max).") String nom,
+      @Email(message = "Format d'email invalide.") String email,
+      String role) {}
 
-  record RequeteConfig(String cle, String valeur) {}
+  record RequeteConfig(
+      @NotBlank(message = "Clé de configuration invalide.") String cle, String valeur) {}
 
   // --- Endpoints utilisateurs ---
 
@@ -185,7 +196,7 @@ public class AdminController {
   /// @return 201 avec l'identifiant temporaire, ou 400 en cas d'erreur
   @PostMapping("/utilisateurs")
   public ResponseEntity<Map<String, Object>> creerUtilisateur(
-      @RequestBody RequeteCreerUtilisateur requete, Authentication auth) {
+      @Valid @RequestBody RequeteCreerUtilisateur requete, Authentication auth) {
     String adminId = utilisateur(auth).id();
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
 
@@ -281,7 +292,7 @@ public class AdminController {
   @PatchMapping("/utilisateurs/{userId}")
   public ResponseEntity<Map<String, Object>> modifierUtilisateur(
       @PathVariable String userId,
-      @RequestBody RequeteModifierUtilisateur requete,
+      @Valid @RequestBody RequeteModifierUtilisateur requete,
       Authentication auth) {
     String adminId = utilisateur(auth).id();
 
@@ -331,12 +342,16 @@ public class AdminController {
 
     if (!email.isEmpty()) {
       logAdminService.logAdmin(
-          "warn", "admin", "email modifié",
+          "warn",
+          "admin",
+          "email modifié",
           Map.of("userId", userId, "nouvelEmail", email, "parAdmin", adminId));
     }
     if (!role.isEmpty()) {
       logAdminService.logAdmin(
-          "warn", "admin", "rôle modifié",
+          "warn",
+          "admin",
+          "rôle modifié",
           Map.of("userId", userId, "nouveauRole", role, "parAdmin", adminId));
     }
     return ResponseEntity.ok(Map.of("succes", true, "action", "modifierCompte"));
@@ -448,7 +463,7 @@ public class AdminController {
   /// @return 200 si sauvegardé, 400 si clé non autorisée ou format invalide
   @PatchMapping("/config")
   public ResponseEntity<Map<String, Object>> sauvegarderConfig(
-      @RequestBody RequeteConfig requete, Authentication auth) {
+      @Valid @RequestBody RequeteConfig requete, Authentication auth) {
     String cle = requete.cle() == null ? "" : requete.cle().strip();
     String valeur = requete.valeur() == null ? "" : requete.valeur().strip();
 

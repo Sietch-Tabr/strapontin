@@ -7,6 +7,10 @@ package fr.strapontin.web.utilisateur;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -49,14 +53,35 @@ public class UserController {
 
   record ProfilUtilisateur(String id, String nom, String email, String identifiant) {}
 
-  record RequeteProfil(String nom, String email) {}
+  record RequeteProfil(
+      @Size(min = 1, max = 100, message = "Nom invalide (1-100 caractères).") String nom,
+      @Email(message = "Format d'email invalide.") @Size(max = 254) String email) {}
 
-  record RequeteIdentifiant(String identifiant) {}
+  record RequeteIdentifiant(
+      @NotBlank(message = "L'identifiant est obligatoire.")
+          @Size(min = 3, max = 30, message = "L'identifiant doit contenir entre 3 et 30 caractères.")
+          @jakarta.validation.constraints.Pattern(
+              regexp = "[a-zA-Z0-9_]+",
+              message = "L'identifiant ne peut contenir que des lettres, chiffres et underscores.")
+          String identifiant) {}
 
-  record RequeteMotDePasse(String motDePasseActuel, String motDePasseNouveau) {}
+  record RequeteMotDePasse(
+      @NotBlank(message = "Tous les champs sont obligatoires.") String motDePasseActuel,
+      @NotBlank(message = "Tous les champs sont obligatoires.")
+          @Size(min = 12, message = "Le nouveau mot de passe doit contenir au moins 12 caractères.")
+          String motDePasseNouveau) {}
 
   record RequetePremierLogin(
-      String nom, String identifiant, String motDePasseActuel, String motDePasseNouveau) {}
+      @NotBlank(message = "Tous les champs sont obligatoires.")
+          @Size(max = 100, message = "Nom invalide (1-100 caractères).")
+          String nom,
+      @NotBlank(message = "Tous les champs sont obligatoires.")
+          @Size(min = 3, max = 30, message = "L'identifiant doit contenir entre 3 et 30 caractères.")
+          String identifiant,
+      @NotBlank(message = "Tous les champs sont obligatoires.") String motDePasseActuel,
+      @NotBlank(message = "Tous les champs sont obligatoires.")
+          @Size(min = 12, message = "Le mot de passe doit contenir au moins 12 caractères.")
+          String motDePasseNouveau) {}
 
   /// Retourne le profil de l'utilisateur courant.
   ///
@@ -76,7 +101,7 @@ public class UserController {
   /// @return 200 si mis à jour, 400 si invalide
   @PatchMapping("/profile")
   public ResponseEntity<Map<String, Object>> majProfil(
-      @RequestBody RequeteProfil requete, Authentication auth) {
+      @Valid @RequestBody RequeteProfil requete, Authentication auth) {
     String userId = utilisateur(auth).id();
 
     if (requete.nom() != null) {
@@ -118,7 +143,7 @@ public class UserController {
   /// @return 200 si mis à jour, 400 si invalide ou déjà utilisé
   @PatchMapping("/identifiant")
   public ResponseEntity<Map<String, Object>> majIdentifiant(
-      @RequestBody RequeteIdentifiant requete, Authentication auth) {
+      @Valid @RequestBody RequeteIdentifiant requete, Authentication auth) {
     String userId = utilisateur(auth).id();
     String identifiant =
         requete.identifiant() == null ? "" : requete.identifiant().strip().toLowerCase();
@@ -158,7 +183,7 @@ public class UserController {
   /// @return 200 si changé, 400 si invalide ou mot de passe actuel incorrect
   @PostMapping("/password")
   public ResponseEntity<Map<String, Object>> changerMotDePasse(
-      @RequestBody RequeteMotDePasse requete, Authentication auth) {
+      @Valid @RequestBody RequeteMotDePasse requete, Authentication auth) {
     UtilisateurDetails details = utilisateur(auth);
 
     if (requete.motDePasseActuel() == null || requete.motDePasseNouveau() == null) {
@@ -189,7 +214,7 @@ public class UserController {
   /// @return 200 si terminé, 400 si invalide
   @PostMapping("/first-login")
   public ResponseEntity<Map<String, Object>> premierLogin(
-      @RequestBody RequetePremierLogin requete,
+      @Valid @RequestBody RequetePremierLogin requete,
       Authentication auth,
       HttpServletRequest httpRequest) {
     UtilisateurDetails details = utilisateur(auth);

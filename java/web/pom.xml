@@ -101,6 +101,12 @@
             <artifactId>bucket4j_jdk17-core</artifactId>
         </dependency>
 
+        <!-- Validation des entrées (Bean Validation / Jakarta) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
         <!-- Notifications push VAPID -->
         <dependency>
             <groupId>nl.martijndwars</groupId>
