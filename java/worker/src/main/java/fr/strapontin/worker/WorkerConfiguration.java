@@ -9,6 +9,7 @@ import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.TicketmasterSource;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.quartz.autoconfigure.SchedulerFactoryBeanCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -28,6 +29,15 @@ public class WorkerConfiguration {
   @Bean
   ObjectMapper objectMapper() {
     return new ObjectMapper();
+  }
+
+  /// Enregistre {@link LogAdminJobListener} comme listener global sur tous les jobs Quartz.
+  ///
+  /// @param listener le listener à enregistrer
+  /// @return le customizer Spring Boot
+  @Bean
+  SchedulerFactoryBeanCustomizer globalJobListeners(LogAdminJobListener listener) {
+    return factory -> factory.setGlobalJobListeners(listener);
   }
 
   /// Client Ticketmaster Discovery v2.
