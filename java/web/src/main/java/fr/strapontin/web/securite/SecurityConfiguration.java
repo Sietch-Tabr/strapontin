@@ -71,7 +71,7 @@ public class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers("/api/setup")
                     .permitAll()
-                    .requestMatchers("/api/admin/**", "/admin")
+                    .requestMatchers("/api/admin/**", "/admin", "/admin/**")
                     .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())

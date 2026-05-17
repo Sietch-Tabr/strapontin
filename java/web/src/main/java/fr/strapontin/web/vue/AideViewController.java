@@ -6,6 +6,7 @@ package fr.strapontin.web.vue;
 
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
+import java.util.Set;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -66,7 +67,8 @@ public class AideViewController {
       redirects.addFlashAttribute("erreurSignalement", "Le message est requis.");
       return "redirect:/aide";
     }
-    emailService.envoyerSignalement(type, msg, utilisateur.email(), utilisateur.nom());
+    String typeValide = Set.of("bug", "suggestion", "question").contains(type) ? type : "question";
+    emailService.envoyerSignalement(typeValide, msg, utilisateur.email(), utilisateur.nom());
     redirects.addFlashAttribute("succesSignalement", true);
     return "redirect:/aide";
   }

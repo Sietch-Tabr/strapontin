@@ -7,7 +7,9 @@ package fr.strapontin.web.securite;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -139,6 +141,7 @@ public class AuthViewController {
   /// @param token      le token de réinitialisation
   /// @param motDePasse le nouveau mot de passe
   /// @param modele     le modèle Thymeleaf
+  /// @param request    la requête HTTP (pour invalider la session serveur)
   /// @param response   la réponse HTTP (pour supprimer le cookie SESSION)
   /// @return redirect vers /login en cas de succès, sinon la vue avec erreur
   @PostMapping("/reset-password")
@@ -146,6 +149,7 @@ public class AuthViewController {
       @RequestParam String token,
       @RequestParam String motDePasse,
       Model modele,
+      HttpServletRequest request,
       HttpServletResponse response) {
 
     if (motDePasse.length() < 12) {
@@ -180,7 +184,9 @@ public class AuthViewController {
 
     jdbc.update("DELETE FROM verifications WHERE value = :token", Map.of("token", token));
 
-    // Invalider la session existante
+    HttpSession session = request.getSession(false);
+    if (session != null) session.invalidate();
+
     Cookie sessionCookie = new Cookie("SESSION", "");
     sessionCookie.setMaxAge(0);
     sessionCookie.setPath("/");
