@@ -53,8 +53,8 @@ ssh root@192.168.1.99 "pct exec 113 -- journalctl -u strapontin-web --no-pager -
 # Build (Mac — Maven requis, pas sur le LXC)
 mvn -f java/pom.xml -pl web,worker -am package -DskipTests
 
-# Déploiement manuel via update.sh (à écrire en 0.9)
-# Woodpecker : build sur agent → scp JARs → SSH update.sh (LXC = JRE uniquement, pas de Maven)
+# Dev : toujours manuel (Woodpecker cible uniquement le LXC prod)
+# Woodpecker prod : build sur agent → scp JARs → SSH update.sh (LXC = JRE uniquement, pas de Maven)
 
 # En attendant update.sh — déploiement direct :
 scp java/web/target/web-2.0.0-SNAPSHOT.jar root@192.168.20.78:/opt/strapontin/web.jar
