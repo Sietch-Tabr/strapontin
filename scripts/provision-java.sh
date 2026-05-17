@@ -2,14 +2,17 @@
 set -euo pipefail
 trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 
-# provision-java.sh — provisionnement LXC "vert" (stack Java/Spring Boot)
+# provision-java.sh — provisionnement LXC (stack Java/Spring Boot)
+# Usage :
+#   bash /tmp/provision-java.sh dev   → LXC dev (SPRING_PROFILES_ACTIVE=dev, IP 192.168.20.78)
+#   bash /tmp/provision-java.sh prod  → LXC prod/vert blue-green (IP 192.168.20.80)
+#
 # À exécuter depuis le HOST Proxmox en tant que root :
 #   scp scripts/provision-java.sh root@192.168.1.99:/tmp/
-#   ssh root@192.168.1.99 "bash /tmp/provision-java.sh"
+#   ssh root@192.168.1.99 "bash /tmp/provision-java.sh dev|prod"
 #
-# Ce LXC est le "vert" de la stratégie blue-green pour la migration v2.0.0.
-# À la bascule prod : la MAC de LXC 113 est assignée à ce LXC,
-# qui hérite alors de l'IP 192.168.20.79 via la réservation DHCP.
+# Stratégie blue-green : en mode prod, à la bascule la MAC de LXC 113
+# est assignée à ce LXC, qui hérite de l'IP 192.168.20.79 via DHCP.
 #
 # Pour redéployer proprement : détruire l'ancien LXC d'abord :
 #   pct set <VMID> --protection 0
@@ -20,9 +23,20 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 # Paramètres
 # ---------------------------------------------------------------
 
+PROFIL="${1:-}"
+if [ "$PROFIL" != "dev" ] && [ "$PROFIL" != "prod" ]; then
+    echo "Usage : $0 dev|prod" >&2
+    exit 1
+fi
+
 VMID=$(pvesh get /cluster/nextid)
 HOSTNAME="strapontin-java"
-IP="192.168.20.80/24"
+
+if [ "$PROFIL" = "dev" ]; then
+    IP="192.168.20.78/24"
+else
+    IP="192.168.20.80/24"
+fi
 GW="192.168.20.1"
 BRIDGE="vmbr0"
 VLAN_TAG="20"
@@ -244,6 +258,18 @@ pct exec "$VMID" -- bash -c "
 "
 
 echo "[7] Fichier de configuration .env..."
+if [ "$PROFIL" = "dev" ]; then
+pct exec "$VMID" -- bash -c "cat > $APP_DIR/.env << 'ENVFILE'
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/$DB_NAME
+SPRING_DATASOURCE_USERNAME=$APP_USER
+SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
+APP_CONFIG_SECRET=$APP_CONFIG_SECRET
+SPRING_PROFILES_ACTIVE=dev
+ENVFILE
+chown $APP_USER:$APP_USER $APP_DIR/.env
+chmod 600 $APP_DIR/.env
+"
+else
 pct exec "$VMID" -- bash -c "cat > $APP_DIR/.env << 'ENVFILE'
 SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/$DB_NAME
 SPRING_DATASOURCE_USERNAME=$APP_USER
@@ -253,6 +279,7 @@ ENVFILE
 chown $APP_USER:$APP_USER $APP_DIR/.env
 chmod 600 $APP_DIR/.env
 "
+fi
 
 echo "[7] Services systemd..."
 pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-worker.service << 'UNIT'
