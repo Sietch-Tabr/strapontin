@@ -60,6 +60,8 @@ public class ArtisteViewController {
     if (rep.getStatusCode().isError()) {
       var corps = (java.util.Map<?, ?>) rep.getBody();
       redirects.addFlashAttribute("erreur", corps != null ? corps.get("erreur") : "Erreur.");
+    } else {
+      redirects.addFlashAttribute("fetchEnCours", nom);
     }
     return "redirect:/artistes";
   }

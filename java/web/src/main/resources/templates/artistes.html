@@ -52,6 +52,21 @@
         th:text="${erreur}"
       ></div>
 
+      <!-- Feedback visuel fetch artiste ajouté -->
+      <div
+        th:if="${fetchEnCours}"
+        class="alerte alerte-info"
+        id="alerte-fetch-cours"
+      >
+        Fetch en cours pour « <strong th:text="${fetchEnCours}"></strong> »… Les concerts apparaîtront dans quelques secondes.
+      </div>
+      <script th:if="${fetchEnCours}">
+        setTimeout(function () {
+          var a = document.getElementById("alerte-fetch-cours");
+          if (a) a.remove();
+        }, 10000);
+      </script>
+
       <!-- Résultats de recherche -->
       <section
         th:if="${donnees.suggestions != null and !donnees.suggestions.isEmpty()}"

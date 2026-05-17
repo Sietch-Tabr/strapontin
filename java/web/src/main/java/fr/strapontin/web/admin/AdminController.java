@@ -121,7 +121,7 @@ public class AdminController {
 
   record RequeteCreerUtilisateur(String email) {}
 
-  record RequeteModifierUtilisateur(String nom, String email) {}
+  record RequeteModifierUtilisateur(String nom, String email, String role) {}
 
   record RequeteConfig(String cle, String valeur) {}
 
@@ -291,12 +291,16 @@ public class AdminController {
 
     String nom = requete.nom() == null ? "" : requete.nom().strip();
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
+    String role = requete.role() == null ? "" : requete.role().strip().toLowerCase();
 
     if (!nom.isEmpty() && nom.length() > 100) {
       return erreur(400, "Nom trop long (100 caractères max).");
     }
     if (!email.isEmpty() && !FORMAT_EMAIL.matcher(email).matches()) {
       return erreur(400, "Format d'email invalide.");
+    }
+    if (!role.isEmpty() && !java.util.Set.of("user", "admin").contains(role)) {
+      return erreur(400, "Rôle invalide. Valeurs acceptées : user, admin.");
     }
 
     if (!email.isEmpty()) {
@@ -316,19 +320,24 @@ public class AdminController {
     miseAJour.put("userId", userId);
     if (!nom.isEmpty()) miseAJour.put("nom", nom);
     if (!email.isEmpty()) miseAJour.put("email", email);
+    if (!role.isEmpty()) miseAJour.put("role", role);
 
     StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
     if (!nom.isEmpty()) setClauses.append(", name = :nom");
     if (!email.isEmpty()) setClauses.append(", email = :email");
+    if (!role.isEmpty()) setClauses.append(", role = :role::user_role");
 
     jdbc.update("UPDATE users SET " + setClauses + " WHERE id = :userId", miseAJour);
 
     if (!email.isEmpty()) {
       logAdminService.logAdmin(
-          "warn",
-          "admin",
-          "email modifié",
+          "warn", "admin", "email modifié",
           Map.of("userId", userId, "nouvelEmail", email, "parAdmin", adminId));
+    }
+    if (!role.isEmpty()) {
+      logAdminService.logAdmin(
+          "warn", "admin", "rôle modifié",
+          Map.of("userId", userId, "nouveauRole", role, "parAdmin", adminId));
     }
     return ResponseEntity.ok(Map.of("succes", true, "action", "modifierCompte"));
   }
