@@ -98,7 +98,7 @@
         <!-- Rate limiting login (5 tentatives / 15 min) -->
         <dependency>
             <groupId>com.bucket4j</groupId>
-            <artifactId>bucket4j-core</artifactId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
         </dependency>
 
         <!-- Notifications push VAPID -->
@@ -110,12 +110,12 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>4.5.13</version>
+            <version>4.5.14</version>
         </dependency>
         <dependency>
             <groupId>org.bitbucket.b_c</groupId>
             <artifactId>jose4j</artifactId>
-            <version>0.7.9</version>
+            <version>0.9.6</version>
         </dependency>
 
         <!-- Email transactionnel -->
