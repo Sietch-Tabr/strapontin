@@ -6,6 +6,7 @@ package fr.strapontin.web.securite;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import fr.strapontin.web.admin.LogAdminService;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
@@ -14,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -36,8 +38,14 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
   private static final Duration FENETRE = Duration.ofMinutes(15);
   private static final Set<String> URLS_LOGIN = Set.of("/api/auth/login", "/login");
 
+  private final LogAdminService logAdminService;
+
   private final Cache<String, Bucket> buckets =
       Caffeine.newBuilder().expireAfterWrite(FENETRE.plusMinutes(1)).maximumSize(10_000).build();
+
+  public RateLimitingLoginFilter(LogAdminService logAdminService) {
+    this.logAdminService = logAdminService;
+  }
 
   @Override
   protected void doFilterInternal(
@@ -55,6 +63,7 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
     if (bucket.tryConsume(1)) {
       chain.doFilter(request, response);
     } else {
+      logAdminService.logAdmin("warn", "auth", "Rate limit connexion atteint : " + ip, Map.of("ip", ip));
       response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
       response.setContentType(MediaType.APPLICATION_JSON_VALUE);
       response.setCharacterEncoding("UTF-8");

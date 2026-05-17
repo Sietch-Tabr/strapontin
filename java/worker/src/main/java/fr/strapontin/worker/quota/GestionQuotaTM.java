@@ -7,6 +7,8 @@ package fr.strapontin.worker.quota;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.sources.QuotaTM;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -96,10 +98,14 @@ public class GestionQuotaTM {
           quota.dispo(),
           quota.total(),
           nomJob);
+      logAdmin("error", "Quota TM épuisé — job annulé : " + nomJob,
+          Map.of("dispo", quota.dispo(), "total", quota.total(), "job", nomJob));
       return false;
     }
     if (quota.dispo() < SEUIL_QUOTA_WARN) {
       log.warn("quota TM faible dispo={} total={} job={}", quota.dispo(), quota.total(), nomJob);
+      logAdmin("warn", "Quota TM faible",
+          Map.of("dispo", quota.dispo(), "total", quota.total(), "job", nomJob));
     }
     return true;
   }
@@ -108,6 +114,37 @@ public class GestionQuotaTM {
   ///
   /// @return {@code true} si le cron peut s'exécuter
   public boolean cronAutorise() {
-    return lireQuota().map(q -> q.dispo() >= SEUIL_QUOTA_CRON).orElse(true);
+    Optional<QuotaTM> quotaOpt = lireQuota();
+    if (quotaOpt.isEmpty()) return true;
+    QuotaTM quota = quotaOpt.get();
+    if (quota.dispo() < SEUIL_QUOTA_CRON) {
+      log.warn("cron TM suspendu — quota insuffisant dispo={}", quota.dispo());
+      logAdmin("warn", "Cron TM suspendu — quota insuffisant",
+          Map.of("dispo", quota.dispo(), "total", quota.total()));
+      return false;
+    }
+    return true;
+  }
+
+  private void logAdmin(String niveau, String message, Map<String, Object> meta) {
+    try {
+      String metaJson = objectMapper.writeValueAsString(meta);
+      Map<String, Object> params = new HashMap<>();
+      params.put("ts", Instant.now().toEpochMilli());
+      params.put("niveau", niveau);
+      params.put("source", "worker");
+      params.put("message", message);
+      params.put("meta", metaJson);
+      jdbc.update(
+          """
+          INSERT INTO logs_admin (ts, niveau, source, message, meta)
+          VALUES (:ts, :niveau, :source, :message, :meta::jsonb)
+          """,
+          params);
+    } catch (JsonProcessingException e) {
+      log.warn("Erreur sérialisation meta log quota : {}", e.getMessage());
+    } catch (Exception e) {
+      log.warn("Impossible d'insérer log quota admin : {}", e.getMessage());
+    }
   }
 }
