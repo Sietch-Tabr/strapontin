@@ -19,9 +19,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class WorkerConfiguration {
 
-  @Value("${ticketmaster.api-key}")
-  private String tmApiKey;
-
   @Value("${contact.email}")
   private String contactEmail;
 
@@ -35,10 +32,21 @@ public class WorkerConfiguration {
 
   /// Client Ticketmaster Discovery v2.
   ///
+  /// <p>Lit {@code TICKETMASTER_API_KEY} depuis {@code app_config} (AES-256-GCM).
+  /// Lève une {@link IllegalStateException} au démarrage si la clé est absente.
+  ///
+  /// @param configService service de configuration chiffrée
   /// @return instance configurée avec la clé API
   @Bean
-  TicketmasterSource ticketmasterSource() {
-    return new TicketmasterSource(tmApiKey);
+  TicketmasterSource ticketmasterSource(ConfigServiceWorker configService) {
+    String apiKey =
+        configService
+            .lireConfig("TICKETMASTER_API_KEY")
+            .orElseThrow(
+                () ->
+                    new IllegalStateException(
+                        "TICKETMASTER_API_KEY absent de app_config — démarrage impossible"));
+    return new TicketmasterSource(apiKey);
   }
 
   /// Client Eventim France.
