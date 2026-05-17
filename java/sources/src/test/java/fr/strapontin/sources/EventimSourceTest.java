@@ -242,6 +242,56 @@ class EventimSourceTest {
   }
 
   @Test
+  void constructeurParDefaut_initialise_sansErreur() {
+    assertDoesNotThrow(() -> {
+      new EventimSource();
+    });
+  }
+
+  @Test
+  void fetchRegion_listeDeptVide_retourneListeVide() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    EventimSource source = new EventimSource(restClient);
+    List<ConcertBrut> resultats = source.fetchRegion(List.of(), List.of("music"));
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchRegion_unDept_retourneConcerts() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[
+                  {"name":"Julien Clerc",
+                   "typeAttributes":{"liveEntertainment":{
+                     "startDate":"2025-09-15T20:30:00",
+                     "location":{"name":"Accor Arena","city":"Paris","postalCode":"75012"},
+                     "priceRange":{"min":39.9,"max":99.9}}},
+                   "link":"https://www.eventim.fr/event/julien-clerc-1234"}
+                ],"totalResults":1}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    EventimSource source = new EventimSource(restClient);
+    List<ConcertBrut> resultats = source.fetchRegion(List.of("75"), List.of("music"));
+
+    assertEquals(1, resultats.size());
+    assertEquals("75", resultats.get(0).dept());
+    serveur.verify();
+  }
+
+  @Test
   void fetchArtiste_reponseValide_retourneConcerts() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();

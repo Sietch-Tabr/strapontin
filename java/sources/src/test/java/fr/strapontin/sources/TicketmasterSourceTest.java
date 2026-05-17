@@ -410,4 +410,134 @@ class TicketmasterSourceTest {
     TicketmasterSource source = new TicketmasterSource("fake-key");
     assertTrue(source.fetchArtistesBatch(List.of()).isEmpty());
   }
+
+  @Test
+  void fetchArtistesBatch_avecIds_retourneConcerts() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchArtistesBatch(List.of("tm-123", "tm-456"));
+
+    assertEquals(1, resultats.size());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchSalle_venueIdValide_retourneConcerts() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchSalle("venue-123");
+
+    assertEquals(1, resultats.size());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchSalle_aucunEvent_retourneListeVide() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(0, false), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchSalle("venue-vide");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void rechercherAttractionId_nomTrouve_retourneId() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
+        .andRespond(
+            withSuccess(
+                """
+                {"_embedded":{"attractions":[{"id":"tm-456","name":"Julien Clerc"}]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    String id = source.rechercherAttractionId("Julien Clerc");
+
+    assertEquals("tm-456", id);
+    serveur.verify();
+  }
+
+  @Test
+  void rechercherAttractionId_nomNonTrouve_retourneNull() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
+        .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    String id = source.rechercherAttractionId("Artiste Inconnu");
+
+    assertNull(id);
+    serveur.verify();
+  }
+
+  @Test
+  void fetchRegion_deptInconnu_retourneListeVide() {
+    TicketmasterSource source = new TicketmasterSource("fake-key");
+    List<ConcertBrut> resultats = source.fetchRegion(List.of("ZZ"), null);
+    assertTrue(resultats.isEmpty());
+  }
+
+  @Test
+  void fetchRegion_deptConnu_retourneConcerts() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchRegion(List.of("75"), null);
+
+    assertEquals(1, resultats.size());
+    serveur.verify();
+  }
 }
