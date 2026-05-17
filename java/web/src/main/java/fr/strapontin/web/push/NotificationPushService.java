@@ -156,7 +156,7 @@ public class NotificationPushService {
 
     // JSON construit manuellement (pas de dépendance Jackson pour ce payload simple)
     return """
-    {"title":"%s","body":"%s","icon":"%s/icon-192.png","url":"%s"}\
+    {"title":"%s","body":"%s","icon":"%s/images/icon-192.png","url":"%s"}\
     """
         .formatted(echapperJson(titre), echapperJson(corps), baseUrl, echapperJson(url));
   }

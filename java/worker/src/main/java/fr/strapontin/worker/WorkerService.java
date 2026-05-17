@@ -253,11 +253,6 @@ public class WorkerService {
     log.info("purger:concerts terminé supprimes={}", supprimes);
   }
 
-  /// Stub pour les notifications quotidiennes — implémenté en Phase 4.
-  public void executerNotifierDigest() {
-    log.info("notifier:digest — implémentation prévue en Phase 4");
-  }
-
   private List<ConcertBrut> resoudreEtDeduplicer(List<ConcertBrut> concerts) {
     List<ConcertBrut> dedoublonnes = Dedoublonner.dedoublonner(concerts);
 
