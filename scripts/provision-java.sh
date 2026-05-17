@@ -5,14 +5,11 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 # provision-java.sh — provisionnement LXC (stack Java/Spring Boot)
 # Usage :
 #   bash /tmp/provision-java.sh dev   → LXC dev (SPRING_PROFILES_ACTIVE=dev, IP 192.168.20.78)
-#   bash /tmp/provision-java.sh prod  → LXC prod/vert blue-green (IP 192.168.20.80)
+#   bash /tmp/provision-java.sh prod  → LXC prod (IP 192.168.20.80)
 #
 # À exécuter depuis le HOST Proxmox en tant que root :
 #   scp scripts/provision-java.sh root@192.168.1.99:/tmp/
 #   ssh root@192.168.1.99 "bash /tmp/provision-java.sh dev|prod"
-#
-# Stratégie blue-green : en mode prod, à la bascule la MAC de LXC 113
-# est assignée à ce LXC, qui hérite de l'IP 192.168.20.79 via DHCP.
 #
 # Pour redéployer proprement : détruire l'ancien LXC d'abord :
 #   pct set <VMID> --protection 0
@@ -69,7 +66,7 @@ fi
 
 DB_PASSWORD=$(openssl rand -hex 16)
 
-printf "BETTER_AUTH_SECRET de prod (LXC 113 — /opt/strapontin/.env) : "
+printf "APP_CONFIG_SECRET (/opt/strapontin/.env du LXC source) : "
 read -r APP_CONFIG_SECRET
 echo ""
 
@@ -351,26 +348,29 @@ pct exec "$VMID" -- bash -c "
 
 echo ""
 echo "================================================================"
-echo "LXC $VMID provisionné avec succès."
+echo "LXC $VMID ($PROFIL) provisionné avec succès."
 echo ""
 echo "CREDENTIALS GÉNÉRÉS (à conserver) :"
-echo "  DB_PASSWORD        : $DB_PASSWORD"
-echo "  APP_CONFIG_SECRET  : (valeur BETTER_AUTH_SECRET de LXC 113)"
+echo "  DB_PASSWORD       : $DB_PASSWORD"
 echo "  Fichier           : $APP_DIR/.env (chmod 600)"
 echo ""
 echo "ÉTAPES SUIVANTES :"
 echo ""
-echo "1. Déployer et démarrer le worker Spring Boot."
-echo "   Le schéma sera appliqué automatiquement par Flyway au premier démarrage."
+echo "1. Déployer les JARs et démarrer les services."
+echo "   Flyway applique le schéma automatiquement au premier démarrage."
 echo ""
-echo "2. Autoriser ce LXC à lire la DB de LXC 113 (pour migrate_data.sql) :"
-echo "   Sur LXC 113 : echo 'host strapontin postgres 192.168.20.80/32 trust' >> /etc/postgresql/18/main/pg_hba.conf"
-echo "   Sur LXC 113 : systemctl reload postgresql"
+if [ "$PROFIL" = "dev" ]; then
+echo "2. Accéder à http://$IP et exécuter /setup pour créer le premier admin."
+else
+echo "2. Autoriser ce LXC à lire la DB source (pour migrate_data.sql) :"
+echo "   Sur le LXC source : ajouter '192.168.20.80/32' dans pg_hba.conf"
+echo "   Sur le LXC source : systemctl reload postgresql"
 echo ""
 echo "3. Tester le dblink depuis ce LXC :"
-echo "   pct exec $VMID -- su -c \"psql -d $DB_NAME -c \\\"SELECT * FROM dblink('host=192.168.20.79 dbname=strapontin user=postgres', 'SELECT 1') AS t(x int);\\\"\" postgres"
+echo "   pct exec $VMID -- su -c \"psql -d $DB_NAME -c \\\"SELECT * FROM dblink('host=<IP_SOURCE> dbname=strapontin user=postgres', 'SELECT 1') AS t(x int);\\\"\" postgres"
 echo ""
-echo "4. À la bascule prod — noter la MAC de LXC 113 :"
-echo "   pct config 113 | grep hwaddr"
+echo "4. À la bascule — noter la MAC du LXC prod actuel :"
+echo "   pct config <VMID_ACTUEL> | grep hwaddr"
 echo "   (sera assignée à LXC $VMID lors du swap)"
+fi
 echo "================================================================"
