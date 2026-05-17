@@ -124,8 +124,7 @@ public class AdminController {
       List<LogAdminService.EntreeLogAdmin> logsAdmin) {}
 
   record RequeteCreerUtilisateur(
-      @NotBlank(message = "Format d'email invalide.")
-          @Email(message = "Format d'email invalide.")
+      @NotBlank(message = "Format d'email invalide.") @Email(message = "Format d'email invalide.")
           String email) {}
 
   record RequeteModifierUtilisateur(

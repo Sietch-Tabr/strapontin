@@ -243,10 +243,7 @@ class EventimSourceTest {
 
   @Test
   void constructeurParDefaut_initialise_sansErreur() {
-    assertDoesNotThrow(
-        () -> {
-          new EventimSource();
-        });
+    assertDoesNotThrow((org.junit.jupiter.api.function.Executable) EventimSource::new);
   }
 
   @Test

@@ -59,7 +59,10 @@ public class UserController {
 
   record RequeteIdentifiant(
       @NotBlank(message = "L'identifiant est obligatoire.")
-          @Size(min = 3, max = 30, message = "L'identifiant doit contenir entre 3 et 30 caractères.")
+          @Size(
+              min = 3,
+              max = 30,
+              message = "L'identifiant doit contenir entre 3 et 30 caractères.")
           @jakarta.validation.constraints.Pattern(
               regexp = "[a-zA-Z0-9_]+",
               message = "L'identifiant ne peut contenir que des lettres, chiffres et underscores.")
@@ -76,7 +79,10 @@ public class UserController {
           @Size(max = 100, message = "Nom invalide (1-100 caractères).")
           String nom,
       @NotBlank(message = "Tous les champs sont obligatoires.")
-          @Size(min = 3, max = 30, message = "L'identifiant doit contenir entre 3 et 30 caractères.")
+          @Size(
+              min = 3,
+              max = 30,
+              message = "L'identifiant doit contenir entre 3 et 30 caractères.")
           String identifiant,
       @NotBlank(message = "Tous les champs sont obligatoires.") String motDePasseActuel,
       @NotBlank(message = "Tous les champs sont obligatoires.")

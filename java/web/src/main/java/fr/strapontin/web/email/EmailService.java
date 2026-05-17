@@ -258,9 +258,7 @@ public class EmailService {
                   Map<String, Object> ligne = new HashMap<>();
                   ligne.put("artiste", c.artiste());
                   ligne.put("dateFormatee", formaterDate(c.date()));
-                  ligne.put(
-                      "lieu",
-                      c.ville() != null ? c.salle() + " · " + c.ville() : c.salle());
+                  ligne.put("lieu", c.ville() != null ? c.salle() + " · " + c.ville() : c.salle());
                   ligne.put("url", c.url());
                   return ligne;
                 })

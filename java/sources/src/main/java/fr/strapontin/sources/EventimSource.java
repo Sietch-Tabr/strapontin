@@ -18,7 +18,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 /// Client HTTP pour l'API publique Eventim France.
 ///
-/// <p>Effectue les appels REST vers l'API exploration Eventim : recherche par artiste (via
+/// Effectue les appels REST vers l'API exploration Eventim : recherche par artiste (via
 /// attractionId) et par région (par département). La pagination est gérée jusqu'à MAX_PAGES.
 ///
 /// @since 2.0.0
@@ -30,6 +30,10 @@ public class EventimSource {
   private static final String BASE_URL =
       "https://public-api.eventim.com/websearch/search/api/exploration";
   private static final String WEB_ID = "web__eventim-fr";
+  private static final String PARAM_WEB_ID = "webId";
+  private static final String PARAM_LANGUE = "language";
+  private static final String CLE_PRODUCTS = "products";
+  private static final String CLE_TOTAL_RESULTS = "totalResults";
   private static final int TAILLE_PAGE = 50;
   private static final int MAX_PAGES = 10;
 
@@ -65,7 +69,7 @@ public class EventimSource {
 
   /// Parse une date ISO 8601 Eventim et extrait la date et l'heure locales.
   ///
-  /// <p>L'heure "00:00" est considérée comme absente (Eventim utilise minuit par défaut).
+  /// L'heure "00:00" est considérée comme absente (Eventim utilise minuit par défaut).
   ///
   /// @param dateStr chaîne de date ISO 8601
   /// @return tableau à deux éléments : [date (yyyy-MM-dd), heure (HH:mm) ou null]
@@ -80,7 +84,7 @@ public class EventimSource {
 
   /// Extrait le nom de l'artiste depuis un titre d'événement Eventim.
   ///
-  /// <p>Le titre Eventim est de la forme "Artiste - Tournée" ou "Artiste : Spectacle".
+  /// Le titre Eventim est de la forme "Artiste - Tournée" ou "Artiste : Spectacle".
   /// On extrait la partie avant le premier séparateur " - " ou " : ".
   ///
   /// @param titre titre de l'événement Eventim
@@ -93,7 +97,7 @@ public class EventimSource {
     return titre;
   }
 
-  /// Mappe un produit Eventim brut (JSON désérialisé) vers un {@link ConcertBrut}.
+  /// Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
   ///
   /// @param produit        produit Eventim sous forme de Map imbriquée
   /// @param artisteFallback nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
@@ -101,65 +105,123 @@ public class EventimSource {
   @SuppressWarnings("unchecked")
   public static ConcertBrut mapProduit(Map<String, Object> produit, String artisteFallback) {
     try {
-      var typeAttributes = (Map<String, Object>) produit.get("typeAttributes");
-      var liveEnt =
-          typeAttributes != null
-              ? (Map<String, Object>) typeAttributes.get("liveEntertainment")
-              : null;
-
+      var liveEnt = extraireLiveEntertainment(produit);
       String dateStr = liveEnt != null ? (String) liveEnt.get("startDate") : null;
       if (dateStr == null) return null;
 
-      String[] datHeure = parseDateEventim(dateStr);
-      String date = datHeure[0];
-      String heure = datHeure[1];
-
       String titre = (String) produit.get("name");
       if (titre == null) return null;
+
+      String[] datHeure = parseDateEventim(dateStr);
       String artiste = artisteFallback != null ? artisteFallback : extraireNomArtiste(titre);
-
-      var location = liveEnt != null ? (Map<String, Object>) liveEnt.get("location") : null;
-      String salle =
-          location != null && location.get("name") != null
-              ? (String) location.get("name")
-              : "Salle inconnue";
-      String ville = location != null ? (String) location.get("city") : null;
-      String dept = extraireDept(location != null ? (String) location.get("postalCode") : null);
-
-      var priceRange = liveEnt != null ? (Map<String, Object>) liveEnt.get("priceRange") : null;
-      Double prixMin =
-          priceRange != null && priceRange.get("min") != null
-              ? ((Number) priceRange.get("min")).doubleValue()
-              : null;
-      Double prixMax =
-          priceRange != null && priceRange.get("max") != null
-              ? ((Number) priceRange.get("max")).doubleValue()
-              : null;
-
-      var urlObj = (Map<String, Object>) produit.get("url");
-      String lienDirect = (String) produit.get("link");
-      String url = null;
-      if (lienDirect != null && lienDirect.startsWith("http")) {
-        url = lienDirect;
-      } else if (urlObj != null && urlObj.get("domain") != null && urlObj.get("path") != null) {
-        url = urlObj.get("domain") + (String) urlObj.get("path");
-      }
-
-      return new ConcertBrut(
-          artiste, date, heure, salle, ville, dept, prixMin, prixMax, url, "eventim", null, null,
-          null);
+      @SuppressWarnings("unchecked")
+      var location = (Map<String, Object>) liveEnt.get("location");
+      return construireConcertEventim(produit, liveEnt, location, artiste, datHeure[0], datHeure[1]);
     } catch (Exception e) {
       log.warn("erreur parsing produit Eventim", e);
       return null;
     }
   }
 
+  private record ResultatPageEventim(List<ConcertBrut> concerts, int total) {
+    static final ResultatPageEventim VIDE = new ResultatPageEventim(List.of(), 0);
+
+    boolean estVide() {
+      return concerts.isEmpty();
+    }
+  }
+
+  private boolean attendreEntrePagesEventim() {
+    try {
+      Thread.sleep(200);
+      return true;
+    } catch (InterruptedException _) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private ResultatPageEventim chargerPageProduits(
+      String uri, String artisteFallback, String deptFiltre) {
+    try {
+      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      if (data == null) return ResultatPageEventim.VIDE;
+      var produits = (List<Map<String, Object>>) data.get(CLE_PRODUCTS);
+      if (produits == null || produits.isEmpty()) return ResultatPageEventim.VIDE;
+
+      List<ConcertBrut> concerts = new ArrayList<>();
+      for (var p : produits) {
+        ConcertBrut c = mapProduit(p, artisteFallback);
+        if (c != null && (deptFiltre == null || deptFiltre.equals(c.dept()))) concerts.add(c);
+      }
+      int total =
+          data.get(CLE_TOTAL_RESULTS) != null
+              ? ((Number) data.get(CLE_TOTAL_RESULTS)).intValue()
+              : 0;
+      return new ResultatPageEventim(concerts, total);
+    } catch (Exception e) {
+      log.warn("Eventim erreur HTTP", e);
+      return ResultatPageEventim.VIDE;
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> extraireLiveEntertainment(Map<String, Object> produit) {
+    var typeAttributes = (Map<String, Object>) produit.get("typeAttributes");
+    return typeAttributes != null
+        ? (Map<String, Object>) typeAttributes.get("liveEntertainment")
+        : null;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static String extraireUrlProduit(Map<String, Object> produit) {
+    String lienDirect = (String) produit.get("link");
+    if (lienDirect != null && lienDirect.startsWith("http")) return lienDirect;
+    var urlObj = (Map<String, Object>) produit.get("url");
+    if (urlObj != null && urlObj.get("domain") != null && urlObj.get("path") != null) {
+      return urlObj.get("domain") + (String) urlObj.get("path");
+    }
+    return null;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static ConcertBrut construireConcertEventim(
+      Map<String, Object> produit,
+      Map<String, Object> liveEnt,
+      Map<String, Object> location,
+      String artiste,
+      String date,
+      String heure) {
+    String salle =
+        location != null && location.get("name") != null
+            ? (String) location.get("name")
+            : "Salle inconnue";
+    String ville = location != null ? (String) location.get("city") : null;
+    String dept = extraireDept(location != null ? (String) location.get("postalCode") : null);
+
+    var priceRange = (Map<String, Object>) liveEnt.get("priceRange");
+    Double prixMin =
+        priceRange != null && priceRange.get("min") != null
+            ? ((Number) priceRange.get("min")).doubleValue()
+            : null;
+    Double prixMax =
+        priceRange != null && priceRange.get("max") != null
+            ? ((Number) priceRange.get("max")).doubleValue()
+            : null;
+
+    String url = extraireUrlProduit(produit);
+    return new ConcertBrut(
+        artiste, date, heure, salle, ville, dept, prixMin, prixMax, url, "eventim", null, null,
+        null);
+  }
+
   @SuppressWarnings("unchecked")
   private String rechercherAttractionId(String terme) {
     String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/v1/attractions")
-            .queryParam("webId", WEB_ID)
-            .queryParam("language", "fr")
+            .queryParam(PARAM_WEB_ID, WEB_ID)
+            .queryParam(PARAM_LANGUE, "fr")
             .queryParam("search_term", terme)
             .queryParam("top", 5)
             .build()
@@ -190,111 +252,62 @@ public class EventimSource {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private List<ConcertBrut> fetchProduitsParAttraction(
       String attractionId, String artisteFallback) {
-    LocalDate aujourd_hui = LocalDate.now();
-    LocalDate dateFin = aujourd_hui.plusMonths(24);
+    LocalDate dateDebut = LocalDate.now();
+    LocalDate dateFin = dateDebut.plusMonths(24);
     DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     List<ConcertBrut> concerts = new ArrayList<>();
+    boolean continuer = true;
 
-    for (int page = 1; page <= MAX_PAGES; page++) {
-      if (page > 1) {
-        try {
-          Thread.sleep(200);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          break;
-        }
-      }
-
-      String uri =
-          UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
-              .queryParam("webId", WEB_ID)
-              .queryParam("language", "fr")
-              .queryParam("attraction_ids", attractionId)
-              .queryParam("date_from", fmt.format(aujourd_hui))
-              .queryParam("date_to", fmt.format(dateFin))
-              .queryParam("sort", "DateAsc")
-              .queryParam("top", TAILLE_PAGE)
-              .queryParam("page", page)
-              .build()
-              .toUriString();
-
-      try {
-        Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-        if (data == null) break;
-        var produits = (List<Map<String, Object>>) data.get("products");
-        if (produits == null || produits.isEmpty()) break;
-
-        for (var p : produits) {
-          ConcertBrut c = mapProduit(p, artisteFallback);
-          if (c != null) concerts.add(c);
-        }
-
-        int total =
-            data.get("totalResults") != null ? ((Number) data.get("totalResults")).intValue() : 0;
-        if (concerts.size() >= total) break;
-      } catch (Exception e) {
-        log.error("erreur HTTP Eventim products", e);
-        break;
+    for (int page = 1; page <= MAX_PAGES && continuer; page++) {
+      if (page > 1) continuer = attendreEntrePagesEventim();
+      if (continuer) {
+        String uri =
+            UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
+                .queryParam(PARAM_WEB_ID, WEB_ID)
+                .queryParam(PARAM_LANGUE, "fr")
+                .queryParam("attraction_ids", attractionId)
+                .queryParam("date_from", fmt.format(dateDebut))
+                .queryParam("date_to", fmt.format(dateFin))
+                .queryParam("sort", "DateAsc")
+                .queryParam("top", TAILLE_PAGE)
+                .queryParam("page", page)
+                .build()
+                .toUriString();
+        ResultatPageEventim resultat = chargerPageProduits(uri, artisteFallback, null);
+        concerts.addAll(resultat.concerts());
+        continuer = !resultat.estVide() && concerts.size() < resultat.total();
       }
     }
 
     return concerts;
   }
 
-  @SuppressWarnings("unchecked")
   private List<ConcertBrut> fetchProduitsParRegion(String dept, List<String> classifications) {
-    LocalDate aujourd_hui = LocalDate.now();
+    LocalDate dateDebut = LocalDate.now();
     DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     List<ConcertBrut> concerts = new ArrayList<>();
+    boolean continuer = true;
 
-    for (int page = 1; page <= MAX_PAGES; page++) {
-      if (page > 1) {
-        try {
-          Thread.sleep(200);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          break;
-        }
-      }
-
-      var builder =
-          UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
-              .queryParam("webId", WEB_ID)
-              .queryParam("language", "fr")
-              .queryParam("country", "FR")
-              .queryParam("query", dept)
-              .queryParam("date_from", fmt.format(aujourd_hui))
-              .queryParam("sort", "DateAsc")
-              .queryParam("top", TAILLE_PAGE)
-              .queryParam("page", page);
-
-      for (String c : classifications) {
-        builder = builder.queryParam("categories", c);
-      }
-
-      String uri = builder.build().toUriString();
-
-      try {
-        Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-        if (data == null) break;
-        var produits = (List<Map<String, Object>>) data.get("products");
-        if (produits == null || produits.isEmpty()) break;
-
-        String deptFiltrer = dept;
-        for (var p : produits) {
-          ConcertBrut c = mapProduit(p, null);
-          if (c != null && deptFiltrer.equals(c.dept())) concerts.add(c);
-        }
-
-        int total =
-            data.get("totalResults") != null ? ((Number) data.get("totalResults")).intValue() : 0;
-        if (concerts.size() >= total) break;
-      } catch (Exception e) {
-        log.warn("Eventim region erreur dept={}", dept, e);
-        break;
+    for (int page = 1; page <= MAX_PAGES && continuer; page++) {
+      if (page > 1) continuer = attendreEntrePagesEventim();
+      if (continuer) {
+        var builder =
+            UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
+                .queryParam(PARAM_WEB_ID, WEB_ID)
+                .queryParam(PARAM_LANGUE, "fr")
+                .queryParam("country", "FR")
+                .queryParam("query", dept)
+                .queryParam("date_from", fmt.format(dateDebut))
+                .queryParam("sort", "DateAsc")
+                .queryParam("top", TAILLE_PAGE)
+                .queryParam("page", page);
+        for (String c : classifications) builder = builder.queryParam("categories", c);
+        ResultatPageEventim resultat =
+            chargerPageProduits(builder.build().toUriString(), null, dept);
+        concerts.addAll(resultat.concerts());
+        continuer = !resultat.estVide() && concerts.size() < resultat.total();
       }
     }
 
@@ -330,12 +343,7 @@ public class EventimSource {
     for (String dept : depts) {
       List<ConcertBrut> concerts = fetchProduitsParRegion(dept, classifs);
       tous.addAll(concerts);
-      try {
-        Thread.sleep(200);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        break;
-      }
+      if (!attendreEntrePagesEventim()) break;
     }
 
     return tous;

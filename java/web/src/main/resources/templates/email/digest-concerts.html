@@ -1,38 +1,95 @@
-<!DOCTYPE html>
+<!doctype html>
 <html xmlns:th="http://www.thymeleaf.org" lang="fr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title th:text="${sujet}">Nouveaux concerts</title>
   </head>
-  <body style="font-family:system-ui,sans-serif;background:#f9f9f9;margin:0;padding:32px 16px">
-    <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;border:1px solid #e5e5e5">
-      <h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px" th:text="${sujet}">Nouveaux concerts</h2>
-      <p style="color:#555;font-size:14px;margin:0 0 24px">Voici les nouveaux concerts ajoutés :</p>
-      <table style="border-collapse:collapse;width:100%">
+  <body
+    style="
+      font-family: system-ui, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 32px 16px;
+    "
+  >
+    <div
+      style="
+        max-width: 520px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 8px;
+        padding: 32px;
+        border: 1px solid #e5e5e5;
+      "
+    >
+      <h2
+        style="font-size: 20px; font-weight: 600; color: #111; margin: 0 0 8px"
+        th:text="${sujet}"
+      >
+        Nouveaux concerts
+      </h2>
+      <p style="color: #555; font-size: 14px; margin: 0 0 24px">
+        Voici les nouveaux concerts ajoutés :
+      </p>
+      <table style="border-collapse: collapse; width: 100%">
         <tr th:each="concert : ${lignes}">
-          <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top">
-            <div style="font-weight:600;color:#111;font-size:14px" th:text="${concert.artiste}">Artiste</div>
-            <div style="color:#666;font-size:13px;margin-top:2px">
+          <td
+            style="
+              padding: 10px 0;
+              border-bottom: 1px solid #f0f0f0;
+              vertical-align: top;
+            "
+          >
+            <div
+              style="font-weight: 600; color: #111; font-size: 14px"
+              th:text="${concert.artiste}"
+            >
+              Artiste
+            </div>
+            <div style="color: #666; font-size: 13px; margin-top: 2px">
               <span th:text="${concert.dateFormatee}">Date</span>
               <span th:if="${concert.url}">
-                — <a th:href="${concert.url}" style="color:#111;font-size:13px">Billets →</a>
+                —
+                <a th:href="${concert.url}" style="color: #111; font-size: 13px"
+                  >Billets →</a
+                >
               </span>
             </div>
-            <div style="color:#999;font-size:12px;margin-top:2px" th:text="${concert.lieu}">Lieu</div>
+            <div
+              style="color: #999; font-size: 12px; margin-top: 2px"
+              th:text="${concert.lieu}"
+            >
+              Lieu
+            </div>
           </td>
         </tr>
       </table>
-      <p style="margin-top:24px">
-        <a th:href="|${baseUrl}/spectacles|"
-           style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
+      <p style="margin-top: 24px">
+        <a
+          th:href="|${baseUrl}/spectacles|"
+          style="
+            display: inline-block;
+            background: #111;
+            color: #fff;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+          "
+        >
           Voir mes spectacles →
         </a>
       </p>
     </div>
-    <p style="text-align:center;color:#aaa;font-size:12px;margin-top:24px">
+    <p
+      style="text-align: center; color: #aaa; font-size: 12px; margin-top: 24px"
+    >
       Strapontin —
-      <a th:href="|${baseUrl}/parametres|" style="color:#aaa">Gérer mes préférences</a>
+      <a th:href="|${baseUrl}/parametres|" style="color: #aaa"
+        >Gérer mes préférences</a
+      >
     </p>
   </body>
 </html>

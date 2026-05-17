@@ -112,8 +112,7 @@ public final class Dedoublonner {
   }
 
   private static ConcertEnrichi fusionner(List<ConcertEnrichi> concerts) {
-    ConcertEnrichi gagnant =
-        concerts.stream().reduce(Dedoublonner::choisirMeilleur).orElseThrow();
+    ConcertEnrichi gagnant = concerts.stream().reduce(Dedoublonner::choisirMeilleur).orElseThrow();
 
     String meilleureSalle = gagnant.concert().salle();
     for (ConcertEnrichi c : concerts) {

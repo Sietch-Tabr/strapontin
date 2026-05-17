@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -22,9 +23,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 /// Client HTTP pour l'API Ticketmaster Discovery v2.
 ///
-/// <p>Effectue les appels REST vers TM : par artiste, par salle (venueId), par lot d'attractionIds
+/// Effectue les appels REST vers TM : par artiste, par salle (venueId), par lot d'attractionIds
 /// et par région (géolocalisation département). Respecte le rate limit de 5 req/s via des pauses
-/// entre les pages. Le quota journalier est extrait des headers {@code Rate-Limit-*} de chaque
+/// entre les pages. Le quota journalier est extrait des headers `Rate-Limit-*` de chaque
 /// réponse.
 ///
 /// @since 2.0.0
@@ -38,6 +39,9 @@ public class TicketmasterSource {
   private static final int TAILLE_PAGE_REGION = 200;
   // TM refuse offset > 1000 : avec size=200, page 5 → offset 1000 (ok), page 6 → 1200 (HTTP 400)
   private static final int NB_PAGES_MAX = 5;
+  private static final String CHEMIN_EVENTS = "/events.json";
+  private static final String TRI_DATE_ASC = "date,asc";
+  private static final String CLE_EMBEDDED = "_embedded";
 
   private static final Set<String> ARTICLES_FR =
       Set.of(
@@ -156,7 +160,7 @@ public class TicketmasterSource {
 
   private final String apiKey;
   private final RestClient restClient;
-  private volatile QuotaTM dernierQuota;
+  private final AtomicReference<QuotaTM> dernierQuota = new AtomicReference<>();
 
   /// Crée une instance avec la clé API fournie et un RestClient par défaut.
   ///
@@ -174,17 +178,17 @@ public class TicketmasterSource {
     this.restClient = restClient;
   }
 
-  /// Retourne le dernier quota TM extrait des headers HTTP, ou {@code null} si aucun appel n'a été
-  // fait.
+  /// Retourne le dernier quota TM extrait des headers HTTP, ou `null` si aucun appel n'a été
+  /// fait.
   ///
   /// @return quota courant ou null
   public QuotaTM obtenirQuota() {
-    return dernierQuota;
+    return dernierQuota.get();
   }
 
   /// Extrait le code département depuis un code postal français.
   ///
-  /// <p>Les DOM-TOM commençant par 97 retournent les 3 premiers chiffres. La Corse (2A/2B) est
+  /// Les DOM-TOM commençant par 97 retournent les 3 premiers chiffres. La Corse (2A/2B) est
   /// déjà normalisée en "20" à la saisie.
   ///
   /// @param codePostal code postal (peut être null)
@@ -208,7 +212,7 @@ public class TicketmasterSource {
 
   /// Convertit un nom tout-majuscule en title case français.
   ///
-  /// <p>Les articles courants restent en minuscules sauf en début de chaîne. Si la chaîne
+  /// Les articles courants restent en minuscules sauf en début de chaîne. Si la chaîne
   /// n'est pas entièrement en majuscules, elle est retournée sans modification.
   ///
   /// @param nom nom à normaliser
@@ -228,7 +232,6 @@ public class TicketmasterSource {
         if (!debutPhrase && ARTICLES_FR.contains(bas)) {
           sb.append(bas);
         } else {
-          debutPhrase = false;
           sb.append(capitaliserAvecApostrophe(bas));
         }
       }
@@ -273,107 +276,104 @@ public class TicketmasterSource {
     return CLASSIFICATION_MAP.getOrDefault(nom, nom);
   }
 
-  /// Mappe un événement TM brut (JSON désérialisé) vers un {@link ConcertBrut}.
+  /// Mappe un événement TM brut (JSON désérialisé) vers un [ConcertBrut].
   ///
   /// @param evt             événement TM sous forme de Map imbriquée
   /// @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être
-  // null
+  /// null
   /// @return concert extrait, ou null si l'événement est invalide ou hors périmètre
-  @SuppressWarnings("unchecked")
   public static ConcertBrut mapEvenement(Map<String, Object> evt, String artisteFallback) {
     try {
-      var dates = (Map<String, Object>) evt.get("dates");
-      var start = (Map<String, Object>) (dates != null ? dates.get("start") : null);
-      String dateStr = start != null ? (String) start.get("localDate") : null;
-      if (dateStr == null) return null;
-
-      String[] datHeure =
-          parseDateTM(dateStr, start != null ? (String) start.get("localTime") : null);
-      String date = datHeure[0];
-      String heure = datHeure[1];
-
-      var embedded = (Map<String, Object>) evt.get("_embedded");
-      List<Map<String, Object>> attractions =
-          embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
-      String nomAttraction =
-          attractions != null && !attractions.isEmpty()
-              ? (String) attractions.get(0).get("name")
-              : null;
-
-      String artiste;
-      if (nomAttraction != null) {
-        artiste = normaliserCasse(nomAttraction);
-      } else if (artisteFallback != null) {
-        String nomEvenement = (String) evt.get("name");
-        if (nomEvenement == null
-            || !nomEvenement.toLowerCase().contains(artisteFallback.toLowerCase())) {
-          return null;
-        }
-        artiste = artisteFallback;
-      } else {
-        return null;
-      }
-
-      List<Map<String, Object>> venues =
-          embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
-      Map<String, Object> venue = venues != null && !venues.isEmpty() ? venues.get(0) : null;
-      String salle =
-          normaliserCasse(
-              venue != null && venue.get("name") != null
-                  ? (String) venue.get("name")
-                  : "Salle inconnue");
-      Map<String, String> cityMap = venue != null ? (Map<String, String>) venue.get("city") : null;
-      String ville = cityMap != null ? cityMap.get("name") : null;
-      String dept = extraireDept(venue != null ? (String) venue.get("postalCode") : null);
-
-      List<Map<String, Object>> priceRanges = (List<Map<String, Object>>) evt.get("priceRanges");
-      Double prixMin = null;
-      Double prixMax = null;
-      if (priceRanges != null && !priceRanges.isEmpty()) {
-        Object min = priceRanges.get(0).get("min");
-        Object max = priceRanges.get(0).get("max");
-        prixMin = min != null ? ((Number) min).doubleValue() : null;
-        prixMax = max != null ? ((Number) max).doubleValue() : null;
-      }
-
-      String url = (String) evt.get("url");
-
-      Map<String, Object> datesData = (Map<String, Object>) evt.get("dates");
-      Map<String, String> statusMap =
-          datesData != null ? (Map<String, String>) datesData.get("status") : null;
-      String statut = statusMap != null ? statusMap.get("code") : null;
-
-      List<Map<String, Object>> classificationsData =
-          (List<Map<String, Object>>) evt.get("classifications");
-      String segmentNom = null;
-      String genre = null;
-      if (classificationsData != null && !classificationsData.isEmpty()) {
-        var segment = (Map<String, String>) classificationsData.get(0).get("segment");
-        if (segment != null && segment.get("name") != null) {
-          segmentNom = segment.get("name").toLowerCase();
-        }
-        var genreMap = (Map<String, String>) classificationsData.get(0).get("genre");
-        if (genreMap != null) genre = genreMap.get("name");
-      }
-
-      return new ConcertBrut(
-          artiste,
-          date,
-          heure,
-          salle,
-          ville,
-          dept,
-          prixMin,
-          prixMax,
-          url,
-          "ticketmaster",
-          normaliserClassification(segmentNom),
-          genre,
-          statut);
+      return parseEvenementTM(evt, artisteFallback);
     } catch (Exception e) {
       log.warn("erreur parsing événement TM", e);
       return null;
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static String extraireArtisteTM(
+      Map<String, Object> evt, Map<String, Object> embedded, String artisteFallback) {
+    List<Map<String, Object>> attractions =
+        embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
+    String nomAttraction =
+        attractions != null && !attractions.isEmpty()
+            ? (String) attractions.get(0).get("name")
+            : null;
+    if (nomAttraction != null) return normaliserCasse(nomAttraction);
+    if (artisteFallback == null) return null;
+    String nomEvenement = (String) evt.get("name");
+    if (nomEvenement != null && nomEvenement.toLowerCase().contains(artisteFallback.toLowerCase())) {
+      return artisteFallback;
+    }
+    return null;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Double[] extrairePrixTM(Map<String, Object> evt) {
+    var priceRanges = (List<Map<String, Object>>) evt.get("priceRanges");
+    if (priceRanges == null || priceRanges.isEmpty()) return new Double[] {null, null};
+    Object min = priceRanges.get(0).get("min");
+    Object max = priceRanges.get(0).get("max");
+    return new Double[] {
+      min != null ? ((Number) min).doubleValue() : null,
+      max != null ? ((Number) max).doubleValue() : null
+    };
+  }
+
+  @SuppressWarnings("unchecked")
+  private static String[] extraireClassificationTM(
+      List<Map<String, Object>> classificationsData) {
+    if (classificationsData == null || classificationsData.isEmpty()) {
+      return new String[] {null, null};
+    }
+    var segment = (Map<String, String>) classificationsData.get(0).get("segment");
+    String segmentNom =
+        segment != null && segment.get("name") != null
+            ? segment.get("name").toLowerCase()
+            : null;
+    var genreMap = (Map<String, String>) classificationsData.get(0).get("genre");
+    String genre = genreMap != null ? genreMap.get("name") : null;
+    return new String[] {segmentNom, genre};
+  }
+
+  @SuppressWarnings("unchecked")
+  private static ConcertBrut parseEvenementTM(Map<String, Object> evt, String artisteFallback) {
+    var dates = (Map<String, Object>) evt.get("dates");
+    var start = dates != null ? (Map<String, Object>) dates.get("start") : null;
+    String dateStr = start != null ? (String) start.get("localDate") : null;
+    if (dateStr == null) return null;
+
+    String[] datHeure = parseDateTM(dateStr, (String) start.get("localTime"));
+
+    var embedded = (Map<String, Object>) evt.get(CLE_EMBEDDED);
+    String artiste = extraireArtisteTM(evt, embedded, artisteFallback);
+    if (artiste == null) return null;
+
+    List<Map<String, Object>> venues =
+        embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
+    Map<String, Object> venue = venues != null && !venues.isEmpty() ? venues.get(0) : null;
+    String salle =
+        normaliserCasse(
+            venue != null && venue.get("name") != null
+                ? (String) venue.get("name")
+                : "Salle inconnue");
+    Map<String, String> cityMap = venue != null ? (Map<String, String>) venue.get("city") : null;
+    String ville = cityMap != null ? cityMap.get("name") : null;
+    String dept = extraireDept(venue != null ? (String) venue.get("postalCode") : null);
+
+    Double[] prix = extrairePrixTM(evt);
+    String url = (String) evt.get("url");
+    Map<String, String> statusMap = (Map<String, String>) dates.get("status");
+    String statut = statusMap != null ? statusMap.get("code") : null;
+
+    List<Map<String, Object>> classificationsData =
+        (List<Map<String, Object>>) evt.get("classifications");
+    String[] segmentGenre = extraireClassificationTM(classificationsData);
+
+    return new ConcertBrut(
+        artiste, datHeure[0], datHeure[1], salle, ville, dept, prix[0], prix[1], url,
+        "ticketmaster", normaliserClassification(segmentGenre[0]), segmentGenre[1], statut);
   }
 
   private record ResultatPage(
@@ -407,14 +407,14 @@ public class TicketmasterSource {
                 Instant.now().toString());
       }
 
-      Map<String, Object> data = (Map<String, Object>) response.getBody();
+      var data = response.getBody();
       if (data == null) return new ResultatPage(List.of(), 0, NB_PAGES_MAX, quota);
 
       var page = (Map<String, Object>) data.get("page");
       int total = page != null ? ((Number) page.get("totalElements")).intValue() : 0;
       int totalPages = page != null ? ((Number) page.get("totalPages")).intValue() : NB_PAGES_MAX;
 
-      var embedded = (Map<String, Object>) data.get("_embedded");
+      var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
       List<Map<String, Object>> evts =
           embedded != null ? (List<Map<String, Object>>) embedded.get("events") : null;
       if (evts == null) return new ResultatPage(List.of(), total, totalPages, quota);
@@ -428,7 +428,7 @@ public class TicketmasterSource {
 
     } catch (Exception e) {
       String uriSafe = uri.replaceAll("apikey=[^&]+", "apikey=***");
-      log.warn("erreur HTTP Ticketmaster url=%s", uriSafe);
+      log.warn("erreur HTTP Ticketmaster url={}", uriSafe, e);
       return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null);
     }
   }
@@ -437,7 +437,7 @@ public class TicketmasterSource {
 
   private static FenetreTemps obtenirFenetreTemps() {
     Instant maintenant = Instant.now();
-    Instant dans6Mois = maintenant.plus(6 * 30, ChronoUnit.DAYS);
+    Instant dans6Mois = maintenant.plus(6L * 30, ChronoUnit.DAYS);
     DateTimeFormatter fmt =
         DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(ZoneOffset.UTC);
     return new FenetreTemps(fmt.format(maintenant), fmt.format(dans6Mois));
@@ -447,26 +447,29 @@ public class TicketmasterSource {
     List<ConcertBrut> tousLesEvents = new ArrayList<>();
     int borneMax = NB_PAGES_MAX;
     int totalElements = 0;
+    boolean continuer = true;
 
-    for (int numPage = 0; numPage < borneMax; numPage++) {
+    for (int numPage = 0; numPage < borneMax && continuer; numPage++) {
       ResultatPage resultat = fetchPage(uriBase, numPage, artisteFallback);
-      if (resultat.quota() != null) dernierQuota = resultat.quota();
+      if (resultat.quota() != null) dernierQuota.set(resultat.quota());
       if (numPage == 0) {
         totalElements = resultat.total();
         borneMax = Math.min(resultat.totalPages(), NB_PAGES_MAX);
       }
       tousLesEvents.addAll(resultat.concerts());
 
-      if (resultat.concerts().isEmpty() || tousLesEvents.size() >= totalElements) break;
-
-      if (numPage < borneMax - 1) {
+      boolean fini =
+          resultat.concerts().isEmpty()
+              || (totalElements > 0 && tousLesEvents.size() >= totalElements);
+      if (!fini && numPage < borneMax - 1) {
         try {
           Thread.sleep(250);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
           Thread.currentThread().interrupt();
-          break;
+          fini = true;
         }
       }
+      continuer = !fini;
     }
 
     int nbPagesTotal = (int) Math.ceil((double) totalElements / TAILLE_PAGE_REGION);
@@ -489,14 +492,14 @@ public class TicketmasterSource {
   /// @return liste des concerts trouvés
   public List<ConcertBrut> fetchArtiste(String nom) {
     var uriBase =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
+        UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("keyword", nom)
             .queryParam("classificationName", String.join(",", CLASSIFICATIONS))
             .queryParam("size", TAILLE_PAGE_REGION)
-            .queryParam("sort", "date,asc");
+            .queryParam("sort", TRI_DATE_ASC);
 
     ResultatPage resultat = fetchPage(uriBase, 0, nom);
-    if (resultat.quota() != null) dernierQuota = resultat.quota();
+    if (resultat.quota() != null) dernierQuota.set(resultat.quota());
     log.info("TM fetchArtiste artiste={} total={}", nom, resultat.total());
     return resultat.concerts();
   }
@@ -508,10 +511,10 @@ public class TicketmasterSource {
   public List<ConcertBrut> fetchSalle(String venueId) {
     FenetreTemps fenetre = obtenirFenetreTemps();
     var uriBase =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
+        UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("venueId", venueId)
             .queryParam("size", TAILLE_PAGE_REGION)
-            .queryParam("sort", "date,asc")
+            .queryParam("sort", TRI_DATE_ASC)
             .queryParam("startDateTime", fenetre.debut())
             .queryParam("endDateTime", fenetre.fin());
 
@@ -519,7 +522,7 @@ public class TicketmasterSource {
     log.info("TM fetchSalle venueId={} total={}", venueId, concerts.size());
     try {
       Thread.sleep(200);
-    } catch (InterruptedException e) {
+    } catch (InterruptedException _) {
       Thread.currentThread().interrupt();
     }
     return concerts;
@@ -542,12 +545,12 @@ public class TicketmasterSource {
     try {
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return null;
-      var embedded = (Map<String, Object>) data.get("_embedded");
+      var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
       var attractions =
           embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
       if (attractions == null || attractions.isEmpty()) return null;
       return (String) attractions.get(0).get("id");
-    } catch (Exception e) {
+    } catch (Exception _) {
       return null;
     }
   }
@@ -559,13 +562,13 @@ public class TicketmasterSource {
   public List<ConcertBrut> fetchArtistesBatch(List<String> attractionIds) {
     if (attractionIds.isEmpty()) return List.of();
     var uriBase =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
+        UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("attractionId", String.join(",", attractionIds))
             .queryParam("size", TAILLE_PAGE_REGION)
-            .queryParam("sort", "date,asc");
+            .queryParam("sort", TRI_DATE_ASC);
 
     List<ConcertBrut> concerts = fetchToutesPages(uriBase, null);
-    if (dernierQuota != null) {
+    if (dernierQuota.get() != null) {
       log.info("TM fetchArtistesBatch ids={} total={}", attractionIds.size(), concerts.size());
     }
     return concerts;
@@ -580,33 +583,34 @@ public class TicketmasterSource {
     if (classifs == null) classifs = CLASSIFICATIONS;
     List<ConcertBrut> tous = new ArrayList<>();
 
-    for (String dept : depts) {
+    boolean continuer = true;
+    for (int i = 0; i < depts.size() && continuer; i++) {
+      String dept = depts.get(i);
       CentreDept centre = CENTRES_DEPT.get(dept);
       if (centre == null) {
         log.warn("département sans coordonnées connues, ignoré dept={}", dept);
-        continue;
-      }
+      } else {
+        FenetreTemps fenetre = obtenirFenetreTemps();
+        var uriBase =
+            UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
+                .queryParam("geoPoint", centre.lat() + "," + centre.lng())
+                .queryParam("radius", centre.rayon())
+                .queryParam("unit", "km")
+                .queryParam("classificationName", String.join(",", classifs))
+                .queryParam("size", TAILLE_PAGE_REGION)
+                .queryParam("sort", TRI_DATE_ASC)
+                .queryParam("startDateTime", fenetre.debut())
+                .queryParam("endDateTime", fenetre.fin());
 
-      FenetreTemps fenetre = obtenirFenetreTemps();
-      var uriBase =
-          UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
-              .queryParam("geoPoint", centre.lat() + "," + centre.lng())
-              .queryParam("radius", centre.rayon())
-              .queryParam("unit", "km")
-              .queryParam("classificationName", String.join(",", classifs))
-              .queryParam("size", TAILLE_PAGE_REGION)
-              .queryParam("sort", "date,asc")
-              .queryParam("startDateTime", fenetre.debut())
-              .queryParam("endDateTime", fenetre.fin());
+        List<ConcertBrut> concerts = fetchToutesPages(uriBase, null);
+        tous.addAll(concerts);
 
-      List<ConcertBrut> concerts = fetchToutesPages(uriBase, null);
-      tous.addAll(concerts);
-
-      try {
-        Thread.sleep(250);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        break;
+        try {
+          Thread.sleep(250);
+        } catch (InterruptedException _) {
+          Thread.currentThread().interrupt();
+          continuer = false;
+        }
       }
     }
 

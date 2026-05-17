@@ -14,10 +14,10 @@ import org.springframework.web.client.RestClient;
 
 /// Résolution des noms canoniques d'artistes et de salles via MusicBrainz et Deezer.
 ///
-/// <p>Stratégie : MusicBrainz (score ≥ 90 + similarité ≥ 0.6) → Deezer (similarité ≥ 0.7) →
+/// Stratégie : MusicBrainz (score ≥ 90 + similarité ≥ 0.6) → Deezer (similarité ≥ 0.7) →
 /// nom inchangé. Les résultats sont mis en cache Caffeine TTL 7 jours pour limiter les appels.
 ///
-/// <p>MusicBrainz impose 1 req/s : le délai de {@value #DELAI_MB_MS} ms est toujours respecté,
+/// MusicBrainz impose 1 req/s : le délai de {@value #DELAI_MB_MS} ms est toujours respecté,
 /// même en cas d'erreur, pour éviter le bannissement d'IP.
 ///
 /// @since 2.0.0
@@ -29,6 +29,7 @@ public class ResolveurNomCanonique {
   private static final long DELAI_MB_MS = 1100;
   private static final double SEUIL_CONFIANCE_MB = 0.6;
   private static final double SEUIL_CONFIANCE_DEEZER = 0.7;
+  private static final String CLE_SCORE = "score";
 
   /// Source de résolution utilisée pour un nom canonique.
   public enum SourceResolution {
@@ -69,7 +70,7 @@ public class ResolveurNomCanonique {
   private void attendreMB() {
     try {
       Thread.sleep(DELAI_MB_MS);
-    } catch (InterruptedException e) {
+    } catch (InterruptedException _) {
       Thread.currentThread().interrupt();
     }
   }
@@ -84,7 +85,7 @@ public class ResolveurNomCanonique {
       var artists = (List<Map<String, Object>>) data.get("artists");
       if (artists == null || artists.isEmpty()) return null;
       var artiste = artists.get(0);
-      int score = artiste.get("score") != null ? ((Number) artiste.get("score")).intValue() : 0;
+      int score = artiste.get(CLE_SCORE) != null ? ((Number) artiste.get(CLE_SCORE)).intValue() : 0;
       if (score < 90) return null;
       String nomMB = (String) artiste.get("name");
       if (Normalisation.similarite(
@@ -93,7 +94,7 @@ public class ResolveurNomCanonique {
         return null;
       }
       return nomMB;
-    } catch (Exception e) {
+    } catch (Exception _) {
       attendreMB();
       return null;
     }
@@ -109,10 +110,10 @@ public class ResolveurNomCanonique {
       var places = (List<Map<String, Object>>) data.get("places");
       if (places == null || places.isEmpty()) return null;
       var lieu = places.get(0);
-      int score = lieu.get("score") != null ? ((Number) lieu.get("score")).intValue() : 0;
+      int score = lieu.get(CLE_SCORE) != null ? ((Number) lieu.get(CLE_SCORE)).intValue() : 0;
       if (score < 90) return null;
       return (String) lieu.get("name");
-    } catch (Exception e) {
+    } catch (Exception _) {
       attendreMB();
       return null;
     }
@@ -134,7 +135,7 @@ public class ResolveurNomCanonique {
         return null;
       }
       return resultat;
-    } catch (Exception e) {
+    } catch (Exception _) {
       return null;
     }
   }
@@ -145,7 +146,7 @@ public class ResolveurNomCanonique {
 
   /// Résout le nom canonique d'un artiste ou d'une salle.
   ///
-  /// <p>Les résultats sont mis en cache par clé {@code "type:nom"}.
+  /// Les résultats sont mis en cache par clé `"type:nom"`.
   ///
   /// @param type {@code "artiste"} ou {@code "salle"}
   /// @param nom  nom brut à résoudre
