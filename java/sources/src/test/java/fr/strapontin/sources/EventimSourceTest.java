@@ -243,9 +243,10 @@ class EventimSourceTest {
 
   @Test
   void constructeurParDefaut_initialise_sansErreur() {
-    assertDoesNotThrow(() -> {
-      new EventimSource();
-    });
+    assertDoesNotThrow(
+        () -> {
+          new EventimSource();
+        });
   }
 
   @Test

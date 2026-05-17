@@ -270,5 +270,4 @@ public class ParametresViewController {
     SecurityContextHolder.clearContext();
     return "redirect:/login";
   }
-
 }

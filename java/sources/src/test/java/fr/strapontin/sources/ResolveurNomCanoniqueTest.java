@@ -20,9 +20,10 @@ class ResolveurNomCanoniqueTest {
 
   @Test
   void constructeurAvecEmail_initialise_sansErreur() {
-    assertDoesNotThrow(() -> {
-      new ResolveurNomCanonique("test@example.com");
-    });
+    assertDoesNotThrow(
+        () -> {
+          new ResolveurNomCanonique("test@example.com");
+        });
   }
 
   @Test

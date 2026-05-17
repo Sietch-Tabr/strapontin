@@ -74,5 +74,4 @@ public class ArtisteViewController {
     artisteController.supprimerArtiste(artisteNormalise, auth);
     return "redirect:/artistes";
   }
-
 }
