@@ -31,8 +31,7 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
 
   private static final Pattern PATTERN_IPV4 =
       Pattern.compile("^(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d+)?$");
-  private static final Pattern PATTERN_IPV6 =
-      Pattern.compile("^\\[?[0-9a-fA-F:]+]?(?::\\d+)?$");
+  private static final Pattern PATTERN_IPV6 = Pattern.compile("^\\[?[0-9a-fA-F:]+]?(?::\\d+)?$");
 
   private final boolean actif;
 
@@ -49,7 +48,8 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
       return;
     }
     String host = request.getHeader("Host");
-    if (host != null && (PATTERN_IPV4.matcher(host).matches() || PATTERN_IPV6.matcher(host).matches())) {
+    if (host != null
+        && (PATTERN_IPV4.matcher(host).matches() || PATTERN_IPV6.matcher(host).matches())) {
       response.setStatus(HttpStatus.FORBIDDEN.value());
       response.setContentType("application/json;charset=UTF-8");
       response.getWriter().write("{\"erreur\":\"Accès direct par IP non autorisé\"}");

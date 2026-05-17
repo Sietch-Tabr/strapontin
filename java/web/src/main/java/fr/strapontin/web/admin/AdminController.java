@@ -245,11 +245,7 @@ public class AdminController {
         INSERT INTO accounts (id, account_id, provider_id, user_id, password, created_at, updated_at)
         VALUES (:id, :accountId, 'credential', :userId, :password, now(), now())
         """,
-        Map.of(
-            "id", accountId,
-            "accountId", userId,
-            CLE_USER_ID, userId,
-            "password", hashMdp));
+        Map.of("id", accountId, "accountId", userId, CLE_USER_ID, userId, "password", hashMdp));
 
     // Token de reset MDP (invitation = 24h)
     String token = genererToken(32);
@@ -278,10 +274,14 @@ public class AdminController {
     return ResponseEntity.status(201)
         .body(
             Map.of(
-                CLE_SUCCES, true,
-                CLE_EMAIL, email,
-                "identifiant", usernameTemp,
-                "lienReset", lienReset));
+                CLE_SUCCES,
+                true,
+                CLE_EMAIL,
+                email,
+                "identifiant",
+                usernameTemp,
+                "lienReset",
+                lienReset));
   }
 
   /// Modifie le nom et/ou l'email d'un utilisateur.
@@ -308,15 +308,22 @@ public class AdminController {
     if (erreurValidation != null) return erreurValidation;
 
     Map<String, Object> miseAJour = construireMiseAJourUser(nom, email, role, userId);
-    jdbc.update("UPDATE users SET " + construireSetClauses(nom, email, role) + " WHERE id = :userId",
+    jdbc.update(
+        "UPDATE users SET " + construireSetClauses(nom, email, role) + " WHERE id = :userId",
         miseAJour);
 
     if (!email.isEmpty()) {
-      logAdminService.logAdmin("warn", "admin", "email modifié",
+      logAdminService.logAdmin(
+          "warn",
+          "admin",
+          "email modifié",
           Map.of(CLE_USER_ID, userId, "nouvelEmail", email, CLE_PAR_ADMIN, adminId));
     }
     if (!role.isEmpty()) {
-      logAdminService.logAdmin("warn", "admin", "rôle modifié",
+      logAdminService.logAdmin(
+          "warn",
+          "admin",
+          "rôle modifié",
           Map.of(CLE_USER_ID, userId, "nouveauRole", role, CLE_PAR_ADMIN, adminId));
     }
     return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "modifierCompte"));
@@ -432,7 +439,9 @@ public class AdminController {
     emailService.envoyerResetMotDePasse(email, lienReset);
 
     logAdminService.logAdmin(
-        "warn", "admin", "mot de passe réinitialisé",
+        "warn",
+        "admin",
+        "mot de passe réinitialisé",
         Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId));
 
     return ResponseEntity.ok(

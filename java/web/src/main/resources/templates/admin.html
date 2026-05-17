@@ -41,10 +41,30 @@
         border-radius: 3px;
         font-family: monospace;
       }
-      .modif-ligne td { background: var(--couleur-fond-secondaire, #f9f9f9); padding: 12px 16px; }
-      .form-modif-utilisateur { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-      .form-modif-utilisateur input, .form-modif-utilisateur select { font-size: 13px; padding: 5px 8px; border: 1px solid var(--couleur-bordure, #ddd); border-radius: 4px; background: var(--couleur-surface, #fff); color: var(--couleur-texte, #111); }
-      .erreur-modif { font-size: 12px; color: #c00; display: none; }
+      .modif-ligne td {
+        background: var(--couleur-fond-secondaire, #f9f9f9);
+        padding: 12px 16px;
+      }
+      .form-modif-utilisateur {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .form-modif-utilisateur input,
+      .form-modif-utilisateur select {
+        font-size: 13px;
+        padding: 5px 8px;
+        border: 1px solid var(--couleur-bordure, #ddd);
+        border-radius: 4px;
+        background: var(--couleur-surface, #fff);
+        color: var(--couleur-texte, #111);
+      }
+      .erreur-modif {
+        font-size: 12px;
+        color: #c00;
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -146,7 +166,10 @@
                       <button
                         type="button"
                         class="btn btn-sm btn-secondary"
-                        th:onclick="'toggleModif(\'' + ${u.id} + '\')'">Modifier</button>
+                        th:onclick="'toggleModif(\'' + ${u.id} + '\')'"
+                      >
+                        Modifier
+                      </button>
                       <form
                         method="post"
                         th:action="@{/admin/utilisateurs/{id}/reset-mdp(id=${u.id})}"
@@ -169,20 +192,53 @@
                       </form>
                     </td>
                   </tr>
-                  <tr th:id="'modif-' + ${u.id}" class="modif-ligne" style="display:none">
+                  <tr
+                    th:id="'modif-' + ${u.id}"
+                    class="modif-ligne"
+                    style="display: none"
+                  >
                     <td colspan="6">
-                      <form class="form-modif-utilisateur" th:data-user-id="${u.id}">
-                        <input type="text" name="nom" maxlength="100"
-                               placeholder="Nom" th:value="${u.name}" />
-                        <input type="email" name="email"
-                               placeholder="Email" th:value="${u.email}" />
+                      <form
+                        class="form-modif-utilisateur"
+                        th:data-user-id="${u.id}"
+                      >
+                        <input
+                          type="text"
+                          name="nom"
+                          maxlength="100"
+                          placeholder="Nom"
+                          th:value="${u.name}"
+                        />
+                        <input
+                          type="email"
+                          name="email"
+                          placeholder="Email"
+                          th:value="${u.email}"
+                        />
                         <select name="role">
-                          <option value="user" th:selected="${u.role == 'user'}">user</option>
-                          <option value="admin" th:selected="${u.role == 'admin'}">admin</option>
+                          <option
+                            value="user"
+                            th:selected="${u.role == 'user'}"
+                          >
+                            user
+                          </option>
+                          <option
+                            value="admin"
+                            th:selected="${u.role == 'admin'}"
+                          >
+                            admin
+                          </option>
                         </select>
-                        <button type="submit" class="btn btn-sm btn-primary">Enregistrer</button>
-                        <button type="button" class="btn btn-sm btn-secondary"
-                                th:onclick="'toggleModif(\'' + ${u.id} + '\')'">Annuler</button>
+                        <button type="submit" class="btn btn-sm btn-primary">
+                          Enregistrer
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-secondary"
+                          th:onclick="'toggleModif(\'' + ${u.id} + '\')'"
+                        >
+                          Annuler
+                        </button>
                         <span class="erreur-modif"></span>
                       </form>
                     </td>
@@ -428,40 +484,45 @@
 
         function toggleModif(userId) {
           var row = document.getElementById("modif-" + userId);
-          if (row) row.style.display = row.style.display === "none" ? "" : "none";
+          if (row)
+            row.style.display = row.style.display === "none" ? "" : "none";
         }
 
-        document.querySelectorAll(".form-modif-utilisateur").forEach(function (form) {
-          form.addEventListener("submit", function (e) {
-            e.preventDefault();
-            var userId = form.getAttribute("data-user-id");
-            var erreurSpan = form.querySelector(".erreur-modif");
-            erreurSpan.style.display = "none";
-            var corps = {
-              nom: form.querySelector("[name=nom]").value.trim(),
-              email: form.querySelector("[name=email]").value.trim(),
-              role: form.querySelector("[name=role]").value,
-            };
-            fetch("/admin/utilisateurs/" + userId, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(corps),
-            })
-              .then(function (r) { return r.json(); })
-              .then(function (d) {
-                if (d.succes) {
-                  location.reload();
-                } else {
-                  erreurSpan.textContent = d.erreur || "Erreur.";
-                  erreurSpan.style.display = "";
-                }
+        document
+          .querySelectorAll(".form-modif-utilisateur")
+          .forEach(function (form) {
+            form.addEventListener("submit", function (e) {
+              e.preventDefault();
+              var userId = form.getAttribute("data-user-id");
+              var erreurSpan = form.querySelector(".erreur-modif");
+              erreurSpan.style.display = "none";
+              var corps = {
+                nom: form.querySelector("[name=nom]").value.trim(),
+                email: form.querySelector("[name=email]").value.trim(),
+                role: form.querySelector("[name=role]").value,
+              };
+              fetch("/admin/utilisateurs/" + userId, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(corps),
               })
-              .catch(function () {
-                erreurSpan.textContent = "Erreur réseau.";
-                erreurSpan.style.display = "";
-              });
+                .then(function (r) {
+                  return r.json();
+                })
+                .then(function (d) {
+                  if (d.succes) {
+                    location.reload();
+                  } else {
+                    erreurSpan.textContent = d.erreur || "Erreur.";
+                    erreurSpan.style.display = "";
+                  }
+                })
+                .catch(function () {
+                  erreurSpan.textContent = "Erreur réseau.";
+                  erreurSpan.style.display = "";
+                });
+            });
           });
-        });
       </script>
     </th:block>
   </body>

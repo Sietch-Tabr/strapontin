@@ -5,7 +5,6 @@
 package fr.strapontin.worker.jobs;
 
 import fr.strapontin.worker.WorkerService;
-import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -303,7 +303,8 @@ public class TicketmasterSource {
     if (nomAttraction != null) return normaliserCasse(nomAttraction);
     if (artisteFallback == null) return null;
     String nomEvenement = (String) evt.get("name");
-    if (nomEvenement != null && nomEvenement.toLowerCase().contains(artisteFallback.toLowerCase())) {
+    if (nomEvenement != null
+        && nomEvenement.toLowerCase().contains(artisteFallback.toLowerCase())) {
       return artisteFallback;
     }
     return null;
@@ -322,16 +323,13 @@ public class TicketmasterSource {
   }
 
   @SuppressWarnings("unchecked")
-  private static String[] extraireClassificationTM(
-      List<Map<String, Object>> classificationsData) {
+  private static String[] extraireClassificationTM(List<Map<String, Object>> classificationsData) {
     if (classificationsData == null || classificationsData.isEmpty()) {
       return new String[] {null, null};
     }
     var segment = (Map<String, String>) classificationsData.get(0).get("segment");
     String segmentNom =
-        segment != null && segment.get("name") != null
-            ? segment.get("name").toLowerCase()
-            : null;
+        segment != null && segment.get("name") != null ? segment.get("name").toLowerCase() : null;
     var genreMap = (Map<String, String>) classificationsData.get(0).get("genre");
     String genre = genreMap != null ? genreMap.get("name") : null;
     return new String[] {segmentNom, genre};
@@ -372,8 +370,19 @@ public class TicketmasterSource {
     String[] segmentGenre = extraireClassificationTM(classificationsData);
 
     return new ConcertBrut(
-        artiste, datHeure[0], datHeure[1], salle, ville, dept, prix[0], prix[1], url,
-        "ticketmaster", normaliserClassification(segmentGenre[0]), segmentGenre[1], statut);
+        artiste,
+        datHeure[0],
+        datHeure[1],
+        salle,
+        ville,
+        dept,
+        prix[0],
+        prix[1],
+        url,
+        "ticketmaster",
+        normaliserClassification(segmentGenre[0]),
+        segmentGenre[1],
+        statut);
   }
 
   private record ResultatPage(

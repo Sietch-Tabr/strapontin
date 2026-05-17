@@ -222,16 +222,26 @@ public class PersisterConcerts {
     log.debug(
         "doublon salle intra-lot réconcilié entrant={} canonique={}", c.salleNorm(), canonique);
     return new ValeurConcert(
-        c.artiste(), c.artisteNorm(), c.date(), c.heure(), c.salle(), canonique,
-        c.ville(), c.dept(), c.prixMin(), c.prixMax(), c.url(), c.source(),
-        c.classification(), c.genre(), c.statut());
+        c.artiste(),
+        c.artisteNorm(),
+        c.date(),
+        c.heure(),
+        c.salle(),
+        canonique,
+        c.ville(),
+        c.dept(),
+        c.prixMin(),
+        c.prixMax(),
+        c.url(),
+        c.source(),
+        c.classification(),
+        c.genre(),
+        c.statut());
   }
 
   private List<ValeurConcert> reconcilierContreBase(
       List<ValeurConcert> lot, Map<String, List<String>> indexExistants) {
-    return lot.stream()
-        .map(concert -> reconcilierUnConcert(concert, indexExistants))
-        .toList();
+    return lot.stream().map(concert -> reconcilierUnConcert(concert, indexExistants)).toList();
   }
 
   private ValeurConcert reconcilierUnConcert(
@@ -244,12 +254,24 @@ public class PersisterConcerts {
       if (estDoublonSalle(concert.salleNorm(), salleNormExistante)) {
         log.debug(
             "doublon salle inter-jobs réconcilié entrant={} existant={}",
-            concert.salleNorm(), salleNormExistante);
+            concert.salleNorm(),
+            salleNormExistante);
         return new ValeurConcert(
-            concert.artiste(), concert.artisteNorm(), concert.date(), concert.heure(),
-            concert.salle(), salleNormExistante, concert.ville(), concert.dept(),
-            concert.prixMin(), concert.prixMax(), concert.url(), concert.source(),
-            concert.classification(), concert.genre(), concert.statut());
+            concert.artiste(),
+            concert.artisteNorm(),
+            concert.date(),
+            concert.heure(),
+            concert.salle(),
+            salleNormExistante,
+            concert.ville(),
+            concert.dept(),
+            concert.prixMin(),
+            concert.prixMax(),
+            concert.url(),
+            concert.source(),
+            concert.classification(),
+            concert.genre(),
+            concert.statut());
       }
     }
     return concert;

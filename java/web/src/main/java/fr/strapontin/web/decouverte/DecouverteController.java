@@ -121,7 +121,8 @@ public class DecouverteController {
     String rechercheNorm = q.strip().substring(0, Math.min(q.strip().length(), 100));
     String genreStr = genre.strip().substring(0, Math.min(genre.strip().length(), 50));
     StringBuilder where =
-        construireFiltresWhere(deptsActifs, rechercheNorm, mois, genreStr, classification, budget, aujourd8, params);
+        construireFiltresWhere(
+            deptsActifs, rechercheNorm, mois, genreStr, classification, budget, aujourd8, params);
 
     String orderBy =
         "nouveaute".equals(tri) ? "c.first_seen DESC, c.date ASC" : "c.date ASC, c.artiste ASC";
@@ -165,7 +166,8 @@ public class DecouverteController {
     Map<String, Object> countParams = new HashMap<>(params);
     countParams.remove("limit");
     countParams.remove("offset");
-    int total = Objects.requireNonNullElse(jdbc.queryForObject(countSql, countParams, Integer.class), 0);
+    int total =
+        Objects.requireNonNullElse(jdbc.queryForObject(countSql, countParams, Integer.class), 0);
 
     Map<String, Object> baseParams = new HashMap<>();
     baseParams.put("aujourd8", aujourd8);

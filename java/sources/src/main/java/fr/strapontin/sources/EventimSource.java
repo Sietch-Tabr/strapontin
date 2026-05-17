@@ -116,7 +116,8 @@ public class EventimSource {
       String artiste = artisteFallback != null ? artisteFallback : extraireNomArtiste(titre);
       @SuppressWarnings("unchecked")
       var location = (Map<String, Object>) liveEnt.get("location");
-      return construireConcertEventim(produit, liveEnt, location, artiste, datHeure[0], datHeure[1]);
+      return construireConcertEventim(
+          produit, liveEnt, location, artiste, datHeure[0], datHeure[1]);
     } catch (Exception e) {
       log.warn("erreur parsing produit Eventim", e);
       return null;

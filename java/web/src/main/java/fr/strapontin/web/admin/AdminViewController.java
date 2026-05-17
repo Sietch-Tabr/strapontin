@@ -73,7 +73,8 @@ public class AdminViewController {
     ResponseEntity<Map<String, Object>> rep = adminController.creerUtilisateur(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       var corps = rep.getBody();
       redirects.addFlashAttribute(CLE_SUCCES, "creerUtilisateur");
@@ -97,7 +98,8 @@ public class AdminViewController {
     ResponseEntity<Map<String, Object>> rep = adminController.supprimerUtilisateur(userId, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "supprimerUtilisateur");
     }
@@ -118,7 +120,8 @@ public class AdminViewController {
     ResponseEntity<Map<String, Object>> rep = adminController.reinitialiserMdp(userId, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "reinitialiserMdp");
     }
@@ -142,7 +145,8 @@ public class AdminViewController {
     ResponseEntity<Map<String, Object>> rep = adminController.sauvegarderConfig(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "config");
     }
@@ -158,7 +162,8 @@ public class AdminViewController {
     ResponseEntity<Map<String, Object>> rep = adminController.genererVapid();
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "vapid");
     }
@@ -174,7 +179,8 @@ public class AdminViewController {
     ResponseEntity<Map<String, Object>> rep = adminController.relancerFetches();
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "relancer");
     }
