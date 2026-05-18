@@ -17,12 +17,13 @@
         </p>
       </div>
 
-      <div th:if="${succes}" class="alerte alerte-succes">
+      <div th:if="${succes}" popover="manual" class="alerte alerte-succes">
         Synchronisation déclenchée — les résultats seront mis à jour dans
         quelques minutes.
       </div>
       <div
         th:if="${erreur}"
+        popover="manual"
         class="alerte alerte-erreur"
         th:text="${erreur}"
       ></div>

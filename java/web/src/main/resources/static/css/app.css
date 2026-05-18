@@ -305,6 +305,7 @@ textarea:focus {
   margin-bottom: 1rem;
   border-width: 1px;
   border-style: solid;
+  position: relative;
 }
 
 .alerte-erreur {
@@ -1091,6 +1092,96 @@ tr:hover td {
 .sync-info {
   font-size: 0.75rem;
   color: var(--fg-muted);
+}
+
+/* ── Transitions de navigation (MPA View Transitions) ───────── */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: 180ms ease-out both vt-sortie;
+}
+
+::view-transition-new(root) {
+  animation: 220ms ease-out both vt-entree;
+}
+
+@keyframes vt-sortie {
+  to {
+    opacity: 0;
+    transform: scale(0.99);
+  }
+}
+
+@keyframes vt-entree {
+  from {
+    opacity: 0;
+    transform: scale(0.99);
+  }
+}
+
+/* ── Toasts (Popover API + @starting-style) ──────────────────── */
+[popover].alerte {
+  inset: auto;
+  bottom: calc(1.5rem + var(--indice-toast, 0) * 5.25rem);
+  right: 1.5rem;
+  left: auto;
+  top: auto;
+  width: min(22rem, calc(100vw - 3rem));
+  margin: 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease,
+    display 0.3s allow-discrete,
+    overlay 0.3s allow-discrete;
+  opacity: 1;
+  transform: translateY(0);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+}
+
+[popover].alerte:not(:popover-open) {
+  opacity: 0;
+  transform: translateY(0.75rem);
+}
+
+.toast-fermer {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.125rem;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.5;
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+.toast-fermer:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.dark .toast-fermer:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 768px) {
+  [popover].alerte {
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+    bottom: calc(var(--nav-h) + 0.75rem + var(--indice-toast, 0) * 5.25rem);
+  }
 }
 
 /* ── Page Setup (configuration initiale) ─────────────────── */

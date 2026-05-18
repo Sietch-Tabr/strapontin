@@ -16,11 +16,13 @@
 
       <div
         th:if="${succes}"
+        popover="manual"
         class="alerte alerte-succes"
         th:text="'Paramètres enregistrés.'"
       ></div>
       <div
         th:if="${erreur}"
+        popover="manual"
         class="alerte alerte-erreur"
         th:text="${erreur}"
       ></div>

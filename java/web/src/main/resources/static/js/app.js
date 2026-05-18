@@ -40,6 +40,35 @@ if ("serviceWorker" in navigator) {
     .catch(() => {});
 }
 
+// Toasts (Popover API)
+(function () {
+  const alertes = document.querySelectorAll('[popover].alerte');
+  alertes.forEach((el, i) => {
+    el.style.setProperty('--indice-toast', i);
+
+    const fermer = document.createElement('button');
+    fermer.textContent = '×';
+    fermer.setAttribute('aria-label', 'Fermer');
+    fermer.className = 'toast-fermer';
+    el.appendChild(fermer);
+
+    el.showPopover();
+
+    let delai = 4000;
+    if (el.dataset.delai) {
+      delai = parseInt(el.dataset.delai, 10);
+    } else if (el.querySelector('a')) {
+      delai = 15000;
+    }
+
+    const minuterie = setTimeout(() => el.hidePopover(), delai);
+    fermer.addEventListener('click', () => {
+      clearTimeout(minuterie);
+      el.hidePopover();
+    });
+  });
+})();
+
 function urlBase64VersUint8Array(base64) {
   const rembourrage = "=".repeat((4 - (base64.length % 4)) % 4);
   const b64 = (base64 + rembourrage).replace(/-/g, "+").replace(/_/g, "/");

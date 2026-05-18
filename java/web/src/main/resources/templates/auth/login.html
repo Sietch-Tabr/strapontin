@@ -12,16 +12,16 @@
       <h1 class="auth-title">Strapontin</h1>
       <p class="auth-subtitle">Connectez-vous à votre compte</p>
 
-      <div class="alerte alerte-erreur" th:if="${param.erreur}">
+      <div popover="manual" class="alerte alerte-erreur" th:if="${param.erreur}">
         Identifiant ou mot de passe incorrect.
       </div>
-      <div class="alerte alerte-succes" th:if="${param.deconnecte}">
+      <div popover="manual" class="alerte alerte-succes" th:if="${param.deconnecte}">
         Vous avez été déconnecté.
       </div>
-      <div class="alerte alerte-succes" th:if="${param.reset}">
+      <div popover="manual" class="alerte alerte-succes" th:if="${param.reset}">
         Mot de passe mis à jour. Connectez-vous avec votre nouveau mot de passe.
       </div>
-      <div class="alerte alerte-succes" th:if="${param.configure}">
+      <div popover="manual" class="alerte alerte-succes" th:if="${param.configure}">
         Application configurée. Connectez-vous avec le compte administrateur.
       </div>
 
