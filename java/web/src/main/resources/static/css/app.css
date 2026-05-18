@@ -1132,6 +1132,7 @@ tr:hover td {
 
 /* ── Toasts (Popover API + @starting-style) ──────────────────── */
 [popover].alerte {
+  position: fixed;
   inset: auto;
   bottom: calc(1.5rem + var(--indice-toast, 0) * 5.25rem);
   right: 1.5rem;
