@@ -45,7 +45,7 @@ public class PreferencesController {
 
   record ArtisteExport(String nom, String normalise) {}
 
-  record SalleExport(String salleId, String tmVenueId) {}
+  record SalleExport(String salleId, String tmVenueId, String nom) {}
 
   record ConfigExport(
       List<String> departements,
@@ -129,13 +129,14 @@ public class PreferencesController {
   private void importerSalles(String userId, List<SalleExport> salles) {
     for (SalleExport s : salles) {
       if (s.salleId() == null || s.salleId().isBlank()) continue;
+      String nomSalle = s.nom() != null && !s.nom().isBlank() ? s.nom() : s.salleId();
       jdbc.update(
           """
           INSERT INTO salles (id, nom, nom_norm)
-          VALUES (:salleId, :salleId, :salleId)
-          ON CONFLICT (id) DO NOTHING
+          VALUES (:salleId, :nom, :nom)
+          ON CONFLICT (id) DO UPDATE SET nom = EXCLUDED.nom, nom_norm = EXCLUDED.nom_norm
           """,
-          Map.of("salleId", s.salleId()));
+          Map.of("salleId", s.salleId(), "nom", nomSalle));
       jdbc.update(
           """
           INSERT INTO user_salles (user_id, salle_id, tm_venue_id)
@@ -229,11 +230,15 @@ public class PreferencesController {
     List<SalleExport> salles =
         jdbc.query(
             """
-            SELECT salle_id, tm_venue_id FROM user_salles
-            WHERE user_id = :userId ORDER BY salle_id
+            SELECT us.salle_id, us.tm_venue_id, s.nom
+            FROM user_salles us
+            JOIN salles s ON s.id = us.salle_id
+            WHERE us.user_id = :userId ORDER BY us.salle_id
             """,
             Map.of(CLE_USER_ID, userId),
-            (rs, _) -> new SalleExport(rs.getString("salle_id"), rs.getString("tm_venue_id")));
+            (rs, _) ->
+                new SalleExport(
+                    rs.getString("salle_id"), rs.getString("tm_venue_id"), rs.getString("nom")));
 
     List<ConfigExport> configRows =
         jdbc.query(

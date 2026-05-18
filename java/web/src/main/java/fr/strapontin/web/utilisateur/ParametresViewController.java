@@ -186,6 +186,9 @@ public class ParametresViewController {
       @RequestParam(required = false) String email,
       RedirectAttributes redirects,
       Authentication auth) {
+    // Champs vides = ne pas mettre à jour (distinction null vs chaîne vide du form)
+    if (nom != null && nom.isBlank()) nom = null;
+    if (email != null && email.isBlank()) email = null;
     var requete = new UserController.RequeteProfil(nom, email);
     ResponseEntity<Map<String, Object>> rep = userController.majProfil(requete, auth);
     if (rep.getStatusCode().isError()) {

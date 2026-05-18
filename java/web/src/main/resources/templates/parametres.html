@@ -73,7 +73,6 @@
               class="form-toggle"
             >
               <label class="switch">
-                <input type="hidden" name="filtreDisponibles" value="false" />
                 <input
                   type="checkbox"
                   name="filtreDisponibles"
@@ -198,18 +197,26 @@
             </form>
           </div>
 
-          <!-- Notifications push (affiché dynamiquement par JS si supportées) -->
-          <div
-            id="push-section"
-            class="param-bloc"
-            style="margin-top: 1.5rem; display: none"
-          >
+          <!-- Notifications push -->
+          <div id="push-section" class="param-bloc" style="margin-top: 1.5rem">
             <h3 class="param-label">Notifications push</h3>
             <div
               id="push-erreur"
               class="alerte alerte-erreur"
               style="display: none"
             ></div>
+            <div id="push-non-supporte" style="display: none">
+              <p class="param-aide">
+                Les notifications push nécessitent HTTPS. Elles seront
+                disponibles une fois l'application déployée en production.
+              </p>
+            </div>
+            <div id="push-vapid-manquant" style="display: none">
+              <p class="param-aide">
+                Les notifications push ne sont pas configurées (clé VAPID
+                manquante dans la configuration admin).
+              </p>
+            </div>
             <div id="push-permission-refusee" style="display: none">
               <p class="param-aide">
                 Les notifications sont bloquées dans votre navigateur. Pour les
@@ -303,6 +310,21 @@
               />
               <button type="submit" class="btn btn-secondary">Modifier</button>
             </form>
+          </div>
+
+          <!-- TOTP (admins uniquement) -->
+          <div
+            class="param-bloc"
+            sec:authorize="hasRole('ADMIN')"
+          >
+            <h3 class="param-label">Authentification à deux facteurs (TOTP)</h3>
+            <p class="param-aide" th:if="${utilisateur?.twoFactorActif}">
+              TOTP activé sur votre compte.
+            </p>
+            <p class="param-aide" th:unless="${utilisateur?.twoFactorActif}">
+              TOTP non activé. La configuration sera disponible après la mise en
+              production.
+            </p>
           </div>
 
           <!-- Mot de passe -->
@@ -426,17 +448,20 @@
       </div>
       <script>
         (function () {
-          if (!("serviceWorker" in navigator) || !("PushManager" in window))
-            return;
-
-          var section = document.getElementById("push-section");
           var erreurDiv = document.getElementById("push-erreur");
+          var nonSupporteDiv = document.getElementById("push-non-supporte");
+          var vapidManquantDiv = document.getElementById("push-vapid-manquant");
           var permRefusee = document.getElementById("push-permission-refusee");
           var abonneDiv = document.getElementById("push-abonne");
           var nonAbonneDiv = document.getElementById("push-non-abonne");
+
+          if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+            nonSupporteDiv.style.display = "";
+            return;
+          }
+
           var btnActiver = document.getElementById("btn-activer-push");
           var btnDesactiver = document.getElementById("btn-desactiver-push");
-
           var pushClePublique = null;
           var pushAbonnement = null;
           var pushEnCours = false;
@@ -485,12 +510,16 @@
               ]);
               var repVapid = results[0];
               var registration = results[1];
-              if (!repVapid.disponible) return;
+              if (!repVapid.disponible) {
+                vapidManquantDiv.style.display = "";
+                return;
+              }
               pushClePublique = repVapid.clePublique;
               pushAbonnement = await registration.pushManager.getSubscription();
-              section.style.display = "";
               majEtat();
-            } catch (_) {}
+            } catch (_) {
+              nonSupporteDiv.style.display = "";
+            }
           }
 
           btnActiver.addEventListener("click", async function () {
