@@ -252,8 +252,7 @@ public class SpectacleController {
     countParams.remove("limit");
     countParams.remove("offset");
     int total =
-        Objects.requireNonNullElse(
-            jdbc.queryForObject(countSql, countParams, Integer.class), 0);
+        Objects.requireNonNullElse(jdbc.queryForObject(countSql, countParams, Integer.class), 0);
 
     // Genres et mois disponibles (sans filtre genre/mois/classification/recherche)
     String whereBase =

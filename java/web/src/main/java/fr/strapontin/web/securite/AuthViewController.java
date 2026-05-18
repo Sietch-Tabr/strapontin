@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -37,24 +38,30 @@ public class AuthViewController {
   private static final SecureRandom rng = new SecureRandom();
   private static final String VUE_FORGOT_PASSWORD = "auth/forgot-password";
   private static final String VUE_RESET_PASSWORD = "auth/reset-password";
+  private static final String VUE_TOTP = "auth/totp";
   private static final String CLE_EMAIL = "email";
   private static final String CLE_ERREUR = "erreur";
   private static final String CLE_TOKEN = "token";
+  private static final String SESSION_ECHECS_TOTP = "TOTP_ECHECS";
+  private static final int MAX_ECHECS_TOTP = 5;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigService configService;
   private final EmailService emailService;
   private final PasswordEncoder passwordEncoder;
+  private final TotpService totpService;
 
   public AuthViewController(
       NamedParameterJdbcTemplate jdbc,
       ConfigService configService,
       EmailService emailService,
-      PasswordEncoder passwordEncoder) {
+      PasswordEncoder passwordEncoder,
+      TotpService totpService) {
     this.jdbc = jdbc;
     this.configService = configService;
     this.emailService = emailService;
     this.passwordEncoder = passwordEncoder;
+    this.totpService = totpService;
   }
 
   /// Affiche la page de connexion.
@@ -63,6 +70,68 @@ public class AuthViewController {
   @GetMapping("/login")
   public String login() {
     return "auth/login";
+  }
+
+  /// Affiche la page de challenge TOTP post-login.
+  ///
+  /// @param session la session HTTP courante
+  /// @return le template TOTP, ou redirect vers {@code /} si aucun challenge en attente
+  @GetMapping("/auth/totp")
+  public String afficherChallengeTotp(HttpSession session) {
+    if (!Boolean.TRUE.equals(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))) {
+      return "redirect:/";
+    }
+    return VUE_TOTP;
+  }
+
+  /// Vérifie le code TOTP soumis par l'utilisateur.
+  ///
+  /// <p>Après 5 échecs consécutifs, la session est invalidée et l'utilisateur
+  /// est renvoyé vers {@code /login}.
+  ///
+  /// @param code    le code à 6 chiffres saisi
+  /// @param modele  le modèle Thymeleaf
+  /// @param session la session HTTP courante
+  /// @param auth    le contexte d'authentification Spring Security
+  /// @return redirect vers {@code /} si succès, sinon ré-affichage avec erreur
+  @PostMapping("/auth/totp")
+  public String verifierChallengeTotp(
+      @RequestParam(required = false, defaultValue = "") String code,
+      Model modele,
+      HttpSession session,
+      Authentication auth) {
+    if (!Boolean.TRUE.equals(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))) {
+      return "redirect:/";
+    }
+
+    UtilisateurDetails principal = (UtilisateurDetails) auth.getPrincipal();
+    List<String> secrets =
+        jdbc.queryForList(
+            "SELECT two_factor_secret FROM users WHERE id = :id",
+            Map.of("id", principal.id()),
+            String.class);
+
+    String secret = secrets.isEmpty() ? null : secrets.get(0);
+    if (totpService.verifierCode(secret, code)) {
+      session.removeAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE);
+      session.removeAttribute(SESSION_ECHECS_TOTP);
+      return "redirect:/";
+    }
+
+    int echecs =
+        ((Integer) session.getAttribute(SESSION_ECHECS_TOTP) != null)
+            ? (Integer) session.getAttribute(SESSION_ECHECS_TOTP) + 1
+            : 1;
+
+    if (echecs >= MAX_ECHECS_TOTP) {
+      session.invalidate();
+      return "redirect:/login?erreur=true";
+    }
+
+    session.setAttribute(SESSION_ECHECS_TOTP, echecs);
+    modele.addAttribute(
+        CLE_ERREUR, "Code incorrect. " + (MAX_ECHECS_TOTP - echecs) + " essai(s) restant(s).");
+    return VUE_TOTP;
   }
 
   /// Affiche le formulaire de mot de passe oublié.

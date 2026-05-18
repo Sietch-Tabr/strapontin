@@ -44,10 +44,13 @@ public class SecurityConfiguration {
   SecurityFilterChain securityFilterChain(
       HttpSecurity http,
       RateLimitingLoginFilter rateLimitingFilter,
-      BloquerAccesDirectIpFilter bloquerIpFilter)
+      BloquerAccesDirectIpFilter bloquerIpFilter,
+      TotpGuardFilter totpGuardFilter,
+      TotpSuccessHandler totpSuccessHandler)
       throws Exception {
     http.addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterAfter(totpGuardFilter, UsernamePasswordAuthenticationFilter.class)
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers(
@@ -73,6 +76,8 @@ public class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers("/api/setup")
                     .permitAll()
+                    .requestMatchers("/auth/totp", "/parametres/totp", "/parametres/totp/**")
+                    .authenticated()
                     .requestMatchers("/api/admin/**", "/admin", "/admin/**")
                     .hasRole("ADMIN")
                     .anyRequest()
@@ -86,7 +91,7 @@ public class SecurityConfiguration {
                     .loginProcessingUrl("/login")
                     .usernameParameter("identifiant")
                     .passwordParameter("motDePasse")
-                    .defaultSuccessUrl("/", true)
+                    .successHandler(totpSuccessHandler)
                     .failureUrl("/login?erreur=true")
                     .permitAll())
         // Logout

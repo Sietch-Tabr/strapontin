@@ -312,16 +312,44 @@
             </form>
           </div>
 
-          <!-- TOTP (admins uniquement) -->
-          <div class="param-bloc" sec:authorize="hasRole('ADMIN')">
+          <!-- TOTP -->
+          <div class="param-bloc">
             <h3 class="param-label">Authentification à deux facteurs (TOTP)</h3>
-            <p class="param-aide" th:if="${utilisateur?.twoFactorActif}">
-              TOTP activé sur votre compte.
-            </p>
-            <p class="param-aide" th:unless="${utilisateur?.twoFactorActif}">
-              TOTP non activé. La configuration sera disponible après la mise en
-              production.
-            </p>
+            <div th:if="${utilisateur?.twoFactorActif}">
+              <p class="param-aide">TOTP activé sur votre compte.</p>
+              <form
+                method="post"
+                th:action="@{/parametres/totp/desactiver}"
+                class="form-vertical form-compact"
+              >
+                <div class="form-group">
+                  <label for="totp-desact-code">Code de confirmation</label>
+                  <input
+                    id="totp-desact-code"
+                    type="text"
+                    name="code"
+                    inputmode="numeric"
+                    pattern="[0-9]{6}"
+                    maxlength="6"
+                    autocomplete="one-time-code"
+                    placeholder="123456"
+                    required
+                  />
+                </div>
+                <button type="submit" class="btn btn-danger btn-sm">
+                  Désactiver le TOTP
+                </button>
+              </form>
+            </div>
+            <div th:unless="${utilisateur?.twoFactorActif}">
+              <p class="param-aide">
+                Protégez votre compte avec une application d'authentification
+                (Google Authenticator, Aegis…).
+              </p>
+              <a th:href="@{/parametres/totp}" class="btn btn-secondary btn-sm">
+                Configurer le TOTP
+              </a>
+            </div>
           </div>
 
           <!-- Mot de passe -->

@@ -124,6 +124,19 @@
             <version>0.9.6</version>
         </dependency>
 
+        <!-- QR code SVG — génération côté serveur (enrollment TOTP) -->
+        <dependency>
+            <groupId>uk.org.okapibarcode</groupId>
+            <artifactId>okapibarcode</artifactId>
+            <version>0.5.5</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.beust</groupId>
+                    <artifactId>jcommander</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
         <!-- Email transactionnel -->
         <dependency>
             <groupId>com.resend</groupId>

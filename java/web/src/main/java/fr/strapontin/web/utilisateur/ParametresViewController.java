@@ -4,14 +4,18 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import fr.strapontin.web.securite.TotpService;
+import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -38,6 +42,7 @@ public class ParametresViewController {
   private static final String CLE_SUCCES = "succes";
   private static final String REDIRECT_PREFS = "redirect:/parametres#preferences";
   private static final String REDIRECT_COMPTE = "redirect:/parametres#compte";
+  private static final String SESSION_TOTP_SETUP = "TOTP_SECRET_SETUP";
 
   @Value("${app.cookie.secure:true}")
   private boolean cookieSecure;
@@ -45,14 +50,20 @@ public class ParametresViewController {
   private final UserConfigController userConfigController;
   private final UserController userController;
   private final PreferencesController preferencesController;
+  private final TotpService totpService;
+  private final NamedParameterJdbcTemplate jdbc;
 
   public ParametresViewController(
       UserConfigController userConfigController,
       UserController userController,
-      PreferencesController preferencesController) {
+      PreferencesController preferencesController,
+      TotpService totpService,
+      NamedParameterJdbcTemplate jdbc) {
     this.userConfigController = userConfigController;
     this.userController = userController;
     this.preferencesController = preferencesController;
+    this.totpService = totpService;
+    this.jdbc = jdbc;
   }
 
   /// Affiche la page des paramètres.
@@ -276,6 +287,89 @@ public class ParametresViewController {
       redirects.addFlashAttribute(CLE_SUCCES, "import");
     }
     return "redirect:/parametres#donnees";
+  }
+
+  /// Affiche la page d'enrollment TOTP pour les admins.
+  ///
+  /// <p>Génère un nouveau secret, le stocke en session et construit l'URI {@code otpauth://}.
+  ///
+  /// @param modele  le modèle Thymeleaf
+  /// @param session la session HTTP courante
+  /// @param auth    contexte d'authentification
+  /// @return le template d'enrollment TOTP
+  @GetMapping("/parametres/totp")
+  public String afficherSetupTotp(Model modele, HttpSession session, Authentication auth) {
+    String secret = totpService.genererSecret();
+    session.setAttribute(SESSION_TOTP_SETUP, secret);
+    String identifiant = ((UtilisateurDetails) auth.getPrincipal()).identifiant();
+    String otpUri = totpService.genererUriOtpAuth(secret, identifiant);
+    modele.addAttribute("otpUri", otpUri);
+    modele.addAttribute("qrCodeSvg", totpService.genererQrCodeSvg(otpUri));
+    modele.addAttribute("totpSecret", secret);
+    modele.addAttribute("currentPage", "parametres");
+    return "auth/totp-setup";
+  }
+
+  /// Confirme l'enrollment TOTP en vérifiant le premier code saisi.
+  ///
+  /// <p>Si le code est valide, le secret est persisté en base et le TOTP est activé.
+  ///
+  /// @param code      le code à 6 chiffres saisi pour confirmer l'enrollment
+  /// @param redirects attributs de redirection
+  /// @param session   la session HTTP courante
+  /// @param auth      contexte d'authentification
+  /// @return redirect vers /parametres#compte si succès, sinon redirect vers /parametres/totp
+  @PostMapping("/parametres/totp/confirmer")
+  public String confirmerSetupTotp(
+      @RequestParam(required = false, defaultValue = "") String code,
+      RedirectAttributes redirects,
+      HttpSession session,
+      Authentication auth) {
+    String secret = (String) session.getAttribute(SESSION_TOTP_SETUP);
+    if (secret == null) {
+      redirects.addFlashAttribute(CLE_ERREUR, "Session expirée. Recommencez la configuration.");
+      return "redirect:/parametres/totp";
+    }
+    if (!totpService.verifierCode(secret, code)) {
+      redirects.addFlashAttribute(CLE_ERREUR, "Code incorrect. Recommencez la configuration.");
+      return "redirect:/parametres/totp";
+    }
+    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+    jdbc.update(
+        "UPDATE users SET two_factor_secret = :secret, two_factor_enabled = true WHERE id = :id",
+        Map.of("secret", secret, "id", userId));
+    session.removeAttribute(SESSION_TOTP_SETUP);
+    redirects.addFlashAttribute(CLE_SUCCES, "totp-active");
+    return REDIRECT_COMPTE;
+  }
+
+  /// Désactive le TOTP après vérification du code courant.
+  ///
+  /// @param code      le code TOTP courant pour confirmer la désactivation
+  /// @param redirects attributs de redirection
+  /// @param auth      contexte d'authentification
+  /// @return redirect vers /parametres#compte
+  @PostMapping("/parametres/totp/desactiver")
+  public String desactiverTotp(
+      @RequestParam(required = false, defaultValue = "") String code,
+      RedirectAttributes redirects,
+      Authentication auth) {
+    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+    List<String> secrets =
+        jdbc.queryForList(
+            "SELECT two_factor_secret FROM users WHERE id = :id",
+            Map.of("id", userId),
+            String.class);
+    String secret = secrets.isEmpty() ? null : secrets.get(0);
+    if (!totpService.verifierCode(secret, code)) {
+      redirects.addFlashAttribute(CLE_ERREUR, "Code TOTP incorrect.");
+      return REDIRECT_COMPTE;
+    }
+    jdbc.update(
+        "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false WHERE id = :id",
+        Map.of("id", userId));
+    redirects.addFlashAttribute(CLE_SUCCES, "totp-desactive");
+    return REDIRECT_COMPTE;
   }
 
   /// Supprime le compte et redirige vers /login.

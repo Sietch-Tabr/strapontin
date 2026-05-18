@@ -1,0 +1,46 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/auth}"
+>
+  <head>
+    <title>Vérification en deux étapes</title>
+  </head>
+  <body>
+    <div layout:fragment="contenu">
+      <h1 class="auth-title">Strapontin</h1>
+      <p class="auth-subtitle">
+        Saisissez le code de votre application d'authentification.
+      </p>
+
+      <div
+        class="alerte alerte-erreur"
+        th:if="${erreur}"
+        th:text="${erreur}"
+      ></div>
+
+      <form method="post" th:action="@{/auth/totp}" autocomplete="off">
+        <div class="form-group">
+          <label for="code">Code à 6 chiffres</label>
+          <input
+            id="code"
+            name="code"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]{6}"
+            maxlength="6"
+            autocomplete="one-time-code"
+            autofocus
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Vérifier</button>
+      </form>
+
+      <p class="mt-4 text-sm text-muted" style="text-align: center">
+        <a th:href="@{/logout}">Se déconnecter</a>
+      </p>
+    </div>
+  </body>
+</html>
