@@ -9,7 +9,7 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 APP_DIR="/opt/strapontin"
 
 echo "[update] Redémarrage des services..."
-systemctl restart strapontin-java-web strapontin-java-worker
+systemctl restart strapontin-web strapontin-worker
 
 echo "[update] Attente démarrage web (max 30 s)..."
 for i in $(seq 1 30); do
@@ -19,7 +19,7 @@ for i in $(seq 1 30); do
     fi
     if [ "$i" -eq 30 ]; then
         echo "[update] ERREUR : service web non UP après 30s" >&2
-        journalctl -u strapontin-java-web -n 30 --no-pager >&2
+        journalctl -u strapontin-web -n 30 --no-pager >&2
         exit 1
     fi
     sleep 1

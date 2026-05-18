@@ -115,7 +115,7 @@ pct create "$VMID" "$TEMPLATE_PATH" \
     --unprivileged 1 \
     --features nesting=1 \
     --ostype debian \
-    --onboot 1 \
+    --onboot "$([ "$PROFIL" = "prod" ] && echo 1 || echo 0)" \
     --start 0
 
 echo "[2] Montage NAS /mnt/backup..."
@@ -283,7 +283,7 @@ chmod 600 $APP_DIR/.env
 fi
 
 echo "[7] Services systemd..."
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-java-worker.service << 'UNIT'
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-worker.service << 'UNIT'
 [Unit]
 Description=Strapontin — worker Quartz
 After=network.target postgresql.service
@@ -303,7 +303,7 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 UNIT"
 
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-java-web.service << 'UNIT'
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-web.service << 'UNIT'
 [Unit]
 Description=Strapontin — API REST
 After=network.target postgresql.service

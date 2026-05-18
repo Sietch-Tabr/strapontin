@@ -2,13 +2,12 @@
 
 ## Lancer l'application (v2 — LXC dev)
 
-L'app Java démarre automatiquement au démarrage du LXC dev (`pct start 114`).
 Accès : `http://192.168.20.78:8080` (Java + Thymeleaf, Phase 8+)
 
 ```bash
-journalctl -fu strapontin-java-web
-journalctl -fu strapontin-java-worker
-systemctl restart strapontin-java-web strapontin-java-worker
+journalctl -fu strapontin-web
+journalctl -fu strapontin-worker
+systemctl restart strapontin-web strapontin-worker
 ```
 
 ## Architecture — monorepo Maven
