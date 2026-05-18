@@ -1,5 +1,15 @@
 /* Strapontin — concert finder — CSS vanilla v2 */
 
+/* ── Transitions entre pages (View Transitions API) ────── */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 150ms;
+}
+
 /* ── Variables ─────────────────────────────────────────── */
 :root {
   --bg: #ffffff;
@@ -1528,8 +1538,12 @@ tr:hover td {
   color: var(--fg);
 }
 
-.form-modif-utilisateur input[name="nom"] { width: 9rem; }
-.form-modif-utilisateur input[name="email"] { width: 12rem; }
+.form-modif-utilisateur input[name="nom"] {
+  width: 9rem;
+}
+.form-modif-utilisateur input[name="email"] {
+  width: 12rem;
+}
 
 .erreur-modif {
   font-size: 0.75rem;
