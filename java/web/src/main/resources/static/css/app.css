@@ -308,7 +308,6 @@ input[type="text"],
 input[type="email"],
 input[type="password"],
 input[type="search"],
-select,
 textarea {
   width: 100%;
   padding: 0.5rem 0.75rem;
@@ -325,15 +324,27 @@ textarea {
     box-shadow 0.15s;
 }
 
+select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--fg);
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
 input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
-}
-
-select {
-  cursor: pointer;
 }
 
 /* ── Boutons ─────────────────────────────────────────────── */
