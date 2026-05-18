@@ -7,65 +7,6 @@
 >
   <head>
     <title>Administration — Strapontin</title>
-    <style>
-      .logs-filtres {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        margin-bottom: 12px;
-        flex-wrap: wrap;
-      }
-      .logs-filtres label {
-        font-size: 13px;
-        color: var(--couleur-texte-secondaire, #666);
-      }
-      .logs-filtres select {
-        font-size: 13px;
-        padding: 4px 8px;
-        border: 1px solid var(--couleur-bordure, #ddd);
-        border-radius: 4px;
-        background: var(--couleur-surface, #fff);
-        color: var(--couleur-texte, #111);
-      }
-      .log-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 4px;
-      }
-      .log-meta-item {
-        font-size: 11px;
-        color: var(--couleur-texte-secondaire, #666);
-        background: var(--couleur-fond-code, #f5f5f5);
-        padding: 1px 6px;
-        border-radius: 3px;
-        font-family: monospace;
-      }
-      .modif-ligne td {
-        background: var(--couleur-fond-secondaire, #f9f9f9);
-        padding: 12px 16px;
-      }
-      .form-modif-utilisateur {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-      }
-      .form-modif-utilisateur input,
-      .form-modif-utilisateur select {
-        font-size: 13px;
-        padding: 5px 8px;
-        border: 1px solid var(--couleur-bordure, #ddd);
-        border-radius: 4px;
-        background: var(--couleur-surface, #fff);
-        color: var(--couleur-texte, #111);
-      }
-      .erreur-modif {
-        font-size: 12px;
-        color: #c00;
-        display: none;
-      }
-    </style>
   </head>
   <body>
     <th:block layout:fragment="contenu">
@@ -122,7 +63,9 @@
               <div class="quota-tm-chiffres">
                 <span>
                   <strong th:text="${quotaTM.dispo}">0</strong>
-                  <span class="quota-tm-sep" th:text="' / ' + ${quotaTM.total}">/ 5000</span>
+                  <span class="quota-tm-sep" th:text="' / ' + ${quotaTM.total}"
+                    >/ 5000</span
+                  >
                   <span class="quota-tm-unite">appels restants</span>
                 </span>
                 <span
@@ -155,38 +98,53 @@
               class="jobs-liste"
               th:if="${statsJobs != null and !statsJobs.isEmpty()}"
             >
-              <th:block th:each="stat : ${statsJobs}">
-                <div
-                  class="job-carte"
-                  th:if="${stat.typeJob == 'FetchArtistesBatchJob' or stat.typeJob == 'FetchRegionJob'}"
-                >
-                  <p
-                    class="job-carte-label"
-                    th:text="${stat.typeJob == 'FetchArtistesBatchJob' ? 'Artistes suivis' : 'Concerts par région'}"
+              <div
+                class="job-carte"
+                th:each="stat : ${statsJobs}"
+                th:with="label=${stat.typeJob == 'FetchArtistesBatchJob' ? 'Artistes suivis' : (stat.typeJob == 'FetchRegionJob' ? 'Concerts par région' : (stat.typeJob == 'FetchArtisteJob' ? 'Fetch artiste' : (stat.typeJob == 'FetchSalleJob' ? 'Fetch salle' : (stat.typeJob == 'RecalculerMatchesJob' ? 'Recalcul matchs' : (stat.typeJob == 'PurgerConcertsJob' ? 'Purge concerts' : stat.typeJob)))))}"
+              >
+                <p class="job-carte-label" th:text="${label}">label</p>
+                <p class="job-carte-detail">
+                  <span
+                    th:if="${stat.derniereExec != null}"
+                    class="job-date-relative"
+                    th:attr="data-ts=${stat.derniereExec.toEpochMilli()}"
+                    th:text="${stat.derniereExec.toString().substring(0, 16).replace('T', ' ')}"
+                  ></span>
+                  <span
+                    th:if="${stat.derniereExec != null and stat.dureeMs != null}"
+                    th:text="${' · ' + (stat.dureeMs < 1000 ? stat.dureeMs + ' ms' : (stat.dureeMs / 1000) + ' s')}"
+                  ></span>
+                  <span
+                    th:if="${stat.nbInseres != null and stat.nbInseres > 0}"
+                    th:text="' · +' + ${stat.nbInseres} + ' insérés'"
+                  ></span>
+                  <span
+                    th:if="${stat.nbMisAJour != null and stat.nbMisAJour > 0}"
+                    th:text="' · ' + ${stat.nbMisAJour} + ' màj'"
+                  ></span>
+                  <span th:unless="${stat.derniereExec != null}"
+                    >Pas encore exécuté</span
                   >
-                    label
-                  </p>
-                  <p class="job-carte-detail">
-                    <span
-                      th:if="${stat.derniereExec != null}"
-                      th:text="'Dernière exécution : ' + ${stat.derniereExec.toString().substring(0, 16).replace('T', ' ')} + (stat.dureeMs != null ? ' · ' + stat.dureeMs + ' ms' : '')"
-                    ></span>
-                    <span th:unless="${stat.derniereExec != null}"
-                      >Pas encore exécuté</span
-                    >
-                    <span
-                      class="badge badge-erreur"
-                      th:if="${stat.erreur != null}"
-                      th:text="${#strings.abbreviate(stat.erreur, 60)}"
-                    ></span>
-                  </p>
-                </div>
-              </th:block>
+                  <span
+                    class="badge badge-erreur"
+                    th:if="${stat.erreur != null}"
+                    th:text="${#strings.abbreviate(stat.erreur, 80)}"
+                  ></span>
+                </p>
+              </div>
             </div>
-            <p class="etat-vide-texte" th:unless="${statsJobs != null and !statsJobs.isEmpty()}">
+            <p
+              class="etat-vide-texte"
+              th:unless="${statsJobs != null and !statsJobs.isEmpty()}"
+            >
               Aucun job exécuté pour l'instant.
             </p>
-            <form method="post" th:action="@{/admin/relancer}" style="margin-top: 0.75rem">
+            <form
+              method="post"
+              th:action="@{/admin/relancer}"
+              style="margin-top: 0.75rem"
+            >
               <button type="submit" class="btn btn-secondary">
                 Relancer les fetches maintenant
               </button>
@@ -202,7 +160,9 @@
             >
               <div th:if="${workerDepuisTexte != null}">
                 <p class="worker-carte-label">Dernier job complété</p>
-                <p class="worker-carte-detail" th:text="${workerDepuisTexte}">—</p>
+                <p class="worker-carte-detail" th:text="${workerDepuisTexte}">
+                  —
+                </p>
                 <p class="worker-alerte-texte" th:if="${workerEnAlerte}">
                   Inactif depuis plus de 3 h
                 </p>
@@ -218,22 +178,58 @@
 
         <!-- Section Logs -->
         <section id="logs" class="admin-section">
-          <h2 class="section-titre">Logs récents</h2>
+          <h2 class="section-titre">Logs système</h2>
 
           <div class="logs-filtres">
-            <label for="filtre-niveau">Niveau :</label>
-            <select id="filtre-niveau">
-              <option value="warn+">≥ warn (défaut)</option>
-              <option value="all">Tout</option>
-              <option value="error">Erreurs seulement</option>
-            </select>
-            <label for="filtre-source">Source :</label>
-            <select id="filtre-source">
-              <option value="">Toutes</option>
-              <option value="web">web</option>
-              <option value="worker">worker</option>
-              <option value="auth">auth</option>
-            </select>
+            <div style="display: flex; align-items: center; gap: 6px">
+              <label for="filtre-source" class="logs-filtre-label"
+                >Source :</label
+              >
+              <select id="filtre-source" class="logs-filtre-select">
+                <option value="">Toutes</option>
+                <option value="auth">auth</option>
+                <option value="admin">admin</option>
+                <option value="push">push</option>
+                <option value="jobs">jobs</option>
+                <option value="worker">worker</option>
+              </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px">
+              <span class="logs-filtre-label">Niveau :</span>
+              <button
+                type="button"
+                class="log-filtre-btn"
+                data-niveau="info"
+                aria-pressed="false"
+              >
+                info
+              </button>
+              <button
+                type="button"
+                class="log-filtre-btn actif"
+                data-niveau="warn"
+                aria-pressed="true"
+              >
+                warn
+              </button>
+              <button
+                type="button"
+                class="log-filtre-btn actif"
+                data-niveau="error"
+                aria-pressed="true"
+              >
+                error
+              </button>
+              <button
+                type="button"
+                class="log-filtre-tous"
+                id="log-filtre-tous"
+                style="display: none"
+              >
+                Tous
+              </button>
+            </div>
+            <span id="log-compte" class="log-compte"></span>
           </div>
 
           <div
@@ -365,7 +361,10 @@
           </div>
 
           <!-- Liste des utilisateurs -->
-          <div class="param-bloc" th:if="${utilisateurs != null and !utilisateurs.isEmpty()}">
+          <div
+            class="param-bloc"
+            th:if="${utilisateurs != null and !utilisateurs.isEmpty()}"
+          >
             <h3
               class="param-label"
               th:text="'Utilisateurs (' + ${utilisateurs.size()} + ')'"
@@ -406,7 +405,10 @@
                         >
                       </p>
                     </div>
-                    <div class="user-carte-actions" th:if="${u.id != utilisateur?.id}">
+                    <div
+                      class="user-carte-actions"
+                      th:if="${u.id != utilisateur?.id}"
+                    >
                       <button
                         type="button"
                         class="btn btn-sm btn-secondary"
@@ -441,7 +443,10 @@
                     class="modif-ligne"
                     style="display: none"
                   >
-                    <form class="form-modif-utilisateur" th:data-user-id="${u.id}">
+                    <form
+                      class="form-modif-utilisateur"
+                      th:data-user-id="${u.id}"
+                    >
                       <input
                         type="text"
                         name="nom"
@@ -456,8 +461,15 @@
                         th:value="${u.email}"
                       />
                       <select name="role">
-                        <option value="user" th:selected="${u.role == 'user'}">user</option>
-                        <option value="admin" th:selected="${u.role == 'admin'}">admin</option>
+                        <option value="user" th:selected="${u.role == 'user'}">
+                          user
+                        </option>
+                        <option
+                          value="admin"
+                          th:selected="${u.role == 'admin'}"
+                        >
+                          admin
+                        </option>
                       </select>
                       <button type="submit" class="btn btn-sm btn-primary">
                         Enregistrer
@@ -481,53 +493,111 @@
       </div>
 
       <script>
+        // ── Dates relatives (job cards) ────────────────────────
+        document.querySelectorAll(".job-date-relative").forEach(function (el) {
+          var ts = parseInt(el.getAttribute("data-ts"), 10);
+          if (!ts) return;
+          var diffMin = Math.floor((Date.now() - ts) / 60000);
+          var texte;
+          if (diffMin < 1) texte = "à l'instant";
+          else if (diffMin < 60) texte = "il y a " + diffMin + " min";
+          else {
+            var h = Math.floor(diffMin / 60);
+            var m = diffMin % 60;
+            texte =
+              m > 0
+                ? "il y a " + h + " h " + m + " min"
+                : "il y a " + h + " h";
+          }
+          el.textContent = texte;
+        });
+
+        // ── Logs système ────────────────────────────────────────
         (function () {
-          var filtreNiveau = document.getElementById("filtre-niveau");
-          var filtreSource = document.getElementById("filtre-source");
           var table = document.getElementById("table-logs");
           if (!table) return;
 
-          table.querySelectorAll("tbody tr[data-meta]").forEach(function (tr) {
-            var metaStr = tr.getAttribute("data-meta");
-            if (!metaStr) return;
-            try {
-              var meta = JSON.parse(metaStr);
-              var cles = Object.keys(meta);
-              if (!cles.length) return;
-              var msgTd = tr.querySelector("td.log-message");
-              if (!msgTd) return;
-              var metaDiv = document.createElement("div");
-              metaDiv.className = "log-meta";
-              cles.forEach(function (k) {
-                var item = document.createElement("span");
-                item.className = "log-meta-item";
-                item.textContent = k + ": " + meta[k];
-                metaDiv.appendChild(item);
-              });
-              msgTd.appendChild(metaDiv);
-            } catch (_) {}
-          });
+          table
+            .querySelectorAll("tbody tr[data-meta]")
+            .forEach(function (tr) {
+              var metaStr = tr.getAttribute("data-meta");
+              if (!metaStr) return;
+              try {
+                var meta = JSON.parse(metaStr);
+                var cles = Object.keys(meta);
+                if (!cles.length) return;
+                var msgTd = tr.querySelector("td.log-message");
+                if (!msgTd) return;
+                var metaDiv = document.createElement("div");
+                metaDiv.className = "log-meta";
+                cles.forEach(function (k) {
+                  var item = document.createElement("span");
+                  item.className = "log-meta-item";
+                  item.textContent = k + ": " + meta[k];
+                  metaDiv.appendChild(item);
+                });
+                msgTd.appendChild(metaDiv);
+              } catch (_) {}
+            });
+
+          var filtreSource = document.getElementById("filtre-source");
+          var filtreNiveaux = new Set(["warn", "error"]);
+          var btnNiveaux = document.querySelectorAll(".log-filtre-btn");
+          var btnTous = document.getElementById("log-filtre-tous");
+          var compte = document.getElementById("log-compte");
+          var lignes = table.querySelectorAll("tbody tr");
+          var total = lignes.length;
 
           function filtrer() {
-            var niveau = filtreNiveau.value;
-            var source = filtreSource.value;
-            table.querySelectorAll("tbody tr").forEach(function (tr) {
+            var source = filtreSource ? filtreSource.value : "";
+            var visible = 0;
+            lignes.forEach(function (tr) {
               var n = tr.getAttribute("data-niveau") || "";
               var s = tr.getAttribute("data-source") || "";
               var okNiveau =
-                niveau === "all" ||
-                (niveau === "warn+" && (n === "warn" || n === "error")) ||
-                (niveau === "error" && n === "error");
+                filtreNiveaux.size === 0 || filtreNiveaux.has(n);
               var okSource = !source || s === source;
-              tr.style.display = okNiveau && okSource ? "" : "none";
+              var show = okNiveau && okSource;
+              tr.style.display = show ? "" : "none";
+              if (show) visible++;
+            });
+            if (compte) compte.textContent = visible + " / " + total;
+            if (btnTous)
+              btnTous.style.display = filtreNiveaux.size > 0 ? "" : "none";
+          }
+
+          btnNiveaux.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var niv = btn.getAttribute("data-niveau");
+              if (filtreNiveaux.has(niv)) {
+                filtreNiveaux.delete(niv);
+                btn.classList.remove("actif");
+                btn.setAttribute("aria-pressed", "false");
+              } else {
+                filtreNiveaux.add(niv);
+                btn.classList.add("actif");
+                btn.setAttribute("aria-pressed", "true");
+              }
+              filtrer();
+            });
+          });
+
+          if (btnTous) {
+            btnTous.addEventListener("click", function () {
+              filtreNiveaux.clear();
+              btnNiveaux.forEach(function (b) {
+                b.classList.remove("actif");
+                b.setAttribute("aria-pressed", "false");
+              });
+              filtrer();
             });
           }
 
-          filtreNiveau.addEventListener("change", filtrer);
-          filtreSource.addEventListener("change", filtrer);
+          if (filtreSource) filtreSource.addEventListener("change", filtrer);
           filtrer();
         })();
 
+        // ── Modification utilisateur ────────────────────────────
         function toggleModif(userId) {
           var row = document.getElementById("modif-" + userId);
           if (row)

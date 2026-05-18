@@ -22,6 +22,7 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("/sw.js")
     .then(async (registration) => {
+      if (document.cookie.match(/(?:^|; )push_opt_out=1/)) return;
       const rep = await fetch("/api/push");
       const { disponible, clePublique } = await rep.json();
       if (!disponible) return;

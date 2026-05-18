@@ -510,7 +510,7 @@ public class AdminController {
   public ResponseEntity<Map<String, Object>> genererVapid() {
     try {
       KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
-      kpg.initialize(new ECGenParameterSpec("prime256v1"));
+      kpg.initialize(new ECGenParameterSpec("secp256r1"));
       KeyPair paire = kpg.generateKeyPair();
 
       ECPublicKey pubKey = (ECPublicKey) paire.getPublic();
