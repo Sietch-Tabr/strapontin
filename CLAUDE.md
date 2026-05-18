@@ -50,7 +50,7 @@ ssh root@192.168.1.99 "pct exec 113 -- journalctl -u strapontin-web --no-pager -
 
 ```bash
 # Build (Mac — Maven requis, pas sur le LXC)
-mvn -f java/pom.xml -pl web,worker -am package -DskipTests
+mvn -f java/pom.xml -pl web,worker -am package
 
 # Dev : toujours manuel (Woodpecker cible uniquement le LXC prod)
 # Woodpecker prod : build sur agent → scp JARs → SSH update.sh (LXC = JRE uniquement, pas de Maven)
