@@ -313,10 +313,7 @@
           </div>
 
           <!-- TOTP (admins uniquement) -->
-          <div
-            class="param-bloc"
-            sec:authorize="hasRole('ADMIN')"
-          >
+          <div class="param-bloc" sec:authorize="hasRole('ADMIN')">
             <h3 class="param-label">Authentification à deux facteurs (TOTP)</h3>
             <p class="param-aide" th:if="${utilisateur?.twoFactorActif}">
               TOTP activé sur votre compte.

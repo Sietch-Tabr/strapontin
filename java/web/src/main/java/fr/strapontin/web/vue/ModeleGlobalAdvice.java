@@ -47,7 +47,8 @@ public class ModeleGlobalAdvice {
   /// @param auth     l'authentification Spring Security (peut être {@code null})
   /// @return la valeur du thème ({@code auto}, {@code clair} ou {@code sombre})
   @ModelAttribute("theme")
-  public String theme(HttpServletRequest request, HttpServletResponse response, Authentication auth) {
+  public String theme(
+      HttpServletRequest request, HttpServletResponse response, Authentication auth) {
     if (request.getCookies() != null) {
       for (Cookie cookie : request.getCookies()) {
         if ("theme".equals(cookie.getName())) {

@@ -14,9 +14,16 @@
         <h1>Administration</h1>
       </div>
 
-      <div th:if="${succes != null and succes != 'creerUtilisateur'}" class="alerte alerte-succes">
-        <span th:if="${succes == 'supprimerUtilisateur'}">Compte supprimé.</span>
-        <span th:if="${succes == 'reinitialiserMdp'}">Email de réinitialisation envoyé.</span>
+      <div
+        th:if="${succes != null and succes != 'creerUtilisateur'}"
+        class="alerte alerte-succes"
+      >
+        <span th:if="${succes == 'supprimerUtilisateur'}"
+          >Compte supprimé.</span
+        >
+        <span th:if="${succes == 'reinitialiserMdp'}"
+          >Email de réinitialisation envoyé.</span
+        >
         <span th:if="${succes == 'config'}">Configuration sauvegardée.</span>
         <span th:if="${succes == 'vapid'}">Clés VAPID régénérées.</span>
         <span th:if="${succes == 'relancer'}">Fetches déclenchés.</span>
@@ -26,8 +33,8 @@
       <dialog id="dialog-invitation" th:if="${succes == 'creerUtilisateur'}">
         <p class="dialog-titre">Compte créé</p>
         <p class="dialog-corps">
-          Envoyez ce lien à l'utilisateur pour qu'il finalise l'inscription.
-          Il expire après utilisation.
+          Envoyez ce lien à l'utilisateur pour qu'il finalise l'inscription. Il
+          expire après utilisation.
         </p>
         <div class="dialog-lien">
           <input
@@ -294,8 +301,12 @@
           <div th:each="statut : ${configStatuts}" class="param-bloc">
             <div class="param-label-ligne">
               <h3 class="param-label" th:text="${statut.cle}">CLE</h3>
-              <span th:if="${statut.presente}" class="badge badge-succes">Configurée</span>
-              <span th:unless="${statut.presente}" class="badge badge-manquant">Non configurée</span>
+              <span th:if="${statut.presente}" class="badge badge-succes"
+                >Configurée</span
+              >
+              <span th:unless="${statut.presente}" class="badge badge-manquant"
+                >Non configurée</span
+              >
             </div>
             <p
               class="param-aide"
