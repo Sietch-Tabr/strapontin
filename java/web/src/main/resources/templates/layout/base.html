@@ -23,12 +23,32 @@
           <a th:href="@{/}">Strapontin</a>
         </div>
         <div class="sidebar-nav">
-          <a th:href="@{/}" th:classappend="${currentPage == 'accueil' ? ' actif' : ''}">Accueil</a>
-          <a th:href="@{/spectacles}" th:classappend="${currentPage == 'spectacles' ? ' actif' : ''}">Mes spectacles</a>
-          <a th:href="@{/decouverte}" th:classappend="${currentPage == 'decouverte' ? ' actif' : ''}">Découverte</a>
+          <a
+            th:href="@{/}"
+            th:classappend="${currentPage == 'accueil' ? ' actif' : ''}"
+            >Accueil</a
+          >
+          <a
+            th:href="@{/spectacles}"
+            th:classappend="${currentPage == 'spectacles' ? ' actif' : ''}"
+            >Mes spectacles</a
+          >
+          <a
+            th:href="@{/decouverte}"
+            th:classappend="${currentPage == 'decouverte' ? ' actif' : ''}"
+            >Découverte</a
+          >
           <hr style="margin: 0.5rem 0; border-color: var(--border)" />
-          <a th:href="@{/artistes}" th:classappend="${currentPage == 'artistes' ? ' actif' : ''}">Mes artistes</a>
-          <a th:href="@{/salles}" th:classappend="${currentPage == 'salles' ? ' actif' : ''}">Mes salles</a>
+          <a
+            th:href="@{/artistes}"
+            th:classappend="${currentPage == 'artistes' ? ' actif' : ''}"
+            >Mes artistes</a
+          >
+          <a
+            th:href="@{/salles}"
+            th:classappend="${currentPage == 'salles' ? ' actif' : ''}"
+            >Mes salles</a
+          >
         </div>
         <div class="sidebar-footer">
           <a
@@ -37,10 +57,22 @@
             th:classappend="${currentPage == 'admin' ? ' actif' : ''}"
             >Admin</a
           >
-          <a th:href="@{/parametres}" th:classappend="${currentPage == 'parametres' ? ' actif' : ''}">Paramètres</a>
+          <a
+            th:href="@{/parametres}"
+            th:classappend="${currentPage == 'parametres' ? ' actif' : ''}"
+            >Paramètres</a
+          >
           <hr style="margin: 0.25rem 0; border-color: var(--border)" />
-          <a th:href="@{/aide}" th:classappend="${currentPage == 'aide' ? ' actif' : ''}">Aide</a>
-          <a th:href="@{/changelog}" th:classappend="${currentPage == 'changelog' ? ' actif' : ''}">Nouveautés</a>
+          <a
+            th:href="@{/aide}"
+            th:classappend="${currentPage == 'aide' ? ' actif' : ''}"
+            >Aide</a
+          >
+          <a
+            th:href="@{/changelog}"
+            th:classappend="${currentPage == 'changelog' ? ' actif' : ''}"
+            >Nouveautés</a
+          >
           <hr style="margin: 0.25rem 0; border-color: var(--border)" />
           <div class="sidebar-user">
             <span sec:authentication="name">Utilisateur</span>

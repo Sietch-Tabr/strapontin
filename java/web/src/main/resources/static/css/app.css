@@ -127,10 +127,63 @@ textarea {
 }
 
 .sidebar-footer {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem;
   border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.sidebar-footer a {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.sidebar-footer a:hover,
+.sidebar-footer a.actif {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  gap: 0.5rem;
+}
+
+.sidebar-user > span {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-deconnexion {
+  background: none;
+  border: none;
+  padding: 0;
   font-size: 0.8125rem;
   color: var(--fg-muted);
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.btn-deconnexion:hover {
+  color: var(--fg);
 }
 
 .main-content {
@@ -954,6 +1007,7 @@ tr:hover td {
   font-weight: 500;
   color: var(--fg-muted);
   border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   text-decoration: none;
   white-space: nowrap;
   transition:
@@ -963,11 +1017,19 @@ tr:hover td {
 
 .param-onglet:hover {
   color: var(--fg);
+  border-bottom-color: var(--border);
 }
 
-.param-onglet:target,
-.param-onglets:has(+ .parametres-sections .parametres-section:target)
-  .param-onglet {
+/* Paramètres */
+.param-onglets:has(~ .parametres-sections #preferences:target) a[href="#preferences"],
+.param-onglets:has(~ .parametres-sections #notifications:target) a[href="#notifications"],
+.param-onglets:has(~ .parametres-sections #compte:target) a[href="#compte"],
+.param-onglets:has(~ .parametres-sections #donnees:target) a[href="#donnees"],
+/* Admin */
+.param-onglets:has(~ .admin-sections #utilisateurs:target) a[href="#utilisateurs"],
+.param-onglets:has(~ .admin-sections #configuration:target) a[href="#configuration"],
+.param-onglets:has(~ .admin-sections #jobs:target) a[href="#jobs"],
+.param-onglets:has(~ .admin-sections #logs:target) a[href="#logs"] {
   color: var(--fg);
   border-bottom-color: var(--fg);
 }
