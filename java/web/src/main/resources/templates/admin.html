@@ -14,30 +14,46 @@
         <h1>Administration</h1>
       </div>
 
-      <div th:if="${succes}" class="alerte alerte-succes">
-        <span th:if="${succes == 'creerUtilisateur'}">
-          Compte créé.
-          <span th:if="${lienReset != null}">
-            Lien d'invitation :
-            <a
-              th:href="${lienReset}"
-              th:text="${lienReset}"
-              target="_blank"
-              rel="noopener"
-              >lien</a
-            >
-          </span>
-        </span>
-        <span th:if="${succes == 'supprimerUtilisateur'}"
-          >Compte supprimé.</span
-        >
-        <span th:if="${succes == 'reinitialiserMdp'}"
-          >Email de réinitialisation envoyé.</span
-        >
+      <div th:if="${succes != null and succes != 'creerUtilisateur'}" class="alerte alerte-succes">
+        <span th:if="${succes == 'supprimerUtilisateur'}">Compte supprimé.</span>
+        <span th:if="${succes == 'reinitialiserMdp'}">Email de réinitialisation envoyé.</span>
         <span th:if="${succes == 'config'}">Configuration sauvegardée.</span>
         <span th:if="${succes == 'vapid'}">Clés VAPID régénérées.</span>
         <span th:if="${succes == 'relancer'}">Fetches déclenchés.</span>
       </div>
+
+      <!-- Modale affichée après invitation -->
+      <dialog id="dialog-invitation" th:if="${succes == 'creerUtilisateur'}">
+        <p class="dialog-titre">Compte créé</p>
+        <p class="dialog-corps">
+          Envoyez ce lien à l'utilisateur pour qu'il finalise l'inscription.
+          Il expire après utilisation.
+        </p>
+        <div class="dialog-lien">
+          <input
+            id="lien-invitation"
+            type="text"
+            readonly
+            th:value="${lienReset != null ? lienReset : '(aucun lien — email envoyé)'}"
+          />
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="copierLienInvitation()"
+          >
+            Copier
+          </button>
+        </div>
+        <div class="dialog-pied">
+          <button
+            type="button"
+            class="btn btn-primary"
+            onclick="document.getElementById('dialog-invitation').close()"
+          >
+            Fermer
+          </button>
+        </div>
+      </dialog>
       <div
         th:if="${erreur}"
         class="alerte alerte-erreur"
@@ -276,19 +292,16 @@
         <!-- Section Configuration -->
         <section id="configuration" class="admin-section">
           <div th:each="statut : ${configStatuts}" class="param-bloc">
-            <h3 class="param-label" th:text="${statut.cle}">CLE</h3>
-            <p class="param-aide">
-              <span th:if="${statut.presente}" class="badge badge-succes"
-                >Configurée</span
-              >
-              <span th:unless="${statut.presente}" class="badge badge-manquant"
-                >Non configurée</span
-              >
-              <span
-                th:if="${!statut.secret and statut.valeur != null}"
-                th:text="' — ' + ${statut.valeur}"
-              ></span>
-            </p>
+            <div class="param-label-ligne">
+              <h3 class="param-label" th:text="${statut.cle}">CLE</h3>
+              <span th:if="${statut.presente}" class="badge badge-succes">Configurée</span>
+              <span th:unless="${statut.presente}" class="badge badge-manquant">Non configurée</span>
+            </div>
+            <p
+              class="param-aide"
+              th:if="${!statut.secret and statut.valeur != null}"
+              th:text="${statut.valeur}"
+            ></p>
             <form
               method="post"
               th:action="@{/admin/config}"
@@ -631,6 +644,21 @@
                 });
             });
           });
+
+        // ── Modale invitation ───────────────────────────────────
+        (function () {
+          var dialog = document.getElementById("dialog-invitation");
+          if (dialog) dialog.showModal();
+        })();
+
+        window.copierLienInvitation = function () {
+          var input = document.getElementById("lien-invitation");
+          if (!input) return;
+          navigator.clipboard.writeText(input.value).catch(function () {
+            input.select();
+            document.execCommand("copy");
+          });
+        };
       </script>
     </th:block>
   </body>

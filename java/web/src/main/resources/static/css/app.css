@@ -1006,6 +1006,10 @@ tr:hover td {
   border-bottom: 1px solid var(--border);
   margin-bottom: 2rem;
   overflow-x: auto;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
 }
 
 .param-onglet {
@@ -1078,6 +1082,7 @@ tr:hover td {
 
 .parametres-section {
   display: none;
+  scroll-margin-top: 3rem;
 }
 
 .parametres-section:target,
@@ -1164,6 +1169,7 @@ tr:hover td {
 
 .admin-section {
   display: none;
+  scroll-margin-top: 3rem;
 }
 
 .admin-section:target,
@@ -1414,6 +1420,7 @@ tr:hover td {
 }
 
 .logs-filtre-select {
+  width: auto;
   font-size: 0.8125rem;
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--border);
@@ -1490,16 +1497,29 @@ tr:hover td {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Badge inline avec le titre ──────────────────────────── */
+.param-label-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.param-label-ligne .param-label {
+  margin-bottom: 0;
+}
+
 /* ── Formulaire modification utilisateur (admin) ─────────── */
 .form-modif-utilisateur {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+  max-width: 28rem;
 }
 
 .form-modif-utilisateur input,
 .form-modif-utilisateur select {
+  width: auto;
   font-size: 0.8125rem;
   padding: 0.3125rem 0.5rem;
   border: 1px solid var(--border);
@@ -1507,6 +1527,9 @@ tr:hover td {
   background: var(--bg);
   color: var(--fg);
 }
+
+.form-modif-utilisateur input[name="nom"] { width: 9rem; }
+.form-modif-utilisateur input[name="email"] { width: 12rem; }
 
 .erreur-modif {
   font-size: 0.75rem;
@@ -1658,4 +1681,48 @@ tr:hover td {
 }
 .form-details .form-group {
   margin-top: 0.75rem;
+}
+
+/* ── Modale invitation (dialog HTML natif) ───────────────── */
+dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  padding: 1.5rem;
+  max-width: 32rem;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+.dark dialog::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+.dialog-titre {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+.dialog-corps {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  margin-bottom: 0.75rem;
+}
+.dialog-lien {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.dialog-lien input {
+  flex: 1;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+}
+.dialog-pied {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
