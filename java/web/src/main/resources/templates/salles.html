@@ -23,15 +23,17 @@
       <!-- Formulaire de recherche -->
       <form method="get" th:action="@{/salles}" class="form-recherche">
         <label for="q-salle" class="sr-only">Rechercher une salle</label>
-        <input
-          id="q-salle"
-          type="text"
-          name="q"
-          th:value="${q}"
-          placeholder="Rechercher ou saisir une salle…"
-          minlength="2"
-          autocomplete="off"
-        />
+        <div class="form-recherche-champ">
+          <input
+            id="q-salle"
+            type="text"
+            name="q"
+            th:value="${q}"
+            placeholder="Rechercher ou saisir une salle…"
+            minlength="2"
+            autocomplete="off"
+          />
+        </div>
         <button
           type="submit"
           class="btn btn-secondary"
