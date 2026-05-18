@@ -110,10 +110,14 @@ public class PushController {
         ON CONFLICT (user_id, endpoint) DO NOTHING
         """,
         Map.of(
-            CLE_USER_ID, userId,
-            CLE_ENDPOINT, requete.endpoint(),
-            "p256dh", requete.keys().p256dh(),
-            "auth", requete.keys().auth()));
+            CLE_USER_ID,
+            userId,
+            CLE_ENDPOINT,
+            requete.endpoint(),
+            "p256dh",
+            requete.keys().p256dh(),
+            "auth",
+            requete.keys().auth()));
 
     logAdminService.logAdmin("info", "push", "abonnement push créé", Map.of(CLE_USER_ID, userId));
     return ResponseEntity.status(201).body(Map.of("ok", true));
@@ -140,7 +144,8 @@ public class PushController {
         """,
         Map.of(CLE_USER_ID, userId, CLE_ENDPOINT, requete.endpoint()));
 
-    logAdminService.logAdmin("info", "push", "abonnement push révoqué", Map.of(CLE_USER_ID, userId));
+    logAdminService.logAdmin(
+        "info", "push", "abonnement push révoqué", Map.of(CLE_USER_ID, userId));
     return ResponseEntity.ok(Map.of("ok", true));
   }
 

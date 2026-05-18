@@ -158,7 +158,8 @@ public class AuthController {
   /// @return l'utilisateur courant ou 401 si non authentifié
   @GetMapping("/api/auth/me")
   public ResponseEntity<UtilisateurDto> moi(Authentication auth) {
-    if (!(auth != null && auth.isAuthenticated()
+    if (!(auth != null
+        && auth.isAuthenticated()
         && auth.getPrincipal() instanceof UtilisateurDetails details)) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }

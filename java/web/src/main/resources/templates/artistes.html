@@ -48,7 +48,6 @@
       <!-- Message d'erreur flash -->
       <div
         th:if="${erreur}"
-        popover="manual"
         class="alerte alerte-erreur"
         th:text="${erreur}"
       ></div>
@@ -56,7 +55,6 @@
       <!-- Feedback visuel fetch artiste ajouté -->
       <div
         th:if="${fetchEnCours}"
-        popover="manual"
         data-delai="10000"
         class="alerte alerte-info"
       >

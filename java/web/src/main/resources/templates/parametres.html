@@ -94,21 +94,33 @@
             <div class="theme-choix">
               <form method="post" th:action="@{/parametres/theme}">
                 <input type="hidden" name="valeur" value="auto" />
-                <button type="submit"
+                <button
+                  type="submit"
                   th:classappend="${config?.theme == 'auto' or config?.theme == null ? ' actif' : ''}"
-                  class="btn btn-theme">Automatique</button>
+                  class="btn btn-theme"
+                >
+                  Automatique
+                </button>
               </form>
               <form method="post" th:action="@{/parametres/theme}">
                 <input type="hidden" name="valeur" value="clair" />
-                <button type="submit"
+                <button
+                  type="submit"
                   th:classappend="${config?.theme == 'clair' ? ' actif' : ''}"
-                  class="btn btn-theme">Clair</button>
+                  class="btn btn-theme"
+                >
+                  Clair
+                </button>
               </form>
               <form method="post" th:action="@{/parametres/theme}">
                 <input type="hidden" name="valeur" value="sombre" />
-                <button type="submit"
+                <button
+                  type="submit"
                   th:classappend="${config?.theme == 'sombre' ? ' actif' : ''}"
-                  class="btn btn-theme">Sombre</button>
+                  class="btn btn-theme"
+                >
+                  Sombre
+                </button>
               </form>
             </div>
           </div>

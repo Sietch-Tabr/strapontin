@@ -143,9 +143,12 @@ public class PreferencesController {
           ON CONFLICT (user_id, salle_id) DO NOTHING
           """,
           Map.of(
-              CLE_USER_ID, userId,
-              "salleId", s.salleId(),
-              "tmVenueId", s.tmVenueId() != null ? s.tmVenueId() : ""));
+              CLE_USER_ID,
+              userId,
+              "salleId",
+              s.salleId(),
+              "tmVenueId",
+              s.tmVenueId() != null ? s.tmVenueId() : ""));
     }
   }
 

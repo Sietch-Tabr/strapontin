@@ -388,7 +388,10 @@ public class AdminController {
 
     jdbc.update("DELETE FROM users WHERE id = :userId", Map.of(CLE_USER_ID, userId));
     logAdminService.logAdmin(
-        "warn", SOURCE_ADMIN, "compte supprimé", Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId));
+        "warn",
+        SOURCE_ADMIN,
+        "compte supprimé",
+        Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId));
     return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 

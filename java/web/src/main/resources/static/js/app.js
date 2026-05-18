@@ -2,9 +2,19 @@
 
 // Applique le thème depuis le cookie au chargement pour éviter le FOUC
 (function () {
-  const theme = document.cookie.match(/(?:^|; )theme=([^;]*)/)?.[1];
-  if (theme === "sombre") document.documentElement.classList.add("dark");
-  else document.documentElement.classList.remove("dark");
+  const theme = document.cookie.match(/(?:^|; )theme=([^;]*)/)?.[1] ?? "auto";
+  const prefSombre = window.matchMedia("(prefers-color-scheme: dark)");
+
+  function appliquerTheme(t) {
+    const sombre = t === "sombre" || (t === "auto" && prefSombre.matches);
+    document.documentElement.classList.toggle("dark", sombre);
+  }
+
+  appliquerTheme(theme);
+
+  if (theme === "auto") {
+    prefSombre.addEventListener("change", () => appliquerTheme("auto"));
+  }
 })();
 
 // Service worker + abonnement push
@@ -40,29 +50,32 @@ if ("serviceWorker" in navigator) {
     .catch(() => {});
 }
 
-// Toasts (Popover API)
+// Toasts (Popover API — l'attribut est posé par JS pour contourner le filtrage Thymeleaf)
 (function () {
-  const alertes = document.querySelectorAll('[popover].alerte');
-  alertes.forEach((el, i) => {
-    el.style.setProperty('--indice-toast', i);
+  if (!("showPopover" in HTMLElement.prototype)) return;
+  const alertes = document.querySelectorAll(".alerte");
 
-    const fermer = document.createElement('button');
-    fermer.textContent = '×';
-    fermer.setAttribute('aria-label', 'Fermer');
-    fermer.className = 'toast-fermer';
+  alertes.forEach((el, i) => {
+    el.style.setProperty("--indice-toast", i);
+
+    const fermer = document.createElement("button");
+    fermer.textContent = "×";
+    fermer.setAttribute("aria-label", "Fermer");
+    fermer.className = "toast-fermer";
     el.appendChild(fermer);
 
+    el.setAttribute("popover", "manual");
     el.showPopover();
 
     let delai = 4000;
     if (el.dataset.delai) {
       delai = parseInt(el.dataset.delai, 10);
-    } else if (el.querySelector('a')) {
+    } else if (el.querySelector("a")) {
       delai = 15000;
     }
 
     const minuterie = setTimeout(() => el.hidePopover(), delai);
-    fermer.addEventListener('click', () => {
+    fermer.addEventListener("click", () => {
       clearTimeout(minuterie);
       el.hidePopover();
     });
