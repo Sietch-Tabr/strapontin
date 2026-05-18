@@ -27,11 +27,11 @@ if [ "$PROFIL" != "dev" ] && [ "$PROFIL" != "prod" ]; then
 fi
 
 VMID=$(pvesh get /cluster/nextid)
-HOSTNAME="strapontin"
-
 if [ "$PROFIL" = "dev" ]; then
+    HOSTNAME="strapontin-dev"
     IP="192.168.20.78/24"
 else
+    HOSTNAME="strapontin"
     IP="192.168.20.80/24"
 fi
 GW="192.168.20.1"
