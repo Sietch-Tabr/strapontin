@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web.admin;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -55,6 +57,25 @@ public class AdminViewController {
     modele.addAttribute("logs", repLogs.getBody());
     var corpsJobs = repJobs.getBody();
     modele.addAttribute("statsJobs", corpsJobs != null ? corpsJobs.get("statsJobs") : null);
+    modele.addAttribute("quotaTM", corpsJobs != null ? corpsJobs.get("quotaTM") : null);
+
+    Instant workerLastSuccess =
+        corpsJobs != null ? (Instant) corpsJobs.get("workerLastSuccess") : null;
+    boolean workerEnAlerte = workerLastSuccess == null;
+    String workerDepuisTexte = null;
+    if (workerLastSuccess != null) {
+      long minutesSince = Duration.between(workerLastSuccess, Instant.now()).toMinutes();
+      workerEnAlerte = minutesSince > 180;
+      if (minutesSince < 1) workerDepuisTexte = "à l'instant";
+      else if (minutesSince < 60) workerDepuisTexte = "il y a " + minutesSince + " min";
+      else {
+        long h = minutesSince / 60;
+        long m = minutesSince % 60;
+        workerDepuisTexte = m > 0 ? "il y a " + h + " h " + m + " min" : "il y a " + h + " h";
+      }
+    }
+    modele.addAttribute("workerEnAlerte", workerEnAlerte);
+    modele.addAttribute("workerDepuisTexte", workerDepuisTexte);
     modele.addAttribute("currentPage", "admin");
     return "admin";
   }

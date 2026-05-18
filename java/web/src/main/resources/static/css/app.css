@@ -1082,7 +1082,8 @@ tr:hover td {
 }
 
 /* Onglet actif par défaut (aucun hash) */
-.param-onglets:not(:has(~ .parametres-sections :target)) a[href="#preferences"] {
+.param-onglets:not(:has(~ .parametres-sections :target))
+  a[href="#preferences"] {
   color: var(--fg);
   border-bottom-color: var(--fg);
 }
@@ -1212,6 +1213,181 @@ tr:hover td {
 .dark .badge-erreur {
   background: #7f1d1d;
   color: #fca5a5;
+}
+
+.badge-mono {
+  font-family: monospace;
+  background: var(--bg-muted);
+  color: var(--fg-muted);
+}
+.badge-warn {
+  background: #fef9c3;
+  color: #854d0e;
+}
+.dark .badge-warn {
+  background: rgba(202, 138, 4, 0.15);
+  color: #fbbf24;
+}
+
+/* ── Quota TM ────────────────────────────────────────────── */
+.quota-tm-carte {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+.quota-tm-chiffres {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+.quota-tm-chiffres strong {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.quota-tm-sep {
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+  margin-left: 0.25rem;
+}
+.quota-tm-unite {
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+  margin-left: 0.375rem;
+}
+.quota-tm-pct {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.quota-tm-barre-fond {
+  height: 0.5rem;
+  background: var(--bg-muted);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+.quota-tm-barre-remplissage {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s;
+}
+.barre-ok {
+  background: #16a34a;
+}
+.barre-warn {
+  background: #ca8a04;
+}
+.barre-danger {
+  background: #dc2626;
+}
+
+/* ── Jobs actualisations ─────────────────────────────────── */
+.jobs-liste {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.job-carte {
+  padding: 0.75rem 1rem;
+}
+.job-carte + .job-carte {
+  border-top: 1px solid var(--border);
+}
+.job-carte-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.job-carte-detail {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  margin-top: 0.25rem;
+}
+
+/* ── Worker health ───────────────────────────────────────── */
+.worker-carte {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+.worker-carte.worker-alerte {
+  border-color: #ca8a04;
+  background: #fefce8;
+}
+.dark .worker-carte.worker-alerte {
+  background: rgba(202, 138, 4, 0.05);
+}
+.worker-carte-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.worker-carte-detail {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  margin-top: 0.25rem;
+}
+.worker-alerte-texte {
+  font-size: 0.75rem;
+  color: #92400e;
+  margin-top: 0.375rem;
+}
+.dark .worker-alerte-texte {
+  color: #fbbf24;
+}
+
+/* ── Cartes utilisateurs (admin) ─────────────────────────── */
+.user-liste {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.user-carte {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.user-carte-entete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  gap: 1rem;
+}
+.user-carte-info {
+  min-width: 0;
+  flex: 1;
+}
+.user-carte-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 0.25rem;
+}
+.user-nom {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.user-carte-email {
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+.user-carte-activite {
+  font-size: 0.75rem;
+  color: var(--fg-subtle);
+  margin-top: 0.125rem;
+}
+.user-carte-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.modif-ligne {
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
 }
 
 .log-error td {

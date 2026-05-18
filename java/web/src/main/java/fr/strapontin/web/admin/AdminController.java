@@ -123,9 +123,11 @@ public class AdminController {
       Integer nbMisAJour,
       String erreur) {}
 
+  record QuotaTM(int dispo, int total, long reset, String misAJour) {}
+
   record ReponseAdmin(
       List<UtilisateurAdmin> utilisateurs,
-      Object quotaTM,
+      QuotaTM quotaTM,
       List<StatJob> statsJobs,
       List<ConfigStatut> configStatuts,
       List<LogAdminService.EntreeLogAdmin> logsAdmin) {}
@@ -570,7 +572,7 @@ public class AdminController {
                     rs.getString("erreur")));
 
     // Quota TM (stocké en JSON brut dans app_config)
-    Object quotaTM = null;
+    QuotaTM quotaTM = null;
     List<String> quotaJson =
         jdbc.queryForList(
             "SELECT valeur_chiffree FROM app_config WHERE cle = 'TM_QUOTA_JSON'",
@@ -578,15 +580,28 @@ public class AdminController {
             String.class);
     if (!quotaJson.isEmpty()) {
       try {
-        quotaTM = objectMapper.readValue(quotaJson.get(0), Object.class);
+        quotaTM = objectMapper.readValue(quotaJson.get(0), QuotaTM.class);
       } catch (Exception _) {
         log.warn("Quota TM malformé — ignoré");
       }
     }
 
+    // Dernier job réussi (worker health)
+    Instant workerLastSuccess = null;
+    try {
+      workerLastSuccess =
+          jdbc.queryForObject(
+              "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE erreur IS NULL",
+              Map.of(),
+              Instant.class);
+    } catch (Exception _) {
+      log.debug("Impossible de lire le dernier job réussi");
+    }
+
     Map<String, Object> reponse = new HashMap<>();
     reponse.put("statsJobs", statsJobs);
     reponse.put("quotaTM", quotaTM);
+    reponse.put("workerLastSuccess", workerLastSuccess);
     return ResponseEntity.ok(reponse);
   }
 

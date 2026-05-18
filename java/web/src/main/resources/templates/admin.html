@@ -113,60 +113,106 @@
       <div class="admin-sections">
         <!-- Section Tableau de bord (Jobs) -->
         <section id="jobs" class="admin-section">
-          <h2 class="section-titre">Jobs &amp; synchronisation</h2>
+          <h2 class="section-titre">Tableau de bord</h2>
 
+          <!-- Quota Ticketmaster -->
           <div class="param-bloc">
-            <form method="post" th:action="@{/admin/relancer}">
-              <button type="submit" class="btn btn-secondary">
-                Déclencher les fetches maintenant
-              </button>
-            </form>
+            <h3 class="param-label">Quota Ticketmaster API</h3>
+            <div class="quota-tm-carte" th:if="${quotaTM != null}">
+              <div class="quota-tm-chiffres">
+                <span>
+                  <strong th:text="${quotaTM.dispo}">0</strong>
+                  <span class="quota-tm-sep" th:text="' / ' + ${quotaTM.total}">/ 5000</span>
+                  <span class="quota-tm-unite">appels restants</span>
+                </span>
+                <span
+                  class="quota-tm-pct"
+                  th:text="${quotaTM.total > 0 ? (quotaTM.dispo * 100 / quotaTM.total) : 0} + ' %'"
+                  >0 %</span
+                >
+              </div>
+              <div class="quota-tm-barre-fond">
+                <div
+                  class="quota-tm-barre-remplissage"
+                  th:classappend="${quotaTM.total > 0 and quotaTM.dispo * 100 / quotaTM.total > 30 ? ' barre-ok' : (quotaTM.total > 0 and quotaTM.dispo * 100 / quotaTM.total > 10 ? ' barre-warn' : ' barre-danger')}"
+                  th:style="'width: ' + ${quotaTM.total > 0 ? (quotaTM.dispo * 100 / quotaTM.total) : 0} + '%'"
+                ></div>
+              </div>
+              <p
+                class="param-aide"
+                th:text="'Remise à zéro vers ' + ${new java.util.Date(quotaTM.reset).toString().substring(11, 16)}"
+              ></p>
+            </div>
+            <p class="etat-vide-texte" th:unless="${quotaTM != null}">
+              Disponible après le prochain fetch Ticketmaster.
+            </p>
           </div>
 
-          <div class="table-wrapper" th:if="${statsJobs != null}">
-            <table>
-              <thead>
-                <tr>
-                  <th>Job</th>
-                  <th>Dernière exécution</th>
-                  <th>Durée (ms)</th>
-                  <th>Insérés</th>
-                  <th>Mis à jour</th>
-                  <th>Erreur</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr th:each="stat : ${statsJobs}">
-                  <td th:text="${stat.typeJob}">job</td>
-                  <td
-                    th:text="${stat.derniereExec != null ? stat.derniereExec.toString().substring(0, 16).replace('T', ' ') : '—'}"
+          <!-- Actualisations -->
+          <div class="param-bloc">
+            <h3 class="param-label">Actualisations</h3>
+            <div
+              class="jobs-liste"
+              th:if="${statsJobs != null and !statsJobs.isEmpty()}"
+            >
+              <th:block th:each="stat : ${statsJobs}">
+                <div
+                  class="job-carte"
+                  th:if="${stat.typeJob == 'FetchArtistesBatchJob' or stat.typeJob == 'FetchRegionJob'}"
+                >
+                  <p
+                    class="job-carte-label"
+                    th:text="${stat.typeJob == 'FetchArtistesBatchJob' ? 'Artistes suivis' : 'Concerts par région'}"
                   >
-                    date
-                  </td>
-                  <td th:text="${stat.dureeMs != null ? stat.dureeMs : '—'}">
-                    —
-                  </td>
-                  <td
-                    th:text="${stat.nbInseres != null ? stat.nbInseres : '—'}"
-                  >
-                    —
-                  </td>
-                  <td
-                    th:text="${stat.nbMisAJour != null ? stat.nbMisAJour : '—'}"
-                  >
-                    —
-                  </td>
-                  <td>
+                    label
+                  </p>
+                  <p class="job-carte-detail">
+                    <span
+                      th:if="${stat.derniereExec != null}"
+                      th:text="'Dernière exécution : ' + ${stat.derniereExec.toString().substring(0, 16).replace('T', ' ')} + (stat.dureeMs != null ? ' · ' + stat.dureeMs + ' ms' : '')"
+                    ></span>
+                    <span th:unless="${stat.derniereExec != null}"
+                      >Pas encore exécuté</span
+                    >
                     <span
                       class="badge badge-erreur"
                       th:if="${stat.erreur != null}"
                       th:text="${#strings.abbreviate(stat.erreur, 60)}"
-                      >erreur</span
-                    >
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    ></span>
+                  </p>
+                </div>
+              </th:block>
+            </div>
+            <p class="etat-vide-texte" th:unless="${statsJobs != null and !statsJobs.isEmpty()}">
+              Aucun job exécuté pour l'instant.
+            </p>
+            <form method="post" th:action="@{/admin/relancer}" style="margin-top: 0.75rem">
+              <button type="submit" class="btn btn-secondary">
+                Relancer les fetches maintenant
+              </button>
+            </form>
+          </div>
+
+          <!-- Worker -->
+          <div class="param-bloc">
+            <h3 class="param-label">Worker</h3>
+            <div
+              class="worker-carte"
+              th:classappend="${workerEnAlerte ? ' worker-alerte' : ''}"
+            >
+              <div th:if="${workerDepuisTexte != null}">
+                <p class="worker-carte-label">Dernier job complété</p>
+                <p class="worker-carte-detail" th:text="${workerDepuisTexte}">—</p>
+                <p class="worker-alerte-texte" th:if="${workerEnAlerte}">
+                  Inactif depuis plus de 3 h
+                </p>
+              </div>
+              <div th:unless="${workerDepuisTexte != null}">
+                <p class="worker-carte-detail">
+                  Aucun job complété — worker non démarré.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -299,9 +345,9 @@
         <section id="utilisateurs" class="admin-section">
           <h2 class="section-titre">Utilisateurs</h2>
 
-          <!-- Créer un utilisateur -->
+          <!-- Créer un compte -->
           <div class="param-bloc">
-            <h3 class="param-label">Inviter un utilisateur</h3>
+            <h3 class="param-label">Créer un compte</h3>
             <form
               method="post"
               th:action="@{/admin/utilisateurs/creer}"
@@ -314,46 +360,53 @@
                 placeholder="adresse@email.fr"
                 autocomplete="off"
               />
-              <button type="submit" class="btn btn-secondary">Créer</button>
+              <button type="submit" class="btn btn-secondary">Inviter</button>
             </form>
           </div>
 
-          <!-- Tableau des utilisateurs -->
-          <div
-            class="table-wrapper"
-            th:if="${utilisateurs != null and !utilisateurs.isEmpty()}"
-          >
-            <table>
-              <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>Identifiant</th>
-                  <th>Email</th>
-                  <th>Rôle</th>
-                  <th>Dernière activité</th>
-                  <th><span class="sr-only">Actions</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                <th:block th:each="u : ${utilisateurs}">
-                  <tr>
-                    <td>
-                      <span th:text="${u.name}">Nom</span>
-                      <span
-                        class="badge badge-info"
-                        th:if="${u.mustChangeCredentials}"
-                        >Invitation</span
-                      >
-                    </td>
-                    <td th:text="${u.username}">identifiant</td>
-                    <td th:text="${u.email}">email</td>
-                    <td th:text="${u.role}">rôle</td>
-                    <td
-                      th:text="${u.derniereActivite != null ? u.derniereActivite.toString().substring(0, 10) : '—'}"
-                    >
-                      date
-                    </td>
-                    <td class="actions-cellule">
+          <!-- Liste des utilisateurs -->
+          <div class="param-bloc" th:if="${utilisateurs != null and !utilisateurs.isEmpty()}">
+            <h3
+              class="param-label"
+              th:text="'Utilisateurs (' + ${utilisateurs.size()} + ')'"
+            >
+              Utilisateurs
+            </h3>
+            <ul class="user-liste">
+              <th:block th:each="u : ${utilisateurs}">
+                <li class="user-carte">
+                  <div class="user-carte-entete">
+                    <div class="user-carte-info">
+                      <div class="user-carte-badges">
+                        <span class="user-nom" th:text="${u.name}">Nom</span>
+                        <span
+                          class="badge badge-mono"
+                          th:if="${u.username != null}"
+                          th:text="'@' + ${u.username}"
+                        ></span>
+                        <span
+                          class="badge badge-info"
+                          th:if="${u.role == 'admin'}"
+                          >admin</span
+                        >
+                        <span
+                          class="badge badge-warn"
+                          th:if="${u.mustChangeCredentials}"
+                          >premier login en attente</span
+                        >
+                      </div>
+                      <p class="user-carte-email" th:text="${u.email}">email</p>
+                      <p class="user-carte-activite">
+                        <span
+                          th:if="${u.derniereActivite != null}"
+                          th:text="'Dernière activité : ' + ${u.derniereActivite.toString().substring(0, 10)}"
+                        ></span>
+                        <span th:unless="${u.derniereActivite != null}"
+                          >Jamais connecté</span
+                        >
+                      </p>
+                    </div>
+                    <div class="user-carte-actions" th:if="${u.id != utilisateur?.id}">
                       <button
                         type="button"
                         class="btn btn-sm btn-secondary"
@@ -375,70 +428,54 @@
                         method="post"
                         th:action="@{/admin/utilisateurs/{id}/supprimer(id=${u.id})}"
                         style="display: inline"
-                        th:if="${u.id != utilisateur?.id}"
                         onsubmit="return confirm('Supprimer ce compte ?');"
                       >
                         <button type="submit" class="btn btn-sm btn-danger">
                           Supprimer
                         </button>
                       </form>
-                    </td>
-                  </tr>
-                  <tr
+                    </div>
+                  </div>
+                  <div
                     th:id="'modif-' + ${u.id}"
                     class="modif-ligne"
                     style="display: none"
                   >
-                    <td colspan="6">
-                      <form
-                        class="form-modif-utilisateur"
-                        th:data-user-id="${u.id}"
+                    <form class="form-modif-utilisateur" th:data-user-id="${u.id}">
+                      <input
+                        type="text"
+                        name="nom"
+                        maxlength="100"
+                        placeholder="Nom"
+                        th:value="${u.name}"
+                      />
+                      <input
+                        type="email"
+                        name="email"
+                        placeholder="Email"
+                        th:value="${u.email}"
+                      />
+                      <select name="role">
+                        <option value="user" th:selected="${u.role == 'user'}">user</option>
+                        <option value="admin" th:selected="${u.role == 'admin'}">admin</option>
+                      </select>
+                      <button type="submit" class="btn btn-sm btn-primary">
+                        Enregistrer
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-secondary"
+                        th:data-id="${u.id}"
+                        onclick="toggleModif(this.dataset.id)"
                       >
-                        <input
-                          type="text"
-                          name="nom"
-                          maxlength="100"
-                          placeholder="Nom"
-                          th:value="${u.name}"
-                        />
-                        <input
-                          type="email"
-                          name="email"
-                          placeholder="Email"
-                          th:value="${u.email}"
-                        />
-                        <select name="role">
-                          <option
-                            value="user"
-                            th:selected="${u.role == 'user'}"
-                          >
-                            user
-                          </option>
-                          <option
-                            value="admin"
-                            th:selected="${u.role == 'admin'}"
-                          >
-                            admin
-                          </option>
-                        </select>
-                        <button type="submit" class="btn btn-sm btn-primary">
-                          Enregistrer
-                        </button>
-                        <button
-                          type="button"
-                          class="btn btn-sm btn-secondary"
-                          th:data-id="${u.id}"
-                          onclick="toggleModif(this.dataset.id)"
-                        >
-                          Annuler
-                        </button>
-                        <span class="erreur-modif"></span>
-                      </form>
-                    </td>
-                  </tr>
-                </th:block>
-              </tbody>
-            </table>
+                        Annuler
+                      </button>
+                      <span class="erreur-modif"></span>
+                    </form>
+                  </div>
+                </li>
+              </th:block>
+            </ul>
           </div>
         </section>
       </div>
