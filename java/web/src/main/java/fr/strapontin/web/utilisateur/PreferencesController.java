@@ -12,6 +12,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/preferences")
 public class PreferencesController {
 
+  private static final Logger log = LoggerFactory.getLogger(PreferencesController.class);
   private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -89,7 +92,8 @@ public class PreferencesController {
     ExportComplet export;
     try {
       export = objectMapper.readValue(fichier.getBytes(), ExportComplet.class);
-    } catch (Exception _) {
+    } catch (Exception e) {
+      log.warn("Import préférences : désérialisation échouée", e);
       Map<String, Object> erreur = new HashMap<>();
       erreur.put("erreur", "Fichier invalide ou format non reconnu.");
       return ResponseEntity.badRequest().body(erreur);
