@@ -5,6 +5,7 @@
 package fr.strapontin.web.accueil;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
+import fr.strapontin.web.utilisateur.UserConfigService;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,9 +37,11 @@ public class AccueilController {
   private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final UserConfigService userConfigService;
 
-  public AccueilController(NamedParameterJdbcTemplate jdbc) {
+  public AccueilController(NamedParameterJdbcTemplate jdbc, UserConfigService userConfigService) {
     this.jdbc = jdbc;
+    this.userConfigService = userConfigService;
   }
 
   record ConcertAccueil(
@@ -81,7 +84,7 @@ public class AccueilController {
     String userId = utilisateur(auth).id();
     LocalDate aujourd8 = LocalDate.now();
 
-    boolean filtreDisponibles = lireFiltreDisponibles(userId);
+    boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
     boolean inclureIndisponibles =
         indisponibles != null ? "1".equals(indisponibles) : !filtreDisponibles;
 
@@ -185,15 +188,6 @@ public class AccueilController {
     return ResponseEntity.ok(
         new ReponseAccueil(
             artistesGroupes, nbArtistes, nbSalles, totalConcerts, totalConcerts > LIMITE_CONCERTS));
-  }
-
-  private boolean lireFiltreDisponibles(String userId) {
-    List<Boolean> lignes =
-        jdbc.queryForList(
-            "SELECT filtre_disponibles FROM user_config WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId),
-            Boolean.class);
-    return lignes.isEmpty() || lignes.get(0);
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {

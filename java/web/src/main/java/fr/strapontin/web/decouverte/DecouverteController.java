@@ -268,7 +268,7 @@ public class DecouverteController {
     } catch (Exception e) {
       log.warn("Erreur appel worker trigger (découverte)", e);
       Map<String, Object> erreur = new HashMap<>();
-      erreur.put("erreur", "Worker inaccessible : " + e.getMessage());
+      erreur.put("erreur", "Worker inaccessible.");
       return ResponseEntity.status(503).body(erreur);
     }
   }

@@ -306,6 +306,10 @@ public class AdminController {
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
     String role = requete.role() == null ? "" : requete.role().strip().toLowerCase();
 
+    if (nom.isEmpty() && email.isEmpty() && role.isEmpty()) {
+      return erreur(400, "Au moins un champ à modifier est requis.");
+    }
+
     ResponseEntity<Map<String, Object>> erreurValidation =
         validerChampsModification(nom, email, role, userId);
     if (erreurValidation != null) return erreurValidation;
@@ -628,7 +632,7 @@ public class AdminController {
       return erreur(503, "Requête interrompue.");
     } catch (Exception e) {
       log.warn("Erreur appel worker trigger", e);
-      return erreur(503, "Worker inaccessible : " + e.getMessage());
+      return erreur(503, "Worker inaccessible.");
     }
   }
 

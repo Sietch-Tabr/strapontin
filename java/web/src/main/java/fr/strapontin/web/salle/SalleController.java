@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -190,10 +191,12 @@ public class SalleController {
     }
 
     int total =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
-            Map.of("userId", userId),
-            Integer.class);
+        Objects.requireNonNullElse(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
+                Map.of("userId", userId),
+                Integer.class),
+            0);
 
     if (total >= CAP_SALLES) {
       return erreur(400, "Limite de 200 salles atteinte.");

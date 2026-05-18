@@ -5,12 +5,14 @@
 package fr.strapontin.web.spectacle;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
+import fr.strapontin.web.utilisateur.UserConfigService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -37,9 +39,11 @@ public class SpectacleController {
   private static final int CONCERTS_PAR_PAGE = 100;
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final UserConfigService userConfigService;
 
-  public SpectacleController(NamedParameterJdbcTemplate jdbc) {
+  public SpectacleController(NamedParameterJdbcTemplate jdbc, UserConfigService userConfigService) {
     this.jdbc = jdbc;
+    this.userConfigService = userConfigService;
   }
 
   record SpectacleDto(
@@ -105,7 +109,7 @@ public class SpectacleController {
     int pageNum = Math.max(0, page);
 
     // Filtre disponibles (lu depuis user_config, surchargeable via ?indisponibles=1)
-    boolean filtreDisponibles = lireFiltreDisponibles(userId);
+    boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
     boolean inclureIndisponibles =
         indisponibles != null ? "1".equals(indisponibles) : !filtreDisponibles;
 
@@ -247,7 +251,9 @@ public class SpectacleController {
     Map<String, Object> countParams = new HashMap<>(params);
     countParams.remove("limit");
     countParams.remove("offset");
-    int total = jdbc.queryForObject(countSql, countParams, Integer.class);
+    int total =
+        Objects.requireNonNullElse(
+            jdbc.queryForObject(countSql, countParams, Integer.class), 0);
 
     // Genres et mois disponibles (sans filtre genre/mois/classification/recherche)
     String whereBase =
@@ -347,15 +353,6 @@ public class SpectacleController {
         Map.of("userId", userId, "artisteNorm", requete.artisteNorm(), "aujourd8", aujourd8));
 
     return ResponseEntity.ok(Map.of("succes", true));
-  }
-
-  private boolean lireFiltreDisponibles(String userId) {
-    List<Boolean> lignes =
-        jdbc.queryForList(
-            "SELECT filtre_disponibles FROM user_config WHERE user_id = :userId",
-            Map.of("userId", userId),
-            Boolean.class);
-    return lignes.isEmpty() ? true : lignes.get(0);
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
