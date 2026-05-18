@@ -8,7 +8,7 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 # Ordre : snapshot → apt upgrade → vérifier services → healthcheck
 # En cas d'échec : rollback via la commande affichée
 
-VMID=113
+VMID="${1:?Usage: system-update.sh <VMID>}"
 DATE=$(date +%Y%m%d)
 NOM_SNAPSHOT="pre-sysupdate-${DATE}"
 
@@ -34,7 +34,7 @@ pct exec "$VMID" -- bash -c "
 
 # 3. Vérifier que les services sont toujours actifs
 echo "[3/4] Vérification des services..."
-SERVICES="postgresql redis-server strapontin-web strapontin-worker"
+SERVICES="postgresql strapontin-web strapontin-worker"
 TOUT_OK=1
 
 for SERVICE in $SERVICES; do
@@ -65,7 +65,7 @@ fi
 # 4. Healthcheck applicatif
 echo "[4/4] Healthcheck..."
 RETRIES=10
-until pct exec "$VMID" -- curl -sf http://localhost:3000/health > /dev/null 2>&1 || [ "$RETRIES" -eq 0 ]; do
+until pct exec "$VMID" -- curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1 || [ "$RETRIES" -eq 0 ]; do
     sleep 3
     RETRIES=$((RETRIES - 1))
 done

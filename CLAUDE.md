@@ -21,7 +21,7 @@ strapontin/
 │   ├── web/          ← Spring Boot (REST API + Thymeleaf UI, port 8080)
 │   └── worker/       ← Spring Boot + Quartz (port 8081)
 └── scripts/
-    ├── provision-java.sh  ← provisionnement LXC dev|prod (Proxmox) ; copie update.sh via pct push
+    ├── provision.sh       ← provisionnement LXC dev|prod (Proxmox) ; copie update.sh via pct push
     ├── update.sh          ← restart services + healthcheck ; appelé par Woodpecker (prod) ou manuellement (dev)
     └── migrate_data.sql   ← migration données prod (dblink LXC 115 → 113, one-shot)
 ```
@@ -48,8 +48,6 @@ ssh root@192.168.1.99 "pct exec 113 -- journalctl -u strapontin-web --no-pager -
 
 ### Build et déploiement LXC dev
 
-> LXC dev 114 historique : `APP_DIR=/opt/strapontin-java`. LXC greenfield (115, futur prod) : `APP_DIR=/opt/strapontin`.
-
 ```bash
 # Build (Mac — Maven requis, pas sur le LXC)
 mvn -f java/pom.xml -pl web,worker -am package -DskipTests
@@ -57,9 +55,9 @@ mvn -f java/pom.xml -pl web,worker -am package -DskipTests
 # Dev : toujours manuel (Woodpecker cible uniquement le LXC prod)
 # Woodpecker prod : build sur agent → scp JARs → SSH update.sh (LXC = JRE uniquement, pas de Maven)
 
-scp java/web/target/web-2.0.0-SNAPSHOT.jar root@192.168.20.78:/opt/strapontin-java/web.jar
-scp java/worker/target/worker-2.0.0-SNAPSHOT.jar root@192.168.20.78:/opt/strapontin-java/worker.jar
-ssh root@192.168.20.78 "/opt/strapontin-java/update.sh"
+scp java/web/target/web-2.0.0-SNAPSHOT.jar root@192.168.20.78:/opt/strapontin/web.jar
+scp java/worker/target/worker-2.0.0-SNAPSHOT.jar root@192.168.20.78:/opt/strapontin/worker.jar
+ssh root@192.168.20.78 "/opt/strapontin/update.sh"
 ```
 
 ### Gestion des issues (Codeberg)

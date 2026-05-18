@@ -3,7 +3,7 @@ set -euo pipefail
 trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 
 # update.sh — redémarrage des services Strapontin après déploiement de nouveaux JARs
-# Usage : /opt/strapontin-java/update.sh
+# Usage : /opt/strapontin/update.sh
 # Appelé par Woodpecker (prod) ou manuellement (dev) après scp des JARs.
 
 APP_DIR="/opt/strapontin"

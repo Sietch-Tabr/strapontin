@@ -2,14 +2,14 @@
 set -euo pipefail
 trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 
-# provision-java.sh — provisionnement LXC (stack Java/Spring Boot)
+# provision.sh — provisionnement LXC (stack Java/Spring Boot)
 # Usage :
-#   bash /tmp/provision-java.sh dev   → LXC dev (SPRING_PROFILES_ACTIVE=dev, IP 192.168.20.78)
-#   bash /tmp/provision-java.sh prod  → LXC prod (IP 192.168.20.80)
+#   bash /tmp/provision.sh dev   → LXC dev (SPRING_PROFILES_ACTIVE=dev, IP 192.168.20.78)
+#   bash /tmp/provision.sh prod  → LXC prod (IP 192.168.20.80)
 #
 # À exécuter depuis le HOST Proxmox en tant que root :
-#   scp scripts/provision-java.sh root@192.168.1.99:/tmp/
-#   ssh root@192.168.1.99 "bash /tmp/provision-java.sh dev|prod"
+#   scp scripts/provision.sh scripts/update.sh root@192.168.1.99:/tmp/
+#   ssh root@192.168.1.99 "bash /tmp/provision.sh dev|prod"
 #
 # Pour redéployer proprement : détruire l'ancien LXC d'abord :
 #   pct set <VMID> --protection 0
@@ -27,7 +27,7 @@ if [ "$PROFIL" != "dev" ] && [ "$PROFIL" != "prod" ]; then
 fi
 
 VMID=$(pvesh get /cluster/nextid)
-HOSTNAME="strapontin-java"
+HOSTNAME="strapontin"
 
 if [ "$PROFIL" = "dev" ]; then
     IP="192.168.20.78/24"
