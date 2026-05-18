@@ -6,7 +6,7 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 # Usage : /opt/strapontin-java/update.sh
 # Appelé par Woodpecker (prod) ou manuellement (dev) après scp des JARs.
 
-APP_DIR="/opt/strapontin-java"
+APP_DIR="/opt/strapontin"
 
 echo "[update] Redémarrage des services..."
 systemctl restart strapontin-java-web strapontin-java-worker

@@ -43,7 +43,7 @@ DISK="20"
 MEMORY="2048"
 SWAP="512"
 CORES="2"
-APP_DIR="/opt/strapontin-java"
+APP_DIR="/opt/strapontin"
 APP_USER="strapontin"
 DB_NAME="strapontin"
 JAVA_VERSION="25"
@@ -283,7 +283,7 @@ chmod 600 $APP_DIR/.env
 fi
 
 echo "[7] Services systemd..."
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-worker.service << 'UNIT'
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-java-worker.service << 'UNIT'
 [Unit]
 Description=Strapontin — worker Quartz
 After=network.target postgresql.service
@@ -303,7 +303,7 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 UNIT"
 
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-web.service << 'UNIT'
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-java-web.service << 'UNIT'
 [Unit]
 Description=Strapontin — API REST
 After=network.target postgresql.service

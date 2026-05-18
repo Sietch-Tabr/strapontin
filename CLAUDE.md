@@ -49,6 +49,8 @@ ssh root@192.168.1.99 "pct exec 113 -- journalctl -u strapontin-web --no-pager -
 
 ### Build et déploiement LXC dev
 
+> LXC dev 114 historique : `APP_DIR=/opt/strapontin-java`. LXC greenfield (115, futur prod) : `APP_DIR=/opt/strapontin`.
+
 ```bash
 # Build (Mac — Maven requis, pas sur le LXC)
 mvn -f java/pom.xml -pl web,worker -am package -DskipTests
@@ -88,7 +90,7 @@ Labels : `Bug`, `Feature`, `Question`, `Task`, `Duplicate`, `Invalid`.
 
 ### Pipeline Woodpecker (.woodpecker.yaml)
 
-Actuellement ciblé v1 (Node.js). Sera mis à jour en Phase 10 pour Maven.
+Pipeline Maven actif : test → build → deploy sur push `v2`. Secrets requis : `ssh_key`, `lxc_java_host`.
 
 ## Variables d'environnement — java/web/.env
 
