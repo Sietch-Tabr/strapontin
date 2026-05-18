@@ -92,7 +92,7 @@ Pipeline Maven actif : test → build → deploy sur push `v2`. Secrets requis :
 ## Variables d'environnement — java/web/.env
 
 ```
-DATABASE_URL=jdbc:postgresql://localhost/strapontin_v2
+DATABASE_URL=jdbc:postgresql://localhost/strapontin
 APP_CONFIG_SECRET=<valeur de BETTER_AUTH_SECRET LXC 113>
 ```
 
