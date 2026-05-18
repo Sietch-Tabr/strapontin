@@ -26,53 +26,37 @@
           <a
             th:href="@{/}"
             th:classappend="${currentPage == 'accueil' ? ' actif' : ''}"
-          >
-            <span>🎵</span> Accueil
-          </a>
-          <a
-            th:href="@{/artistes}"
-            th:classappend="${currentPage == 'artistes' ? ' actif' : ''}"
-          >
-            <span>🎤</span> Artistes
-          </a>
-          <a
-            th:href="@{/salles}"
-            th:classappend="${currentPage == 'salles' ? ' actif' : ''}"
-          >
-            <span>🏟️</span> Salles
-          </a>
+          >Accueil</a>
           <a
             th:href="@{/spectacles}"
             th:classappend="${currentPage == 'spectacles' ? ' actif' : ''}"
-          >
-            <span>🎟️</span> Spectacles
-          </a>
+          >Mes spectacles</a>
           <a
             th:href="@{/decouverte}"
             th:classappend="${currentPage == 'decouverte' ? ' actif' : ''}"
-          >
-            <span>🔍</span> Découverte
-          </a>
+          >Découverte</a>
+          <a
+            th:href="@{/artistes}"
+            th:classappend="${currentPage == 'artistes' ? ' actif' : ''}"
+          >Mes artistes</a>
+          <a
+            th:href="@{/salles}"
+            th:classappend="${currentPage == 'salles' ? ' actif' : ''}"
+          >Mes salles</a>
           <hr style="margin: 0.5rem 0; border-color: var(--border)" />
-          <a
-            th:href="@{/parametres}"
-            th:classappend="${currentPage == 'parametres' ? ' actif' : ''}"
-          >
-            <span>⚙️</span> Paramètres
-          </a>
-          <a
-            th:href="@{/aide}"
-            th:classappend="${currentPage == 'aide' ? ' actif' : ''}"
-          >
-            <span>❓</span> Aide
-          </a>
           <a
             sec:authorize="hasRole('ADMIN')"
             th:href="@{/admin}"
             th:classappend="${currentPage == 'admin' ? ' actif' : ''}"
-          >
-            <span>🛠️</span> Admin
-          </a>
+          >Admin</a>
+          <a
+            th:href="@{/parametres}"
+            th:classappend="${currentPage == 'parametres' ? ' actif' : ''}"
+          >Paramètres</a>
+          <a
+            th:href="@{/aide}"
+            th:classappend="${currentPage == 'aide' ? ' actif' : ''}"
+          >Aide</a>
         </div>
         <div class="sidebar-footer">
           <span sec:authentication="name">Utilisateur</span>

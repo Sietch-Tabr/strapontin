@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -37,6 +38,9 @@ public class ParametresViewController {
   private static final String CLE_SUCCES = "succes";
   private static final String REDIRECT_PREFS = "redirect:/parametres#preferences";
   private static final String REDIRECT_COMPTE = "redirect:/parametres#compte";
+
+  @Value("${app.cookie.secure:true}")
+  private boolean cookieSecure;
 
   private final UserConfigController userConfigController;
   private final UserController userController;
@@ -83,7 +87,8 @@ public class ParametresViewController {
     ResponseEntity<Map<String, Object>> rep = userConfigController.majDepartements(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "departements");
     }
@@ -111,7 +116,8 @@ public class ParametresViewController {
     ResponseEntity<Map<String, Object>> rep = userConfigController.majNotifications(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "notifications");
     }
@@ -152,13 +158,14 @@ public class ParametresViewController {
     ResponseEntity<Map<String, Object>> rep = userConfigController.majTheme(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       Cookie cookie = new Cookie("theme", valeur);
       cookie.setMaxAge(365 * 24 * 3600);
       cookie.setPath("/");
       cookie.setHttpOnly(false);
-      cookie.setSecure(true);
+      cookie.setSecure(cookieSecure);
       cookie.setAttribute("SameSite", "Strict");
       response.addCookie(cookie);
       redirects.addFlashAttribute(CLE_SUCCES, "theme");
@@ -183,7 +190,8 @@ public class ParametresViewController {
     ResponseEntity<Map<String, Object>> rep = userController.majProfil(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "compte");
     }
@@ -203,7 +211,8 @@ public class ParametresViewController {
     ResponseEntity<Map<String, Object>> rep = userController.majIdentifiant(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "identifiant");
     }
@@ -229,7 +238,8 @@ public class ParametresViewController {
     ResponseEntity<Map<String, Object>> rep = userController.changerMotDePasse(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
       return REDIRECT_COMPTE;
     }
     HttpSession session = request.getSession(false);
@@ -257,7 +267,8 @@ public class ParametresViewController {
         preferencesController.importer(fichier, mode, importerConfig, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
-      redirects.addFlashAttribute(CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+      redirects.addFlashAttribute(
+          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
       redirects.addFlashAttribute(CLE_SUCCES, "import");
     }

@@ -940,6 +940,63 @@ tr:hover td {
 }
 
 /* ── Page Paramètres ─────────────────────────────────────── */
+.param-onglets {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+  overflow-x: auto;
+}
+
+.param-onglet {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.param-onglet:hover {
+  color: var(--fg);
+}
+
+.param-onglet:target,
+.param-onglets:has(+ .parametres-sections .parametres-section:target) .param-onglet {
+  color: var(--fg);
+  border-bottom-color: var(--fg);
+}
+
+.theme-choix {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-theme {
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--fg-muted);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.btn-theme:hover {
+  color: var(--fg);
+  border-color: var(--fg-muted);
+}
+
+.btn-theme.actif {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+}
+
 .parametres-sections {
   display: flex;
   flex-direction: column;

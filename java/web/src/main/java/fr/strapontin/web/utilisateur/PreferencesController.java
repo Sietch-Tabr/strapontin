@@ -131,9 +131,15 @@ public class PreferencesController {
       if (s.salleId() == null || s.salleId().isBlank()) continue;
       jdbc.update(
           """
+          INSERT INTO salles (id, nom, nom_norm)
+          VALUES (:salleId, :salleId, :salleId)
+          ON CONFLICT (id) DO NOTHING
+          """,
+          Map.of("salleId", s.salleId()));
+      jdbc.update(
+          """
           INSERT INTO user_salles (user_id, salle_id, tm_venue_id)
-          SELECT :userId, :salleId, :tmVenueId
-          WHERE EXISTS (SELECT 1 FROM salles WHERE id = :salleId)
+          VALUES (:userId, :salleId, :tmVenueId)
           ON CONFLICT (user_id, salle_id) DO NOTHING
           """,
           Map.of(
@@ -144,7 +150,8 @@ public class PreferencesController {
   }
 
   private void importerConfig(String userId, ConfigExport c) {
-    String[] depts = c.departements() != null ? c.departements().toArray(String[]::new) : new String[0];
+    String[] depts =
+        c.departements() != null ? c.departements().toArray(String[]::new) : new String[0];
     jdbc.update(
         """
         INSERT INTO user_config
@@ -162,13 +169,20 @@ public class PreferencesController {
             updated_at              = now()
         """,
         Map.of(
-            CLE_USER_ID, userId,
-            "depts", depts,
-            "filtreDisponibles", c.filtreDisponibles(),
-            "frequence", c.frequenceNotifications() != null ? c.frequenceNotifications() : "jamais",
-            "notifArtistes", c.notifArtistes(),
-            "notifSalles", c.notifSalles(),
-            "theme", c.theme() != null ? c.theme() : "auto"));
+            CLE_USER_ID,
+            userId,
+            "depts",
+            depts,
+            "filtreDisponibles",
+            c.filtreDisponibles(),
+            "frequence",
+            c.frequenceNotifications() != null ? c.frequenceNotifications() : "jamais",
+            "notifArtistes",
+            c.notifArtistes(),
+            "notifSalles",
+            c.notifSalles(),
+            "theme",
+            c.theme() != null ? c.theme() : "auto"));
   }
 
   private void fusionnerDepartements(String userId, String[] nouveauxDepts) {

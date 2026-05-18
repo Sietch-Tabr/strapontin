@@ -16,16 +16,21 @@
 
       <div
         th:if="${succes}"
-        popover="manual"
         class="alerte alerte-succes"
         th:text="'Paramètres enregistrés.'"
       ></div>
       <div
         th:if="${erreur}"
-        popover="manual"
         class="alerte alerte-erreur"
         th:text="${erreur}"
       ></div>
+
+      <nav class="param-onglets" aria-label="Sections des paramètres">
+        <a href="#preferences" class="param-onglet">Préférences</a>
+        <a href="#notifications" class="param-onglet">Notifications</a>
+        <a href="#compte" class="param-onglet">Compte</a>
+        <a href="#donnees" class="param-onglet">Données</a>
+      </nav>
 
       <div class="parametres-sections">
         <!-- Section Préférences -->
@@ -86,30 +91,26 @@
           <!-- Thème -->
           <div class="param-bloc">
             <h3 class="param-label">Thème de l'interface</h3>
-            <form
-              method="post"
-              th:action="@{/parametres/theme}"
-              class="form-inline"
-            >
-              <select name="valeur">
-                <option
-                  value="auto"
-                  th:selected="${config?.theme == 'auto' or config?.theme == null}"
-                >
-                  Automatique (système)
-                </option>
-                <option value="clair" th:selected="${config?.theme == 'clair'}">
-                  Clair
-                </option>
-                <option
-                  value="sombre"
-                  th:selected="${config?.theme == 'sombre'}"
-                >
-                  Sombre
-                </option>
-              </select>
-              <button type="submit" class="btn btn-secondary">Appliquer</button>
-            </form>
+            <div class="theme-choix">
+              <form method="post" th:action="@{/parametres/theme}">
+                <input type="hidden" name="valeur" value="auto" />
+                <button type="submit"
+                  th:classappend="${config?.theme == 'auto' or config?.theme == null ? ' actif' : ''}"
+                  class="btn btn-theme">Automatique</button>
+              </form>
+              <form method="post" th:action="@{/parametres/theme}">
+                <input type="hidden" name="valeur" value="clair" />
+                <button type="submit"
+                  th:classappend="${config?.theme == 'clair' ? ' actif' : ''}"
+                  class="btn btn-theme">Clair</button>
+              </form>
+              <form method="post" th:action="@{/parametres/theme}">
+                <input type="hidden" name="valeur" value="sombre" />
+                <button type="submit"
+                  th:classappend="${config?.theme == 'sombre' ? ' actif' : ''}"
+                  class="btn btn-theme">Sombre</button>
+              </form>
+            </div>
           </div>
         </section>
 
