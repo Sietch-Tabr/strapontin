@@ -1,4 +1,5 @@
-import { writeFileSync, existsSync, readFileSync } from "fs";
+import { chromium } from "@playwright/test";
+import { existsSync, readFileSync } from "fs";
 
 const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
 export const FICHIER_STATE = "tests/e2e/.auth-state.json";
@@ -7,7 +8,6 @@ const E2E_IDENTIFIANT = process.env["E2E_IDENTIFIANT"] ?? "";
 const E2E_MOT_DE_PASSE = process.env["E2E_MOT_DE_PASSE"] ?? "";
 
 export default async function setup(): Promise<() => Promise<void>> {
-  // Si le fichier d'état existe déjà avec une session SESSION valide, l'utiliser directement.
   if (!E2E_IDENTIFIANT && existsSync(FICHIER_STATE)) {
     const etat = JSON.parse(readFileSync(FICHIER_STATE, "utf-8")) as {
       cookies?: { name: string; value: string; expires?: number }[];
@@ -17,7 +17,7 @@ export default async function setup(): Promise<() => Promise<void>> {
       (c) =>
         c.name === "SESSION" &&
         c.value &&
-        (!c.expires || c.expires > maintenant),
+        (!c.expires || c.expires < 0 || c.expires > maintenant),
     );
     if (sessionExistante) {
       console.log("[e2e setup] session existante réutilisée");
@@ -32,57 +32,28 @@ export default async function setup(): Promise<() => Promise<void>> {
     );
   }
 
-  const cookie = await seConnecter();
-  if (!cookie) {
+  const navigateur = await chromium.launch();
+  const contexte = await navigateur.newContext({ baseURL: BASE_URL });
+  const page = await contexte.newPage();
+
+  await page.goto("/login");
+  await page.fill('input[name="identifiant"]', E2E_IDENTIFIANT);
+  await page.fill('input[name="motDePasse"]', E2E_MOT_DE_PASSE);
+  await Promise.all([
+    page.waitForURL(/\/(?!login)/, { waitUntil: "domcontentloaded" }),
+    page.click('button[type="submit"]'),
+  ]);
+
+  if (page.url().includes("/login")) {
+    await navigateur.close();
     throw new Error(
-      `Impossible d'obtenir une session E2E sur ${BASE_URL}.\n` +
-        "Vérifier les credentials et que l'app dev est accessible.",
+      `Échec du login E2E (identifiant ou mot de passe incorrect) sur ${BASE_URL}.`,
     );
   }
 
-  const hostname = new URL(BASE_URL).hostname;
+  await contexte.storageState({ path: FICHIER_STATE });
+  await navigateur.close();
 
-  writeFileSync(
-    FICHIER_STATE,
-    JSON.stringify({
-      cookies: [
-        {
-          name: "SESSION",
-          value: cookie,
-          domain: hostname,
-          path: "/",
-          httpOnly: true,
-          secure: false,
-          sameSite: "Lax",
-          expires: Math.floor(Date.now() / 1000) + 604800,
-        },
-      ],
-      origins: [],
-    }),
-  );
-
-  console.log("[e2e setup] session Java obtenue");
+  console.log("[e2e setup] session Playwright obtenue via form login");
   return async () => {};
-}
-
-async function seConnecter(): Promise<string | null> {
-  try {
-    const rep = await fetch(`${BASE_URL}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        identifiant: E2E_IDENTIFIANT,
-        motDePasse: E2E_MOT_DE_PASSE,
-      }),
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!rep.ok) return null;
-
-    const setCookie = rep.headers.get("set-cookie") ?? "";
-    const match = setCookie.match(/SESSION=([^;]+)/);
-    return match?.[1] ?? null;
-  } catch {
-    return null;
-  }
 }

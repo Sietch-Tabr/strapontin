@@ -73,7 +73,7 @@
         <h1>Administration</h1>
       </div>
 
-      <div th:if="${succes}" popover="manual" class="alerte alerte-succes">
+      <div th:if="${succes}" class="alerte alerte-succes">
         <span th:if="${succes == 'creerUtilisateur'}">
           Compte créé.
           <span th:if="${lienReset != null}">
@@ -99,7 +99,6 @@
       </div>
       <div
         th:if="${erreur}"
-        popover="manual"
         class="alerte alerte-erreur"
         th:text="${erreur}"
       ></div>
@@ -167,7 +166,8 @@
                       <button
                         type="button"
                         class="btn btn-sm btn-secondary"
-                        th:onclick="'toggleModif(\'' + ${u.id} + '\')'"
+                        th:data-id="${u.id}"
+                        onclick="toggleModif(this.dataset.id)"
                       >
                         Modifier
                       </button>
@@ -236,7 +236,8 @@
                         <button
                           type="button"
                           class="btn btn-sm btn-secondary"
-                          th:onclick="'toggleModif(\'' + ${u.id} + '\')'"
+                          th:data-id="${u.id}"
+                          onclick="toggleModif(this.dataset.id)"
                         >
                           Annuler
                         </button>
