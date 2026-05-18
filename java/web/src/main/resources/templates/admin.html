@@ -104,13 +104,197 @@
       ></div>
 
       <nav class="param-onglets" aria-label="Sections d'administration">
-        <a href="#utilisateurs" class="param-onglet">Utilisateurs</a>
-        <a href="#configuration" class="param-onglet">Configuration</a>
-        <a href="#jobs" class="param-onglet">Jobs</a>
+        <a href="#jobs" class="param-onglet">Tableau de bord</a>
         <a href="#logs" class="param-onglet">Logs</a>
+        <a href="#configuration" class="param-onglet">Configuration</a>
+        <a href="#utilisateurs" class="param-onglet">Utilisateurs</a>
       </nav>
 
       <div class="admin-sections">
+        <!-- Section Tableau de bord (Jobs) -->
+        <section id="jobs" class="admin-section">
+          <h2 class="section-titre">Jobs &amp; synchronisation</h2>
+
+          <div class="param-bloc">
+            <form method="post" th:action="@{/admin/relancer}">
+              <button type="submit" class="btn btn-secondary">
+                Déclencher les fetches maintenant
+              </button>
+            </form>
+          </div>
+
+          <div class="table-wrapper" th:if="${statsJobs != null}">
+            <table>
+              <thead>
+                <tr>
+                  <th>Job</th>
+                  <th>Dernière exécution</th>
+                  <th>Durée (ms)</th>
+                  <th>Insérés</th>
+                  <th>Mis à jour</th>
+                  <th>Erreur</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="stat : ${statsJobs}">
+                  <td th:text="${stat.typeJob}">job</td>
+                  <td
+                    th:text="${stat.derniereExec != null ? stat.derniereExec.toString().substring(0, 16).replace('T', ' ') : '—'}"
+                  >
+                    date
+                  </td>
+                  <td th:text="${stat.dureeMs != null ? stat.dureeMs : '—'}">
+                    —
+                  </td>
+                  <td
+                    th:text="${stat.nbInseres != null ? stat.nbInseres : '—'}"
+                  >
+                    —
+                  </td>
+                  <td
+                    th:text="${stat.nbMisAJour != null ? stat.nbMisAJour : '—'}"
+                  >
+                    —
+                  </td>
+                  <td>
+                    <span
+                      class="badge badge-erreur"
+                      th:if="${stat.erreur != null}"
+                      th:text="${#strings.abbreviate(stat.erreur, 60)}"
+                      >erreur</span
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Section Logs -->
+        <section id="logs" class="admin-section">
+          <h2 class="section-titre">Logs récents</h2>
+
+          <div class="logs-filtres">
+            <label for="filtre-niveau">Niveau :</label>
+            <select id="filtre-niveau">
+              <option value="warn+">≥ warn (défaut)</option>
+              <option value="all">Tout</option>
+              <option value="error">Erreurs seulement</option>
+            </select>
+            <label for="filtre-source">Source :</label>
+            <select id="filtre-source">
+              <option value="">Toutes</option>
+              <option value="web">web</option>
+              <option value="worker">worker</option>
+              <option value="auth">auth</option>
+            </select>
+          </div>
+
+          <div
+            class="table-wrapper"
+            th:if="${logs != null and !logs.isEmpty()}"
+          >
+            <table id="table-logs">
+              <thead>
+                <tr>
+                  <th>Horodatage</th>
+                  <th>Niveau</th>
+                  <th>Source</th>
+                  <th>Message</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  th:each="entree : ${logs}"
+                  th:classappend="${entree.niveau == 'error' ? ' log-error' : (entree.niveau == 'warn' ? ' log-warn' : '')}"
+                  th:data-source="${entree.source}"
+                  th:data-niveau="${entree.niveau}"
+                  th:data-meta="${entree.meta != null ? entree.meta : ''}"
+                >
+                  <td
+                    th:text="${new java.util.Date(entree.ts).toString().substring(0, 19)}"
+                  >
+                    date
+                  </td>
+                  <td th:text="${entree.niveau}">niveau</td>
+                  <td th:text="${entree.source}">source</td>
+                  <td class="log-message" th:text="${entree.message}">
+                    message
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p th:if="${logs == null or logs.isEmpty()}" class="etat-vide-texte">
+            Aucun log pour l'instant.
+          </p>
+        </section>
+
+        <!-- Section Configuration -->
+        <section id="configuration" class="admin-section">
+          <h2 class="section-titre">Configuration</h2>
+
+          <div th:each="statut : ${configStatuts}" class="param-bloc">
+            <h3 class="param-label" th:text="${statut.cle}">CLE</h3>
+            <p class="param-aide">
+              <span th:if="${statut.presente}" class="badge badge-succes"
+                >Configurée</span
+              >
+              <span th:unless="${statut.presente}" class="badge badge-manquant"
+                >Non configurée</span
+              >
+              <span
+                th:if="${!statut.secret and statut.valeur != null}"
+                th:text="' — ' + ${statut.valeur}"
+              ></span>
+            </p>
+            <form
+              method="post"
+              th:action="@{/admin/config}"
+              class="form-inline"
+              th:if="${statut.cle != 'VAPID_PUBLIC_KEY' and statut.cle != 'VAPID_PRIVATE_KEY'}"
+            >
+              <input type="hidden" name="cle" th:value="${statut.cle}" />
+              <input
+                th:if="${statut.secret}"
+                type="password"
+                name="valeur"
+                autocomplete="new-password"
+                placeholder="Nouvelle valeur…"
+              />
+              <input
+                th:unless="${statut.secret}"
+                type="text"
+                name="valeur"
+                th:value="${statut.valeur}"
+                autocomplete="off"
+              />
+              <button type="submit" class="btn btn-secondary">
+                Enregistrer
+              </button>
+            </form>
+          </div>
+
+          <!-- Régénération VAPID -->
+          <div class="param-bloc param-bloc-danger">
+            <h3 class="param-label">Clés VAPID (Push)</h3>
+            <p class="param-aide">
+              Régénérer les clés invalide tous les abonnements push existants.
+            </p>
+            <form
+              method="post"
+              th:action="@{/admin/vapid}"
+              onsubmit="
+                return confirm(
+                  'Régénérer les clés VAPID ? Les abonnements push existants seront invalidés.',
+                );
+              "
+            >
+              <button type="submit" class="btn btn-secondary">Régénérer</button>
+            </form>
+          </div>
+        </section>
+
         <!-- Section Utilisateurs -->
         <section id="utilisateurs" class="admin-section">
           <h2 class="section-titre">Utilisateurs</h2>
@@ -256,190 +440,6 @@
               </tbody>
             </table>
           </div>
-        </section>
-
-        <!-- Section Configuration -->
-        <section id="configuration" class="admin-section">
-          <h2 class="section-titre">Configuration</h2>
-
-          <div th:each="statut : ${configStatuts}" class="param-bloc">
-            <h3 class="param-label" th:text="${statut.cle}">CLE</h3>
-            <p class="param-aide">
-              <span th:if="${statut.presente}" class="badge badge-succes"
-                >Configurée</span
-              >
-              <span th:unless="${statut.presente}" class="badge badge-manquant"
-                >Non configurée</span
-              >
-              <span
-                th:if="${!statut.secret and statut.valeur != null}"
-                th:text="' — ' + ${statut.valeur}"
-              ></span>
-            </p>
-            <form
-              method="post"
-              th:action="@{/admin/config}"
-              class="form-inline"
-              th:if="${statut.cle != 'VAPID_PUBLIC_KEY' and statut.cle != 'VAPID_PRIVATE_KEY'}"
-            >
-              <input type="hidden" name="cle" th:value="${statut.cle}" />
-              <input
-                th:if="${statut.secret}"
-                type="password"
-                name="valeur"
-                autocomplete="new-password"
-                placeholder="Nouvelle valeur…"
-              />
-              <input
-                th:unless="${statut.secret}"
-                type="text"
-                name="valeur"
-                th:value="${statut.valeur}"
-                autocomplete="off"
-              />
-              <button type="submit" class="btn btn-secondary">
-                Enregistrer
-              </button>
-            </form>
-          </div>
-
-          <!-- Régénération VAPID -->
-          <div class="param-bloc param-bloc-danger">
-            <h3 class="param-label">Clés VAPID (Push)</h3>
-            <p class="param-aide">
-              Régénérer les clés invalide tous les abonnements push existants.
-            </p>
-            <form
-              method="post"
-              th:action="@{/admin/vapid}"
-              onsubmit="
-                return confirm(
-                  'Régénérer les clés VAPID ? Les abonnements push existants seront invalidés.',
-                );
-              "
-            >
-              <button type="submit" class="btn btn-secondary">Régénérer</button>
-            </form>
-          </div>
-        </section>
-
-        <!-- Section Jobs -->
-        <section id="jobs" class="admin-section">
-          <h2 class="section-titre">Jobs &amp; synchronisation</h2>
-
-          <div class="param-bloc">
-            <form method="post" th:action="@{/admin/relancer}">
-              <button type="submit" class="btn btn-secondary">
-                Déclencher les fetches maintenant
-              </button>
-            </form>
-          </div>
-
-          <div class="table-wrapper" th:if="${statsJobs != null}">
-            <table>
-              <thead>
-                <tr>
-                  <th>Job</th>
-                  <th>Dernière exécution</th>
-                  <th>Durée (ms)</th>
-                  <th>Insérés</th>
-                  <th>Mis à jour</th>
-                  <th>Erreur</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr th:each="stat : ${statsJobs}">
-                  <td th:text="${stat.typeJob}">job</td>
-                  <td
-                    th:text="${stat.derniereExec != null ? stat.derniereExec.toString().substring(0, 16).replace('T', ' ') : '—'}"
-                  >
-                    date
-                  </td>
-                  <td th:text="${stat.dureeMs != null ? stat.dureeMs : '—'}">
-                    —
-                  </td>
-                  <td
-                    th:text="${stat.nbInseres != null ? stat.nbInseres : '—'}"
-                  >
-                    —
-                  </td>
-                  <td
-                    th:text="${stat.nbMisAJour != null ? stat.nbMisAJour : '—'}"
-                  >
-                    —
-                  </td>
-                  <td>
-                    <span
-                      class="badge badge-erreur"
-                      th:if="${stat.erreur != null}"
-                      th:text="${#strings.abbreviate(stat.erreur, 60)}"
-                      >erreur</span
-                    >
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- Section Logs -->
-        <section id="logs" class="admin-section">
-          <h2 class="section-titre">Logs récents</h2>
-
-          <div class="logs-filtres">
-            <label for="filtre-niveau">Niveau :</label>
-            <select id="filtre-niveau">
-              <option value="warn+">≥ warn (défaut)</option>
-              <option value="all">Tout</option>
-              <option value="error">Erreurs seulement</option>
-            </select>
-            <label for="filtre-source">Source :</label>
-            <select id="filtre-source">
-              <option value="">Toutes</option>
-              <option value="web">web</option>
-              <option value="worker">worker</option>
-              <option value="auth">auth</option>
-            </select>
-          </div>
-
-          <div
-            class="table-wrapper"
-            th:if="${logs != null and !logs.isEmpty()}"
-          >
-            <table id="table-logs">
-              <thead>
-                <tr>
-                  <th>Horodatage</th>
-                  <th>Niveau</th>
-                  <th>Source</th>
-                  <th>Message</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  th:each="entree : ${logs}"
-                  th:classappend="${entree.niveau == 'error' ? ' log-error' : (entree.niveau == 'warn' ? ' log-warn' : '')}"
-                  th:data-source="${entree.source}"
-                  th:data-niveau="${entree.niveau}"
-                  th:data-meta="${entree.meta != null ? entree.meta : ''}"
-                >
-                  <td
-                    th:text="${new java.util.Date(entree.ts).toString().substring(0, 19)}"
-                  >
-                    date
-                  </td>
-                  <td th:text="${entree.niveau}">niveau</td>
-                  <td th:text="${entree.source}">source</td>
-                  <td class="log-message" th:text="${entree.message}">
-                    message
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p th:if="${logs == null or logs.isEmpty()}" class="etat-vide-texte">
-            Aucun log pour l'instant.
-          </p>
         </section>
       </div>
 

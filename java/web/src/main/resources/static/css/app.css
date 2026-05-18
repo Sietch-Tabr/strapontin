@@ -1066,16 +1066,25 @@ tr:hover td {
 }
 
 .parametres-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
   max-width: 42rem;
 }
 
 .parametres-section {
+  display: none;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.5rem;
+}
+
+.parametres-section:target,
+.parametres-sections:not(:has(:target)) #preferences {
+  display: block;
+}
+
+/* Onglet actif par défaut (aucun hash) */
+.param-onglets:not(:has(~ .parametres-sections :target)) a[href="#preferences"] {
+  color: var(--fg);
+  border-bottom-color: var(--fg);
 }
 
 .section-titre {
@@ -1150,14 +1159,25 @@ tr:hover td {
 
 /* ── Page Admin ──────────────────────────────────────────── */
 .admin-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
+  max-width: 56rem;
 }
+
 .admin-section {
+  display: none;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.5rem;
+}
+
+.admin-section:target,
+.admin-sections:not(:has(:target)) #jobs {
+  display: block;
+}
+
+/* Onglet actif par défaut (aucun hash) */
+.param-onglets:not(:has(~ .admin-sections :target)) a[href="#jobs"] {
+  color: var(--fg);
+  border-bottom-color: var(--fg);
 }
 
 .badge-info {
