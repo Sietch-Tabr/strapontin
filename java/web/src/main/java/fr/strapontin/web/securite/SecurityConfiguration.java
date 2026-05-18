@@ -54,6 +54,7 @@ public class SecurityConfiguration {
                         "/css/**",
                         "/js/**",
                         "/images/**",
+                        "/icons/**",
                         "/favicon.ico",
                         "/manifest.json",
                         "/sw.js")

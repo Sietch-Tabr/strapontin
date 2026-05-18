@@ -137,6 +137,7 @@ textarea {
 .sidebar-footer a {
   display: flex;
   align-items: center;
+  gap: 0.625rem;
   padding: 0.5rem 0.75rem;
   border-radius: var(--radius);
   color: var(--fg-muted);
@@ -145,6 +146,12 @@ textarea {
   transition:
     background 0.15s,
     color 0.15s;
+}
+
+.icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
 }
 
 .sidebar-footer a:hover,
