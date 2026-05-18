@@ -127,74 +127,75 @@
         <!-- Section Notifications -->
         <section id="notifications" class="parametres-section">
           <div class="param-bloc">
-          <h3 class="param-label">Notifications email</h3>
-          <form
-            method="post"
-            th:action="@{/parametres/notifications}"
-            class="form-vertical"
-          >
-            <div class="form-group">
-              <label for="frequence">Fréquence des emails</label>
-              <select
-                id="frequence"
-                name="frequenceNotifications"
+            <h3 class="param-label">Notifications email</h3>
+            <form
+              method="post"
+              th:action="@{/parametres/notifications}"
+              class="form-vertical"
+            >
+              <div class="form-group">
+                <label for="frequence">Fréquence des emails</label>
+                <select
+                  id="frequence"
+                  name="frequenceNotifications"
+                  th:disabled="${config == null or !config.resendDisponible}"
+                >
+                  <option
+                    value="jamais"
+                    th:selected="${config?.frequenceNotifications == 'jamais' or config?.frequenceNotifications == null}"
+                  >
+                    Jamais
+                  </option>
+                  <option
+                    value="quotidien"
+                    th:selected="${config?.frequenceNotifications == 'quotidien'}"
+                  >
+                    Récapitulatif quotidien (8h)
+                  </option>
+                  <option
+                    value="temps_reel"
+                    th:selected="${config?.frequenceNotifications == 'temps_reel'}"
+                  >
+                    À chaque nouveau concert
+                  </option>
+                </select>
+                <p class="form-aide" th:unless="${config?.resendDisponible}">
+                  Les emails ne sont pas disponibles (clé Resend non
+                  configurée).
+                </p>
+              </div>
+
+              <div class="form-group form-checkboxes">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="notifArtistes"
+                    value="true"
+                    th:checked="${config?.notifArtistes}"
+                    th:disabled="${config == null or !config.resendDisponible}"
+                  />
+                  Artistes suivis
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="notifSalles"
+                    value="true"
+                    th:checked="${config?.notifSalles}"
+                    th:disabled="${config == null or !config.resendDisponible}"
+                  />
+                  Salles suivies
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                class="btn btn-secondary"
                 th:disabled="${config == null or !config.resendDisponible}"
               >
-                <option
-                  value="jamais"
-                  th:selected="${config?.frequenceNotifications == 'jamais' or config?.frequenceNotifications == null}"
-                >
-                  Jamais
-                </option>
-                <option
-                  value="quotidien"
-                  th:selected="${config?.frequenceNotifications == 'quotidien'}"
-                >
-                  Récapitulatif quotidien (8h)
-                </option>
-                <option
-                  value="temps_reel"
-                  th:selected="${config?.frequenceNotifications == 'temps_reel'}"
-                >
-                  À chaque nouveau concert
-                </option>
-              </select>
-              <p class="form-aide" th:unless="${config?.resendDisponible}">
-                Les emails ne sont pas disponibles (clé Resend non configurée).
-              </p>
-            </div>
-
-            <div class="form-group form-checkboxes">
-              <label>
-                <input
-                  type="checkbox"
-                  name="notifArtistes"
-                  value="true"
-                  th:checked="${config?.notifArtistes}"
-                  th:disabled="${config == null or !config.resendDisponible}"
-                />
-                Artistes suivis
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  name="notifSalles"
-                  value="true"
-                  th:checked="${config?.notifSalles}"
-                  th:disabled="${config == null or !config.resendDisponible}"
-                />
-                Salles suivies
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              class="btn btn-secondary"
-              th:disabled="${config == null or !config.resendDisponible}"
-            >
-              Enregistrer
-            </button>
-          </form>
+                Enregistrer
+              </button>
+            </form>
           </div>
 
           <!-- Notifications push (affiché dynamiquement par JS si supportées) -->

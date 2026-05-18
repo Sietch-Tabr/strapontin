@@ -177,96 +177,99 @@
         <!-- Section Logs -->
         <section id="logs" class="admin-section">
           <div class="param-bloc">
-          <div class="logs-filtres">
-            <div style="display: flex; align-items: center; gap: 6px">
-              <label for="filtre-source" class="logs-filtre-label"
-                >Source :</label
-              >
-              <select id="filtre-source" class="logs-filtre-select">
-                <option value="">Toutes</option>
-                <option value="auth">auth</option>
-                <option value="admin">admin</option>
-                <option value="push">push</option>
-                <option value="jobs">jobs</option>
-                <option value="worker">worker</option>
-              </select>
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px">
-              <span class="logs-filtre-label">Niveau :</span>
-              <button
-                type="button"
-                class="log-filtre-btn"
-                data-niveau="info"
-                aria-pressed="false"
-              >
-                info
-              </button>
-              <button
-                type="button"
-                class="log-filtre-btn actif"
-                data-niveau="warn"
-                aria-pressed="true"
-              >
-                warn
-              </button>
-              <button
-                type="button"
-                class="log-filtre-btn actif"
-                data-niveau="error"
-                aria-pressed="true"
-              >
-                error
-              </button>
-              <button
-                type="button"
-                class="log-filtre-tous"
-                id="log-filtre-tous"
-                style="display: none"
-              >
-                Tous
-              </button>
-            </div>
-            <span id="log-compte" class="log-compte"></span>
-          </div>
-
-          <div
-            class="table-wrapper"
-            th:if="${logs != null and !logs.isEmpty()}"
-          >
-            <table id="table-logs">
-              <thead>
-                <tr>
-                  <th>Horodatage</th>
-                  <th>Niveau</th>
-                  <th>Source</th>
-                  <th>Message</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  th:each="entree : ${logs}"
-                  th:classappend="${entree.niveau == 'error' ? ' log-error' : (entree.niveau == 'warn' ? ' log-warn' : '')}"
-                  th:data-source="${entree.source}"
-                  th:data-niveau="${entree.niveau}"
-                  th:data-meta="${entree.meta != null ? entree.meta : ''}"
+            <div class="logs-filtres">
+              <div style="display: flex; align-items: center; gap: 6px">
+                <label for="filtre-source" class="logs-filtre-label"
+                  >Source :</label
                 >
-                  <td
-                    th:text="${new java.util.Date(entree.ts).toString().substring(0, 19)}"
+                <select id="filtre-source" class="logs-filtre-select">
+                  <option value="">Toutes</option>
+                  <option value="auth">auth</option>
+                  <option value="admin">admin</option>
+                  <option value="push">push</option>
+                  <option value="jobs">jobs</option>
+                  <option value="worker">worker</option>
+                </select>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px">
+                <span class="logs-filtre-label">Niveau :</span>
+                <button
+                  type="button"
+                  class="log-filtre-btn"
+                  data-niveau="info"
+                  aria-pressed="false"
+                >
+                  info
+                </button>
+                <button
+                  type="button"
+                  class="log-filtre-btn actif"
+                  data-niveau="warn"
+                  aria-pressed="true"
+                >
+                  warn
+                </button>
+                <button
+                  type="button"
+                  class="log-filtre-btn actif"
+                  data-niveau="error"
+                  aria-pressed="true"
+                >
+                  error
+                </button>
+                <button
+                  type="button"
+                  class="log-filtre-tous"
+                  id="log-filtre-tous"
+                  style="display: none"
+                >
+                  Tous
+                </button>
+              </div>
+              <span id="log-compte" class="log-compte"></span>
+            </div>
+
+            <div
+              class="table-wrapper"
+              th:if="${logs != null and !logs.isEmpty()}"
+            >
+              <table id="table-logs">
+                <thead>
+                  <tr>
+                    <th>Horodatage</th>
+                    <th>Niveau</th>
+                    <th>Source</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    th:each="entree : ${logs}"
+                    th:classappend="${entree.niveau == 'error' ? ' log-error' : (entree.niveau == 'warn' ? ' log-warn' : '')}"
+                    th:data-source="${entree.source}"
+                    th:data-niveau="${entree.niveau}"
+                    th:data-meta="${entree.meta != null ? entree.meta : ''}"
                   >
-                    date
-                  </td>
-                  <td th:text="${entree.niveau}">niveau</td>
-                  <td th:text="${entree.source}">source</td>
-                  <td class="log-message" th:text="${entree.message}">
-                    message
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p th:if="${logs == null or logs.isEmpty()}" class="etat-vide-texte">
-            Aucun log pour l'instant.
-          </p>
+                    <td
+                      th:text="${new java.util.Date(entree.ts).toString().substring(0, 19)}"
+                    >
+                      date
+                    </td>
+                    <td th:text="${entree.niveau}">niveau</td>
+                    <td th:text="${entree.source}">source</td>
+                    <td class="log-message" th:text="${entree.message}">
+                      message
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p
+              th:if="${logs == null or logs.isEmpty()}"
+              class="etat-vide-texte"
+            >
+              Aucun log pour l'instant.
+            </p>
           </div>
         </section>
 
