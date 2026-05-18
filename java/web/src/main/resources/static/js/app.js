@@ -83,6 +83,17 @@ if ("serviceWorker" in navigator) {
   });
 })();
 
+// Bouton de recherche — activation dynamique selon la longueur du champ
+(function () {
+  const input = document.getElementById("q-artiste") ?? document.getElementById("q-salle");
+  if (!input) return;
+  const btn = input.closest("form")?.querySelector('button[type="submit"]');
+  if (!btn) return;
+  const majEtat = () => { btn.disabled = input.value.trim().length < 2; };
+  input.addEventListener("input", majEtat);
+  majEtat();
+})();
+
 function urlBase64VersUint8Array(base64) {
   const rembourrage = "=".repeat((4 - (base64.length % 4)) % 4);
   const b64 = (base64 + rembourrage).replace(/-/g, "+").replace(/_/g, "/");

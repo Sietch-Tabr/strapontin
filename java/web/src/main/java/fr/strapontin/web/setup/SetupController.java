@@ -164,7 +164,7 @@ public class SetupController {
   private void genererVapid() {
     try {
       KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
-      kpg.initialize(new ECGenParameterSpec("P-256"));
+      kpg.initialize(new ECGenParameterSpec("secp256r1"));
       KeyPair paire = kpg.generateKeyPair();
 
       ECPublicKey pubKey = (ECPublicKey) paire.getPublic();
