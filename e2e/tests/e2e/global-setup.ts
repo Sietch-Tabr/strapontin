@@ -28,7 +28,7 @@ export default async function setup(): Promise<() => Promise<void>> {
   if (!E2E_IDENTIFIANT || !E2E_MOT_DE_PASSE) {
     throw new Error(
       "Variables d'environnement E2E_IDENTIFIANT et E2E_MOT_DE_PASSE requises.\n" +
-        "Exemple : E2E_IDENTIFIANT=kwaite E2E_MOT_DE_PASSE=... pnpm test:e2e",
+        "Exemple : E2E_IDENTIFIANT=kwaite E2E_MOT_DE_PASSE=... pnpm test",
     );
   }
 

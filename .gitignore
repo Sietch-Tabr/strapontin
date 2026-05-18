@@ -6,8 +6,6 @@ dist/
 *.sql.gz
 .DS_Store
 .pnpm-store/
-.auth-state.json
-apps/web/test-results/
 .code-review-graph/
 .understand-anything/intermediate/
 .understand-anything/tmp/

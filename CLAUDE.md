@@ -160,10 +160,10 @@ Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de
 - Identifiants en français (`nombreUtilisateurs`, `calculerTotal`)
 - Logging : SLF4J, jamais `System.out`
 - **Tests Java** : `mvn -pl core,sources test` (unitaires). `mvn -pl worker test -am` requiert Docker (Testcontainers).
-- **Tests E2E** : Playwright (`apps/web/tests/e2e/`) — 52 tests, nécessite LXC dev actif (port 8080)
-  - Lancer : `cd apps/web && npx playwright test`
+- **Tests E2E** : Playwright (`e2e/`) — 52 tests, nécessite LXC dev actif (port 8080)
+  - Lancer : `cd e2e && npx playwright test`
   - Credentials : `E2E_IDENTIFIANT=kwaite E2E_MOT_DE_PASSE=... npx playwright test` (si session expirée)
-  - Résultats : `apps/web/test-results/results.json` (reporter JSON) + `.last-run.json`
+  - Résultats : `e2e/test-results/results.json` (reporter JSON)
 - Nommage tests : `<methode>_<scenario>_<resultatAttendu>`
 
 ## Outils Claude Code

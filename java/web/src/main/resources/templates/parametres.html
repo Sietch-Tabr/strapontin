@@ -491,8 +491,7 @@
               var registration = results[1];
               if (!repVapid.disponible) return;
               pushClePublique = repVapid.clePublique;
-              pushAbonnement =
-                await registration.pushManager.getSubscription();
+              pushAbonnement = await registration.pushManager.getSubscription();
               section.style.display = "";
               majEtat();
             } catch (_) {}
@@ -523,21 +522,20 @@
                   keys: {
                     p256dh: btoa(
                       String.fromCharCode(
-                        ...new Uint8Array(abonnement.getKey("p256dh"))
-                      )
+                        ...new Uint8Array(abonnement.getKey("p256dh")),
+                      ),
                     ),
                     auth: btoa(
                       String.fromCharCode(
-                        ...new Uint8Array(abonnement.getKey("auth"))
-                      )
+                        ...new Uint8Array(abonnement.getKey("auth")),
+                      ),
                     ),
                   },
                 }),
               });
               if (!rep.ok) throw new Error("Échec enregistrement");
               pushAbonnement = abonnement;
-              document.cookie =
-                "push_opt_out=;path=/;max-age=0;SameSite=Lax";
+              document.cookie = "push_opt_out=;path=/;max-age=0;SameSite=Lax";
               majEtat();
             } catch (e) {
               afficherErreur(e.message || "Une erreur est survenue.");

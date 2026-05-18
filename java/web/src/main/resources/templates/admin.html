@@ -505,9 +505,7 @@
             var h = Math.floor(diffMin / 60);
             var m = diffMin % 60;
             texte =
-              m > 0
-                ? "il y a " + h + " h " + m + " min"
-                : "il y a " + h + " h";
+              m > 0 ? "il y a " + h + " h " + m + " min" : "il y a " + h + " h";
           }
           el.textContent = texte;
         });
@@ -517,28 +515,26 @@
           var table = document.getElementById("table-logs");
           if (!table) return;
 
-          table
-            .querySelectorAll("tbody tr[data-meta]")
-            .forEach(function (tr) {
-              var metaStr = tr.getAttribute("data-meta");
-              if (!metaStr) return;
-              try {
-                var meta = JSON.parse(metaStr);
-                var cles = Object.keys(meta);
-                if (!cles.length) return;
-                var msgTd = tr.querySelector("td.log-message");
-                if (!msgTd) return;
-                var metaDiv = document.createElement("div");
-                metaDiv.className = "log-meta";
-                cles.forEach(function (k) {
-                  var item = document.createElement("span");
-                  item.className = "log-meta-item";
-                  item.textContent = k + ": " + meta[k];
-                  metaDiv.appendChild(item);
-                });
-                msgTd.appendChild(metaDiv);
-              } catch (_) {}
-            });
+          table.querySelectorAll("tbody tr[data-meta]").forEach(function (tr) {
+            var metaStr = tr.getAttribute("data-meta");
+            if (!metaStr) return;
+            try {
+              var meta = JSON.parse(metaStr);
+              var cles = Object.keys(meta);
+              if (!cles.length) return;
+              var msgTd = tr.querySelector("td.log-message");
+              if (!msgTd) return;
+              var metaDiv = document.createElement("div");
+              metaDiv.className = "log-meta";
+              cles.forEach(function (k) {
+                var item = document.createElement("span");
+                item.className = "log-meta-item";
+                item.textContent = k + ": " + meta[k];
+                metaDiv.appendChild(item);
+              });
+              msgTd.appendChild(metaDiv);
+            } catch (_) {}
+          });
 
           var filtreSource = document.getElementById("filtre-source");
           var filtreNiveaux = new Set(["warn", "error"]);
@@ -554,8 +550,7 @@
             lignes.forEach(function (tr) {
               var n = tr.getAttribute("data-niveau") || "";
               var s = tr.getAttribute("data-source") || "";
-              var okNiveau =
-                filtreNiveaux.size === 0 || filtreNiveaux.has(n);
+              var okNiveau = filtreNiveaux.size === 0 || filtreNiveaux.has(n);
               var okSource = !source || s === source;
               var show = okNiveau && okSource;
               tr.style.display = show ? "" : "none";
