@@ -57,7 +57,8 @@ public class SecurityConfiguration {
                         "/icons/**",
                         "/favicon.ico",
                         "/manifest.json",
-                        "/sw.js")
+                        "/sw.js",
+                        "/offline.html")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/push")
                     .permitAll()
