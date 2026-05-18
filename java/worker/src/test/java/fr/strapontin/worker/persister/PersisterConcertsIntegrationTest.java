@@ -7,12 +7,14 @@ package fr.strapontin.worker.persister;
 import static org.junit.jupiter.api.Assertions.*;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.sources.TicketmasterSource;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -32,6 +34,9 @@ class PersisterConcertsIntegrationTest {
   static {
     postgres.start();
   }
+
+  @MockitoBean @SuppressWarnings("unused")
+  TicketmasterSource ticketmasterSource;
 
   @Autowired private PersisterConcerts persisterConcerts;
 
