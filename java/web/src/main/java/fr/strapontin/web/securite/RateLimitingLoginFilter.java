@@ -36,7 +36,8 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
 
   private static final int MAX_TENTATIVES = 5;
   private static final Duration FENETRE = Duration.ofMinutes(15);
-  private static final Set<String> URLS_LOGIN = Set.of("/api/auth/login", "/login");
+  private static final Set<String> URLS_LOGIN =
+      Set.of("/api/auth/login", "/login", "/api/auth/forgot-password", "/forgot-password");
 
   private final LogAdminService logAdminService;
 
@@ -84,10 +85,6 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
   }
 
   private String obtenirIp(HttpServletRequest request) {
-    String forwarded = request.getHeader("X-Forwarded-For");
-    if (forwarded != null && !forwarded.isBlank()) {
-      return forwarded.split(",")[0].strip();
-    }
     return request.getRemoteAddr();
   }
 }

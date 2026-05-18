@@ -13,8 +13,11 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
@@ -262,8 +265,8 @@ public class AdminController {
         """,
         Map.of(
             "id", tokenId,
-            "identifier", email,
-            "value", token,
+            "identifier", "invite:" + email,
+            "value", sha256Hex(token),
             "expiresAt", java.sql.Timestamp.from(expiresAt)));
 
     String baseUrl =
@@ -275,16 +278,7 @@ public class AdminController {
         "info", SOURCE_ADMIN, "compte créé", Map.of(CLE_EMAIL, email, CLE_PAR_ADMIN, adminId));
 
     return ResponseEntity.status(201)
-        .body(
-            Map.of(
-                CLE_SUCCES,
-                true,
-                CLE_EMAIL,
-                email,
-                "identifiant",
-                usernameTemp,
-                "lienReset",
-                lienReset));
+        .body(Map.of(CLE_SUCCES, true, CLE_EMAIL, email, "identifiant", usernameTemp));
   }
 
   /// Modifie le nom et/ou l'email d'un utilisateur.
@@ -428,8 +422,9 @@ public class AdminController {
       return erreur(400, "PUBLIC_BASE_URL n'est pas configurée.");
     }
 
-    // Supprimer les anciens tokens pour cet email
-    jdbc.update("DELETE FROM verifications WHERE identifier = :email", Map.of(CLE_EMAIL, email));
+    String prefixeReset = "reset:" + email;
+    jdbc.update(
+        "DELETE FROM verifications WHERE identifier = :prefixe", Map.of("prefixe", prefixeReset));
 
     String token = genererToken(32);
     String tokenId = UUID.randomUUID().toString();
@@ -441,8 +436,8 @@ public class AdminController {
         """,
         Map.of(
             "id", tokenId,
-            "identifier", email,
-            "value", token,
+            "identifier", prefixeReset,
+            "value", sha256Hex(token),
             "expiresAt", java.sql.Timestamp.from(expiresAt)));
 
     String lienReset = baseUrl + "/reset-password?token=" + token;
@@ -663,6 +658,20 @@ public class AdminController {
       }
     }
     return null;
+  }
+
+  private static String sha256Hex(String input) {
+    try {
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
+      StringBuilder sb = new StringBuilder();
+      for (byte b : hash) {
+        sb.append(String.format("%02x", b));
+      }
+      return sb.toString();
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 non disponible", e);
+    }
   }
 
   private String genererHex(int nbOctets) {

@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 /// Configuration Spring Security 7 pour les vues Thymeleaf et l'API REST.
@@ -48,7 +49,21 @@ public class SecurityConfiguration {
       TotpGuardFilter totpGuardFilter,
       TotpSuccessHandler totpSuccessHandler)
       throws Exception {
-    http.addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
+    http.headers(
+            headers ->
+                headers
+                    .httpStrictTransportSecurity(
+                        hsts -> hsts.maxAgeInSeconds(63072000).includeSubDomains(true))
+                    .referrerPolicy(
+                        referrer ->
+                            referrer.policy(
+                                ReferrerPolicyHeaderWriter.ReferrerPolicy
+                                    .STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                    .contentSecurityPolicy(
+                        csp ->
+                            csp.policyDirectives(
+                                "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; object-src 'none'")))
+        .addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(totpGuardFilter, UsernamePasswordAuthenticationFilter.class)
         .authorizeHttpRequests(

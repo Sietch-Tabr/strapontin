@@ -16,8 +16,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -334,11 +337,22 @@ public class ParametresViewController {
       redirects.addFlashAttribute(CLE_ERREUR, "Code incorrect. Recommencez la configuration.");
       return "redirect:/parametres/totp";
     }
-    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+    UtilisateurDetails ancien = (UtilisateurDetails) auth.getPrincipal();
     jdbc.update(
         "UPDATE users SET two_factor_secret = :secret, two_factor_enabled = true WHERE id = :id",
-        Map.of("secret", secret, "id", userId));
+        Map.of("secret", secret, "id", ancien.id()));
     session.removeAttribute(SESSION_TOTP_SETUP);
+    UtilisateurDetails nouveau =
+        new UtilisateurDetails(
+            ancien.id(),
+            ancien.identifiant(),
+            ancien.nom(),
+            ancien.email(),
+            ancien.motDePasse(),
+            ancien.role(),
+            true,
+            ancien.doitChangerCredentials());
+    rafraichirContexteSecurite(nouveau, auth, session);
     redirects.addFlashAttribute(CLE_SUCCES, "totp-active");
     return REDIRECT_COMPTE;
   }
@@ -353,12 +367,13 @@ public class ParametresViewController {
   public String desactiverTotp(
       @RequestParam(required = false, defaultValue = "") String code,
       RedirectAttributes redirects,
-      Authentication auth) {
-    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+      Authentication auth,
+      HttpSession session) {
+    UtilisateurDetails ancien = (UtilisateurDetails) auth.getPrincipal();
     List<String> secrets =
         jdbc.queryForList(
             "SELECT two_factor_secret FROM users WHERE id = :id",
-            Map.of("id", userId),
+            Map.of("id", ancien.id()),
             String.class);
     String secret = secrets.isEmpty() ? null : secrets.get(0);
     if (!totpService.verifierCode(secret, code)) {
@@ -367,9 +382,34 @@ public class ParametresViewController {
     }
     jdbc.update(
         "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false WHERE id = :id",
-        Map.of("id", userId));
+        Map.of("id", ancien.id()));
+    UtilisateurDetails nouveau =
+        new UtilisateurDetails(
+            ancien.id(),
+            ancien.identifiant(),
+            ancien.nom(),
+            ancien.email(),
+            ancien.motDePasse(),
+            ancien.role(),
+            false,
+            ancien.doitChangerCredentials());
+    rafraichirContexteSecurite(nouveau, auth, session);
     redirects.addFlashAttribute(CLE_SUCCES, "totp-desactive");
     return REDIRECT_COMPTE;
+  }
+
+  private void rafraichirContexteSecurite(
+      UtilisateurDetails details, Authentication ancienneAuth, HttpSession session) {
+    Authentication nouvelleAuth =
+        UsernamePasswordAuthenticationToken.authenticated(
+            details, null, ancienneAuth.getAuthorities());
+    SecurityContext contexte = SecurityContextHolder.createEmptyContext();
+    contexte.setAuthentication(nouvelleAuth);
+    SecurityContextHolder.setContext(contexte);
+    if (session != null) {
+      session.setAttribute(
+          HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, contexte);
+    }
   }
 
   /// Supprime le compte et redirige vers /login.

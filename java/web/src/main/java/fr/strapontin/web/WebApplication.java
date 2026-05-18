@@ -19,7 +19,7 @@ import org.springframework.session.jdbc.config.annotation.web.http.EnableJdbcHtt
 /// @author Kwaite
 @SpringBootApplication
 @EnableCaching
-@EnableJdbcHttpSession(maxInactiveIntervalInSeconds = 604800)
+@EnableJdbcHttpSession
 public class WebApplication {
 
   public static void main(String[] args) {

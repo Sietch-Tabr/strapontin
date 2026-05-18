@@ -26,6 +26,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -93,6 +95,7 @@ public class SetupController {
   /// @param requete les données d'initialisation
   /// @return 201 si créé, 400 si validation échoue, 409 si déjà configuré
   @PostMapping
+  @Transactional(isolation = Isolation.SERIALIZABLE)
   public ResponseEntity<Map<String, Object>> initialiser(@Valid @RequestBody RequeteSetup requete) {
     Integer nbUsers = jdbc.queryForObject("SELECT COUNT(*) FROM users", Map.of(), Integer.class);
     if (nbUsers != null && nbUsers > 0) {

@@ -8,6 +8,9 @@ import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -116,6 +119,10 @@ public class AuthController {
             UsernamePasswordAuthenticationToken.unauthenticated(
                 req.identifiant(), req.motDePasse()));
 
+    // Prévention de la fixation de session
+    HttpSession sessionExistante = httpRequest.getSession(false);
+    if (sessionExistante != null) sessionExistante.invalidate();
+
     SecurityContext contexte = SecurityContextHolder.createEmptyContext();
     contexte.setAuthentication(auth);
     SecurityContextHolder.setContext(contexte);
@@ -126,6 +133,9 @@ public class AuthController {
 
     if (!(auth.getPrincipal() instanceof UtilisateurDetails details)) {
       throw new IllegalStateException("Principal inattendu après authentification");
+    }
+    if (details.twoFactorActif()) {
+      session.setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
     }
     log.debug("Connexion réussie : {}", details.identifiant());
     return ResponseEntity.ok(
@@ -192,7 +202,9 @@ public class AuthController {
         jdbc.queryForList("SELECT id FROM users WHERE email = :email", Map.of(CLE_EMAIL, email));
 
     if (!utilisateurs.isEmpty()) {
-      jdbc.update("DELETE FROM verifications WHERE identifier = :email", Map.of(CLE_EMAIL, email));
+      String prefixe = "reset:" + email;
+      jdbc.update(
+          "DELETE FROM verifications WHERE identifier = :prefixe", Map.of("prefixe", prefixe));
 
       String token = genererToken(32);
       String tokenId = UUID.randomUUID().toString();
@@ -205,8 +217,8 @@ public class AuthController {
           """,
           Map.of(
               "id", tokenId,
-              "identifier", email,
-              "value", token,
+              "identifier", prefixe,
+              "value", sha256Hex(token),
               "expiresAt", java.sql.Timestamp.from(expiresAt)));
 
       String baseUrl =
@@ -235,15 +247,16 @@ public class AuthController {
 
     List<Map<String, Object>> verifs =
         jdbc.queryForList(
-            "SELECT identifier FROM verifications WHERE value = :token AND expires_at > NOW()",
-            Map.of("token", req.token()));
+            "SELECT identifier FROM verifications WHERE value = :tokenHash AND expires_at > NOW()",
+            Map.of("tokenHash", sha256Hex(req.token())));
 
     if (verifs.isEmpty()) {
       return ResponseEntity.badRequest()
           .body(Map.of(CLE_ERREUR, "Lien invalide ou expiré. Recommencez depuis le formulaire."));
     }
 
-    String email = (String) verifs.get(0).get("identifier");
+    String identifiant = (String) verifs.get(0).get("identifier");
+    String email = identifiant.contains(":") ? identifiant.split(":", 2)[1] : identifiant;
     String hash = passwordEncoder.encode(req.motDePasse());
 
     jdbc.update(
@@ -257,7 +270,9 @@ public class AuthController {
         "UPDATE users SET must_change_credentials = false, updated_at = NOW() WHERE email = :email",
         Map.of(CLE_EMAIL, email));
 
-    jdbc.update("DELETE FROM verifications WHERE value = :token", Map.of("token", req.token()));
+    jdbc.update(
+        "DELETE FROM verifications WHERE value = :tokenHash",
+        Map.of("tokenHash", sha256Hex(req.token())));
 
     return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
@@ -270,5 +285,19 @@ public class AuthController {
       sb.append(String.format("%02x", b));
     }
     return sb.toString();
+  }
+
+  private static String sha256Hex(String input) {
+    try {
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
+      StringBuilder sb = new StringBuilder();
+      for (byte b : hash) {
+        sb.append(String.format("%02x", b));
+      }
+      return sb.toString();
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 non disponible", e);
+    }
   }
 }

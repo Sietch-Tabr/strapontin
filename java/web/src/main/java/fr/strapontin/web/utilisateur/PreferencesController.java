@@ -5,6 +5,7 @@
 package fr.strapontin.web.utilisateur;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -118,29 +119,49 @@ public class PreferencesController {
   }
 
   private void importerArtistes(String userId, List<ArtisteExport> artistes) {
+    Integer nbExistants =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
+            Map.of(CLE_USER_ID, userId),
+            Integer.class);
+    int restant = Math.max(0, 500 - (nbExistants != null ? nbExistants : 0));
+    int traites = 0;
     for (ArtisteExport a : artistes) {
+      if (traites >= restant) break;
       if (a.nom() == null || a.nom().isBlank()) continue;
+      String normalise = Normalisation.normaliserTexte(a.nom());
       jdbc.update(
           """
           INSERT INTO user_artistes (user_id, artiste_normalise, artiste_affiche)
           VALUES (:userId, :normalise, :nom)
           ON CONFLICT (user_id, artiste_normalise) DO NOTHING
           """,
-          Map.of(CLE_USER_ID, userId, "normalise", a.normalise(), "nom", a.nom()));
+          Map.of(CLE_USER_ID, userId, "normalise", normalise, "nom", a.nom().strip()));
+      traites++;
     }
   }
 
   private void importerSalles(String userId, List<SalleExport> salles) {
+    Integer nbExistants =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
+            Map.of(CLE_USER_ID, userId),
+            Integer.class);
+    int restant = Math.max(0, 200 - (nbExistants != null ? nbExistants : 0));
+    int traites = 0;
     for (SalleExport s : salles) {
+      if (traites >= restant) break;
       if (s.salleId() == null || s.salleId().isBlank()) continue;
-      String nomSalle = s.nom() != null && !s.nom().isBlank() ? s.nom() : s.salleId();
+      if (!s.salleId().matches("[A-Za-z0-9_-]{1,64}")) continue;
+      String nomSalle = s.nom() != null && !s.nom().isBlank() ? s.nom().strip() : s.salleId();
+      String nomNorm = Normalisation.normaliserTexte(nomSalle);
       jdbc.update(
           """
           INSERT INTO salles (id, nom, nom_norm)
-          VALUES (:salleId, :nom, :nom)
+          VALUES (:salleId, :nom, :nomNorm)
           ON CONFLICT (id) DO UPDATE SET nom = EXCLUDED.nom, nom_norm = EXCLUDED.nom_norm
           """,
-          Map.of("salleId", s.salleId(), "nom", nomSalle));
+          Map.of("salleId", s.salleId(), "nom", nomSalle, "nomNorm", nomNorm));
       jdbc.update(
           """
           INSERT INTO user_salles (user_id, salle_id, tm_venue_id)
@@ -154,6 +175,7 @@ public class PreferencesController {
               s.salleId(),
               "tmVenueId",
               s.tmVenueId() != null ? s.tmVenueId() : ""));
+      traites++;
     }
   }
 
