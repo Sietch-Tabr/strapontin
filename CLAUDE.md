@@ -29,7 +29,7 @@ strapontin/
 ## Stack technique (v2.0.0)
 
 - **Spring Boot 4.0.6** + Thymeleaf — UI SSR + REST API (port 8080)
-- **Spring Security 7** — auth session, form login, TOTP admin (bucket4j rate-limiting)
+- **Spring Security 7** — auth session, form login, TOTP 2FA optionnel (bucket4j rate-limiting)
 - **Spring Data JDBC** + PostgreSQL 18 — données persistantes
 - **Quartz** — jobs background (fetch concerts)
 - **Flyway 12** — migrations DB (`java/web/src/main/resources/db/migration/`)
@@ -131,7 +131,7 @@ Rate limiting TM : max 2 jobs simultanés (3 → HTTP 429). Quota TM persisté d
 ## Authentification
 
 Invite-only. Login par identifiant (insensible à la casse). Rôles : `user` | `admin`.
-2FA TOTP prévu pour les admins — **désactivé** (`totp.guard.enabled=false`) jusqu'à migration prod. Cap : 500 artistes / 200 salles par user.
+2FA TOTP optionnel pour tous les utilisateurs — enrollment via `/parametres/totp`, challenge automatique à la connexion si activé. Cap : 500 artistes / 200 salles par user.
 Spring Security form login → cookie `SESSION` (JDBC-backed, survit aux restarts).
 `BetterAuthPasswordEncoder` : scrypt hérité de v1 → re-hash bcrypt transparent au premier login.
 Détails : [wiki Authentification](https://codeberg.org/Kwaite/strapontin/wiki/Authentification)
