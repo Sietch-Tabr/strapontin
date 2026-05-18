@@ -35,8 +35,6 @@
       <div class="parametres-sections">
         <!-- Section Préférences -->
         <section id="preferences" class="parametres-section">
-          <h2 class="section-titre">Préférences</h2>
-
           <!-- Départements -->
           <div class="param-bloc">
             <h3 class="param-label">Départements de découverte</h3>
@@ -128,8 +126,8 @@
 
         <!-- Section Notifications -->
         <section id="notifications" class="parametres-section">
-          <h2 class="section-titre">Notifications</h2>
-
+          <div class="param-bloc">
+          <h3 class="param-label">Notifications email</h3>
           <form
             method="post"
             th:action="@{/parametres/notifications}"
@@ -197,6 +195,7 @@
               Enregistrer
             </button>
           </form>
+          </div>
 
           <!-- Notifications push (affiché dynamiquement par JS si supportées) -->
           <div
@@ -248,8 +247,6 @@
 
         <!-- Section Compte -->
         <section id="compte" class="parametres-section">
-          <h2 class="section-titre">Compte</h2>
-
           <!-- Nom et email -->
           <div class="param-bloc">
             <h3 class="param-label">Profil</h3>
@@ -347,8 +344,6 @@
 
         <!-- Section Données -->
         <section id="donnees" class="parametres-section">
-          <h2 class="section-titre">Données</h2>
-
           <!-- Export -->
           <div class="param-bloc">
             <h3 class="param-label">Exporter mes préférences</h3>

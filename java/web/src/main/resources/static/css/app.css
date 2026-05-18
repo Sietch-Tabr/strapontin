@@ -1078,9 +1078,6 @@ tr:hover td {
 
 .parametres-section {
   display: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
 }
 
 .parametres-section:target,
@@ -1095,16 +1092,12 @@ tr:hover td {
   border-bottom-color: var(--fg);
 }
 
-.section-titre {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border);
-}
-
 .param-bloc {
-  margin-bottom: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
 }
 .param-bloc:last-child {
   margin-bottom: 0;
@@ -1122,8 +1115,7 @@ tr:hover td {
 }
 
 .param-bloc-danger {
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
+  border-left: 3px solid var(--danger);
 }
 
 /* ── Toggle switch ───────────────────────────────────────── */
@@ -1172,9 +1164,6 @@ tr:hover td {
 
 .admin-section {
   display: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
 }
 
 .admin-section:target,

@@ -54,8 +54,6 @@
       <div class="admin-sections">
         <!-- Section Tableau de bord (Jobs) -->
         <section id="jobs" class="admin-section">
-          <h2 class="section-titre">Tableau de bord</h2>
-
           <!-- Quota Ticketmaster -->
           <div class="param-bloc">
             <h3 class="param-label">Quota Ticketmaster API</h3>
@@ -178,8 +176,7 @@
 
         <!-- Section Logs -->
         <section id="logs" class="admin-section">
-          <h2 class="section-titre">Logs système</h2>
-
+          <div class="param-bloc">
           <div class="logs-filtres">
             <div style="display: flex; align-items: center; gap: 6px">
               <label for="filtre-source" class="logs-filtre-label"
@@ -270,12 +267,11 @@
           <p th:if="${logs == null or logs.isEmpty()}" class="etat-vide-texte">
             Aucun log pour l'instant.
           </p>
+          </div>
         </section>
 
         <!-- Section Configuration -->
         <section id="configuration" class="admin-section">
-          <h2 class="section-titre">Configuration</h2>
-
           <div th:each="statut : ${configStatuts}" class="param-bloc">
             <h3 class="param-label" th:text="${statut.cle}">CLE</h3>
             <p class="param-aide">
@@ -339,8 +335,6 @@
 
         <!-- Section Utilisateurs -->
         <section id="utilisateurs" class="admin-section">
-          <h2 class="section-titre">Utilisateurs</h2>
-
           <!-- Créer un compte -->
           <div class="param-bloc">
             <h3 class="param-label">Créer un compte</h3>
