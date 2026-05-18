@@ -23,17 +23,15 @@
       <!-- Formulaire de recherche -->
       <form method="get" th:action="@{/artistes}" class="form-recherche">
         <label for="q-artiste" class="sr-only">Rechercher un artiste</label>
-        <div class="form-recherche-champ">
-          <input
-            id="q-artiste"
-            type="text"
-            name="q"
-            th:value="${q}"
-            placeholder="Rechercher un artiste…"
-            minlength="2"
-            autocomplete="off"
-          />
-        </div>
+        <input
+          id="q-artiste"
+          type="text"
+          name="q"
+          th:value="${q}"
+          placeholder="Rechercher un artiste…"
+          minlength="2"
+          autocomplete="off"
+        />
         <button
           type="submit"
           class="btn btn-secondary"
