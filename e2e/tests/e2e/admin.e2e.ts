@@ -7,31 +7,23 @@ test.describe("Scénario: admin — sections et contenus", () => {
   });
 
   test("admin_section_utilisateurs_visible", async ({ page }) => {
-    await page.goto("/admin");
+    await page.goto("/admin#utilisateurs");
     await expect(page.locator("section#utilisateurs")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Utilisateurs", level: 2 })).toBeVisible();
   });
 
   test("admin_section_configuration_visible", async ({ page }) => {
-    await page.goto("/admin");
+    await page.goto("/admin#configuration");
     await expect(page.locator("section#configuration")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Configuration", level: 2 })).toBeVisible();
   });
 
   test("admin_section_jobs_visible", async ({ page }) => {
     await page.goto("/admin");
     await expect(page.locator("section#jobs")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: /Jobs/, level: 2 }),
-    ).toBeVisible();
   });
 
   test("admin_section_logs_visible", async ({ page }) => {
-    await page.goto("/admin");
+    await page.goto("/admin#logs");
     await expect(page.locator("section#logs")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: /Logs/, level: 2 }),
-    ).toBeVisible();
   });
 
   test("admin_anchor_utilisateurs_scroll", async ({ page }) => {

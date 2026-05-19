@@ -22,8 +22,8 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
 
   test("aide_formulaire_signalement_present", async ({ page }) => {
     await page.goto("/aide");
-    const formulaire = page.locator("form").last();
-    await expect(formulaire).toBeVisible();
+    await page.locator("#btn-ouvrir-signalement").click();
+    await expect(page.locator("#form-signalement")).toBeVisible();
   });
 
   test("aide_lien_changelog_present", async ({ page }) => {

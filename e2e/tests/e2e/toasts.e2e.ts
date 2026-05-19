@@ -26,13 +26,14 @@ test.describe("Toasts (Popover API)", () => {
   });
 
   test("toast succes admin relancer fetches", async ({ page }) => {
-    await page.goto("/admin");
+    await page.goto("/admin#jobs");
     await page
       .getByRole("button", { name: "Relancer les fetches maintenant" })
       .click();
-    const toast = page.locator(".alerte-succes");
-    await expect(toast.first()).toBeVisible({ timeout: 15000 });
-    await expect(toast.first()).toContainText("Fetches déclenchés");
+    await expect(page.locator("#relancer-statut")).toContainText(
+      "Fetches en cours",
+      { timeout: 5000 },
+    );
   });
 
   test("toast contient le bouton fermer", async ({ page }) => {

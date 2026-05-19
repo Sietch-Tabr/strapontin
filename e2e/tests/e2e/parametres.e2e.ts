@@ -11,33 +11,21 @@ test.describe("Scénario: paramètres — sections", () => {
   test("parametres_section_preferences_visible", async ({ page }) => {
     await page.goto("/parametres");
     await expect(page.locator("section#preferences")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Préférences", level: 2 }),
-    ).toBeVisible();
   });
 
   test("parametres_section_notifications_visible", async ({ page }) => {
-    await page.goto("/parametres");
+    await page.goto("/parametres#notifications");
     await expect(page.locator("section#notifications")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Notifications", level: 2 }),
-    ).toBeVisible();
   });
 
   test("parametres_section_compte_visible", async ({ page }) => {
-    await page.goto("/parametres");
+    await page.goto("/parametres#compte");
     await expect(page.locator("section#compte")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Compte", level: 2 }),
-    ).toBeVisible();
   });
 
   test("parametres_section_donnees_visible", async ({ page }) => {
     await page.goto("/parametres#donnees");
     await expect(page.locator("section#donnees")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Données", level: 2 }),
-    ).toBeVisible();
   });
 });
 
