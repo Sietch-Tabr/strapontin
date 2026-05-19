@@ -1094,7 +1094,12 @@ tr:hover td {
 }
 
 .changelog-historique > section {
-  margin-top: 1.5rem;
+  margin-top: 2.5rem;
+}
+
+.changelog-historique > section + section {
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
 }
 
 /* ── Page Paramètres ─────────────────────────────────────── */
