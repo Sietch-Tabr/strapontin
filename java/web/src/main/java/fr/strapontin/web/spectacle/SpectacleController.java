@@ -73,7 +73,8 @@ public class SpectacleController {
       int totalPages,
       int totalConcerts,
       List<String> genresDisponibles,
-      List<String> moisDisponibles) {}
+      List<String> moisDisponibles,
+      List<String> classificationsDisponibles) {}
 
   record RequeteMasque(boolean masquer) {}
 
@@ -294,10 +295,29 @@ public class SpectacleController {
             baseParams,
             String.class);
 
+    List<String> classificationsDisponibles =
+        jdbc.queryForList(
+            """
+            SELECT DISTINCT c.classification
+            FROM user_matches um
+            INNER JOIN concerts c ON um.concert_id = c.id
+            WHERE %s AND c.classification IS NOT NULL
+            ORDER BY c.classification
+            """
+                .formatted(whereBase),
+            baseParams,
+            String.class);
+
     int totalPages = Math.max(1, (int) Math.ceil((double) total / CONCERTS_PAR_PAGE));
     return ResponseEntity.ok(
         new ReponseSpectacles(
-            concerts, pageNum, totalPages, total, genresDisponibles, moisDisponibles));
+            concerts,
+            pageNum,
+            totalPages,
+            total,
+            genresDisponibles,
+            moisDisponibles,
+            classificationsDisponibles));
   }
 
   /// Masque ou démasque un concert pour l'utilisateur courant.

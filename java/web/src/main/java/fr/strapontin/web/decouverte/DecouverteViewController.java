@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.decouverte;
 
+import fr.strapontin.web.utils.Dates;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,11 +79,14 @@ public class DecouverteViewController {
     if (donnees != null) {
       for (DecouverteController.SyncDept s : donnees.syncParDept()) {
         if (s.derniereExec() != null) {
-          syncDepts.put(s.dept(), s.derniereExec().toString().substring(0, 16).replace('T', ' '));
+          syncDepts.put(s.dept(), Dates.formaterInstant(s.derniereExec()));
         }
       }
     }
     modele.addAttribute("syncDepts", syncDepts);
+    modele.addAttribute(
+        "derniereSyncFormatee",
+        donnees != null ? Dates.formaterInstant(donnees.derniereSyncRegion()) : null);
     return "decouverte";
   }
 

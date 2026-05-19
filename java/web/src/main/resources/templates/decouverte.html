@@ -28,17 +28,11 @@
       ></div>
 
       <div class="decouverte-header">
-        <span class="sync-info" th:if="${donnees?.derniereSyncRegion != null}">
+        <span class="sync-info" th:if="${derniereSyncFormatee != null}">
           Dernière synchro :
-          <span
-            th:text="${donnees.derniereSyncRegion.toString().substring(0, 16).replace('T', ' ')}"
-            >date</span
-          >
+          <span th:text="${derniereSyncFormatee}">date</span>
         </span>
-        <span
-          class="sync-info"
-          th:unless="${donnees?.derniereSyncRegion != null}"
-        >
+        <span class="sync-info" th:unless="${derniereSyncFormatee != null}">
           Jamais synchronisé
         </span>
       </div>
@@ -74,7 +68,7 @@
             type="text"
             name="q"
             th:value="${q}"
-            placeholder="Rechercher un artiste…"
+            placeholder="Rechercher un artiste ou une salle…"
             autocomplete="off"
           />
 
@@ -114,13 +108,17 @@
             </option>
           </select>
 
-          <input
-            type="number"
-            name="budget"
-            th:value="${budget}"
-            placeholder="Budget max (€)"
-            min="0"
-          />
+          <select name="budget">
+            <option value="" th:selected="${budget == null or budget == ''}">
+              Tous les prix
+            </option>
+            <option value="30" th:selected="${budget == '30'}">≤ 30 €</option>
+            <option value="50" th:selected="${budget == '50'}">≤ 50 €</option>
+            <option value="80" th:selected="${budget == '80'}">≤ 80 €</option>
+            <option value="100" th:selected="${budget == '100'}">
+              ≤ 100 €
+            </option>
+          </select>
 
           <select name="tri">
             <option value="date" th:selected="${tri == 'date' or tri == null}">

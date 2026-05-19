@@ -210,8 +210,8 @@ public class DecouverteController {
     List<Instant> syncLignes =
         jdbc
             .queryForList(
-                "SELECT derniere_exec FROM fetch_jobs WHERE type_job = 'region' AND derniere_exec"
-                    + " IS NOT NULL",
+                "SELECT derniere_exec FROM fetch_jobs WHERE type_job = 'fetch:region' AND"
+                    + " derniere_exec IS NOT NULL",
                 Map.of(),
                 java.sql.Timestamp.class)
             .stream()
@@ -295,7 +295,7 @@ public class DecouverteController {
       params.put(CLE_DEPTS, deptsActifs.toArray(String[]::new));
     }
     if (!rechercheNorm.isEmpty()) {
-      where.append(" AND c.artiste ILIKE :q");
+      where.append(" AND (c.artiste ILIKE :q OR c.salle ILIKE :q)");
       params.put("q", "%" + rechercheNorm + "%");
     }
     if (!mois.isBlank() && mois.matches("\\d{4}-\\d{2}")) {
