@@ -1,0 +1,777 @@
+/* Strapontin — pages : accueil, aide, changelog, paramètres, admin, découverte, setup */
+
+/* ── Groupes de concerts (accueil) ──────────────────────── */
+.concert-groupes {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 42rem;
+}
+
+.concert-groupe {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.groupe-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-muted);
+  flex-wrap: wrap;
+}
+
+.groupe-artiste {
+  font-weight: 600;
+}
+
+.masquer-artiste-form {
+  margin-left: auto;
+}
+
+.concert-ligne {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.concert-ligne:last-child {
+  border-bottom: none;
+}
+
+.concert-info {
+  min-width: 0;
+  flex: 1;
+}
+.concert-date-principale {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.concert-date-secondaire {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+.concert-lieu {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  margin-top: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.concert-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  margin-left: 0.75rem;
+  flex-shrink: 0;
+}
+
+.tronque-info {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  margin-top: 1.5rem;
+}
+.tronque-info a {
+  text-decoration: underline;
+}
+
+/* ── Page Aide ───────────────────────────────────────────── */
+.max-w-2xl {
+  max-width: 42rem;
+}
+.max-w-xl {
+  max-width: 36rem;
+}
+
+.aide-section {
+  margin-bottom: 2.5rem;
+}
+.aide-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-muted);
+  margin-bottom: 1rem;
+}
+
+.aide-grille {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+}
+
+.carte {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+.carte-titre {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+.carte ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.carte p {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+.carte a {
+  text-decoration: underline;
+}
+.carte-large {
+  grid-column: 1 / -1;
+}
+
+.aide-footer {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+.aide-footer a {
+  text-decoration: underline;
+}
+
+/* ── Page Changelog ──────────────────────────────────────── */
+.changelog {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+.changelog-version {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.changelog-entrees {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.changelog-categorie {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.375rem;
+}
+.changelog section ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* ── Page Paramètres ─────────────────────────────────────── */
+.param-onglets {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+  overflow-x: auto;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+}
+
+.param-onglet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.param-onglet:hover {
+  color: var(--fg);
+  border-bottom-color: var(--border);
+}
+
+/* Paramètres */
+.param-onglets:has(~ .parametres-sections #preferences:target) a[href="#preferences"],
+.param-onglets:has(~ .parametres-sections #notifications:target) a[href="#notifications"],
+.param-onglets:has(~ .parametres-sections #compte:target) a[href="#compte"],
+.param-onglets:has(~ .parametres-sections #donnees:target) a[href="#donnees"],
+/* Admin */
+.param-onglets:has(~ .admin-sections #utilisateurs:target) a[href="#utilisateurs"],
+.param-onglets:has(~ .admin-sections #configuration:target) a[href="#configuration"],
+.param-onglets:has(~ .admin-sections #jobs:target) a[href="#jobs"],
+.param-onglets:has(~ .admin-sections #logs:target) a[href="#logs"] {
+  color: var(--fg);
+  border-bottom-color: var(--fg);
+}
+
+.theme-choix {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-theme {
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--fg-muted);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.btn-theme:hover {
+  color: var(--fg);
+  border-color: var(--fg-muted);
+}
+
+.btn-theme.actif {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+}
+
+.parametres-sections {
+  max-width: 42rem;
+}
+
+.parametres-section {
+  display: none;
+  scroll-margin-top: 3rem;
+}
+
+.parametres-section:target,
+.parametres-sections:not(:has(:target)) #preferences {
+  display: block;
+}
+
+/* Onglet actif par défaut (aucun hash) */
+.param-onglets:not(:has(~ .parametres-sections :target))
+  a[href="#preferences"] {
+  color: var(--fg);
+  border-bottom-color: var(--fg);
+}
+
+.param-bloc {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.param-bloc:last-child {
+  margin-bottom: 0;
+}
+
+.param-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+.param-aide {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  margin-bottom: 0.5rem;
+}
+
+.param-bloc-danger {
+  border-left: 3px solid var(--danger);
+}
+
+/* ── Badge inline avec le titre ──────────────────────────── */
+.param-label-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.param-label-ligne .param-label {
+  margin-bottom: 0;
+}
+
+/* ── Formulaire vertical compact ─────────────────────────── */
+.form-vertical.form-compact .form-group {
+  margin-bottom: 0;
+}
+
+/* ── Page Admin ──────────────────────────────────────────── */
+.admin-sections {
+  max-width: 56rem;
+}
+
+.admin-section {
+  display: none;
+  scroll-margin-top: 3rem;
+}
+
+.admin-section:target,
+.admin-sections:not(:has(:target)) #jobs {
+  display: block;
+}
+
+/* Onglet actif par défaut (aucun hash) */
+.param-onglets:not(:has(~ .admin-sections :target)) a[href="#jobs"] {
+  color: var(--fg);
+  border-bottom-color: var(--fg);
+}
+
+.badge-info {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.badge-succes {
+  background: #f0fdf4;
+  color: #166534;
+}
+.badge-manquant {
+  background: #fef2f2;
+  color: #991b1b;
+}
+.badge-erreur {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.dark .badge-info {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+.dark .badge-succes {
+  background: #14532d;
+  color: #86efac;
+}
+.dark .badge-manquant {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+.dark .badge-erreur {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.badge-mono {
+  font-family: monospace;
+  background: var(--bg-muted);
+  color: var(--fg-muted);
+}
+.badge-warn {
+  background: #fef9c3;
+  color: #854d0e;
+}
+.dark .badge-warn {
+  background: rgba(202, 138, 4, 0.15);
+  color: #fbbf24;
+}
+
+/* ── Quota TM ────────────────────────────────────────────── */
+.quota-tm-carte {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+.quota-tm-chiffres {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+.quota-tm-chiffres strong {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.quota-tm-sep {
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+  margin-left: 0.25rem;
+}
+.quota-tm-unite {
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+  margin-left: 0.375rem;
+}
+.quota-tm-pct {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.quota-tm-barre-fond {
+  height: 0.5rem;
+  background: var(--bg-muted);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+.quota-tm-barre-remplissage {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s;
+}
+.barre-ok {
+  background: #16a34a;
+}
+.barre-warn {
+  background: #ca8a04;
+}
+.barre-danger {
+  background: #dc2626;
+}
+
+/* ── Jobs actualisations ─────────────────────────────────── */
+.jobs-liste {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.job-carte {
+  padding: 0.75rem 1rem;
+}
+.job-carte + .job-carte {
+  border-top: 1px solid var(--border);
+}
+.job-carte-entete {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.job-carte-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.job-carte-detail {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  margin-top: 0.25rem;
+}
+.relancer-statut {
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+  margin-left: 0.75rem;
+}
+.job-en-cours {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.job-en-cours .spinner {
+  animation: tourner 1s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes tourner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Worker health ───────────────────────────────────────── */
+.worker-carte {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+.worker-carte.worker-alerte {
+  border-color: #ca8a04;
+  background: #fefce8;
+}
+.dark .worker-carte.worker-alerte {
+  background: rgba(202, 138, 4, 0.05);
+}
+.worker-carte-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.worker-carte-detail {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  margin-top: 0.25rem;
+}
+.worker-alerte-texte {
+  font-size: 0.75rem;
+  color: #92400e;
+  margin-top: 0.375rem;
+}
+.dark .worker-alerte-texte {
+  color: #fbbf24;
+}
+
+/* ── Cartes utilisateurs (admin) ─────────────────────────── */
+.user-liste {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.user-carte {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.user-carte-entete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  gap: 1rem;
+}
+.user-carte-info {
+  min-width: 0;
+  flex: 1;
+}
+.user-carte-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 0.25rem;
+}
+.user-nom {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.user-carte-email {
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+.user-carte-activite {
+  font-size: 0.75rem;
+  color: var(--fg-subtle);
+  margin-top: 0.125rem;
+}
+.user-carte-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.modif-ligne {
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+}
+
+.log-error td {
+  background: #fef2f2;
+}
+.log-warn td {
+  background: #fffbeb;
+}
+.dark .log-error td {
+  background: #1c0a0a;
+}
+.dark .log-warn td {
+  background: #1c1200;
+}
+
+/* ── Filtres logs (boutons niveau) ───────────────────────── */
+.logs-filtres {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.logs-filtre-label {
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+
+.logs-filtre-select {
+  width: auto;
+  font-size: 0.8125rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.log-filtre-btn {
+  border: none;
+  background: none;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.log-filtre-btn:hover {
+  background: var(--accent);
+  color: var(--fg);
+}
+
+.log-filtre-btn[data-niveau="info"].actif {
+  background: rgba(17, 24, 39, 0.1);
+  color: var(--fg);
+}
+
+.dark .log-filtre-btn[data-niveau="info"].actif {
+  background: rgba(250, 250, 250, 0.1);
+}
+
+.log-filtre-btn[data-niveau="warn"].actif {
+  background: rgba(202, 138, 4, 0.15);
+  color: #92400e;
+}
+
+.dark .log-filtre-btn[data-niveau="warn"].actif {
+  color: #fbbf24;
+}
+
+.log-filtre-btn[data-niveau="error"].actif {
+  background: rgba(220, 38, 38, 0.15);
+  color: #991b1b;
+}
+
+.dark .log-filtre-btn[data-niveau="error"].actif {
+  color: #fca5a5;
+}
+
+.log-filtre-tous {
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0.125rem 0.25rem;
+  margin-left: 0.25rem;
+}
+
+.log-filtre-tous:hover {
+  color: var(--fg);
+}
+
+.log-compte {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Formulaire modification utilisateur (admin) ─────────── */
+.form-modif-utilisateur {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  max-width: 28rem;
+}
+
+.form-modif-utilisateur input,
+.form-modif-utilisateur select {
+  width: auto;
+  font-size: 0.8125rem;
+  padding: 0.3125rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.form-modif-utilisateur input[name="nom"] {
+  width: 9rem;
+}
+.form-modif-utilisateur input[name="email"] {
+  width: 12rem;
+}
+
+.erreur-modif {
+  font-size: 0.75rem;
+  color: var(--danger);
+  display: none;
+}
+
+/* ── Log meta (admin) ────────────────────────────────────── */
+.log-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.log-meta-item {
+  font-size: 11px;
+  color: var(--fg-muted);
+  background: var(--bg-muted);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+/* ── Page Découverte ─────────────────────────────────────── */
+.decouverte-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.decouverte-depts {
+  margin-bottom: 1rem;
+}
+.sync-info {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+}
+
+/* ── Page Setup (configuration initiale) ─────────────────── */
+.form-details {
+  margin: 1.25rem 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+}
+.form-details summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  user-select: none;
+}
+.form-details .form-group {
+  margin-top: 0.75rem;
+}

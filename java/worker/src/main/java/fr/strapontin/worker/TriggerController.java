@@ -1,0 +1,142 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025 Kwaite
+ */
+package fr.strapontin.worker;
+
+import fr.strapontin.worker.jobs.FetchSalleJob;
+import java.util.List;
+import java.util.Map;
+import org.quartz.JobBuilder;
+import org.quartz.JobDetail;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobKey;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.TriggerBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/// API interne de déclenchement manuel des jobs Quartz.
+///
+/// Accessible uniquement depuis `localhost` (filtrée par le pare-feu ou
+/// le proxy web). N'expose pas de données sensibles.
+///
+/// @since 2.0.0
+/// @author Kwaite
+@RestController
+@RequestMapping("/trigger")
+public class TriggerController {
+
+  private static final Logger log = LoggerFactory.getLogger(TriggerController.class);
+
+  private static final Map<String, String> NOM_JOBS =
+      Map.of(
+          "fetchArtistesBatch", "fetch:artistes:batch",
+          "fetchRegion", "fetch:region",
+          "purgerConcerts", "purger:concerts",
+          "recalculerMatches", "recalculer:matches",
+          "notifierDigest", "notifier:digest");
+
+  private final Scheduler scheduler;
+
+  public TriggerController(Scheduler scheduler) {
+    this.scheduler = scheduler;
+  }
+
+  /// Retourne les noms traduits des jobs Quartz en cours d'exécution.
+  ///
+  /// @return les noms traduits (ex. {@code "fetch:artistes:batch"}) des jobs actifs
+  @GetMapping("/actif")
+  public ResponseEntity<Map<String, Object>> jobsActifs() {
+    try {
+      List<String> actifs =
+          scheduler.getCurrentlyExecutingJobs().stream()
+              .map(
+                  ctx ->
+                      NOM_JOBS.getOrDefault(
+                          ctx.getJobDetail().getKey().getName(),
+                          ctx.getJobDetail().getKey().getName()))
+              .toList();
+      return ResponseEntity.ok(Map.of("actifs", actifs));
+    } catch (SchedulerException e) {
+      log.warn("Erreur lecture jobs actifs", e);
+      return ResponseEntity.ok(Map.of("actifs", List.of()));
+    }
+  }
+
+  /// Déclenche immédiatement {@code fetch:artistes:batch} et {@code fetch:region}.
+  ///
+  /// @return 200 si les deux jobs ont été déclenchés, 500 en cas d'erreur Quartz
+  @PostMapping("/tout")
+  public ResponseEntity<Map<String, String>> relancerTout() {
+    try {
+      scheduler.triggerJob(JobKey.jobKey("fetchArtistesBatch"));
+      scheduler.triggerJob(JobKey.jobKey("fetchRegion"));
+      log.info("Déclenchement manuel : fetchArtistesBatch + fetchRegion");
+      return ResponseEntity.ok(Map.of("statut", "déclenché"));
+    } catch (SchedulerException e) {
+      log.warn("Erreur déclenchement manuel", e);
+      return ResponseEntity.internalServerError()
+          .body(Map.of("erreur", "Erreur Quartz : " + e.getMessage()));
+    }
+  }
+
+  /// Déclenche immédiatement {@code fetch:artistes:batch} uniquement si aucun n'est déjà en cours.
+  ///
+  /// <p>Appelé automatiquement par le web après l'ajout d'un artiste.
+  ///
+  /// @return 200 si déclenché ou déjà en cours, 500 en cas d'erreur Quartz
+  @PostMapping("/artiste")
+  public ResponseEntity<Map<String, String>> relancerArtistes() {
+    try {
+      if (jobEnCours("fetchArtistesBatch")) {
+        log.debug("fetchArtistesBatch déjà en cours — ignoré");
+        return ResponseEntity.ok(Map.of("statut", "déjà en cours"));
+      }
+      scheduler.triggerJob(JobKey.jobKey("fetchArtistesBatch"));
+      log.info("Déclenchement artiste : fetchArtistesBatch");
+      return ResponseEntity.ok(Map.of("statut", "déclenché"));
+    } catch (SchedulerException e) {
+      log.warn("Erreur déclenchement artiste", e);
+      return ResponseEntity.internalServerError()
+          .body(Map.of("erreur", "Erreur Quartz : " + e.getMessage()));
+    }
+  }
+
+  private boolean jobEnCours(String nomJob) throws SchedulerException {
+    return scheduler.getCurrentlyExecutingJobs().stream()
+        .map(JobExecutionContext::getJobDetail)
+        .anyMatch(jd -> nomJob.equals(jd.getKey().getName()));
+  }
+
+  /// Planifie un {@code FetchSalleJob} immédiat pour le {@code venueId} donné.
+  ///
+  /// <p>Appelé automatiquement par le web après l'ajout d'une salle avec venueId TM.
+  ///
+  /// @param venueId identifiant Ticketmaster de la salle
+  /// @return 200 si planifié, 500 en cas d'erreur Quartz
+  @PostMapping("/salle/{venueId}")
+  public ResponseEntity<Map<String, String>> relancerSalle(@PathVariable String venueId) {
+    try {
+      JobDetail jobDetail =
+          JobBuilder.newJob(FetchSalleJob.class)
+              .withIdentity("fetchSalle-" + venueId, "on-demand")
+              .usingJobData(FetchSalleJob.CLE_VENUE_ID, venueId)
+              .build();
+      scheduler.scheduleJob(jobDetail, TriggerBuilder.newTrigger().startNow().build());
+      log.info("Déclenchement salle : venueId={}", venueId);
+      return ResponseEntity.ok(Map.of("statut", "déclenché"));
+    } catch (SchedulerException e) {
+      log.warn("Erreur déclenchement salle venueId={}", venueId, e);
+      return ResponseEntity.internalServerError()
+          .body(Map.of("erreur", "Erreur Quartz : " + e.getMessage()));
+    }
+  }
+}

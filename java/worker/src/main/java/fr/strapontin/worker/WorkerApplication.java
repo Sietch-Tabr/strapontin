@@ -1,0 +1,24 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025 Kwaite
+ */
+package fr.strapontin.worker;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+/// Point d'entrée du worker Strapontin.
+///
+/// Application Spring Boot non-web. Exécute les jobs Quartz planifiés :
+/// fetch concerts (artistes, régions, salles), dédoublonnage, persistance,
+/// recalcul des matches et notifications.
+///
+/// @since 2.0.0
+/// @author Kwaite
+@SpringBootApplication
+public class WorkerApplication {
+
+  public static void main(String[] args) {
+    SpringApplication.run(WorkerApplication.class, args);
+  }
+}

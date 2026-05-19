@@ -1,0 +1,135 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/base}"
+  th:lang="fr"
+>
+  <head>
+    <title>Mes salles — Strapontin</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contenu">
+      <div class="page-header">
+        <h1>Mes salles</h1>
+        <p
+          class="page-subtitle"
+          th:text="${donnees.salles.size()} + ' salle' + (${donnees.salles.size() != 1} ? 's' : '') + ' suivie' + (${donnees.salles.size() != 1} ? 's' : '')"
+        >
+          0 salle suivie
+        </p>
+      </div>
+
+      <!-- Formulaire de recherche -->
+      <form method="get" th:action="@{/salles}" class="form-recherche">
+        <label for="q-salle" class="sr-only">Rechercher une salle</label>
+        <input
+          id="q-salle"
+          type="text"
+          name="q"
+          th:value="${q}"
+          placeholder="Rechercher ou saisir une salle…"
+          minlength="2"
+          autocomplete="off"
+        />
+        <button
+          type="submit"
+          class="btn btn-secondary"
+          th:disabled="${q == null or q.trim().length() < 2}"
+        >
+          Rechercher
+        </button>
+      </form>
+      <p class="form-aide">
+        La recherche porte sur les concerts en base et les suggestions
+        Ticketmaster (si la clé API est configurée). Si une salle n'apparaît
+        pas, vous pouvez l'ajouter directement par nom.
+      </p>
+
+      <!-- Message d'erreur flash -->
+      <div
+        th:if="${erreur}"
+        class="alerte alerte-erreur"
+        th:text="${erreur}"
+      ></div>
+
+      <!-- Résultats de recherche -->
+      <section
+        th:if="${donnees.resultats != null and !donnees.resultats.isEmpty()}"
+        class="section-resultats"
+      >
+        <h2 class="section-label" th:text="'Résultats pour « ' + ${q} + ' »'">
+          Résultats
+        </h2>
+        <ul class="liste-cartes">
+          <li class="carte-item" th:each="resultat : ${donnees.resultats}">
+            <div>
+              <p class="carte-nom" th:text="${resultat.salle}">Salle</p>
+              <p
+                class="carte-sous-titre"
+                th:if="${resultat.ville}"
+                th:text="${resultat.ville}"
+              >
+                Ville
+              </p>
+            </div>
+            <form method="post" th:action="@{/salles/ajouter}">
+              <input type="hidden" name="nom" th:value="${resultat.salle}" />
+              <input
+                th:if="${resultat.tmVenueId}"
+                type="hidden"
+                name="tmVenueId"
+                th:value="${resultat.tmVenueId}"
+              />
+              <button type="submit" class="btn btn-sm btn-secondary">
+                Suivre
+              </button>
+            </form>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Message si aucun résultat -->
+      <div
+        th:if="${q != null and q.trim().length() >= 2 and (donnees.resultats == null or donnees.resultats.isEmpty())}"
+        class="section-resultats"
+      >
+        <div th:if="${donnees.dejaLaSuivie}" class="alerte alerte-info">
+          Vous suivez déjà « <span th:text="${q}">salle</span> ».
+        </div>
+        <div th:unless="${donnees.dejaLaSuivie}" class="alerte alerte-info">
+          Aucun résultat pour « <span th:text="${q}">salle</span> ».
+        </div>
+      </div>
+
+      <!-- Liste des salles suivies -->
+      <div th:if="${donnees.salles.isEmpty()}" class="etat-vide">
+        <p class="etat-vide-titre">Aucune salle suivie.</p>
+        <p class="etat-vide-texte">
+          Recherchez une salle ci-dessus pour commencer.
+        </p>
+      </div>
+
+      <section th:unless="${donnees.salles.isEmpty()}">
+        <h2 class="section-label">Salles suivies</h2>
+        <ul class="liste-cartes">
+          <li class="carte-item" th:each="salle : ${donnees.salles}">
+            <span class="carte-nom" th:text="${salle.nom}">Salle</span>
+            <form
+              method="post"
+              th:action="@{/salles/supprimer/{id}(id=${salle.salleId})}"
+            >
+              <button
+                type="submit"
+                class="btn btn-sm btn-danger-texte"
+                th:attr="aria-label='Supprimer ' + ${salle.nom}"
+              >
+                Supprimer
+              </button>
+            </form>
+          </li>
+        </ul>
+      </section>
+    </th:block>
+  </body>
+</html>

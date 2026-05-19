@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.6</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>fr.strapontin</groupId>
+    <artifactId>strapontin-parent</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>core</module>
+        <module>sources</module>
+        <module>worker</module>
+        <module>web</module>
+    </modules>
+
+    <properties>
+        <java.version>25</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Override BOM : Flyway 12.x cible Java 25 + PostgreSQL 14+ -->
+        <flyway.version>12.6.1</flyway.version>
+        <!-- Overrides BOM Spring Boot 4.0.6 -->
+        <caffeine.version>3.2.4</caffeine.version>
+        <postgresql.version>42.7.11</postgresql.version>
+        <thymeleaf-layout-dialect.version>4.0.1</thymeleaf-layout-dialect.version>
+        <!-- Versions non gérées par le BOM -->
+        <bouncycastle.version>1.84</bouncycastle.version>
+        <webpush.version>5.1.2</webpush.version>
+        <commons-text.version>1.15.0</commons-text.version>
+        <resend.version>4.13.0</resend.version>
+        <springdoc.version>3.0.3</springdoc.version>
+        <bucket4j.version>8.18.0</bucket4j.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Modules internes -->
+            <dependency>
+                <groupId>fr.strapontin</groupId>
+                <artifactId>core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>fr.strapontin</groupId>
+                <artifactId>sources</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- BouncyCastle — jdk18on uniquement (jdk15on incompatible Java 25) -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+
+            <!-- Push VAPID — exclure bcprov-jdk15on tiré par webpush-java -->
+            <dependency>
+                <groupId>nl.martijndwars</groupId>
+                <artifactId>web-push</artifactId>
+                <version>${webpush.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.bouncycastle</groupId>
+                        <artifactId>bcprov-jdk15on</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <!-- Similarité Levenshtein (dédup fuzzy) -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>${commons-text.version}</version>
+            </dependency>
+
+            <!-- Email transactionnel -->
+            <dependency>
+                <groupId>com.resend</groupId>
+                <artifactId>resend-java</artifactId>
+                <version>${resend.version}</version>
+            </dependency>
+
+            <!-- OpenAPI / Swagger UI (série 3.x pour Spring Boot 4.x) -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+
+            <!-- Rate limiting login (5 tentatives / 15 min) -->
+            <dependency>
+                <groupId>com.bucket4j</groupId>
+                <artifactId>bucket4j_jdk17-core</artifactId>
+                <version>${bucket4j.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

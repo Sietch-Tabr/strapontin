@@ -1,38 +1,37 @@
 steps:
   - name: test
-    image: node:24
+    image: maven:3.9-eclipse-temurin-25
+    volumes:
+      - /var/cache/woodpecker/maven:/root/.m2
     commands:
-      - corepack enable
-      - pnpm install --frozen-lockfile --store-dir ./.pnpm-store
-      - pnpm -r test
+      - mvn -f java/pom.xml -pl core,sources test
     when:
       - event: push
 
-  - name: typecheck
-    image: node:24
+  - name: build
+    image: maven:3.9-eclipse-temurin-25
     depends_on: [test]
+    volumes:
+      - /var/cache/woodpecker/maven:/root/.m2
     commands:
-      - corepack enable
-      - pnpm install --frozen-lockfile --store-dir ./.pnpm-store
-      - printf 'DATABASE_URL=x\nBETTER_AUTH_SECRET=x\nREDIS_URL=x\nPUBLIC_BASE_URL=http://localhost\n' > .env
-      - pnpm --filter @strapontin/web run check
-      - pnpm --filter @strapontin/worker exec tsc --noEmit
-      - pnpm audit --audit-level=high
+      - mvn -f java/pom.xml -pl web,worker -am package -DskipTests
     when:
       - event: push
 
   - name: deploy
     image: alpine
-    depends_on: [typecheck, test]
+    depends_on: [build]
     environment:
       SSH_KEY:
         from_secret: ssh_key
-      LXC_HOST:
-        from_secret: lxc_host
+      LXC_JAVA_HOST:
+        from_secret: lxc_java_host
     commands:
       - apk add openssh-client
       - echo "$$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
-      - ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_HOST "/opt/strapontin/scripts/update.sh"
+      - scp -i /tmp/key -o StrictHostKeyChecking=no java/web/target/web-2.0.0-SNAPSHOT.jar root@$$LXC_JAVA_HOST:/opt/strapontin/web.jar
+      - scp -i /tmp/key -o StrictHostKeyChecking=no java/worker/target/worker-2.0.0-SNAPSHOT.jar root@$$LXC_JAVA_HOST:/opt/strapontin/worker.jar
+      - ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST "/opt/strapontin/update.sh"
     when:
       - event: push
-        branch: main
+        branch: v2

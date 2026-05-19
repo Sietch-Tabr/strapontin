@@ -29,5 +29,5 @@ systemctl start strapontin-web strapontin-worker
 echo ""
 echo "================================================================"
 echo "  Restauration terminée"
-echo "  Vérifiez l'application : curl -sf http://localhost:3000/health"
+echo "  Vérifiez l'application : curl -sf http://localhost:8080/actuator/health"
 echo "================================================================"

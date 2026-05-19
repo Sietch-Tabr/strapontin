@@ -1,0 +1,70 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025 Kwaite
+ */
+package fr.strapontin.web.securite;
+
+import fr.strapontin.web.admin.LogAdminService;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.context.event.EventListener;
+import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent;
+import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
+import org.springframework.stereotype.Component;
+
+/// Écoute les événements Spring Security et les consigne dans `logs_admin`.
+///
+/// Couvre : connexion réussie (info), échec d'authentification (warn).
+/// Le rate-limit est géré séparément par [RateLimitingLoginFilter].
+///
+/// @since 2.0.0
+/// @author Kwaite
+@Component
+public class AuthEvenementListener {
+
+  private final LogAdminService logAdminService;
+
+  public AuthEvenementListener(LogAdminService logAdminService) {
+    this.logAdminService = logAdminService;
+  }
+
+  /// Consigne une connexion réussie.
+  ///
+  /// @param event l'événement Spring Security
+  @EventListener
+  public void surSuccesAuthentification(AuthenticationSuccessEvent event) {
+    String identifiant = event.getAuthentication().getName();
+    String ip = obtenirIp(event.getAuthentication());
+    Map<String, Object> meta = new HashMap<>();
+    meta.put("identifiant", identifiant);
+    meta.put("ip", ip != null ? ip : "?");
+    if (event.getAuthentication().getPrincipal() instanceof UtilisateurDetails ud) {
+      meta.put("userId", ud.id());
+    }
+    logAdminService.logAdmin("info", "auth", "Connexion réussie : " + identifiant, meta);
+  }
+
+  /// Consigne un échec d'authentification.
+  ///
+  /// @param event l'événement Spring Security
+  @EventListener
+  public void surEchecAuthentification(AbstractAuthenticationFailureEvent event) {
+    String identifiant = event.getAuthentication().getName();
+    String ip = obtenirIp(event.getAuthentication());
+    String raison =
+        event.getException().getClass().getSimpleName().replace("Exception", "").toLowerCase();
+    Map<String, Object> meta = new HashMap<>();
+    meta.put("identifiant", identifiant);
+    meta.put("ip", ip != null ? ip : "?");
+    meta.put("raison", raison);
+    logAdminService.logAdmin("warn", "auth", "Échec connexion : " + identifiant, meta);
+  }
+
+  private String obtenirIp(org.springframework.security.core.Authentication auth) {
+    if (auth.getDetails() instanceof WebAuthenticationDetails details) {
+      return details.getRemoteAddress();
+    }
+    return null;
+  }
+}

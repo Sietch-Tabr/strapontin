@@ -1,0 +1,543 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025 Kwaite
+ */
+package fr.strapontin.sources;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+
+import fr.strapontin.core.ConcertBrut;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
+
+class TicketmasterSourceTest {
+
+  // --- Fixtures ---
+
+  private static Map<String, Object> evenementTMRaw() {
+    return evenementTMRaw(Map.of());
+  }
+
+  private static Map<String, Object> evenementTMRaw(Map<String, Object> surcharge) {
+    Map<String, Object> base = new HashMap<>();
+    base.put("name", "Julien Clerc — Tournée 2025");
+    base.put(
+        "dates",
+        Map.of(
+            "start", Map.of("localDate", "2025-09-15", "localTime", "20:30:00"),
+            "status", Map.of("code", "onsale")));
+    base.put(
+        "_embedded",
+        Map.of(
+            "attractions", List.of(Map.of("name", "Julien Clerc")),
+            "venues",
+                List.of(
+                    Map.of(
+                        "name", "ACCOR ARENA",
+                        "city", Map.of("name", "Paris"),
+                        "postalCode", "75012"))));
+    base.put(
+        "classifications",
+        List.of(
+            Map.of(
+                "segment", Map.of("name", "Music"),
+                "genre", Map.of("name", "Pop"))));
+    base.put("priceRanges", List.of(Map.of("min", 39.9, "max", 99.9)));
+    base.put("url", "https://example.com");
+    base.putAll(surcharge);
+    return base;
+  }
+
+  private static String reponsePageTMJson(int totalElements, boolean avecEvents) {
+    String events =
+        avecEvents
+            ? """
+            [{"name":"Julien Clerc — Tournée 2025",
+              "dates":{"start":{"localDate":"2025-09-15","localTime":"20:30:00"},"status":{"code":"onsale"}},
+              "_embedded":{"attractions":[{"name":"Julien Clerc"}],
+                "venues":[{"name":"ACCOR ARENA","city":{"name":"Paris"},"postalCode":"75012"}]},
+              "classifications":[{"segment":{"name":"Music"},"genre":{"name":"Pop"}}],
+              "priceRanges":[{"min":39.9,"max":99.9}],
+              "url":"https://example.com"}]
+            """
+            : "[]";
+    int totalPages = (int) Math.ceil((double) totalElements / 200);
+    return """
+    {"_embedded":{"events":%s},"page":{"totalElements":%d,"totalPages":%d}}
+    """
+        .formatted(events, totalElements, totalPages);
+  }
+
+  // --- extraireDept ---
+
+  @Test
+  void extraireDept_codePostalAbsent_retourneNull() {
+    assertNull(TicketmasterSource.extraireDept(null));
+    assertNull(TicketmasterSource.extraireDept(""));
+    assertNull(TicketmasterSource.extraireDept("   "));
+  }
+
+  @Test
+  void extraireDept_metropole_retourneDeuxChiffres() {
+    assertEquals("75", TicketmasterSource.extraireDept("75012"));
+    assertEquals("13", TicketmasterSource.extraireDept("13001"));
+    assertEquals("01", TicketmasterSource.extraireDept("01000"));
+  }
+
+  @Test
+  void extraireDept_DOM_retourneTroisChiffres() {
+    assertEquals("971", TicketmasterSource.extraireDept("97100"));
+    assertEquals("972", TicketmasterSource.extraireDept("97200"));
+    assertEquals("976", TicketmasterSource.extraireDept("97600"));
+  }
+
+  @Test
+  void extraireDept_codePostalCourt_retourneChaine() {
+    assertEquals("75", TicketmasterSource.extraireDept("75"));
+  }
+
+  // --- parseDateTM ---
+
+  @Test
+  void parseDateTM_dateEtHeureValides_retourneDateEtHeure() {
+    String[] resultat = TicketmasterSource.parseDateTM("2025-09-15", "20:30:00");
+    assertEquals("2025-09-15", resultat[0]);
+    assertEquals("20:30", resultat[1]);
+  }
+
+  @Test
+  void parseDateTM_heureAbsente_retourneHeureNull() {
+    String[] resultat = TicketmasterSource.parseDateTM("2025-09-15", null);
+    assertEquals("2025-09-15", resultat[0]);
+    assertNull(resultat[1]);
+  }
+
+  @Test
+  void parseDateTM_heure0000_retourne0000() {
+    String[] resultat = TicketmasterSource.parseDateTM("2025-09-15", "00:00:00");
+    assertEquals("00:00", resultat[1]);
+  }
+
+  @Test
+  void parseDateTM_dateAvecHeure_tronqueA10Caracteres() {
+    String[] resultat = TicketmasterSource.parseDateTM("2025-09-15T20:30:00Z", "20:30:00");
+    assertEquals("2025-09-15", resultat[0]);
+    assertEquals("20:30", resultat[1]);
+  }
+
+  // --- normaliserCasse ---
+
+  @Test
+  void normaliserCasse_nomToutMajuscule_retourneTitleCase() {
+    assertEquals("Accor Arena", TicketmasterSource.normaliserCasse("ACCOR ARENA"));
+  }
+
+  @Test
+  void normaliserCasse_nomAvecCasseMixte_retourneInchange() {
+    assertEquals("Accor Arena", TicketmasterSource.normaliserCasse("Accor Arena"));
+  }
+
+  @Test
+  void normaliserCasse_nomAvecApostrophe_capitaliseApresApostrophe() {
+    assertEquals("L'Olympia", TicketmasterSource.normaliserCasse("L'OLYMPIA"));
+  }
+
+  @Test
+  void normaliserCasse_articleEnMinuscule_conserveMinuscule() {
+    assertEquals("Orchestre de Paris", TicketmasterSource.normaliserCasse("ORCHESTRE DE PARIS"));
+  }
+
+  // --- mapEvenement ---
+
+  @Test
+  void mapEvenement_evenementComplet_parseTousLesChamps() {
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
+    assertNotNull(resultat);
+    assertEquals("Julien Clerc", resultat.artiste());
+    assertEquals("2025-09-15", resultat.date());
+    assertEquals("20:30", resultat.heure());
+    assertEquals("Accor Arena", resultat.salle());
+    assertEquals("Paris", resultat.ville());
+    assertEquals("75", resultat.dept());
+    assertEquals(39.9, resultat.prixMin());
+    assertEquals(99.9, resultat.prixMax());
+    assertEquals("https://example.com", resultat.url());
+    assertEquals("ticketmaster", resultat.source());
+    assertEquals("music", resultat.classification());
+    assertEquals("Pop", resultat.genre());
+    assertEquals("onsale", resultat.statut());
+  }
+
+  @Test
+  void mapEvenement_attractionsAbsentes_utiliseFallback() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Zénith Paris",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75019")))));
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "Julien Clerc");
+    assertNotNull(resultat);
+    assertEquals("Julien Clerc", resultat.artiste());
+  }
+
+  @Test
+  void mapEvenement_sansAttractionNiFallback_retourneNull() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "name",
+                "Radiohead - OK Computer Tour",
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Zénith Paris",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75019")))));
+    assertNull(TicketmasterSource.mapEvenement(evt, null));
+  }
+
+  @Test
+  void mapEvenement_salleToutMajuscule_normaliseEnTitleCase() {
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
+    assertNotNull(resultat);
+    assertEquals("Accor Arena", resultat.salle());
+  }
+
+  @Test
+  void mapEvenement_salleAvecApostrophe_capitaliseApresApostrophe() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(Map.of("name", "Julien Clerc")),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "L'OLYMPIA",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75009")))));
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    assertNotNull(resultat);
+    assertEquals("L'Olympia", resultat.salle());
+  }
+
+  @Test
+  void mapEvenement_fauxPositifFallback_rejetteEvenementSansRapport() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "name",
+                "Déjeuner pour 2 personnes Tour Eiffel",
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Madame Brasserie",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75007")))));
+    assertNull(TicketmasterSource.mapEvenement(evt, "2 Unlimited"));
+  }
+
+  @Test
+  void mapEvenement_fallbackTitreContientArtiste_accepteEvenement() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "name",
+                "2 Unlimited - Greatest Hits Tour",
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Zénith Paris",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75019")))));
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "2 Unlimited");
+    assertNotNull(resultat);
+    assertEquals("2 Unlimited", resultat.artiste());
+  }
+
+  @Test
+  void mapEvenement_dateAbsente_retourneNull() {
+    Map<String, Object> evt = new HashMap<>(evenementTMRaw());
+    evt.put("dates", Map.of("start", Map.of()));
+    assertNull(TicketmasterSource.mapEvenement(evt, null));
+  }
+
+  @Test
+  void mapEvenement_classificationArtsTheatre_retourneTheatre() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "classifications",
+                List.of(
+                    Map.of(
+                        "segment", Map.of("name", "Arts et théâtre"),
+                        "genre", Map.of("name", "Théâtre")))));
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    assertNotNull(resultat);
+    assertEquals("theatre", resultat.classification());
+  }
+
+  @Test
+  void mapEvenement_prixEtUrlAbsents_retourneNull() {
+    Map<String, Object> evt = new HashMap<>(evenementTMRaw());
+    evt.remove("priceRanges");
+    evt.remove("url");
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    assertNotNull(resultat);
+    assertNull(resultat.prixMin());
+    assertNull(resultat.prixMax());
+    assertNull(resultat.url());
+  }
+
+  @Test
+  void mapEvenement_DOMGuadeloupe_retourneDept971() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(Map.of("name", "Artiste")),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Salle",
+                                "city", Map.of("name", "Pointe-à-Pitre"),
+                                "postalCode", "97100")))));
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    assertNotNull(resultat);
+    assertEquals("971", resultat.dept());
+  }
+
+  // --- Tests HTTP ---
+
+  @Test
+  void fetchArtiste_reponseValide_retourneConcerts() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+
+    assertEquals(1, resultats.size());
+    assertEquals("Julien Clerc", resultats.get(0).artiste());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchArtiste_embeddedAbsent_retourneListeVide() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(
+                    """
+                    {"page":{"totalElements":0,"totalPages":0}}
+                    """,
+                    MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "0"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchArtiste("Artiste Inconnu");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchArtiste_metsAJourLeQuota() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(0, false), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    source.fetchArtiste("Radiohead");
+
+    QuotaTM quota = source.obtenirQuota();
+    assertNotNull(quota);
+    assertEquals(9800, quota.dispo());
+    assertEquals(10000, quota.total());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchArtistesBatch_listeVide_retourneListeVide() {
+    TicketmasterSource source = new TicketmasterSource("fake-key");
+    assertTrue(source.fetchArtistesBatch(List.of()).isEmpty());
+  }
+
+  @Test
+  void fetchArtistesBatch_avecIds_retourneConcerts() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchArtistesBatch(List.of("tm-123", "tm-456"));
+
+    assertEquals(1, resultats.size());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchSalle_venueIdValide_retourneConcerts() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchSalle("venue-123");
+
+    assertEquals(1, resultats.size());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchSalle_aucunEvent_retourneListeVide() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(0, false), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchSalle("venue-vide");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void rechercherAttractionId_nomTrouve_retourneId() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
+        .andRespond(
+            withSuccess(
+                """
+                {"_embedded":{"attractions":[{"id":"tm-456","name":"Julien Clerc"}]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    String id = source.rechercherAttractionId("Julien Clerc");
+
+    assertEquals("tm-456", id);
+    serveur.verify();
+  }
+
+  @Test
+  void rechercherAttractionId_nomNonTrouve_retourneNull() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
+        .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    String id = source.rechercherAttractionId("Artiste Inconnu");
+
+    assertNull(id);
+    serveur.verify();
+  }
+
+  @Test
+  void fetchRegion_deptInconnu_retourneListeVide() {
+    TicketmasterSource source = new TicketmasterSource("fake-key");
+    List<ConcertBrut> resultats = source.fetchRegion(List.of("ZZ"), null);
+    assertTrue(resultats.isEmpty());
+  }
+
+  @Test
+  void fetchRegion_deptConnu_retourneConcerts() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchRegion(List.of("75"), null);
+
+    assertEquals(1, resultats.size());
+    serveur.verify();
+  }
+}

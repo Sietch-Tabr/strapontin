@@ -17,7 +17,6 @@
 -- ---------------------------------------------------------------
 
 CREATE EXTENSION IF NOT EXISTS unaccent;
-CREATE EXTENSION IF NOT EXISTS dblink;
 
 -- ---------------------------------------------------------------
 -- Types ENUM (#J)

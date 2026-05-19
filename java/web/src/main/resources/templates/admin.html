@@ -1,0 +1,680 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/base}"
+  th:lang="fr"
+>
+  <head>
+    <title>Administration — Strapontin</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contenu">
+      <div class="page-header">
+        <h1>Administration</h1>
+      </div>
+
+      <div
+        th:if="${succes != null and succes != 'creerUtilisateur'}"
+        class="alerte alerte-succes"
+      >
+        <span th:if="${succes == 'supprimerUtilisateur'}"
+          >Compte supprimé.</span
+        >
+        <span th:if="${succes == 'reinitialiserMdp'}"
+          >Email de réinitialisation envoyé.</span
+        >
+        <span th:if="${succes == 'config'}">Configuration sauvegardée.</span>
+        <span th:if="${succes == 'vapid'}">Clés VAPID régénérées.</span>
+        <span th:if="${succes == 'relancer'}">Fetches déclenchés.</span>
+      </div>
+
+      <!-- Modale affichée après invitation -->
+      <dialog id="dialog-invitation" th:if="${succes == 'creerUtilisateur'}">
+        <p class="dialog-titre">Compte créé</p>
+        <p class="dialog-corps">
+          Envoyez ce lien à l'utilisateur pour qu'il finalise l'inscription. Il
+          expire après utilisation.
+        </p>
+        <div class="dialog-lien">
+          <input
+            id="lien-invitation"
+            type="text"
+            readonly
+            th:value="${lienReset != null ? lienReset : '(aucun lien — email envoyé)'}"
+          />
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="copierLienInvitation()"
+          >
+            Copier
+          </button>
+        </div>
+        <div class="dialog-pied">
+          <button
+            type="button"
+            class="btn btn-primary"
+            onclick="document.getElementById('dialog-invitation').close()"
+          >
+            Fermer
+          </button>
+        </div>
+      </dialog>
+      <div
+        th:if="${erreur}"
+        class="alerte alerte-erreur"
+        th:text="${erreur}"
+      ></div>
+
+      <nav class="param-onglets" aria-label="Sections d'administration">
+        <a href="#jobs" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-activity" />
+          </svg>
+          Tableau de bord
+        </a>
+        <a href="#logs" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-scroll-text" />
+          </svg>
+          Logs
+        </a>
+        <a href="#configuration" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-settings" />
+          </svg>
+          Configuration
+        </a>
+        <a href="#utilisateurs" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-users" />
+          </svg>
+          Utilisateurs
+        </a>
+      </nav>
+
+      <div class="admin-sections">
+        <!-- Section Tableau de bord (Jobs) -->
+        <section id="jobs" class="admin-section">
+          <!-- Quota Ticketmaster -->
+          <div class="param-bloc">
+            <h3 class="param-label">Quota Ticketmaster API</h3>
+            <div class="quota-tm-carte" th:if="${quotaTM != null}">
+              <div class="quota-tm-chiffres">
+                <span>
+                  <strong th:text="${quotaTM.dispo}">0</strong>
+                  <span class="quota-tm-sep" th:text="' / ' + ${quotaTM.total}"
+                    >/ 5000</span
+                  >
+                  <span class="quota-tm-unite">appels restants</span>
+                </span>
+                <span
+                  class="quota-tm-pct"
+                  th:text="${quotaTM.total > 0 ? (quotaTM.dispo * 100 / quotaTM.total) : 0} + ' %'"
+                  >0 %</span
+                >
+              </div>
+              <div class="quota-tm-barre-fond">
+                <div
+                  class="quota-tm-barre-remplissage"
+                  th:classappend="${quotaTM.total > 0 and quotaTM.dispo * 100 / quotaTM.total > 30 ? ' barre-ok' : (quotaTM.total > 0 and quotaTM.dispo * 100 / quotaTM.total > 10 ? ' barre-warn' : ' barre-danger')}"
+                  th:style="'width: ' + ${quotaTM.total > 0 ? (quotaTM.dispo * 100 / quotaTM.total) : 0} + '%'"
+                ></div>
+              </div>
+              <p
+                class="param-aide"
+                th:if="${quotaTM.reset > 0}"
+                th:text="'Remise à zéro le ' + ${T(fr.strapontin.web.utils.Dates).formaterEpochSec(quotaTM.reset)}"
+              ></p>
+            </div>
+            <p class="etat-vide-texte" th:unless="${quotaTM != null}">
+              Disponible après le prochain fetch Ticketmaster.
+            </p>
+          </div>
+
+          <!-- Actualisations -->
+          <div class="param-bloc">
+            <h3 class="param-label">Actualisations</h3>
+            <div
+              class="jobs-liste"
+              th:if="${statsJobs != null and !statsJobs.isEmpty()}"
+            >
+              <div
+                class="job-carte"
+                th:each="stat : ${statsJobs}"
+                th:with="label=${stat.typeJob == 'fetch:artistes:batch' ? 'Artistes suivis' : (stat.typeJob == 'fetch:region' ? 'Concerts par région' : (stat.typeJob == 'notifier:digest' ? 'Notifications digest' : (stat.typeJob == 'purger:concerts' ? 'Purge concerts' : (stat.typeJob == 'recalculer:matches' ? 'Recalcul matchs' : stat.typeJob))))}"
+              >
+                <div class="job-carte-entete">
+                  <p class="job-carte-label" th:text="${label}">label</p>
+                  <span
+                    class="job-en-cours"
+                    th:if="${jobsEnCours != null and jobsEnCours.contains(stat.typeJob)}"
+                    th:attr="data-job=${stat.typeJob}"
+                  >
+                    <svg
+                      class="spinner"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                    >
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    En cours
+                  </span>
+                </div>
+                <p class="job-carte-detail">
+                  <span
+                    th:if="${stat.derniereExec != null}"
+                    th:text="${T(fr.strapontin.web.utils.Dates).formaterInstant(stat.derniereExec)}"
+                  ></span>
+                  <span
+                    th:if="${stat.derniereExec != null and stat.dureeMs != null}"
+                    th:text="${' · ' + (stat.dureeMs < 1000 ? stat.dureeMs + ' ms' : (stat.dureeMs / 1000) + ' s')}"
+                  ></span>
+                  <span
+                    th:if="${stat.nbInseres != null and stat.nbInseres > 0}"
+                    th:text="' · +' + ${stat.nbInseres} + ' insérés'"
+                  ></span>
+                  <span
+                    th:if="${stat.nbMisAJour != null and stat.nbMisAJour > 0}"
+                    th:text="' · ' + ${stat.nbMisAJour} + ' màj'"
+                  ></span>
+                  <span th:unless="${stat.derniereExec != null}"
+                    >Pas encore exécuté</span
+                  >
+                  <span
+                    class="badge badge-erreur"
+                    th:if="${stat.erreur != null}"
+                    th:text="${#strings.abbreviate(stat.erreur, 80)}"
+                  ></span>
+                </p>
+              </div>
+            </div>
+            <p
+              class="etat-vide-texte"
+              th:unless="${statsJobs != null and !statsJobs.isEmpty()}"
+            >
+              Aucun job exécuté pour l'instant.
+            </p>
+            <div style="margin-top: 0.75rem">
+              <button type="button" id="btn-relancer" class="btn btn-secondary">
+                Relancer les fetches maintenant
+              </button>
+              <span
+                id="relancer-statut"
+                class="relancer-statut"
+                aria-live="polite"
+              ></span>
+            </div>
+          </div>
+
+          <!-- Worker -->
+          <div class="param-bloc">
+            <h3 class="param-label">Worker</h3>
+            <div
+              class="worker-carte"
+              th:classappend="${workerEnAlerte ? ' worker-alerte' : ''}"
+            >
+              <div th:if="${workerDepuisTexte != null}">
+                <p class="worker-carte-label">Dernier job complété</p>
+                <p class="worker-carte-detail" th:text="${workerDepuisTexte}">
+                  —
+                </p>
+                <p class="worker-alerte-texte" th:if="${workerEnAlerte}">
+                  Inactif depuis plus de 3 h
+                </p>
+              </div>
+              <div th:unless="${workerDepuisTexte != null}">
+                <p class="worker-carte-detail">
+                  Aucun job complété — worker non démarré.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section Logs -->
+        <section id="logs" class="admin-section">
+          <div class="param-bloc">
+            <div class="logs-filtres">
+              <div style="display: flex; align-items: center; gap: 6px">
+                <label for="filtre-source" class="logs-filtre-label"
+                  >Source :</label
+                >
+                <select id="filtre-source" class="logs-filtre-select">
+                  <option value="">Toutes</option>
+                  <option value="auth">auth</option>
+                  <option value="admin">admin</option>
+                  <option value="push">push</option>
+                  <option value="jobs">jobs</option>
+                  <option value="worker">worker</option>
+                </select>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px">
+                <span class="logs-filtre-label">Niveau :</span>
+                <button
+                  type="button"
+                  class="log-filtre-btn"
+                  data-niveau="info"
+                  aria-pressed="false"
+                >
+                  info
+                </button>
+                <button
+                  type="button"
+                  class="log-filtre-btn"
+                  data-niveau="warn"
+                  aria-pressed="false"
+                >
+                  warn
+                </button>
+                <button
+                  type="button"
+                  class="log-filtre-btn"
+                  data-niveau="error"
+                  aria-pressed="false"
+                >
+                  error
+                </button>
+              </div>
+              <span id="log-compte" class="log-compte"></span>
+            </div>
+
+            <div
+              class="table-wrapper"
+              th:if="${logs != null and !logs.isEmpty()}"
+            >
+              <table id="table-logs">
+                <thead>
+                  <tr>
+                    <th>Horodatage</th>
+                    <th>Niveau</th>
+                    <th>Source</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    th:each="entree : ${logs}"
+                    th:classappend="${entree.niveau == 'error' ? ' log-error' : (entree.niveau == 'warn' ? ' log-warn' : '')}"
+                    th:data-source="${entree.source}"
+                    th:data-niveau="${entree.niveau}"
+                    th:data-meta="${entree.meta != null ? entree.meta : ''}"
+                  >
+                    <td
+                      class="log-ts"
+                      th:text="${T(fr.strapontin.web.utils.Dates).formaterTs(entree.ts)}"
+                    >
+                      date
+                    </td>
+                    <td th:text="${entree.niveau}">niveau</td>
+                    <td th:text="${entree.source}">source</td>
+                    <td class="log-message" th:text="${entree.message}">
+                      message
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p
+              th:if="${logs == null or logs.isEmpty()}"
+              class="etat-vide-texte"
+            >
+              Aucun log pour l'instant.
+            </p>
+          </div>
+        </section>
+
+        <!-- Section Configuration -->
+        <section id="configuration" class="admin-section">
+          <div th:each="statut : ${configStatuts}" class="param-bloc">
+            <div class="param-label-ligne">
+              <h3 class="param-label" th:text="${statut.cle}">CLE</h3>
+              <span th:if="${statut.presente}" class="badge badge-succes"
+                >Configurée</span
+              >
+              <span th:unless="${statut.presente}" class="badge badge-manquant"
+                >Non configurée</span
+              >
+            </div>
+            <p
+              class="param-aide"
+              th:if="${!statut.secret and statut.valeur != null}"
+              th:text="${statut.valeur}"
+            ></p>
+            <form
+              method="post"
+              th:action="@{/admin/config}"
+              class="form-inline"
+              th:if="${statut.cle != 'VAPID_PUBLIC_KEY' and statut.cle != 'VAPID_PRIVATE_KEY'}"
+            >
+              <input type="hidden" name="cle" th:value="${statut.cle}" />
+              <input
+                th:if="${statut.secret}"
+                type="password"
+                name="valeur"
+                autocomplete="new-password"
+                placeholder="Nouvelle valeur…"
+              />
+              <input
+                th:unless="${statut.secret}"
+                type="text"
+                name="valeur"
+                th:value="${statut.valeur}"
+                autocomplete="off"
+              />
+              <button type="submit" class="btn btn-secondary">
+                Enregistrer
+              </button>
+            </form>
+          </div>
+
+          <!-- Régénération VAPID -->
+          <div class="param-bloc param-bloc-danger">
+            <h3 class="param-label">Clés VAPID (Push)</h3>
+            <p class="param-aide">
+              Régénérer les clés invalide tous les abonnements push existants.
+            </p>
+            <form
+              method="post"
+              th:action="@{/admin/vapid}"
+              onsubmit="
+                return confirm(
+                  'Régénérer les clés VAPID ? Les abonnements push existants seront invalidés.',
+                );
+              "
+            >
+              <button type="submit" class="btn btn-secondary">Régénérer</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- Section Utilisateurs -->
+        <section id="utilisateurs" class="admin-section">
+          <!-- Créer un compte -->
+          <div class="param-bloc">
+            <h3 class="param-label">Créer un compte</h3>
+            <form
+              method="post"
+              th:action="@{/admin/utilisateurs/creer}"
+              class="form-inline"
+            >
+              <input
+                type="email"
+                name="email"
+                required
+                placeholder="adresse@email.fr"
+                autocomplete="off"
+              />
+              <button type="submit" class="btn btn-secondary">Inviter</button>
+            </form>
+          </div>
+
+          <!-- Liste des utilisateurs -->
+          <div
+            class="param-bloc"
+            th:if="${utilisateurs != null and !utilisateurs.isEmpty()}"
+          >
+            <h3
+              class="param-label"
+              th:text="'Utilisateurs (' + ${utilisateurs.size()} + ')'"
+            >
+              Utilisateurs
+            </h3>
+            <ul class="user-liste">
+              <th:block th:each="u : ${utilisateurs}">
+                <li class="user-carte">
+                  <div class="user-carte-entete">
+                    <div class="user-carte-info">
+                      <div class="user-carte-badges">
+                        <span class="user-nom" th:text="${u.name}">Nom</span>
+                        <span
+                          class="badge badge-mono"
+                          th:if="${u.username != null}"
+                          th:text="'@' + ${u.username}"
+                        ></span>
+                        <span
+                          class="badge badge-info"
+                          th:if="${u.role == 'admin'}"
+                          >admin</span
+                        >
+                        <span
+                          class="badge badge-warn"
+                          th:if="${u.mustChangeCredentials}"
+                          >premier login en attente</span
+                        >
+                      </div>
+                      <p class="user-carte-email" th:text="${u.email}">email</p>
+                      <p class="user-carte-activite">
+                        <span
+                          th:if="${u.derniereActivite != null}"
+                          th:text="'Dernière activité : ' + ${T(fr.strapontin.web.utils.Dates).formaterInstant(u.derniereActivite)}"
+                        ></span>
+                        <span th:unless="${u.derniereActivite != null}"
+                          >Jamais connecté</span
+                        >
+                      </p>
+                    </div>
+                    <div
+                      class="user-carte-actions"
+                      th:if="${u.id != utilisateur?.id}"
+                    >
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-secondary"
+                        th:data-id="${u.id}"
+                        onclick="toggleModif(this.dataset.id)"
+                      >
+                        Modifier
+                      </button>
+                      <form
+                        method="post"
+                        th:action="@{/admin/utilisateurs/{id}/reset-mdp(id=${u.id})}"
+                        style="display: inline"
+                      >
+                        <button type="submit" class="btn btn-sm btn-secondary">
+                          Réinit. MDP
+                        </button>
+                      </form>
+                      <form
+                        method="post"
+                        th:action="@{/admin/utilisateurs/{id}/supprimer(id=${u.id})}"
+                        style="display: inline"
+                        onsubmit="return confirm('Supprimer ce compte ?');"
+                      >
+                        <button type="submit" class="btn btn-sm btn-danger">
+                          Supprimer
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                  <div
+                    th:id="'modif-' + ${u.id}"
+                    class="modif-ligne"
+                    style="display: none"
+                  >
+                    <form
+                      class="form-modif-utilisateur"
+                      th:data-user-id="${u.id}"
+                    >
+                      <input
+                        type="text"
+                        name="nom"
+                        maxlength="100"
+                        placeholder="Nom"
+                        th:value="${u.name}"
+                      />
+                      <input
+                        type="email"
+                        name="email"
+                        placeholder="Email"
+                        th:value="${u.email}"
+                      />
+                      <select name="role">
+                        <option value="user" th:selected="${u.role == 'user'}">
+                          user
+                        </option>
+                        <option
+                          value="admin"
+                          th:selected="${u.role == 'admin'}"
+                        >
+                          admin
+                        </option>
+                      </select>
+                      <button type="submit" class="btn btn-sm btn-primary">
+                        Enregistrer
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-secondary"
+                        th:data-id="${u.id}"
+                        onclick="toggleModif(this.dataset.id)"
+                      >
+                        Annuler
+                      </button>
+                      <span class="erreur-modif"></span>
+                    </form>
+                  </div>
+                </li>
+              </th:block>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <script>
+        // ── Logs système ────────────────────────────────────────
+        (function () {
+          var table = document.getElementById("table-logs");
+          if (!table) return;
+
+          table.querySelectorAll("tbody tr[data-meta]").forEach(function (tr) {
+            var metaStr = tr.getAttribute("data-meta");
+            if (!metaStr) return;
+            try {
+              var meta = JSON.parse(metaStr);
+              var cles = Object.keys(meta);
+              if (!cles.length) return;
+              var msgTd = tr.querySelector("td.log-message");
+              if (!msgTd) return;
+              var metaDiv = document.createElement("div");
+              metaDiv.className = "log-meta";
+              cles.forEach(function (k) {
+                var item = document.createElement("span");
+                item.className = "log-meta-item";
+                item.textContent = k + ": " + meta[k];
+                metaDiv.appendChild(item);
+              });
+              msgTd.appendChild(metaDiv);
+            } catch (_) {}
+          });
+
+          var filtreSource = document.getElementById("filtre-source");
+          var filtreNiveau = "";
+          var btnNiveaux = document.querySelectorAll(".log-filtre-btn");
+          var compte = document.getElementById("log-compte");
+
+          function filtrer() {
+            var lignes = table.querySelectorAll("tbody tr");
+            var source = filtreSource ? filtreSource.value : "";
+            var visible = 0;
+            lignes.forEach(function (tr) {
+              var n = tr.getAttribute("data-niveau") || "";
+              var s = tr.getAttribute("data-source") || "";
+              var okNiveau = !filtreNiveau || n === filtreNiveau;
+              var okSource = !source || s === source;
+              var show = okNiveau && okSource;
+              tr.style.display = show ? "" : "none";
+              if (show) visible++;
+            });
+            if (compte) compte.textContent = visible + " / " + lignes.length;
+          }
+
+          btnNiveaux.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var niv = btn.getAttribute("data-niveau");
+              filtreNiveau = filtreNiveau === niv ? "" : niv;
+              btnNiveaux.forEach(function (b) {
+                var actif = b.getAttribute("data-niveau") === filtreNiveau;
+                b.classList.toggle("actif", actif);
+                b.setAttribute("aria-pressed", String(actif));
+              });
+              filtrer();
+            });
+          });
+
+          if (filtreSource) filtreSource.addEventListener("change", filtrer);
+          filtrer();
+        })();
+
+        // ── Modification utilisateur ────────────────────────────
+        function toggleModif(userId) {
+          var row = document.getElementById("modif-" + userId);
+          if (row)
+            row.style.display = row.style.display === "none" ? "" : "none";
+        }
+
+        document
+          .querySelectorAll(".form-modif-utilisateur")
+          .forEach(function (form) {
+            form.addEventListener("submit", function (e) {
+              e.preventDefault();
+              var userId = form.getAttribute("data-user-id");
+              var erreurSpan = form.querySelector(".erreur-modif");
+              erreurSpan.style.display = "none";
+              var corps = {
+                nom: form.querySelector("[name=nom]").value.trim(),
+                email: form.querySelector("[name=email]").value.trim(),
+                role: form.querySelector("[name=role]").value,
+              };
+              fetch("/admin/utilisateurs/" + userId, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(corps),
+              })
+                .then(function (r) {
+                  return r.json();
+                })
+                .then(function (d) {
+                  if (d.succes) {
+                    location.reload();
+                  } else {
+                    erreurSpan.textContent = d.erreur || "Erreur.";
+                    erreurSpan.style.display = "";
+                  }
+                })
+                .catch(function () {
+                  erreurSpan.textContent = "Erreur réseau.";
+                  erreurSpan.style.display = "";
+                });
+            });
+          });
+
+        // ── Modale invitation ───────────────────────────────────
+        (function () {
+          var dialog = document.getElementById("dialog-invitation");
+          if (dialog) dialog.showModal();
+        })();
+
+        window.copierLienInvitation = function () {
+          var input = document.getElementById("lien-invitation");
+          if (!input) return;
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(input.value).catch(function () {
+              input.select();
+              document.execCommand("copy");
+            });
+          } else {
+            input.select();
+            document.execCommand("copy");
+          }
+        };
+      </script>
+    </th:block>
+  </body>
+</html>

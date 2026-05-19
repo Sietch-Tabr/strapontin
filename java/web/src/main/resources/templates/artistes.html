@@ -1,0 +1,141 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/base}"
+  th:lang="fr"
+>
+  <head>
+    <title>Mes artistes — Strapontin</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contenu">
+      <div class="page-header">
+        <h1>Mes artistes</h1>
+        <p
+          class="page-subtitle"
+          th:text="${donnees.artistes.size()} + ' artiste' + (${donnees.artistes.size() != 1} ? 's' : '') + ' suivi' + (${donnees.artistes.size() != 1} ? 's' : '')"
+        >
+          0 artiste suivi
+        </p>
+      </div>
+
+      <!-- Formulaire de recherche -->
+      <form method="get" th:action="@{/artistes}" class="form-recherche">
+        <label for="q-artiste" class="sr-only">Rechercher un artiste</label>
+        <input
+          id="q-artiste"
+          type="text"
+          name="q"
+          th:value="${q}"
+          placeholder="Rechercher un artiste…"
+          minlength="2"
+          autocomplete="off"
+        />
+        <button
+          type="submit"
+          class="btn btn-secondary"
+          th:disabled="${q == null or q.trim().length() < 2}"
+        >
+          Rechercher
+        </button>
+      </form>
+      <p class="form-aide">
+        La recherche propose des artistes déjà en base puis des suggestions
+        Deezer pour s'assurer de la bonne orthographe.
+      </p>
+
+      <!-- Message d'erreur flash -->
+      <div
+        th:if="${erreur}"
+        class="alerte alerte-erreur"
+        th:text="${erreur}"
+      ></div>
+
+      <!-- Feedback visuel fetch artiste ajouté -->
+      <div
+        th:if="${fetchEnCours}"
+        data-delai="10000"
+        class="alerte alerte-info"
+      >
+        Fetch en cours pour « <strong th:text="${fetchEnCours}"></strong> »… Les
+        concerts apparaîtront dans quelques secondes.
+      </div>
+
+      <!-- Résultats de recherche -->
+      <section
+        th:if="${donnees.suggestions != null and !donnees.suggestions.isEmpty()}"
+        class="section-resultats"
+      >
+        <h2 class="section-label" th:text="'Résultats pour « ' + ${q} + ' »'">
+          Résultats
+        </h2>
+        <ul class="liste-cartes">
+          <li class="carte-item" th:each="suggestion : ${donnees.suggestions}">
+            <p class="carte-nom" th:text="${suggestion.nom}">Artiste</p>
+            <form method="post" th:action="@{/artistes/ajouter}">
+              <input type="hidden" name="nom" th:value="${suggestion.nom}" />
+              <button type="submit" class="btn btn-sm btn-secondary">
+                Suivre
+              </button>
+            </form>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Recherche sans résultat -->
+      <div
+        th:if="${q != null and q.trim().length() >= 2 and (donnees.suggestions == null or donnees.suggestions.isEmpty())}"
+        class="section-resultats"
+      >
+        <div th:if="${donnees.dejaLeSuivi}" class="alerte alerte-info">
+          Vous suivez déjà « <span th:text="${q}">artiste</span> ».
+        </div>
+        <div th:unless="${donnees.dejaLeSuivi}" class="alerte alerte-info">
+          <p>Aucun résultat pour « <span th:text="${q}">artiste</span> ».</p>
+          <form
+            method="post"
+            th:action="@{/artistes/ajouter}"
+            class="form-ajouter-direct"
+          >
+            <input type="hidden" name="nom" th:value="${q}" />
+            <button type="submit" class="btn btn-primary">
+              Ajouter « <span th:text="${q}">artiste</span> » quand même
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Liste des artistes suivis -->
+      <div th:if="${donnees.artistes.isEmpty()}" class="etat-vide">
+        <p class="etat-vide-titre">Aucun artiste suivi.</p>
+        <p class="etat-vide-texte">
+          Recherchez un artiste ci-dessus pour commencer.
+        </p>
+      </div>
+
+      <section th:unless="${donnees.artistes.isEmpty()}">
+        <h2 class="section-label">Artistes suivis</h2>
+        <ul class="liste-cartes">
+          <li class="carte-item" th:each="artiste : ${donnees.artistes}">
+            <span class="carte-nom" th:text="${artiste.artisteAffiche}"
+              >Artiste</span
+            >
+            <form
+              method="post"
+              th:action="@{/artistes/supprimer/{n}(n=${artiste.artisteNormalise})}"
+            >
+              <button
+                type="submit"
+                class="btn btn-sm btn-danger-texte"
+                th:attr="aria-label='Supprimer ' + ${artiste.artisteAffiche}"
+              >
+                Supprimer
+              </button>
+            </form>
+          </li>
+        </ul>
+      </section>
+    </th:block>
+  </body>
+</html>

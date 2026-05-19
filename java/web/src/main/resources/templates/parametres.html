@@ -1,0 +1,658 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/base}"
+  th:lang="fr"
+>
+  <head>
+    <title>Paramètres — Strapontin</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contenu">
+      <div class="page-header">
+        <h1>Paramètres</h1>
+      </div>
+
+      <div
+        th:if="${succes}"
+        class="alerte alerte-succes"
+        th:text="'Paramètres enregistrés.'"
+      ></div>
+      <div
+        th:if="${erreur}"
+        class="alerte alerte-erreur"
+        th:text="${erreur}"
+      ></div>
+
+      <nav class="param-onglets" aria-label="Sections des paramètres">
+        <a href="#preferences" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-sliders-horizontal" />
+          </svg>
+          Préférences
+        </a>
+        <a href="#notifications" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-bell" />
+          </svg>
+          Notifications
+        </a>
+        <a href="#compte" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-user" />
+          </svg>
+          Compte
+        </a>
+        <a href="#donnees" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-database" />
+          </svg>
+          Données
+        </a>
+      </nav>
+
+      <div class="parametres-sections">
+        <!-- Section Préférences -->
+        <section id="preferences" class="parametres-section">
+          <!-- Départements -->
+          <div class="param-bloc">
+            <h3 class="param-label">Départements de découverte</h3>
+            <p class="param-aide">
+              Séparés par des virgules (ex. : 75, 92, 93). Utilisés par la page
+              Découverte.
+            </p>
+            <form
+              method="post"
+              th:action="@{/parametres/departements}"
+              class="form-inline"
+            >
+              <input
+                type="text"
+                name="departements"
+                th:value="${config?.departements != null ? #strings.listJoin(config.departements, ', ') : ''}"
+                placeholder="75, 92, 93…"
+                autocomplete="off"
+              />
+              <button type="submit" class="btn btn-secondary">
+                Enregistrer
+              </button>
+            </form>
+          </div>
+
+          <!-- Filtre disponibles -->
+          <div class="param-bloc">
+            <h3 class="param-label">Concerts disponibles uniquement</h3>
+            <p class="param-aide">
+              Masque les concerts dont la billetterie est fermée (annulés,
+              complets…).
+            </p>
+            <form
+              method="post"
+              th:action="@{/parametres/filtres}"
+              class="form-toggle"
+            >
+              <label class="switch">
+                <input
+                  type="checkbox"
+                  name="filtreDisponibles"
+                  value="true"
+                  th:checked="${config?.filtreDisponibles}"
+                  onchange="this.form.submit()"
+                />
+                <span class="switch-curseur"></span>
+              </label>
+            </form>
+          </div>
+
+          <!-- Thème -->
+          <div class="param-bloc">
+            <h3 class="param-label">Thème de l'interface</h3>
+            <div class="theme-choix">
+              <form method="post" th:action="@{/parametres/theme}">
+                <input type="hidden" name="valeur" value="auto" />
+                <button
+                  type="submit"
+                  th:classappend="${config?.theme == 'auto' or config?.theme == null ? ' actif' : ''}"
+                  class="btn btn-theme"
+                >
+                  Automatique
+                </button>
+              </form>
+              <form method="post" th:action="@{/parametres/theme}">
+                <input type="hidden" name="valeur" value="clair" />
+                <button
+                  type="submit"
+                  th:classappend="${config?.theme == 'clair' ? ' actif' : ''}"
+                  class="btn btn-theme"
+                >
+                  Clair
+                </button>
+              </form>
+              <form method="post" th:action="@{/parametres/theme}">
+                <input type="hidden" name="valeur" value="sombre" />
+                <button
+                  type="submit"
+                  th:classappend="${config?.theme == 'sombre' ? ' actif' : ''}"
+                  class="btn btn-theme"
+                >
+                  Sombre
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section Notifications -->
+        <section id="notifications" class="parametres-section">
+          <div class="param-bloc">
+            <h3 class="param-label">Notifications email</h3>
+            <form
+              method="post"
+              th:action="@{/parametres/notifications}"
+              class="form-vertical"
+            >
+              <div class="form-group">
+                <label for="frequence">Fréquence des emails</label>
+                <select
+                  id="frequence"
+                  name="frequenceNotifications"
+                  th:disabled="${config == null or !config.resendDisponible}"
+                >
+                  <option
+                    value="jamais"
+                    th:selected="${config?.frequenceNotifications == 'jamais' or config?.frequenceNotifications == null}"
+                  >
+                    Jamais
+                  </option>
+                  <option
+                    value="quotidien"
+                    th:selected="${config?.frequenceNotifications == 'quotidien'}"
+                  >
+                    Récapitulatif quotidien (8h)
+                  </option>
+                  <option
+                    value="temps_reel"
+                    th:selected="${config?.frequenceNotifications == 'temps_reel'}"
+                  >
+                    À chaque nouveau concert
+                  </option>
+                </select>
+                <p class="form-aide" th:unless="${config?.resendDisponible}">
+                  Les emails ne sont pas disponibles (clé Resend non
+                  configurée).
+                </p>
+              </div>
+
+              <div class="form-group form-checkboxes">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="notifArtistes"
+                    value="true"
+                    th:checked="${config?.notifArtistes}"
+                    th:disabled="${config == null or !config.resendDisponible}"
+                  />
+                  Artistes suivis
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="notifSalles"
+                    value="true"
+                    th:checked="${config?.notifSalles}"
+                    th:disabled="${config == null or !config.resendDisponible}"
+                  />
+                  Salles suivies
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                class="btn btn-secondary"
+                th:disabled="${config == null or !config.resendDisponible}"
+              >
+                Enregistrer
+              </button>
+            </form>
+          </div>
+
+          <!-- Notifications push -->
+          <div id="push-section" class="param-bloc" style="margin-top: 1.5rem">
+            <h3 class="param-label">Notifications push</h3>
+            <div
+              id="push-erreur"
+              class="alerte alerte-erreur"
+              style="display: none"
+            ></div>
+            <div id="push-non-supporte" style="display: none">
+              <p class="param-aide">
+                Les notifications push nécessitent HTTPS. Elles seront
+                disponibles une fois l'application déployée en production.
+              </p>
+            </div>
+            <div id="push-vapid-manquant" style="display: none">
+              <p class="param-aide">
+                Les notifications push ne sont pas configurées (clé VAPID
+                manquante dans la configuration admin).
+              </p>
+            </div>
+            <div id="push-permission-refusee" style="display: none">
+              <p class="param-aide">
+                Les notifications sont bloquées dans votre navigateur. Pour les
+                activer, modifiez les permissions du site dans les paramètres de
+                votre navigateur.
+              </p>
+            </div>
+            <div id="push-abonne" style="display: none">
+              <p class="param-aide">
+                Les notifications push sont activées sur cet appareil. Vous
+                recevrez une alerte lors de chaque digest.
+              </p>
+              <button
+                type="button"
+                id="btn-desactiver-push"
+                class="btn btn-secondary"
+              >
+                Désactiver les notifications push
+              </button>
+            </div>
+            <div id="push-non-abonne" style="display: none">
+              <p class="param-aide">
+                Recevez une notification sur cet appareil en même temps que vos
+                emails de digest.
+              </p>
+              <button
+                type="button"
+                id="btn-activer-push"
+                class="btn btn-secondary"
+              >
+                Activer les notifications push
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section Compte -->
+        <section id="compte" class="parametres-section">
+          <!-- Nom et email -->
+          <div class="param-bloc">
+            <h3 class="param-label">Profil</h3>
+            <form
+              method="post"
+              th:action="@{/parametres/compte}"
+              class="form-vertical form-compact"
+            >
+              <div class="form-group">
+                <label for="nom">Nom d'affichage</label>
+                <input
+                  id="nom"
+                  type="text"
+                  name="nom"
+                  th:value="${profil?.nom}"
+                  maxlength="100"
+                  autocomplete="name"
+                />
+              </div>
+              <div class="form-group">
+                <label for="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  th:value="${profil?.email}"
+                  maxlength="254"
+                  autocomplete="email"
+                />
+              </div>
+              <button type="submit" class="btn btn-secondary">
+                Enregistrer
+              </button>
+            </form>
+          </div>
+
+          <!-- Identifiant -->
+          <div class="param-bloc">
+            <h3 class="param-label">Identifiant de connexion</h3>
+            <form
+              method="post"
+              th:action="@{/parametres/identifiant}"
+              class="form-inline"
+            >
+              <input
+                type="text"
+                name="identifiant"
+                th:value="${profil?.identifiant}"
+                minlength="3"
+                maxlength="30"
+                pattern="[a-zA-Z0-9_]+"
+                autocomplete="username"
+              />
+              <button type="submit" class="btn btn-secondary">Modifier</button>
+            </form>
+          </div>
+
+          <!-- TOTP -->
+          <div class="param-bloc">
+            <h3 class="param-label">Authentification à deux facteurs (TOTP)</h3>
+            <div th:if="${utilisateur?.twoFactorActif}">
+              <p class="param-aide">TOTP activé sur votre compte.</p>
+              <form
+                method="post"
+                th:action="@{/parametres/totp/desactiver}"
+                class="form-vertical form-compact"
+              >
+                <div class="form-group">
+                  <label for="totp-desact-code">Code de confirmation</label>
+                  <input
+                    id="totp-desact-code"
+                    type="text"
+                    name="code"
+                    inputmode="numeric"
+                    pattern="[0-9]{6}"
+                    maxlength="6"
+                    autocomplete="one-time-code"
+                    placeholder="123456"
+                    required
+                  />
+                </div>
+                <button type="submit" class="btn btn-danger btn-sm">
+                  Désactiver le TOTP
+                </button>
+              </form>
+            </div>
+            <div th:unless="${utilisateur?.twoFactorActif}">
+              <p class="param-aide">
+                Protégez votre compte avec une application d'authentification
+                (Google Authenticator, Aegis…).
+              </p>
+              <a th:href="@{/parametres/totp}" class="btn btn-secondary btn-sm">
+                Configurer le TOTP
+              </a>
+            </div>
+          </div>
+
+          <!-- Mot de passe -->
+          <div class="param-bloc">
+            <h3 class="param-label">Mot de passe</h3>
+            <p class="param-aide">
+              La session sera invalidée après le changement.
+            </p>
+            <form
+              method="post"
+              th:action="@{/parametres/motdepasse}"
+              class="form-vertical form-compact"
+            >
+              <div class="form-group">
+                <label for="mdp-actuel">Mot de passe actuel</label>
+                <input
+                  id="mdp-actuel"
+                  type="password"
+                  name="motDePasseActuel"
+                  required
+                  autocomplete="current-password"
+                />
+              </div>
+              <div class="form-group">
+                <label for="mdp-nouveau">Nouveau mot de passe</label>
+                <input
+                  id="mdp-nouveau"
+                  type="password"
+                  name="motDePasseNouveau"
+                  required
+                  minlength="12"
+                  autocomplete="new-password"
+                  placeholder="12 caractères minimum"
+                />
+              </div>
+              <button type="submit" class="btn btn-secondary">Changer</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- Section Données -->
+        <section id="donnees" class="parametres-section">
+          <!-- Export -->
+          <div class="param-bloc">
+            <h3 class="param-label">Exporter mes préférences</h3>
+            <p class="param-aide">
+              Télécharge un fichier JSON avec vos artistes, salles et
+              configuration.
+            </p>
+            <a th:href="@{/api/preferences}" class="btn btn-secondary"
+              >Télécharger (JSON)</a
+            >
+          </div>
+
+          <!-- Import -->
+          <div class="param-bloc">
+            <h3 class="param-label">Importer des préférences</h3>
+            <p class="param-aide">
+              Importez un fichier JSON exporté par Strapontin. Mode Fusionner
+              conserve vos données existantes ; mode Écraser les remplace.
+            </p>
+            <form
+              method="post"
+              th:action="@{/parametres/importer}"
+              enctype="multipart/form-data"
+              class="form-vertical form-compact"
+            >
+              <div class="form-group">
+                <label for="import-fichier">Fichier JSON</label>
+                <input
+                  id="import-fichier"
+                  type="file"
+                  name="fichier"
+                  accept=".json,application/json"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="import-mode">Mode</label>
+                <select id="import-mode" name="mode">
+                  <option value="fusionner">
+                    Fusionner (conserver les données existantes)
+                  </option>
+                  <option value="ecraser">
+                    Écraser (remplacer artistes et salles)
+                  </option>
+                </select>
+              </div>
+              <div class="form-group form-checkboxes">
+                <label>
+                  <input type="checkbox" name="importerConfig" value="true" />
+                  Importer la configuration (départements, notifications, thème)
+                </label>
+              </div>
+              <button type="submit" class="btn btn-secondary">Importer</button>
+            </form>
+          </div>
+
+          <!-- Suppression de compte -->
+          <div class="param-bloc param-bloc-danger">
+            <h3 class="param-label">Supprimer mon compte</h3>
+            <p class="param-aide">
+              Supprime définitivement votre compte et toutes vos données. Cette
+              action est irréversible.
+            </p>
+            <form
+              method="post"
+              th:action="@{/parametres/supprimer-compte}"
+              onsubmit="
+                return confirm(
+                  'Supprimer définitivement votre compte ? Cette action est irréversible.',
+                );
+              "
+            >
+              <button type="submit" class="btn btn-danger">
+                Supprimer mon compte
+              </button>
+            </form>
+          </div>
+        </section>
+      </div>
+      <script>
+        (function () {
+          var erreurDiv = document.getElementById("push-erreur");
+          var nonSupporteDiv = document.getElementById("push-non-supporte");
+          var vapidManquantDiv = document.getElementById("push-vapid-manquant");
+          var permRefusee = document.getElementById("push-permission-refusee");
+          var abonneDiv = document.getElementById("push-abonne");
+          var nonAbonneDiv = document.getElementById("push-non-abonne");
+
+          if (
+            location.protocol !== "https:" &&
+            location.hostname !== "localhost"
+          ) {
+            nonSupporteDiv.style.display = "";
+            return;
+          }
+          if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+            nonSupporteDiv.style.display = "";
+            return;
+          }
+
+          var btnActiver = document.getElementById("btn-activer-push");
+          var btnDesactiver = document.getElementById("btn-desactiver-push");
+          var pushClePublique = null;
+          var pushAbonnement = null;
+          var pushEnCours = false;
+
+          function afficherErreur(msg) {
+            erreurDiv.textContent = msg;
+            erreurDiv.style.display = "";
+          }
+
+          function masquerErreur() {
+            erreurDiv.style.display = "none";
+          }
+
+          function majEtat() {
+            permRefusee.style.display = "none";
+            abonneDiv.style.display = "none";
+            nonAbonneDiv.style.display = "none";
+            if (Notification.permission === "denied") {
+              permRefusee.style.display = "";
+            } else if (pushAbonnement) {
+              abonneDiv.style.display = "";
+            } else {
+              nonAbonneDiv.style.display = "";
+            }
+          }
+
+          function urlBase64VersUint8Array(base64) {
+            var rembourrage = "=".repeat((4 - (base64.length % 4)) % 4);
+            var b64 = (base64 + rembourrage)
+              .replace(/-/g, "+")
+              .replace(/_/g, "/");
+            var brut = atob(b64);
+            var octets = new Uint8Array(brut.length);
+            for (var i = 0; i < brut.length; i++)
+              octets[i] = brut.charCodeAt(i);
+            return octets.buffer;
+          }
+
+          async function chargerEtat() {
+            try {
+              var results = await Promise.all([
+                fetch("/api/push").then(function (r) {
+                  return r.json();
+                }),
+                navigator.serviceWorker.ready,
+              ]);
+              var repVapid = results[0];
+              var registration = results[1];
+              if (!repVapid.disponible) {
+                vapidManquantDiv.style.display = "";
+                return;
+              }
+              pushClePublique = repVapid.clePublique;
+              pushAbonnement = await registration.pushManager.getSubscription();
+              majEtat();
+            } catch (_) {
+              nonSupporteDiv.style.display = "";
+            }
+          }
+
+          btnActiver.addEventListener("click", async function () {
+            if (!pushClePublique || pushEnCours) return;
+            pushEnCours = true;
+            masquerErreur();
+            btnActiver.disabled = true;
+            btnActiver.textContent = "Activation…";
+            try {
+              var permission = await Notification.requestPermission();
+              if (permission !== "granted") {
+                if (permission === "denied") majEtat();
+                return;
+              }
+              var registration = await navigator.serviceWorker.ready;
+              var abonnement = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64VersUint8Array(pushClePublique),
+              });
+              var rep = await fetch("/api/push", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  endpoint: abonnement.endpoint,
+                  keys: {
+                    p256dh: btoa(
+                      String.fromCharCode(
+                        ...new Uint8Array(abonnement.getKey("p256dh")),
+                      ),
+                    ),
+                    auth: btoa(
+                      String.fromCharCode(
+                        ...new Uint8Array(abonnement.getKey("auth")),
+                      ),
+                    ),
+                  },
+                }),
+              });
+              if (!rep.ok) throw new Error("Échec enregistrement");
+              pushAbonnement = abonnement;
+              document.cookie = "push_opt_out=;path=/;max-age=0;SameSite=Lax";
+              majEtat();
+            } catch (e) {
+              afficherErreur(e.message || "Une erreur est survenue.");
+            } finally {
+              pushEnCours = false;
+              btnActiver.disabled = false;
+              btnActiver.textContent = "Activer les notifications push";
+            }
+          });
+
+          btnDesactiver.addEventListener("click", async function () {
+            if (!pushAbonnement || pushEnCours) return;
+            pushEnCours = true;
+            masquerErreur();
+            btnDesactiver.disabled = true;
+            btnDesactiver.textContent = "Désactivation…";
+            try {
+              var endpoint = pushAbonnement.endpoint;
+              await pushAbonnement.unsubscribe();
+              await fetch("/api/push", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ endpoint: endpoint }),
+              });
+              pushAbonnement = null;
+              document.cookie =
+                "push_opt_out=1;path=/;max-age=31536000;SameSite=Lax";
+              majEtat();
+            } catch (e) {
+              afficherErreur(e.message || "Une erreur est survenue.");
+            } finally {
+              pushEnCours = false;
+              btnDesactiver.disabled = false;
+              btnDesactiver.textContent = "Désactiver les notifications push";
+            }
+          });
+
+          chargerEtat();
+        })();
+      </script>
+    </th:block>
+  </body>
+</html>

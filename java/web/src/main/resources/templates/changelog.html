@@ -1,0 +1,568 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/base}"
+  th:lang="fr"
+>
+  <head>
+    <title>Nouveautés — Strapontin</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contenu">
+      <div class="page-header">
+        <h1>Nouveautés</h1>
+      </div>
+
+      <div class="max-w-xl changelog">
+        <section>
+          <h2 class="changelog-version">v 2.0.0 — 2026</h2>
+          <div class="changelog-entrees">
+            <div>
+              <p class="changelog-categorie">Infrastructure</p>
+              <ul>
+                <li>
+                  Migration complète vers Java / Spring Boot — l'application ne
+                  dépend plus de Node.js.
+                </li>
+                <li>
+                  Spring Security remplace Better-Auth pour la gestion des
+                  sessions et de l'authentification.
+                </li>
+                <li>
+                  Interface serveur Thymeleaf (rendu côté serveur) en
+                  remplacement de SvelteKit.
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p class="changelog-categorie">Administration</p>
+              <ul>
+                <li>
+                  La section « Actualisations » affiche désormais un badge animé
+                  « En cours » pour chaque job en cours d'exécution, et se
+                  recharge automatiquement à la fin des fetches.
+                </li>
+                <li>
+                  Le bouton « Relancer les fetches » donne un retour visuel
+                  immédiat et recharge la page sans intervention manuelle.
+                </li>
+                <li>
+                  Les dates et heures s'affichent en français dans toutes les
+                  sections (jobs, logs, utilisateurs).
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p class="changelog-categorie">Corrections</p>
+              <ul>
+                <li>
+                  Accueil : les concerts d'artistes en résidence (plusieurs
+                  dates dans la même salle, ex. Slimane à la Salle Pleyel)
+                  s'affichent désormais correctement — toutes les dates sont
+                  conservées au lieu d'une seule.
+                </li>
+                <li>
+                  Accueil : certains concerts (artistes en tournée, concerts
+                  liés à une salle suivie) n'apparaissaient pas — corrigé.
+                </li>
+                <li>
+                  Import des préférences : les fichiers exportés depuis la v1
+                  sont de nouveau acceptés.
+                </li>
+                <li>
+                  Salles : l'ajout de salles arbitraires (sans résultat de
+                  recherche) n'est plus possible, pour préserver la cohérence
+                  des données.
+                </li>
+                <li>
+                  Administration : le bouton « Copier » du lien d'invitation
+                  fonctionne désormais sur les accès en HTTP local.
+                </li>
+                <li>
+                  Administration : les liens d'invitation et de réinitialisation
+                  de mot de passe utilisent désormais l'adresse réelle du
+                  serveur — ils fonctionnent correctement depuis n'importe
+                  quelle instance (dev, prod) sans configuration supplémentaire.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <details class="changelog-historique">
+          <summary class="changelog-historique-titre">
+            Versions précédentes
+          </summary>
+
+          <section>
+            <h2 class="changelog-version">v 1.4.0 — Mai 2026</h2>
+            <div class="changelog-entrees">
+              <div>
+                <p class="changelog-categorie">Accueil</p>
+                <ul>
+                  <li>
+                    Nouveau bouton « Masquer » sur chaque groupe d'artiste pour
+                    masquer toute la tournée en un clic.
+                  </li>
+                  <li>
+                    Nouveau filtre « Masqués » pour retrouver et réafficher les
+                    concerts masqués.
+                  </li>
+                  <li>
+                    L'accueil affiche désormais un avertissement quand plus de
+                    50 concerts sont disponibles, avec un lien vers Mes
+                    spectacles.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Mes spectacles</p>
+                <ul>
+                  <li>
+                    Pagination par 100 concerts avec navigation entre les pages.
+                  </li>
+                  <li>
+                    Les mois disponibles dans le filtre sont calculés sur
+                    l'ensemble de vos concerts, pas uniquement la page en cours.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Paramètres</p>
+                <ul>
+                  <li>
+                    La page est désormais organisée en quatre onglets :
+                    Préférences, Notifications, Compte, Données. L'onglet actif
+                    est mémorisé dans l'URL.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Artistes</p>
+                <ul>
+                  <li>
+                    Un indicateur de chargement apparaît à côté de l'artiste
+                    après son ajout, pendant la recherche des concerts.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Aide</p>
+                <ul>
+                  <li>
+                    La page d'aide est réorganisée avec des sections claires et
+                    des instructions pour installer l'application (iOS, Android,
+                    Desktop).
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Accessibilité</p>
+                <ul>
+                  <li>
+                    Sur la page Paramètres, la clé secrète TOTP peut désormais
+                    être affichée en clair (pour les applications
+                    d'authentification ne supportant pas le scan QR).
+                  </li>
+                  <li>
+                    Lors de la connexion, le champ de saisie du code de
+                    vérification (2FA) reçoit automatiquement le focus.
+                  </li>
+                  <li>
+                    Amélioration générale de la navigation au clavier et de la
+                    compatibilité avec les lecteurs d'écran.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 class="changelog-version">v 1.3.1 — Mai 2026</h2>
+            <div class="changelog-entrees">
+              <div>
+                <p class="changelog-categorie">Recherche d'artiste</p>
+                <ul>
+                  <li>
+                    La recherche d'artiste trouve désormais les résultats quelle
+                    que soit l'orthographe des accents (« Adèle » trouve « Adele
+                    », « Etienne Daho » trouve « Étienne Daho »).
+                  </li>
+                  <li>
+                    Les suggestions s'appuient maintenant sur Deezer, plus
+                    fiable depuis ce serveur.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 class="changelog-version">v 1.3.0 — Mai 2026</h2>
+            <div class="changelog-entrees">
+              <div>
+                <p class="changelog-categorie">Découverte</p>
+                <ul>
+                  <li>
+                    Nouvelle page Découverte — explorez tous les concerts en
+                    base par département, sans vous limiter à vos artistes
+                    suivis.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Notifications</p>
+                <ul>
+                  <li>
+                    Les concerts dont les billets ne sont plus disponibles
+                    n'apparaissent plus comme « Nouveaux » et ne déclenchent
+                    plus de notification.
+                  </li>
+                  <li>
+                    Le clic sur une notification ouvre directement les
+                    spectacles de l'artiste concerné.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Aide</p>
+                <ul>
+                  <li>La page d'aide a été réorganisée et mise à jour.</li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Administration</p>
+                <ul>
+                  <li>
+                    Les logs système sont maintenant visibles dans la page
+                    d'administration : connexions, modifications de
+                    configuration et état des jobs.
+                  </li>
+                  <li>
+                    La page d'administration a été réorganisée en onglets :
+                    Tableau de bord, Logs, Configuration, Utilisateurs. La
+                    colonne « Dernière activité » indique la date de connexion
+                    de chaque utilisateur.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Double authentification</p>
+                <ul>
+                  <li>
+                    La double authentification TOTP est disponible dans
+                    Paramètres → Double authentification. Fonctionne avec Google
+                    Authenticator, Aegis, 1Password et toute application
+                    compatible TOTP. Elle est optionnelle pour tous les
+                    utilisateurs.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Paramètres</p>
+                <ul>
+                  <li>Configuration des départements de découverte.</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 class="changelog-version">v 1.2.3 — Mai 2026</h2>
+            <div class="changelog-entrees">
+              <div>
+                <p class="changelog-categorie">Concerts</p>
+                <ul>
+                  <li>
+                    Correction d'un problème qui pouvait afficher le même
+                    concert en doublon lors du premier ajout d'un artiste (si
+                    Ticketmaster renvoyait deux noms de salle légèrement
+                    différents pour le même événement).
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 class="changelog-version">v 1.2.2 — Mai 2026</h2>
+            <div class="changelog-entrees">
+              <div>
+                <p class="changelog-categorie">Filtres</p>
+                <ul>
+                  <li>
+                    Les deux chips « Complet » et « Annulé/Reporté » sont
+                    remplacés par un seul chip
+                    <strong>« Indisponibles »</strong>
+                    sur l'accueil et Mes spectacles. Il masque les concerts
+                    complets, annulés et reportés sans date — les concerts
+                    reportés avec une nouvelle date restent toujours visibles.
+                  </li>
+                  <li>
+                    Dans Découverte et Mes spectacles, changer un filtre (mois,
+                    prix, catégorie, genre) applique le résultat immédiatement,
+                    sans avoir à cliquer sur un bouton.
+                  </li>
+                  <li>
+                    Le bouton « Filtrer » est renommé « Rechercher » et se
+                    trouve maintenant directement à côté du champ de recherche.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Paramètres</p>
+                <ul>
+                  <li>
+                    Le curseur « rayon de recherche » a été supprimé. Le rayon
+                    est maintenant calculé automatiquement selon la taille
+                    géographique de chaque département — les grandes régions
+                    comme la Gironde ou la Corse obtiennent un rayon adapté.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Concerts</p>
+                <ul>
+                  <li>
+                    Les recherches par département et par salle se limitent
+                    désormais aux 6 prochains mois, ce qui réduit le nombre de
+                    résultats inutiles et améliore les performances.
+                  </li>
+                  <li>
+                    Les artistes et salles suivis récupèrent désormais jusqu'à
+                    200 concerts par page au lieu de 20.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 class="changelog-version">v 1.2.1 — Mai 2026</h2>
+            <div class="changelog-entrees">
+              <div>
+                <p class="changelog-categorie">Notifications email et push</p>
+                <p>
+                  Les notifications email et push fonctionnent désormais
+                  correctement. La clé API Resend est lue depuis la
+                  configuration de l'application (comme les autres clés). Le
+                  marquage « déjà notifié » n'est effectué que si l'envoi a
+                  réussi.
+                </p>
+              </div>
+              <div>
+                <p class="changelog-categorie">Accueil</p>
+                <ul>
+                  <li>
+                    Tous vos concerts s'affichent (la limite de 50 est
+                    supprimée).
+                  </li>
+                  <li>
+                    Les chips « Complet » et « Annulé/Reporté » s'affichent dès
+                    que vous suivez des artistes, même sans concert en cours.
+                  </li>
+                  <li>
+                    Quand les filtres actifs expliquent l'absence de résultats,
+                    un message dédié vous invite à les ajuster.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Artistes et salles</p>
+                <ul>
+                  <li>
+                    Si vous recherchez un artiste ou une salle déjà suivi,
+                    l'application l'indique clairement au lieu d'afficher « non
+                    trouvé ».
+                  </li>
+                  <li>
+                    Après avoir supprimé un artiste ou une salle, un message
+                    vous rappelle que les concerts associés disparaîtront lors
+                    de la prochaine actualisation (dans moins de 2h).
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Mes spectacles</p>
+                <ul>
+                  <li>
+                    Le filtre par catégorie et par genre affiche désormais le
+                    bon message d'état vide quand aucun résultat ne correspond.
+                  </li>
+                  <li>
+                    Le filtre par budget fonctionne correctement pour tous les
+                    montants (la comparaison était lexicographique, ex. 9 €
+                    était considéré supérieur à 30 €).
+                  </li>
+                  <li>
+                    La chip « Masqués » conserve désormais tous les autres
+                    filtres actifs au lieu de les effacer.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Découverte</p>
+                <ul>
+                  <li>
+                    Le filtre par budget déclenche désormais le message « Aucun
+                    résultat pour ces filtres. » quand aucun concert ne
+                    correspond.
+                  </li>
+                  <li>
+                    La chip « Mes depts » s'affiche correctement même quand le
+                    nombre de départements sélectionnés correspond mais pas leur
+                    contenu.
+                  </li>
+                  <li>
+                    Le lien « Réinitialiser » apparaît maintenant aussi quand
+                    seul le tri a été modifié.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Paramètres</p>
+                <ul>
+                  <li>
+                    L'import en mode « Fusionner » vérifie désormais que le
+                    total (existants + nouveaux) ne dépasse pas les limites (500
+                    artistes, 200 salles) et affiche un message explicite si
+                    c'est le cas.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Administration</p>
+                <ul>
+                  <li>
+                    Un bouton « Relancer tous les fetches » permet de déclencher
+                    manuellement l'actualisation des concerts (artistes suivis +
+                    région) sans attendre le cron 2h.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 class="changelog-version">v 1.2 — Avril 2026</h2>
+            <div class="changelog-entrees">
+              <div>
+                <p class="changelog-categorie">Notifications push</p>
+                <p>
+                  Recevez des notifications directement sur votre appareil, en
+                  même temps que vos emails de digest. Activez-les dans
+                  Paramètres → Notifications push. Fonctionne sur tous les
+                  appareils et navigateurs compatibles (Chrome, Firefox, Edge,
+                  Safari 17+).
+                </p>
+              </div>
+              <div>
+                <p class="changelog-categorie">Application installable</p>
+                <p>
+                  Strapontin peut désormais être installé comme application sur
+                  votre appareil (Android, iOS, desktop) via le menu de votre
+                  navigateur. L'application s'ouvre alors sans barre d'adresse,
+                  comme une application native.
+                </p>
+              </div>
+              <div>
+                <p class="changelog-categorie">Masquer un concert</p>
+                <p>
+                  Un bouton « Masquer » est disponible sur chaque concert de
+                  l'Accueil. Le concert disparaît de la page d'accueil mais
+                  reste visible dans Mes spectacles. Pour le réafficher,
+                  utilisez le chip « Masqués » dans Mes spectacles puis cliquez
+                  sur « Réafficher ».
+                </p>
+              </div>
+              <div>
+                <p class="changelog-categorie">Logo et favicon</p>
+                <p>
+                  L'application dispose désormais de son logo et de sa favicône,
+                  visibles dans l'onglet du navigateur et les pages de
+                  connexion.
+                </p>
+              </div>
+              <div>
+                <p class="changelog-categorie">Gestion du compte</p>
+                <ul>
+                  <li>
+                    Modification de l'adresse email depuis Paramètres → Mon
+                    compte.
+                  </li>
+                  <li>
+                    Suppression du compte depuis Paramètres → Zone de danger
+                    (RGPD art. 17).
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Administration</p>
+                <ul>
+                  <li>
+                    Modification du nom et de l'email d'un utilisateur depuis la
+                    page Admin.
+                  </li>
+                  <li>
+                    Réinitialisation du mot de passe par l'admin : envoi d'un
+                    lien de reset à l'utilisateur.
+                  </li>
+                  <li>
+                    Configuration des clés API depuis l'interface Admin
+                    (Ticketmaster, Resend, email de contact, URL de base) — sans
+                    accès au serveur.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Signalement et suggestions</p>
+                <p>
+                  Un formulaire de contact est disponible dans Aide pour
+                  signaler un bug, proposer une amélioration ou poser une
+                  question directement depuis l'application.
+                </p>
+              </div>
+              <div>
+                <p class="changelog-categorie">Notifications email</p>
+                <ul>
+                  <li>
+                    Recevez un email lorsque de nouveaux concerts correspondent
+                    à vos préférences. Trois fréquences au choix dans Paramètres
+                    : désactivées, après chaque mise à jour (toutes les 2h), ou
+                    récapitulatif quotidien à 8h.
+                  </li>
+                  <li>
+                    Choix du contenu des notifications : concerts de vos
+                    artistes suivis, de vos salles suivies, ou les deux
+                    (Paramètres → Notifications).
+                  </li>
+                  <li>
+                    Email d'invitation automatique lors de la création de compte
+                    par l'admin.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p class="changelog-categorie">Mot de passe oublié</p>
+                <p>
+                  Réinitialisez votre mot de passe depuis la page de connexion
+                  sans passer par l'admin.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 class="changelog-version">v 1.0 — Avril 2026</h2>
+            <div class="changelog-entrees">
+              <div>
+                <p>Version initiale.</p>
+              </div>
+            </div>
+          </section>
+        </details>
+      </div>
+    </th:block>
+  </body>
+</html>

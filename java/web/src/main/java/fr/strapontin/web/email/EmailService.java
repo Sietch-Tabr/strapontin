@@ -1,0 +1,333 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025 Kwaite
+ */
+package fr.strapontin.web.email;
+
+import com.resend.Resend;
+import com.resend.core.exception.ResendException;
+import com.resend.services.emails.model.CreateEmailOptions;
+import fr.strapontin.web.config.ConfigService;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+
+/// Service d'email transactionnel via Resend (portage de `email.ts`).
+///
+/// Si `RESEND_API_KEY` est absent de la configuration, toutes les méthodes
+/// retournent silencieusement sans erreur (comportement identique au TypeScript).
+///
+/// Les corps d'emails sont rendus depuis des templates Thymeleaf situés dans
+/// `classpath:/templates/email/`.
+///
+/// Couvre l'ensemble des emails : invitation, reset MDP, signalement,
+/// digest concerts, alerte worker inactif.
+///
+/// @since 2.0.0
+/// @author Kwaite
+@Service
+public class EmailService {
+
+  private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+  private static final String EXPEDITEUR = "Strapontin <noreply@strapontin.kwaite.fr>";
+  private static final String CLE_BASE_URL = "baseUrl";
+
+  private final ConfigService configService;
+  private final TemplateEngine templateEngine;
+
+  public EmailService(ConfigService configService, TemplateEngine templateEngine) {
+    this.configService = configService;
+    this.templateEngine = templateEngine;
+  }
+
+  /// Paramètres d'un concert pour le digest email.
+  ///
+  /// @param artiste le nom de l'artiste
+  /// @param date    la date ISO (yyyy-MM-dd)
+  /// @param salle   le nom de la salle
+  /// @param ville   la ville (peut être nulle)
+  /// @param url     l'URL de billetterie (peut être nulle)
+  public record ConcertDigest(
+      String artiste, String date, String salle, String ville, String url) {}
+
+  private record ContexteEmail(Resend client, String replyTo, String baseUrl) {}
+
+  private Optional<ContexteEmail> obtenirContexte() {
+    Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
+    if (cle.isEmpty()) {
+      return Optional.empty();
+    }
+    String replyTo = configService.lireConfig("CONTACT_EMAIL").orElse("admin@strapontin.kwaite.fr");
+    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
+    return Optional.of(new ContexteEmail(new Resend(cle.get()), replyTo, baseUrl));
+  }
+
+  private String rendreCours(String nomTemplate, Map<String, Object> variables) {
+    Context ctx = new Context(Locale.FRANCE);
+    ctx.setVariables(variables);
+    return templateEngine.process("email/" + nomTemplate, ctx);
+  }
+
+  private void envoyer(
+      ContexteEmail ctx,
+      String destinataire,
+      String replyTo,
+      String sujet,
+      String corps,
+      String texte) {
+    try {
+      CreateEmailOptions options =
+          CreateEmailOptions.builder()
+              .from(EXPEDITEUR)
+              .replyTo(replyTo)
+              .to(List.of(destinataire))
+              .subject(sujet)
+              .html(corps)
+              .text(texte)
+              .build();
+      ctx.client().emails().send(options);
+    } catch (ResendException e) {
+      throw new IllegalStateException("Erreur d'envoi email", e);
+    }
+  }
+
+  /// Envoie un email d'invitation à un nouvel utilisateur.
+  ///
+  /// @param email       l'adresse email du destinataire
+  /// @param identifiant l'identifiant temporaire
+  /// @param lienReset   le lien de création de mot de passe (valable 24 heures)
+  public void envoyerInvitation(String email, String identifiant, String lienReset) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — email invitation non envoyé");
+      return;
+    }
+
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("identifiant", identifiant);
+    vars.put("lienReset", lienReset);
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
+    String corps = rendreCours("invitation", vars);
+
+    String texte =
+        """
+        Bienvenue sur Strapontin
+
+        Votre compte a été créé. Commencez par choisir votre mot de passe (lien valable 24 heures) :
+
+        %s
+
+        Une fois votre mot de passe créé, connectez-vous avec votre identifiant temporaire : %s
+
+        Il vous sera demandé de choisir un identifiant définitif à la première connexion.
+        """
+            .formatted(lienReset, identifiant);
+
+    try {
+      envoyer(ctx.get(), email, ctx.get().replyTo(), "Votre invitation Strapontin", corps, texte);
+      log.info("Invitation envoyée : {}", email);
+    } catch (Exception e) {
+      log.error("Échec envoi invitation : {}", email, e);
+    }
+  }
+
+  /// Envoie un email de réinitialisation de mot de passe.
+  ///
+  /// @param email     l'adresse email du destinataire
+  /// @param lienReset le lien de réinitialisation (valable 1 heure)
+  public void envoyerResetMotDePasse(String email, String lienReset) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — email reset non envoyé");
+      return;
+    }
+
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("lienReset", lienReset);
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
+    String corps = rendreCours("reset-mdp", vars);
+
+    String texte =
+        """
+        Réinitialisation du mot de passe
+
+        Cliquez sur ce lien pour réinitialiser votre mot de passe (valable 1 heure) :
+
+        %s
+
+        Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+        """
+            .formatted(lienReset);
+
+    try {
+      envoyer(
+          ctx.get(),
+          email,
+          ctx.get().replyTo(),
+          "Réinitialisation de votre mot de passe Strapontin",
+          corps,
+          texte);
+      log.info("Email reset MDP envoyé : {}", email);
+    } catch (Exception e) {
+      log.error("Échec envoi reset MDP : {}", email, e);
+    }
+  }
+
+  /// Indique si le service email est disponible (clé Resend configurée).
+  ///
+  /// @return `true` si `RESEND_API_KEY` est présent en configuration
+  public boolean estDisponible() {
+    return configService.lireConfig("RESEND_API_KEY").isPresent();
+  }
+
+  /// Envoie un signalement d'utilisateur à l'adresse de contact.
+  ///
+  /// @param type            le type (`bug`, `suggestion`, `question`)
+  /// @param message         le message
+  /// @param expediteurEmail l'email de l'expéditeur
+  /// @param expediteurNom   le nom de l'expéditeur
+  public void envoyerSignalement(
+      String type, String message, String expediteurEmail, String expediteurNom) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — signalement non envoyé");
+      return;
+    }
+
+    String typeLabel =
+        switch (type) {
+          case "bug" -> "Bug";
+          case "suggestion" -> "Amélioration";
+          case "question" -> "Question";
+          default -> type;
+        };
+
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("typeLabel", typeLabel);
+    vars.put("expediteurNom", expediteurNom);
+    vars.put("expediteurEmail", expediteurEmail);
+    vars.put("message", message);
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
+    String corps = rendreCours("signalement", vars);
+
+    String texte =
+        "Signalement — %s%n%nUtilisateur : %s%nEmail : %s%n%n%s"
+            .formatted(typeLabel, expediteurNom, expediteurEmail, message);
+
+    try {
+      envoyer(
+          ctx.get(),
+          ctx.get().replyTo(),
+          expediteurEmail,
+          "[Strapontin] Signalement — %s — %s".formatted(typeLabel, expediteurNom),
+          corps,
+          texte);
+      log.info("Signalement envoyé : {}", expediteurEmail);
+    } catch (Exception e) {
+      log.error("Échec envoi signalement", e);
+    }
+  }
+
+  /// Envoie un digest de nouveaux concerts à un utilisateur.
+  ///
+  /// @param email    l'adresse email du destinataire
+  /// @param concerts la liste des concerts à notifier (doit être non vide)
+  /// @return `true` si l'email a été envoyé avec succès
+  public boolean envoyerDigestConcerts(String email, List<ConcertDigest> concerts) {
+    if (concerts.isEmpty()) return false;
+
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — digest concerts non envoyé");
+      return false;
+    }
+
+    int nb = concerts.size();
+    String sujet =
+        nb == 1
+            ? "1 nouveau concert correspond à vos préférences"
+            : "%d nouveaux concerts correspondent à vos préférences".formatted(nb);
+
+    List<Map<String, Object>> lignes =
+        concerts.stream()
+            .map(
+                c -> {
+                  Map<String, Object> ligne = new HashMap<>();
+                  ligne.put("artiste", c.artiste());
+                  ligne.put("dateFormatee", formaterDate(c.date()));
+                  ligne.put("lieu", c.ville() != null ? c.salle() + " · " + c.ville() : c.salle());
+                  ligne.put("url", c.url());
+                  return ligne;
+                })
+            .toList();
+
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("sujet", sujet);
+    vars.put("lignes", lignes);
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
+    String corps = rendreCours("digest-concerts", vars);
+
+    try {
+      envoyer(ctx.get(), email, ctx.get().replyTo(), sujet, corps, sujet);
+      log.info("Digest envoyé : {} ({} concert(s))", email, nb);
+      return true;
+    } catch (Exception e) {
+      log.error("Échec envoi digest : {}", email, e);
+      return false;
+    }
+  }
+
+  /// Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3 heures.
+  ///
+  /// @param email               l'adresse email de l'administrateur
+  /// @param derniereActiviteIso la date ISO du dernier job complété, ou null
+  public void envoyerAlerteWorkerInactif(String email, String derniereActiviteIso) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — alerte worker non envoyée");
+      return;
+    }
+
+    String detail =
+        derniereActiviteIso != null
+            ? "Dernier job complété : %s.".formatted(derniereActiviteIso)
+            : "Aucun job complété enregistré.";
+
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("detail", detail);
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
+    String corps = rendreCours("alerte-worker", vars);
+
+    String sujet = "Strapontin — worker inactif";
+    try {
+      envoyer(
+          ctx.get(),
+          email,
+          ctx.get().replyTo(),
+          sujet,
+          corps,
+          "Worker inactif — %s Consultez l'administration : %s/admin"
+              .formatted(detail, ctx.get().baseUrl()));
+      log.info("Alerte worker envoyée : {}", email);
+    } catch (Exception e) {
+      log.error("Échec envoi alerte worker", e);
+    }
+  }
+
+  private static String formaterDate(String dateIso) {
+    LocalDate date = LocalDate.parse(dateIso);
+    return DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
+        .withLocale(Locale.FRANCE)
+        .format(date);
+  }
+}

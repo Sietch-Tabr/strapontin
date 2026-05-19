@@ -1,0 +1,106 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/auth}"
+>
+  <head>
+    <title>Configuration initiale</title>
+  </head>
+  <body>
+    <div layout:fragment="contenu">
+      <h1 class="auth-title">Strapontin</h1>
+      <p class="auth-subtitle">Créez le premier compte administrateur</p>
+
+      <div
+        class="alerte alerte-erreur"
+        th:if="${erreur}"
+        th:text="${erreur}"
+      ></div>
+
+      <form method="post" th:action="@{/setup}">
+        <div class="form-group">
+          <label for="nom">Nom d'affichage</label>
+          <input
+            id="nom"
+            name="nom"
+            type="text"
+            th:value="${nom}"
+            maxlength="100"
+            autocomplete="name"
+            autofocus
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="identifiant">Identifiant de connexion</label>
+          <input
+            id="identifiant"
+            name="identifiant"
+            type="text"
+            th:value="${identifiant}"
+            minlength="3"
+            maxlength="30"
+            pattern="[a-zA-Z0-9_]+"
+            autocomplete="username"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            th:value="${email}"
+            maxlength="254"
+            autocomplete="email"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="motDePasse">Mot de passe</label>
+          <input
+            id="motDePasse"
+            name="motDePasse"
+            type="password"
+            minlength="12"
+            autocomplete="new-password"
+            placeholder="12 caractères minimum"
+            required
+          />
+        </div>
+
+        <details class="form-details">
+          <summary>Configuration avancée (optionnel)</summary>
+          <div class="form-group">
+            <label for="baseUrl">URL publique de l'application</label>
+            <input
+              id="baseUrl"
+              name="baseUrl"
+              type="url"
+              th:value="${baseUrl}"
+              placeholder="https://moninstance.example.com"
+              autocomplete="off"
+            />
+          </div>
+          <div class="form-group">
+            <label for="contactEmail">Email de contact</label>
+            <input
+              id="contactEmail"
+              name="contactEmail"
+              type="email"
+              th:value="${contactEmail}"
+              maxlength="254"
+              autocomplete="off"
+            />
+          </div>
+        </details>
+
+        <button type="submit" class="btn btn-primary btn-full">
+          Créer le compte
+        </button>
+      </form>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,235 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layout/base}"
+  th:lang="fr"
+>
+  <head>
+    <title>Découverte — Strapontin</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contenu">
+      <div class="page-header">
+        <h1>Découverte</h1>
+        <p class="page-subtitle">
+          Explorez tous les concerts disponibles par département.
+        </p>
+      </div>
+
+      <div th:if="${succes}" class="alerte alerte-succes">
+        Synchronisation déclenchée — les résultats seront mis à jour dans
+        quelques minutes.
+      </div>
+      <div
+        th:if="${erreur}"
+        class="alerte alerte-erreur"
+        th:text="${erreur}"
+      ></div>
+
+      <div class="decouverte-header">
+        <span class="sync-info" th:if="${derniereSyncFormatee != null}">
+          Dernière synchro :
+          <span th:text="${derniereSyncFormatee}">date</span>
+        </span>
+        <span class="sync-info" th:unless="${derniereSyncFormatee != null}">
+          Jamais synchronisé
+        </span>
+      </div>
+
+      <!-- Chips départements -->
+      <div class="decouverte-depts" th:if="${donnees != null}">
+        <span class="section-label">Départements :</span>
+        <div class="chips">
+          <th:block th:each="dept : ${donnees.deptsUtilisateur}">
+            <a
+              th:href="@{/decouverte(dept=${dept},q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri})}"
+              th:classappend="${depts.contains(dept) ? ' actif' : ''}"
+              th:text="${dept}"
+              th:title="${syncDepts[dept] != null ? 'Dernière synchro : ' + syncDepts[dept] : 'Jamais synchronisé'}"
+              >75</a
+            >
+          </th:block>
+        </div>
+        <p class="form-aide" th:if="${donnees.deptsUtilisateur.isEmpty()}">
+          Configurez vos départements dans
+          <a th:href="@{/parametres#preferences}">Paramètres</a> pour les
+          pré-sélectionner.
+        </p>
+      </div>
+
+      <!-- Filtres -->
+      <form method="get" th:action="@{/decouverte}" class="filtres-form">
+        <th:block th:each="d : ${depts}">
+          <input type="hidden" name="dept" th:value="${d}" />
+        </th:block>
+        <div class="filtres-ligne">
+          <input
+            type="text"
+            name="q"
+            th:value="${q}"
+            placeholder="Rechercher un artiste ou une salle…"
+            autocomplete="off"
+          />
+
+          <select name="mois">
+            <option value="">Tous les mois</option>
+            <option
+              th:each="m : ${donnees?.moisDisponibles}"
+              th:value="${m}"
+              th:text="${m}"
+              th:selected="${m == mois}"
+            >
+              Mois
+            </option>
+          </select>
+
+          <select name="genre">
+            <option value="">Tous les genres</option>
+            <option
+              th:each="g : ${donnees?.genresDisponibles}"
+              th:value="${g}"
+              th:text="${g}"
+              th:selected="${g == genre}"
+            >
+              Genre
+            </option>
+          </select>
+
+          <select name="classification">
+            <option value="">Toutes classifications</option>
+            <option
+              th:each="c : ${donnees?.classificationsDisponibles}"
+              th:value="${c}"
+              th:text="${c}"
+              th:selected="${c == classification}"
+            >
+              Classif.
+            </option>
+          </select>
+
+          <select name="budget">
+            <option value="" th:selected="${budget == null or budget == ''}">
+              Tous les prix
+            </option>
+            <option value="30" th:selected="${budget == '30'}">≤ 30 €</option>
+            <option value="50" th:selected="${budget == '50'}">≤ 50 €</option>
+            <option value="80" th:selected="${budget == '80'}">≤ 80 €</option>
+            <option value="100" th:selected="${budget == '100'}">
+              ≤ 100 €
+            </option>
+          </select>
+
+          <select name="tri">
+            <option value="date" th:selected="${tri == 'date' or tri == null}">
+              Par date
+            </option>
+            <option value="nouveaute" th:selected="${tri == 'nouveaute'}">
+              Par nouveauté
+            </option>
+          </select>
+
+          <button type="submit" class="btn btn-secondary">Filtrer</button>
+          <a th:href="@{/decouverte}" class="btn btn-texte">Réinitialiser</a>
+        </div>
+      </form>
+
+      <!-- Compteur -->
+      <p
+        class="page-subtitle"
+        th:if="${donnees != null}"
+        th:text="${donnees.totalConcerts} + ' concert' + (${donnees.totalConcerts != 1} ? 's' : '') + ' trouvé' + (${donnees.totalConcerts != 1} ? 's' : '')"
+      >
+        0 concert trouvé
+      </p>
+
+      <!-- État vide -->
+      <div
+        th:if="${donnees == null or donnees.concerts.isEmpty()}"
+        class="etat-vide"
+      >
+        <p class="etat-vide-titre">Aucun concert avec ces filtres.</p>
+        <p class="etat-vide-texte" th:if="${depts.isEmpty()}">
+          Sélectionnez un département ci-dessus ou configurez vos départements
+          dans
+          <a th:href="@{/parametres#preferences}">Paramètres</a>.
+        </p>
+        <p class="etat-vide-texte" th:unless="${depts.isEmpty()}">
+          <a th:href="@{/decouverte}">Réinitialiser les filtres</a>
+        </p>
+      </div>
+
+      <!-- Tableau des concerts -->
+      <div
+        th:unless="${donnees == null or donnees.concerts.isEmpty()}"
+        class="table-wrapper"
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>Artiste</th>
+              <th>Date</th>
+              <th>Salle</th>
+              <th>Ville</th>
+              <th>Dept</th>
+              <th>Genre</th>
+              <th>Prix</th>
+              <th><span class="sr-only">Lien</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="concert : ${donnees.concerts}">
+              <td th:text="${concert.artiste}">Artiste</td>
+              <td th:text="${concert.dateFormatee()}">date</td>
+              <td th:text="${concert.salle}">Salle</td>
+              <td th:text="${concert.ville}">Ville</td>
+              <td th:text="${concert.dept}">dept</td>
+              <td th:text="${concert.genre}">genre</td>
+              <td>
+                <span
+                  th:if="${concert.prixMin != null}"
+                  th:text="${concert.prixMin} + (${concert.prixMax != null and concert.prixMax != concert.prixMin} ? '–' + ${concert.prixMax} : '') + ' €'"
+                >
+                  Prix
+                </span>
+              </td>
+              <td>
+                <a
+                  th:if="${concert.url}"
+                  th:href="${concert.url}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn btn-xs btn-secondary"
+                  >Billets</a
+                >
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div
+        class="pagination"
+        th:if="${donnees != null and donnees.totalPages > 1}"
+      >
+        <a
+          th:if="${donnees.page > 0}"
+          th:href="@{/decouverte(q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri},page=${donnees.page - 1})}"
+          class="btn btn-secondary"
+          >Précédent</a
+        >
+        <span
+          th:text="'Page ' + (${donnees.page + 1}) + ' / ' + ${donnees.totalPages}"
+          >Page</span
+        >
+        <a
+          th:if="${donnees.page + 1 < donnees.totalPages}"
+          th:href="@{/decouverte(q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri},page=${donnees.page + 1})}"
+          class="btn btn-secondary"
+          >Suivant</a
+        >
+      </div>
+    </th:block>
+  </body>
+</html>
