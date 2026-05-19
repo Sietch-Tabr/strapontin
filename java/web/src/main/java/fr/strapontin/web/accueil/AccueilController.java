@@ -57,11 +57,11 @@ public class AccueilController {
       String statut,
       boolean estNew) {
 
-    String dateFormatee() {
+    public String dateFormatee() {
       return Dates.formater(date, false);
     }
 
-    String dateLongue() {
+    public String dateLongue() {
       return Dates.formater(date, true);
     }
   }

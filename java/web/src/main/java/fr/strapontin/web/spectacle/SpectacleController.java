@@ -62,7 +62,7 @@ public class SpectacleController {
       String statut,
       boolean estNew) {
 
-    String dateFormatee() {
+    public String dateFormatee() {
       return Dates.formater(date, false);
     }
   }

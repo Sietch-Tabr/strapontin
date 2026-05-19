@@ -69,7 +69,7 @@ public class DecouverteController {
       String statut,
       Instant firstSeen) {
 
-    String dateFormatee() {
+    public String dateFormatee() {
       return Dates.formater(date, false);
     }
   }
