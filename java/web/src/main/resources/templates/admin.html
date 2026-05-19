@@ -135,14 +135,7 @@
 
           <!-- Actualisations -->
           <div class="param-bloc">
-            <div class="param-label-ligne">
-              <h3 class="param-label">Actualisations</h3>
-              <span
-                class="param-aide"
-                th:if="${heureActualisation}"
-                th:text="${heureActualisation}"
-              ></span>
-            </div>
+            <h3 class="param-label">Actualisations</h3>
             <div
               class="jobs-liste"
               th:if="${statsJobs != null and !statsJobs.isEmpty()}"
@@ -274,27 +267,19 @@
                 </button>
                 <button
                   type="button"
-                  class="log-filtre-btn actif"
+                  class="log-filtre-btn"
                   data-niveau="warn"
-                  aria-pressed="true"
+                  aria-pressed="false"
                 >
                   warn
                 </button>
                 <button
                   type="button"
-                  class="log-filtre-btn actif"
+                  class="log-filtre-btn"
                   data-niveau="error"
-                  aria-pressed="true"
+                  aria-pressed="false"
                 >
                   error
-                </button>
-                <button
-                  type="button"
-                  class="log-filtre-tous"
-                  id="log-filtre-tous"
-                  style="display: none"
-                >
-                  Tous
                 </button>
               </div>
               <span id="log-compte" class="log-compte"></span>
@@ -590,56 +575,38 @@
           });
 
           var filtreSource = document.getElementById("filtre-source");
-          var filtreNiveaux = new Set(["warn", "error"]);
+          var filtreNiveau = "";
           var btnNiveaux = document.querySelectorAll(".log-filtre-btn");
-          var btnTous = document.getElementById("log-filtre-tous");
           var compte = document.getElementById("log-compte");
-          var lignes = table.querySelectorAll("tbody tr");
-          var total = lignes.length;
 
           function filtrer() {
+            var lignes = table.querySelectorAll("tbody tr");
             var source = filtreSource ? filtreSource.value : "";
             var visible = 0;
             lignes.forEach(function (tr) {
               var n = tr.getAttribute("data-niveau") || "";
               var s = tr.getAttribute("data-source") || "";
-              var okNiveau = filtreNiveaux.size === 0 || filtreNiveaux.has(n);
+              var okNiveau = !filtreNiveau || n === filtreNiveau;
               var okSource = !source || s === source;
               var show = okNiveau && okSource;
               tr.style.display = show ? "" : "none";
               if (show) visible++;
             });
-            if (compte) compte.textContent = visible + " / " + total;
-            if (btnTous)
-              btnTous.style.display = filtreNiveaux.size > 0 ? "" : "none";
+            if (compte) compte.textContent = visible + " / " + lignes.length;
           }
 
           btnNiveaux.forEach(function (btn) {
             btn.addEventListener("click", function () {
               var niv = btn.getAttribute("data-niveau");
-              if (filtreNiveaux.has(niv)) {
-                filtreNiveaux.delete(niv);
-                btn.classList.remove("actif");
-                btn.setAttribute("aria-pressed", "false");
-              } else {
-                filtreNiveaux.add(niv);
-                btn.classList.add("actif");
-                btn.setAttribute("aria-pressed", "true");
-              }
-              filtrer();
-            });
-          });
-
-          if (btnTous) {
-            btnTous.addEventListener("click", function () {
-              filtreNiveaux.clear();
+              filtreNiveau = filtreNiveau === niv ? "" : niv;
               btnNiveaux.forEach(function (b) {
-                b.classList.remove("actif");
-                b.setAttribute("aria-pressed", "false");
+                var actif = b.getAttribute("data-niveau") === filtreNiveau;
+                b.classList.toggle("actif", actif);
+                b.setAttribute("aria-pressed", String(actif));
               });
               filtrer();
             });
-          }
+          });
 
           if (filtreSource) filtreSource.addEventListener("change", filtrer);
           filtrer();

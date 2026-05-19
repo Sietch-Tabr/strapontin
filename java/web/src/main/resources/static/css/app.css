@@ -1077,6 +1077,26 @@ tr:hover td {
   gap: 0.25rem;
 }
 
+.changelog-historique {
+  margin-top: 2rem;
+}
+
+.changelog-historique-titre {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+  user-select: none;
+  padding: 0.25rem 0;
+}
+
+.changelog-historique-titre:hover {
+  color: var(--fg);
+}
+
+.changelog-historique > section {
+  margin-top: 1.5rem;
+}
+
 /* ── Page Paramètres ─────────────────────────────────────── */
 .param-onglets {
   display: flex;

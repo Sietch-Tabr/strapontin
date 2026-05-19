@@ -96,8 +96,11 @@ public class UserController {
   @GetMapping("/profile")
   public ResponseEntity<ProfilUtilisateur> lireProfil(Authentication auth) {
     UtilisateurDetails details = utilisateur(auth);
+    String email =
+        jdbc.queryForObject(
+            "SELECT email FROM users WHERE id = :id", Map.of("id", details.id()), String.class);
     return ResponseEntity.ok(
-        new ProfilUtilisateur(details.id(), details.nom(), details.email(), details.identifiant()));
+        new ProfilUtilisateur(details.id(), details.nom(), email, details.identifiant()));
   }
 
   /// Met à jour le nom et/ou l'email de l'utilisateur courant.
