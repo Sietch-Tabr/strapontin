@@ -37,14 +37,16 @@ public class SecurityConfiguration {
 
   /// Chaîne de filtres de sécurité principale.
   ///
-  /// @param http               le constructeur de configuration Spring Security
-  /// @param rateLimitingFilter le filtre de rate limiting sur le login
-  /// @param bloquerIpFilter    le filtre de blocage d'accès direct par IP
+  /// @param http                le constructeur de configuration Spring Security
+  /// @param correlationIdFilter le filtre de corrélation MDC (premier dans la chaîne)
+  /// @param rateLimitingFilter  le filtre de rate limiting sur le login
+  /// @param bloquerIpFilter     le filtre de blocage d'accès direct par IP
   /// @return la SecurityFilterChain configurée
   /// @throws Exception en cas d'erreur de configuration
   @Bean
   SecurityFilterChain securityFilterChain(
       HttpSecurity http,
+      CorrelationIdFilter correlationIdFilter,
       RateLimitingLoginFilter rateLimitingFilter,
       BloquerAccesDirectIpFilter bloquerIpFilter,
       TotpGuardFilter totpGuardFilter,
@@ -66,6 +68,7 @@ public class SecurityConfiguration {
                                 "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src"
                                     + " 'self' data:; frame-ancestors 'none'; object-src 'none'"))
                     .addHeaderWriter(new StaticHeadersWriter("X-Robots-Tag", "noindex, nofollow")))
+        .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(totpGuardFilter, UsernamePasswordAuthenticationFilter.class)
