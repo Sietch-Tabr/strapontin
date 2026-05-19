@@ -82,7 +82,9 @@ public class WorkerService {
 
       List<Map<String, Object>> rows =
           jdbc.queryForList(
-              "SELECT DISTINCT artiste_affiche, artiste_normalise FROM user_artistes", Map.of());
+              "SELECT DISTINCT artiste_affiche, artiste_normalise, attraction_id FROM"
+                  + " user_artistes",
+              Map.of());
 
       if (rows.isEmpty()) {
         log.info("fetch:artistes:batch — aucun artiste suivi");
@@ -126,9 +128,18 @@ public class WorkerService {
     for (Map<String, Object> row : rows) {
       String nom = (String) row.get("artiste_affiche");
       String norm = (String) row.get("artiste_normalise");
+      String attractionIdCachedInDb = (String) row.get("attraction_id");
       try {
         List<ConcertBrut> concerts = List.of();
-        String attractionId = tm.rechercherAttractionId(nom);
+        String attractionId = attractionIdCachedInDb;
+        if (attractionId == null) {
+          attractionId = tm.rechercherAttractionId(nom);
+          if (attractionId != null) {
+            jdbc.update(
+                "UPDATE user_artistes SET attraction_id = :id WHERE artiste_normalise = :norm",
+                Map.of("id", attractionId, "norm", norm));
+          }
+        }
         if (attractionId != null) {
           concerts = tm.fetchArtistesBatch(List.of(attractionId));
         }
