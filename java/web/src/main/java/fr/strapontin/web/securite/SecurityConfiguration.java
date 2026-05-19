@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 /// Configuration Spring Security 7 pour les vues Thymeleaf et l'API REST.
@@ -62,7 +63,10 @@ public class SecurityConfiguration {
                     .contentSecurityPolicy(
                         csp ->
                             csp.policyDirectives(
-                                "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; object-src 'none'")))
+                                "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src"
+                                    + " 'self' data:; frame-ancestors 'none'; object-src 'none'"))
+                    .addHeaderWriter(
+                        new StaticHeadersWriter("X-Robots-Tag", "noindex, nofollow")))
         .addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(totpGuardFilter, UsernamePasswordAuthenticationFilter.class)
