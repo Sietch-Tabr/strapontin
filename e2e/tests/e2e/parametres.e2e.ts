@@ -33,7 +33,7 @@ test.describe("Scénario: paramètres — sections", () => {
   });
 
   test("parametres_section_donnees_visible", async ({ page }) => {
-    await page.goto("/parametres");
+    await page.goto("/parametres#donnees");
     await expect(page.locator("section#donnees")).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Données", level: 2 }),
@@ -67,7 +67,11 @@ test.describe("Scénario: import préférences — validation", () => {
     request,
   }) => {
     const formData = new FormData();
-    formData.append("fichier", new Blob(["pas du json"], { type: "application/json" }), "prefs.json");
+    formData.append(
+      "fichier",
+      new Blob(["pas du json"], { type: "application/json" }),
+      "prefs.json",
+    );
     formData.append("mode", "fusionner");
     const rep = await request.post("/api/preferences/importer", {
       multipart: {

@@ -28,7 +28,7 @@ test.describe("Toasts (Popover API)", () => {
   test("toast succes admin relancer fetches", async ({ page }) => {
     await page.goto("/admin");
     await page
-      .getByRole("button", { name: "Déclencher les fetches maintenant" })
+      .getByRole("button", { name: "Relancer les fetches maintenant" })
       .click();
     const toast = page.locator(".alerte-succes");
     await expect(toast.first()).toBeVisible({ timeout: 15000 });
@@ -50,7 +50,7 @@ test.describe("Toasts (Popover API)", () => {
     });
 
     if (estOuvert) {
-      await page.locator(".toast-fermer").click();
+      await page.locator(".toast-fermer").first().click();
       await page.waitForFunction(
         () => {
           const el = document.querySelector(".alerte-succes");

@@ -226,7 +226,29 @@ public class SalleController {
         """,
         params);
 
+    if (tmVenueId != null) {
+      declencherWorkerSalle(tmVenueId);
+    }
     return ResponseEntity.status(201).body(Map.of("succes", true));
+  }
+
+  private void declencherWorkerSalle(String venueId) {
+    httpClient
+        .sendAsync(
+            HttpRequest.newBuilder()
+                .uri(
+                    URI.create(
+                        "http://localhost:8081/trigger/salle/"
+                            + URLEncoder.encode(venueId, StandardCharsets.UTF_8)))
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .timeout(Duration.ofSeconds(5))
+                .build(),
+            HttpResponse.BodyHandlers.discarding())
+        .exceptionally(
+            e -> {
+              log.warn("Déclenchement worker salle impossible venueId={}", venueId, e);
+              return null;
+            });
   }
 
   /// Supprime une salle de la liste de suivi.

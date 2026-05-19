@@ -314,6 +314,12 @@ public class NotificationDigestService {
 
   private void enregistrerStat(long dureeMs, int nbNotifies, String erreur) {
     try {
+      Map<String, Object> params = new LinkedHashMap<>();
+      params.put("typeJob", "notifier:digest");
+      params.put("now", Timestamp.from(Instant.now()));
+      params.put("dureeMs", (int) Math.min(dureeMs, Integer.MAX_VALUE));
+      params.put("nbNotifies", nbNotifies);
+      params.put("erreur", erreur);
       jdbc.update(
           """
           INSERT INTO fetch_jobs (type_job, derniere_exec, duree_ms, nb_inseres, nb_mis_a_jour, erreur)
@@ -325,17 +331,7 @@ public class NotificationDigestService {
             nb_mis_a_jour  = EXCLUDED.nb_mis_a_jour,
             erreur         = EXCLUDED.erreur
           """,
-          Map.of(
-              "typeJob",
-              "notifier:digest",
-              "now",
-              Timestamp.from(Instant.now()),
-              "dureeMs",
-              (int) Math.min(dureeMs, Integer.MAX_VALUE),
-              "nbNotifies",
-              nbNotifies,
-              "erreur",
-              erreur));
+          params);
     } catch (Exception e) {
       log.warn("Impossible d'enregistrer stat notifier:digest : {}", e.getMessage());
     }

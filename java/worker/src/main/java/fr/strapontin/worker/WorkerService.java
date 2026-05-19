@@ -296,6 +296,13 @@ public class WorkerService {
   private void enregistrerStatJob(
       String typeJob, long dureeMs, ResultatPersistance resultat, String erreur) {
     try {
+      Map<String, Object> params = new LinkedHashMap<>();
+      params.put("typeJob", typeJob);
+      params.put("now", Timestamp.from(Instant.now()));
+      params.put("dureeMs", (int) Math.min(dureeMs, Integer.MAX_VALUE));
+      params.put("nbInseres", resultat.nbInseres());
+      params.put("nbMisAJour", resultat.nbMisAJour());
+      params.put("erreur", erreur);
       jdbc.update(
           """
           INSERT INTO fetch_jobs (type_job, derniere_exec, duree_ms, nb_inseres, nb_mis_a_jour, erreur)
@@ -307,19 +314,7 @@ public class WorkerService {
             nb_mis_a_jour  = EXCLUDED.nb_mis_a_jour,
             erreur         = EXCLUDED.erreur
           """,
-          Map.of(
-              "typeJob",
-              typeJob,
-              "now",
-              Timestamp.from(Instant.now()),
-              "dureeMs",
-              (int) Math.min(dureeMs, Integer.MAX_VALUE),
-              "nbInseres",
-              resultat.nbInseres(),
-              "nbMisAJour",
-              resultat.nbMisAJour(),
-              "erreur",
-              erreur));
+          params);
     } catch (Exception e) {
       log.warn("Impossible d'enregistrer stat job {} : {}", typeJob, e.getMessage());
     }

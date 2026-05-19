@@ -204,6 +204,7 @@ public class ArtisteController {
         """,
         Map.of(CLE_USER_ID, userId, "normalise", normalise, "nom", nom));
 
+    declencherWorkerArtiste();
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }
 
@@ -277,6 +278,22 @@ public class ArtisteController {
       log.warn("Deezer parsing JSON échoué");
     }
     return resultats;
+  }
+
+  private void declencherWorkerArtiste() {
+    httpClient
+        .sendAsync(
+            HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:8081/trigger/artiste"))
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .timeout(Duration.ofSeconds(5))
+                .build(),
+            HttpResponse.BodyHandlers.discarding())
+        .exceptionally(
+            e -> {
+              log.warn("Déclenchement worker artiste impossible", e);
+              return null;
+            });
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
