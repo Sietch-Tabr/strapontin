@@ -127,12 +127,15 @@ public class WorkerService {
       String nom = (String) row.get("artiste_affiche");
       String norm = (String) row.get("artiste_normalise");
       try {
+        List<ConcertBrut> concerts = List.of();
         String attractionId = tm.rechercherAttractionId(nom);
         if (attractionId != null) {
-          resultats.addAll(tm.fetchArtistesBatch(List.of(attractionId)));
-        } else {
-          resultats.addAll(tm.fetchArtiste(nom));
+          concerts = tm.fetchArtistesBatch(List.of(attractionId));
         }
+        if (concerts.isEmpty()) {
+          concerts = tm.fetchArtiste(nom);
+        }
+        resultats.addAll(concerts);
       } catch (Exception e) {
         log.warn("TM échoué pour artiste={} norm={} : {}", nom, norm, e.getMessage());
       }
@@ -192,6 +195,7 @@ public class WorkerService {
           dedoublonnes.size());
 
       resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+      recalculerMatchesService.recalculerMatches(null);
       log.info("fetch:region terminé");
     } catch (Exception e) {
       erreur = e.getMessage();

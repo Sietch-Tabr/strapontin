@@ -77,6 +77,8 @@ public class PersisterConcerts {
       JOIN concerts c2
         ON c1.source = c2.source
        AND c1.url    = c2.url
+       AND c1.date   = c2.date
+       AND c1.heure IS NOT DISTINCT FROM c2.heure
        AND c1.id    != c2.id
        AND c1.updated_at < c2.updated_at
       WHERE c1.url IS NOT NULL
