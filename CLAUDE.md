@@ -21,7 +21,7 @@ strapontin/
 │   ├── web/          ← Spring Boot (REST API + Thymeleaf UI, port 8080)
 │   └── worker/       ← Spring Boot + Quartz (port 8081)
 └── scripts/
-    ├── provision-java.sh  ← provisionnement LXC dev|prod (Proxmox) ; copie update.sh via pct push
+    ├── provision.sh       ← provisionnement LXC dev|prod (Proxmox) ; copie update.sh via pct push
     ├── update.sh          ← restart services + healthcheck ; appelé par Woodpecker (prod) ou manuellement (dev)
     └── migrate_data.sql   ← migration données prod (dblink LXC 115 → 113, one-shot)
 ```
