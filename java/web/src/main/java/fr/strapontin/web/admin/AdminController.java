@@ -594,11 +594,12 @@ public class AdminController {
     // Dernier job réussi (worker health)
     Instant workerLastSuccess = null;
     try {
-      workerLastSuccess =
+      java.sql.Timestamp ts =
           jdbc.queryForObject(
-              "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE erreur IS NULL",
+              "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE (erreur IS NULL OR erreur = '')",
               Map.of(),
-              Instant.class);
+              java.sql.Timestamp.class);
+      workerLastSuccess = ts != null ? ts.toInstant() : null;
     } catch (Exception _) {
       log.debug("Impossible de lire le dernier job réussi");
     }

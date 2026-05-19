@@ -335,7 +335,7 @@ public class NotificationDigestService {
               "nbNotifies",
               nbNotifies,
               "erreur",
-              erreur != null ? erreur : ""));
+              erreur));
     } catch (Exception e) {
       log.warn("Impossible d'enregistrer stat notifier:digest : {}", e.getMessage());
     }

@@ -319,7 +319,7 @@ public class WorkerService {
               "nbMisAJour",
               resultat.nbMisAJour(),
               "erreur",
-              erreur != null ? erreur : ""));
+              erreur));
     } catch (Exception e) {
       log.warn("Impossible d'enregistrer stat job {} : {}", typeJob, e.getMessage());
     }
