@@ -191,7 +191,7 @@ public class AuthController {
   /// @return 200 dans tous les cas
   @PostMapping("/api/auth/forgot-password")
   public ResponseEntity<Map<String, Object>> motDePasseOublie(
-      @RequestBody ForgotPasswordRequest req) {
+      @RequestBody ForgotPasswordRequest req, HttpServletRequest httpRequest) {
     if (req.email() == null || req.email().isBlank()) {
       return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
     }
@@ -216,13 +216,16 @@ public class AuthController {
           VALUES (:id, :identifier, :value, :expiresAt, now(), now())
           """,
           Map.of(
-              "id", tokenId,
-              "identifier", prefixe,
-              "value", sha256Hex(token),
-              "expiresAt", java.sql.Timestamp.from(expiresAt)));
+              "id",
+              tokenId,
+              "identifier",
+              prefixe,
+              "value",
+              sha256Hex(token),
+              "expiresAt",
+              java.sql.Timestamp.from(expiresAt)));
 
-      String baseUrl =
-          configService.lireConfig("PUBLIC_BASE_URL").orElse("https://strapontin.kwaite.fr");
+      String baseUrl = baseUrlDepuisRequete(httpRequest);
       String lienReset = baseUrl + "/reset-password?token=" + token;
       emailService.envoyerResetMotDePasse(email, lienReset);
     }
@@ -275,6 +278,16 @@ public class AuthController {
         Map.of("tokenHash", sha256Hex(req.token())));
 
     return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
+  }
+
+  private static String baseUrlDepuisRequete(HttpServletRequest request) {
+    String scheme = request.getScheme();
+    String host = request.getServerName();
+    int port = request.getServerPort();
+    if (("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443)) {
+      return scheme + "://" + host + request.getContextPath();
+    }
+    return scheme + "://" + host + ":" + port + request.getContextPath();
   }
 
   private String genererToken(int nbOctets) {

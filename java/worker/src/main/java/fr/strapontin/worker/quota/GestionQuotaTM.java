@@ -50,6 +50,10 @@ public class GestionQuotaTM {
 
   /// Lit le quota courant depuis {@code app_config}.
   ///
+  /// <p>Si le timestamp de réinitialisation TM est dépassé, retourne un quota synthétique
+  /// {@code dispo = total} et persiste la mise à jour pour débloquer les jobs cron.
+  /// Le premier vrai appel TM réécrira la valeur réelle depuis les headers.
+  ///
   /// @return quota lu, ou vide si absent ou malformé
   public Optional<QuotaTM> lireQuota() {
     try {
@@ -59,7 +63,14 @@ public class GestionQuotaTM {
               Map.of("cle", CLE_QUOTA),
               String.class);
       if (json == null) return Optional.empty();
-      return Optional.of(objectMapper.readValue(json, QuotaTM.class));
+      QuotaTM quota = objectMapper.readValue(json, QuotaTM.class);
+      if (quota.reset() > 0 && quota.reset() <= Instant.now().toEpochMilli()) {
+        QuotaTM renouvele = new QuotaTM(quota.total(), quota.total(), 0L, Instant.now().toString());
+        ecrireQuota(renouvele);
+        log.info("quota TM renouvelé automatiquement après reset — dispo={}", renouvele.dispo());
+        return Optional.of(renouvele);
+      }
+      return Optional.of(quota);
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
     } catch (JsonProcessingException e) {

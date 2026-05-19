@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -90,9 +91,11 @@ public class AdminViewController {
   public String creerUtilisateur(
       @RequestParam String email,
       RedirectAttributes redirects,
-      org.springframework.security.core.Authentication auth) {
+      org.springframework.security.core.Authentication auth,
+      HttpServletRequest request) {
     var requete = new AdminController.RequeteCreerUtilisateur(email);
-    ResponseEntity<Map<String, Object>> rep = adminController.creerUtilisateur(requete, auth);
+    ResponseEntity<Map<String, Object>> rep =
+        adminController.creerUtilisateur(requete, auth, request);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
       redirects.addFlashAttribute(
@@ -138,8 +141,10 @@ public class AdminViewController {
   public String reinitialiserMdp(
       @PathVariable String userId,
       RedirectAttributes redirects,
-      org.springframework.security.core.Authentication auth) {
-    ResponseEntity<Map<String, Object>> rep = adminController.reinitialiserMdp(userId, auth);
+      org.springframework.security.core.Authentication auth,
+      HttpServletRequest request) {
+    ResponseEntity<Map<String, Object>> rep =
+        adminController.reinitialiserMdp(userId, auth, request);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
       redirects.addFlashAttribute(

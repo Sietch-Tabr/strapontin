@@ -33,7 +33,6 @@ import org.springframework.stereotype.Service;
 public class NotificationPushService {
 
   private static final Logger log = LoggerFactory.getLogger(NotificationPushService.class);
-  private static final String BASE_URL_DEFAUT = "https://strapontin.kwaite.fr";
   private static final String CLE_ENDPOINT = "endpoint";
 
   private final ConfigService configService;
@@ -85,7 +84,7 @@ public class NotificationPushService {
             Map.of("userId", userId));
     if (abonnements.isEmpty()) return false;
 
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse(BASE_URL_DEFAUT);
+    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     String contactEmail =
         configService.lireConfig("CONTACT_EMAIL").orElse("admin@strapontin.kwaite.fr");
     String payload = construirePayload(concerts, baseUrl);

@@ -68,8 +68,7 @@ public class EmailService {
       return Optional.empty();
     }
     String replyTo = configService.lireConfig("CONTACT_EMAIL").orElse("admin@strapontin.kwaite.fr");
-    String baseUrl =
-        configService.lireConfig("PUBLIC_BASE_URL").orElse("https://strapontin.kwaite.fr");
+    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     return Optional.of(new ContexteEmail(new Resend(cle.get()), replyTo, baseUrl));
   }
 

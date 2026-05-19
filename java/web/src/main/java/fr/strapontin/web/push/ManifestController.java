@@ -4,7 +4,7 @@
  */
 package fr.strapontin.web.push;
 
-import fr.strapontin.web.config.ConfigService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,28 +15,22 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Contrôleur servant le manifeste PWA dynamiquement.
 ///
-/// <p>Dynamique car {@code start_url} dépend de {@code PUBLIC_BASE_URL} dans {@code app_config}.
-/// Le manifeste est mis en cache navigateur 1 heure.
+/// <p>{@code start_url} est dérivé de la requête HTTP entrante — fonctionne
+/// sans configuration {@code PUBLIC_BASE_URL}, en dev comme en prod.
+/// Le manifeste est servi sans cache navigateur.
 ///
 /// @since 2.0.0
 /// @author Kwaite
 @RestController
 public class ManifestController {
 
-  private static final String BASE_URL_DEFAUT = "https://strapontin.kwaite.fr";
-
-  private final ConfigService configService;
-
-  public ManifestController(ConfigService configService) {
-    this.configService = configService;
-  }
-
   /// Retourne le manifeste PWA au format {@code application/manifest+json}.
   ///
+  /// @param request la requête HTTP courante (pour dériver la base URL)
   /// @return le manifeste JSON avec {@code start_url} dynamique
   @GetMapping(value = "/manifest.json", produces = "application/manifest+json")
-  public ResponseEntity<Map<String, Object>> manifest() {
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse(BASE_URL_DEFAUT);
+  public ResponseEntity<Map<String, Object>> manifest(HttpServletRequest request) {
+    String baseUrl = baseUrlDepuisRequete(request);
 
     Map<String, Object> manifest = new LinkedHashMap<>();
     manifest.put("name", "Strapontin");
@@ -64,5 +58,15 @@ public class ManifestController {
                 "purpose", "any maskable")));
 
     return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(manifest);
+  }
+
+  private static String baseUrlDepuisRequete(HttpServletRequest request) {
+    String scheme = request.getScheme();
+    String host = request.getServerName();
+    int port = request.getServerPort();
+    if (("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443)) {
+      return scheme + "://" + host + request.getContextPath();
+    }
+    return scheme + "://" + host + ":" + port + request.getContextPath();
   }
 }

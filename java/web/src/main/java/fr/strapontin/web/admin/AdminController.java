@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -207,7 +208,9 @@ public class AdminController {
   /// @return 201 avec l'identifiant temporaire, ou 400 en cas d'erreur
   @PostMapping("/utilisateurs")
   public ResponseEntity<Map<String, Object>> creerUtilisateur(
-      @Valid @RequestBody RequeteCreerUtilisateur requete, Authentication auth) {
+      @Valid @RequestBody RequeteCreerUtilisateur requete,
+      Authentication auth,
+      HttpServletRequest request) {
     String adminId = utilisateur(auth).id();
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
 
@@ -264,13 +267,16 @@ public class AdminController {
         VALUES (:id, :identifier, :value, :expiresAt, now(), now())
         """,
         Map.of(
-            "id", tokenId,
-            "identifier", "invite:" + email,
-            "value", sha256Hex(token),
-            "expiresAt", java.sql.Timestamp.from(expiresAt)));
+            "id",
+            tokenId,
+            "identifier",
+            "invite:" + email,
+            "value",
+            sha256Hex(token),
+            "expiresAt",
+            java.sql.Timestamp.from(expiresAt)));
 
-    String baseUrl =
-        configService.lireConfig(CLE_PUBLIC_BASE_URL).orElse("https://strapontin.kwaite.fr");
+    String baseUrl = baseUrlDepuisRequete(request);
     String lienReset = baseUrl + "/reset-password?token=" + token;
     emailService.envoyerInvitation(email, usernameTemp, lienReset);
 
@@ -402,7 +408,7 @@ public class AdminController {
   /// @return 200 si envoyé, 400/404 en cas d'erreur
   @PostMapping("/utilisateurs/{userId}/reset-mdp")
   public ResponseEntity<Map<String, Object>> reinitialiserMdp(
-      @PathVariable String userId, Authentication auth) {
+      @PathVariable String userId, Authentication auth, HttpServletRequest request) {
     String adminId = utilisateur(auth).id();
 
     if (userId.equals(adminId)) {
@@ -417,11 +423,7 @@ public class AdminController {
     }
 
     String email = (String) cible.get(0).get(CLE_EMAIL);
-    String baseUrl = configService.lireConfig(CLE_PUBLIC_BASE_URL).orElse("");
-    if (baseUrl.isEmpty()) {
-      return erreur(400, "PUBLIC_BASE_URL n'est pas configurée.");
-    }
-
+    String baseUrl = baseUrlDepuisRequete(request);
     String prefixeReset = "reset:" + email;
     jdbc.update(
         "DELETE FROM verifications WHERE identifier = :prefixe", Map.of("prefixe", prefixeReset));
@@ -435,10 +437,14 @@ public class AdminController {
         VALUES (:id, :identifier, :value, :expiresAt, now(), now())
         """,
         Map.of(
-            "id", tokenId,
-            "identifier", prefixeReset,
-            "value", sha256Hex(token),
-            "expiresAt", java.sql.Timestamp.from(expiresAt)));
+            "id",
+            tokenId,
+            "identifier",
+            prefixeReset,
+            "value",
+            sha256Hex(token),
+            "expiresAt",
+            java.sql.Timestamp.from(expiresAt)));
 
     String lienReset = baseUrl + "/reset-password?token=" + token;
     emailService.envoyerResetMotDePasse(email, lienReset);
@@ -715,5 +721,15 @@ public class AdminController {
     Map<String, Object> corps = new HashMap<>();
     corps.put("erreur", message);
     return ResponseEntity.status(status).body(corps);
+  }
+
+  private static String baseUrlDepuisRequete(HttpServletRequest request) {
+    String scheme = request.getScheme();
+    String host = request.getServerName();
+    int port = request.getServerPort();
+    if (("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443)) {
+      return scheme + "://" + host + request.getContextPath();
+    }
+    return scheme + "://" + host + ":" + port + request.getContextPath();
   }
 }

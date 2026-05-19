@@ -154,7 +154,7 @@ public class AuthViewController {
   /// @return le nom du template Thymeleaf
   @PostMapping("/forgot-password")
   public String traiterMotDePasseOublie(
-      @RequestParam(required = false) String email, Model modele) {
+      @RequestParam(required = false) String email, Model modele, HttpServletRequest request) {
     if (email != null && !email.isBlank()) {
       String emailNorm = email.strip().toLowerCase();
       List<Map<String, Object>> utilisateurs =
@@ -164,8 +164,7 @@ public class AuthViewController {
       if (!utilisateurs.isEmpty()) {
         String prefixe = "reset:" + emailNorm;
         jdbc.update(
-            "DELETE FROM verifications WHERE identifier = :prefixe",
-            Map.of("prefixe", prefixe));
+            "DELETE FROM verifications WHERE identifier = :prefixe", Map.of("prefixe", prefixe));
 
         String token = genererToken(32);
         String tokenId = UUID.randomUUID().toString();
@@ -177,13 +176,16 @@ public class AuthViewController {
             VALUES (:id, :identifier, :value, :expiresAt, now(), now())
             """,
             Map.of(
-                "id", tokenId,
-                "identifier", prefixe,
-                "value", sha256Hex(token),
-                "expiresAt", java.sql.Timestamp.from(expiresAt)));
+                "id",
+                tokenId,
+                "identifier",
+                prefixe,
+                "value",
+                sha256Hex(token),
+                "expiresAt",
+                java.sql.Timestamp.from(expiresAt)));
 
-        String baseUrl =
-            configService.lireConfig("PUBLIC_BASE_URL").orElse("https://strapontin.kwaite.fr");
+        String baseUrl = baseUrlDepuisRequete(request);
         emailService.envoyerResetMotDePasse(emailNorm, baseUrl + "/reset-password?token=" + token);
       }
     }
@@ -299,5 +301,15 @@ public class AuthViewController {
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException("SHA-256 non disponible", e);
     }
+  }
+
+  private static String baseUrlDepuisRequete(HttpServletRequest request) {
+    String scheme = request.getScheme();
+    String host = request.getServerName();
+    int port = request.getServerPort();
+    if (("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443)) {
+      return scheme + "://" + host + request.getContextPath();
+    }
+    return scheme + "://" + host + ":" + port + request.getContextPath();
   }
 }
