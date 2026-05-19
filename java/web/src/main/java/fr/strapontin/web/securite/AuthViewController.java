@@ -10,6 +10,9 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -159,8 +162,10 @@ public class AuthViewController {
               "SELECT id FROM users WHERE email = :email", Map.of(CLE_EMAIL, emailNorm));
 
       if (!utilisateurs.isEmpty()) {
+        String prefixe = "reset:" + emailNorm;
         jdbc.update(
-            "DELETE FROM verifications WHERE identifier = :email", Map.of(CLE_EMAIL, emailNorm));
+            "DELETE FROM verifications WHERE identifier = :prefixe",
+            Map.of("prefixe", prefixe));
 
         String token = genererToken(32);
         String tokenId = UUID.randomUUID().toString();
@@ -173,8 +178,8 @@ public class AuthViewController {
             """,
             Map.of(
                 "id", tokenId,
-                "identifier", emailNorm,
-                "value", token,
+                "identifier", prefixe,
+                "value", sha256Hex(token),
                 "expiresAt", java.sql.Timestamp.from(expiresAt)));
 
         String baseUrl =
@@ -200,8 +205,8 @@ public class AuthViewController {
     }
     List<Map<String, Object>> verifs =
         jdbc.queryForList(
-            "SELECT id FROM verifications WHERE value = :token AND expires_at > NOW()",
-            Map.of(CLE_TOKEN, token));
+            "SELECT id FROM verifications WHERE value = :hash AND expires_at > NOW()",
+            Map.of("hash", sha256Hex(token)));
     if (verifs.isEmpty()) {
       modele.addAttribute(CLE_ERREUR, "Lien invalide ou expiré. Recommencez depuis le formulaire.");
       return VUE_FORGOT_PASSWORD;
@@ -232,17 +237,19 @@ public class AuthViewController {
       return VUE_RESET_PASSWORD;
     }
 
+    String tokenHash = sha256Hex(token);
     List<Map<String, Object>> verifs =
         jdbc.queryForList(
-            "SELECT identifier FROM verifications WHERE value = :token AND expires_at > NOW()",
-            Map.of(CLE_TOKEN, token));
+            "SELECT identifier FROM verifications WHERE value = :hash AND expires_at > NOW()",
+            Map.of("hash", tokenHash));
 
     if (verifs.isEmpty()) {
       modele.addAttribute(CLE_ERREUR, "Lien invalide ou expiré. Recommencez depuis le formulaire.");
       return VUE_FORGOT_PASSWORD;
     }
 
-    String email = (String) verifs.get(0).get("identifier");
+    String identifiant = (String) verifs.get(0).get("identifier");
+    String email = identifiant.contains(":") ? identifiant.split(":", 2)[1] : identifiant;
     String hash = passwordEncoder.encode(motDePasse);
 
     jdbc.update(
@@ -256,7 +263,7 @@ public class AuthViewController {
         "UPDATE users SET must_change_credentials = false, updated_at = NOW() WHERE email = :email",
         Map.of(CLE_EMAIL, email));
 
-    jdbc.update("DELETE FROM verifications WHERE value = :token", Map.of(CLE_TOKEN, token));
+    jdbc.update("DELETE FROM verifications WHERE value = :hash", Map.of("hash", tokenHash));
 
     HttpSession session = request.getSession(false);
     if (session != null) session.invalidate();
@@ -278,5 +285,19 @@ public class AuthViewController {
       sb.append(String.format("%02x", b));
     }
     return sb.toString();
+  }
+
+  private static String sha256Hex(String input) {
+    try {
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
+      StringBuilder sb = new StringBuilder();
+      for (byte b : hash) {
+        sb.append(String.format("%02x", b));
+      }
+      return sb.toString();
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 non disponible", e);
+    }
   }
 }
