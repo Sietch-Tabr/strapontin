@@ -2,8 +2,8 @@
 
 /* ── Police Geist Variable ──────────────────────────────── */
 @font-face {
-  font-family: 'Geist Variable';
-  src: url('/fonts/geist-variable.woff2') format('woff2');
+  font-family: "Geist Variable";
+  src: url("/fonts/geist-variable.woff2") format("woff2");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -39,7 +39,7 @@
   --radius: 0.5rem;
   --sidebar-w: 240px;
   --nav-h: 56px;
-  --font: 'Geist Variable', system-ui, -apple-system, sans-serif;
+  --font: "Geist Variable", system-ui, -apple-system, sans-serif;
 }
 
 .dark {
@@ -414,6 +414,11 @@ textarea:focus {
 .btn-sm {
   padding: 0.375rem 0.75rem;
   font-size: 0.8125rem;
+}
+.btn-xs {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
 }
 
 /* ── Alertes ─────────────────────────────────────────────── */
