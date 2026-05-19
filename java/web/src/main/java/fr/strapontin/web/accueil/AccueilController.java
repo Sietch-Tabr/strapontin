@@ -6,6 +6,7 @@ package fr.strapontin.web.accueil;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
 import fr.strapontin.web.utilisateur.UserConfigService;
+import fr.strapontin.web.utils.Dates;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -54,7 +55,16 @@ public class AccueilController {
       String ville,
       String url,
       String statut,
-      boolean estNew) {}
+      boolean estNew) {
+
+    String dateFormatee() {
+      return Dates.formater(date, false);
+    }
+
+    String dateLongue() {
+      return Dates.formater(date, true);
+    }
+  }
 
   record GroupeArtiste(
       String artiste,

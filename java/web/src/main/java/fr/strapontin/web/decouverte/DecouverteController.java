@@ -5,6 +5,7 @@
 package fr.strapontin.web.decouverte;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
+import fr.strapontin.web.utils.Dates;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -66,7 +67,12 @@ public class DecouverteController {
       String classification,
       String genre,
       String statut,
-      Instant firstSeen) {}
+      Instant firstSeen) {
+
+    String dateFormatee() {
+      return Dates.formater(date, false);
+    }
+  }
 
   record SyncDept(String dept, Instant derniereExec) {}
 

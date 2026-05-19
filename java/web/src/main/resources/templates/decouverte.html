@@ -192,7 +192,7 @@
           <tbody>
             <tr th:each="concert : ${donnees.concerts}">
               <td th:text="${concert.artiste}">Artiste</td>
-              <td th:text="${concert.date}">date</td>
+              <td th:text="${concert.dateFormatee()}">date</td>
               <td th:text="${concert.salle}">Salle</td>
               <td th:text="${concert.ville}">Ville</td>
               <td th:text="${concert.dept}">dept</td>

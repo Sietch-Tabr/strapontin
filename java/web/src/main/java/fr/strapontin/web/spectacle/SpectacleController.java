@@ -6,6 +6,7 @@ package fr.strapontin.web.spectacle;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
 import fr.strapontin.web.utilisateur.UserConfigService;
+import fr.strapontin.web.utils.Dates;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -59,7 +60,12 @@ public class SpectacleController {
       String classification,
       Instant firstSeen,
       String statut,
-      boolean estNew) {}
+      boolean estNew) {
+
+    String dateFormatee() {
+      return Dates.formater(date, false);
+    }
+  }
 
   record ReponseSpectacles(
       List<SpectacleDto> concerts,

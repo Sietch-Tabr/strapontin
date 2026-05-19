@@ -1,5 +1,14 @@
 /* Strapontin — concert finder — CSS vanilla v2 */
 
+/* ── Police Geist Variable ──────────────────────────────── */
+@font-face {
+  font-family: 'Geist Variable';
+  src: url('/fonts/geist-variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── Transitions entre pages (View Transitions API) ────── */
 @view-transition {
   navigation: auto;
@@ -30,7 +39,7 @@
   --radius: 0.5rem;
   --sidebar-w: 240px;
   --nav-h: 56px;
-  --font: system-ui, -apple-system, sans-serif;
+  --font: 'Geist Variable', system-ui, -apple-system, sans-serif;
 }
 
 .dark {
@@ -497,10 +506,10 @@ tr:hover td {
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem 0.5rem;
+  padding: 0.125rem 0.375rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.625rem;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -629,7 +638,7 @@ tr:hover td {
 .chips a {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.75rem;
+  padding: 0.25rem 0.625rem;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;

@@ -116,7 +116,7 @@
             <div class="concert-ligne" th:each="concert : ${groupe.concerts}">
               <div class="concert-info">
                 <p class="concert-date-principale" th:if="${groupe.estTournee}">
-                  <span th:text="${concert.date}">date</span>
+                  <span th:text="${concert.dateFormatee()}">date</span>
                   <span class="badge badge-nouveau" th:if="${concert.estNew}"
                     >Nouveau</span
                   >
@@ -140,7 +140,7 @@
                   class="concert-date-secondaire"
                   th:unless="${groupe.estTournee}"
                 >
-                  <span th:text="${concert.date}">date</span>
+                  <span th:text="${concert.dateLongue()}">date</span>
                   <span class="badge badge-nouveau" th:if="${concert.estNew}"
                     >Nouveau</span
                   >
