@@ -21,7 +21,7 @@ strapontin/
 │   ├── web/          ← Spring Boot (REST API + Thymeleaf UI, port 8080)
 │   └── worker/       ← Spring Boot + Quartz (port 8081)
 └── scripts/
-    ├── provision.sh       ← provisionnement LXC dev|prod (Proxmox) ; copie update.sh via pct push
+    ├── provision-java.sh  ← provisionnement LXC dev|prod (Proxmox) ; copie update.sh via pct push
     ├── update.sh          ← restart services + healthcheck ; appelé par Woodpecker (prod) ou manuellement (dev)
     └── migrate_data.sql   ← migration données prod (dblink LXC 115 → 113, one-shot)
 ```
@@ -168,7 +168,6 @@ Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de
 
 ## Outils Claude Code
 
-- **Understand-Anything** (`/understand`) — graphe de connaissance du codebase
 - **code-review-graph** — MCP ; analyse d'impact et blast-radius sur les modifications
 - **everything-search** — MCP recherche fichiers via Spotlight (évite le bruit `node_modules/`)
 
