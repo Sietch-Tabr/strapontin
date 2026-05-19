@@ -9,7 +9,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" th:href="@{/images/favicon.svg}" />
-    <link rel="stylesheet" th:href="@{/css/app.css}" />
+    <link rel="stylesheet" th:href="@{/css/base.css}" />
+    <link rel="stylesheet" th:href="@{/css/layout.css}" />
+    <link rel="stylesheet" th:href="@{/css/components.css}" />
+    <link rel="stylesheet" th:href="@{/css/pages.css}" />
     <title layout:title-pattern="$CONTENT_TITLE — Strapontin">Strapontin</title>
   </head>
   <body th:class="${theme == 'sombre' ? 'dark' : ''}">

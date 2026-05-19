@@ -68,10 +68,30 @@
       ></div>
 
       <nav class="param-onglets" aria-label="Sections d'administration">
-        <a href="#jobs" class="param-onglet">Tableau de bord</a>
-        <a href="#logs" class="param-onglet">Logs</a>
-        <a href="#configuration" class="param-onglet">Configuration</a>
-        <a href="#utilisateurs" class="param-onglet">Utilisateurs</a>
+        <a href="#jobs" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-activity" />
+          </svg>
+          Tableau de bord
+        </a>
+        <a href="#logs" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-scroll-text" />
+          </svg>
+          Logs
+        </a>
+        <a href="#configuration" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-settings" />
+          </svg>
+          Configuration
+        </a>
+        <a href="#utilisateurs" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-users" />
+          </svg>
+          Utilisateurs
+        </a>
       </nav>
 
       <div class="admin-sections">
@@ -104,7 +124,8 @@
               </div>
               <p
                 class="param-aide"
-                th:text="'Remise à zéro vers ' + ${new java.util.Date(quotaTM.reset).toString().substring(11, 16)}"
+                th:if="${quotaTM.reset > 0}"
+                th:text="'Remise à zéro le ' + ${T(fr.strapontin.web.utils.Dates).formaterEpochSec(quotaTM.reset)}"
               ></p>
             </div>
             <p class="etat-vide-texte" th:unless="${quotaTM != null}">
@@ -114,7 +135,10 @@
 
           <!-- Actualisations -->
           <div class="param-bloc">
-            <h3 class="param-label">Actualisations</h3>
+            <div class="param-label-ligne">
+              <h3 class="param-label">Actualisations</h3>
+              <span class="param-aide" th:if="${heureActualisation}" th:text="${heureActualisation}"></span>
+            </div>
             <div
               class="jobs-liste"
               th:if="${statsJobs != null and !statsJobs.isEmpty()}"
@@ -122,15 +146,25 @@
               <div
                 class="job-carte"
                 th:each="stat : ${statsJobs}"
-                th:with="label=${stat.typeJob == 'FetchArtistesBatchJob' ? 'Artistes suivis' : (stat.typeJob == 'FetchRegionJob' ? 'Concerts par région' : (stat.typeJob == 'FetchArtisteJob' ? 'Fetch artiste' : (stat.typeJob == 'FetchSalleJob' ? 'Fetch salle' : (stat.typeJob == 'RecalculerMatchesJob' ? 'Recalcul matchs' : (stat.typeJob == 'PurgerConcertsJob' ? 'Purge concerts' : stat.typeJob)))))}"
+                th:with="label=${stat.typeJob == 'fetch:artistes:batch' ? 'Artistes suivis' : (stat.typeJob == 'fetch:region' ? 'Concerts par région' : (stat.typeJob == 'notifier:digest' ? 'Notifications digest' : (stat.typeJob == 'purger:concerts' ? 'Purge concerts' : (stat.typeJob == 'recalculer:matches' ? 'Recalcul matchs' : stat.typeJob))))}"
               >
-                <p class="job-carte-label" th:text="${label}">label</p>
+                <div class="job-carte-entete">
+                  <p class="job-carte-label" th:text="${label}">label</p>
+                  <span
+                    class="job-en-cours"
+                    th:if="${jobsEnCours != null and jobsEnCours.contains(stat.typeJob)}"
+                    th:attr="data-job=${stat.typeJob}"
+                  >
+                    <svg class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    </svg>
+                    En cours
+                  </span>
+                </div>
                 <p class="job-carte-detail">
                   <span
                     th:if="${stat.derniereExec != null}"
-                    class="job-date-relative"
-                    th:attr="data-ts=${stat.derniereExec.toEpochMilli()}"
-                    th:text="${stat.derniereExec.toString().substring(0, 16).replace('T', ' ')}"
+                    th:text="${T(fr.strapontin.web.utils.Dates).formaterInstant(stat.derniereExec)}"
                   ></span>
                   <span
                     th:if="${stat.derniereExec != null and stat.dureeMs != null}"
@@ -161,15 +195,20 @@
             >
               Aucun job exécuté pour l'instant.
             </p>
-            <form
-              method="post"
-              th:action="@{/admin/relancer}"
-              style="margin-top: 0.75rem"
-            >
-              <button type="submit" class="btn btn-secondary">
+            <div style="margin-top: 0.75rem">
+              <button
+                type="button"
+                id="btn-relancer"
+                class="btn btn-secondary"
+              >
                 Relancer les fetches maintenant
               </button>
-            </form>
+              <span
+                id="relancer-statut"
+                class="relancer-statut"
+                aria-live="polite"
+              ></span>
+            </div>
           </div>
 
           <!-- Worker -->
@@ -273,11 +312,7 @@
                     th:data-niveau="${entree.niveau}"
                     th:data-meta="${entree.meta != null ? entree.meta : ''}"
                   >
-                    <td
-                      th:text="${new java.util.Date(entree.ts).toString().substring(0, 19)}"
-                    >
-                      date
-                    </td>
+                    <td class="log-ts" th:text="${T(fr.strapontin.web.utils.Dates).formaterTs(entree.ts)}">date</td>
                     <td th:text="${entree.niveau}">niveau</td>
                     <td th:text="${entree.source}">source</td>
                     <td class="log-message" th:text="${entree.message}">
@@ -419,7 +454,7 @@
                       <p class="user-carte-activite">
                         <span
                           th:if="${u.derniereActivite != null}"
-                          th:text="'Dernière activité : ' + ${u.derniereActivite.toString().substring(0, 10)}"
+                          th:text="'Dernière activité : ' + ${T(fr.strapontin.web.utils.Dates).formaterInstant(u.derniereActivite)}"
                         ></span>
                         <span th:unless="${u.derniereActivite != null}"
                           >Jamais connecté</span
@@ -514,23 +549,6 @@
       </div>
 
       <script>
-        // ── Dates relatives (job cards) ────────────────────────
-        document.querySelectorAll(".job-date-relative").forEach(function (el) {
-          var ts = parseInt(el.getAttribute("data-ts"), 10);
-          if (!ts) return;
-          var diffMin = Math.floor((Date.now() - ts) / 60000);
-          var texte;
-          if (diffMin < 1) texte = "à l'instant";
-          else if (diffMin < 60) texte = "il y a " + diffMin + " min";
-          else {
-            var h = Math.floor(diffMin / 60);
-            var m = diffMin % 60;
-            texte =
-              m > 0 ? "il y a " + h + " h " + m + " min" : "il y a " + h + " h";
-          }
-          el.textContent = texte;
-        });
-
         // ── Logs système ────────────────────────────────────────
         (function () {
           var table = document.getElementById("table-logs");

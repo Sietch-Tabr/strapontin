@@ -140,7 +140,7 @@
                   class="concert-date-secondaire"
                   th:unless="${groupe.estTournee}"
                 >
-                  <span th:text="${concert.dateLongue()}">date</span>
+                  <span th:text="${concert.dateFormatee()}">date</span>
                   <span class="badge badge-nouveau" th:if="${concert.estNew}"
                     >Nouveau</span
                   >
@@ -176,19 +176,15 @@
                   class="btn btn-xs btn-secondary"
                   >Billets</a
                 >
-                <form
+                <button
                   th:if="${masques}"
-                  method="post"
-                  th:action="@{/demasquer/{id}(id=${concert.id})}"
+                  type="button"
+                  class="btn-texte btn-sm"
+                  aria-label="Réafficher ce concert"
+                  th:attr="data-reafficher-id=${concert.id}"
                 >
-                  <button
-                    type="submit"
-                    class="btn-texte btn-sm"
-                    aria-label="Réafficher ce concert"
-                  >
-                    Réafficher
-                  </button>
-                </form>
+                  Réafficher
+                </button>
                 <form
                   th:unless="${masques}"
                   method="post"

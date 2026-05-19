@@ -12,7 +12,10 @@
     <meta name="theme-color" content="#111827" />
     <link rel="icon" type="image/png" th:href="@{/images/favicon.png}" />
     <link rel="manifest" th:href="@{/manifest.json}" />
-    <link rel="stylesheet" th:href="@{/css/app.css}" />
+    <link rel="stylesheet" th:href="@{/css/base.css}" />
+    <link rel="stylesheet" th:href="@{/css/layout.css}" />
+    <link rel="stylesheet" th:href="@{/css/components.css}" />
+    <link rel="stylesheet" th:href="@{/css/pages.css}" />
     <title layout:title-pattern="$CONTENT_TITLE — Strapontin">Strapontin</title>
   </head>
   <body th:class="${theme == 'sombre' ? 'dark' : ''}">

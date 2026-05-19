@@ -1,0 +1,107 @@
+/* Strapontin — base : police, variables, reset, transitions */
+
+/* ── Police Geist Variable ──────────────────────────────── */
+@font-face {
+  font-family: "Geist Variable";
+  src: url("/fonts/geist-variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Transitions entre pages (View Transitions API) ────── */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: 180ms ease-out both vt-sortie;
+}
+
+::view-transition-new(root) {
+  animation: 220ms ease-out both vt-entree;
+}
+
+@keyframes vt-sortie {
+  to {
+    opacity: 0;
+    transform: scale(0.99);
+  }
+}
+
+@keyframes vt-entree {
+  from {
+    opacity: 0;
+    transform: scale(0.99);
+  }
+}
+
+/* ── Variables ─────────────────────────────────────────── */
+:root {
+  --bg: #ffffff;
+  --bg-card: #f9fafb;
+  --bg-muted: #f3f4f6;
+  --fg: #111827;
+  --fg-muted: #6b7280;
+  --fg-subtle: #9ca3af;
+  --border: #e5e7eb;
+  --primary: #111827;
+  --primary-fg: #ffffff;
+  --accent: #f3f4f6;
+  --accent-fg: #111827;
+  --danger: #dc2626;
+  --danger-fg: #ffffff;
+  --success: #16a34a;
+  --warning: #ca8a04;
+  --radius: 0.5rem;
+  --sidebar-w: 240px;
+  --nav-h: 56px;
+  --font: "Geist Variable", system-ui, -apple-system, sans-serif;
+}
+
+.dark {
+  --bg: #0a0a0a;
+  --bg-card: #111111;
+  --bg-muted: #1a1a1a;
+  --fg: #fafafa;
+  --fg-muted: #a1a1aa;
+  --fg-subtle: #71717a;
+  --border: #27272a;
+  --primary: #fafafa;
+  --primary-fg: #09090b;
+  --accent: #27272a;
+  --accent-fg: #fafafa;
+}
+
+/* ── Reset ──────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html {
+  font-size: 16px;
+}
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
