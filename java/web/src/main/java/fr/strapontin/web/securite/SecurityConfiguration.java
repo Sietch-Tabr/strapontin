@@ -65,8 +65,7 @@ public class SecurityConfiguration {
                             csp.policyDirectives(
                                 "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src"
                                     + " 'self' data:; frame-ancestors 'none'; object-src 'none'"))
-                    .addHeaderWriter(
-                        new StaticHeadersWriter("X-Robots-Tag", "noindex, nofollow")))
+                    .addHeaderWriter(new StaticHeadersWriter("X-Robots-Tag", "noindex, nofollow")))
         .addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(totpGuardFilter, UsernamePasswordAuthenticationFilter.class)

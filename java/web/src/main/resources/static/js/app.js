@@ -97,6 +97,149 @@ if ("serviceWorker" in navigator) {
   majEtat();
 })();
 
+// Réaffichage de concerts masqués (accueil)
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll("[data-reafficher-id]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var id = btn.getAttribute("data-reafficher-id");
+      btn.disabled = true;
+      fetch("/api/spectacles/matches/" + id, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ masquer: false }),
+      })
+        .then(function () {
+          window.location.reload();
+        })
+        .catch(function () {
+          btn.disabled = false;
+        });
+    });
+  });
+});
+
+// Navigation par onglets — repositionnement en haut à chaque changement
+// Les sections ont display:none avant d'être ciblées ; on évite le scroll
+// natif (comportement aléatoire) en remontant en haut après le repaint.
+(function () {
+  document
+    .querySelectorAll(".param-onglet[href^='#']")
+    .forEach(function (lien) {
+      lien.addEventListener("click", function (e) {
+        e.preventDefault();
+        location.hash = lien.getAttribute("href");
+        requestAnimationFrame(function () {
+          window.scrollTo({ top: 0 });
+        });
+      });
+    });
+})();
+
+// Modale de signalement (page aide)
+(function () {
+  var dialog = document.getElementById("dialog-signaler");
+  if (!dialog) return;
+
+  var btnOuvrir = document.getElementById("btn-ouvrir-signalement");
+  var btnFermer = document.getElementById("btn-fermer-signalement");
+  var btnAnnuler = document.getElementById("btn-annuler-signalement");
+  var typeSelect = document.getElementById("type-signalement");
+  var messageArea = document.getElementById("message-signalement");
+
+  var canevas = {
+    bug: "Décrivez le problème\n\nÉtapes pour reproduire :\n1. \n2. \n\nComportement attendu :\n\nComportement observé :",
+    suggestion:
+      "Décrivez votre suggestion\n\nContexte (pourquoi c'est utile) :\n\nComportement souhaité :",
+    question: "Votre question",
+  };
+
+  function ouvrir() {
+    if (messageArea && !messageArea.value.trim()) {
+      messageArea.value = canevas["bug"] || "";
+    }
+    dialog.showModal();
+  }
+
+  function fermer() {
+    dialog.close();
+  }
+
+  if (btnOuvrir) btnOuvrir.addEventListener("click", ouvrir);
+  if (btnFermer) btnFermer.addEventListener("click", fermer);
+  if (btnAnnuler) btnAnnuler.addEventListener("click", fermer);
+
+  dialog.addEventListener("click", function (e) {
+    if (e.target === dialog) fermer();
+  });
+
+  if (typeSelect && messageArea) {
+    typeSelect.addEventListener("change", function () {
+      messageArea.value = canevas[typeSelect.value] || "";
+    });
+  }
+})();
+
+// Bouton "Relancer les fetches" (admin) — AJAX + polling indicateur visuel
+(function () {
+  var btn = document.getElementById("btn-relancer");
+  if (!btn) return;
+  var statut = document.getElementById("relancer-statut");
+  var intervalId = null;
+
+  function mettreAJourBadges(jobsEnCours) {
+    document.querySelectorAll(".job-en-cours[data-job]").forEach(function (el) {
+      el.style.display = "none";
+    });
+    (jobsEnCours || []).forEach(function (nom) {
+      var badge = document.querySelector(
+        ".job-en-cours[data-job='" + nom + "']",
+      );
+      if (badge) badge.style.display = "";
+    });
+  }
+
+  function arreterPolling() {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  }
+
+  function demarrerPolling() {
+    arreterPolling();
+    intervalId = setInterval(function () {
+      fetch("/api/admin/jobs")
+        .then(function (rep) {
+          return rep.json();
+        })
+        .then(function (data) {
+          var actifs = data.jobsEnCours || [];
+          mettreAJourBadges(actifs);
+          if (actifs.length === 0) {
+            arreterPolling();
+            btn.disabled = false;
+            if (statut) statut.textContent = "";
+            window.location.reload();
+          }
+        })
+        .catch(arreterPolling);
+    }, 3000);
+  }
+
+  btn.addEventListener("click", function () {
+    btn.disabled = true;
+    if (statut) statut.textContent = "Fetches en cours…";
+    fetch("/api/admin/relancer", { method: "POST" })
+      .then(function () {
+        demarrerPolling();
+      })
+      .catch(function () {
+        btn.disabled = false;
+        if (statut) statut.textContent = "Erreur — worker inaccessible.";
+      });
+  });
+})();
+
 function urlBase64VersUint8Array(base64) {
   const rembourrage = "=".repeat((4 - (base64.length % 4)) % 4);
   const b64 = (base64 + rembourrage).replace(/-/g, "+").replace(/_/g, "/");

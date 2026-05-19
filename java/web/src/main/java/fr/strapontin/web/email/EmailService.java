@@ -183,6 +183,13 @@ public class EmailService {
     }
   }
 
+  /// Indique si le service email est disponible (clé Resend configurée).
+  ///
+  /// @return `true` si `RESEND_API_KEY` est présent en configuration
+  public boolean estDisponible() {
+    return configService.lireConfig("RESEND_API_KEY").isPresent();
+  }
+
   /// Envoie un signalement d'utilisateur à l'adresse de contact.
   ///
   /// @param type            le type (`bug`, `suggestion`, `question`)

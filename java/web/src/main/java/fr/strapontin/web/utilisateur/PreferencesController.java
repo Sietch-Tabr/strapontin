@@ -7,6 +7,7 @@ package fr.strapontin.web.utilisateur;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.securite.UtilisateurDetails;
+import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -151,9 +152,11 @@ public class PreferencesController {
     int traites = 0;
     for (SalleExport s : salles) {
       if (traites >= restant) break;
-      if (s.salleId() == null || s.salleId().isBlank()) continue;
-      if (!s.salleId().matches("[A-Za-z0-9_-]{1,64}")) continue;
       String nomSalle = s.nom() != null && !s.nom().isBlank() ? s.nom().strip() : s.salleId();
+      if (nomSalle == null || nomSalle.isBlank()) continue;
+      String salleId = normaliserSalleCle(nomSalle);
+      if (salleId.isEmpty()) continue;
+      String tmVenueId = s.tmVenueId() != null && !s.tmVenueId().isBlank() ? s.tmVenueId() : null;
       String nomNorm = Normalisation.normaliserTexte(nomSalle);
       jdbc.update(
           """
@@ -161,22 +164,25 @@ public class PreferencesController {
           VALUES (:salleId, :nom, :nomNorm)
           ON CONFLICT (id) DO UPDATE SET nom = EXCLUDED.nom, nom_norm = EXCLUDED.nom_norm
           """,
-          Map.of("salleId", s.salleId(), "nom", nomSalle, "nomNorm", nomNorm));
+          Map.of("salleId", salleId, "nom", nomSalle, "nomNorm", nomNorm));
+      Map<String, Object> paramsUs = new HashMap<>();
+      paramsUs.put(CLE_USER_ID, userId);
+      paramsUs.put("salleId", salleId);
+      paramsUs.put("tmVenueId", tmVenueId);
       jdbc.update(
           """
           INSERT INTO user_salles (user_id, salle_id, tm_venue_id)
           VALUES (:userId, :salleId, :tmVenueId)
           ON CONFLICT (user_id, salle_id) DO NOTHING
           """,
-          Map.of(
-              CLE_USER_ID,
-              userId,
-              "salleId",
-              s.salleId(),
-              "tmVenueId",
-              s.tmVenueId() != null ? s.tmVenueId() : ""));
+          paramsUs);
       traites++;
     }
+  }
+
+  private static String normaliserSalleCle(String nom) {
+    String nfd = Normalizer.normalize(nom.toLowerCase(), Normalizer.Form.NFD);
+    return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}", "").replaceAll("[^a-z0-9]", "");
   }
 
   private void importerConfig(String userId, ConfigExport c) {

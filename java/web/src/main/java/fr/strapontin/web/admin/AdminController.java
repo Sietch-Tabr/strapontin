@@ -604,11 +604,40 @@ public class AdminController {
       log.debug("Impossible de lire le dernier job réussi");
     }
 
+    List<String> jobsEnCours = obtenirJobsEnCours();
+
     Map<String, Object> reponse = new HashMap<>();
     reponse.put("statsJobs", statsJobs);
     reponse.put("quotaTM", quotaTM);
     reponse.put("workerLastSuccess", workerLastSuccess);
+    reponse.put("jobsEnCours", jobsEnCours);
     return ResponseEntity.ok(reponse);
+  }
+
+  private List<String> obtenirJobsEnCours() {
+    try (java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient()) {
+      java.net.http.HttpRequest req =
+          java.net.http.HttpRequest.newBuilder()
+              .uri(java.net.URI.create("http://localhost:8081/trigger/actif"))
+              .GET()
+              .timeout(java.time.Duration.ofSeconds(2))
+              .build();
+      java.net.http.HttpResponse<String> rep =
+          client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+      if (rep.statusCode() == 200) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> data = objectMapper.readValue(rep.body(), Map.class);
+        Object actifs = data.get("actifs");
+        if (actifs instanceof java.util.List<?> liste) {
+          return liste.stream().map(Object::toString).toList();
+        }
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    } catch (Exception e) {
+      log.debug("Worker inaccessible pour jobs actifs");
+    }
+    return List.of();
   }
 
   /// Déclenche immédiatement les fetches (appel au worker via HTTP interne).

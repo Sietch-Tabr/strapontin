@@ -26,10 +26,30 @@
       ></div>
 
       <nav class="param-onglets" aria-label="Sections des paramètres">
-        <a href="#preferences" class="param-onglet">Préférences</a>
-        <a href="#notifications" class="param-onglet">Notifications</a>
-        <a href="#compte" class="param-onglet">Compte</a>
-        <a href="#donnees" class="param-onglet">Données</a>
+        <a href="#preferences" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-sliders-horizontal" />
+          </svg>
+          Préférences
+        </a>
+        <a href="#notifications" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-bell" />
+          </svg>
+          Notifications
+        </a>
+        <a href="#compte" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-user" />
+          </svg>
+          Compte
+        </a>
+        <a href="#donnees" class="param-onglet">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-database" />
+          </svg>
+          Données
+        </a>
       </nav>
 
       <div class="parametres-sections">
@@ -480,6 +500,13 @@
           var abonneDiv = document.getElementById("push-abonne");
           var nonAbonneDiv = document.getElementById("push-non-abonne");
 
+          if (
+            location.protocol !== "https:" &&
+            location.hostname !== "localhost"
+          ) {
+            nonSupporteDiv.style.display = "";
+            return;
+          }
           if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
             nonSupporteDiv.style.display = "";
             return;

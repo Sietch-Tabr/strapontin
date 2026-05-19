@@ -70,7 +70,7 @@ public class AccueilViewController {
     jdbc.update(
         """
         UPDATE user_matches SET masque_le = NOW()
-        WHERE concert_id = :concertId AND user_id = :userId AND masque_le IS NULL
+        WHERE concert_id = :concertId::uuid AND user_id = :userId AND masque_le IS NULL
         """,
         Map.of("concertId", concertId, "userId", utilisateur(auth).id()));
     return REDIRECT_ACCUEIL;
@@ -111,7 +111,7 @@ public class AccueilViewController {
     jdbc.update(
         """
         UPDATE user_matches SET masque_le = NULL
-        WHERE concert_id = :concertId AND user_id = :userId
+        WHERE concert_id = :concertId::uuid AND user_id = :userId
         """,
         Map.of("concertId", concertId, "userId", utilisateur(auth).id()));
     return REDIRECT_ACCUEIL;

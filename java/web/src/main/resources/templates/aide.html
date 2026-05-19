@@ -28,7 +28,12 @@
           <p id="titre-usage" class="aide-label">Usage courant</p>
           <div class="aide-grille">
             <div class="carte">
-              <h2 class="carte-titre">Artistes &amp; salles</h2>
+              <h2 class="carte-titre">
+                <svg width="16" height="16" aria-hidden="true">
+                  <use href="/icons/lucide-sprite.svg#icon-book-open" />
+                </svg>
+                Artistes &amp; salles
+              </h2>
               <ul>
                 <li>Recherchez et ajoutez les artistes et salles à suivre.</li>
                 <li>
@@ -43,7 +48,12 @@
             </div>
 
             <div class="carte">
-              <h2 class="carte-titre">Notifications</h2>
+              <h2 class="carte-titre">
+                <svg width="16" height="16" aria-hidden="true">
+                  <use href="/icons/lucide-sprite.svg#icon-bell" />
+                </svg>
+                Notifications
+              </h2>
               <ul>
                 <li>
                   <strong>Email</strong> : récapitulatif quotidien à 8h ou à
@@ -58,7 +68,12 @@
             </div>
 
             <div class="carte">
-              <h2 class="carte-titre">Installer l'application</h2>
+              <h2 class="carte-titre">
+                <svg width="16" height="16" aria-hidden="true">
+                  <use href="/icons/lucide-sprite.svg#icon-smartphone" />
+                </svg>
+                Installer l'application
+              </h2>
               <ul>
                 <li>
                   <strong>iOS</strong> : Safari → Partager → « Sur l'écran
@@ -76,7 +91,12 @@
             </div>
 
             <div class="carte">
-              <h2 class="carte-titre">Paramètres</h2>
+              <h2 class="carte-titre">
+                <svg width="16" height="16" aria-hidden="true">
+                  <use href="/icons/lucide-sprite.svg#icon-settings" />
+                </svg>
+                Paramètres
+              </h2>
               <ul>
                 <li>
                   Configurez vos départements de recherche et le filtre des
@@ -91,7 +111,12 @@
             </div>
 
             <div class="carte carte-large">
-              <h2 class="carte-titre">Mes spectacles &amp; Découverte</h2>
+              <h2 class="carte-titre">
+                <svg width="16" height="16" aria-hidden="true">
+                  <use href="/icons/lucide-sprite.svg#icon-compass" />
+                </svg>
+                Mes spectacles &amp; Découverte
+              </h2>
               <ul>
                 <li>
                   <strong>Mes spectacles</strong> : vos prochains concerts
@@ -110,7 +135,12 @@
           <p id="titre-infos" class="aide-label">Informations</p>
           <div class="aide-grille">
             <div class="carte">
-              <h2 class="carte-titre">Données personnelles</h2>
+              <h2 class="carte-titre">
+                <svg width="16" height="16" aria-hidden="true">
+                  <use href="/icons/lucide-sprite.svg#icon-shield-check" />
+                </svg>
+                Données personnelles
+              </h2>
               <ul>
                 <li>
                   Données collectées : nom, identifiant, email, préférences et
@@ -123,13 +153,19 @@
                 </li>
                 <li>
                   Export intégral depuis
-                  <a th:href="@{/parametres}">Paramètres</a>.
+                  <a th:href="@{/parametres}">Paramètres</a>. Suppression de
+                  compte sur demande à l'administrateur.
                 </li>
               </ul>
             </div>
 
             <div class="carte">
-              <h2 class="carte-titre">Licence</h2>
+              <h2 class="carte-titre">
+                <svg width="16" height="16" aria-hidden="true">
+                  <use href="/icons/lucide-sprite.svg#icon-scale" />
+                </svg>
+                Licence
+              </h2>
               <p>
                 Strapontin est distribué sous licence <strong>MIT</strong> —
                 logiciel libre, utilisation, modification et redistribution
@@ -138,7 +174,12 @@
             </div>
 
             <div class="carte">
-              <h2 class="carte-titre">Code source</h2>
+              <h2 class="carte-titre">
+                <svg width="16" height="16" aria-hidden="true">
+                  <use href="/icons/lucide-sprite.svg#icon-code" />
+                </svg>
+                Code source
+              </h2>
               <p>
                 Le code source est disponible sur
                 <a
@@ -150,36 +191,29 @@
               </p>
             </div>
 
-            <div class="carte carte-large">
-              <h2 class="carte-titre">Signaler un problème</h2>
-              <form
-                method="post"
-                th:action="@{/aide/signalement}"
-                class="form-vertical form-compact"
-              >
-                <div class="form-group">
-                  <label for="type-signal">Type</label>
-                  <select id="type-signal" name="type">
-                    <option value="bug">Bug</option>
-                    <option value="suggestion">
-                      Suggestion d'amélioration
-                    </option>
-                    <option value="question">Question</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="message-signal">Message</label>
-                  <textarea
-                    id="message-signal"
-                    name="message"
-                    rows="4"
-                    maxlength="2000"
-                    placeholder="Décrivez le problème ou votre suggestion…"
-                    required
-                  ></textarea>
-                </div>
-                <button type="submit" class="btn btn-secondary">Envoyer</button>
-              </form>
+            <div class="carte">
+              <h2 class="carte-titre">
+                <svg width="16" height="16" aria-hidden="true">
+                  <use href="/icons/lucide-sprite.svg#icon-message-square" />
+                </svg>
+                Signaler un problème
+              </h2>
+              <div th:if="${resendDisponible}">
+                <p class="param-aide">Un bug, une suggestion, une question ?</p>
+                <button
+                  type="button"
+                  id="btn-ouvrir-signalement"
+                  class="btn btn-secondary"
+                >
+                  Ouvrir le formulaire
+                </button>
+              </div>
+              <div th:unless="${resendDisponible}">
+                <p class="param-aide">
+                  Écrivez à
+                  <a th:href="'mailto:' + ${contactEmail}">l'administrateur</a>.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -188,6 +222,66 @@
           <a th:href="@{/changelog}">Voir les nouveautés →</a>
         </p>
       </div>
+
+      <!-- Modale de signalement -->
+      <dialog
+        id="dialog-signaler"
+        aria-labelledby="titre-signalement"
+        th:if="${resendDisponible}"
+      >
+        <div class="dialog-entete">
+          <h2 id="titre-signalement" class="dialog-titre">
+            Signaler un problème ou une suggestion
+          </h2>
+          <button
+            type="button"
+            id="btn-fermer-signalement"
+            class="btn-icone"
+            aria-label="Fermer"
+          >
+            <svg width="18" height="18" aria-hidden="true">
+              <use href="/icons/lucide-sprite.svg#icon-x" />
+            </svg>
+          </button>
+        </div>
+        <form
+          method="post"
+          th:action="@{/aide/signalement}"
+          class="form-vertical"
+          id="form-signalement"
+        >
+          <div class="form-group">
+            <label for="type-signalement">Type</label>
+            <select id="type-signalement" name="type">
+              <option value="bug">Bug</option>
+              <option value="suggestion">Amélioration</option>
+              <option value="question">Question</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="message-signalement">
+              Message <span class="form-aide">(2000 caractères max)</span>
+            </label>
+            <textarea
+              id="message-signalement"
+              name="message"
+              rows="8"
+              maxlength="2000"
+              required
+            ></textarea>
+          </div>
+          <div class="dialog-pied">
+            <button type="submit" class="btn btn-primary">Envoyer</button>
+            <button
+              type="button"
+              id="btn-annuler-signalement"
+              class="btn btn-texte"
+            >
+              Annuler
+            </button>
+          </div>
+        </form>
+      </dialog>
     </th:block>
   </body>
 </html>

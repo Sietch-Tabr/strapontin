@@ -43,8 +43,22 @@ public class EventimSource {
   public EventimSource() {
     this(
         RestClient.builder()
-            .defaultHeader("Accept", "application/json")
-            .defaultHeader("User-Agent", "Mozilla/5.0")
+            .defaultHeader("Accept", "application/json, text/plain, */*")
+            .defaultHeader(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    + " (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+            .defaultHeader("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
+            .defaultHeader("Accept-Encoding", "gzip, deflate, br")
+            .defaultHeader("Referer", "https://www.eventim.fr/")
+            .defaultHeader("Origin", "https://www.eventim.fr")
+            .defaultHeader("sec-ch-ua", "\"Google Chrome\";v=\"131\", \"Not_A Brand\";v=\"24\"")
+            .defaultHeader("sec-ch-ua-mobile", "?0")
+            .defaultHeader("sec-ch-ua-platform", "\"Windows\"")
+            .defaultHeader("Sec-Fetch-Dest", "empty")
+            .defaultHeader("Sec-Fetch-Mode", "cors")
+            .defaultHeader("Sec-Fetch-Site", "same-site")
+            .defaultHeader("Connection", "keep-alive")
             .build());
   }
 

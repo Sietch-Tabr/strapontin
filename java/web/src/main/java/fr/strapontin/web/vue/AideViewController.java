@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.vue;
 
+import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.Set;
@@ -22,10 +23,14 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 public class AideViewController {
 
-  private final EmailService emailService;
+  private static final String EMAIL_CONTACT_DEFAUT = "admin@strapontin.kwaite.fr";
 
-  public AideViewController(EmailService emailService) {
+  private final EmailService emailService;
+  private final ConfigService configService;
+
+  public AideViewController(EmailService emailService, ConfigService configService) {
     this.emailService = emailService;
+    this.configService = configService;
   }
 
   /// Affiche la page d'aide.
@@ -35,6 +40,9 @@ public class AideViewController {
   @GetMapping("/aide")
   public String aide(Model modele) {
     modele.addAttribute("currentPage", "aide");
+    modele.addAttribute("resendDisponible", emailService.estDisponible());
+    modele.addAttribute(
+        "contactEmail", configService.lireConfig("CONTACT_EMAIL").orElse(EMAIL_CONTACT_DEFAUT));
     return "aide";
   }
 

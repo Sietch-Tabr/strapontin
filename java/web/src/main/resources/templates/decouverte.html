@@ -27,17 +27,7 @@
         th:text="${erreur}"
       ></div>
 
-      <!-- Déclenchement manuel du fetch -->
       <div class="decouverte-header">
-        <form
-          method="post"
-          th:action="@{/decouverte/fetcher}"
-          style="display: inline"
-        >
-          <button type="submit" class="btn btn-secondary btn-sm">
-            Synchroniser maintenant
-          </button>
-        </form>
         <span class="sync-info" th:if="${donnees?.derniereSyncRegion != null}">
           Dernière synchro :
           <span

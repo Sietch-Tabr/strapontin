@@ -122,8 +122,6 @@ public class AccueilController {
                c.salle, c.ville, c.url, c.statut, um.notifie_le
         FROM user_matches um
         INNER JOIN concerts c ON um.concert_id = c.id
-        INNER JOIN user_artistes ua
-               ON ua.user_id = um.user_id AND ua.artiste_normalise = c.artiste_norm
         WHERE %s
         ORDER BY c.date ASC, c.artiste ASC
         LIMIT :limite
@@ -152,8 +150,6 @@ public class AccueilController {
         SELECT COUNT(*)
         FROM user_matches um
         INNER JOIN concerts c ON um.concert_id = c.id
-        INNER JOIN user_artistes ua
-               ON ua.user_id = um.user_id AND ua.artiste_normalise = c.artiste_norm
         WHERE %s
         """
             .formatted(where);

@@ -35,7 +35,7 @@ strapontin/
 - **Flyway 12** — migrations DB (`java/web/src/main/resources/db/migration/`)
 - **Resend** — notifications email (tier gratuit 3 000/mois)
 - **web-push (VAPID)** — notifications push PWA
-- **Maven** — build (`mvn -f java/pom.xml -pl web -am package -DskipTests`)
+- **Maven** — build (`mvn -f java/pom.xml -pl web,worker -am package`)
 
 ## Workflow de développement
 

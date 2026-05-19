@@ -7,7 +7,10 @@ package fr.strapontin.web.admin;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -59,6 +62,9 @@ public class AdminViewController {
     var corpsJobs = repJobs.getBody();
     modele.addAttribute("statsJobs", corpsJobs != null ? corpsJobs.get("statsJobs") : null);
     modele.addAttribute("quotaTM", corpsJobs != null ? corpsJobs.get("quotaTM") : null);
+    modele.addAttribute(
+        "jobsEnCours",
+        corpsJobs != null ? corpsJobs.getOrDefault("jobsEnCours", List.of()) : List.of());
 
     Instant workerLastSuccess =
         corpsJobs != null ? (Instant) corpsJobs.get("workerLastSuccess") : null;
@@ -78,6 +84,9 @@ public class AdminViewController {
     modele.addAttribute("workerEnAlerte", workerEnAlerte);
     modele.addAttribute("workerDepuisTexte", workerDepuisTexte);
     modele.addAttribute("currentPage", "admin");
+    DateTimeFormatter formateur =
+        DateTimeFormatter.ofPattern("EEEE d MMMM yyyy à HH'h'mm", Locale.FRENCH);
+    modele.addAttribute("heureActualisation", LocalDateTime.now().format(formateur));
     return "admin";
   }
 
