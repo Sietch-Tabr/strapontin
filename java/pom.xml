@@ -38,7 +38,7 @@
         <commons-text.version>1.15.0</commons-text.version>
         <resend.version>4.13.0</resend.version>
         <springdoc.version>3.0.3</springdoc.version>
-        <bucket4j.version>8.18.0</bucket4j.version>
+        <bucket4j.version>8.19.0</bucket4j.version>
     </properties>
 
     <dependencyManagement>
