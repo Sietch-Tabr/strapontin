@@ -335,14 +335,14 @@ public class SpectacleController {
       jdbc.update(
           """
           UPDATE user_matches SET masque_le = now()
-          WHERE user_id = :userId AND concert_id = :concertId::uuid
+          WHERE user_id = :userId AND concert_id = CAST(:concertId AS uuid)
           """,
           Map.of("userId", userId, "concertId", concertId));
     } else {
       jdbc.update(
           """
           UPDATE user_matches SET masque_le = NULL
-          WHERE user_id = :userId AND concert_id = :concertId::uuid
+          WHERE user_id = :userId AND concert_id = CAST(:concertId AS uuid)
           """,
           Map.of("userId", userId, "concertId", concertId));
     }
