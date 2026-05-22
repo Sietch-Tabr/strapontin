@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -44,10 +46,13 @@ public class EmailService {
 
   private final ConfigService configService;
   private final TemplateEngine templateEngine;
+  private final JdbcTemplate jdbcTemplate;
 
-  public EmailService(ConfigService configService, TemplateEngine templateEngine) {
+  public EmailService(
+      ConfigService configService, TemplateEngine templateEngine, JdbcTemplate jdbcTemplate) {
     this.configService = configService;
     this.templateEngine = templateEngine;
+    this.jdbcTemplate = jdbcTemplate;
   }
 
   /// Paramètres d'un concert pour le digest email.
@@ -67,9 +72,24 @@ public class EmailService {
     if (cle.isEmpty()) {
       return Optional.empty();
     }
-    String replyTo = configService.lireConfig("CONTACT_EMAIL").orElse("admin@strapontin.kwaite.fr");
+    String replyTo =
+        configService
+            .lireConfig("CONTACT_EMAIL")
+            .or(this::obtenirEmailPremierAdmin)
+            .orElse("admin@strapontin.kwaite.fr");
     String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     return Optional.of(new ContexteEmail(new Resend(cle.get()), replyTo, baseUrl));
+  }
+
+  private Optional<String> obtenirEmailPremierAdmin() {
+    try {
+      return Optional.ofNullable(
+          jdbcTemplate.queryForObject(
+              "SELECT email FROM users WHERE role = 'admin' ORDER BY created_at LIMIT 1",
+              String.class));
+    } catch (EmptyResultDataAccessException e) {
+      return Optional.empty();
+    }
   }
 
   private String rendreCours(String nomTemplate, Map<String, Object> variables) {
