@@ -196,7 +196,8 @@ public class SpectacleController {
       if (ids.isEmpty()) {
         whereClause.append(" AND false");
       } else {
-        whereClause.append(" AND c.salle_norm IN (:salleIds)");
+        whereClause.append(
+            " AND regexp_replace(c.salle_norm, '[^a-z0-9]', '', 'g') IN (:salleIds)");
         params.put("salleIds", ids);
       }
     }
