@@ -86,6 +86,32 @@ public class ModeleGlobalAdvice {
     return "auto";
   }
 
+  /// Injecte le nombre de concerts non encore notifiés (badge bottom nav).
+  ///
+  /// <p>Requête ignorée pour les endpoints {@code /api/} et les utilisateurs non authentifiés.
+  ///
+  /// @param auth    l'authentification Spring Security (peut être {@code null})
+  /// @param request la requête HTTP
+  /// @return le nombre de matches avec {@code notifie_le IS NULL}, ou 0
+  @ModelAttribute("nbNouveau")
+  public int nbNouveau(Authentication auth, HttpServletRequest request) {
+    if (auth == null
+        || !auth.isAuthenticated()
+        || request.getRequestURI().startsWith("/api/")
+        || !(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
+      return 0;
+    }
+    Integer count =
+        jdbc.queryForObject(
+            """
+            SELECT COUNT(*) FROM user_matches
+            WHERE user_id = :userId AND notifie_le IS NULL AND masque_le IS NULL
+            """,
+            Map.of("userId", ud.id()),
+            Integer.class);
+    return count != null ? count : 0;
+  }
+
   /// Injecte l'utilisateur courant dans le modèle.
   ///
   /// @param auth l'authentification Spring Security (peut être {@code null})

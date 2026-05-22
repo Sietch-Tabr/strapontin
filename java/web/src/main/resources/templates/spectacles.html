@@ -54,8 +54,18 @@
         </a>
       </div>
 
+      <!-- Bouton toggle filtres (mobile uniquement) -->
+      <div class="filtres-toggle">
+        <button type="button" id="btn-filtres" class="btn btn-secondary btn-sm" aria-expanded="false" aria-controls="filtres-form">
+          <svg class="icon" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-sliders-horizontal" />
+          </svg>
+          <span id="filtres-toggle-label">Filtres</span>
+        </button>
+      </div>
+
       <!-- Formulaire de filtres -->
-      <form method="get" th:action="@{/spectacles}" class="filtres-form">
+      <form method="get" th:action="@{/spectacles}" class="filtres-form" id="filtres-form">
         <input type="hidden" name="masques" th:value="${masques}" />
 
         <div class="filtres-ligne">
@@ -137,78 +147,67 @@
         </p>
       </div>
 
-      <!-- Tableau des concerts -->
-      <div th:unless="${donnees.concerts.isEmpty()}" class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Artiste</th>
-              <th>Date</th>
-              <th>Salle</th>
-              <th>Ville</th>
-              <th>Prix</th>
-              <th>Statut</th>
-              <th><span class="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr th:each="concert : ${donnees.concerts}">
-              <td>
-                <span th:text="${concert.artiste}">Artiste</span>
-                <span class="badge badge-nouveau" th:if="${concert.estNew}"
-                  >Nouveau</span
-                >
-              </td>
-              <td th:text="${concert.dateFormatee()}">date</td>
-              <td th:text="${concert.salle}">Salle</td>
-              <td th:text="${concert.ville}">Ville</td>
-              <td>
-                <span
-                  th:if="${concert.prixMin != null}"
-                  th:text="${concert.prixMin} + (${concert.prixMax != null and concert.prixMax != concert.prixMin} ? '–' + ${concert.prixMax} : '') + ' €'"
-                >
-                  Prix
-                </span>
-              </td>
-              <td>
-                <span
-                  class="badge badge-annule"
-                  th:if="${concert.statut == 'cancelled'}"
-                  >Annulé</span
-                >
-                <span
-                  class="badge badge-reporte"
-                  th:if="${concert.statut == 'rescheduled'}"
-                  >Reporté</span
-                >
-                <span
-                  class="badge badge-complet"
-                  th:if="${concert.statut == 'offsale'}"
-                  >Complet</span
-                >
-              </td>
-              <td class="actions-cellule">
-                <a
-                  th:if="${concert.url}"
-                  th:href="${concert.url}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="btn btn-xs btn-secondary"
-                  >Billets</a
-                >
-                <form
-                  th:if="${masques}"
-                  method="post"
-                  th:action="@{/spectacles/demasquer/{id}(id=${concert.id})}"
-                >
-                  <button type="submit" class="btn btn-sm btn-texte">
-                    Réafficher
-                  </button>
-                </form>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Tableau / cartes des concerts -->
+      <div th:unless="${donnees.concerts.isEmpty()}" class="spectacles-conteneur">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Artiste</th>
+                <th>Date</th>
+                <th>Salle</th>
+                <th>Ville</th>
+                <th>Prix</th>
+                <th>Statut</th>
+                <th><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="concert : ${donnees.concerts}">
+                <td data-label="Artiste">
+                  <span th:text="${concert.artiste}">Artiste</span>
+                  <span class="badge badge-nouveau" th:if="${concert.estNew}">Nouveau</span>
+                </td>
+                <td data-label="Date" th:text="${concert.dateFormatee()}">date</td>
+                <td data-label="Salle"
+                    th:text="${concert.salle}"
+                    th:classappend="${concert.salle == null} ? ' cel-vide' : ''">Salle</td>
+                <td data-label="Ville"
+                    th:text="${concert.ville}"
+                    th:classappend="${concert.ville == null} ? ' cel-vide' : ''">Ville</td>
+                <td data-label="Prix"
+                    th:classappend="${concert.prixMin == null} ? ' cel-vide' : ''">
+                  <span
+                    th:if="${concert.prixMin != null}"
+                    th:text="${concert.prixMin} + (${concert.prixMax != null and concert.prixMax != concert.prixMin} ? '–' + ${concert.prixMax} : '') + ' €'"
+                  >Prix</span>
+                </td>
+                <td data-label="Statut"
+                    th:classappend="${concert.statut != 'cancelled' and concert.statut != 'rescheduled' and concert.statut != 'offsale'} ? ' cel-vide' : ''">
+                  <span class="badge badge-annule"  th:if="${concert.statut == 'cancelled'}">Annulé</span>
+                  <span class="badge badge-reporte" th:if="${concert.statut == 'rescheduled'}">Reporté</span>
+                  <span class="badge badge-complet" th:if="${concert.statut == 'offsale'}">Complet</span>
+                </td>
+                <td data-label="" class="actions-cellule">
+                  <a
+                    th:if="${concert.url}"
+                    th:href="${concert.url}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn btn-xs btn-secondary"
+                  >Billets</a>
+                  <form
+                    th:if="${masques}"
+                    method="post"
+                    th:action="@{/spectacles/demasquer/{id}(id=${concert.id})}"
+                  >
+                    <button type="submit" class="btn btn-sm btn-texte">Réafficher</button>
+                  </form>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Pagination -->

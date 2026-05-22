@@ -118,6 +118,41 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+// Toggle filtres spectacles (mobile)
+(function () {
+  var btn = document.getElementById("btn-filtres");
+  var form = document.getElementById("filtres-form");
+  if (!btn || !form) return;
+
+  var NOMS_FILTRES = ["q", "mois", "genre", "classification", "budget"];
+
+  function compterActifs() {
+    return NOMS_FILTRES.reduce(function (n, nom) {
+      var el = form.querySelector("[name=" + nom + "]");
+      return n + (el && el.value !== "" ? 1 : 0);
+    }, 0);
+  }
+
+  function mettreAJourLabel(nb) {
+    var label = document.getElementById("filtres-toggle-label");
+    if (label) label.textContent = nb > 0 ? "Filtres · " + nb : "Filtres";
+  }
+
+  var nb = compterActifs();
+  mettreAJourLabel(nb);
+
+  // Ouvrir automatiquement si des filtres sont actifs
+  if (nb > 0) {
+    form.classList.add("visible");
+    btn.setAttribute("aria-expanded", "true");
+  }
+
+  btn.addEventListener("click", function () {
+    var ouvert = form.classList.toggle("visible");
+    btn.setAttribute("aria-expanded", String(ouvert));
+  });
+})();
+
 // Navigation par onglets — repositionnement en haut à chaque changement
 // Les sections ont display:none avant d'être ciblées ; on évite le scroll
 // natif (comportement aléatoire) en remontant en haut après le repaint.
@@ -135,36 +170,43 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 })();
 
-// Tiroir de navigation mobile
+// Drawer de navigation mobile (dialog natif)
 (function () {
   var btnPlus = document.getElementById("btn-nav-plus");
-  var tiroir = document.getElementById("tiroir-nav");
-  var fond = document.getElementById("tiroir-fond");
-  if (!btnPlus || !tiroir || !fond) return;
+  var dialog = document.getElementById("dialog-nav-plus");
+  if (!btnPlus || !dialog) return;
 
   function ouvrir() {
-    tiroir.classList.add("ouvert");
-    fond.classList.add("ouvert");
+    dialog.showModal();
     btnPlus.setAttribute("aria-expanded", "true");
-    tiroir.setAttribute("aria-hidden", "false");
-    fond.setAttribute("aria-hidden", "false");
   }
 
   function fermer() {
-    tiroir.classList.remove("ouvert");
-    fond.classList.remove("ouvert");
-    btnPlus.setAttribute("aria-expanded", "false");
-    tiroir.setAttribute("aria-hidden", "true");
-    fond.setAttribute("aria-hidden", "true");
+    dialog.close();
   }
 
   btnPlus.addEventListener("click", function () {
-    tiroir.classList.contains("ouvert") ? fermer() : ouvrir();
+    dialog.open ? fermer() : ouvrir();
   });
-  fond.addEventListener("click", fermer);
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") fermer();
+
+  // Clic sur le backdrop (clic sur le <dialog> lui-même, hors contenu)
+  dialog.addEventListener("click", function (e) {
+    if (e.target === dialog) fermer();
   });
+
+  // Sync aria-expanded à la fermeture (Echap natif inclus)
+  dialog.addEventListener("close", function () {
+    btnPlus.setAttribute("aria-expanded", "false");
+  });
+
+  // Swipe vers le bas pour fermer
+  var touchDepart = 0;
+  dialog.addEventListener("touchstart", function (e) {
+    touchDepart = e.touches[0].clientY;
+  }, { passive: true });
+  dialog.addEventListener("touchend", function (e) {
+    if (e.changedTouches[0].clientY - touchDepart > 80) fermer();
+  }, { passive: true });
 })();
 
 // Modale de signalement (page aide)

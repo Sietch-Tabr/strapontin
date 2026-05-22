@@ -129,6 +129,7 @@
   padding: 2rem;
   max-width: 1100px;
   view-transition-name: zone-principale;
+  overflow-x: clip;
 }
 
 /* ── Navigation mobile (bottom nav) ─────────────────────── */
@@ -174,43 +175,54 @@
   color: var(--fg);
 }
 
-/* Tiroir navigation mobile */
-.tiroir-fond {
-  display: none;
+/* Drawer navigation mobile (dialog natif) */
+#dialog-nav-plus {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 19;
-}
-
-.tiroir-fond.ouvert {
-  display: block;
-}
-
-.tiroir-nav {
-  position: fixed;
-  bottom: var(--nav-h);
-  left: 0;
-  right: 0;
-  background: var(--bg);
+  inset: auto 0 var(--nav-h) 0;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 80vh;
+  border: none;
   border-top: 1px solid var(--border);
   border-radius: 0.75rem 0.75rem 0 0;
-  z-index: 20;
-  padding: 0.5rem;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  overflow-y: auto;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+  animation: drawer-entree 0.25s ease;
+}
+
+@keyframes drawer-entree {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+#dialog-nav-plus::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.dark #dialog-nav-plus::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.dialog-nav-handle {
+  width: 2.5rem;
+  height: 0.25rem;
+  background: var(--border);
+  border-radius: 9999px;
+  margin: 0.75rem auto 0.25rem;
+}
+
+.dialog-nav-contenu {
+  padding: 0.25rem 0.5rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
-  transform: translateY(100%);
-  transition: transform 0.25s ease;
-  visibility: hidden;
 }
 
-.tiroir-nav.ouvert {
-  transform: translateY(0);
-  visibility: visible;
-}
-
-.tiroir-nav a {
+.dialog-nav-contenu a {
   display: flex;
   align-items: center;
   gap: 0.625rem;
@@ -224,22 +236,47 @@
     color 0.15s;
 }
 
-.tiroir-nav a:hover,
-.tiroir-nav a.actif {
+.dialog-nav-contenu a:hover,
+.dialog-nav-contenu a.actif {
   background: var(--accent);
   color: var(--accent-fg);
 }
 
-.tiroir-separateur {
+.dialog-nav-sep {
   margin: 0.25rem 0;
   border-color: var(--border);
 }
 
-.tiroir-user {
+.dialog-nav-user {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 1rem;
+}
+
+/* Badge nouveautés — bottom nav */
+.bottom-nav-badge-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.5rem;
+  min-width: 1rem;
+  height: 1rem;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 9999px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.2rem;
+  pointer-events: none;
+  line-height: 1;
 }
 
 @media (max-width: 768px) {

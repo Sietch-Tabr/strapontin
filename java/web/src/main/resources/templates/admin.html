@@ -286,40 +286,39 @@
             </div>
 
             <div
-              class="table-wrapper"
+              class="logs-conteneur"
               th:if="${logs != null and !logs.isEmpty()}"
             >
-              <table id="table-logs">
-                <thead>
-                  <tr>
-                    <th>Horodatage</th>
-                    <th>Niveau</th>
-                    <th>Source</th>
-                    <th>Message</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    th:each="entree : ${logs}"
-                    th:classappend="${entree.niveau == 'error' ? ' log-error' : (entree.niveau == 'warn' ? ' log-warn' : '')}"
-                    th:data-source="${entree.source}"
-                    th:data-niveau="${entree.niveau}"
-                    th:data-meta="${entree.meta != null ? entree.meta : ''}"
-                  >
-                    <td
-                      class="log-ts"
-                      th:text="${T(fr.strapontin.web.utils.Dates).formaterTs(entree.ts)}"
+              <div class="table-wrapper">
+                <table id="table-logs">
+                  <thead>
+                    <tr>
+                      <th>Horodatage</th>
+                      <th>Niveau</th>
+                      <th>Source</th>
+                      <th>Message</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      th:each="entree : ${logs}"
+                      th:classappend="${entree.niveau == 'error' ? ' log-error' : (entree.niveau == 'warn' ? ' log-warn' : '')}"
+                      th:data-source="${entree.source}"
+                      th:data-niveau="${entree.niveau}"
+                      th:data-meta="${entree.meta != null ? entree.meta : ''}"
                     >
-                      date
-                    </td>
-                    <td th:text="${entree.niveau}">niveau</td>
-                    <td th:text="${entree.source}">source</td>
-                    <td class="log-message" th:text="${entree.message}">
-                      message
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                      <td
+                        class="log-ts"
+                        data-label="Horodatage"
+                        th:text="${T(fr.strapontin.web.utils.Dates).formaterTs(entree.ts)}"
+                      >date</td>
+                      <td data-label="Niveau" th:text="${entree.niveau}">niveau</td>
+                      <td data-label="Source" th:text="${entree.source}">source</td>
+                      <td class="log-message" data-label="Message" th:text="${entree.message}">message</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
             <p
               th:if="${logs == null or logs.isEmpty()}"
