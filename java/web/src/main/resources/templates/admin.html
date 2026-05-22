@@ -67,7 +67,10 @@
         th:text="${erreur}"
       ></div>
 
-      <select class="param-onglets-mobile" aria-label="Section d'administration">
+      <select
+        class="param-onglets-mobile"
+        aria-label="Section d'administration"
+      >
         <option value="#jobs">Tableau de bord</option>
         <option value="#logs">Logs</option>
         <option value="#configuration">Configuration</option>
@@ -593,18 +596,27 @@
           });
 
           var filtreSource = document.getElementById("filtre-source");
-          var filtreNiveau = "";
+          var filtresActifs = new Set(["warn", "error"]);
           var btnNiveaux = document.querySelectorAll(".log-filtre-btn");
           var compte = document.getElementById("log-compte");
+
+          function mettreAJourBoutons() {
+            btnNiveaux.forEach(function (b) {
+              var actif = filtresActifs.has(b.getAttribute("data-niveau"));
+              b.classList.toggle("actif", actif);
+              b.setAttribute("aria-pressed", String(actif));
+            });
+          }
 
           function filtrer() {
             var lignes = table.querySelectorAll("tbody tr");
             var source = filtreSource ? filtreSource.value : "";
+            var tousActifs = filtresActifs.size === 0;
             var visible = 0;
             lignes.forEach(function (tr) {
               var n = tr.getAttribute("data-niveau") || "";
               var s = tr.getAttribute("data-source") || "";
-              var okNiveau = !filtreNiveau || n === filtreNiveau;
+              var okNiveau = tousActifs || filtresActifs.has(n);
               var okSource = !source || s === source;
               var show = okNiveau && okSource;
               tr.style.display = show ? "" : "none";
@@ -616,17 +628,18 @@
           btnNiveaux.forEach(function (btn) {
             btn.addEventListener("click", function () {
               var niv = btn.getAttribute("data-niveau");
-              filtreNiveau = filtreNiveau === niv ? "" : niv;
-              btnNiveaux.forEach(function (b) {
-                var actif = b.getAttribute("data-niveau") === filtreNiveau;
-                b.classList.toggle("actif", actif);
-                b.setAttribute("aria-pressed", String(actif));
-              });
+              if (filtresActifs.has(niv)) {
+                filtresActifs.delete(niv);
+              } else {
+                filtresActifs.add(niv);
+              }
+              mettreAJourBoutons();
               filtrer();
             });
           });
 
           if (filtreSource) filtreSource.addEventListener("change", filtrer);
+          mettreAJourBoutons();
           filtrer();
         })();
 
