@@ -43,7 +43,7 @@
         <div class="chips">
           <th:block th:each="dept : ${donnees.deptsUtilisateur}">
             <a
-              th:href="@{/decouverte(dept=${dept},q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri})}"
+              th:href="@{/decouverte(dept=${depts.contains(dept) ? null : dept},q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri})}"
               th:classappend="${depts.contains(dept) ? ' actif' : ''}"
               th:text="${dept}"
               th:title="${syncDepts[dept] != null ? 'Dernière synchro : ' + syncDepts[dept] : 'Jamais synchronisé'}"
@@ -60,7 +60,13 @@
 
       <!-- Bouton toggle filtres (mobile/tablette) -->
       <div class="filtres-toggle">
-        <button type="button" id="btn-filtres" class="btn btn-secondary btn-sm" aria-expanded="false" aria-controls="filtres-form">
+        <button
+          type="button"
+          id="btn-filtres"
+          class="btn btn-secondary btn-sm"
+          aria-expanded="false"
+          aria-controls="filtres-form"
+        >
           <svg class="icon" aria-hidden="true">
             <use href="/icons/lucide-sprite.svg#icon-sliders-horizontal" />
           </svg>
@@ -69,7 +75,12 @@
       </div>
 
       <!-- Filtres -->
-      <form method="get" th:action="@{/decouverte}" class="filtres-form" id="filtres-form">
+      <form
+        method="get"
+        th:action="@{/decouverte}"
+        class="filtres-form"
+        id="filtres-form"
+      >
         <th:block th:each="d : ${depts}">
           <input type="hidden" name="dept" th:value="${d}" />
         </th:block>
@@ -190,27 +201,48 @@
             </thead>
             <tbody>
               <tr th:each="concert : ${donnees.concerts}">
-                <td data-label="Artiste" th:text="${concert.artiste}">Artiste</td>
-                <td data-label="Date" th:text="${concert.dateFormatee()}">date</td>
-                <td data-label="Salle"
-                    th:text="${concert.salle}"
-                    th:classappend="${concert.salle == null} ? ' cel-vide' : ''">Salle</td>
-                <td data-label="Ville"
-                    th:text="${concert.ville}"
-                    th:classappend="${concert.ville == null} ? ' cel-vide' : ''">Ville</td>
+                <td data-label="Artiste" th:text="${concert.artiste}">
+                  Artiste
+                </td>
+                <td data-label="Date" th:text="${concert.dateFormatee()}">
+                  date
+                </td>
+                <td
+                  data-label="Salle"
+                  th:text="${concert.salle}"
+                  th:classappend="${concert.salle == null} ? ' cel-vide' : ''"
+                >
+                  Salle
+                </td>
+                <td
+                  data-label="Ville"
+                  th:text="${concert.ville}"
+                  th:classappend="${concert.ville == null} ? ' cel-vide' : ''"
+                >
+                  Ville
+                </td>
                 <td data-label="Dept" th:text="${concert.dept}">dept</td>
-                <td data-label="Genre"
-                    th:text="${concert.genre}"
-                    th:classappend="${concert.genre == null} ? ' cel-vide' : ''">genre</td>
-                <td data-label="Prix"
-                    th:classappend="${concert.prixMin == null} ? ' cel-vide' : ''">
+                <td
+                  data-label="Genre"
+                  th:text="${concert.genre}"
+                  th:classappend="${concert.genre == null} ? ' cel-vide' : ''"
+                >
+                  genre
+                </td>
+                <td
+                  data-label="Prix"
+                  th:classappend="${concert.prixMin == null} ? ' cel-vide' : ''"
+                >
                   <span
                     th:if="${concert.prixMin != null}"
                     th:text="${concert.prixMin} + (${concert.prixMax != null and concert.prixMax != concert.prixMin} ? '–' + ${concert.prixMax} : '') + ' €'"
-                  >Prix</span>
+                    >Prix</span
+                  >
                 </td>
-                <td data-label=""
-                    th:classappend="${concert.url == null} ? ' cel-vide' : ''">
+                <td
+                  data-label=""
+                  th:classappend="${concert.url == null} ? ' cel-vide' : ''"
+                >
                   <a
                     th:if="${concert.url}"
                     th:href="${concert.url}"

@@ -572,33 +572,33 @@
         // ── Logs système ────────────────────────────────────────
         (function () {
           var table = document.getElementById("table-logs");
-          if (!table) return;
-
-          table.querySelectorAll("tbody tr[data-meta]").forEach(function (tr) {
-            var metaStr = tr.getAttribute("data-meta");
-            if (!metaStr) return;
-            try {
-              var meta = JSON.parse(metaStr);
-              var cles = Object.keys(meta);
-              if (!cles.length) return;
-              var msgTd = tr.querySelector("td.log-message");
-              if (!msgTd) return;
-              var metaDiv = document.createElement("div");
-              metaDiv.className = "log-meta";
-              cles.forEach(function (k) {
-                var item = document.createElement("span");
-                item.className = "log-meta-item";
-                item.textContent = k + ": " + meta[k];
-                metaDiv.appendChild(item);
-              });
-              msgTd.appendChild(metaDiv);
-            } catch (_) {}
-          });
-
           var filtreSource = document.getElementById("filtre-source");
           var filtresActifs = new Set(["warn", "error"]);
           var btnNiveaux = document.querySelectorAll(".log-filtre-btn");
           var compte = document.getElementById("log-compte");
+
+          if (table) {
+            table.querySelectorAll("tbody tr[data-meta]").forEach(function (tr) {
+              var metaStr = tr.getAttribute("data-meta");
+              if (!metaStr) return;
+              try {
+                var meta = JSON.parse(metaStr);
+                var cles = Object.keys(meta);
+                if (!cles.length) return;
+                var msgTd = tr.querySelector("td.log-message");
+                if (!msgTd) return;
+                var metaDiv = document.createElement("div");
+                metaDiv.className = "log-meta";
+                cles.forEach(function (k) {
+                  var item = document.createElement("span");
+                  item.className = "log-meta-item";
+                  item.textContent = k + ": " + meta[k];
+                  metaDiv.appendChild(item);
+                });
+                msgTd.appendChild(metaDiv);
+              } catch (_) {}
+            });
+          }
 
           function mettreAJourBoutons() {
             btnNiveaux.forEach(function (b) {
@@ -609,6 +609,7 @@
           }
 
           function filtrer() {
+            if (!table) return;
             var lignes = table.querySelectorAll("tbody tr");
             var source = filtreSource ? filtreSource.value : "";
             var tousActifs = filtresActifs.size === 0;
