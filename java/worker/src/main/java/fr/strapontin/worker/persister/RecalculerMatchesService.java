@@ -154,7 +154,8 @@ public class RecalculerMatchesService {
 
   private List<String> rechercherConcertsParSalles(List<String> salleIds, String aujourdhui) {
     return jdbc.queryForList(
-        "SELECT id::text FROM concerts WHERE regexp_replace(salle_norm, '[^a-z0-9]', '', 'g') IN (:salleNorms) AND date >= :aujourdhui",
+        "SELECT id::text FROM concerts WHERE regexp_replace(salle_norm, '[^a-z0-9]', '', 'g') IN"
+            + " (:salleNorms) AND date >= :aujourdhui",
         Map.of("salleNorms", salleIds, "aujourdhui", LocalDate.parse(aujourdhui)),
         String.class);
   }

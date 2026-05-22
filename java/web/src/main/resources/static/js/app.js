@@ -347,6 +347,288 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 })();
 
+// Logs admin — filtre multi-niveaux avec warn+error actifs par défaut
+(function () {
+  var table = document.getElementById("table-logs");
+  var filtreSource = document.getElementById("filtre-source");
+  var filtresActifs = new Set(["warn", "error"]);
+  var btnNiveaux = document.querySelectorAll(".log-filtre-btn");
+  var compte = document.getElementById("log-compte");
+
+  if (!btnNiveaux.length) return;
+
+  if (table) {
+    table.querySelectorAll("tbody tr[data-meta]").forEach(function (tr) {
+      var metaStr = tr.getAttribute("data-meta");
+      if (!metaStr) return;
+      try {
+        var meta = JSON.parse(metaStr);
+        var cles = Object.keys(meta);
+        if (!cles.length) return;
+        var msgTd = tr.querySelector("td.log-message");
+        if (!msgTd) return;
+        var metaDiv = document.createElement("div");
+        metaDiv.className = "log-meta";
+        cles.forEach(function (k) {
+          var item = document.createElement("span");
+          item.className = "log-meta-item";
+          item.textContent = k + ": " + meta[k];
+          metaDiv.appendChild(item);
+        });
+        msgTd.appendChild(metaDiv);
+      } catch (_) {}
+    });
+  }
+
+  function mettreAJourBoutonsLogs() {
+    btnNiveaux.forEach(function (b) {
+      var actif = filtresActifs.has(b.getAttribute("data-niveau"));
+      b.classList.toggle("actif", actif);
+      b.setAttribute("aria-pressed", String(actif));
+    });
+  }
+
+  function filtrerLogs() {
+    if (!table) return;
+    var lignes = table.querySelectorAll("tbody tr");
+    var source = filtreSource ? filtreSource.value : "";
+    var tousActifs = filtresActifs.size === 0;
+    var visible = 0;
+    lignes.forEach(function (tr) {
+      var n = tr.getAttribute("data-niveau") || "";
+      var s = tr.getAttribute("data-source") || "";
+      var okNiveau = tousActifs || filtresActifs.has(n);
+      var okSource = !source || s === source;
+      var show = okNiveau && okSource;
+      tr.style.display = show ? "" : "none";
+      if (show) visible++;
+    });
+    if (compte) compte.textContent = visible + " / " + lignes.length;
+  }
+
+  btnNiveaux.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var niv = btn.getAttribute("data-niveau");
+      if (filtresActifs.has(niv)) {
+        filtresActifs.delete(niv);
+      } else {
+        filtresActifs.add(niv);
+      }
+      mettreAJourBoutonsLogs();
+      filtrerLogs();
+    });
+  });
+
+  if (filtreSource) filtreSource.addEventListener("change", filtrerLogs);
+  mettreAJourBoutonsLogs();
+  filtrerLogs();
+})();
+
+// Modification utilisateur (admin)
+(function () {
+  var formsModif = document.querySelectorAll(".form-modif-utilisateur");
+  if (!formsModif.length) return;
+
+  formsModif.forEach(function (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var userId = form.getAttribute("data-user-id");
+      var erreurSpan = form.querySelector(".erreur-modif");
+      erreurSpan.style.display = "none";
+      var corps = {
+        nom: form.querySelector("[name=nom]").value.trim(),
+        email: form.querySelector("[name=email]").value.trim(),
+        role: form.querySelector("[name=role]").value,
+      };
+      fetch("/admin/utilisateurs/" + userId, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(corps),
+      })
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (d) {
+          if (d.succes) {
+            location.reload();
+          } else {
+            erreurSpan.textContent = d.erreur || "Erreur.";
+            erreurSpan.style.display = "";
+          }
+        })
+        .catch(function () {
+          erreurSpan.textContent = "Erreur réseau.";
+          erreurSpan.style.display = "";
+        });
+    });
+  });
+})();
+
+// Modale invitation (admin)
+(function () {
+  var dialog = document.getElementById("dialog-invitation");
+  if (dialog) dialog.showModal();
+})();
+
+window.copierLienInvitation = function () {
+  var input = document.getElementById("lien-invitation");
+  if (!input) return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(input.value).catch(function () {
+      input.select();
+      document.execCommand("copy");
+    });
+  } else {
+    input.select();
+    document.execCommand("copy");
+  }
+};
+
+window.toggleModif = function (userId) {
+  var row = document.getElementById("modif-" + userId);
+  if (row) row.style.display = row.style.display === "none" ? "" : "none";
+};
+
+// Push notifications (paramètres)
+(function () {
+  var erreurDiv = document.getElementById("push-erreur");
+  if (!erreurDiv) return;
+
+  var nonSupporteDiv = document.getElementById("push-non-supporte");
+  var vapidManquantDiv = document.getElementById("push-vapid-manquant");
+  var permRefusee = document.getElementById("push-permission-refusee");
+  var abonneDiv = document.getElementById("push-abonne");
+  var nonAbonneDiv = document.getElementById("push-non-abonne");
+
+  if (location.protocol !== "https:" && location.hostname !== "localhost") {
+    nonSupporteDiv.style.display = "";
+    return;
+  }
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    nonSupporteDiv.style.display = "";
+    return;
+  }
+
+  var btnActiver = document.getElementById("btn-activer-push");
+  var btnDesactiver = document.getElementById("btn-desactiver-push");
+  var pushClePublique = null;
+  var pushAbonnement = null;
+  var pushEnCours = false;
+
+  function afficherErreur(msg) {
+    erreurDiv.textContent = msg;
+    erreurDiv.style.display = "";
+  }
+
+  function masquerErreur() {
+    erreurDiv.style.display = "none";
+  }
+
+  function majEtat() {
+    permRefusee.style.display = "none";
+    abonneDiv.style.display = "none";
+    nonAbonneDiv.style.display = "none";
+    if (Notification.permission === "denied") {
+      permRefusee.style.display = "";
+    } else if (pushAbonnement) {
+      abonneDiv.style.display = "";
+    } else {
+      nonAbonneDiv.style.display = "";
+    }
+  }
+
+  async function chargerEtat() {
+    try {
+      var results = await Promise.all([
+        fetch("/api/push").then(function (r) {
+          return r.json();
+        }),
+        navigator.serviceWorker.ready,
+      ]);
+      var repVapid = results[0];
+      var registration = results[1];
+      if (!repVapid.disponible) {
+        vapidManquantDiv.style.display = "";
+        return;
+      }
+      pushClePublique = repVapid.clePublique;
+      pushAbonnement = await registration.pushManager.getSubscription();
+      majEtat();
+    } catch (_) {
+      nonSupporteDiv.style.display = "";
+    }
+  }
+
+  btnActiver.addEventListener("click", async function () {
+    if (!pushClePublique || pushEnCours) return;
+    pushEnCours = true;
+    masquerErreur();
+    btnActiver.disabled = true;
+    btnActiver.textContent = "Activation…";
+    try {
+      var permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        if (permission === "denied") majEtat();
+        return;
+      }
+      var registration = await navigator.serviceWorker.ready;
+      var abonnement = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64VersUint8Array(pushClePublique),
+      });
+      var rep = await fetch("/api/push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpoint: abonnement.endpoint,
+          keys: {
+            p256dh: arrayBufferVersBase64(abonnement.getKey("p256dh")),
+            auth: arrayBufferVersBase64(abonnement.getKey("auth")),
+          },
+        }),
+      });
+      if (!rep.ok) throw new Error("Échec enregistrement");
+      pushAbonnement = abonnement;
+      document.cookie = "push_opt_out=;path=/;max-age=0;SameSite=Lax";
+      majEtat();
+    } catch (e) {
+      afficherErreur(e.message || "Une erreur est survenue.");
+    } finally {
+      pushEnCours = false;
+      btnActiver.disabled = false;
+      btnActiver.textContent = "Activer les notifications push";
+    }
+  });
+
+  btnDesactiver.addEventListener("click", async function () {
+    if (!pushAbonnement || pushEnCours) return;
+    pushEnCours = true;
+    masquerErreur();
+    btnDesactiver.disabled = true;
+    btnDesactiver.textContent = "Désactivation…";
+    try {
+      var endpoint = pushAbonnement.endpoint;
+      await pushAbonnement.unsubscribe();
+      await fetch("/api/push", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: endpoint }),
+      });
+      pushAbonnement = null;
+      document.cookie = "push_opt_out=1;path=/;max-age=31536000;SameSite=Lax";
+      majEtat();
+    } catch (e) {
+      afficherErreur(e.message || "Une erreur est survenue.");
+    } finally {
+      pushEnCours = false;
+      btnDesactiver.disabled = false;
+      btnDesactiver.textContent = "Désactiver les notifications push";
+    }
+  });
+
+  chargerEtat();
+})();
+
 function urlBase64VersUint8Array(base64) {
   const rembourrage = "=".repeat((4 - (base64.length % 4)) % 4);
   const b64 = (base64 + rembourrage).replace(/-/g, "+").replace(/_/g, "/");

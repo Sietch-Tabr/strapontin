@@ -111,6 +111,16 @@ public class AccueilController {
       where.append(" AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled'))");
     }
 
+    where.append(
+        """
+         AND EXISTS (
+           SELECT 1 FROM user_artistes ua
+           WHERE ua.user_id = :userId
+             AND (c.artiste_norm = ua.artiste_normalise
+                  OR c.artiste_norm LIKE ua.artiste_normalise || ' %')
+         )
+        """);
+
     Map<String, Object> params = new HashMap<>();
     params.put(CLE_USER_ID, userId);
     params.put("aujourd8", aujourd8);
