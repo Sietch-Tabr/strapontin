@@ -67,6 +67,13 @@
         th:text="${erreur}"
       ></div>
 
+      <select class="param-onglets-mobile" aria-label="Section d'administration">
+        <option value="#jobs">Tableau de bord</option>
+        <option value="#logs">Logs</option>
+        <option value="#configuration">Configuration</option>
+        <option value="#utilisateurs">Utilisateurs</option>
+      </select>
+
       <nav class="param-onglets" aria-label="Sections d'administration">
         <a href="#jobs" class="param-onglet">
           <svg width="16" height="16" aria-hidden="true">
@@ -311,10 +318,22 @@
                         class="log-ts"
                         data-label="Horodatage"
                         th:text="${T(fr.strapontin.web.utils.Dates).formaterTs(entree.ts)}"
-                      >date</td>
-                      <td data-label="Niveau" th:text="${entree.niveau}">niveau</td>
-                      <td data-label="Source" th:text="${entree.source}">source</td>
-                      <td class="log-message" data-label="Message" th:text="${entree.message}">message</td>
+                      >
+                        date
+                      </td>
+                      <td data-label="Niveau" th:text="${entree.niveau}">
+                        niveau
+                      </td>
+                      <td data-label="Source" th:text="${entree.source}">
+                        source
+                      </td>
+                      <td
+                        class="log-message"
+                        data-label="Message"
+                        th:text="${entree.message}"
+                      >
+                        message
+                      </td>
                     </tr>
                   </tbody>
                 </table>

@@ -153,6 +153,31 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 })();
 
+// Select natif — onglets paramètres/admin sur mobile
+(function () {
+  var select = document.querySelector(".param-onglets-mobile");
+  if (!select) return;
+
+  function syncSelect() {
+    var hash = location.hash;
+    if (hash && select.querySelector('option[value="' + hash + '"]')) {
+      select.value = hash;
+    } else {
+      select.selectedIndex = 0;
+    }
+  }
+
+  syncSelect();
+  window.addEventListener("hashchange", syncSelect);
+
+  select.addEventListener("change", function () {
+    location.hash = select.value;
+    requestAnimationFrame(function () {
+      window.scrollTo({ top: 0 });
+    });
+  });
+})();
+
 // Navigation par onglets — repositionnement en haut à chaque changement
 // Les sections ont display:none avant d'être ciblées ; on évite le scroll
 // natif (comportement aléatoire) en remontant en haut après le repaint.
@@ -201,12 +226,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Swipe vers le bas pour fermer
   var touchDepart = 0;
-  dialog.addEventListener("touchstart", function (e) {
-    touchDepart = e.touches[0].clientY;
-  }, { passive: true });
-  dialog.addEventListener("touchend", function (e) {
-    if (e.changedTouches[0].clientY - touchDepart > 80) fermer();
-  }, { passive: true });
+  dialog.addEventListener(
+    "touchstart",
+    function (e) {
+      touchDepart = e.touches[0].clientY;
+    },
+    { passive: true },
+  );
+  dialog.addEventListener(
+    "touchend",
+    function (e) {
+      if (e.changedTouches[0].clientY - touchDepart > 80) fermer();
+    },
+    { passive: true },
+  );
 })();
 
 // Modale de signalement (page aide)
