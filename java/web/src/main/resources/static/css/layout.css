@@ -178,7 +178,7 @@
 /* Drawer navigation mobile (dialog natif) */
 #dialog-nav-plus {
   position: fixed;
-  inset: auto 0 var(--nav-h) 0;
+  inset: auto 0 calc(var(--nav-h) + env(safe-area-inset-bottom)) 0;
   margin: 0;
   width: 100%;
   max-width: 100%;
@@ -195,8 +195,12 @@
 }
 
 @keyframes drawer-entree {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 #dialog-nav-plus::backdrop {
@@ -279,17 +283,19 @@
   line-height: 1;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .sidebar {
     display: none;
   }
   .bottom-nav {
     display: block;
+    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(var(--nav-h) + env(safe-area-inset-bottom));
   }
   .main-content {
     margin-left: 0;
     padding: 1rem;
-    padding-bottom: calc(var(--nav-h) + 1rem);
+    padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 1rem);
   }
 }
 

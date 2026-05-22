@@ -58,8 +58,18 @@
         </p>
       </div>
 
+      <!-- Bouton toggle filtres (mobile/tablette) -->
+      <div class="filtres-toggle">
+        <button type="button" id="btn-filtres" class="btn btn-secondary btn-sm" aria-expanded="false" aria-controls="filtres-form">
+          <svg class="icon" aria-hidden="true">
+            <use href="/icons/lucide-sprite.svg#icon-sliders-horizontal" />
+          </svg>
+          <span id="filtres-toggle-label">Filtres</span>
+        </button>
+      </div>
+
       <!-- Filtres -->
-      <form method="get" th:action="@{/decouverte}" class="filtres-form">
+      <form method="get" th:action="@{/decouverte}" class="filtres-form" id="filtres-form">
         <th:block th:each="d : ${depts}">
           <input type="hidden" name="dept" th:value="${d}" />
         </th:block>
@@ -162,50 +172,58 @@
       <!-- Tableau des concerts -->
       <div
         th:unless="${donnees == null or donnees.concerts.isEmpty()}"
-        class="table-wrapper"
+        class="decouverte-conteneur"
       >
-        <table>
-          <thead>
-            <tr>
-              <th>Artiste</th>
-              <th>Date</th>
-              <th>Salle</th>
-              <th>Ville</th>
-              <th>Dept</th>
-              <th>Genre</th>
-              <th>Prix</th>
-              <th><span class="sr-only">Lien</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr th:each="concert : ${donnees.concerts}">
-              <td th:text="${concert.artiste}">Artiste</td>
-              <td th:text="${concert.dateFormatee()}">date</td>
-              <td th:text="${concert.salle}">Salle</td>
-              <td th:text="${concert.ville}">Ville</td>
-              <td th:text="${concert.dept}">dept</td>
-              <td th:text="${concert.genre}">genre</td>
-              <td>
-                <span
-                  th:if="${concert.prixMin != null}"
-                  th:text="${concert.prixMin} + (${concert.prixMax != null and concert.prixMax != concert.prixMin} ? '–' + ${concert.prixMax} : '') + ' €'"
-                >
-                  Prix
-                </span>
-              </td>
-              <td>
-                <a
-                  th:if="${concert.url}"
-                  th:href="${concert.url}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="btn btn-xs btn-secondary"
-                  >Billets</a
-                >
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Artiste</th>
+                <th>Date</th>
+                <th>Salle</th>
+                <th>Ville</th>
+                <th>Dept</th>
+                <th>Genre</th>
+                <th>Prix</th>
+                <th><span class="sr-only">Lien</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="concert : ${donnees.concerts}">
+                <td data-label="Artiste" th:text="${concert.artiste}">Artiste</td>
+                <td data-label="Date" th:text="${concert.dateFormatee()}">date</td>
+                <td data-label="Salle"
+                    th:text="${concert.salle}"
+                    th:classappend="${concert.salle == null} ? ' cel-vide' : ''">Salle</td>
+                <td data-label="Ville"
+                    th:text="${concert.ville}"
+                    th:classappend="${concert.ville == null} ? ' cel-vide' : ''">Ville</td>
+                <td data-label="Dept" th:text="${concert.dept}">dept</td>
+                <td data-label="Genre"
+                    th:text="${concert.genre}"
+                    th:classappend="${concert.genre == null} ? ' cel-vide' : ''">genre</td>
+                <td data-label="Prix"
+                    th:classappend="${concert.prixMin == null} ? ' cel-vide' : ''">
+                  <span
+                    th:if="${concert.prixMin != null}"
+                    th:text="${concert.prixMin} + (${concert.prixMax != null and concert.prixMax != concert.prixMin} ? '–' + ${concert.prixMax} : '') + ' €'"
+                  >Prix</span>
+                </td>
+                <td data-label=""
+                    th:classappend="${concert.url == null} ? ' cel-vide' : ''">
+                  <a
+                    th:if="${concert.url}"
+                    th:href="${concert.url}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn btn-xs btn-secondary"
+                    >Billets</a
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Pagination -->
