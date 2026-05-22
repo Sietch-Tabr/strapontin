@@ -249,14 +249,6 @@
     white-space: normal;
     overflow: visible;
   }
-
-  .param-onglets {
-    display: none;
-  }
-
-  .param-onglets-mobile {
-    display: block;
-  }
 }
 
 /* ── Page Aide ───────────────────────────────────────────── */
@@ -1045,4 +1037,16 @@ details[open].changelog-historique > summary::before {
 }
 .form-details .form-group {
   margin-top: 0.75rem;
+}
+
+/* ── Onglets → select natif sur mobile ──────────────────────
+   Ces règles doivent rester après .param-onglets { display: flex }
+   pour l'emporter dans la cascade CSS.                          */
+@media (max-width: 1024px) {
+  .param-onglets {
+    display: none;
+  }
+  .param-onglets-mobile {
+    display: block;
+  }
 }
