@@ -62,6 +62,19 @@ public final class Dates {
     return LocalDateTime.ofInstant(instant, ZONE_FR).format(FORMAT_HEURE);
   }
 
+  /// Formate une chaîne ISO-8601 (ex. {@code misAJour} de {@code QuotaTM}) en "dim. 22 juin 21h05".
+  ///
+  /// @param isoInstant  instant au format ISO-8601, ou {@code null}
+  /// @return la date/heure formatée, ou chaîne vide si {@code null} ou invalide
+  public static String formaterInstantStr(String isoInstant) {
+    if (isoInstant == null || isoInstant.isBlank()) return "";
+    try {
+      return formaterInstant(Instant.parse(isoInstant));
+    } catch (Exception e) {
+      return "";
+    }
+  }
+
   /// Formate un epoch en secondes (ex. header TM {@code Rate-Limit-Reset}) en "dim. 22 juin 21h05".
   ///
   /// @param epochSec  timestamp en secondes

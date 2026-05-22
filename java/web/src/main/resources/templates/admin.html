@@ -135,7 +135,12 @@
               <p
                 class="param-aide"
                 th:if="${quotaTM.reset > 0}"
-                th:text="'Remise à zéro le ' + ${T(fr.strapontin.web.utils.Dates).formaterEpochSec(quotaTM.reset)}"
+                th:text="'Remise à zéro le ' + ${T(fr.strapontin.web.utils.Dates).formaterTs(quotaTM.reset)}"
+              ></p>
+              <p
+                class="param-aide"
+                th:if="${quotaTM.misAJour != null}"
+                th:text="'Actualisé le ' + ${T(fr.strapontin.web.utils.Dates).formaterInstantStr(quotaTM.misAJour)}"
               ></p>
             </div>
             <p class="etat-vide-texte" th:unless="${quotaTM != null}">
