@@ -265,7 +265,7 @@
       >
         <a
           th:if="${donnees.page > 0}"
-          th:href="@{/decouverte(q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri},page=${donnees.page - 1})}"
+          th:href="@{/decouverte(dept=${depts},q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri},page=${donnees.page - 1})}"
           class="btn btn-secondary"
           >Précédent</a
         >
@@ -275,7 +275,7 @@
         >
         <a
           th:if="${donnees.page + 1 < donnees.totalPages}"
-          th:href="@{/decouverte(q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri},page=${donnees.page + 1})}"
+          th:href="@{/decouverte(dept=${depts},q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri},page=${donnees.page + 1})}"
           class="btn btn-secondary"
           >Suivant</a
         >
