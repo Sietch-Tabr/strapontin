@@ -7,6 +7,7 @@ package fr.strapontin.worker.quota;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.sources.QuotaTM;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,9 +51,13 @@ public class GestionQuotaTM {
 
   /// Lit le quota courant depuis {@code app_config}.
   ///
-  /// <p>Si le timestamp de réinitialisation TM est dépassé, retourne un quota synthétique
-  /// {@code dispo = total} et persiste la mise à jour pour débloquer les jobs cron.
-  /// Le premier vrai appel TM réécrira la valeur réelle depuis les headers.
+  /// <p>Si le dernier relevé date de plus de 26 heures (fenêtre journalière TM + marge),
+  /// retourne un quota synthétique {@code dispo = total} et persiste la mise à jour
+  /// pour débloquer les jobs cron. Le premier vrai appel TM réécrira la valeur réelle.
+  ///
+  /// <p>Note : {@code QuotaTM.reset} contient la date de renouvellement du plan API TM
+  /// (annuelle, en ms), pas le prochain reset quotidien — le reset journalier est inféré
+  /// depuis {@code misAJour}.
   ///
   /// @return quota lu, ou vide si absent ou malformé
   public Optional<QuotaTM> lireQuota() {
@@ -64,11 +69,15 @@ public class GestionQuotaTM {
               String.class);
       if (json == null) return Optional.empty();
       QuotaTM quota = objectMapper.readValue(json, QuotaTM.class);
-      if (quota.reset() > 0 && quota.reset() <= Instant.now().toEpochMilli()) {
-        QuotaTM renouvele = new QuotaTM(quota.total(), quota.total(), 0L, Instant.now().toString());
-        ecrireQuota(renouvele);
-        log.info("quota TM renouvelé automatiquement après reset — dispo={}", renouvele.dispo());
-        return Optional.of(renouvele);
+      if (quota.misAJour() != null) {
+        Instant dernierReleve = Instant.parse(quota.misAJour());
+        if (Duration.between(dernierReleve, Instant.now()).toHours() >= 26) {
+          QuotaTM renouvele =
+              new QuotaTM(quota.total(), quota.total(), quota.reset(), Instant.now().toString());
+          ecrireQuota(renouvele);
+          log.info("quota TM renouvelé automatiquement (>26h) — dispo={}", renouvele.dispo());
+          return Optional.of(renouvele);
+        }
       }
       return Optional.of(quota);
     } catch (EmptyResultDataAccessException e) {
