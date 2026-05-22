@@ -101,7 +101,7 @@ if ("serviceWorker" in navigator) {
 document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll("[data-reafficher-id]").forEach(function (btn) {
     btn.addEventListener("click", function () {
-      var id = btn.getAttribute("data-reafficher-id");
+      const id = btn.getAttribute("data-reafficher-id");
       btn.disabled = true;
       fetch("/api/spectacles/matches/" + id, {
         method: "PATCH",
@@ -120,25 +120,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Toggle filtres spectacles (mobile)
 (function () {
-  var btn = document.getElementById("btn-filtres");
-  var form = document.getElementById("filtres-form");
+  const btn = document.getElementById("btn-filtres");
+  const form = document.getElementById("filtres-form");
   if (!btn || !form) return;
 
-  var NOMS_FILTRES = ["q", "mois", "genre", "classification", "budget"];
+  const NOMS_FILTRES = ["q", "mois", "genre", "classification", "budget"];
 
   function compterActifs() {
     return NOMS_FILTRES.reduce(function (n, nom) {
-      var el = form.querySelector("[name=" + nom + "]");
+      const el = form.querySelector("[name=" + nom + "]");
       return n + (el && el.value !== "" ? 1 : 0);
     }, 0);
   }
 
   function mettreAJourLabel(nb) {
-    var label = document.getElementById("filtres-toggle-label");
+    const label = document.getElementById("filtres-toggle-label");
     if (label) label.textContent = nb > 0 ? "Filtres · " + nb : "Filtres";
   }
 
-  var nb = compterActifs();
+  const nb = compterActifs();
   mettreAJourLabel(nb);
 
   // Ouvrir automatiquement si des filtres sont actifs
@@ -148,18 +148,18 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   btn.addEventListener("click", function () {
-    var ouvert = form.classList.toggle("visible");
+    const ouvert = form.classList.toggle("visible");
     btn.setAttribute("aria-expanded", String(ouvert));
   });
 })();
 
 // Select natif — onglets paramètres/admin sur mobile
 (function () {
-  var select = document.querySelector(".param-onglets-mobile");
+  const select = document.querySelector(".param-onglets-mobile");
   if (!select) return;
 
   function syncSelect() {
-    var hash = location.hash;
+    const hash = location.hash;
     if (hash && select.querySelector('option[value="' + hash + '"]')) {
       select.value = hash;
     } else {
@@ -197,8 +197,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Drawer de navigation mobile (dialog natif)
 (function () {
-  var btnPlus = document.getElementById("btn-nav-plus");
-  var dialog = document.getElementById("dialog-nav-plus");
+  const btnPlus = document.getElementById("btn-nav-plus");
+  const dialog = document.getElementById("dialog-nav-plus");
   if (!btnPlus || !dialog) return;
 
   function ouvrir() {
@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // Swipe vers le bas pour fermer
-  var touchDepart = 0;
+  let touchDepart = 0;
   dialog.addEventListener(
     "touchstart",
     function (e) {
@@ -244,16 +244,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Modale de signalement (page aide)
 (function () {
-  var dialog = document.getElementById("dialog-signaler");
+  const dialog = document.getElementById("dialog-signaler");
   if (!dialog) return;
 
-  var btnOuvrir = document.getElementById("btn-ouvrir-signalement");
-  var btnFermer = document.getElementById("btn-fermer-signalement");
-  var btnAnnuler = document.getElementById("btn-annuler-signalement");
-  var typeSelect = document.getElementById("type-signalement");
-  var messageArea = document.getElementById("message-signalement");
+  const btnOuvrir = document.getElementById("btn-ouvrir-signalement");
+  const btnFermer = document.getElementById("btn-fermer-signalement");
+  const btnAnnuler = document.getElementById("btn-annuler-signalement");
+  const typeSelect = document.getElementById("type-signalement");
+  const messageArea = document.getElementById("message-signalement");
 
-  var canevas = {
+  const canevas = {
     bug: "Décrivez le problème\n\nÉtapes pour reproduire :\n1. \n2. \n\nComportement attendu :\n\nComportement observé :",
     suggestion:
       "Décrivez votre suggestion\n\nContexte (pourquoi c'est utile) :\n\nComportement souhaité :",
@@ -288,17 +288,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Bouton "Relancer les fetches" (admin) — AJAX + polling indicateur visuel
 (function () {
-  var btn = document.getElementById("btn-relancer");
+  const btn = document.getElementById("btn-relancer");
   if (!btn) return;
-  var statut = document.getElementById("relancer-statut");
-  var intervalId = null;
+  const statut = document.getElementById("relancer-statut");
+  let intervalId = null;
 
   function mettreAJourBadges(jobsEnCours) {
     document.querySelectorAll(".job-en-cours[data-job]").forEach(function (el) {
       el.style.display = "none";
     });
     (jobsEnCours || []).forEach(function (nom) {
-      var badge = document.querySelector(
+      const badge = document.querySelector(
         ".job-en-cours[data-job='" + nom + "']",
       );
       if (badge) badge.style.display = "";
@@ -320,7 +320,7 @@ document.addEventListener("DOMContentLoaded", function () {
           return rep.json();
         })
         .then(function (data) {
-          var actifs = data.jobsEnCours || [];
+          const actifs = data.jobsEnCours || [];
           mettreAJourBadges(actifs);
           if (actifs.length === 0) {
             arreterPolling();
@@ -349,28 +349,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Logs admin — filtre multi-niveaux avec warn+error actifs par défaut
 (function () {
-  var table = document.getElementById("table-logs");
-  var filtreSource = document.getElementById("filtre-source");
-  var filtresActifs = new Set(["warn", "error"]);
-  var btnNiveaux = document.querySelectorAll(".log-filtre-btn");
-  var compte = document.getElementById("log-compte");
+  const table = document.getElementById("table-logs");
+  const filtreSource = document.getElementById("filtre-source");
+  const filtresActifs = new Set(["warn", "error"]);
+  const btnNiveaux = document.querySelectorAll(".log-filtre-btn");
+  const compte = document.getElementById("log-compte");
 
   if (!btnNiveaux.length) return;
 
   if (table) {
     table.querySelectorAll("tbody tr[data-meta]").forEach(function (tr) {
-      var metaStr = tr.getAttribute("data-meta");
+      const metaStr = tr.getAttribute("data-meta");
       if (!metaStr) return;
       try {
-        var meta = JSON.parse(metaStr);
-        var cles = Object.keys(meta);
+        const meta = JSON.parse(metaStr);
+        const cles = Object.keys(meta);
         if (!cles.length) return;
-        var msgTd = tr.querySelector("td.log-message");
+        const msgTd = tr.querySelector("td.log-message");
         if (!msgTd) return;
-        var metaDiv = document.createElement("div");
+        const metaDiv = document.createElement("div");
         metaDiv.className = "log-meta";
         cles.forEach(function (k) {
-          var item = document.createElement("span");
+          const item = document.createElement("span");
           item.className = "log-meta-item";
           item.textContent = k + ": " + meta[k];
           metaDiv.appendChild(item);
@@ -382,7 +382,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function mettreAJourBoutonsLogs() {
     btnNiveaux.forEach(function (b) {
-      var actif = filtresActifs.has(b.getAttribute("data-niveau"));
+      const actif = filtresActifs.has(b.getAttribute("data-niveau"));
       b.classList.toggle("actif", actif);
       b.setAttribute("aria-pressed", String(actif));
     });
@@ -390,16 +390,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function filtrerLogs() {
     if (!table) return;
-    var lignes = table.querySelectorAll("tbody tr");
-    var source = filtreSource ? filtreSource.value : "";
-    var tousActifs = filtresActifs.size === 0;
-    var visible = 0;
+    const lignes = table.querySelectorAll("tbody tr");
+    const source = filtreSource ? filtreSource.value : "";
+    const tousActifs = filtresActifs.size === 0;
+    let visible = 0;
     lignes.forEach(function (tr) {
-      var n = tr.getAttribute("data-niveau") || "";
-      var s = tr.getAttribute("data-source") || "";
-      var okNiveau = tousActifs || filtresActifs.has(n);
-      var okSource = !source || s === source;
-      var show = okNiveau && okSource;
+      const n = tr.getAttribute("data-niveau") || "";
+      const s = tr.getAttribute("data-source") || "";
+      const okNiveau = tousActifs || filtresActifs.has(n);
+      const okSource = !source || s === source;
+      const show = okNiveau && okSource;
       tr.style.display = show ? "" : "none";
       if (show) visible++;
     });
@@ -408,7 +408,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   btnNiveaux.forEach(function (btn) {
     btn.addEventListener("click", function () {
-      var niv = btn.getAttribute("data-niveau");
+      const niv = btn.getAttribute("data-niveau");
       if (filtresActifs.has(niv)) {
         filtresActifs.delete(niv);
       } else {
@@ -426,16 +426,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Modification utilisateur (admin)
 (function () {
-  var formsModif = document.querySelectorAll(".form-modif-utilisateur");
+  const formsModif = document.querySelectorAll(".form-modif-utilisateur");
   if (!formsModif.length) return;
 
   formsModif.forEach(function (form) {
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      var userId = form.getAttribute("data-user-id");
-      var erreurSpan = form.querySelector(".erreur-modif");
+      const userId = form.getAttribute("data-user-id");
+      const erreurSpan = form.querySelector(".erreur-modif");
       erreurSpan.style.display = "none";
-      var corps = {
+      const corps = {
         nom: form.querySelector("[name=nom]").value.trim(),
         email: form.querySelector("[name=email]").value.trim(),
         role: form.querySelector("[name=role]").value,
@@ -466,12 +466,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Modale invitation (admin)
 (function () {
-  var dialog = document.getElementById("dialog-invitation");
+  const dialog = document.getElementById("dialog-invitation");
   if (dialog) dialog.showModal();
 })();
 
 window.copierLienInvitation = function () {
-  var input = document.getElementById("lien-invitation");
+  const input = document.getElementById("lien-invitation");
   if (!input) return;
   if (navigator.clipboard) {
     navigator.clipboard.writeText(input.value).catch(function () {
@@ -485,20 +485,20 @@ window.copierLienInvitation = function () {
 };
 
 window.toggleModif = function (userId) {
-  var row = document.getElementById("modif-" + userId);
+  const row = document.getElementById("modif-" + userId);
   if (row) row.style.display = row.style.display === "none" ? "" : "none";
 };
 
 // Push notifications (paramètres)
 (function () {
-  var erreurDiv = document.getElementById("push-erreur");
+  const erreurDiv = document.getElementById("push-erreur");
   if (!erreurDiv) return;
 
-  var nonSupporteDiv = document.getElementById("push-non-supporte");
-  var vapidManquantDiv = document.getElementById("push-vapid-manquant");
-  var permRefusee = document.getElementById("push-permission-refusee");
-  var abonneDiv = document.getElementById("push-abonne");
-  var nonAbonneDiv = document.getElementById("push-non-abonne");
+  const nonSupporteDiv = document.getElementById("push-non-supporte");
+  const vapidManquantDiv = document.getElementById("push-vapid-manquant");
+  const permRefusee = document.getElementById("push-permission-refusee");
+  const abonneDiv = document.getElementById("push-abonne");
+  const nonAbonneDiv = document.getElementById("push-non-abonne");
 
   if (location.protocol !== "https:" && location.hostname !== "localhost") {
     nonSupporteDiv.style.display = "";
@@ -509,11 +509,11 @@ window.toggleModif = function (userId) {
     return;
   }
 
-  var btnActiver = document.getElementById("btn-activer-push");
-  var btnDesactiver = document.getElementById("btn-desactiver-push");
-  var pushClePublique = null;
-  var pushAbonnement = null;
-  var pushEnCours = false;
+  const btnActiver = document.getElementById("btn-activer-push");
+  const btnDesactiver = document.getElementById("btn-desactiver-push");
+  let pushClePublique = null;
+  let pushAbonnement = null;
+  let pushEnCours = false;
 
   function afficherErreur(msg) {
     erreurDiv.textContent = msg;
@@ -539,14 +539,14 @@ window.toggleModif = function (userId) {
 
   async function chargerEtat() {
     try {
-      var results = await Promise.all([
+      const results = await Promise.all([
         fetch("/api/push").then(function (r) {
           return r.json();
         }),
         navigator.serviceWorker.ready,
       ]);
-      var repVapid = results[0];
-      var registration = results[1];
+      const repVapid = results[0];
+      const registration = results[1];
       if (!repVapid.disponible) {
         vapidManquantDiv.style.display = "";
         return;
@@ -566,17 +566,17 @@ window.toggleModif = function (userId) {
     btnActiver.disabled = true;
     btnActiver.textContent = "Activation…";
     try {
-      var permission = await Notification.requestPermission();
+      const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         if (permission === "denied") majEtat();
         return;
       }
-      var registration = await navigator.serviceWorker.ready;
-      var abonnement = await registration.pushManager.subscribe({
+      const registration = await navigator.serviceWorker.ready;
+      const abonnement = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64VersUint8Array(pushClePublique),
       });
-      var rep = await fetch("/api/push", {
+      const rep = await fetch("/api/push", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -587,7 +587,10 @@ window.toggleModif = function (userId) {
           },
         }),
       });
-      if (!rep.ok) throw new Error("Échec enregistrement");
+      if (!rep.ok) {
+        afficherErreur("Échec enregistrement");
+        return;
+      }
       pushAbonnement = abonnement;
       document.cookie = "push_opt_out=;path=/;max-age=0;SameSite=Lax";
       majEtat();
@@ -607,7 +610,7 @@ window.toggleModif = function (userId) {
     btnDesactiver.disabled = true;
     btnDesactiver.textContent = "Désactivation…";
     try {
-      var endpoint = pushAbonnement.endpoint;
+      const endpoint = pushAbonnement.endpoint;
       await pushAbonnement.unsubscribe();
       await fetch("/api/push", {
         method: "DELETE",

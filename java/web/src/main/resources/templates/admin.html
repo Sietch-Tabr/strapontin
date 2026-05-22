@@ -381,6 +381,7 @@
                 name="valeur"
                 autocomplete="new-password"
                 placeholder="Nouvelle valeur…"
+                th:attr="aria-label='Valeur de ' + ${statut.cle}"
               />
               <input
                 th:unless="${statut.secret}"
@@ -388,6 +389,7 @@
                 name="valeur"
                 th:value="${statut.valeur}"
                 autocomplete="off"
+                th:attr="aria-label='Valeur de ' + ${statut.cle}"
               />
               <button type="submit" class="btn btn-secondary">
                 Enregistrer
@@ -430,6 +432,7 @@
                 name="email"
                 required
                 placeholder="adresse@email.fr"
+                aria-label="Adresse email du nouvel utilisateur"
                 autocomplete="off"
               />
               <button type="submit" class="btn btn-secondary">Inviter</button>
@@ -528,15 +531,17 @@
                         name="nom"
                         maxlength="100"
                         placeholder="Nom"
+                        aria-label="Nom de l'utilisateur"
                         th:value="${u.name}"
                       />
                       <input
                         type="email"
                         name="email"
                         placeholder="Email"
+                        aria-label="Adresse email de l'utilisateur"
                         th:value="${u.email}"
                       />
-                      <select name="role">
+                      <select name="role" aria-label="Rôle de l'utilisateur">
                         <option value="user" th:selected="${u.role == 'user'}">
                           user
                         </option>

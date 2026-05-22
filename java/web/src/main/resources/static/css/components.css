@@ -287,9 +287,6 @@ tr:hover td {
 .mt-4 {
   margin-top: 1rem;
 }
-.mb-4 {
-  margin-bottom: 1rem;
-}
 .text-muted {
   color: var(--fg-muted);
 }
@@ -299,13 +296,6 @@ tr:hover td {
 .text-right {
   text-align: right;
 }
-.font-bold {
-  font-weight: 700;
-}
-.w-full {
-  width: 100%;
-}
-
 .page-title {
   font-size: 1.5rem;
   font-weight: 700;

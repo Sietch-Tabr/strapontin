@@ -90,10 +90,11 @@
             name="q"
             th:value="${q}"
             placeholder="Rechercher un artiste ou une salle…"
+            aria-label="Rechercher un artiste ou une salle"
             autocomplete="off"
           />
 
-          <select name="mois">
+          <select name="mois" aria-label="Filtrer par mois">
             <option value="">Tous les mois</option>
             <option
               th:each="m : ${donnees?.moisDisponibles}"
@@ -105,7 +106,7 @@
             </option>
           </select>
 
-          <select name="genre">
+          <select name="genre" aria-label="Filtrer par genre">
             <option value="">Tous les genres</option>
             <option
               th:each="g : ${donnees?.genresDisponibles}"
@@ -117,7 +118,7 @@
             </option>
           </select>
 
-          <select name="classification">
+          <select name="classification" aria-label="Filtrer par classification">
             <option value="">Toutes classifications</option>
             <option
               th:each="c : ${donnees?.classificationsDisponibles}"
@@ -129,7 +130,7 @@
             </option>
           </select>
 
-          <select name="budget">
+          <select name="budget" aria-label="Filtrer par budget">
             <option value="" th:selected="${budget == null or budget == ''}">
               Tous les prix
             </option>
@@ -141,7 +142,7 @@
             </option>
           </select>
 
-          <select name="tri">
+          <select name="tri" aria-label="Trier les résultats">
             <option value="date" th:selected="${tri == 'date' or tri == null}">
               Par date
             </option>

@@ -940,21 +940,6 @@ details[open].changelog-historique > summary::before {
   color: #fca5a5;
 }
 
-.log-filtre-tous {
-  background: none;
-  border: none;
-  font-size: 0.75rem;
-  color: var(--fg-muted);
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 0.125rem 0.25rem;
-  margin-left: 0.25rem;
-}
-
-.log-filtre-tous:hover {
-  color: var(--fg);
-}
-
 .log-compte {
   margin-left: auto;
   font-size: 0.75rem;

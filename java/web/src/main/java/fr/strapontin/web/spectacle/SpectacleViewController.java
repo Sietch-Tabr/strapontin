@@ -104,7 +104,8 @@ public class SpectacleViewController {
   @PostMapping("/spectacles/demasquer/{concertId}")
   public String demasquer(@PathVariable String concertId, Authentication auth) {
     jdbc.update(
-        "UPDATE user_matches SET masque_le = NULL WHERE user_id = :userId AND concert_id = CAST(:id AS uuid)",
+        "UPDATE user_matches SET masque_le = NULL WHERE user_id = :userId AND concert_id = CAST(:id"
+            + " AS uuid)",
         Map.of("userId", utilisateur(auth).id(), "id", concertId));
     return "redirect:/spectacles";
   }
