@@ -135,6 +135,38 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 })();
 
+// Tiroir de navigation mobile
+(function () {
+  var btnPlus = document.getElementById("btn-nav-plus");
+  var tiroir = document.getElementById("tiroir-nav");
+  var fond = document.getElementById("tiroir-fond");
+  if (!btnPlus || !tiroir || !fond) return;
+
+  function ouvrir() {
+    tiroir.classList.add("ouvert");
+    fond.classList.add("ouvert");
+    btnPlus.setAttribute("aria-expanded", "true");
+    tiroir.setAttribute("aria-hidden", "false");
+    fond.setAttribute("aria-hidden", "false");
+  }
+
+  function fermer() {
+    tiroir.classList.remove("ouvert");
+    fond.classList.remove("ouvert");
+    btnPlus.setAttribute("aria-expanded", "false");
+    tiroir.setAttribute("aria-hidden", "true");
+    fond.setAttribute("aria-hidden", "true");
+  }
+
+  btnPlus.addEventListener("click", function () {
+    tiroir.classList.contains("ouvert") ? fermer() : ouvrir();
+  });
+  fond.addEventListener("click", fermer);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") fermer();
+  });
+})();
+
 // Modale de signalement (page aide)
 (function () {
   var dialog = document.getElementById("dialog-signaler");

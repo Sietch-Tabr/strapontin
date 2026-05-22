@@ -131,7 +131,7 @@
     </div>
 
     <!-- Navigation mobile -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" aria-label="Navigation principale">
       <div class="bottom-nav-items">
         <a
           th:href="@{/}"
@@ -160,15 +160,91 @@
           </svg>
           <span>Découverte</span>
         </a>
-        <a
-          th:href="@{/parametres}"
-          th:classappend="${currentPage == 'parametres' ? ' actif' : ''}"
+        <button
+          type="button"
+          id="btn-nav-plus"
+          class="bottom-nav-plus"
+          th:classappend="${currentPage == 'artistes' or currentPage == 'salles' or currentPage == 'changelog' or currentPage == 'aide' or currentPage == 'parametres' or currentPage == 'admin' ? ' actif' : ''}"
+          aria-expanded="false"
+          aria-controls="tiroir-nav"
         >
           <svg class="icon" aria-hidden="true">
-            <use href="/icons/lucide-sprite.svg#icon-settings" />
+            <use href="/icons/lucide-sprite.svg#icon-menu" />
           </svg>
-          <span>Paramètres</span>
-        </a>
+          <span>Plus</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Tiroir navigation mobile -->
+    <div id="tiroir-fond" class="tiroir-fond" aria-hidden="true"></div>
+    <nav
+      id="tiroir-nav"
+      class="tiroir-nav"
+      aria-label="Menu complémentaire"
+      aria-hidden="true"
+    >
+      <a
+        th:href="@{/artistes}"
+        th:classappend="${currentPage == 'artistes' ? ' actif' : ''}"
+      >
+        <svg class="icon" aria-hidden="true">
+          <use href="/icons/lucide-sprite.svg#icon-music" />
+        </svg>
+        Mes artistes
+      </a>
+      <a
+        th:href="@{/salles}"
+        th:classappend="${currentPage == 'salles' ? ' actif' : ''}"
+      >
+        <svg class="icon" aria-hidden="true">
+          <use href="/icons/lucide-sprite.svg#icon-building-2" />
+        </svg>
+        Mes salles
+      </a>
+      <a
+        th:href="@{/aide}"
+        th:classappend="${currentPage == 'aide' ? ' actif' : ''}"
+      >
+        <svg class="icon" aria-hidden="true">
+          <use href="/icons/lucide-sprite.svg#icon-help-circle" />
+        </svg>
+        Aide
+      </a>
+      <a
+        th:href="@{/changelog}"
+        th:classappend="${currentPage == 'changelog' ? ' actif' : ''}"
+      >
+        <svg class="icon" aria-hidden="true">
+          <use href="/icons/lucide-sprite.svg#icon-history" />
+        </svg>
+        Nouveautés
+      </a>
+      <a
+        th:href="@{/parametres}"
+        th:classappend="${currentPage == 'parametres' ? ' actif' : ''}"
+      >
+        <svg class="icon" aria-hidden="true">
+          <use href="/icons/lucide-sprite.svg#icon-settings" />
+        </svg>
+        Paramètres
+      </a>
+      <a
+        sec:authorize="hasRole('ADMIN')"
+        th:href="@{/admin}"
+        th:classappend="${currentPage == 'admin' ? ' actif' : ''}"
+      >
+        <svg class="icon" aria-hidden="true">
+          <use href="/icons/lucide-sprite.svg#icon-shield-check" />
+        </svg>
+        Admin
+      </a>
+      <hr class="tiroir-separateur" />
+      <div class="tiroir-user">
+        <span sec:authentication="principal.nom">Utilisateur</span>
+        <form th:action="@{/logout}" method="post">
+          <button type="submit" class="btn-deconnexion">Déconnexion</button>
+        </form>
       </div>
     </nav>
 
