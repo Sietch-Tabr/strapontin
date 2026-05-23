@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,6 +40,8 @@ public class TicketmasterSource {
   private static final int TAILLE_PAGE_REGION = 200;
   // TM refuse offset > 1000 : avec size=200, page 5 → offset 1000 (ok), page 6 → 1200 (HTTP 400)
   private static final int NB_PAGES_MAX = 5;
+  // 250 ms entre appels = 4 req/s max — protège contre le spike arrest TM (5 req/s) même sous concurrence
+  private static final int DELAI_MIN_ENTRE_APPELS_MS = 250;
   private static final String CHEMIN_EVENTS = "/events.json";
   private static final String TRI_DATE_ASC = "date,asc";
   private static final String CLE_EMBEDDED = "_embedded";
@@ -161,6 +164,7 @@ public class TicketmasterSource {
   private final String apiKey;
   private final RestClient restClient;
   private final AtomicReference<QuotaTM> dernierQuota = new AtomicReference<>();
+  private final AtomicLong dernierAppelMs = new AtomicLong(0);
 
   /// Crée une instance avec la clé API fournie et un RestClient par défaut.
   ///
@@ -388,9 +392,25 @@ public class TicketmasterSource {
   private record ResultatPage(
       List<ConcertBrut> concerts, int total, int totalPages, QuotaTM quota) {}
 
+  /// Garantit un écart minimal entre deux requêtes HTTP vers TM, quel que soit le nombre de jobs
+  /// Quartz en parallèle. Le verrou est sur l'instance (singleton Spring).
+  private synchronized void attendreRateLimitGlobal() {
+    long maintenant = System.currentTimeMillis();
+    long prochainAppel = dernierAppelMs.get() + DELAI_MIN_ENTRE_APPELS_MS;
+    if (maintenant < prochainAppel) {
+      try {
+        Thread.sleep(prochainAppel - maintenant);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+    dernierAppelMs.set(System.currentTimeMillis());
+  }
+
   @SuppressWarnings("unchecked")
   private ResultatPage fetchPage(
       UriComponentsBuilder uriBase, int numPage, String artisteFallback) {
+    attendreRateLimitGlobal();
     String uri =
         uriBase
             .cloneBuilder()
@@ -470,14 +490,6 @@ public class TicketmasterSource {
       boolean fini =
           resultat.concerts().isEmpty()
               || (totalElements > 0 && tousLesEvents.size() >= totalElements);
-      if (!fini && numPage < borneMax - 1) {
-        try {
-          Thread.sleep(250);
-        } catch (InterruptedException _) {
-          Thread.currentThread().interrupt();
-          fini = true;
-        }
-      }
       continuer = !fini;
     }
 
@@ -529,11 +541,6 @@ public class TicketmasterSource {
 
     List<ConcertBrut> concerts = fetchToutesPages(uriBase, null);
     log.info("TM fetchSalle venueId={} total={}", venueId, concerts.size());
-    try {
-      Thread.sleep(200);
-    } catch (InterruptedException _) {
-      Thread.currentThread().interrupt();
-    }
     return concerts;
   }
 
@@ -551,6 +558,7 @@ public class TicketmasterSource {
             .queryParam("apikey", apiKey)
             .build()
             .toUriString();
+    attendreRateLimitGlobal();
     try {
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return null;
@@ -592,8 +600,7 @@ public class TicketmasterSource {
     if (classifs == null) classifs = CLASSIFICATIONS;
     List<ConcertBrut> tous = new ArrayList<>();
 
-    boolean continuer = true;
-    for (int i = 0; i < depts.size() && continuer; i++) {
+    for (int i = 0; i < depts.size(); i++) {
       String dept = depts.get(i);
       CentreDept centre = CENTRES_DEPT.get(dept);
       if (centre == null) {
@@ -613,13 +620,6 @@ public class TicketmasterSource {
 
         List<ConcertBrut> concerts = fetchToutesPages(uriBase, null);
         tous.addAll(concerts);
-
-        try {
-          Thread.sleep(250);
-        } catch (InterruptedException _) {
-          Thread.currentThread().interrupt();
-          continuer = false;
-        }
       }
     }
 

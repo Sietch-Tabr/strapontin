@@ -150,7 +150,6 @@ public class WorkerService {
       } catch (Exception e) {
         log.warn("TM échoué pour artiste={} norm={} : {}", nom, norm, e.getMessage());
       }
-      attendreRateLimit();
     }
     return resultats;
   }

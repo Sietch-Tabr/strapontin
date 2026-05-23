@@ -15,14 +15,17 @@ Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège autom
 ## Fonctionnalités
 
 **Suivi**
+
 - Artistes et salles favoris (jusqu'à 500 artistes, 200 salles)
 - Actualisation automatique toutes les 2 heures depuis Ticketmaster et Eventim
 - Dédoublonnage inter-sources automatique
 
 **Notifications**
+
 - Email ou notification push (immédiat ou récapitulatif quotidien à 8h)
 
 **Interface**
+
 - Filtrage par département, mois, budget, catégorie
 - Thème clair / sombre / automatique
 - Application installable (PWA)
