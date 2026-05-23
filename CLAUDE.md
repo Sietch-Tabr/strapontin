@@ -13,7 +13,7 @@ strapontin/
 └── scripts/
     ├── provision.sh       ← provisionnement LXC dev|prod (Proxmox) ; copie update.sh via pct push
     ├── update.sh          ← restart services + healthcheck ; appelé par Woodpecker (prod) ou manuellement (dev)
-    └── migrate_data.sql   ← migration données prod one-shot (LXC 115 → 113) ; à supprimer après bascule
+    └── migrate_data.sql   ← migration données prod one-shot (LXC 115 → 113) ; exécutée le 2026-05-23, à supprimer
 ```
 
 ## Stack technique (v2.0.0)
@@ -33,9 +33,9 @@ strapontin/
 
 | Environnement        | VMID | IP            | Notes                                |
 | -------------------- | ---- | ------------- | ------------------------------------ |
-| dev                  | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev` |
-| prod v2 (greenfield) | 115  | —             | primo MEP en cours                   |
-| prod v1 (Node.js)    | 113  | 192.168.20.79 | remplacé par LXC 115 au jour J       |
+| dev                         | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev`            |
+| prod v2 Java (actif)        | 113  | 192.168.20.79 | production — Woodpecker déploie sur push `v2`   |
+| prod v1 Node.js (à détruire)| 115  | 192.168.20.77 | détruire après 1 semaine de stabilisation       |
 
 ```bash
 # Logs LXC dev (depuis le LXC)
@@ -43,8 +43,9 @@ journalctl -fu strapontin-web
 journalctl -fu strapontin-worker
 systemctl restart strapontin-web strapontin-worker
 
-# Logs prod v1 (depuis Mac)
-ssh root@192.168.1.99 "pct exec 113 -- journalctl -u strapontin-web --no-pager -n 50"
+# Logs prod v2 (depuis Mac)
+ssh root@192.168.20.79 "journalctl -u strapontin-web -n 50 --no-pager"
+ssh root@192.168.20.79 "journalctl -u strapontin-worker -n 50 --no-pager"
 ```
 
 ### Build et déploiement LXC dev
@@ -83,9 +84,9 @@ Labels : `Bug`, `Feature`, `Question`, `Task`, `Duplicate`, `Invalid`.
 
 ### Workflow Git (v2)
 
-- `main` : prod v1 Node.js (Woodpecker déploie sur push — **ne jamais pousser manuellement**)
-- `v2` : intégration — CI uniquement, pas de deploy auto
-- Features mergées dans `v2`, `v2` → `main` au jour J uniquement (Phase 9)
+- `v2` : branche principale — Woodpecker déploie sur LXC 113 prod à chaque push (**ne jamais pousser manuellement sans build valide**)
+- `main` : archive v1 Node.js — ne pas toucher
+- Features : branche `feature/xxx` → PR → merge dans `v2`
 
 ### Pipeline Woodpecker (.woodpecker.yaml)
 
@@ -95,7 +96,7 @@ Pipeline Maven actif : test → build → deploy sur push `v2`. Secrets requis :
 
 ```
 DATABASE_URL=jdbc:postgresql://localhost/strapontin
-APP_CONFIG_SECRET=<valeur de BETTER_AUTH_SECRET LXC 113>
+APP_CONFIG_SECRET=<valeur de BETTER_AUTH_SECRET LXC 115 (prod v1)>
 ```
 
 ## Configuration applicative (`app_config`)
