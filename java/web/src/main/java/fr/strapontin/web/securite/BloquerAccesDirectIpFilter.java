@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,9 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
       Pattern.compile("^(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d+)?$");
   private static final Pattern PATTERN_IPV6 = Pattern.compile("^\\[?[0-9a-fA-F:]+]?(?::\\d+)?$");
 
+  // /setup et /api/setup sont exemptés pour permettre la configuration initiale par IP
+  private static final Set<String> CHEMINS_EXEMPTS = Set.of("/setup", "/api/setup");
+
   private final boolean actif;
 
   public BloquerAccesDirectIpFilter(Environment env) {
@@ -44,6 +48,10 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain chain)
       throws ServletException, IOException {
     if (!actif) {
+      chain.doFilter(request, response);
+      return;
+    }
+    if (CHEMINS_EXEMPTS.contains(request.getServletPath())) {
       chain.doFilter(request, response);
       return;
     }

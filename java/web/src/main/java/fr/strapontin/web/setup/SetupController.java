@@ -23,10 +23,10 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -89,13 +89,14 @@ public class SetupController {
 
   /// Crée le premier administrateur et initialise la configuration applicative.
   ///
-  /// <p>Génère également une paire de clés VAPID. Retourne 409 si des utilisateurs
-  /// existent déjà.
+  /// <p>Génère une paire de clés VAPID. {@code CONTACT_EMAIL} est initialisé avec
+  /// {@code contactEmail} si fourni, sinon avec l'email du premier administrateur.
+  /// Retourne 409 si des utilisateurs existent déjà ou en cas de contrainte d'unicité.
   ///
   /// @param requete les données d'initialisation
   /// @return 201 si créé, 400 si validation échoue, 409 si déjà configuré
   @PostMapping
-  @Transactional(isolation = Isolation.SERIALIZABLE)
+  @Transactional
   public ResponseEntity<Map<String, Object>> initialiser(@Valid @RequestBody RequeteSetup requete) {
     Integer nbUsers = jdbc.queryForObject("SELECT COUNT(*) FROM users", Map.of(), Integer.class);
     if (nbUsers != null && nbUsers > 0) {
@@ -130,14 +131,18 @@ public class SetupController {
     paramsUser.put("email", email);
     paramsUser.put("username", identifiant);
     paramsUser.put("displayUsername", identifiant);
-    jdbc.update(
-        """
-        INSERT INTO users (id, name, email, email_verified, role, username, display_username,
-                           must_change_credentials, created_at, updated_at)
-        VALUES (:id, :name, :email, true, 'admin', :username, :displayUsername,
-                false, now(), now())
-        """,
-        paramsUser);
+    try {
+      jdbc.update(
+          """
+          INSERT INTO users (id, name, email, email_verified, role, username, display_username,
+                             must_change_credentials, created_at, updated_at)
+          VALUES (:id, :name, :email, true, 'admin', :username, :displayUsername,
+                  false, now(), now())
+          """,
+          paramsUser);
+    } catch (DataIntegrityViolationException e) {
+      return erreur(409, "L'application est déjà configurée.");
+    }
 
     String accountId = UUID.randomUUID().toString();
     jdbc.update(
@@ -153,8 +158,11 @@ public class SetupController {
 
     String baseUrl = requete.baseUrl() == null ? "" : requete.baseUrl().strip();
     String contactEmail = requete.contactEmail() == null ? "" : requete.contactEmail().strip();
+    if (contactEmail.isEmpty()) {
+      contactEmail = email;
+    }
     if (!baseUrl.isEmpty()) configService.sauvegarderConfig("PUBLIC_BASE_URL", baseUrl);
-    if (!contactEmail.isEmpty()) configService.sauvegarderConfig("CONTACT_EMAIL", contactEmail);
+    configService.sauvegarderConfig("CONTACT_EMAIL", contactEmail);
 
     genererVapid();
 
