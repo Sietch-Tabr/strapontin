@@ -1,15 +1,5 @@
 # CLAUDE.md — strapontin (strapontin.kwaite.fr)
 
-## Lancer l'application (v2 — LXC dev)
-
-Accès : `http://192.168.20.78:8080` (Java + Thymeleaf, Phase 8+)
-
-```bash
-journalctl -fu strapontin-web
-journalctl -fu strapontin-worker
-systemctl restart strapontin-web strapontin-worker
-```
-
 ## Architecture — monorepo Maven
 
 ```
@@ -23,7 +13,7 @@ strapontin/
 └── scripts/
     ├── provision.sh       ← provisionnement LXC dev|prod (Proxmox) ; copie update.sh via pct push
     ├── update.sh          ← restart services + healthcheck ; appelé par Woodpecker (prod) ou manuellement (dev)
-    └── migrate_data.sql   ← migration données prod (dblink LXC 115 → 113, one-shot)
+    └── migrate_data.sql   ← migration données prod one-shot (LXC 115 → 113) ; à supprimer après bascule
 ```
 
 ## Stack technique (v2.0.0)
@@ -39,26 +29,38 @@ strapontin/
 
 ## Workflow de développement
 
-### LXC dev (VMID 114, 192.168.20.78) / prod v1 (VMID 113, 192.168.20.79)
+### LXC
+
+| Environnement        | VMID | IP            | Notes                                |
+| -------------------- | ---- | ------------- | ------------------------------------ |
+| dev                  | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev` |
+| prod v2 (greenfield) | 115  | —             | primo MEP en cours                   |
+| prod v1 (Node.js)    | 113  | 192.168.20.79 | remplacé par LXC 115 au jour J       |
 
 ```bash
-ssh root@192.168.20.78                                                                 # dev
-ssh root@192.168.1.99 "pct exec 113 -- journalctl -u strapontin-web --no-pager -n 50" # prod v1
+# Logs LXC dev (depuis le LXC)
+journalctl -fu strapontin-web
+journalctl -fu strapontin-worker
+systemctl restart strapontin-web strapontin-worker
+
+# Logs prod v1 (depuis Mac)
+ssh root@192.168.1.99 "pct exec 113 -- journalctl -u strapontin-web --no-pager -n 50"
 ```
 
 ### Build et déploiement LXC dev
 
+Utiliser le skill `/deploy-dev` (build Maven avec tests + scp + restart + tail logs).
+
+Commandes manuelles si besoin :
+
 ```bash
-# Build (Mac — Maven requis, pas sur le LXC)
 mvn -f java/pom.xml -pl web,worker -am package
-
-# Dev : toujours manuel (Woodpecker cible uniquement le LXC prod)
-# Woodpecker prod : build sur agent → scp JARs → SSH update.sh (LXC = JRE uniquement, pas de Maven)
-
 scp java/web/target/web-2.0.0-SNAPSHOT.jar root@192.168.20.78:/opt/strapontin/web.jar
 scp java/worker/target/worker-2.0.0-SNAPSHOT.jar root@192.168.20.78:/opt/strapontin/worker.jar
 ssh root@192.168.20.78 "/opt/strapontin/update.sh"
 ```
+
+Accès app : `http://192.168.20.78:8080` — config locale dans `CLAUDE.local.md` (tunnel SSH, URL sandbox).
 
 ### Gestion des issues (Codeberg)
 
@@ -139,7 +141,7 @@ Détails : [wiki Authentification](https://codeberg.org/Kwaite/strapontin/wiki/A
 ## Dédoublonnage inter-sources
 
 Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein normalisé ≥ 0.85.
-→ Détails : `.claude/rules/dedup.md`
+→ Détails : [wiki Architecture](https://codeberg.org/Kwaite/strapontin/wiki/Architecture)
 
 ## UI / Design system (v2 — Thymeleaf)
 
