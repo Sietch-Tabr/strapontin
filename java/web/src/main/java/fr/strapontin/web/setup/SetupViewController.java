@@ -52,7 +52,8 @@ public class SetupViewController {
   /// @param baseUrl      l'URL publique de l'application (optionnel)
   /// @param contactEmail l'email de contact (optionnel)
   /// @param modele       le modèle Thymeleaf
-  /// @return redirect vers {@code /login?configure=true} en cas de succès, sinon la vue avec erreur
+  /// @return redirect vers {@code baseUrl/login?configure=true} si baseUrl fourni, sinon
+  ///     {@code /login?configure=true} — en cas d'erreur, la vue setup avec message
   @PostMapping("/setup")
   public String traiterSetup(
       @RequestParam(required = false) String nom,
@@ -70,6 +71,10 @@ public class SetupViewController {
     ResponseEntity<Map<String, Object>> reponse = setupController.initialiser(requete);
 
     if (reponse.getStatusCode().is2xxSuccessful()) {
+      if (baseUrl != null && !baseUrl.isBlank()) {
+        String base = baseUrl.strip().replaceAll("/+$", "");
+        return "redirect:" + base + "/login?configure=true";
+      }
       return "redirect:/login?configure=true";
     }
 

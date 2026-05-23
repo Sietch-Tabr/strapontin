@@ -34,8 +34,10 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
       Pattern.compile("^(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d+)?$");
   private static final Pattern PATTERN_IPV6 = Pattern.compile("^\\[?[0-9a-fA-F:]+]?(?::\\d+)?$");
 
-  // /setup et /api/setup sont exemptés pour permettre la configuration initiale par IP
-  private static final Set<String> CHEMINS_EXEMPTS = Set.of("/setup", "/api/setup");
+  // /setup et ressources statiques exemptés pour permettre la configuration initiale par IP
+  private static final Set<String> CHEMINS_EXEMPTS =
+      Set.of("/setup", "/api/setup", "/sw.js", "/offline.html");
+  private static final String[] PREFIXES_STATIQUES = {"/css/", "/js/", "/icons/", "/images/"};
 
   private final boolean actif;
 
@@ -51,7 +53,8 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
       chain.doFilter(request, response);
       return;
     }
-    if (CHEMINS_EXEMPTS.contains(request.getServletPath())) {
+    String chemin = request.getServletPath();
+    if (CHEMINS_EXEMPTS.contains(chemin) || estStatique(chemin)) {
       chain.doFilter(request, response);
       return;
     }
@@ -64,5 +67,12 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
       return;
     }
     chain.doFilter(request, response);
+  }
+
+  private boolean estStatique(String chemin) {
+    for (String prefixe : PREFIXES_STATIQUES) {
+      if (chemin.startsWith(prefixe)) return true;
+    }
+    return false;
   }
 }
