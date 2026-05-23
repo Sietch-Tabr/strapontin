@@ -166,6 +166,14 @@ Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de
   - Résultats : `e2e/test-results/results.json` (reporter JSON)
 - Nommage tests : `<methode>_<scenario>_<resultatAttendu>`
 
+## Skills projet (`.claude/commands/`)
+
+| Skill         | Usage                                                                 |
+| ------------- | --------------------------------------------------------------------- |
+| `/deploy-dev` | Build Maven (avec tests) + scp JARs + restart LXC dev + tail logs     |
+| `/test`       | Tests unitaires Maven + E2E Playwright + résumé des résultats         |
+| `/pre-pr`     | Wiki + CLAUDE.md + changelog + README + commit docs + `tea pr create` |
+
 ## Outils Claude Code
 
 - **code-review-graph** — MCP ; analyse d'impact et blast-radius sur les modifications
