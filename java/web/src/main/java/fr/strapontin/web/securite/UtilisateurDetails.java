@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web.securite;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.security.core.GrantedAuthority;
@@ -35,7 +37,9 @@ public record UtilisateurDetails(
     String role,
     boolean twoFactorActif,
     boolean doitChangerCredentials)
-    implements UserDetails {
+    implements UserDetails, Serializable {
+
+  @Serial private static final long serialVersionUID = 1L;
 
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
