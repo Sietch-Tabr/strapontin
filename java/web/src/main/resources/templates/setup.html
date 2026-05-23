@@ -71,16 +71,18 @@
           />
         </div>
 
-        <div class="form-group">
-          <label for="baseUrl">URL publique de l'application</label>
-          <input
-            id="baseUrl"
-            name="baseUrl"
-            type="url"
-            th:value="${baseUrl}"
-            placeholder="https://moninstance.example.com"
-            autocomplete="off"
-          />
+        <div class="form-details">
+          <div class="form-group">
+            <label for="baseUrl">URL publique de l'application</label>
+            <input
+              id="baseUrl"
+              name="baseUrl"
+              type="url"
+              th:value="${baseUrl}"
+              placeholder="https://moninstance.example.com"
+              autocomplete="off"
+            />
+          </div>
         </div>
 
         <button type="submit" class="btn btn-primary btn-full">

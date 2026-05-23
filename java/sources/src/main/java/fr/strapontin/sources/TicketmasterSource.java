@@ -40,7 +40,8 @@ public class TicketmasterSource {
   private static final int TAILLE_PAGE_REGION = 200;
   // TM refuse offset > 1000 : avec size=200, page 5 → offset 1000 (ok), page 6 → 1200 (HTTP 400)
   private static final int NB_PAGES_MAX = 5;
-  // 250 ms entre appels = 4 req/s max — protège contre le spike arrest TM (5 req/s) même sous concurrence
+  // 250 ms entre appels = 4 req/s max — protège contre le spike arrest TM (5 req/s) même sous
+  // concurrence
   private static final int DELAI_MIN_ENTRE_APPELS_MS = 250;
   private static final String CHEMIN_EVENTS = "/events.json";
   private static final String TRI_DATE_ASC = "date,asc";

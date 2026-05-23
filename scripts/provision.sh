@@ -5,7 +5,7 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 # provision.sh — provisionnement LXC (stack Java/Spring Boot)
 # Usage :
 #   bash /tmp/provision.sh dev   → LXC dev (SPRING_PROFILES_ACTIVE=dev, IP 192.168.20.78)
-#   bash /tmp/provision.sh prod  → LXC prod (IP 192.168.20.80)
+#   bash /tmp/provision.sh prod  → LXC prod (IP 192.168.20.79)
 #
 # À exécuter depuis le HOST Proxmox en tant que root :
 #   scp scripts/provision.sh scripts/update.sh root@192.168.1.99:/tmp/
@@ -30,9 +30,11 @@ VMID=$(pvesh get /cluster/nextid)
 if [ "$PROFIL" = "dev" ]; then
     HOSTNAME="strapontin-dev"
     IP="192.168.20.78/24"
+    MAC="02:00:00:00:00:14"
 else
     HOSTNAME="strapontin"
-    IP="192.168.20.80/24"
+    IP="192.168.20.79/24"
+    MAC="02:00:00:00:00:13"
 fi
 GW="192.168.20.1"
 BRIDGE="vmbr0"
@@ -111,15 +113,17 @@ pct create "$VMID" "$TEMPLATE_PATH" \
     --memory "$MEMORY" \
     --swap "$SWAP" \
     --rootfs "$DISK_STORAGE:$DISK" \
-    --net0 "name=eth0,bridge=$BRIDGE,tag=$VLAN_TAG,ip=$IP,gw=$GW" \
+    --net0 "name=eth0,bridge=$BRIDGE,tag=$VLAN_TAG,hwaddr=$MAC,ip=$IP,gw=$GW" \
     --unprivileged 1 \
     --features nesting=1 \
     --ostype debian \
     --onboot "$([ "$PROFIL" = "prod" ] && echo 1 || echo 0)" \
     --start 0
 
-echo "[2] Montage NAS /mnt/backup..."
-pct set "$VMID" --mp0 "/mnt/synology/backup/Strapontin,mp=/mnt/backup"
+if [ "$PROFIL" = "prod" ]; then
+    echo "[2] Montage NAS /mnt/backup..."
+    pct set "$VMID" --mp0 "/mnt/synology/backup/Strapontin,mp=/mnt/backup"
+fi
 
 echo "[2] Protection contre la suppression accidentelle..."
 pct set "$VMID" --protection 1
@@ -338,10 +342,27 @@ pct exec "$VMID" -- bash -c "
 "
 
 # ---------------------------------------------------------------
-# 9. Vérifications finales
+# 9. Clé SSH Woodpecker (prod uniquement)
 # ---------------------------------------------------------------
 
-echo "[9] Vérifications..."
+WOODPECKER_PRIVKEY=""
+if [ "$PROFIL" = "prod" ]; then
+    echo "[9] Génération clé SSH Woodpecker..."
+    pct exec "$VMID" -- bash -c "
+        mkdir -p /root/.ssh
+        ssh-keygen -t ed25519 -C 'woodpecker@strapontin' -f /root/.ssh/woodpecker_strapontin -N ''
+        cat /root/.ssh/woodpecker_strapontin.pub >> /root/.ssh/authorized_keys
+        chmod 700 /root/.ssh
+        chmod 600 /root/.ssh/authorized_keys
+    "
+    WOODPECKER_PRIVKEY=$(pct exec "$VMID" -- cat /root/.ssh/woodpecker_strapontin)
+fi
+
+# ---------------------------------------------------------------
+# 10. Vérifications finales
+# ---------------------------------------------------------------
+
+echo "[10] Vérifications..."
 pct exec "$VMID" -- bash -c "
     echo '--- Java ---'
     java -version 2>&1
@@ -349,6 +370,23 @@ pct exec "$VMID" -- bash -c "
     su -c \"psql -d $DB_NAME -c 'SELECT version();'\" postgres
     su -c \"psql -d $DB_NAME -c 'SELECT extname FROM pg_extension ORDER BY extname;'\" postgres
 "
+
+LIBRE=$(pct exec "$VMID" -- df /opt --output=avail -m | tail -1 | tr -d ' ')
+if [ "$LIBRE" -lt 2048 ]; then
+    echo "  [ECHEC] Espace disque insuffisant : ${LIBRE} Mo (minimum 2048)" >&2
+    exit 1
+else
+    echo "  [OK]    Espace disque : ${LIBRE} Mo"
+fi
+
+if [ "$PROFIL" = "prod" ]; then
+    if pct exec "$VMID" -- mountpoint -q /mnt/backup 2>/dev/null; then
+        echo "  [OK]    NAS /mnt/backup monté"
+    else
+        echo "  [ECHEC] NAS /mnt/backup non monté" >&2
+        exit 1
+    fi
+fi
 
 echo ""
 echo "================================================================"
@@ -363,4 +401,11 @@ echo "  2. scp java/web/target/web-2.0.0-SNAPSHOT.jar root@${IP%%/*}:$APP_DIR/we
 echo "     scp java/worker/target/worker-2.0.0-SNAPSHOT.jar root@${IP%%/*}:$APP_DIR/worker.jar"
 echo "  3. ssh root@${IP%%/*} '$APP_DIR/update.sh'"
 echo "  4. Ouvrir http://${IP%%/*}:8080/setup"
+if [ "$PROFIL" = "prod" ]; then
+echo ""
+echo "  Secrets Woodpecker à configurer :"
+echo "    lxc_java_host = ${IP%%/*}"
+echo "    ssh_key       ="
+echo "$WOODPECKER_PRIVKEY"
+fi
 echo "================================================================"

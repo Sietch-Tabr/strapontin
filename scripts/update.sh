@@ -25,4 +25,13 @@ for i in $(seq 1 30); do
     sleep 1
 done
 
+echo "[update] Vérification worker..."
+sleep 3
+if ! systemctl is-active --quiet strapontin-worker; then
+    echo "[update] ERREUR : strapontin-worker inactif" >&2
+    journalctl -u strapontin-worker -n 20 --no-pager >&2
+    exit 1
+fi
+echo "[update] Service worker UP"
+
 echo "[update] Déploiement terminé."
