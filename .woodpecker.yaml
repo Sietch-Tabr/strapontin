@@ -29,8 +29,8 @@ steps:
     commands:
       - apk add openssh-client
       - echo "$$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
-      - scp -i /tmp/key -o StrictHostKeyChecking=no java/web/target/web-2.0.0-SNAPSHOT.jar root@$$LXC_JAVA_HOST:/opt/strapontin/web.jar
-      - scp -i /tmp/key -o StrictHostKeyChecking=no java/worker/target/worker-2.0.0-SNAPSHOT.jar root@$$LXC_JAVA_HOST:/opt/strapontin/worker.jar
+      - scp -i /tmp/key -o StrictHostKeyChecking=no "$(find java/web/target -name 'web-*.jar' ! -name '*.original')" root@$$LXC_JAVA_HOST:/opt/strapontin/web.jar
+      - scp -i /tmp/key -o StrictHostKeyChecking=no "$(find java/worker/target -name 'worker-*.jar' ! -name '*.original')" root@$$LXC_JAVA_HOST:/opt/strapontin/worker.jar
       - ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST "/opt/strapontin/update.sh"
     when:
       - event: push
