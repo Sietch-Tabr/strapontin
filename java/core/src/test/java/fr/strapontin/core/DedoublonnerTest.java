@@ -9,8 +9,21 @@ class DedoublonnerTest {
 
   private static ConcertBrut concert(String artiste, String date, String salle) {
     return new ConcertBrut(
-        artiste, date, null, salle, null, null, null, null, null, "ticketmaster", null, null, null,
-        null, null);
+        artiste,
+        date,
+        null,
+        salle,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "ticketmaster",
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 
   private static ConcertBrut concert(String artiste, String date, String salle, String ville) {
@@ -35,8 +48,8 @@ class DedoublonnerTest {
   private static ConcertBrut concert(
       String artiste, String date, String salle, String ville, String source) {
     return new ConcertBrut(
-        artiste, date, null, salle, ville, null, null, null, null, source, null, null, null,
-        null, null);
+        artiste, date, null, salle, ville, null, null, null, null, source, null, null, null, null,
+        null);
   }
 
   // --- Cas limites ---

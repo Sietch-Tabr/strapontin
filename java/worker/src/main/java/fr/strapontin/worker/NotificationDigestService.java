@@ -4,7 +4,6 @@
  */
 package fr.strapontin.worker;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
 import com.resend.services.emails.model.CreateEmailOptions;
@@ -333,8 +332,9 @@ public class NotificationDigestService {
 
   private void logAdminDigest(int nbEmails, int nbPush, int nbErreurs) {
     try {
-      String metaJson = jackson.writeValueAsString(
-          Map.of("nb_emails", nbEmails, "nb_push", nbPush, "nb_erreurs", nbErreurs));
+      String metaJson =
+          jackson.writeValueAsString(
+              Map.of("nb_emails", nbEmails, "nb_push", nbPush, "nb_erreurs", nbErreurs));
       String message = "digest — " + nbEmails + " email(s), " + nbPush + " push envoyés";
       String niveau = nbErreurs > 0 ? "warn" : "info";
       jdbc.update(
