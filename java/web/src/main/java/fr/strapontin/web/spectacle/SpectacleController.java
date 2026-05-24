@@ -60,10 +60,16 @@ public class SpectacleController {
       String classification,
       Instant firstSeen,
       String statut,
-      boolean estNew) {
+      boolean estNew,
+      Instant presaleDebut,
+      String presaleNom) {
 
     public String dateFormatee() {
       return Dates.formater(date, false);
+    }
+
+    public boolean presaleActive() {
+      return presaleDebut != null && presaleDebut.isAfter(Instant.now());
     }
   }
 
@@ -210,7 +216,7 @@ public class SpectacleController {
         """
         SELECT c.id, c.artiste, c.date::text, c.heure::text, c.salle, c.ville,
                c.url, c.prix_min, c.prix_max, c.classification, c.first_seen, c.statut,
-               um.notifie_le
+               um.notifie_le, c.presale_debut, c.presale_nom
         FROM user_matches um
         INNER JOIN concerts c ON um.concert_id = c.id
         WHERE %s
@@ -232,6 +238,10 @@ public class SpectacleController {
                       ? rs.getTimestamp("first_seen").toInstant()
                       : null;
               boolean estNew = rs.getTimestamp("notifie_le") == null;
+              Instant presaleDebut =
+                  rs.getTimestamp("presale_debut") != null
+                      ? rs.getTimestamp("presale_debut").toInstant()
+                      : null;
               return new SpectacleDto(
                   rs.getString("id"),
                   rs.getString("artiste"),
@@ -245,7 +255,9 @@ public class SpectacleController {
                   rs.getString("classification"),
                   firstSeen,
                   rs.getString("statut"),
-                  estNew);
+                  estNew,
+                  presaleDebut,
+                  rs.getString("presale_nom"));
             });
 
     // Total sans LIMIT

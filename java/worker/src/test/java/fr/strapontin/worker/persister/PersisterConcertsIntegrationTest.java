@@ -18,7 +18,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /// Tests d'intégration de [PersisterConcerts] avec PostgreSQL réel (Testcontainers).
 ///
@@ -29,7 +29,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 class PersisterConcertsIntegrationTest {
 
   @ServiceConnection
-  static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18");
+  static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
 
   static {
     postgres.start();
@@ -63,7 +63,9 @@ class PersisterConcertsIntegrationTest {
         source,
         "music",
         "Pop",
-        "onsale");
+        "onsale",
+        null,
+        null);
   }
 
   @Test
@@ -95,6 +97,8 @@ class PersisterConcertsIntegrationTest {
             "eventim",
             "music",
             "Pop",
+            null,
+            null,
             null);
 
     persisterConcerts.persisterConcerts(List.of(v1));
@@ -121,6 +125,8 @@ class PersisterConcertsIntegrationTest {
                 "ticketmaster",
                 "music",
                 "Pop",
+                null,
+                null,
                 null),
             new ConcertBrut(
                 "Julien Doré",
@@ -135,6 +141,8 @@ class PersisterConcertsIntegrationTest {
                 "eventim",
                 "music",
                 "Pop",
+                null,
+                null,
                 null));
 
     persisterConcerts.persisterConcerts(liste);
@@ -167,6 +175,8 @@ class PersisterConcertsIntegrationTest {
             null,
             null,
             "ticketmaster",
+            null,
+            null,
             null,
             null,
             null);

@@ -338,7 +338,9 @@ public class WorkerService {
                   c.source(),
                   c.classification(),
                   c.genre(),
-                  c.statut());
+                  c.statut(),
+                  c.presaleDebut(),
+                  c.presaleNom());
             })
         .toList();
   }

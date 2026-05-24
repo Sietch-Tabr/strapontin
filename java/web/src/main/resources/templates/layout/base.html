@@ -140,7 +140,7 @@
     </div>
 
     <!-- Navigation mobile -->
-    <nav class="bottom-nav" aria-label="Navigation principale">
+    <nav id="bottom-nav" data-turbo-permanent class="bottom-nav" aria-label="Navigation principale">
       <div class="bottom-nav-items">
         <a
           th:href="@{/}"
@@ -257,13 +257,14 @@
         <hr class="dialog-nav-sep" />
         <div class="dialog-nav-user">
           <span sec:authentication="principal.nom">Utilisateur</span>
-          <form th:action="@{/logout}" method="post">
+          <form th:action="@{/logout}" method="post" data-turbo="false">
             <button type="submit" class="btn-deconnexion">Déconnexion</button>
           </form>
         </div>
       </div>
     </dialog>
 
+    <script th:src="@{/js/turbo.js}"></script>
     <script th:src="@{/js/app.js}" defer></script>
   </body>
 </html>

@@ -4,6 +4,8 @@
  */
 package fr.strapontin.worker;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
 import com.resend.services.emails.model.CreateEmailOptions;
 import java.net.URLEncoder;
@@ -50,11 +52,13 @@ public class NotificationDigestService {
 
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
+  private final ObjectMapper jackson;
 
   public NotificationDigestService(
-      ConfigServiceWorker configService, NamedParameterJdbcTemplate jdbc) {
+      ConfigServiceWorker configService, NamedParameterJdbcTemplate jdbc, ObjectMapper jackson) {
     this.configService = configService;
     this.jdbc = jdbc;
+    this.jackson = jackson;
   }
 
   /// Données d'un concert pour le digest.
@@ -68,12 +72,17 @@ public class NotificationDigestService {
   public record ConcertNotif(
       String artiste, String date, String salle, String ville, String url, String concertId) {}
 
+  private record ResultatDigest(boolean emailOk, boolean pushOk) {}
+
   /// Parcourt les matches non notifiés, envoie le digest, met à jour `notifie_le`.
   public void executerDigest() {
     log.info("notifier:digest démarré");
     long debut = System.currentTimeMillis();
     int nbUtilisateurs = 0;
     int nbMatchesNotifies = 0;
+    int nbEmailsOk = 0;
+    int nbPushOk = 0;
+    int nbErreurs = 0;
     String erreur = null;
 
     try {
@@ -126,8 +135,11 @@ public class NotificationDigestService {
         String userId = entree.getKey();
         List<ConcertNotif> concerts = entree.getValue();
         try {
-          envoyerDigest(userId, emailsUtilisateurs.get(userId), concerts);
+          ResultatDigest res = envoyerDigest(userId, emailsUtilisateurs.get(userId), concerts);
+          if (res.emailOk()) nbEmailsOk++;
+          if (res.pushOk()) nbPushOk++;
         } catch (Exception e) {
+          nbErreurs++;
           log.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
         }
         List<UUID> concertIds = concerts.stream().map(c -> UUID.fromString(c.concertId())).toList();
@@ -149,14 +161,15 @@ public class NotificationDigestService {
       log.error("notifier:digest échoué", e);
     } finally {
       enregistrerStat(System.currentTimeMillis() - debut, nbMatchesNotifies, erreur);
+      logAdminDigest(nbEmailsOk, nbPushOk, nbErreurs);
       log.info("notifier:digest terminé users={} concerts={}", nbUtilisateurs, nbMatchesNotifies);
     }
   }
 
-  private boolean envoyerDigest(String userId, String email, List<ConcertNotif> concerts) {
+  private ResultatDigest envoyerDigest(String userId, String email, List<ConcertNotif> concerts) {
     boolean emailOk = envoyerEmail(email, concerts);
     boolean pushOk = envoyerPush(userId, concerts);
-    return emailOk || pushOk;
+    return new ResultatDigest(emailOk, pushOk);
   }
 
   private boolean envoyerEmail(String email, List<ConcertNotif> concerts) {
@@ -316,6 +329,35 @@ public class NotificationDigestService {
     </html>
     """
         .formatted(sujet, sujet, lignes, baseUrl, baseUrl);
+  }
+
+  private void logAdminDigest(int nbEmails, int nbPush, int nbErreurs) {
+    try {
+      String metaJson = jackson.writeValueAsString(
+          Map.of("nb_emails", nbEmails, "nb_push", nbPush, "nb_erreurs", nbErreurs));
+      String message = "digest — " + nbEmails + " email(s), " + nbPush + " push envoyés";
+      String niveau = nbErreurs > 0 ? "warn" : "info";
+      jdbc.update(
+          """
+          INSERT INTO logs_admin (ts, niveau, source, message, meta)
+          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
+          """,
+          new MapSqlParameterSource()
+              .addValue("ts", Instant.now().toEpochMilli())
+              .addValue("niveau", niveau)
+              .addValue("source", "worker")
+              .addValue("message", message)
+              .addValue("meta", metaJson));
+      jdbc.update(
+          """
+          DELETE FROM logs_admin WHERE id NOT IN (
+            SELECT id FROM logs_admin ORDER BY ts DESC LIMIT 200
+          )
+          """,
+          Map.of());
+    } catch (Exception e) {
+      log.warn("Impossible d'écrire log admin digest : {}", e.getMessage());
+    }
   }
 
   private void enregistrerStat(long dureeMs, int nbNotifies, String erreur) {

@@ -147,7 +147,9 @@ public final class Dedoublonner {
             cb.source(),
             cb.classification(),
             cb.genre(),
-            cb.statut());
+            cb.statut(),
+            cb.presaleDebut(),
+            cb.presaleNom());
     return new ConcertEnrichi(
         fusionne, gagnant.artisteNorm(), gagnant.villeNorm(), gagnant.salleNorm());
   }

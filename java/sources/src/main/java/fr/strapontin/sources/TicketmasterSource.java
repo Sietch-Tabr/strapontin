@@ -374,6 +374,12 @@ public class TicketmasterSource {
         (List<Map<String, Object>>) evt.get("classifications");
     String[] segmentGenre = extraireClassificationTM(classificationsData);
 
+    var sales = (Map<String, Object>) evt.get("sales");
+    var presales = sales != null ? (List<Map<String, Object>>) sales.get("presales") : null;
+    var presale = presales != null && !presales.isEmpty() ? presales.get(0) : null;
+    String presaleDebut = presale != null ? (String) presale.get("startDateTime") : null;
+    String presaleNom = presale != null ? (String) presale.get("name") : null;
+
     return new ConcertBrut(
         artiste,
         datHeure[0],
@@ -387,7 +393,9 @@ public class TicketmasterSource {
         "ticketmaster",
         normaliserClassification(segmentGenre[0]),
         segmentGenre[1],
-        statut);
+        statut,
+        presaleDebut,
+        presaleNom);
   }
 
   private record ResultatPage(
