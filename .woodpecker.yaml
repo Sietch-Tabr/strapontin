@@ -34,4 +34,4 @@ steps:
       - ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST "/opt/strapontin/update.sh"
     when:
       - event: push
-        branch: v2
+        branch: main

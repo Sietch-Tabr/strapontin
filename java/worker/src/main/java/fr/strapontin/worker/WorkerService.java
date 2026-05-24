@@ -12,6 +12,7 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
+import fr.strapontin.worker.NotificationDigestService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -46,6 +47,7 @@ public class WorkerService {
   private final PersisterConcerts persisterConcerts;
   private final RecalculerMatchesService recalculerMatchesService;
   private final GestionQuotaTM gestionQuotaTM;
+  private final NotificationDigestService notificationDigestService;
   private final NamedParameterJdbcTemplate jdbc;
 
   public WorkerService(
@@ -55,6 +57,7 @@ public class WorkerService {
       PersisterConcerts persisterConcerts,
       RecalculerMatchesService recalculerMatchesService,
       GestionQuotaTM gestionQuotaTM,
+      NotificationDigestService notificationDigestService,
       NamedParameterJdbcTemplate jdbc) {
     this.tm = tm;
     this.eventim = eventim;
@@ -62,6 +65,7 @@ public class WorkerService {
     this.persisterConcerts = persisterConcerts;
     this.recalculerMatchesService = recalculerMatchesService;
     this.gestionQuotaTM = gestionQuotaTM;
+    this.notificationDigestService = notificationDigestService;
     this.jdbc = jdbc;
   }
 
@@ -113,6 +117,7 @@ public class WorkerService {
 
       resultat = persisterConcerts.persisterConcerts(dedoublonnes);
       recalculerMatchesService.recalculerMatches(null);
+      notificationDigestService.executerDigest();
       log.info("fetch:artistes:batch terminé");
     } catch (Exception e) {
       erreur = e.getMessage();
@@ -206,6 +211,7 @@ public class WorkerService {
 
       resultat = persisterConcerts.persisterConcerts(dedoublonnes);
       recalculerMatchesService.recalculerMatches(null);
+      notificationDigestService.executerDigest();
       log.info("fetch:region terminé");
     } catch (Exception e) {
       erreur = e.getMessage();
@@ -246,18 +252,49 @@ public class WorkerService {
   /// @param userIds IDs à recalculer, ou `null` pour tous
   public void executerRecalculerMatches(List<String> userIds) {
     log.info("recalculer:matches démarré userIds={}", userIds);
-    recalculerMatchesService.recalculerMatches(userIds);
-    log.info("recalculer:matches terminé");
+    long debut = System.currentTimeMillis();
+    String erreur = null;
+    try {
+      recalculerMatchesService.recalculerMatches(userIds);
+      notificationDigestService.executerDigest();
+      log.info("recalculer:matches terminé");
+    } catch (Exception e) {
+      erreur = e.getMessage();
+      log.error("recalculer:matches échoué", e);
+    } finally {
+      enregistrerStatJob(
+          "recalculer:matches",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, 0),
+          erreur);
+    }
   }
 
   /// Supprime les concerts passés depuis plus de 7 jours.
   public void executerPurgerConcerts() {
     LocalDate dateLimite = LocalDate.now().minusDays(7);
     log.info("purger:concerts dateLimite={}", dateLimite);
-    int supprimes =
-        jdbc.update(
-            "DELETE FROM concerts WHERE date < :dateLimite", Map.of("dateLimite", dateLimite));
-    log.info("purger:concerts terminé supprimes={}", supprimes);
+    long debut = System.currentTimeMillis();
+    String erreur = null;
+    try {
+      int supprimes =
+          jdbc.update(
+              "DELETE FROM concerts WHERE date < :dateLimite", Map.of("dateLimite", dateLimite));
+      log.info("purger:concerts terminé supprimes={}", supprimes);
+      enregistrerStatJob(
+          "purger:concerts",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, supprimes),
+          null);
+    } catch (Exception e) {
+      erreur = e.getMessage();
+      log.error("purger:concerts échoué", e);
+      enregistrerStatJob(
+          "purger:concerts",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, 0),
+          erreur);
+    }
   }
 
   private static java.util.Set<String> collecterTousLesDepts(List<String[]> allDepts) {
