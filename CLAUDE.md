@@ -30,11 +30,11 @@ strapontin/
 
 ### LXC
 
-| Environnement          | VMID | IP            | Notes                                          |
-| ---------------------- | ---- | ------------- | ---------------------------------------------- |
-| dev                    | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev`           |
-| prod Java (actif)      | 113  | 192.168.20.79 | production — Woodpecker déploie sur push `main` |
-| prod v1 Node.js        | 115  | 192.168.20.77 | à détruire ≥ 2026-05-30                        |
+| Environnement     | VMID | IP            | Notes                                           |
+| ----------------- | ---- | ------------- | ----------------------------------------------- |
+| dev               | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev`            |
+| prod Java (actif) | 113  | 192.168.20.79 | production — Woodpecker déploie sur push `main` |
+| prod v1 Node.js   | 115  | 192.168.20.77 | à détruire ≥ 2026-05-30                         |
 
 ```bash
 # Logs LXC dev (depuis le LXC)
@@ -135,8 +135,7 @@ Rate limiting TM : max 2 jobs simultanés (3 → HTTP 429). Quota TM persisté d
 
 Invite-only. Login par identifiant (insensible à la casse). Rôles : `user` | `admin`.
 2FA TOTP optionnel pour tous les utilisateurs — enrollment via `/parametres/totp`, challenge automatique à la connexion si activé. Cap : 500 artistes / 200 salles par user.
-Spring Security form login → cookie `SESSION` (JDBC-backed, survit aux restarts).
-`BetterAuthPasswordEncoder` : scrypt hérité de v1 → re-hash bcrypt transparent au premier login.
+Spring Security form login → cookie `SESSION` (JDBC-backed, survit aux restarts). Mots de passe hashés en bcrypt.
 Détails : [wiki Authentification](https://codeberg.org/Kwaite/strapontin/wiki/Authentification)
 
 ## Dédoublonnage inter-sources
