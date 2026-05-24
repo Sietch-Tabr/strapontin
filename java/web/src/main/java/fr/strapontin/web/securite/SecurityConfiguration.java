@@ -16,6 +16,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -172,12 +173,12 @@ public class SecurityConfiguration {
     return http.build();
   }
 
-  /// Encodeur de mots de passe compatible Better-Auth + bcrypt.
+  /// Encodeur de mots de passe bcrypt.
   ///
   /// @return l'encodeur de mots de passe
   @Bean
   PasswordEncoder passwordEncoder() {
-    return new BetterAuthPasswordEncoder();
+    return new BCryptPasswordEncoder();
   }
 
   /// Gestionnaire d'authentification avec chargement depuis la base de données.
