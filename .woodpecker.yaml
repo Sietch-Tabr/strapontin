@@ -25,7 +25,7 @@ steps:
       SSH_KEY:
         from_secret: ssh_key
       LXC_JAVA_HOST:
-        from_secret: lxc_java_host
+        from_secret: lxc_host
     commands:
       - apk add openssh-client
       - echo "$$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
