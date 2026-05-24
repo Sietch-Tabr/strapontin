@@ -32,9 +32,8 @@ strapontin/
 
 | Environnement     | VMID | IP            | Notes                                           |
 | ----------------- | ---- | ------------- | ----------------------------------------------- |
-| dev               | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev`            |
-| prod Java (actif) | 113  | 192.168.20.79 | production — Woodpecker déploie sur push `main` |
-| prod v1 Node.js   | 115  | 192.168.20.77 | à détruire ≥ 2026-05-30                         |
+| dev  | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev`            |
+| prod | 113  | 192.168.20.79 | production — Woodpecker déploie sur push `main` |
 
 ```bash
 # Logs LXC dev (depuis le LXC)
