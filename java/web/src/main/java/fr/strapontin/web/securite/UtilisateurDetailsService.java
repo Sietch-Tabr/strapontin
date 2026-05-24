@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsPasswordService;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -20,13 +19,10 @@ import org.springframework.stereotype.Service;
 /// (provider {@code credential}). Le login est insensible à la casse
 /// (correspondance sur {@code lower(username)}).
 ///
-/// <p>Implémente {@link UserDetailsPasswordService} pour permettre le re-hashage
-/// transparent scrypt → bcrypt déclenché par {@code DaoAuthenticationProvider}.
-///
 /// @since 2.0.0
 /// @author Kwaite
 @Service
-public class UtilisateurDetailsService implements UserDetailsService, UserDetailsPasswordService {
+public class UtilisateurDetailsService implements UserDetailsService {
 
   private static final Logger log = LoggerFactory.getLogger(UtilisateurDetailsService.class);
 
@@ -34,21 +30,6 @@ public class UtilisateurDetailsService implements UserDetailsService, UserDetail
 
   public UtilisateurDetailsService(NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
-  }
-
-  /// Persiste le nouveau hash bcrypt après re-hashage transparent par {@code DaoAuthenticationProvider}.
-  ///
-  /// @param utilisateur les détails de l'utilisateur dont le hash doit être mis à jour
-  /// @param nouveauHash le nouveau hash bcrypt
-  /// @return les détails inchangés (le hash n'est pas stocké dans {@link UtilisateurDetails})
-  @Override
-  public UserDetails updatePassword(UserDetails utilisateur, String nouveauHash) {
-    jdbc.update(
-        "UPDATE accounts SET password = :hash, updated_at = NOW()"
-            + " WHERE user_id = :userId AND provider_id = 'credential'",
-        Map.of("hash", nouveauHash, "userId", ((UtilisateurDetails) utilisateur).id()));
-    log.debug("Hash re-hashé en bcrypt pour : {}", utilisateur.getUsername());
-    return utilisateur;
   }
 
   /// Charge un utilisateur par son identifiant (insensible à la casse).
