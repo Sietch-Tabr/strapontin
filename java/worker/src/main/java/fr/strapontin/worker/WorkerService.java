@@ -12,7 +12,6 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
-import fr.strapontin.worker.NotificationDigestService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import java.sql.Timestamp;
 import java.time.Instant;

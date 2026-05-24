@@ -80,7 +80,8 @@ public class RecalculerMatchesService {
 
     List<String> salleIds =
         jdbc.queryForList(
-            "SELECT regexp_replace(lower(salle_id), '[^a-z0-9]', '', 'g') FROM user_salles WHERE user_id = :userId",
+            "SELECT regexp_replace(lower(salle_id), '[^a-z0-9]', '', 'g') FROM user_salles WHERE"
+                + " user_id = :userId",
             Map.of(CLE_USER_ID, userId),
             String.class);
 

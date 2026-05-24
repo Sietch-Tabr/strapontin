@@ -11,9 +11,8 @@ strapontin/
 │   ├── web/          ← Spring Boot (REST API + Thymeleaf UI, port 8080)
 │   └── worker/       ← Spring Boot + Quartz (port 8081)
 └── scripts/
-    ├── provision.sh       ← provisionnement LXC dev|prod (Proxmox) ; copie update.sh via pct push
-    ├── update.sh          ← restart services + healthcheck ; appelé par Woodpecker (prod) ou manuellement (dev)
-    └── migrate_data.sql   ← migration données prod one-shot (LXC 115 → 113) ; exécutée le 2026-05-23, à supprimer
+    ├── provision.sh  ← provisionnement LXC dev|prod (Proxmox) ; copie update.sh via pct push
+    └── update.sh     ← restart services + healthcheck ; appelé par Woodpecker (prod) ou manuellement (dev)
 ```
 
 ## Stack technique (v2.0.0)
@@ -31,11 +30,11 @@ strapontin/
 
 ### LXC
 
-| Environnement        | VMID | IP            | Notes                                |
-| -------------------- | ---- | ------------- | ------------------------------------ |
-| dev                         | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev`            |
-| prod v2 Java (actif)        | 113  | 192.168.20.79 | production — Woodpecker déploie sur push `v2`   |
-| prod v1 Node.js (à détruire)| 115  | 192.168.20.77 | détruire après 1 semaine de stabilisation       |
+| Environnement          | VMID | IP            | Notes                                          |
+| ---------------------- | ---- | ------------- | ---------------------------------------------- |
+| dev                    | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev`           |
+| prod Java (actif)      | 113  | 192.168.20.79 | production — Woodpecker déploie sur push `main` |
+| prod v1 Node.js        | 115  | 192.168.20.77 | à détruire ≥ 2026-05-30                        |
 
 ```bash
 # Logs LXC dev (depuis le LXC)
@@ -82,21 +81,22 @@ EOF
 `tea issue view N` → toujours passer `-f "index,title,body"` (body absent par défaut).
 Labels : `Bug`, `Feature`, `Question`, `Task`, `Duplicate`, `Invalid`.
 
-### Workflow Git (v2)
+### Workflow Git
 
-- `v2` : branche principale — Woodpecker déploie sur LXC 113 prod à chaque push (**ne jamais pousser manuellement sans build valide**)
-- `main` : archive v1 Node.js — ne pas toucher
-- Features : branche `feature/xxx` → PR → merge dans `v2`
+- `main` : branche principale — Woodpecker déploie sur LXC 113 prod à chaque push (**ne jamais pousser manuellement sans build valide**)
+- Features : branche `feature/xxx` → PR → merge dans `main`
 
 ### Pipeline Woodpecker (.woodpecker.yaml)
 
-Pipeline Maven actif : test → build → deploy sur push `v2`. Secrets requis : `ssh_key`, `lxc_java_host`.
+Pipeline Maven actif : test → build → deploy sur push `main`. Secrets requis : `ssh_key`, `lxc_java_host`.
+
+> **Woodpecker — repo trusted** : le repo doit être marqué "trusted" (Settings → repo → cocher "Trusted") pour autoriser les volumes Maven dans le pipeline.
 
 ## Variables d'environnement — java/web/.env
 
 ```
 DATABASE_URL=jdbc:postgresql://localhost/strapontin
-APP_CONFIG_SECRET=<valeur de BETTER_AUTH_SECRET LXC 115 (prod v1)>
+APP_CONFIG_SECRET=<clé AES-256-GCM de chiffrement de app_config>
 ```
 
 ## Configuration applicative (`app_config`)
