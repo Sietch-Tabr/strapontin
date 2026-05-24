@@ -190,7 +190,7 @@ public class SpectacleController {
     } else if (sourceSalles && !sourceArtistes) {
       List<String> ids =
           jdbc.queryForList(
-              "SELECT salle_id FROM user_salles WHERE user_id = :u",
+              "SELECT regexp_replace(lower(salle_id), '[^a-z0-9]', '', 'g') FROM user_salles WHERE user_id = :u",
               Map.of("u", userId),
               String.class);
       if (ids.isEmpty()) {
