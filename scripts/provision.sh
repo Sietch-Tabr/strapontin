@@ -327,7 +327,7 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 UNIT"
 
-pct exec "$VMID" -- bash -c "systemctl daemon-reload"
+pct exec "$VMID" -- bash -c "systemctl daemon-reload && systemctl enable strapontin-web strapontin-worker"
 
 # ---------------------------------------------------------------
 # 8. SSH développeur
