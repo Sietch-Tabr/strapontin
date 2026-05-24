@@ -4,7 +4,7 @@ steps:
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
     commands:
-      - mvn -f java/pom.xml -pl core,sources test
+      - mvn -f java/pom.xml -pl core,sources,web -am test
     when:
       - event: push
 
