@@ -89,6 +89,12 @@ public class NotificationDigestService {
               WHERE um.notifie_le IS NULL
                 AND um.masque_le  IS NULL
                 AND uc.frequence_notifications != 'jamais'
+                AND EXISTS (
+                  SELECT 1 FROM user_artistes ua
+                  WHERE ua.user_id = um.user_id
+                    AND (c.artiste_norm = ua.artiste_normalise
+                         OR c.artiste_norm LIKE (ua.artiste_normalise || ' %'))
+                )
               ORDER BY um.user_id, c.date
               """,
               Map.of());

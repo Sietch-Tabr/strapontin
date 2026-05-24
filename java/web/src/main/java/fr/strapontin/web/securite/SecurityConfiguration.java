@@ -14,6 +14,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -21,6 +22,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
+import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 
 /// Configuration Spring Security 7 pour les vues Thymeleaf et l'API REST.
 ///
@@ -35,12 +39,23 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
 @EnableWebSecurity
 public class SecurityConfiguration {
 
+  /// Registre de sessions persisté en JDBC — survit aux redémarrages.
+  ///
+  /// @param sessionRepository le dépôt de sessions Spring Session JDBC
+  /// @return le registre de sessions
+  @Bean
+  SpringSessionBackedSessionRegistry<? extends Session> sessionRegistry(
+      FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
+    return new SpringSessionBackedSessionRegistry<>(sessionRepository);
+  }
+
   /// Chaîne de filtres de sécurité principale.
   ///
   /// @param http                le constructeur de configuration Spring Security
   /// @param correlationIdFilter le filtre de corrélation MDC (premier dans la chaîne)
   /// @param rateLimitingFilter  le filtre de rate limiting sur le login
   /// @param bloquerIpFilter     le filtre de blocage d'accès direct par IP
+  /// @param sessionRegistry     le registre de sessions persisté en JDBC
   /// @return la SecurityFilterChain configurée
   /// @throws Exception en cas d'erreur de configuration
   @Bean
@@ -50,7 +65,8 @@ public class SecurityConfiguration {
       RateLimitingLoginFilter rateLimitingFilter,
       BloquerAccesDirectIpFilter bloquerIpFilter,
       TotpGuardFilter totpGuardFilter,
-      TotpSuccessHandler totpSuccessHandler)
+      TotpSuccessHandler totpSuccessHandler,
+      SessionRegistry sessionRegistry)
       throws Exception {
     http.headers(
             headers ->
@@ -127,7 +143,8 @@ public class SecurityConfiguration {
             session ->
                 session
                     .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                    .maximumSessions(10))
+                    .maximumSessions(10)
+                    .sessionRegistry(sessionRegistry))
         .exceptionHandling(
             ex ->
                 ex.authenticationEntryPoint(
