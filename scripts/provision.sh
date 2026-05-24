@@ -68,13 +68,14 @@ fi
 
 DB_PASSWORD=$(openssl rand -hex 16)
 
-printf "APP_CONFIG_SECRET (/opt/strapontin/.env du LXC source) : "
+printf "APP_CONFIG_SECRET (laisser vide pour en générer un nouveau) : "
 read -r APP_CONFIG_SECRET
 echo ""
 
 if [ -z "$APP_CONFIG_SECRET" ]; then
-    echo "ERREUR : APP_CONFIG_SECRET requis (chiffrement app_config)" >&2
-    exit 1
+    APP_CONFIG_SECRET=$(openssl rand -hex 32)
+    echo "APP_CONFIG_SECRET généré automatiquement : $APP_CONFIG_SECRET"
+    echo "  --> Conservez cette valeur pour restaurer les app_config chiffrées."
 fi
 
 # ---------------------------------------------------------------

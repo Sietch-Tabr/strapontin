@@ -30,4 +30,6 @@ public record ValeurConcert(
     String source,
     String classification,
     String genre,
-    String statut) {}
+    String statut,
+    String presaleDebut,
+    String presaleNom) {}

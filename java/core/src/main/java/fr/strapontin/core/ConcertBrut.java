@@ -13,4 +13,6 @@ public record ConcertBrut(
     String source,
     String classification,
     String genre,
-    String statut) {}
+    String statut,
+    String presaleDebut,
+    String presaleNom) {}

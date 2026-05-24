@@ -231,6 +231,11 @@
                     th:if="${concert.statut == 'offsale'}"
                     >Complet</span
                   >
+                  <span
+                    class="badge badge-prevente"
+                    th:if="${concert.presaleActive()}"
+                    th:text="'Prévente le ' + ${#temporals.format(concert.presaleDebut, 'dd/MM', #locale)}"
+                  ></span>
                 </td>
                 <td data-label="" class="actions-cellule">
                   <a

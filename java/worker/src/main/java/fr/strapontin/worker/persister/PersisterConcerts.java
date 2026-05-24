@@ -46,11 +46,13 @@ public class PersisterConcerts {
       """
       INSERT INTO concerts
           (artiste, artiste_norm, date, heure, salle, salle_norm, ville, dept,
-           prix_min, prix_max, url, source, classification, genre, statut)
+           prix_min, prix_max, url, source, classification, genre, statut,
+           presale_debut, presale_nom)
       VALUES
           (:artiste, :artisteNorm, :date, :heure, :salle, :salleNorm, :ville, :dept,
            :prixMin, :prixMax, :url, CAST(:source AS source_concert),
-           :classification, :genre, :statut)
+           :classification, :genre, :statut,
+           :presaleDebut, :presaleNom)
       ON CONFLICT (artiste_norm, date, salle_norm) DO UPDATE SET
           artiste        = CASE WHEN unaccent(EXCLUDED.artiste) != EXCLUDED.artiste
                                 THEN EXCLUDED.artiste ELSE concerts.artiste END,
@@ -66,6 +68,8 @@ public class PersisterConcerts {
           classification = COALESCE(EXCLUDED.classification, concerts.classification),
           genre          = COALESCE(EXCLUDED.genre, concerts.genre),
           statut         = COALESCE(EXCLUDED.statut, concerts.statut),
+          presale_debut  = COALESCE(EXCLUDED.presale_debut, concerts.presale_debut),
+          presale_nom    = COALESCE(EXCLUDED.presale_nom, concerts.presale_nom),
           updated_at     = now()
       RETURNING id, (xmax = 0) AS est_insertion
       """;
@@ -241,7 +245,9 @@ public class PersisterConcerts {
         c.source(),
         c.classification(),
         c.genre(),
-        c.statut());
+        c.statut(),
+        c.presaleDebut(),
+        c.presaleNom());
   }
 
   private List<ValeurConcert> reconcilierContreBase(
@@ -276,7 +282,9 @@ public class PersisterConcerts {
             concert.source(),
             concert.classification(),
             concert.genre(),
-            concert.statut());
+            concert.statut(),
+            concert.presaleDebut(),
+            concert.presaleNom());
       }
     }
     return concert;
@@ -299,6 +307,8 @@ public class PersisterConcerts {
     params.addValue("classification", v.classification());
     params.addValue("genre", v.genre());
     params.addValue("statut", v.statut());
+    params.addValue("presaleDebut", v.presaleDebut());
+    params.addValue("presaleNom", v.presaleNom());
     return params;
   }
 
@@ -366,7 +376,9 @@ public class PersisterConcerts {
                           c.source(),
                           c.classification(),
                           c.genre(),
-                          c.statut()))
+                          c.statut(),
+                          c.presaleDebut(),
+                          c.presaleNom()))
               .toList();
 
       List<ValeurConcert> valeurs = deduplicerLotReconcilie(reconcilierSalles(valeursBrutes));

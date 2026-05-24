@@ -258,6 +258,14 @@ tr:hover td {
   background: #0c2d4a;
   color: #7dd3fc;
 }
+.badge-prevente {
+  background: #fdf4ff;
+  color: #7e22ce;
+}
+.dark .badge-prevente {
+  background: #3b0764;
+  color: #e9d5ff;
+}
 
 /* ── Utilitaires ─────────────────────────────────────────── */
 .sr-only {

@@ -98,7 +98,7 @@ if ("serviceWorker" in navigator) {
 })();
 
 // Réaffichage de concerts masqués (accueil)
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("turbo:load", function () {
   document.querySelectorAll("[data-reafficher-id]").forEach(function (btn) {
     btn.addEventListener("click", function () {
       const id = btn.getAttribute("data-reafficher-id");
