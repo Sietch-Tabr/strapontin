@@ -30,10 +30,10 @@ strapontin/
 
 ### LXC
 
-| Environnement     | VMID | IP            | Notes                                           |
-| ----------------- | ---- | ------------- | ----------------------------------------------- |
-| dev  | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev`            |
-| prod | 113  | 192.168.20.79 | production — Woodpecker déploie sur push `main` |
+| Environnement | VMID | IP            | Notes                                           |
+| ------------- | ---- | ------------- | ----------------------------------------------- |
+| dev           | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev`            |
+| prod          | 113  | 192.168.20.79 | production — Woodpecker déploie sur push `main` |
 
 ```bash
 # Logs LXC dev (depuis le LXC)
@@ -41,7 +41,7 @@ journalctl -fu strapontin-web
 journalctl -fu strapontin-worker
 systemctl restart strapontin-web strapontin-worker
 
-# Logs prod v2 (depuis Mac)
+# Logs prod (depuis Mac)
 ssh root@192.168.20.79 "journalctl -u strapontin-web -n 50 --no-pager"
 ssh root@192.168.20.79 "journalctl -u strapontin-worker -n 50 --no-pager"
 ```
@@ -54,8 +54,8 @@ Commandes manuelles si besoin :
 
 ```bash
 mvn -f java/pom.xml -pl web,worker -am package
-scp java/web/target/web-2.0.0-SNAPSHOT.jar root@192.168.20.78:/opt/strapontin/web.jar
-scp java/worker/target/worker-2.0.0-SNAPSHOT.jar root@192.168.20.78:/opt/strapontin/worker.jar
+scp "$(find java/web/target -name 'web-*.jar' ! -name '*.original')" root@192.168.20.78:/opt/strapontin/web.jar
+scp "$(find java/worker/target -name 'worker-*.jar' ! -name '*.original')" root@192.168.20.78:/opt/strapontin/worker.jar
 ssh root@192.168.20.78 "/opt/strapontin/update.sh"
 ```
 
@@ -87,7 +87,7 @@ Labels : `Bug`, `Feature`, `Question`, `Task`, `Duplicate`, `Invalid`.
 
 ### Pipeline Woodpecker (.woodpecker.yaml)
 
-Pipeline Maven actif : test → build → deploy sur push `main`. Secrets requis : `ssh_key`, `lxc_java_host`.
+Pipeline Maven actif : test → build → deploy sur push `main`. Secrets requis : `ssh_key`, `lxc_host`.
 
 > **Woodpecker — repo trusted** : le repo doit être marqué "trusted" (Settings → repo → cocher "Trusted") pour autoriser les volumes Maven dans le pipeline.
 
