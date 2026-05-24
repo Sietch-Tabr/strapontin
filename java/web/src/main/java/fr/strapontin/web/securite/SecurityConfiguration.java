@@ -23,8 +23,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
+import java.time.Duration;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
+import org.springframework.session.config.SessionRepositoryCustomizer;
+import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 
 /// Configuration Spring Security 7 pour les vues Thymeleaf et l'API REST.
@@ -192,6 +195,19 @@ public class SecurityConfiguration {
     DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
     provider.setPasswordEncoder(passwordEncoder);
     return new ProviderManager(provider);
+  }
+
+  /// Force le timeout d'inactivité des sessions JDBC à 30 jours.
+  ///
+  /// <p>{@code spring.session.timeout=30d} n'est pas appliqué par Spring Session 4 —
+  /// ce customizer le remplace de façon programmatique.
+  /// La session est prolongée à chaque requête ; elle expire uniquement après
+  /// 30 jours sans activité.
+  ///
+  /// @return le customizer de dépôt de sessions
+  @Bean
+  SessionRepositoryCustomizer<JdbcIndexedSessionRepository> sessionTimeoutCustomizer() {
+    return repository -> repository.setDefaultMaxInactiveInterval(Duration.ofDays(30));
   }
 
   /// Publie les événements de session HTTP (requis pour le suivi des sessions actives).

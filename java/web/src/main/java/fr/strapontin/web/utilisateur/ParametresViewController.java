@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.securite.TotpService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.Cookie;
@@ -55,18 +56,21 @@ public class ParametresViewController {
   private final PreferencesController preferencesController;
   private final TotpService totpService;
   private final NamedParameterJdbcTemplate jdbc;
+  private final LogAdminService logAdminService;
 
   public ParametresViewController(
       UserConfigController userConfigController,
       UserController userController,
       PreferencesController preferencesController,
       TotpService totpService,
-      NamedParameterJdbcTemplate jdbc) {
+      NamedParameterJdbcTemplate jdbc,
+      LogAdminService logAdminService) {
     this.userConfigController = userConfigController;
     this.userController = userController;
     this.preferencesController = preferencesController;
     this.totpService = totpService;
     this.jdbc = jdbc;
+    this.logAdminService = logAdminService;
   }
 
   /// Affiche la page des paramètres.
@@ -341,6 +345,8 @@ public class ParametresViewController {
     jdbc.update(
         "UPDATE users SET two_factor_secret = :secret, two_factor_enabled = true WHERE id = :id",
         Map.of("secret", secret, "id", ancien.id()));
+    logAdminService.logAdmin(
+        "info", "web", "TOTP activé", Map.of("userId", ancien.id(), "username", ancien.identifiant()));
     session.removeAttribute(SESSION_TOTP_SETUP);
     UtilisateurDetails nouveau =
         new UtilisateurDetails(
@@ -383,6 +389,8 @@ public class ParametresViewController {
     jdbc.update(
         "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false WHERE id = :id",
         Map.of("id", ancien.id()));
+    logAdminService.logAdmin(
+        "info", "web", "TOTP désactivé", Map.of("userId", ancien.id(), "username", ancien.identifiant()));
     UtilisateurDetails nouveau =
         new UtilisateurDetails(
             ancien.id(),
