@@ -1,6 +1,6 @@
 // Strapontin — service worker
 
-const CACHE_NOM = "strapontin-v2";
+const CACHE_NOM = "strapontin-v3";
 const RESSOURCES_STATIQUES = [
   "/offline.html",
   "/css/app.css",
@@ -8,6 +8,7 @@ const RESSOURCES_STATIQUES = [
   "/images/favicon.png",
   "/images/icon-192.png",
   "/images/icon-512.png",
+  "/images/logo.png",
   "/icons/lucide-sprite.svg",
 ];
 

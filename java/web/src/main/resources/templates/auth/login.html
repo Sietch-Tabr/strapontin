@@ -9,7 +9,9 @@
   </head>
   <body>
     <div layout:fragment="contenu">
-      <h1 class="auth-title">Strapontin</h1>
+      <div class="auth-logo">
+        <img th:src="@{/images/logo.png}" alt="Strapontin" />
+      </div>
       <p class="auth-subtitle">Connectez-vous à votre compte</p>
 
       <div class="alerte alerte-erreur" th:if="${param.erreur}">
