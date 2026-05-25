@@ -34,7 +34,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/accueil")
 public class AccueilController {
 
-  private static final int LIMITE_CONCERTS = 50;
   private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -76,9 +75,7 @@ public class AccueilController {
   record ReponseAccueil(
       List<GroupeArtiste> artistesGroupes,
       int nbArtistes,
-      int nbSalles,
-      int totalConcerts,
-      boolean tronque) {}
+      int nbSalles) {}
 
   /// Retourne les prochains concerts des artistes suivis, groupés par artiste.
   ///
@@ -124,7 +121,6 @@ public class AccueilController {
     Map<String, Object> params = new HashMap<>();
     params.put(CLE_USER_ID, userId);
     params.put("aujourd8", aujourd8);
-    params.put("limite", LIMITE_CONCERTS);
 
     String selectSql =
         """
@@ -134,7 +130,6 @@ public class AccueilController {
         INNER JOIN concerts c ON um.concert_id = c.id
         WHERE %s
         ORDER BY c.date ASC, c.artiste ASC
-        LIMIT :limite
         """
             .formatted(where);
 
@@ -154,19 +149,6 @@ public class AccueilController {
                     rs.getString("url"),
                     rs.getString("statut"),
                     rs.getTimestamp("notifie_le") == null));
-
-    String countSql =
-        """
-        SELECT COUNT(*)
-        FROM user_matches um
-        INNER JOIN concerts c ON um.concert_id = c.id
-        WHERE %s
-        """
-            .formatted(where);
-    Map<String, Object> countParams = new HashMap<>(params);
-    countParams.remove("limite");
-    int totalConcerts =
-        Objects.requireNonNullElse(jdbc.queryForObject(countSql, countParams, Integer.class), 0);
 
     // Grouper par artiste en conservant l'ordre
     Map<String, List<ConcertAccueil>> groupes = new LinkedHashMap<>();
@@ -201,9 +183,7 @@ public class AccueilController {
                 Integer.class),
             0);
 
-    return ResponseEntity.ok(
-        new ReponseAccueil(
-            artistesGroupes, nbArtistes, nbSalles, totalConcerts, totalConcerts > LIMITE_CONCERTS));
+    return ResponseEntity.ok(new ReponseAccueil(artistesGroupes, nbArtistes, nbSalles));
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {

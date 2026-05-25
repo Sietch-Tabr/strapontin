@@ -97,6 +97,37 @@ if ("serviceWorker" in navigator) {
   majEtat();
 })();
 
+// Mise à jour de l'onglet actif de la nav mobile lors des navigations Turbo
+// (le #bottom-nav est data-turbo-permanent : il n'est pas re-rendu par le serveur)
+document.addEventListener("turbo:load", function () {
+  var chemin = window.location.pathname;
+  document
+    .querySelectorAll("#bottom-nav a[href], #bottom-nav button[data-nav-path]")
+    .forEach(function (el) {
+      var href = el.getAttribute("href") || el.getAttribute("data-nav-path") || "";
+      var actif =
+        href === "/"
+          ? chemin === "/"
+          : chemin === href || chemin.startsWith(href + "/");
+      el.classList.toggle("actif", actif);
+    });
+  var btnPlus = document.getElementById("btn-nav-plus");
+  if (btnPlus) {
+    var pagesPlus = [
+      "/artistes",
+      "/salles",
+      "/parametres",
+      "/admin",
+      "/aide",
+      "/changelog",
+    ];
+    var dansPlus = pagesPlus.some(function (p) {
+      return chemin === p || chemin.startsWith(p + "/");
+    });
+    btnPlus.classList.toggle("actif", dansPlus);
+  }
+});
+
 // Réaffichage de concerts masqués (accueil)
 document.addEventListener("turbo:load", function () {
   document.querySelectorAll("[data-reafficher-id]").forEach(function (btn) {

@@ -21,6 +21,8 @@ public final class Dates {
 
   private static final DateTimeFormatter FORMAT_COURT =
       DateTimeFormatter.ofPattern("EEE d MMM", Locale.FRENCH);
+  private static final DateTimeFormatter FORMAT_COURT_ANNEE =
+      DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.FRENCH);
   private static final DateTimeFormatter FORMAT_LONG =
       DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", Locale.FRENCH);
   private static final DateTimeFormatter FORMAT_HEURE =
@@ -30,15 +32,20 @@ public final class Dates {
 
   /// Formate une date ISO-8601 (`yyyy-MM-dd`) en français.
   ///
+  /// Pour le format court, l'année est ajoutée si la date n'est pas dans l'année courante
+  /// (ex. "jeu. 8 avr. 2027" vs "jeu. 8 avr.").
+  ///
   /// @param dateIso  la date au format `yyyy-MM-dd`, ou {@code null}
   /// @param longue   {@code true} pour le format long (ex. "lundi 15 septembre 2026"),
-  ///                 {@code false} pour le format court (ex. "lun. 15 sept. 2026")
+  ///                 {@code false} pour le format court (ex. "lun. 15 sept.")
   /// @return la date formatée, ou chaîne vide si l'entrée est {@code null} ou invalide
   public static String formater(String dateIso, boolean longue) {
     if (dateIso == null || dateIso.isBlank()) return "";
     try {
       LocalDate date = LocalDate.parse(dateIso);
-      return date.format(longue ? FORMAT_LONG : FORMAT_COURT);
+      if (longue) return date.format(FORMAT_LONG);
+      boolean autreAnnee = date.getYear() != LocalDate.now().getYear();
+      return date.format(autreAnnee ? FORMAT_COURT_ANNEE : FORMAT_COURT);
     } catch (Exception e) {
       return dateIso;
     }
