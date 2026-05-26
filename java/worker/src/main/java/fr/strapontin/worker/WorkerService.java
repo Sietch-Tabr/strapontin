@@ -116,7 +116,7 @@ public class WorkerService {
 
       resultat = persisterConcerts.persisterConcerts(dedoublonnes);
       recalculerMatchesService.recalculerMatches(null);
-      notificationDigestService.executerDigest();
+      notificationDigestService.executerDigest("temps_reel");
       log.info("fetch:artistes:batch terminé");
     } catch (Exception e) {
       erreur = e.getMessage();
@@ -210,7 +210,7 @@ public class WorkerService {
 
       resultat = persisterConcerts.persisterConcerts(dedoublonnes);
       recalculerMatchesService.recalculerMatches(null);
-      notificationDigestService.executerDigest();
+      notificationDigestService.executerDigest("temps_reel");
       log.info("fetch:region terminé");
     } catch (Exception e) {
       erreur = e.getMessage();
@@ -255,7 +255,7 @@ public class WorkerService {
     String erreur = null;
     try {
       recalculerMatchesService.recalculerMatches(userIds);
-      notificationDigestService.executerDigest();
+      notificationDigestService.executerDigest("temps_reel");
       log.info("recalculer:matches terminé");
     } catch (Exception e) {
       erreur = e.getMessage();

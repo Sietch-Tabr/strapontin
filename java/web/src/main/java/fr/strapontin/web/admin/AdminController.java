@@ -284,7 +284,8 @@ public class AdminController {
         "info", SOURCE_ADMIN, "compte créé", Map.of(CLE_EMAIL, email, CLE_PAR_ADMIN, adminId));
 
     return ResponseEntity.status(201)
-        .body(Map.of(CLE_SUCCES, true, CLE_EMAIL, email, "identifiant", usernameTemp));
+        .body(Map.of(CLE_SUCCES, true, CLE_EMAIL, email, "identifiant", usernameTemp,
+                     "lienReset", lienReset));
   }
 
   /// Modifie le nom et/ou l'email d'un utilisateur.

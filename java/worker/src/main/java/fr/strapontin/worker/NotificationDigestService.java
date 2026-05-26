@@ -73,9 +73,12 @@ public class NotificationDigestService {
 
   private record ResultatDigest(boolean emailOk, boolean pushOk) {}
 
-  /// Parcourt les matches non notifiés, envoie le digest, met à jour `notifie_le`.
-  public void executerDigest() {
-    log.info("notifier:digest démarré");
+  /// Parcourt les matches non notifiés pour une fréquence donnée, envoie le digest,
+  /// met à jour `notifie_le`.
+  ///
+  /// @param frequence `"temps_reel"` (après chaque recalcul) ou `"quotidien"` (cron 8h)
+  public void executerDigest(String frequence) {
+    log.info("notifier:digest démarré frequence={}", frequence);
     long debut = System.currentTimeMillis();
     int nbUtilisateurs = 0;
     int nbMatchesNotifies = 0;
@@ -96,16 +99,25 @@ public class NotificationDigestService {
               JOIN user_config uc ON uc.user_id = um.user_id
               WHERE um.notifie_le IS NULL
                 AND um.masque_le  IS NULL
-                AND uc.frequence_notifications != 'jamais'
-                AND EXISTS (
-                  SELECT 1 FROM user_artistes ua
-                  WHERE ua.user_id = um.user_id
-                    AND (c.artiste_norm = ua.artiste_normalise
-                         OR c.artiste_norm LIKE (ua.artiste_normalise || ' %'))
+                AND uc.frequence_notifications = :frequence
+                AND (
+                  (uc.notif_artistes = true AND EXISTS (
+                    SELECT 1 FROM user_artistes ua
+                    WHERE ua.user_id = um.user_id
+                      AND (c.artiste_norm = ua.artiste_normalise
+                           OR c.artiste_norm LIKE (ua.artiste_normalise || ' %'))
+                  ))
+                  OR
+                  (uc.notif_salles = true AND EXISTS (
+                    SELECT 1 FROM user_salles us
+                    JOIN salles s ON s.id = us.salle_id
+                    WHERE us.user_id = um.user_id
+                      AND c.salle_norm = s.nom_norm
+                  ))
                 )
               ORDER BY um.user_id, c.date
               """,
-              Map.of());
+              Map.of("frequence", frequence));
 
       if (lignes.isEmpty()) {
         log.info("notifier:digest — aucun match non notifié");

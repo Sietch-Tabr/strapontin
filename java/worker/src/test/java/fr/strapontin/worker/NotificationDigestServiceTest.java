@@ -44,7 +44,7 @@ class NotificationDigestServiceTest {
   void executerDigest_sansMatches_nAppellePasConfigService() {
     when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of());
 
-    service.executerDigest();
+    service.executerDigest("quotidien");
 
     verify(configService, never()).lireConfig(eq("RESEND_API_KEY"));
     verify(configService, never()).lireConfig(eq("VAPID_PUBLIC_KEY"));
@@ -59,7 +59,7 @@ class NotificationDigestServiceTest {
     when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
     when(jdbc.update(anyString(), any(Map.class))).thenReturn(1);
 
-    assertDoesNotThrow(() -> service.executerDigest());
+    assertDoesNotThrow(() -> service.executerDigest("quotidien"));
 
     verify(configService).lireConfig("RESEND_API_KEY");
   }
@@ -73,7 +73,7 @@ class NotificationDigestServiceTest {
     when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
     when(jdbc.update(anyString(), any(Map.class))).thenReturn(1);
 
-    assertDoesNotThrow(() -> service.executerDigest());
+    assertDoesNotThrow(() -> service.executerDigest("quotidien"));
 
     verify(configService).lireConfig("VAPID_PUBLIC_KEY");
   }

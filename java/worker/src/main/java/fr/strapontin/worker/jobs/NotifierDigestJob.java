@@ -29,7 +29,7 @@ public class NotifierDigestJob extends QuartzJobBean {
   @Override
   protected void executeInternal(JobExecutionContext context) {
     try {
-      notificationDigestService.executerDigest();
+      notificationDigestService.executerDigest("quotidien");
     } catch (Exception e) {
       log.error("notifier:digest échoué", e);
       throw e;
