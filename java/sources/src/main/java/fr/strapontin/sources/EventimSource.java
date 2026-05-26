@@ -225,21 +225,23 @@ public class EventimSource {
             ? ((Number) priceRange.get("max")).doubleValue()
             : null;
 
-    String statut = liveEnt != null ? (String) liveEnt.get("salesStatus") : null;
-    var presales =
-        liveEnt != null ? (List<Map<String, Object>>) liveEnt.get("presales") : null;
-    var presale = presales != null && !presales.isEmpty() ? presales.get(0) : null;
-    String presaleDebut = presale != null ? (String) presale.get("startDate") : null;
-    String presaleNom = presale != null ? (String) presale.get("name") : null;
-
-    if (log.isDebugEnabled() && statut != null) {
-      log.debug("Eventim statut={} presaleDebut={} presaleNom={} artiste={}", statut, presaleDebut, presaleNom, artiste);
-    }
-
     String url = extraireUrlProduit(produit);
     return new ConcertBrut(
-        artiste, date, heure, salle, ville, dept, prixMin, prixMax, url, "eventim", null, null,
-        statut, presaleDebut, presaleNom);
+        artiste,
+        date,
+        heure,
+        salle,
+        ville,
+        dept,
+        prixMin,
+        prixMax,
+        url,
+        "eventim",
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 
   @SuppressWarnings("unchecked")
