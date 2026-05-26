@@ -87,7 +87,7 @@ Labels : `Bug`, `Feature`, `Question`, `Task`, `Duplicate`, `Invalid`.
 
 ### Pipeline Woodpecker (.woodpecker.yaml)
 
-Pipeline Maven actif : test → build → deploy sur push `main`. Secrets requis : `ssh_key`, `lxc_host`.
+Pipeline Maven actif : test → build → deploy, tous restreints à `branch: main`. Secrets requis : `ssh_key`, `lxc_host`.
 
 > **Woodpecker — repo trusted** : le repo doit être marqué "trusted" (Settings → repo → cocher "Trusted") pour autoriser les volumes Maven dans le pipeline.
 
