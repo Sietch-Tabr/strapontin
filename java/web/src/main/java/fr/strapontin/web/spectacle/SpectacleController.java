@@ -68,6 +68,21 @@ public class SpectacleController {
       return Dates.formater(date, false);
     }
 
+    public String dateHeureFormatee() {
+      return Dates.formaterAvecHeure(date, heure);
+    }
+
+    public String prixFormate() {
+      if (prixMin == null) return "";
+      String min = formatBd(prixMin);
+      if (prixMax == null || prixMax.compareTo(prixMin) == 0) return min + " €";
+      return min + "–" + formatBd(prixMax) + " €";
+    }
+
+    private static String formatBd(BigDecimal v) {
+      return v.stripTrailingZeros().toPlainString().replace('.', ',');
+    }
+
     public boolean presaleActive() {
       return presaleDebut != null && presaleDebut.isAfter(Instant.now());
     }
@@ -150,7 +165,8 @@ public class SpectacleController {
     }
 
     if (!inclureIndisponibles) {
-      whereClause.append(" AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled'))");
+      whereClause.append(
+          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled', 'postponed'))");
     }
 
     String recherche = q.strip().substring(0, Math.min(q.strip().length(), 100));

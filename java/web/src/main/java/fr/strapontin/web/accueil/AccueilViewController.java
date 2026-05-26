@@ -5,6 +5,7 @@
 package fr.strapontin.web.accueil;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
+import fr.strapontin.web.utilisateur.UserConfigService;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,11 +33,15 @@ public class AccueilViewController {
 
   private final AccueilController accueilController;
   private final NamedParameterJdbcTemplate jdbc;
+  private final UserConfigService userConfigService;
 
   public AccueilViewController(
-      AccueilController accueilController, NamedParameterJdbcTemplate jdbc) {
+      AccueilController accueilController,
+      NamedParameterJdbcTemplate jdbc,
+      UserConfigService userConfigService) {
     this.accueilController = accueilController;
     this.jdbc = jdbc;
+    this.userConfigService = userConfigService;
   }
 
   /// Affiche la page d'accueil avec les concerts groupés par artiste.
@@ -52,10 +57,14 @@ public class AccueilViewController {
       @RequestParam(required = false) String indisponibles,
       Model modele,
       Authentication auth) {
+    String userId = utilisateur(auth).id();
+    boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
+    boolean inclureIndisponibles =
+        indisponibles != null ? "1".equals(indisponibles) : !filtreDisponibles;
     ResponseEntity<?> rep = accueilController.accueil(masques, indisponibles, auth);
     modele.addAttribute("donnees", rep.getBody());
     modele.addAttribute("masques", masques);
-    modele.addAttribute("indisponibles", "1".equals(indisponibles));
+    modele.addAttribute("indisponibles", inclureIndisponibles);
     modele.addAttribute("currentPage", "accueil");
     return "accueil";
   }
@@ -92,6 +101,31 @@ public class AccueilViewController {
         """
         UPDATE user_matches SET masque_le = NOW()
         WHERE user_id = :userId AND masque_le IS NULL
+          AND concert_id IN (
+            SELECT id FROM concerts
+            WHERE artiste_norm = :artisteNorm AND date >= :aujourd8
+          )
+        """,
+        params);
+    return REDIRECT_ACCUEIL;
+  }
+
+  /// Démasque tous les concerts d'un artiste pour l'utilisateur courant.
+  ///
+  /// @param artisteNorm l'artiste normalisé
+  /// @param auth        contexte d'authentification
+  /// @return redirect vers la page d'accueil (PRG)
+  @PostMapping("/demasquer-artiste")
+  public String demasquerArtiste(@RequestParam String artisteNorm, Authentication auth) {
+    String userId = utilisateur(auth).id();
+    Map<String, Object> params = new HashMap<>();
+    params.put("userId", userId);
+    params.put("artisteNorm", artisteNorm);
+    params.put("aujourd8", LocalDate.now());
+    jdbc.update(
+        """
+        UPDATE user_matches SET masque_le = NULL
+        WHERE user_id = :userId
           AND concert_id IN (
             SELECT id FROM concerts
             WHERE artiste_norm = :artisteNorm AND date >= :aujourd8

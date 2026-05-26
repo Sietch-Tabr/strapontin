@@ -41,7 +41,7 @@
           15 prochains jours
         </a>
         <a
-          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},budget=${budget},tri=${tri},masques=true,indisponibles=${indisponibles})}"
+          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},budget=${budget},tri=${tri},masques=${masques ? null : true},indisponibles=${indisponibles})}"
           th:classappend="${masques ? ' actif' : ''}"
         >
           Masqués
@@ -185,8 +185,12 @@
                     >Nouveau</span
                   >
                 </td>
-                <td data-label="Date" th:text="${concert.dateFormatee()}">
-                  date
+                <td data-label="Date">
+                  <time
+                    th:datetime="${concert.date}"
+                    th:text="${concert.dateHeureFormatee()}"
+                    >date</time
+                  >
                 </td>
                 <td
                   data-label="Salle"
@@ -208,13 +212,13 @@
                 >
                   <span
                     th:if="${concert.prixMin != null}"
-                    th:text="${concert.prixMin} + (${concert.prixMax != null and concert.prixMax != concert.prixMin} ? '–' + ${concert.prixMax} : '') + ' €'"
+                    th:text="${concert.prixFormate()}"
                     >Prix</span
                   >
                 </td>
                 <td
                   data-label="Statut"
-                  th:classappend="${concert.statut != 'cancelled' and concert.statut != 'rescheduled' and concert.statut != 'offsale'} ? ' cel-vide' : ''"
+                  th:classappend="${concert.statut != 'cancelled' and concert.statut != 'rescheduled' and concert.statut != 'postponed' and concert.statut != 'offsale'} ? ' cel-vide' : ''"
                 >
                   <span
                     class="badge badge-annule"
@@ -223,7 +227,7 @@
                   >
                   <span
                     class="badge badge-reporte"
-                    th:if="${concert.statut == 'rescheduled'}"
+                    th:if="${concert.statut == 'rescheduled' or concert.statut == 'postponed'}"
                     >Reporté</span
                   >
                   <span
