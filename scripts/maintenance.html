@@ -105,7 +105,19 @@
         quelques minutes.
       </p>
       <hr class="separateur" />
-      <p class="indication">Rechargez la page dans un moment.</p>
+      <p class="indication">Cette page se rechargera automatiquement.</p>
     </div>
+    <script>
+      (function () {
+        function verifier() {
+          fetch("/", { method: "HEAD", cache: "no-store" })
+            .then(function (r) {
+              if (r.ok) window.location.reload();
+            })
+            .catch(function () {});
+        }
+        setInterval(verifier, 5000);
+      })();
+    </script>
   </body>
 </html>
