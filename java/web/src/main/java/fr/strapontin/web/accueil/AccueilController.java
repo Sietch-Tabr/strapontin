@@ -76,10 +76,7 @@ public class AccueilController {
       boolean estNew,
       List<ConcertAccueil> concerts) {}
 
-  record ReponseAccueil(
-      List<GroupeArtiste> artistesGroupes,
-      int nbArtistes,
-      int nbSalles) {}
+  record ReponseAccueil(List<GroupeArtiste> artistesGroupes, int nbArtistes, int nbSalles) {}
 
   /// Retourne les prochains concerts des artistes suivis, groupés par artiste.
   ///
@@ -109,8 +106,7 @@ public class AccueilController {
                 .formatted(masques ? "NOT NULL" : "NULL"));
 
     if (!inclureIndisponibles) {
-      where.append(
-          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled', 'postponed'))");
+      where.append(" AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled', 'postponed'))");
     }
 
     where.append(
