@@ -125,7 +125,7 @@
           <hr style="margin: 0.25rem 0; border-color: var(--border)" />
           <div class="sidebar-user">
             <span sec:authentication="principal.nom">Utilisateur</span>
-            <form th:action="@{/logout}" method="post">
+            <form th:action="@{/logout}" method="post" data-turbo="false">
               <button type="submit" class="btn-deconnexion">Déconnexion</button>
             </form>
           </div>

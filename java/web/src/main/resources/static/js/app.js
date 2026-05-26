@@ -99,8 +99,8 @@ if ("serviceWorker" in navigator) {
 
 // Mise à jour de l'onglet actif de la nav mobile lors des navigations Turbo
 // (le #bottom-nav est data-turbo-permanent : il n'est pas re-rendu par le serveur)
-document.addEventListener("turbo:load", function () {
-  var chemin = window.location.pathname;
+document.addEventListener("turbo:load", function (event) {
+  var chemin = new URL(event.detail.url).pathname;
   document
     .querySelectorAll("#bottom-nav a[href], #bottom-nav button[data-nav-path]")
     .forEach(function (el) {
