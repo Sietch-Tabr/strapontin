@@ -38,8 +38,8 @@ public class TicketmasterSource {
   private static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
   private static final List<String> CLASSIFICATIONS = List.of("music", "opera", "musical");
   private static final int TAILLE_PAGE_REGION = 200;
-  // TM refuse offset > 1000 : avec size=200, page 5 → offset 1000 (ok), page 6 → 1200 (HTTP 400)
-  private static final int NB_PAGES_MAX = 5;
+  // TM refuse offset > 1000 : avec size=200, page 6 → offset 1000 (ok), page 7 → 1200 (HTTP 400)
+  private static final int NB_PAGES_MAX = 6;
   // 250 ms entre appels = 4 req/s max — protège contre le spike arrest TM (5 req/s) même sous
   // concurrence
   private static final int DELAI_MIN_ENTRE_APPELS_MS = 250;
@@ -424,8 +424,10 @@ public class TicketmasterSource {
         uriBase
             .cloneBuilder()
             .queryParam("apikey", apiKey)
-            .queryParam("locale", "fr")
+            .queryParam("locale", "fr,en,*")
             .queryParam("countryCode", "FR")
+            .queryParam("includeTBA", "no")
+            .queryParam("includeTBD", "no")
             .queryParam("page", numPage)
             .build()
             .toUriString();
@@ -521,12 +523,14 @@ public class TicketmasterSource {
   /// @param nom nom de l'artiste recherché
   /// @return liste des concerts trouvés
   public List<ConcertBrut> fetchArtiste(String nom) {
+    FenetreTemps fenetre = obtenirFenetreTemps();
     var uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("keyword", nom)
-            .queryParam("classificationName", String.join(",", CLASSIFICATIONS))
+            .queryParam("classificationName", CLASSIFICATIONS.toArray())
             .queryParam("size", TAILLE_PAGE_REGION)
-            .queryParam("sort", TRI_DATE_ASC);
+            .queryParam("sort", TRI_DATE_ASC)
+            .queryParam("startDateTime", fenetre.debut());
 
     ResultatPage resultat = fetchPage(uriBase, 0, nom);
     if (resultat.quota() != null) dernierQuota.set(resultat.quota());
@@ -587,11 +591,13 @@ public class TicketmasterSource {
   /// @return liste des concerts trouvés pour tous les artistes du lot
   public List<ConcertBrut> fetchArtistesBatch(List<String> attractionIds) {
     if (attractionIds.isEmpty()) return List.of();
+    FenetreTemps fenetre = obtenirFenetreTemps();
     var uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("attractionId", String.join(",", attractionIds))
             .queryParam("size", TAILLE_PAGE_REGION)
-            .queryParam("sort", TRI_DATE_ASC);
+            .queryParam("sort", TRI_DATE_ASC)
+            .queryParam("startDateTime", fenetre.debut());
 
     List<ConcertBrut> concerts = fetchToutesPages(uriBase, null);
     if (dernierQuota.get() != null) {
@@ -618,10 +624,10 @@ public class TicketmasterSource {
         FenetreTemps fenetre = obtenirFenetreTemps();
         var uriBase =
             UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
-                .queryParam("geoPoint", centre.lat() + "," + centre.lng())
+                .queryParam("latlong", centre.lat() + "," + centre.lng())
                 .queryParam("radius", centre.rayon())
                 .queryParam("unit", "km")
-                .queryParam("classificationName", String.join(",", classifs))
+                .queryParam("classificationName", classifs.toArray())
                 .queryParam("size", TAILLE_PAGE_REGION)
                 .queryParam("sort", TRI_DATE_ASC)
                 .queryParam("startDateTime", fenetre.debut())
