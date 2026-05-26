@@ -19,12 +19,14 @@
         <a
           th:href="@{/(indisponibles=${indisponibles ? '0' : '1'})}"
           th:classappend="${indisponibles ? ' actif' : ''}"
+          th:attr="aria-current=${indisponibles ? 'true' : null}"
         >
           Indisponibles
         </a>
         <a
           th:href="@{/(masques=${masques ? 'false' : 'true'})}"
           th:classappend="${masques ? ' actif' : ''}"
+          th:attr="aria-current=${masques ? 'true' : null}"
         >
           Masqués
         </a>
@@ -109,38 +111,39 @@
                 Masquer
               </button>
             </form>
+            <form
+              th:if="${masques}"
+              method="post"
+              th:action="@{/demasquer-artiste}"
+              class="masquer-artiste-form"
+            >
+              <input
+                type="hidden"
+                name="artisteNorm"
+                th:value="${groupe.artisteNorm}"
+              />
+              <button
+                type="submit"
+                class="btn-texte"
+                th:attr="aria-label='Réafficher tous les concerts de ' + ${groupe.artiste}"
+              >
+                Réafficher
+              </button>
+            </form>
           </div>
 
           <!-- Dates du groupe -->
           <div class="groupe-dates">
             <div class="concert-ligne" th:each="concert : ${groupe.concerts}">
               <div class="concert-info">
-                <p class="concert-date-principale" th:if="${groupe.estTournee}">
-                  <span th:text="${concert.dateFormatee()}">date</span>
-                  <span class="badge badge-nouveau" th:if="${concert.estNew}"
-                    >Nouveau</span
-                  >
-                  <span
-                    class="badge badge-annule"
-                    th:if="${concert.statut == 'cancelled'}"
-                    >Annulé</span
-                  >
-                  <span
-                    class="badge badge-reporte"
-                    th:if="${concert.statut == 'rescheduled'}"
-                    >Reporté</span
-                  >
-                  <span
-                    class="badge badge-complet"
-                    th:if="${concert.statut == 'offsale'}"
-                    >Complet</span
-                  >
-                </p>
                 <p
-                  class="concert-date-secondaire"
-                  th:unless="${groupe.estTournee}"
+                  th:class="${groupe.estTournee} ? 'concert-date-principale' : 'concert-date-secondaire'"
                 >
-                  <span th:text="${concert.dateFormatee()}">date</span>
+                  <time
+                    th:datetime="${concert.date}"
+                    th:text="${concert.dateHeureFormatee()}"
+                    >date</time
+                  >
                   <span class="badge badge-nouveau" th:if="${concert.estNew}"
                     >Nouveau</span
                   >
@@ -151,7 +154,7 @@
                   >
                   <span
                     class="badge badge-reporte"
-                    th:if="${concert.statut == 'rescheduled'}"
+                    th:if="${concert.statut == 'rescheduled' or concert.statut == 'postponed'}"
                     >Reporté</span
                   >
                   <span

@@ -51,6 +51,29 @@ public final class Dates {
     }
   }
 
+  /// Formate une date ISO-8601 avec une heure optionnelle en français.
+  ///
+  /// L'heure est affichée sous la forme "20h" (minutes omises si `00`) ou "20h30".
+  ///
+  /// @param dateIso  date au format `yyyy-MM-dd`, ou {@code null}
+  /// @param heureStr heure au format `HH:mm:ss` ou `HH:mm`, ou {@code null}
+  /// @return la date (et l'heure) formatée, ex. "mer. 4 juin 20h30"
+  public static String formaterAvecHeure(String dateIso, String heureStr) {
+    if (dateIso == null || dateIso.isBlank()) return "";
+    try {
+      LocalDate date = LocalDate.parse(dateIso);
+      boolean autreAnnee = date.getYear() != LocalDate.now().getYear();
+      String datePart = date.format(autreAnnee ? FORMAT_COURT_ANNEE : FORMAT_COURT);
+      if (heureStr == null || heureStr.isBlank()) return datePart;
+      String[] parts = heureStr.split(":");
+      int h = Integer.parseInt(parts[0]);
+      int m = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+      return datePart + " " + h + "h" + (m == 0 ? "" : String.format("%02d", m));
+    } catch (Exception e) {
+      return dateIso;
+    }
+  }
+
   /// Formate un epoch en millisecondes en "dim. 22 juin 21h05" (fuseau Europe/Paris).
   ///
   /// @param epochMs  timestamp en millisecondes
