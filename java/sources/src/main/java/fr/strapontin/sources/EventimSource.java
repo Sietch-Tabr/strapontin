@@ -227,21 +227,8 @@ public class EventimSource {
 
     String url = extraireUrlProduit(produit);
     return new ConcertBrut(
-        artiste,
-        date,
-        heure,
-        salle,
-        ville,
-        dept,
-        prixMin,
-        prixMax,
-        url,
-        "eventim",
-        null,
-        null,
-        null,
-        null,
-        null);
+        artiste, date, heure, salle, ville, dept, prixMin, prixMax, url, "eventim", null, null,
+        null, null, null);
   }
 
   @SuppressWarnings("unchecked")
