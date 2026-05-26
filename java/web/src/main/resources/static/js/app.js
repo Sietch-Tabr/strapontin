@@ -99,8 +99,7 @@ if ("serviceWorker" in navigator) {
 
 // Mise à jour de l'onglet actif de la nav mobile lors des navigations Turbo
 // (le #bottom-nav est data-turbo-permanent : il n'est pas re-rendu par le serveur)
-document.addEventListener("turbo:load", function (event) {
-  var chemin = new URL(event.detail.url).pathname;
+function majNavActif(chemin) {
   document
     .querySelectorAll("#bottom-nav a[href], #bottom-nav button[data-nav-path]")
     .forEach(function (el) {
@@ -121,11 +120,18 @@ document.addEventListener("turbo:load", function (event) {
       "/aide",
       "/changelog",
     ];
-    var dansPlus = pagesPlus.some(function (p) {
-      return chemin === p || chemin.startsWith(p + "/");
-    });
-    btnPlus.classList.toggle("actif", dansPlus);
+    btnPlus.classList.toggle(
+      "actif",
+      pagesPlus.some(function (p) {
+        return chemin === p || chemin.startsWith(p + "/");
+      })
+    );
   }
+}
+
+majNavActif(window.location.pathname);
+document.addEventListener("turbo:load", function () {
+  majNavActif(window.location.pathname);
 });
 
 // Réaffichage de concerts masqués (accueil)
@@ -471,7 +477,7 @@ document.addEventListener("turbo:load", function () {
         email: form.querySelector("[name=email]").value.trim(),
         role: form.querySelector("[name=role]").value,
       };
-      fetch("/admin/utilisateurs/" + userId, {
+      fetch("/api/admin/utilisateurs/" + userId, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(corps),
