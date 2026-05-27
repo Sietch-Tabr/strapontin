@@ -125,7 +125,8 @@ public class AdminController {
       Integer dureeMs,
       Integer nbInseres,
       Integer nbMisAJour,
-      String erreur) {}
+      String erreur,
+      Instant prochaineExec) {}
 
   record QuotaTM(int dispo, int total, long reset, String misAJour) {}
 
@@ -575,7 +576,8 @@ public class AdminController {
                     rs.getObject("duree_ms", Integer.class),
                     rs.getObject("nb_inseres", Integer.class),
                     rs.getObject("nb_mis_a_jour", Integer.class),
-                    rs.getString("erreur")));
+                    rs.getString("erreur"),
+                    null));
 
     // Quota TM (stocké en JSON brut dans app_config)
     QuotaTM quotaTM = null;
@@ -606,10 +608,31 @@ public class AdminController {
     }
 
     List<String> jobsEnCours = obtenirJobsEnCours();
+    Map<String, Instant> prochainesExec = obtenirProchainerExec();
+    List<StatJob> statsJobsComplets =
+        statsJobs.stream()
+            .map(
+                j ->
+                    new StatJob(
+                        j.typeJob(),
+                        j.derniereExec(),
+                        j.dureeMs(),
+                        j.nbInseres(),
+                        j.nbMisAJour(),
+                        j.erreur(),
+                        prochainesExec.get(j.typeJob())))
+            .toList();
+
+    String etatQuota = "ok";
+    if (quotaTM != null && quotaTM.total() > 0) {
+      int pct = quotaTM.dispo() * 100 / quotaTM.total();
+      etatQuota = pct < 10 ? "critique" : pct < 20 ? "attention" : "ok";
+    }
 
     Map<String, Object> reponse = new HashMap<>();
-    reponse.put("statsJobs", statsJobs);
+    reponse.put("statsJobs", statsJobsComplets);
     reponse.put("quotaTM", quotaTM);
+    reponse.put("etatQuota", etatQuota);
     reponse.put("workerLastSuccess", workerLastSuccess);
     reponse.put("jobsEnCours", jobsEnCours);
     return ResponseEntity.ok(reponse);
@@ -639,6 +662,34 @@ public class AdminController {
       log.debug("Worker inaccessible pour jobs actifs");
     }
     return List.of();
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Instant> obtenirProchainerExec() {
+    try (java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient()) {
+      java.net.http.HttpRequest req =
+          java.net.http.HttpRequest.newBuilder()
+              .uri(java.net.URI.create("http://localhost:8081/trigger/prochaines-exec"))
+              .GET()
+              .timeout(java.time.Duration.ofSeconds(2))
+              .build();
+      java.net.http.HttpResponse<String> rep =
+          client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+      if (rep.statusCode() == 200) {
+        Map<String, Object> data = objectMapper.readValue(rep.body(), Map.class);
+        Map<String, Instant> resultat = new HashMap<>();
+        data.forEach(
+            (k, v) -> {
+              if (v instanceof Number n) resultat.put(k, Instant.ofEpochMilli(n.longValue()));
+            });
+        return resultat;
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    } catch (Exception e) {
+      log.debug("Worker inaccessible pour prochaines exécutions");
+    }
+    return Map.of();
   }
 
   /// Déclenche immédiatement les fetches (appel au worker via HTTP interne).

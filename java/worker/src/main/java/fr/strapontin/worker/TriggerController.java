@@ -5,9 +5,13 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.worker.jobs.FetchSalleJob;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.quartz.JobBuilder;
+import org.quartz.Trigger;
 import org.quartz.JobDetail;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobKey;
@@ -48,6 +52,27 @@ public class TriggerController {
 
   public TriggerController(Scheduler scheduler) {
     this.scheduler = scheduler;
+  }
+
+  /// Retourne la prochaine date d'exécution de chaque job planifié.
+  ///
+  /// @return map typeJob → epoch ms de la prochaine exécution
+  @GetMapping("/prochaines-exec")
+  public ResponseEntity<Map<String, Long>> prochainesExec() {
+    Map<String, Long> resultat = new HashMap<>();
+    for (Map.Entry<String, String> entree : NOM_JOBS.entrySet()) {
+      try {
+        scheduler.getTriggersOfJob(JobKey.jobKey(entree.getKey())).stream()
+            .map(Trigger::getNextFireTime)
+            .filter(Objects::nonNull)
+            .mapToLong(Date::getTime)
+            .min()
+            .ifPresent(t -> resultat.put(entree.getValue(), t));
+      } catch (SchedulerException e) {
+        log.debug("Impossible de lire trigger pour {}", entree.getKey());
+      }
+    }
+    return ResponseEntity.ok(resultat);
   }
 
   /// Retourne les noms traduits des jobs Quartz en cours d'exécution.
