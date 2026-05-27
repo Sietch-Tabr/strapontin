@@ -546,12 +546,12 @@ public class AdminController {
 
   // --- Endpoints logs & jobs ---
 
-  /// Retourne les 100 derniers logs admin.
+  /// Retourne les 200 derniers logs admin.
   ///
   /// @return la liste des entrées de log
   @GetMapping("/logs")
   public ResponseEntity<List<LogAdminService.EntreeLogAdmin>> lireLogs() {
-    return ResponseEntity.ok(logAdminService.lireLogs(100));
+    return ResponseEntity.ok(logAdminService.lireLogs(200));
   }
 
   /// Retourne les statistiques des jobs Quartz et le quota TM.

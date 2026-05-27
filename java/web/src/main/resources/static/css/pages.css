@@ -906,6 +906,30 @@ details[open].changelog-historique > summary::before {
   flex-wrap: wrap;
 }
 
+.logs-filtres-source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.logs-filtres-niveaux {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.logs-btn-action {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.625rem;
+}
+
+.logs-note-info {
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+  margin-bottom: 0.5rem;
+  font-style: italic;
+}
+
 .logs-filtre-label {
   font-size: 0.8125rem;
   color: var(--fg-muted);
