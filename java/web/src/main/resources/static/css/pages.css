@@ -579,6 +579,26 @@ details[open].changelog-historique > summary::before {
   border-left: 3px solid var(--danger);
 }
 
+.config-vapid-details {
+  margin-bottom: 0.5rem;
+}
+
+.config-vapid-details summary {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.config-vapid-details[open] summary {
+  margin-bottom: 0.25rem;
+}
+
+.config-vapid-avertissement {
+  font-weight: 500;
+  color: var(--danger);
+}
+
 /* ── Badge inline avec le titre ──────────────────────────── */
 .param-label-ligne {
   display: flex;

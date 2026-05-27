@@ -414,16 +414,48 @@
 
         <!-- Section Configuration -->
         <section id="configuration" class="admin-section">
+
+          <!-- Statut APP_CONFIG_SECRET -->
+          <div class="param-bloc">
+            <div class="param-label-ligne">
+              <h3 class="param-label">APP_CONFIG_SECRET</h3>
+              <span
+                th:if="${appConfigSecretPresente}"
+                class="badge badge-succes"
+                role="status"
+                >Clé configurée</span
+              >
+              <span
+                th:unless="${appConfigSecretPresente}"
+                class="badge badge-manquant"
+                role="status"
+                >Clé absente</span
+              >
+            </div>
+            <p class="param-aide">
+              Variable d'environnement de chiffrement de la configuration.
+              Changer cette clé rend toutes les valeurs chiffrées illisibles.
+            </p>
+          </div>
+
           <div th:each="statut : ${configStatuts}" class="param-bloc">
             <div class="param-label-ligne">
               <h3 class="param-label" th:text="${statut.cle}">CLE</h3>
               <span th:if="${statut.presente}" class="badge badge-succes"
                 >Configurée</span
               >
-              <span th:unless="${statut.presente}" class="badge badge-manquant"
+              <span
+                th:unless="${statut.presente}"
+                class="badge badge-manquant"
+                role="status"
                 >Non configurée</span
               >
             </div>
+            <p
+              th:id="'desc-' + ${statut.cle}"
+              class="param-aide"
+              th:text="${descriptionsConfig[statut.cle]}"
+            ></p>
             <p
               class="param-aide"
               th:if="${!statut.secret and statut.valeur != null}"
@@ -442,7 +474,7 @@
                 name="valeur"
                 autocomplete="new-password"
                 placeholder="Nouvelle valeur…"
-                th:attr="aria-label='Valeur de ' + ${statut.cle}"
+                th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
               />
               <input
                 th:unless="${statut.secret}"
@@ -450,7 +482,7 @@
                 name="valeur"
                 th:value="${statut.valeur}"
                 autocomplete="off"
-                th:attr="aria-label='Valeur de ' + ${statut.cle}"
+                th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
               />
               <button type="submit" class="btn btn-secondary">
                 Enregistrer
@@ -461,22 +493,56 @@
           <!-- Régénération VAPID -->
           <div class="param-bloc param-bloc-danger">
             <h3 class="param-label">Clés VAPID (Push)</h3>
-            <p class="param-aide">
+            <details class="config-vapid-details">
+              <summary>Qu'est-ce que les clés VAPID ?</summary>
+              <p class="param-aide">
+                Les clés VAPID (Voluntary Application Server Identification)
+                permettent d'authentifier le serveur auprès des services de
+                notification push. Chaque abonnement push est lié à la clé
+                publique au moment de l'inscription — régénérer les clés
+                invalide tous les abonnements existants. Les utilisateurs
+                devront se réabonner.
+              </p>
+            </details>
+            <p class="param-aide config-vapid-avertissement">
               Régénérer les clés invalide tous les abonnements push existants.
             </p>
-            <form
-              method="post"
-              th:action="@{/admin/vapid}"
-              onsubmit="
-                return confirm(
-                  'Régénérer les clés VAPID ? Les abonnements push existants seront invalidés.',
-                );
-              "
-            >
-              <button type="submit" class="btn btn-secondary">Régénérer</button>
+            <form method="post" th:action="@{/admin/vapid}" id="form-vapid">
+              <button
+                type="submit"
+                class="btn btn-secondary"
+                id="btn-vapid-regenerer"
+              >
+                Régénérer les clés VAPID (invalide tous les abonnements push)
+              </button>
             </form>
           </div>
         </section>
+
+        <!-- Dialog confirmation VAPID -->
+        <dialog id="dialog-vapid">
+          <p class="dialog-titre">Régénérer les clés VAPID ?</p>
+          <p class="dialog-corps">
+            Tous les abonnements push existants seront invalidés. Les
+            utilisateurs devront se réabonner aux notifications.
+          </p>
+          <div class="dialog-pied">
+            <button
+              type="button"
+              id="dialog-vapid-confirmer"
+              class="btn btn-secondary"
+            >
+              Régénérer
+            </button>
+            <button
+              type="button"
+              id="dialog-vapid-annuler"
+              class="btn btn-secondaire"
+            >
+              Annuler
+            </button>
+          </div>
+        </dialog>
 
         <!-- Section Utilisateurs -->
         <section id="utilisateurs" class="admin-section">

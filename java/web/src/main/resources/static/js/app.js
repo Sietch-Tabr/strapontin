@@ -574,6 +574,35 @@ document.addEventListener("turbo:load", function () {
   filtrerLogs();
 })();
 
+// Dialog confirmation VAPID (admin)
+(function () {
+  const form = document.getElementById("form-vapid");
+  const dialog = document.getElementById("dialog-vapid");
+  if (!form || !dialog) return;
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    dialog.showModal();
+  });
+
+  document
+    .getElementById("dialog-vapid-confirmer")
+    .addEventListener("click", function () {
+      dialog.close();
+      form.submit();
+    });
+
+  document
+    .getElementById("dialog-vapid-annuler")
+    .addEventListener("click", function () {
+      dialog.close();
+    });
+
+  dialog.addEventListener("click", function (e) {
+    if (e.target === dialog) dialog.close();
+  });
+})();
+
 // Modification utilisateur (admin)
 (function () {
   const formsModif = document.querySelectorAll(".form-modif-utilisateur");

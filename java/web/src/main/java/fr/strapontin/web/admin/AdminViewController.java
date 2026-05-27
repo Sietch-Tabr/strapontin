@@ -33,6 +33,15 @@ public class AdminViewController {
 
   private final AdminController adminController;
 
+  private static final Map<String, String> DESCRIPTIONS_CONFIG =
+      Map.of(
+          "TICKETMASTER_API_KEY", "Clé d'API Ticketmaster Discovery v2.",
+          "RESEND_API_KEY", "Clé d'API Resend pour les notifications email.",
+          "CONTACT_EMAIL", "Adresse email affichée dans les emails envoyés.",
+          "PUBLIC_BASE_URL", "URL publique de l'application (ex. https://strapontin.kwaite.fr).",
+          "VAPID_PUBLIC_KEY", "Clé publique VAPID (générée automatiquement).",
+          "VAPID_PRIVATE_KEY", "Clé privée VAPID (générée automatiquement).");
+
   private static final Map<String, String> LABELS_JOBS =
       Map.of(
           "fetch:artistes:batch", "Artistes suivis",
@@ -107,6 +116,9 @@ public class AdminViewController {
     modele.addAttribute("nbJobsOk", nbJobsOk);
     modele.addAttribute("nbJobsErreur", nbJobsErreur);
 
+    modele.addAttribute("descriptionsConfig", DESCRIPTIONS_CONFIG);
+    modele.addAttribute(
+        "appConfigSecretPresente", System.getenv("APP_CONFIG_SECRET") != null);
     modele.addAttribute("currentPage", "admin");
     DateTimeFormatter formateur =
         DateTimeFormatter.ofPattern("EEEE d MMMM yyyy à HH'h'mm", Locale.FRENCH);
