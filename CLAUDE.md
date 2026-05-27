@@ -15,7 +15,7 @@ strapontin/
     └── update.sh     ← restart services + healthcheck ; appelé par Woodpecker (prod) ou manuellement (dev)
 ```
 
-## Stack technique (v2.0.0)
+## Stack technique (v2.0.3)
 
 - **Spring Boot 4.0.6** + Thymeleaf — UI SSR + REST API (port 8080)
 - **Spring Security 7** — auth session, form login, TOTP 2FA optionnel (bucket4j rate-limiting)
