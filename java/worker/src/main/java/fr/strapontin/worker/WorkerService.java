@@ -39,6 +39,7 @@ public class WorkerService {
 
   private static final List<String> CLASSIFICATIONS = List.of("music", "opera", "musical");
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
+  private static final int TAILLE_LOT_TM = 20;
 
   private final TicketmasterSource tm;
   private final EventimSource eventim;
@@ -127,34 +128,67 @@ public class WorkerService {
     }
   }
 
+  /// Fetch TM pour une liste d'artistes suivis.
+  ///
+  /// <p>Deux passes :
+  ///
+  /// <ol>
+  ///   <li>Résolution des {@code attractionId} manquants (1 requête /attractions.json par artiste
+  ///       non résolu), puis fetch groupé par lots de {@value TAILLE_LOT_TM} via
+  ///       {@code fetchArtistesBatch} — réduit la consommation de quota d'un facteur ×20 par
+  ///       rapport à un fetch artiste-par-artiste.
+  ///   <li>Fallback keyword ({@code fetchArtiste}) pour les artistes sans {@code attractionId} TM.
+  /// </ol>
+  ///
+  /// @param rows lignes de {@code user_artistes} avec {@code artiste_affiche}, {@code
+  ///     artiste_normalise}, {@code attraction_id}
+  /// @return concerts bruts collectés depuis TM
   private List<ConcertBrut> fetchTMParArtistes(List<Map<String, Object>> rows) {
     List<ConcertBrut> resultats = new ArrayList<>();
+    List<String> attractionIds = new ArrayList<>();
+    List<String> nomsSansTmId = new ArrayList<>();
+
     for (Map<String, Object> row : rows) {
       String nom = (String) row.get("artiste_affiche");
       String norm = (String) row.get("artiste_normalise");
-      String attractionIdCachedInDb = (String) row.get("attraction_id");
-      try {
-        List<ConcertBrut> concerts = List.of();
-        String attractionId = attractionIdCachedInDb;
-        if (attractionId == null) {
+      String attractionId = (String) row.get("attraction_id");
+      if (attractionId == null) {
+        try {
           attractionId = tm.rechercherAttractionId(nom);
           if (attractionId != null) {
             jdbc.update(
                 "UPDATE user_artistes SET attraction_id = :id WHERE artiste_normalise = :norm",
                 Map.of("id", attractionId, "norm", norm));
           }
+        } catch (Exception e) {
+          log.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());
         }
-        if (attractionId != null) {
-          concerts = tm.fetchArtistesBatch(List.of(attractionId));
-        }
-        if (concerts.isEmpty()) {
-          concerts = tm.fetchArtiste(nom);
-        }
-        resultats.addAll(concerts);
-      } catch (Exception e) {
-        log.warn("TM échoué pour artiste={} norm={} : {}", nom, norm, e.getMessage());
+      }
+      if (attractionId != null) {
+        attractionIds.add(attractionId);
+      } else {
+        nomsSansTmId.add(nom);
       }
     }
+
+    for (int i = 0; i < attractionIds.size(); i += TAILLE_LOT_TM) {
+      List<String> lot = attractionIds.subList(i, Math.min(i + TAILLE_LOT_TM, attractionIds.size()));
+      try {
+        resultats.addAll(tm.fetchArtistesBatch(lot));
+      } catch (Exception e) {
+        log.warn("TM fetchArtistesBatch lot={} échoué : {}", lot.size(), e.getMessage());
+      }
+    }
+
+    for (String nom : nomsSansTmId) {
+      try {
+        resultats.addAll(tm.fetchArtiste(nom));
+      } catch (Exception e) {
+        log.warn("TM fetchArtiste échoué artiste={} : {}", nom, e.getMessage());
+      }
+      attendreRateLimit();
+    }
+
     return resultats;
   }
 

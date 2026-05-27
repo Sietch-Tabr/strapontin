@@ -91,15 +91,15 @@ public class NotificationDigestService {
       List<Map<String, Object>> lignes =
           jdbc.queryForList(
               """
-              SELECT um.user_id, u.email, c.id::text AS concert_id,
-                     c.artiste, c.date::text AS date, c.salle, c.ville, c.url
+              SELECT um.user_id, u.email, CAST(c.id AS text) AS concert_id,
+                     c.artiste, CAST(c.date AS text) AS date, c.salle, c.ville, c.url
               FROM user_matches um
               JOIN concerts    c  ON c.id      = um.concert_id
               JOIN users       u  ON u.id      = um.user_id
               JOIN user_config uc ON uc.user_id = um.user_id
               WHERE um.notifie_le IS NULL
                 AND um.masque_le  IS NULL
-                AND uc.frequence_notifications = :frequence
+                AND uc.frequence_notifications = CAST(:frequence AS frequence_notif)
                 AND (
                   (uc.notif_artistes = true AND EXISTS (
                     SELECT 1 FROM user_artistes ua
