@@ -375,7 +375,7 @@ public class AdminController {
     StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
     if (!nom.isEmpty()) setClauses.append(", name = :nom");
     if (!email.isEmpty()) setClauses.append(", email = :email");
-    if (!role.isEmpty()) setClauses.append(", role = :role::user_role");
+    if (!role.isEmpty()) setClauses.append(", role = CAST(:role AS user_role)");
     return setClauses.toString();
   }
 
