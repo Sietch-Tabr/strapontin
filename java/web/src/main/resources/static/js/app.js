@@ -363,7 +363,9 @@ document.addEventListener("turbo:load", function () {
             arreterPolling();
             btn.disabled = false;
             if (statut) statut.textContent = "";
-            window.location.reload();
+            window.location.replace(
+              location.pathname + location.search + "#jobs",
+            );
           }
         })
         .catch(arreterPolling);

@@ -33,6 +33,15 @@ public class AdminViewController {
 
   private final AdminController adminController;
 
+  private static final Map<String, String> LABELS_JOBS =
+      Map.of(
+          "fetch:artistes:batch", "Artistes suivis",
+          "fetch:region", "Concerts par région",
+          "notifier:digest", "Notifications digest",
+          "purger:concerts", "Purge concerts",
+          "recalculer:matches", "Recalcul matchs",
+          "fetch:salle", "Salle");
+
   private static final String CLE_ERREUR = "erreur";
   private static final String CLE_SUCCES = "succes";
   private static final String ERREUR_DEFAUT = "Erreur.";
@@ -83,6 +92,21 @@ public class AdminViewController {
     }
     modele.addAttribute("workerEnAlerte", workerEnAlerte);
     modele.addAttribute("workerDepuisTexte", workerDepuisTexte);
+
+    String etatQuota = corpsJobs != null ? (String) corpsJobs.getOrDefault("etatQuota", "ok") : "ok";
+    modele.addAttribute("etatQuota", etatQuota);
+    modele.addAttribute("labelsJobs", LABELS_JOBS);
+
+    @SuppressWarnings("unchecked")
+    List<AdminController.StatJob> statsJobsList =
+        corpsJobs != null
+            ? (List<AdminController.StatJob>) corpsJobs.get("statsJobs")
+            : List.of();
+    long nbJobsOk = statsJobsList.stream().filter(j -> j.erreur() == null).count();
+    long nbJobsErreur = statsJobsList.stream().filter(j -> j.erreur() != null).count();
+    modele.addAttribute("nbJobsOk", nbJobsOk);
+    modele.addAttribute("nbJobsErreur", nbJobsErreur);
+
     modele.addAttribute("currentPage", "admin");
     DateTimeFormatter formateur =
         DateTimeFormatter.ofPattern("EEEE d MMMM yyyy à HH'h'mm", Locale.FRENCH);

@@ -125,13 +125,25 @@
                   >0 %</span
                 >
               </div>
-              <div class="quota-tm-barre-fond">
+              <div
+                class="quota-tm-barre-fond"
+                role="progressbar"
+                aria-valuemin="0"
+                th:attr="aria-valuenow=${quotaTM.dispo}, aria-valuemax=${quotaTM.total}"
+                aria-label="Quota Ticketmaster"
+              >
                 <div
                   class="quota-tm-barre-remplissage"
                   th:classappend="${quotaTM.total > 0 and quotaTM.dispo * 100 / quotaTM.total > 30 ? ' barre-ok' : (quotaTM.total > 0 and quotaTM.dispo * 100 / quotaTM.total > 10 ? ' barre-warn' : ' barre-danger')}"
                   th:style="'width: ' + ${quotaTM.total > 0 ? (quotaTM.dispo * 100 / quotaTM.total) : 0} + '%'"
                 ></div>
               </div>
+              <p
+                class="badge-quota"
+                th:if="${etatQuota != 'ok'}"
+                th:classappend="${etatQuota == 'critique' ? ' badge-quota-critique' : ' badge-quota-attention'}"
+                th:text="${etatQuota == 'critique' ? 'Quota critique (moins de 10 %)' : 'Quota faible (moins de 20 %)'}"
+              ></p>
               <p
                 class="param-aide"
                 th:if="${quotaTM.reset > 0}"
@@ -152,13 +164,24 @@
           <div class="param-bloc">
             <h3 class="param-label">Actualisations</h3>
             <div
+              class="jobs-resume"
+              th:if="${statsJobs != null and !statsJobs.isEmpty()}"
+            >
+              <span class="jobs-resume-ok" th:if="${nbJobsOk > 0}">
+                <strong th:text="${nbJobsOk}">0</strong> OK
+              </span>
+              <span class="jobs-resume-erreur" th:if="${nbJobsErreur > 0}">
+                <strong th:text="${nbJobsErreur}">0</strong> en erreur
+              </span>
+            </div>
+            <div
               class="jobs-liste"
               th:if="${statsJobs != null and !statsJobs.isEmpty()}"
             >
               <div
                 class="job-carte"
                 th:each="stat : ${statsJobs}"
-                th:with="label=${stat.typeJob == 'fetch:artistes:batch' ? 'Artistes suivis' : (stat.typeJob == 'fetch:region' ? 'Concerts par région' : (stat.typeJob == 'notifier:digest' ? 'Notifications digest' : (stat.typeJob == 'purger:concerts' ? 'Purge concerts' : (stat.typeJob == 'recalculer:matches' ? 'Recalcul matchs' : stat.typeJob))))}"
+                th:with="label=${labelsJobs[stat.typeJob] ?: stat.typeJob}"
               >
                 <div class="job-carte-entete">
                   <p class="job-carte-label" th:text="${label}">label</p>
@@ -166,6 +189,8 @@
                     class="job-en-cours"
                     th:if="${jobsEnCours != null and jobsEnCours.contains(stat.typeJob)}"
                     th:attr="data-job=${stat.typeJob}"
+                    aria-busy="true"
+                    aria-label="En cours"
                   >
                     <svg
                       class="spinner"
@@ -208,6 +233,11 @@
                     th:text="${#strings.abbreviate(stat.erreur, 80)}"
                   ></span>
                 </p>
+                <p
+                  class="job-carte-detail"
+                  th:if="${stat.prochaineExec != null}"
+                  th:text="'Prochaine exécution : ' + ${T(fr.strapontin.web.utils.Dates).formaterInstant(stat.prochaineExec)}"
+                ></p>
               </div>
             </div>
             <p
@@ -216,7 +246,7 @@
             >
               Aucun job exécuté pour l'instant.
             </p>
-            <div style="margin-top: 0.75rem">
+            <div class="relancer-actions">
               <button type="button" id="btn-relancer" class="btn btn-secondary">
                 Relancer les fetches maintenant
               </button>
@@ -240,7 +270,7 @@
                 <p class="worker-carte-detail" th:text="${workerDepuisTexte}">
                   —
                 </p>
-                <p class="worker-alerte-texte" th:if="${workerEnAlerte}">
+                <p class="worker-alerte-texte" th:if="${workerEnAlerte}" role="alert">
                   Inactif depuis plus de 3 h
                 </p>
               </div>
