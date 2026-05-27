@@ -393,11 +393,31 @@ document.addEventListener("turbo:load", function () {
   const filtresActifs = new Set(["warn", "error"]);
   const btnNiveaux = document.querySelectorAll(".log-filtre-btn");
   const compte = document.getElementById("log-compte");
+  const noteInfo = document.getElementById("logs-note-info");
 
   if (!btnNiveaux.length) return;
 
-  if (table) {
-    table.querySelectorAll("tbody tr[data-meta]").forEach(function (tr) {
+  function formaterTs(epochMs) {
+    if (!epochMs) return "";
+    const d = new Date(epochMs);
+    const fmt = new Intl.DateTimeFormat("fr-FR", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Paris",
+    });
+    return fmt
+      .format(d)
+      .replace(",", "")
+      .replace(/(\d{2}):(\d{2})/, function (_, h, m) {
+        return h + "h" + (m === "00" ? "" : m);
+      });
+  }
+
+  function ajouterMeta(tbody) {
+    tbody.querySelectorAll("tr[data-meta]").forEach(function (tr) {
       const metaStr = tr.getAttribute("data-meta");
       if (!metaStr) return;
       try {
@@ -419,12 +439,19 @@ document.addEventListener("turbo:load", function () {
     });
   }
 
+  if (table) ajouterMeta(table.querySelector("tbody") || table);
+
   function mettreAJourBoutonsLogs() {
     btnNiveaux.forEach(function (b) {
       const actif = filtresActifs.has(b.getAttribute("data-niveau"));
       b.classList.toggle("actif", actif);
       b.setAttribute("aria-pressed", String(actif));
     });
+  }
+
+  function mettreAJourNoteInfo() {
+    if (!noteInfo) return;
+    noteInfo.hidden = filtresActifs.has("info");
   }
 
   function filtrerLogs() {
@@ -443,6 +470,84 @@ document.addEventListener("turbo:load", function () {
       if (show) visible++;
     });
     if (compte) compte.textContent = visible + " / " + lignes.length;
+    mettreAJourNoteInfo();
+  }
+
+  function creerLignelog(entree) {
+    const tr = document.createElement("tr");
+    if (entree.niveau === "error") tr.classList.add("log-error");
+    else if (entree.niveau === "warn") tr.classList.add("log-warn");
+    tr.setAttribute("data-source", entree.source || "");
+    tr.setAttribute("data-niveau", entree.niveau || "");
+    tr.setAttribute("data-meta", entree.meta || "");
+
+    const tdTs = document.createElement("td");
+    tdTs.className = "log-ts";
+    tdTs.setAttribute("data-label", "Horodatage");
+    tdTs.textContent = formaterTs(entree.ts);
+
+    const tdNiv = document.createElement("td");
+    tdNiv.setAttribute("data-label", "Niveau");
+    tdNiv.textContent = entree.niveau || "";
+
+    const tdSrc = document.createElement("td");
+    tdSrc.setAttribute("data-label", "Source");
+    tdSrc.textContent = entree.source || "";
+
+    const tdMsg = document.createElement("td");
+    tdMsg.className = "log-message";
+    tdMsg.setAttribute("data-label", "Message");
+    tdMsg.textContent = entree.message || "";
+
+    if (entree.meta) {
+      try {
+        const meta = JSON.parse(entree.meta);
+        const cles = Object.keys(meta);
+        if (cles.length) {
+          const metaDiv = document.createElement("div");
+          metaDiv.className = "log-meta";
+          cles.forEach(function (k) {
+            const item = document.createElement("span");
+            item.className = "log-meta-item";
+            item.textContent = k + ": " + meta[k];
+            metaDiv.appendChild(item);
+          });
+          tdMsg.appendChild(metaDiv);
+        }
+      } catch (_) {}
+    }
+
+    tr.appendChild(tdTs);
+    tr.appendChild(tdNiv);
+    tr.appendChild(tdSrc);
+    tr.appendChild(tdMsg);
+    return tr;
+  }
+
+  function rafraichirLogs() {
+    fetch("/api/admin/logs")
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (donnees) {
+        const tbody = table ? table.querySelector("tbody") : null;
+        if (!tbody) return;
+        tbody.innerHTML = "";
+        donnees.forEach(function (entree) {
+          tbody.appendChild(creerLignelog(entree));
+        });
+        filtrerLogs();
+      })
+      .catch(function () {});
+  }
+
+  function reinitialiserFiltres() {
+    if (filtreSource) filtreSource.value = "";
+    filtresActifs.clear();
+    filtresActifs.add("warn");
+    filtresActifs.add("error");
+    mettreAJourBoutonsLogs();
+    filtrerLogs();
   }
 
   btnNiveaux.forEach(function (btn) {
@@ -457,6 +562,12 @@ document.addEventListener("turbo:load", function () {
       filtrerLogs();
     });
   });
+
+  const btnRafraichir = document.getElementById("btn-rafraichir-logs");
+  const btnReinitialiser = document.getElementById("btn-reinitialiser-logs");
+  if (btnRafraichir) btnRafraichir.addEventListener("click", rafraichirLogs);
+  if (btnReinitialiser)
+    btnReinitialiser.addEventListener("click", reinitialiserFiltres);
 
   if (filtreSource) filtreSource.addEventListener("change", filtrerLogs);
   mettreAJourBoutonsLogs();
