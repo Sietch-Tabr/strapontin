@@ -166,7 +166,8 @@ public class SpectacleController {
 
     if (!inclureIndisponibles) {
       whereClause.append(
-          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled', 'postponed'))");
+          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'presale', 'rescheduled',"
+              + " 'postponed'))");
     }
 
     String recherche = q.strip().substring(0, Math.min(q.strip().length(), 100));
