@@ -181,12 +181,11 @@ public class UserConfigController {
       return erreur(400, "Valeur de thème invalide.");
     }
 
-    // Cast explicite ::theme_interface requis : PostgreSQL refuse varchar → ENUM sans cast.
     jdbc.update(
         """
         INSERT INTO user_config (user_id, theme)
-        VALUES (:userId, :theme::theme_interface)
-        ON CONFLICT (user_id) DO UPDATE SET theme = :theme::theme_interface, updated_at = now()
+        VALUES (:userId, CAST(:theme AS theme_interface))
+        ON CONFLICT (user_id) DO UPDATE SET theme = CAST(:theme AS theme_interface), updated_at = now()
         """,
         Map.of("userId", userId, "theme", requete.valeur()));
     return ResponseEntity.ok(Map.of("succes", "theme", "theme", requete.valeur()));

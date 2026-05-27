@@ -193,8 +193,8 @@ public class PreferencesController {
         INSERT INTO user_config
             (user_id, departements, filtre_disponibles, frequence_notifications,
              notif_artistes, notif_salles, theme, updated_at)
-        VALUES (:userId, :depts, :filtreDisponibles, :frequence::frequence_notif,
-                :notifArtistes, :notifSalles, :theme::theme_interface, now())
+        VALUES (:userId, :depts, :filtreDisponibles, CAST(:frequence AS frequence_notif),
+                :notifArtistes, :notifSalles, CAST(:theme AS theme_interface), now())
         ON CONFLICT (user_id) DO UPDATE SET
             departements            = EXCLUDED.departements,
             filtre_disponibles      = EXCLUDED.filtre_disponibles,
@@ -227,7 +227,7 @@ public class PreferencesController {
         UPDATE user_config
         SET departements = (
             SELECT ARRAY(
-                SELECT DISTINCT unnest(departements || :depts::text[])
+                SELECT DISTINCT unnest(departements || CAST(:depts AS text[]))
                 ORDER BY 1
             )
         ),

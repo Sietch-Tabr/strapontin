@@ -172,7 +172,7 @@ public class RecalculerMatchesService {
   private void insererNouveauxMatches(String userId, Set<String> concertIds) {
     String sql =
         "INSERT INTO user_matches (user_id, concert_id)"
-            + " VALUES (:userId, :concertId::uuid) ON CONFLICT DO NOTHING";
+            + " VALUES (:userId, CAST(:concertId AS uuid)) ON CONFLICT DO NOTHING";
     SqlParameterSource[] params =
         concertIds.stream()
             .map(
