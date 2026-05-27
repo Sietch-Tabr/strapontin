@@ -603,17 +603,68 @@ document.addEventListener("turbo:load", function () {
   });
 })();
 
-// Modification utilisateur (admin)
+// Modification / suppression utilisateur (admin)
 (function () {
   const formsModif = document.querySelectorAll(".form-modif-utilisateur");
-  if (!formsModif.length) return;
+  const dialogSuppr = document.getElementById("dialog-supprimer-user");
+  const dialogNom = document.getElementById("dialog-supprimer-user-nom");
+  let formSupprEnAttente = null;
 
+  // Boutons Modifier / Annuler — event listeners remplacent onclick inline
+  document.querySelectorAll(".btn-toggle-modif").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const userId = btn.getAttribute("data-id");
+      const row = document.getElementById("modif-" + userId);
+      if (row) row.classList.toggle("visible");
+    });
+  });
+
+  // Dialog confirmation suppression
+  if (dialogSuppr) {
+    document
+      .querySelectorAll(".form-supprimer-user")
+      .forEach(function (form) {
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          formSupprEnAttente = form;
+          if (dialogNom)
+            dialogNom.textContent =
+              "Supprimer le compte de " +
+              (form.getAttribute("data-nom") || "cet utilisateur") +
+              " ?";
+          dialogSuppr.showModal();
+        });
+      });
+
+    document
+      .getElementById("dialog-supprimer-user-confirmer")
+      .addEventListener("click", function () {
+        dialogSuppr.close();
+        if (formSupprEnAttente) formSupprEnAttente.submit();
+      });
+
+    document
+      .getElementById("dialog-supprimer-user-annuler")
+      .addEventListener("click", function () {
+        dialogSuppr.close();
+        formSupprEnAttente = null;
+      });
+
+    dialogSuppr.addEventListener("click", function (e) {
+      if (e.target === dialogSuppr) {
+        dialogSuppr.close();
+        formSupprEnAttente = null;
+      }
+    });
+  }
+
+  // Soumission PATCH modification
   formsModif.forEach(function (form) {
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       const userId = form.getAttribute("data-user-id");
       const erreurSpan = form.querySelector(".erreur-modif");
-      erreurSpan.style.display = "none";
+      erreurSpan.hidden = true;
       const corps = {
         nom: form.querySelector("[name=nom]").value.trim(),
         email: form.querySelector("[name=email]").value.trim(),
@@ -629,15 +680,17 @@ document.addEventListener("turbo:load", function () {
         })
         .then(function (d) {
           if (d.succes) {
-            location.reload();
+            location.replace(
+              location.pathname + location.search + "#utilisateurs",
+            );
           } else {
             erreurSpan.textContent = d.erreur || "Erreur.";
-            erreurSpan.style.display = "";
+            erreurSpan.hidden = false;
           }
         })
         .catch(function () {
           erreurSpan.textContent = "Erreur réseau.";
-          erreurSpan.style.display = "";
+          erreurSpan.hidden = false;
         });
     });
   });
@@ -661,11 +714,6 @@ window.copierLienInvitation = function () {
     input.select();
     document.execCommand("copy");
   }
-};
-
-window.toggleModif = function (userId) {
-  const row = document.getElementById("modif-" + userId);
-  if (row) row.style.display = row.style.display === "none" ? "" : "none";
 };
 
 // Push notifications (paramètres)

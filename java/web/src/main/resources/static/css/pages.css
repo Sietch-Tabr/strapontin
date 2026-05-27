@@ -902,6 +902,15 @@ details[open].changelog-historique > summary::before {
   border-top: 1px solid var(--border);
   padding: 0.75rem 1rem;
   background: var(--bg-card);
+  display: none;
+}
+
+.modif-ligne.visible {
+  display: block;
+}
+
+.form-action-inline {
+  display: inline;
 }
 
 .log-error td {
@@ -1050,7 +1059,6 @@ details[open].changelog-historique > summary::before {
 .erreur-modif {
   font-size: 0.75rem;
   color: var(--danger);
-  display: none;
 }
 
 /* ── Log meta (admin) ────────────────────────────────────── */

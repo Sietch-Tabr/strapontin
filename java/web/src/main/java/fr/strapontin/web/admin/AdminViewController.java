@@ -66,7 +66,8 @@ public class AdminViewController {
   /// @param modele le modèle Thymeleaf
   /// @return le nom du template
   @GetMapping("/admin")
-  public String admin(Model modele) {
+  public String admin(
+      Model modele, org.springframework.security.core.Authentication auth) {
     ResponseEntity<List<AdminController.UtilisateurAdmin>> repUsers =
         adminController.listerUtilisateurs();
     ResponseEntity<List<AdminController.ConfigStatut>> repConfig =
@@ -119,6 +120,11 @@ public class AdminViewController {
     modele.addAttribute("descriptionsConfig", DESCRIPTIONS_CONFIG);
     modele.addAttribute(
         "appConfigSecretPresente", System.getenv("APP_CONFIG_SECRET") != null);
+    String utilisateurCourantId =
+        auth != null && auth.getPrincipal() instanceof fr.strapontin.web.securite.UtilisateurDetails u
+            ? u.id()
+            : null;
+    modele.addAttribute("utilisateurCourantId", utilisateurCourantId);
     modele.addAttribute("currentPage", "admin");
     DateTimeFormatter formateur =
         DateTimeFormatter.ofPattern("EEEE d MMMM yyyy à HH'h'mm", Locale.FRENCH);

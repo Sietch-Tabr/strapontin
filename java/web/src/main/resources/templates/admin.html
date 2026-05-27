@@ -544,6 +544,28 @@
           </div>
         </dialog>
 
+        <!-- Dialog confirmation suppression utilisateur -->
+        <dialog id="dialog-supprimer-user">
+          <p class="dialog-titre">Supprimer ce compte ?</p>
+          <p id="dialog-supprimer-user-nom" class="dialog-corps"></p>
+          <div class="dialog-pied">
+            <button
+              type="button"
+              id="dialog-supprimer-user-confirmer"
+              class="btn btn-danger"
+            >
+              Supprimer
+            </button>
+            <button
+              type="button"
+              id="dialog-supprimer-user-annuler"
+              class="btn btn-secondaire"
+            >
+              Annuler
+            </button>
+          </div>
+        </dialog>
+
         <!-- Section Utilisateurs -->
         <section id="utilisateurs" class="admin-section">
           <!-- Créer un compte -->
@@ -613,20 +635,19 @@
                     </div>
                     <div
                       class="user-carte-actions"
-                      th:if="${u.id != utilisateur?.id}"
+                      th:if="${u.id != utilisateurCourantId}"
                     >
                       <button
                         type="button"
-                        class="btn btn-sm btn-secondary"
+                        class="btn btn-sm btn-secondary btn-toggle-modif"
                         th:data-id="${u.id}"
-                        onclick="toggleModif(this.dataset.id)"
                       >
                         Modifier
                       </button>
                       <form
                         method="post"
                         th:action="@{/admin/utilisateurs/{id}/reset-mdp(id=${u.id})}"
-                        style="display: inline"
+                        class="form-action-inline"
                       >
                         <button type="submit" class="btn btn-sm btn-secondary">
                           Réinit. MDP
@@ -635,8 +656,8 @@
                       <form
                         method="post"
                         th:action="@{/admin/utilisateurs/{id}/supprimer(id=${u.id})}"
-                        style="display: inline"
-                        onsubmit="return confirm('Supprimer ce compte ?');"
+                        class="form-action-inline form-supprimer-user"
+                        th:data-nom="${u.name}"
                       >
                         <button type="submit" class="btn btn-sm btn-danger">
                           Supprimer
@@ -647,7 +668,6 @@
                   <div
                     th:id="'modif-' + ${u.id}"
                     class="modif-ligne"
-                    style="display: none"
                   >
                     <form
                       class="form-modif-utilisateur"
@@ -690,7 +710,7 @@
                       >
                         Annuler
                       </button>
-                      <span class="erreur-modif"></span>
+                      <span class="erreur-modif" hidden></span>
                     </form>
                   </div>
                 </li>
