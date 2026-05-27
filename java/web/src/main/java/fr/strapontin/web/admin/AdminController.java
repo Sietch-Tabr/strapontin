@@ -71,8 +71,8 @@ public class AdminController {
   private static final String CLE_PAR_ADMIN = "parAdmin";
   private static final String SOURCE_ADMIN = "admin";
   private static final String CLE_PUBLIC_BASE_URL = "PUBLIC_BASE_URL";
-  private static final Set<String> CLES_AUTORISEES =
-      Set.of(
+  private static final List<String> CLES_AUTORISEES =
+      List.of(
           "TICKETMASTER_API_KEY",
           "RESEND_API_KEY",
           "CONTACT_EMAIL",
@@ -80,6 +80,7 @@ public class AdminController {
           "VAPID_PUBLIC_KEY",
           "VAPID_PRIVATE_KEY");
   private static final Set<String> CLES_EN_CLAIR = Set.of("CONTACT_EMAIL", "PUBLIC_BASE_URL");
+  private static final Set<String> CLES_OBLIGATOIRES = Set.of("CONTACT_EMAIL", "PUBLIC_BASE_URL");
   private static final Pattern FORMAT_EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
   private static final Pattern FORMAT_TM_KEY = Pattern.compile("^[A-Za-z0-9]{16,64}$");
   private static final Pattern FORMAT_RESEND_KEY = Pattern.compile("^re_[A-Za-z0-9_-]{10,}$");
@@ -499,12 +500,18 @@ public class AdminController {
       return erreur(400, "Clé de configuration invalide.");
     }
 
+    if (valeur.isEmpty() && CLES_OBLIGATOIRES.contains(cle)) {
+      return erreur(400, "La valeur ne peut pas être vide pour " + cle + ".");
+    }
+
     if (!valeur.isEmpty()) {
       ResponseEntity<Map<String, Object>> erreurValidation = validerConfig(cle, valeur);
       if (erreurValidation != null) return erreurValidation;
     }
 
     configService.sauvegarderConfig(cle, valeur.isEmpty() ? null : valeur);
+    logAdminService.logAdmin(
+        "info", SOURCE_ADMIN, "Config sauvegardée : " + cle, Map.of("cle", cle));
     return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "sauvegarderConfig", "cle", cle));
   }
 
@@ -536,6 +543,13 @@ public class AdminController {
 
       configService.sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique);
       configService.sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee);
+
+      int nbSupprimes = jdbc.update("DELETE FROM push_abonnements", Map.of());
+      logAdminService.logAdmin(
+          "info",
+          SOURCE_ADMIN,
+          "Clés VAPID régénérées — " + nbSupprimes + " abonnement(s) supprimé(s)",
+          Map.of("nbAbonnements", nbSupprimes));
 
       return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "genererVapid"));
     } catch (Exception e) {
