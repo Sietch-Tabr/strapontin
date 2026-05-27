@@ -158,7 +158,7 @@ public class GestionQuotaTM {
       jdbc.update(
           """
           INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, :meta::jsonb)
+          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
           """,
           params);
     } catch (JsonProcessingException e) {
