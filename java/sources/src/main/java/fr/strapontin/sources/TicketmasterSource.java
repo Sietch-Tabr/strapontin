@@ -380,6 +380,10 @@ public class TicketmasterSource {
     String presaleDebut = presale != null ? (String) presale.get("startDateTime") : null;
     String presaleNom = presale != null ? (String) presale.get("name") : null;
 
+    if ("offsale".equals(statut) && presaleDebut != null) {
+      statut = "presale";
+    }
+
     return new ConcertBrut(
         artiste,
         datHeure[0],

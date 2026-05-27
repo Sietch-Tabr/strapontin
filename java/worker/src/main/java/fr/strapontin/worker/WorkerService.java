@@ -172,7 +172,8 @@ public class WorkerService {
     }
 
     for (int i = 0; i < attractionIds.size(); i += TAILLE_LOT_TM) {
-      List<String> lot = attractionIds.subList(i, Math.min(i + TAILLE_LOT_TM, attractionIds.size()));
+      List<String> lot =
+          attractionIds.subList(i, Math.min(i + TAILLE_LOT_TM, attractionIds.size()));
       try {
         resultats.addAll(tm.fetchArtistesBatch(lot));
       } catch (Exception e) {

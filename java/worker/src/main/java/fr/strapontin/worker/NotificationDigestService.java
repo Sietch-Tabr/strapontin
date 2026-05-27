@@ -157,8 +157,12 @@ public class NotificationDigestService {
         int updated =
             jdbc.update(
                 """
-                UPDATE user_matches SET notifie_le = :maintenant
-                WHERE user_id = :userId AND concert_id IN (:concertIds)
+                UPDATE user_matches um
+                SET notifie_le = :maintenant, statut_notifie = c.statut
+                FROM concerts c
+                WHERE c.id = um.concert_id
+                  AND um.user_id = :userId
+                  AND um.concert_id IN (:concertIds)
                 """,
                 new MapSqlParameterSource()
                     .addValue("userId", userId)

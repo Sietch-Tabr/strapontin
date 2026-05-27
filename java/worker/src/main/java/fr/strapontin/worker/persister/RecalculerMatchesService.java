@@ -106,6 +106,7 @@ public class RecalculerMatchesService {
     supprimerMatchesPetimes(userId, concertIds);
     insererNouveauxMatches(userId, concertIds);
     marquerIndisponiblesCommeLus(userId, concertIds);
+    reinitialiserNotifPreventesOuvertes(userId);
 
     log.info("matches recalculés userId={} matches={}", userId, concertIds.size());
   }
@@ -199,6 +200,21 @@ public class RecalculerMatchesService {
           )
         """,
         Map.of(CLE_USER_ID, userId, "concertIds", concertIds));
+  }
+
+  private void reinitialiserNotifPreventesOuvertes(String userId) {
+    jdbc.update(
+        """
+        UPDATE user_matches um
+        SET notifie_le = NULL, statut_notifie = NULL
+        FROM concerts c
+        WHERE c.id = um.concert_id
+          AND um.user_id = :userId
+          AND um.statut_notifie = 'presale'
+          AND um.masque_le IS NULL
+          AND (c.statut IS NULL OR c.statut = 'onsale')
+        """,
+        Map.of(CLE_USER_ID, userId));
   }
 
   private void purgerMatchesOrphelins(Set<String> usersAvecAbonnements) {
