@@ -5,17 +5,26 @@
 package fr.strapontin.web.utilisateur;
 
 import fr.strapontin.web.admin.LogAdminService;
+import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.TotpService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -50,23 +59,31 @@ public class ParametresViewController {
   @Value("${app.cookie.secure:true}")
   private boolean cookieSecure;
 
+  private static final SecureRandom RNG = new SecureRandom();
+
   private final UserConfigController userConfigController;
   private final UserController userController;
   private final PreferencesController preferencesController;
   private final TotpService totpService;
   private final LogAdminService logAdminService;
+  private final EmailService emailService;
+  private final NamedParameterJdbcTemplate jdbc;
 
   public ParametresViewController(
       UserConfigController userConfigController,
       UserController userController,
       PreferencesController preferencesController,
       TotpService totpService,
-      LogAdminService logAdminService) {
+      LogAdminService logAdminService,
+      EmailService emailService,
+      NamedParameterJdbcTemplate jdbc) {
     this.userConfigController = userConfigController;
     this.userController = userController;
     this.preferencesController = preferencesController;
     this.totpService = totpService;
     this.logAdminService = logAdminService;
+    this.emailService = emailService;
+    this.jdbc = jdbc;
   }
 
   /// Affiche la page des paramètres.
@@ -107,7 +124,9 @@ public class ParametresViewController {
       var corps = rep.getBody();
       if (corps != null && corps.get("ignores") instanceof List<?> ignores && !ignores.isEmpty()) {
         redirects.addFlashAttribute(
-            "avertissement", "Codes ignorés car non reconnus : " + String.join(", ", ignores.stream().map(Object::toString).toList()));
+            "avertissement",
+            "Codes ignorés car non reconnus : "
+                + String.join(", ", ignores.stream().map(Object::toString).toList()));
       }
       redirects.addFlashAttribute(CLE_SUCCES, "departements");
     }
@@ -192,34 +211,188 @@ public class ParametresViewController {
     return REDIRECT_PREFS;
   }
 
-  /// Met à jour le nom et/ou l'email.
+  /// Met à jour le nom et déclenche la confirmation par email si l'adresse change.
   ///
-  /// @param nom       le nouveau nom
-  /// @param email     le nouvel email
+  /// @param nom       le nouveau nom (optionnel)
+  /// @param email     le nouvel email (optionnel — déclenche un flux de confirmation)
   /// @param redirects attributs de redirection
   /// @param auth      contexte d'authentification
+  /// @param request   la requête HTTP (pour construire le lien de confirmation)
   /// @return redirect vers /parametres
   @PostMapping("/parametres/compte")
   public String majCompte(
       @RequestParam(required = false) String nom,
       @RequestParam(required = false) String email,
       RedirectAttributes redirects,
-      Authentication auth) {
+      Authentication auth,
+      HttpServletRequest request) {
     if (nom != null && nom.isBlank()) nom = null;
     if (email != null && email.isBlank()) email = null;
-    if (nom == null && email == null) {
+
+    UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
+    boolean emailChange = email != null && !email.equalsIgnoreCase(details.email());
+
+    if (nom == null && !emailChange) {
       return REDIRECT_COMPTE;
     }
-    var requete = new UserController.RequeteProfil(nom, email);
-    ResponseEntity<Map<String, Object>> rep = userController.majProfil(requete, auth);
-    if (rep.getStatusCode().isError()) {
-      var corps = rep.getBody();
-      redirects.addFlashAttribute(
-          CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
-    } else {
-      redirects.addFlashAttribute(CLE_SUCCES, "compte");
+
+    if (nom != null) {
+      ResponseEntity<Map<String, Object>> rep =
+          userController.majProfil(new UserController.RequeteProfil(nom, null), auth);
+      if (rep.getStatusCode().isError()) {
+        var corps = rep.getBody();
+        redirects.addFlashAttribute(
+            CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
+        return REDIRECT_COMPTE;
+      }
     }
+
+    if (emailChange) {
+      String emailNorm = email.strip().toLowerCase();
+      boolean emailPris =
+          !jdbc.queryForList(
+                  "SELECT 1 FROM users WHERE email = :email AND id != :id",
+                  Map.of("email", emailNorm, "id", details.id()),
+                  Integer.class)
+              .isEmpty();
+      if (emailPris) {
+        redirects.addFlashAttribute(CLE_ERREUR, "Cette adresse email est déjà utilisée.");
+        return REDIRECT_COMPTE;
+      }
+      if (!emailService.estDisponible()) {
+        redirects.addFlashAttribute(
+            CLE_ERREUR,
+            "L'envoi d'email n'est pas configuré. Impossible de confirmer le changement.");
+        return REDIRECT_COMPTE;
+      }
+
+      String token = genererToken(32);
+      String prefixe = "email-change:" + details.id();
+      jdbc.update("DELETE FROM verifications WHERE identifier = :p", Map.of("p", prefixe));
+      jdbc.update(
+          """
+          INSERT INTO verifications (id, identifier, value, expires_at, created_at, updated_at)
+          VALUES (:id, :identifier, :value, :expiresAt, now(), now())
+          """,
+          Map.of(
+              "id", UUID.randomUUID().toString(),
+              "identifier", prefixe,
+              "value", sha256Hex(token),
+              "expiresAt", java.sql.Timestamp.from(Instant.now().plus(24, ChronoUnit.HOURS))));
+      jdbc.update(
+          "UPDATE users SET pending_email = :email WHERE id = :id",
+          Map.of("email", emailNorm, "id", details.id()));
+
+      String lien = baseUrl(request) + "/parametres/confirmer-email?token=" + token;
+      emailService.envoyerConfirmationEmail(emailNorm, lien);
+      redirects.addFlashAttribute(
+          "avertissement",
+          "Un email de confirmation a été envoyé à "
+              + emailNorm
+              + ". Cliquez sur le lien pour valider.");
+      return REDIRECT_COMPTE;
+    }
+
+    redirects.addFlashAttribute(CLE_SUCCES, "compte");
     return REDIRECT_COMPTE;
+  }
+
+  /// Confirme le changement d'adresse email via le token envoyé par email.
+  ///
+  /// @param token     le token de confirmation (paramètre URL)
+  /// @param redirects attributs de redirection
+  /// @return redirect vers /parametres#compte
+  @GetMapping("/parametres/confirmer-email")
+  public String confirmerEmail(
+      @RequestParam(required = false) String token, RedirectAttributes redirects) {
+    if (token == null || token.isBlank()) {
+      redirects.addFlashAttribute(CLE_ERREUR, "Lien invalide.");
+      return REDIRECT_COMPTE;
+    }
+
+    List<Map<String, Object>> verifs =
+        jdbc.queryForList(
+            """
+            SELECT identifier FROM verifications
+            WHERE value = :hash AND expires_at > NOW()
+            """,
+            Map.of("hash", sha256Hex(token)));
+
+    if (verifs.isEmpty()) {
+      redirects.addFlashAttribute(
+          CLE_ERREUR, "Lien expiré ou invalide. Recommencez depuis Paramètres.");
+      return REDIRECT_COMPTE;
+    }
+
+    String identifier = (String) verifs.get(0).get("identifier");
+    String userId = identifier.contains(":") ? identifier.split(":", 2)[1] : null;
+    if (userId == null) {
+      redirects.addFlashAttribute(CLE_ERREUR, "Lien invalide.");
+      return REDIRECT_COMPTE;
+    }
+
+    List<String> pendingEmails =
+        jdbc.queryForList(
+            "SELECT pending_email FROM users WHERE id = :id", Map.of("id", userId), String.class);
+
+    if (pendingEmails.isEmpty() || pendingEmails.get(0) == null) {
+      redirects.addFlashAttribute(CLE_ERREUR, "Aucun changement d'email en attente.");
+      return REDIRECT_COMPTE;
+    }
+    String nouvelEmail = pendingEmails.get(0);
+
+    boolean emailPris =
+        !jdbc.queryForList(
+                "SELECT 1 FROM users WHERE email = :email AND id != :id",
+                Map.of("email", nouvelEmail, "id", userId),
+                Integer.class)
+            .isEmpty();
+    if (emailPris) {
+      redirects.addFlashAttribute(
+          CLE_ERREUR, "Cette adresse email est désormais utilisée par un autre compte.");
+      jdbc.update("UPDATE users SET pending_email = NULL WHERE id = :id", Map.of("id", userId));
+      jdbc.update(
+          "DELETE FROM verifications WHERE identifier = :p", Map.of("p", "email-change:" + userId));
+      return REDIRECT_COMPTE;
+    }
+
+    jdbc.update(
+        "UPDATE users SET email = :email, pending_email = NULL, updated_at = now() WHERE id = :id",
+        Map.of("email", nouvelEmail, "id", userId));
+    jdbc.update(
+        "DELETE FROM verifications WHERE identifier = :p", Map.of("p", "email-change:" + userId));
+
+    redirects.addFlashAttribute(CLE_SUCCES, "email-confirme");
+    return REDIRECT_COMPTE;
+  }
+
+  private String genererToken(int nbOctets) {
+    byte[] octets = new byte[nbOctets];
+    RNG.nextBytes(octets);
+    StringBuilder sb = new StringBuilder();
+    for (byte b : octets) sb.append(String.format("%02x", b));
+    return sb.toString();
+  }
+
+  private static String sha256Hex(String input) {
+    try {
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
+      StringBuilder sb = new StringBuilder();
+      for (byte b : hash) sb.append(String.format("%02x", b));
+      return sb.toString();
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 non disponible", e);
+    }
+  }
+
+  private static String baseUrl(HttpServletRequest request) {
+    String scheme = request.getScheme();
+    String host = request.getServerName();
+    int port = request.getServerPort();
+    boolean portDefaut =
+        ("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443);
+    return scheme + "://" + host + (portDefaut ? "" : ":" + port) + request.getContextPath();
   }
 
   /// Met à jour l'identifiant.
@@ -259,7 +432,8 @@ public class ParametresViewController {
       Authentication auth,
       HttpServletRequest request) {
     var requete = new UserController.RequeteMotDePasse(motDePasseActuel, motDePasseNouveau);
-    ResponseEntity<Map<String, Object>> rep = userController.changerMotDePasse(requete, auth, request);
+    ResponseEntity<Map<String, Object>> rep =
+        userController.changerMotDePasse(requete, auth, request);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
       redirects.addFlashAttribute(
@@ -347,7 +521,10 @@ public class ParametresViewController {
     UtilisateurDetails ancien = (UtilisateurDetails) auth.getPrincipal();
     userController.activerTotp(ancien.id(), secret);
     logAdminService.logAdmin(
-        "info", "web", "TOTP activé", Map.of("userId", ancien.id(), "username", ancien.identifiant()));
+        "info",
+        "web",
+        "TOTP activé",
+        Map.of("userId", ancien.id(), "username", ancien.identifiant()));
     session.removeAttribute(SESSION_TOTP_SETUP);
     UtilisateurDetails nouveau =
         new UtilisateurDetails(
@@ -384,7 +561,10 @@ public class ParametresViewController {
     }
     userController.desactiverTotp(ancien.id());
     logAdminService.logAdmin(
-        "info", "web", "TOTP désactivé", Map.of("userId", ancien.id(), "username", ancien.identifiant()));
+        "info",
+        "web",
+        "TOTP désactivé",
+        Map.of("userId", ancien.id(), "username", ancien.identifiant()));
     UtilisateurDetails nouveau =
         new UtilisateurDetails(
             ancien.id(),

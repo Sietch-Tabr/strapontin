@@ -51,7 +51,8 @@ public class UserController {
     this.passwordEncoder = passwordEncoder;
   }
 
-  record ProfilUtilisateur(String id, String nom, String email, String identifiant) {}
+  record ProfilUtilisateur(
+      String id, String nom, String email, String identifiant, String pendingEmail) {}
 
   record RequeteProfil(
       @Size(min = 1, max = 100, message = "Nom invalide (1-100 caractères).") String nom,
@@ -92,15 +93,25 @@ public class UserController {
   /// Retourne le profil de l'utilisateur courant.
   ///
   /// @param auth contexte d'authentification
-  /// @return le profil (id, nom, email, identifiant)
+  /// @return le profil (id, nom, email, identifiant, pendingEmail)
   @GetMapping("/profile")
   public ResponseEntity<ProfilUtilisateur> lireProfil(Authentication auth) {
     UtilisateurDetails details = utilisateur(auth);
-    String email =
-        jdbc.queryForObject(
-            "SELECT email FROM users WHERE id = :id", Map.of("id", details.id()), String.class);
-    return ResponseEntity.ok(
-        new ProfilUtilisateur(details.id(), details.nom(), email, details.identifiant()));
+    return jdbc
+        .query(
+            "SELECT email, pending_email FROM users WHERE id = :id",
+            Map.of("id", details.id()),
+            (rs, _) ->
+                new ProfilUtilisateur(
+                    details.id(),
+                    details.nom(),
+                    rs.getString("email"),
+                    details.identifiant(),
+                    rs.getString("pending_email")))
+        .stream()
+        .findFirst()
+        .map(ResponseEntity::ok)
+        .orElse(ResponseEntity.notFound().build());
   }
 
   /// Met à jour le nom et/ou l'email de l'utilisateur courant.

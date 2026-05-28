@@ -1,0 +1,64 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Confirmation de votre nouvelle adresse email</title>
+  </head>
+  <body
+    style="
+      font-family: system-ui, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 32px 16px;
+    "
+  >
+    <div
+      style="
+        max-width: 520px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 8px;
+        padding: 32px;
+        border: 1px solid #e5e5e5;
+      "
+    >
+      <h2
+        style="font-size: 20px; font-weight: 600; color: #111; margin: 0 0 8px"
+      >
+        Confirmez votre nouvelle adresse email
+      </h2>
+      <p style="color: #555; margin: 0 0 24px">
+        Cliquez sur le bouton ci-dessous pour valider votre nouvelle adresse. Ce
+        lien est valable 24 heures.
+      </p>
+      <a
+        th:href="${lien}"
+        style="
+          display: inline-block;
+          background: #111;
+          color: #fff;
+          text-decoration: none;
+          padding: 10px 20px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 500;
+        "
+      >
+        Confirmer ma nouvelle adresse →
+      </a>
+      <p style="color: #aaa; font-size: 13px; margin-top: 24px">
+        Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+        Votre adresse actuelle reste inchangée.
+      </p>
+    </div>
+    <p
+      style="text-align: center; color: #aaa; font-size: 12px; margin-top: 24px"
+    >
+      Strapontin —
+      <a th:href="|${baseUrl}/parametres|" style="color: #aaa"
+        >Gérer mes préférences</a
+      >
+    </p>
+  </body>
+</html>
