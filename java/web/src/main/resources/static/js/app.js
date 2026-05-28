@@ -118,7 +118,8 @@ function majNavActif(chemin) {
   document
     .querySelectorAll("#bottom-nav a[href], #bottom-nav button[data-nav-path]")
     .forEach(function (el) {
-      var href = el.getAttribute("href") || el.getAttribute("data-nav-path") || "";
+      var href =
+        el.getAttribute("href") || el.getAttribute("data-nav-path") || "";
       var actif =
         href === "/"
           ? chemin === "/"
@@ -139,7 +140,7 @@ function majNavActif(chemin) {
       "actif",
       pagesPlus.some(function (p) {
         return chemin === p || chemin.startsWith(p + "/");
-      })
+      }),
     );
   }
 }
@@ -636,20 +637,18 @@ document.addEventListener("turbo:load", function () {
 
   // Dialog confirmation suppression
   if (dialogSuppr) {
-    document
-      .querySelectorAll(".form-supprimer-user")
-      .forEach(function (form) {
-        form.addEventListener("submit", function (e) {
-          e.preventDefault();
-          formSupprEnAttente = form;
-          if (dialogNom)
-            dialogNom.textContent =
-              "Supprimer le compte de " +
-              (form.getAttribute("data-nom") || "cet utilisateur") +
-              " ?";
-          dialogSuppr.showModal();
-        });
+    document.querySelectorAll(".form-supprimer-user").forEach(function (form) {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        formSupprEnAttente = form;
+        if (dialogNom)
+          dialogNom.textContent =
+            "Supprimer le compte de " +
+            (form.getAttribute("data-nom") || "cet utilisateur") +
+            " ?";
+        dialogSuppr.showModal();
       });
+    });
 
     document
       .getElementById("dialog-supprimer-user-confirmer")
@@ -782,7 +781,8 @@ window.copierLienInvitation = function () {
     } else {
       nonAbonneDiv.style.display = "";
       const frequenceJamais = estFrequenceJamais();
-      if (infoFrequenceP) infoFrequenceP.style.display = frequenceJamais ? "" : "none";
+      if (infoFrequenceP)
+        infoFrequenceP.style.display = frequenceJamais ? "" : "none";
       if (btnActiver) btnActiver.disabled = frequenceJamais;
     }
   }
@@ -792,6 +792,7 @@ window.copierLienInvitation = function () {
   }
 
   async function chargerEtat() {
+    if (chargementDiv) chargementDiv.style.display = "";
     try {
       const results = await Promise.all([
         fetch("/api/push").then(function (r) {

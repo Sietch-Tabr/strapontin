@@ -94,7 +94,9 @@
 
           <!-- Filtre disponibles -->
           <div class="param-bloc">
-            <h3 class="param-label" id="label-filtre-disponibles">Concerts disponibles uniquement</h3>
+            <h3 class="param-label" id="label-filtre-disponibles">
+              Concerts disponibles uniquement
+            </h3>
             <p class="param-aide">
               Masque les concerts dont la billetterie est fermée (annulés,
               complets…) sur l'accueil et Mes spectacles.
@@ -121,7 +123,11 @@
           <!-- Thème -->
           <div class="param-bloc">
             <h3 class="param-label">Thème de l'interface</h3>
-            <form method="post" th:action="@{/parametres/theme}" aria-label="Choisir le thème">
+            <form
+              method="post"
+              th:action="@{/parametres/theme}"
+              aria-label="Choisir le thème"
+            >
               <div class="theme-choix">
                 <button
                   type="submit"
@@ -155,7 +161,9 @@
                 </button>
               </div>
             </form>
-            <p class="param-aide">Le mode Automatique suit la préférence de votre appareil.</p>
+            <p class="param-aide">
+              Le mode Automatique suit la préférence de votre appareil.
+            </p>
           </div>
         </section>
 
@@ -195,7 +203,11 @@
                     À chaque nouveau concert
                   </option>
                 </select>
-                <p id="aide-resend" class="form-aide" th:unless="${config?.resendDisponible}">
+                <p
+                  id="aide-resend"
+                  class="form-aide"
+                  th:unless="${config?.resendDisponible}"
+                >
                   Les emails ne sont pas disponibles (clé Resend non
                   configurée).
                 </p>
@@ -238,7 +250,7 @@
           <!-- Notifications push -->
           <div id="push-section" class="param-bloc param-bloc-push">
             <h3 class="param-label">Notifications push</h3>
-            <div id="push-chargement" aria-live="polite">
+            <div id="push-chargement" aria-live="polite" style="display: none">
               <p class="param-aide">Chargement…</p>
             </div>
             <div
@@ -283,7 +295,11 @@
                 Recevez une notification sur cet appareil en même temps que vos
                 emails de digest.
               </p>
-              <p id="push-info-frequence" class="form-aide" style="display: none">
+              <p
+                id="push-info-frequence"
+                class="form-aide"
+                style="display: none"
+              >
                 Les notifications push ne fonctionneront qu'avec une fréquence
                 email active.
               </p>
