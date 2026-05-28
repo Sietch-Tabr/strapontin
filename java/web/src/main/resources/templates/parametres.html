@@ -20,6 +20,11 @@
         th:text="'Paramètres enregistrés.'"
       ></div>
       <div
+        th:if="${avertissement}"
+        class="alerte alerte-avertissement"
+        th:text="${avertissement}"
+      ></div>
+      <div
         th:if="${erreur}"
         class="alerte alerte-erreur"
         th:text="${erreur}"
@@ -67,7 +72,7 @@
             <h3 class="param-label">Départements de découverte</h3>
             <p class="param-aide">
               Séparés par des virgules (ex. : 75, 92, 93). Utilisés par la page
-              Découverte.
+              Découverte. Pour la Corse, utilisez 2A ou 2B.
             </p>
             <form
               method="post"
@@ -89,10 +94,10 @@
 
           <!-- Filtre disponibles -->
           <div class="param-bloc">
-            <h3 class="param-label">Concerts disponibles uniquement</h3>
+            <h3 class="param-label" id="label-filtre-disponibles">Concerts disponibles uniquement</h3>
             <p class="param-aide">
               Masque les concerts dont la billetterie est fermée (annulés,
-              complets…).
+              complets…) sur l'accueil et Mes spectacles.
             </p>
             <form
               method="post"
@@ -105,7 +110,8 @@
                   name="filtreDisponibles"
                   value="true"
                   th:checked="${config?.filtreDisponibles}"
-                  onchange="this.form.submit()"
+                  aria-labelledby="label-filtre-disponibles"
+                  class="js-auto-submit"
                 />
                 <span class="switch-curseur"></span>
               </label>
@@ -115,38 +121,41 @@
           <!-- Thème -->
           <div class="param-bloc">
             <h3 class="param-label">Thème de l'interface</h3>
-            <div class="theme-choix">
-              <form method="post" th:action="@{/parametres/theme}">
-                <input type="hidden" name="valeur" value="auto" />
+            <form method="post" th:action="@{/parametres/theme}" aria-label="Choisir le thème">
+              <div class="theme-choix">
                 <button
                   type="submit"
-                  th:classappend="${config?.theme == 'auto' or config?.theme == null ? ' actif' : ''}"
+                  name="valeur"
+                  value="auto"
                   class="btn btn-theme"
+                  th:classappend="${config?.theme == 'auto' or config?.theme == null ? ' actif' : ''}"
+                  th:attr="aria-pressed=${config?.theme == 'auto' or config?.theme == null ? 'true' : 'false'}"
                 >
                   Automatique
                 </button>
-              </form>
-              <form method="post" th:action="@{/parametres/theme}">
-                <input type="hidden" name="valeur" value="clair" />
                 <button
                   type="submit"
-                  th:classappend="${config?.theme == 'clair' ? ' actif' : ''}"
+                  name="valeur"
+                  value="clair"
                   class="btn btn-theme"
+                  th:classappend="${config?.theme == 'clair' ? ' actif' : ''}"
+                  th:attr="aria-pressed=${config?.theme == 'clair' ? 'true' : 'false'}"
                 >
                   Clair
                 </button>
-              </form>
-              <form method="post" th:action="@{/parametres/theme}">
-                <input type="hidden" name="valeur" value="sombre" />
                 <button
                   type="submit"
-                  th:classappend="${config?.theme == 'sombre' ? ' actif' : ''}"
+                  name="valeur"
+                  value="sombre"
                   class="btn btn-theme"
+                  th:classappend="${config?.theme == 'sombre' ? ' actif' : ''}"
+                  th:attr="aria-pressed=${config?.theme == 'sombre' ? 'true' : 'false'}"
                 >
                   Sombre
                 </button>
-              </form>
-            </div>
+              </div>
+            </form>
+            <p class="param-aide">Le mode Automatique suit la préférence de votre appareil.</p>
           </div>
         </section>
 
