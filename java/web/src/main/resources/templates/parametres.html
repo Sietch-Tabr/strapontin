@@ -17,7 +17,10 @@
       <div
         th:if="${succes}"
         class="alerte alerte-succes"
-        th:text="'Paramètres enregistrés.'"
+        th:text="${succes == 'totp-active'} ? 'Authentification à deux facteurs activée.'
+                 : (${succes == 'totp-desactive'} ? 'Authentification à deux facteurs désactivée.'
+                 : (${succes == 'identifiant'} ? 'Identifiant modifié.'
+                 : 'Paramètres enregistrés.'))"
       ></div>
       <div
         th:if="${avertissement}"
@@ -67,6 +70,7 @@
       <div class="parametres-sections">
         <!-- Section Préférences -->
         <section id="preferences" class="parametres-section">
+          <h2 class="sr-only">Préférences</h2>
           <!-- Départements -->
           <div class="param-bloc">
             <h3 class="param-label">Départements de découverte</h3>
@@ -169,6 +173,7 @@
 
         <!-- Section Notifications -->
         <section id="notifications" class="parametres-section">
+          <h2 class="sr-only">Notifications</h2>
           <div class="param-bloc">
             <h3 class="param-label">Notifications email</h3>
             <form
@@ -316,6 +321,7 @@
 
         <!-- Section Compte -->
         <section id="compte" class="parametres-section">
+          <h2 class="sr-only">Compte</h2>
           <!-- Nom et email -->
           <div class="param-bloc">
             <h3 class="param-label">Profil</h3>
@@ -354,13 +360,15 @@
 
           <!-- Identifiant -->
           <div class="param-bloc">
-            <h3 class="param-label">Identifiant de connexion</h3>
+            <h3 class="param-label" id="label-identifiant">Identifiant de connexion</h3>
             <form
               method="post"
               th:action="@{/parametres/identifiant}"
               class="form-inline"
             >
+              <label for="identifiant" class="sr-only">Identifiant de connexion</label>
               <input
+                id="identifiant"
                 type="text"
                 name="identifiant"
                 th:value="${profil?.identifiant}"
@@ -445,6 +453,7 @@
                   autocomplete="new-password"
                   placeholder="12 caractères minimum"
                 />
+                <span id="compteur-mdp" class="form-aide" aria-live="polite"></span>
               </div>
               <button type="submit" class="btn btn-secondary">Changer</button>
             </form>
@@ -453,6 +462,7 @@
 
         <!-- Section Données -->
         <section id="donnees" class="parametres-section">
+          <h2 class="sr-only">Données</h2>
           <!-- Export -->
           <div class="param-bloc">
             <h3 class="param-label">Exporter mes préférences</h3>
@@ -516,19 +526,24 @@
               Supprime définitivement votre compte et toutes vos données. Cette
               action est irréversible.
             </p>
-            <form
-              method="post"
-              th:action="@{/parametres/supprimer-compte}"
-              onsubmit="
-                return confirm(
-                  'Supprimer définitivement votre compte ? Cette action est irréversible.',
-                );
-              "
+            <button
+              type="button"
+              id="btn-ouvrir-suppression"
+              class="btn btn-danger"
             >
-              <button type="submit" class="btn btn-danger">
-                Supprimer mon compte
-              </button>
-            </form>
+              Supprimer mon compte
+            </button>
+            <dialog id="dialog-supprimer-compte">
+              <p>Supprimer définitivement votre compte ? Cette action est irréversible.</p>
+              <div class="dialog-actions">
+                <button type="button" id="btn-annuler-suppression" class="btn btn-secondary">
+                  Annuler
+                </button>
+                <form method="post" th:action="@{/parametres/supprimer-compte}">
+                  <button type="submit" class="btn btn-danger">Confirmer la suppression</button>
+                </form>
+              </div>
+            </dialog>
           </div>
         </section>
       </div>

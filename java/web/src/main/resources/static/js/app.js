@@ -231,6 +231,34 @@ document.addEventListener("turbo:load", function () {
   });
 })();
 
+// Compteur de longueur pour le champ mot de passe (/parametres)
+(function () {
+  const champ = document.getElementById("mdp-nouveau");
+  const compteur = document.getElementById("compteur-mdp");
+  if (!champ || !compteur) return;
+  champ.addEventListener("input", function () {
+    const n = champ.value.length;
+    compteur.textContent =
+      n === 0 ? "" : n + " caractère" + (n > 1 ? "s" : "") + (n < 12 ? " (minimum 12)" : "");
+  });
+})();
+
+// Dialog confirmation suppression de compte (/parametres)
+(function () {
+  const btn = document.getElementById("btn-ouvrir-suppression");
+  const dialog = document.getElementById("dialog-supprimer-compte");
+  const annuler = document.getElementById("btn-annuler-suppression");
+  if (!btn || !dialog) return;
+  btn.addEventListener("click", function () {
+    dialog.showModal();
+  });
+  if (annuler) {
+    annuler.addEventListener("click", function () {
+      dialog.close();
+    });
+  }
+})();
+
 // Navigation par onglets — repositionnement en haut à chaque changement
 // Les sections ont display:none avant d'être ciblées ; on évite le scroll
 // natif (comportement aléatoire) en remontant en haut après le repaint.
@@ -793,12 +821,20 @@ window.copierLienInvitation = function () {
 
   async function chargerEtat() {
     if (chargementDiv) chargementDiv.style.display = "";
+    const timeout = new Promise(function (_, reject) {
+      setTimeout(function () {
+        reject(new Error("timeout"));
+      }, 5000);
+    });
     try {
-      const results = await Promise.all([
-        fetch("/api/push").then(function (r) {
-          return r.json();
-        }),
-        navigator.serviceWorker.ready,
+      const results = await Promise.race([
+        Promise.all([
+          fetch("/api/push").then(function (r) {
+            return r.json();
+          }),
+          navigator.serviceWorker.ready,
+        ]),
+        timeout,
       ]);
       const repVapid = results[0];
       const registration = results[1];
