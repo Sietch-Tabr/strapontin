@@ -16,6 +16,13 @@ function appliquerTheme(t) {
   }
 })();
 
+// Ferme tous les dialogs ouverts avant une navigation Turbo pour éviter l'état incohérent iOS
+document.addEventListener("turbo:before-visit", function () {
+  document.querySelectorAll("dialog[open]").forEach(function (d) {
+    d.close();
+  });
+});
+
 // Soumission automatique des champs marqués js-auto-submit
 document.addEventListener("change", function (e) {
   if (e.target.classList.contains("js-auto-submit")) {
@@ -259,7 +266,7 @@ function initParametres() {
   const champ = document.getElementById("mdp-nouveau");
   const compteur = document.getElementById("compteur-mdp");
   if (champ && compteur) {
-    champ.addEventListener("input", function () {
+    function majCompteurMdp() {
       const n = champ.value.length;
       compteur.textContent =
         n === 0
@@ -268,7 +275,10 @@ function initParametres() {
             " caractère" +
             (n > 1 ? "s" : "") +
             (n < 12 ? " (minimum 12)" : "");
-    });
+    }
+    champ.addEventListener("input", majCompteurMdp);
+    champ.addEventListener("change", majCompteurMdp);
+    majCompteurMdp();
   }
 
   const btnOuvrir = document.getElementById("btn-ouvrir-suppression");
