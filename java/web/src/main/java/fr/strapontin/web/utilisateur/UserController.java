@@ -185,14 +185,17 @@ public class UserController {
     return ResponseEntity.ok(Map.of("succes", "identifiant"));
   }
 
-  /// Change le mot de passe de l'utilisateur courant.
+  /// Change le mot de passe de l'utilisateur courant et invalide la session.
   ///
-  /// @param requete corps JSON avec {@code motDePasseActuel} et {@code motDePasseNouveau}
-  /// @param auth    contexte d'authentification
+  /// @param requete  corps JSON avec {@code motDePasseActuel} et {@code motDePasseNouveau}
+  /// @param auth     contexte d'authentification
+  /// @param request  la requête HTTP (pour invalider la session)
   /// @return 200 si changé, 400 si invalide ou mot de passe actuel incorrect
   @PostMapping("/password")
   public ResponseEntity<Map<String, Object>> changerMotDePasse(
-      @Valid @RequestBody RequeteMotDePasse requete, Authentication auth) {
+      @Valid @RequestBody RequeteMotDePasse requete,
+      Authentication auth,
+      HttpServletRequest request) {
     UtilisateurDetails details = utilisateur(auth);
 
     if (requete.motDePasseActuel() == null || requete.motDePasseNouveau() == null) {
@@ -211,7 +214,45 @@ public class UserController {
             + " 'credential'",
         Map.of("hash", nouveauHash, "userId", details.id()));
 
+    HttpSession session = request.getSession(false);
+    if (session != null) session.invalidate();
+    SecurityContextHolder.clearContext();
+
     return ResponseEntity.ok(Map.of("succes", "motDePasse"));
+  }
+
+  /// Active le TOTP pour l'utilisateur.
+  ///
+  /// @param userId l'identifiant de l'utilisateur
+  /// @param secret le secret Base32 à persister
+  void activerTotp(String userId, String secret) {
+    jdbc.update(
+        "UPDATE users SET two_factor_secret = :secret, two_factor_enabled = true WHERE id = :id",
+        Map.of("secret", secret, "id", userId));
+  }
+
+  /// Retourne le secret TOTP stocké en base pour l'utilisateur.
+  ///
+  /// @param userId l'identifiant de l'utilisateur
+  /// @return le secret Base32, ou {@code null} si absent
+  String lireSecretTotp(String userId) {
+    return jdbc
+        .queryForList(
+            "SELECT two_factor_secret FROM users WHERE id = :id",
+            Map.of("id", userId),
+            String.class)
+        .stream()
+        .findFirst()
+        .orElse(null);
+  }
+
+  /// Désactive le TOTP pour l'utilisateur.
+  ///
+  /// @param userId l'identifiant de l'utilisateur
+  void desactiverTotp(String userId) {
+    jdbc.update(
+        "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false WHERE id = :id",
+        Map.of("id", userId));
   }
 
   /// Complète la première connexion : nom, identifiant, mot de passe, et lève {@code

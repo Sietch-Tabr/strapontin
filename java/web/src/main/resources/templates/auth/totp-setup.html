@@ -25,41 +25,22 @@
           <div
             th:if="${qrCodeSvg}"
             th:utext="${qrCodeSvg}"
-            style="width: 200px; height: 200px; margin: 1rem 0"
+            class="totp-qr"
           ></div>
 
-          <p class="param-aide">
-            Ou ouvrez ce lien depuis votre téléphone :
-            <a th:href="${otpUri}" class="break-all" th:text="${otpUri}"></a>
-          </p>
+          <details class="totp-manuel">
+            <summary>Saisie manuelle (si QR indisponible)</summary>
+            <p class="param-aide">Entrez ce code dans votre application :</p>
+            <code class="totp-secret-code" th:text="${totpSecret}"></code>
+            <p class="param-aide" style="margin-top: 0.5rem">
+              Ou ouvrez ce lien depuis votre téléphone :
+              <a th:href="${otpUri}" class="break-all" th:text="${otpUri}"></a>
+            </p>
+          </details>
         </div>
 
         <div class="param-bloc">
-          <h2 class="param-label">
-            Étape 2 — Saisie manuelle (si QR indisponible)
-          </h2>
-          <p class="param-aide">
-            Entrez manuellement ce code dans votre application :
-          </p>
-          <code
-            class="totp-secret-code"
-            th:text="${totpSecret}"
-            style="
-              display: block;
-              font-size: 1.1rem;
-              letter-spacing: 0.15em;
-              padding: 0.75rem;
-              background: var(--bg-card);
-              border: 1px solid var(--border);
-              border-radius: var(--radius);
-              word-break: break-all;
-              margin: 0.5rem 0;
-            "
-          ></code>
-        </div>
-
-        <div class="param-bloc">
-          <h2 class="param-label">Étape 3 — Confirmez</h2>
+          <h2 class="param-label">Étape 2 — Confirmez</h2>
           <p class="param-aide">
             Saisissez le code à 6 chiffres affiché dans votre application pour
             valider la configuration.

@@ -16,7 +16,6 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -55,7 +54,6 @@ public class ParametresViewController {
   private final UserController userController;
   private final PreferencesController preferencesController;
   private final TotpService totpService;
-  private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
   public ParametresViewController(
@@ -63,13 +61,11 @@ public class ParametresViewController {
       UserController userController,
       PreferencesController preferencesController,
       TotpService totpService,
-      NamedParameterJdbcTemplate jdbc,
       LogAdminService logAdminService) {
     this.userConfigController = userConfigController;
     this.userController = userController;
     this.preferencesController = preferencesController;
     this.totpService = totpService;
-    this.jdbc = jdbc;
     this.logAdminService = logAdminService;
   }
 
@@ -209,9 +205,11 @@ public class ParametresViewController {
       @RequestParam(required = false) String email,
       RedirectAttributes redirects,
       Authentication auth) {
-    // Champs vides = ne pas mettre à jour (distinction null vs chaîne vide du form)
     if (nom != null && nom.isBlank()) nom = null;
     if (email != null && email.isBlank()) email = null;
+    if (nom == null && email == null) {
+      return REDIRECT_COMPTE;
+    }
     var requete = new UserController.RequeteProfil(nom, email);
     ResponseEntity<Map<String, Object>> rep = userController.majProfil(requete, auth);
     if (rep.getStatusCode().isError()) {
@@ -261,7 +259,7 @@ public class ParametresViewController {
       Authentication auth,
       HttpServletRequest request) {
     var requete = new UserController.RequeteMotDePasse(motDePasseActuel, motDePasseNouveau);
-    ResponseEntity<Map<String, Object>> rep = userController.changerMotDePasse(requete, auth);
+    ResponseEntity<Map<String, Object>> rep = userController.changerMotDePasse(requete, auth, request);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
       redirects.addFlashAttribute(
@@ -347,9 +345,7 @@ public class ParametresViewController {
       return "redirect:/parametres/totp";
     }
     UtilisateurDetails ancien = (UtilisateurDetails) auth.getPrincipal();
-    jdbc.update(
-        "UPDATE users SET two_factor_secret = :secret, two_factor_enabled = true WHERE id = :id",
-        Map.of("secret", secret, "id", ancien.id()));
+    userController.activerTotp(ancien.id(), secret);
     logAdminService.logAdmin(
         "info", "web", "TOTP activé", Map.of("userId", ancien.id(), "username", ancien.identifiant()));
     session.removeAttribute(SESSION_TOTP_SETUP);
@@ -381,19 +377,12 @@ public class ParametresViewController {
       Authentication auth,
       HttpSession session) {
     UtilisateurDetails ancien = (UtilisateurDetails) auth.getPrincipal();
-    List<String> secrets =
-        jdbc.queryForList(
-            "SELECT two_factor_secret FROM users WHERE id = :id",
-            Map.of("id", ancien.id()),
-            String.class);
-    String secret = secrets.isEmpty() ? null : secrets.get(0);
+    String secret = userController.lireSecretTotp(ancien.id());
     if (!totpService.verifierCode(secret, code)) {
       redirects.addFlashAttribute(CLE_ERREUR, "Code TOTP incorrect.");
       return REDIRECT_COMPTE;
     }
-    jdbc.update(
-        "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false WHERE id = :id",
-        Map.of("id", ancien.id()));
+    userController.desactiverTotp(ancien.id());
     logAdminService.logAdmin(
         "info", "web", "TOTP désactivé", Map.of("userId", ancien.id(), "username", ancien.identifiant()));
     UtilisateurDetails nouveau =
