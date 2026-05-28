@@ -117,19 +117,11 @@ public class AccueilController {
 
     where.append(
         """
-         AND (
-           EXISTS (
-             SELECT 1 FROM user_artistes ua
-             WHERE ua.user_id = :userId
-               AND (c.artiste_norm = ua.artiste_normalise
-                    OR c.artiste_norm LIKE ua.artiste_normalise || ' %')
-           )
-           OR EXISTS (
-             SELECT 1 FROM user_salles us
-             WHERE us.user_id = :userId
-               AND regexp_replace(c.salle_norm, '[^a-z0-9]', '', 'g')
-                   = regexp_replace(lower(us.salle_id), '[^a-z0-9]', '', 'g')
-           )
+         AND EXISTS (
+           SELECT 1 FROM user_artistes ua
+           WHERE ua.user_id = :userId
+             AND (c.artiste_norm = ua.artiste_normalise
+                  OR c.artiste_norm LIKE ua.artiste_normalise || ' %')
          )
         """);
 

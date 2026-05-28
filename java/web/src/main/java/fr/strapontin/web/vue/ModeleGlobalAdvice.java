@@ -88,11 +88,14 @@ public class ModeleGlobalAdvice {
 
   /// Injecte le nombre de concerts non encore notifiés (badge bottom nav).
   ///
+  /// <p>Ne compte que les matches par artiste suivi — les concerts des salles suivies
+  /// sont accessibles via /spectacles et ne contribuent pas au badge.
+  ///
   /// <p>Requête ignorée pour les endpoints {@code /api/} et les utilisateurs non authentifiés.
   ///
   /// @param auth    l'authentification Spring Security (peut être {@code null})
   /// @param request la requête HTTP
-  /// @return le nombre de matches avec {@code notifie_le IS NULL}, ou 0
+  /// @return le nombre de matches artiste avec {@code notifie_le IS NULL}, ou 0
   @ModelAttribute("nbNouveau")
   public int nbNouveau(Authentication auth, HttpServletRequest request) {
     if (auth == null
@@ -104,8 +107,17 @@ public class ModeleGlobalAdvice {
     Integer count =
         jdbc.queryForObject(
             """
-            SELECT COUNT(*) FROM user_matches
-            WHERE user_id = :userId AND notifie_le IS NULL AND masque_le IS NULL
+            SELECT COUNT(*) FROM user_matches um
+            JOIN concerts c ON c.id = um.concert_id
+            WHERE um.user_id = :userId
+              AND um.notifie_le IS NULL
+              AND um.masque_le IS NULL
+              AND EXISTS (
+                SELECT 1 FROM user_artistes ua
+                WHERE ua.user_id = :userId
+                  AND (c.artiste_norm = ua.artiste_normalise
+                       OR c.artiste_norm LIKE ua.artiste_normalise || ' %')
+              )
             """,
             Map.of("userId", ud.id()),
             Integer.class);
