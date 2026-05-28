@@ -17,6 +17,13 @@
       <!-- Chips de filtre -->
       <div class="chips" th:if="${donnees != null}">
         <a
+          th:href="@{/(nouveau=${nouveau ? 'false' : 'true'})}"
+          th:classappend="${nouveau ? ' actif' : ''}"
+          th:attr="aria-current=${nouveau ? 'true' : null}"
+        >
+          Nouveau
+        </a>
+        <a
           th:href="@{/(indisponibles=${indisponibles ? '0' : '1'})}"
           th:classappend="${indisponibles ? ' actif' : ''}"
           th:attr="aria-current=${indisponibles ? 'true' : null}"
