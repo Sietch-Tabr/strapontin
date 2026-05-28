@@ -143,7 +143,6 @@ function majNavActif(chemin) {
   }
 }
 
-majNavActif(window.location.pathname);
 document.addEventListener("DOMContentLoaded", function () {
   majNavActif(window.location.pathname);
 });
@@ -216,10 +215,8 @@ function initOngletsPage() {
     sections.forEach(function (s) {
       s.classList.remove("actif");
     });
-    if (hash) {
-      const cible = document.querySelector(hash);
-      if (cible) cible.classList.add("actif");
-    }
+    const cible = hash ? document.querySelector(hash) : sections[0];
+    if (cible) cible.classList.add("actif");
   }
 
   const hash = location.hash;
@@ -253,10 +250,9 @@ function initOngletsPage() {
     });
 }
 
-initOngletsPage();
 document.addEventListener("DOMContentLoaded", initOngletsPage);
 
-// Compteur de longueur MDP + dialog suppression (/parametres) — réinitialisé à chaque navigation Turbo
+// Compteur de longueur MDP + dialog suppression (/parametres)
 function initParametres() {
   const champ = document.getElementById("mdp-nouveau");
   const compteur = document.getElementById("compteur-mdp");
@@ -310,7 +306,6 @@ function initParametres() {
   }
 }
 
-initParametres();
 document.addEventListener("DOMContentLoaded", initParametres);
 
 // Drawer de navigation mobile (dialog natif)
@@ -361,7 +356,6 @@ function initDrawerDialog() {
   );
 }
 
-initDrawerDialog();
 document.addEventListener("DOMContentLoaded", initDrawerDialog);
 
 // Modale de signalement (page aide)
