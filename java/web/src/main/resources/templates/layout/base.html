@@ -125,7 +125,7 @@
           <hr style="margin: 0.25rem 0; border-color: var(--border)" />
           <div class="sidebar-user">
             <span sec:authentication="principal.nom">Utilisateur</span>
-            <form th:action="@{/logout}" method="post" data-turbo="false">
+            <form th:action="@{/logout}" method="post">
               <button type="submit" class="btn-deconnexion">Déconnexion</button>
             </form>
           </div>
@@ -143,7 +143,6 @@
     <!-- Navigation mobile -->
     <nav
       id="bottom-nav"
-      data-turbo-permanent
       class="bottom-nav"
       aria-label="Navigation principale"
     >
@@ -263,14 +262,13 @@
         <hr class="dialog-nav-sep" />
         <div class="dialog-nav-user">
           <span sec:authentication="principal.nom">Utilisateur</span>
-          <form th:action="@{/logout}" method="post" data-turbo="false">
+          <form th:action="@{/logout}" method="post">
             <button type="submit" class="btn-deconnexion">Déconnexion</button>
           </form>
         </div>
       </div>
     </dialog>
 
-    <script th:src="@{/js/turbo.js}"></script>
     <script th:src="@{/js/app.js}" defer></script>
   </body>
 </html>
