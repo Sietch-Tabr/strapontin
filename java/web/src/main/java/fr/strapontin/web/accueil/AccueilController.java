@@ -78,16 +78,18 @@ public class AccueilController {
 
   record ReponseAccueil(List<GroupeArtiste> artistesGroupes, int nbArtistes, int nbSalles) {}
 
-  /// Retourne les prochains concerts des artistes suivis, groupés par artiste.
+  /// Retourne les prochains concerts des artistes et salles suivis, groupés par artiste.
   ///
   /// @param masques       {@code true} pour afficher les concerts masqués
   /// @param indisponibles {@code "1"} pour inclure les concerts non disponibles
+  /// @param nouveau       {@code true} pour n'afficher que les concerts non encore vus
   /// @param auth          contexte d'authentification
   /// @return les groupes artiste/concerts avec compteurs
   @GetMapping
   public ResponseEntity<ReponseAccueil> accueil(
       @RequestParam(required = false, defaultValue = "false") boolean masques,
       @RequestParam(required = false) String indisponibles,
+      @RequestParam(required = false, defaultValue = "false") boolean nouveau,
       Authentication auth) {
     String userId = utilisateur(auth).id();
     LocalDate aujourd8 = LocalDate.now();
@@ -109,13 +111,25 @@ public class AccueilController {
       where.append(" AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled', 'postponed'))");
     }
 
+    if (nouveau) {
+      where.append(" AND um.notifie_le IS NULL");
+    }
+
     where.append(
         """
-         AND EXISTS (
-           SELECT 1 FROM user_artistes ua
-           WHERE ua.user_id = :userId
-             AND (c.artiste_norm = ua.artiste_normalise
-                  OR c.artiste_norm LIKE ua.artiste_normalise || ' %')
+         AND (
+           EXISTS (
+             SELECT 1 FROM user_artistes ua
+             WHERE ua.user_id = :userId
+               AND (c.artiste_norm = ua.artiste_normalise
+                    OR c.artiste_norm LIKE ua.artiste_normalise || ' %')
+           )
+           OR EXISTS (
+             SELECT 1 FROM user_salles us
+             WHERE us.user_id = :userId
+               AND regexp_replace(c.salle_norm, '[^a-z0-9]', '', 'g')
+                   = regexp_replace(lower(us.salle_id), '[^a-z0-9]', '', 'g')
+           )
          )
         """);
 

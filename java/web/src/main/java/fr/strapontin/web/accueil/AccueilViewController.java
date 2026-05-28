@@ -48,6 +48,7 @@ public class AccueilViewController {
   ///
   /// @param masques       `true` pour inclure les concerts masqués
   /// @param indisponibles {@code "1"} pour inclure les concerts non disponibles
+  /// @param nouveau       `true` pour n'afficher que les concerts non encore vus
   /// @param modele        le modèle Thymeleaf
   /// @param auth          contexte d'authentification
   /// @return le nom du template
@@ -55,16 +56,18 @@ public class AccueilViewController {
   public String accueil(
       @RequestParam(required = false, defaultValue = "false") boolean masques,
       @RequestParam(required = false) String indisponibles,
+      @RequestParam(required = false, defaultValue = "false") boolean nouveau,
       Model modele,
       Authentication auth) {
     String userId = utilisateur(auth).id();
     boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
     boolean inclureIndisponibles =
         indisponibles != null ? "1".equals(indisponibles) : !filtreDisponibles;
-    ResponseEntity<?> rep = accueilController.accueil(masques, indisponibles, auth);
+    ResponseEntity<?> rep = accueilController.accueil(masques, indisponibles, nouveau, auth);
     modele.addAttribute("donnees", rep.getBody());
     modele.addAttribute("masques", masques);
     modele.addAttribute("indisponibles", inclureIndisponibles);
+    modele.addAttribute("nouveau", nouveau);
     modele.addAttribute("currentPage", "accueil");
     return "accueil";
   }
