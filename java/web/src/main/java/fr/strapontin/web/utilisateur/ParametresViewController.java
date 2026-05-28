@@ -108,6 +108,11 @@ public class ParametresViewController {
       redirects.addFlashAttribute(
           CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
+      var corps = rep.getBody();
+      if (corps != null && corps.get("ignores") instanceof List<?> ignores && !ignores.isEmpty()) {
+        redirects.addFlashAttribute(
+            "avertissement", "Codes ignorés car non reconnus : " + String.join(", ", ignores.stream().map(Object::toString).toList()));
+      }
       redirects.addFlashAttribute(CLE_SUCCES, "departements");
     }
     return REDIRECT_PREFS;

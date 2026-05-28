@@ -1,21 +1,36 @@
 // Strapontin v2 — JS minimal (thème, push)
 
 // Applique le thème depuis le cookie au chargement pour éviter le FOUC
+const prefSombre = window.matchMedia("(prefers-color-scheme: dark)");
+
+function appliquerTheme(t) {
+  const sombre = t === "sombre" || (t === "auto" && prefSombre.matches);
+  document.documentElement.classList.toggle("dark", sombre);
+}
+
 (function () {
   const theme = document.cookie.match(/(?:^|; )theme=([^;]*)/)?.[1] ?? "auto";
-  const prefSombre = window.matchMedia("(prefers-color-scheme: dark)");
-
-  function appliquerTheme(t) {
-    const sombre = t === "sombre" || (t === "auto" && prefSombre.matches);
-    document.documentElement.classList.toggle("dark", sombre);
-  }
-
   appliquerTheme(theme);
-
   if (theme === "auto") {
     prefSombre.addEventListener("change", () => appliquerTheme("auto"));
   }
 })();
+
+// Soumission automatique des champs marqués js-auto-submit
+document.addEventListener("change", function (e) {
+  if (e.target.classList.contains("js-auto-submit")) {
+    e.target.form.submit();
+  }
+});
+
+// Aperçu immédiat du thème au clic sur les boutons de thème
+document.addEventListener("click", function (e) {
+  const btn = e.target.closest(".btn-theme");
+  if (!btn) return;
+  const valeur = btn.value;
+  document.cookie = "theme=" + valeur + "; path=/; max-age=" + 365 * 24 * 3600;
+  appliquerTheme(valeur);
+});
 
 // Service worker + abonnement push
 if ("serviceWorker" in navigator) {

@@ -112,24 +112,41 @@ public class UserConfigController {
 
   /// Met à jour les départements de l'utilisateur.
   ///
+  /// <p>Les codes non reconnus sont ignorés silencieusement et retournés dans {@code ignores}
+  /// pour permettre un retour utilisateur.
+  ///
   /// @param requete corps JSON avec {@code departements} séparés par virgules
   /// @param auth    contexte d'authentification
-  /// @return 200 si mis à jour, 400 en cas d'erreur
+  /// @return 200 avec {@code succes} et éventuellement {@code ignores}
   @PatchMapping("/departements")
   public ResponseEntity<Map<String, Object>> majDepartements(
       @RequestBody RequeteDepartements requete, Authentication auth) {
     String userId = utilisateur(auth).id();
 
-    List<String> depts =
+    List<String> bruts =
         Arrays.stream((requete.departements() == null ? "" : requete.departements()).split(","))
             .map(String::strip)
+            .filter(s -> !s.isEmpty())
+            .toList();
+
+    List<String> depts =
+        bruts.stream()
+            .filter(s -> normaliserDept(s) != null)
             .map(this::normaliserDept)
-            .filter(d -> d != null)
             .distinct()
             .collect(Collectors.toList());
 
+    List<String> ignores =
+        bruts.stream().filter(s -> normaliserDept(s) == null).toList();
+
     upsertConfig(userId, Map.of("departements", depts.toArray(String[]::new)));
-    return ResponseEntity.ok(Map.of("succes", "departements"));
+
+    Map<String, Object> rep = new HashMap<>();
+    rep.put("succes", "departements");
+    if (!ignores.isEmpty()) {
+      rep.put("ignores", ignores);
+    }
+    return ResponseEntity.ok(rep);
   }
 
   /// Met à jour les préférences de notification.
