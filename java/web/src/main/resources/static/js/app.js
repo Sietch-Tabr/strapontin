@@ -206,63 +206,38 @@ document.addEventListener("turbo:load", function () {
   });
 })();
 
-// Select natif — onglets paramètres/admin sur mobile
-(function () {
+// Select natif + liens onglets — paramètres/admin sur mobile, réinitialisé à chaque nav Turbo
+function initOngletsPage() {
   const select = document.querySelector(".param-onglets-mobile");
-  if (!select) return;
-
-  function syncSelect() {
-    const hash = location.hash;
-    if (hash && select.querySelector('option[value="' + hash + '"]')) {
-      select.value = hash;
-    } else {
-      select.selectedIndex = 0;
+  if (select) {
+    function syncSelect() {
+      const hash = location.hash;
+      if (hash && select.querySelector('option[value="' + hash + '"]')) {
+        select.value = hash;
+      } else {
+        select.selectedIndex = 0;
+      }
+    }
+    syncSelect();
+    select.addEventListener("change", function () {
+      location.hash = select.value;
+      requestAnimationFrame(function () {
+        window.scrollTo({ top: 0 });
+      });
+    });
+    if (!window._selectHashListenerInit) {
+      window._selectHashListenerInit = true;
+      window.addEventListener("hashchange", function () {
+        const s = document.querySelector(".param-onglets-mobile");
+        if (!s) return;
+        const hash = location.hash;
+        if (hash && s.querySelector('option[value="' + hash + '"]'))
+          s.value = hash;
+        else s.selectedIndex = 0;
+      });
     }
   }
 
-  syncSelect();
-  window.addEventListener("hashchange", syncSelect);
-
-  select.addEventListener("change", function () {
-    location.hash = select.value;
-    requestAnimationFrame(function () {
-      window.scrollTo({ top: 0 });
-    });
-  });
-})();
-
-// Compteur de longueur pour le champ mot de passe (/parametres)
-(function () {
-  const champ = document.getElementById("mdp-nouveau");
-  const compteur = document.getElementById("compteur-mdp");
-  if (!champ || !compteur) return;
-  champ.addEventListener("input", function () {
-    const n = champ.value.length;
-    compteur.textContent =
-      n === 0 ? "" : n + " caractère" + (n > 1 ? "s" : "") + (n < 12 ? " (minimum 12)" : "");
-  });
-})();
-
-// Dialog confirmation suppression de compte (/parametres)
-(function () {
-  const btn = document.getElementById("btn-ouvrir-suppression");
-  const dialog = document.getElementById("dialog-supprimer-compte");
-  const annuler = document.getElementById("btn-annuler-suppression");
-  if (!btn || !dialog) return;
-  btn.addEventListener("click", function () {
-    dialog.showModal();
-  });
-  if (annuler) {
-    annuler.addEventListener("click", function () {
-      dialog.close();
-    });
-  }
-})();
-
-// Navigation par onglets — repositionnement en haut à chaque changement
-// Les sections ont display:none avant d'être ciblées ; on évite le scroll
-// natif (comportement aléatoire) en remontant en haut après le repaint.
-(function () {
   document
     .querySelectorAll(".param-onglet[href^='#']")
     .forEach(function (lien) {
@@ -274,38 +249,79 @@ document.addEventListener("turbo:load", function () {
         });
       });
     });
-})();
+}
+
+initOngletsPage();
+document.addEventListener("turbo:load", initOngletsPage);
+
+// Compteur de longueur MDP + dialog suppression (/parametres) — réinitialisé à chaque navigation Turbo
+function initParametres() {
+  const champ = document.getElementById("mdp-nouveau");
+  const compteur = document.getElementById("compteur-mdp");
+  if (champ && compteur) {
+    champ.addEventListener("input", function () {
+      const n = champ.value.length;
+      compteur.textContent =
+        n === 0
+          ? ""
+          : n +
+            " caractère" +
+            (n > 1 ? "s" : "") +
+            (n < 12 ? " (minimum 12)" : "");
+    });
+  }
+
+  const btnOuvrir = document.getElementById("btn-ouvrir-suppression");
+  const dialog = document.getElementById("dialog-supprimer-compte");
+  const btnAnnuler = document.getElementById("btn-annuler-suppression");
+  if (btnOuvrir && dialog) {
+    btnOuvrir.addEventListener("click", function () {
+      dialog.showModal();
+    });
+    if (btnAnnuler) {
+      btnAnnuler.addEventListener("click", function () {
+        dialog.close();
+      });
+    }
+  }
+}
+
+initParametres();
+document.addEventListener("turbo:load", initParametres);
 
 // Drawer de navigation mobile (dialog natif)
+// #btn-nav-plus est data-turbo-permanent ; #dialog-nav-plus est remplacé à chaque nav Turbo.
+// Le click handler résout le dialog dynamiquement ; les listeners dialog sont re-bindés sur turbo:load.
 (function () {
+  const btnPlus = document.getElementById("btn-nav-plus");
+  if (!btnPlus || btnPlus.dataset.initDrawer) return;
+  btnPlus.dataset.initDrawer = "1";
+
+  btnPlus.addEventListener("click", function () {
+    const d = document.getElementById("dialog-nav-plus");
+    if (!d) return;
+    if (d.open) {
+      d.close();
+    } else {
+      d.showModal();
+      btnPlus.setAttribute("aria-expanded", "true");
+    }
+  });
+})();
+
+function initDrawerDialog() {
   const btnPlus = document.getElementById("btn-nav-plus");
   const dialog = document.getElementById("dialog-nav-plus");
   if (!btnPlus || !dialog) return;
 
-  function ouvrir() {
-    dialog.showModal();
-    btnPlus.setAttribute("aria-expanded", "true");
-  }
-
-  function fermer() {
-    dialog.close();
-  }
-
-  btnPlus.addEventListener("click", function () {
-    dialog.open ? fermer() : ouvrir();
-  });
-
-  // Clic sur le backdrop (clic sur le <dialog> lui-même, hors contenu)
   dialog.addEventListener("click", function (e) {
-    if (e.target === dialog) fermer();
+    if (e.target === dialog) dialog.close();
   });
 
-  // Sync aria-expanded à la fermeture (Echap natif inclus)
   dialog.addEventListener("close", function () {
     btnPlus.setAttribute("aria-expanded", "false");
   });
 
-  // Swipe vers le bas pour fermer
   let touchDepart = 0;
   dialog.addEventListener(
     "touchstart",
@@ -317,11 +333,14 @@ document.addEventListener("turbo:load", function () {
   dialog.addEventListener(
     "touchend",
     function (e) {
-      if (e.changedTouches[0].clientY - touchDepart > 80) fermer();
+      if (e.changedTouches[0].clientY - touchDepart > 80) dialog.close();
     },
     { passive: true },
   );
-})();
+}
+
+initDrawerDialog();
+document.addEventListener("turbo:load", initDrawerDialog);
 
 // Modale de signalement (page aide)
 (function () {

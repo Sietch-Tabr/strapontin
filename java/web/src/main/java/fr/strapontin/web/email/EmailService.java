@@ -203,6 +203,48 @@ public class EmailService {
     }
   }
 
+  /// Envoie un email de confirmation de changement d'adresse email.
+  ///
+  /// @param email le nouvel email destinataire
+  /// @param lien  le lien de confirmation (valable 24 heures)
+  public void envoyerConfirmationEmail(String email, String lien) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — confirmation email non envoyée");
+      return;
+    }
+
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("lien", lien);
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
+    String corps = rendreCours("confirmation-email", vars);
+
+    String texte =
+        """
+        Confirmation de votre nouvelle adresse email
+
+        Cliquez sur ce lien pour valider votre nouvelle adresse (valable 24 heures) :
+
+        %s
+
+        Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+        """
+            .formatted(lien);
+
+    try {
+      envoyer(
+          ctx.get(),
+          email,
+          ctx.get().replyTo(),
+          "Confirmez votre nouvelle adresse email — Strapontin",
+          corps,
+          texte);
+      log.info("Confirmation email envoyée : {}", email);
+    } catch (Exception e) {
+      log.error("Échec envoi confirmation email : {}", email, e);
+    }
+  }
+
   /// Indique si le service email est disponible (clé Resend configurée).
   ///
   /// @return `true` si `RESEND_API_KEY` est présent en configuration

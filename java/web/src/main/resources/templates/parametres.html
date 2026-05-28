@@ -20,7 +20,8 @@
         th:text="${succes == 'totp-active'} ? 'Authentification à deux facteurs activée.'
                  : (${succes == 'totp-desactive'} ? 'Authentification à deux facteurs désactivée.'
                  : (${succes == 'identifiant'} ? 'Identifiant modifié.'
-                 : 'Paramètres enregistrés.'))"
+                 : (${succes == 'email-confirme'} ? 'Adresse email mise à jour.'
+                 : 'Paramètres enregistrés.')))"
       ></div>
       <div
         th:if="${avertissement}"
@@ -351,6 +352,11 @@
                   maxlength="254"
                   autocomplete="email"
                 />
+                <p
+                  th:if="${profil?.pendingEmail}"
+                  class="form-aide"
+                  th:text="'En attente de confirmation : ' + ${profil.pendingEmail}"
+                ></p>
               </div>
               <button type="submit" class="btn btn-secondary">
                 Enregistrer
@@ -360,13 +366,17 @@
 
           <!-- Identifiant -->
           <div class="param-bloc">
-            <h3 class="param-label" id="label-identifiant">Identifiant de connexion</h3>
+            <h3 class="param-label" id="label-identifiant">
+              Identifiant de connexion
+            </h3>
             <form
               method="post"
               th:action="@{/parametres/identifiant}"
               class="form-inline"
             >
-              <label for="identifiant" class="sr-only">Identifiant de connexion</label>
+              <label for="identifiant" class="sr-only"
+                >Identifiant de connexion</label
+              >
               <input
                 id="identifiant"
                 type="text"
@@ -453,7 +463,11 @@
                   autocomplete="new-password"
                   placeholder="12 caractères minimum"
                 />
-                <span id="compteur-mdp" class="form-aide" aria-live="polite"></span>
+                <span
+                  id="compteur-mdp"
+                  class="form-aide"
+                  aria-live="polite"
+                ></span>
               </div>
               <button type="submit" class="btn btn-secondary">Changer</button>
             </form>
@@ -534,13 +548,22 @@
               Supprimer mon compte
             </button>
             <dialog id="dialog-supprimer-compte">
-              <p>Supprimer définitivement votre compte ? Cette action est irréversible.</p>
+              <p>
+                Supprimer définitivement votre compte ? Cette action est
+                irréversible.
+              </p>
               <div class="dialog-actions">
-                <button type="button" id="btn-annuler-suppression" class="btn btn-secondary">
+                <button
+                  type="button"
+                  id="btn-annuler-suppression"
+                  class="btn btn-secondary"
+                >
                   Annuler
                 </button>
                 <form method="post" th:action="@{/parametres/supprimer-compte}">
-                  <button type="submit" class="btn btn-danger">Confirmer la suppression</button>
+                  <button type="submit" class="btn btn-danger">
+                    Confirmer la suppression
+                  </button>
                 </form>
               </div>
             </dialog>
