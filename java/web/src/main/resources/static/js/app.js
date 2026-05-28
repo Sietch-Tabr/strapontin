@@ -728,22 +728,27 @@ window.copierLienInvitation = function () {
   const erreurDiv = document.getElementById("push-erreur");
   if (!erreurDiv) return;
 
+  const chargementDiv = document.getElementById("push-chargement");
   const nonSupporteDiv = document.getElementById("push-non-supporte");
   const vapidManquantDiv = document.getElementById("push-vapid-manquant");
   const permRefusee = document.getElementById("push-permission-refusee");
   const abonneDiv = document.getElementById("push-abonne");
   const nonAbonneDiv = document.getElementById("push-non-abonne");
 
+  function masquerChargement() {
+    if (chargementDiv) chargementDiv.style.display = "none";
+  }
+
   if (location.protocol !== "https:" && location.hostname !== "localhost") {
+    masquerChargement();
     nonSupporteDiv.style.display = "";
     return;
   }
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    masquerChargement();
     nonSupporteDiv.style.display = "";
     return;
   }
-
-  const chargementDiv = document.getElementById("push-chargement");
   const infoFrequenceP = document.getElementById("push-info-frequence");
   const selectFrequence = document.getElementById("frequence");
   const btnActiver = document.getElementById("btn-activer-push");
@@ -766,7 +771,7 @@ window.copierLienInvitation = function () {
   }
 
   function majEtat() {
-    if (chargementDiv) chargementDiv.style.display = "none";
+    masquerChargement();
     permRefusee.style.display = "none";
     abonneDiv.style.display = "none";
     nonAbonneDiv.style.display = "none";
@@ -797,7 +802,7 @@ window.copierLienInvitation = function () {
       const repVapid = results[0];
       const registration = results[1];
       if (!repVapid.disponible) {
-        if (chargementDiv) chargementDiv.style.display = "none";
+        masquerChargement();
         vapidManquantDiv.style.display = "";
         return;
       }
@@ -805,7 +810,7 @@ window.copierLienInvitation = function () {
       pushAbonnement = await registration.pushManager.getSubscription();
       majEtat();
     } catch (_) {
-      if (chargementDiv) chargementDiv.style.display = "none";
+      masquerChargement();
       nonSupporteDiv.style.display = "";
     }
   }

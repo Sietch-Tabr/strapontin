@@ -583,6 +583,22 @@ details[open].changelog-historique > summary::before {
   margin-top: 1.5rem;
 }
 
+fieldset.form-checkboxes {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+fieldset.form-checkboxes legend {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  margin-bottom: 0.5rem;
+  padding: 0;
+  float: left;
+  width: 100%;
+}
+
 .config-vapid-details {
   margin-bottom: 0.5rem;
 }
