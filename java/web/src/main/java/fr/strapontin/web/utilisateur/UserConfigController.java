@@ -163,6 +163,12 @@ public class UserConfigController {
       return erreur(400, "Valeur invalide.");
     }
 
+    if (!"jamais".equals(requete.frequenceNotifications())
+        && !requete.notifArtistes()
+        && !requete.notifSalles()) {
+      return erreur(400, "Activez au moins un type de contenu pour recevoir des notifications.");
+    }
+
     Map<String, Object> champs = new HashMap<>();
     champs.put("frequenceNotifications", requete.frequenceNotifications());
     champs.put("notifArtistes", requete.notifArtistes());

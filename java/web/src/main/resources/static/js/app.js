@@ -33,11 +33,11 @@ document.addEventListener("click", function (e) {
 });
 
 // Service worker + abonnement push
-if ("serviceWorker" in navigator) {
+if ("serviceWorker" in navigator && "PushManager" in window) {
   navigator.serviceWorker
     .register("/sw.js")
     .then(async (registration) => {
-      if (document.cookie.match(/(?:^|; )push_opt_out=1/)) return;
+      if (!document.cookie.match(/(?:^|; )push_opt_in=1/)) return;
       const rep = await fetch("/api/push");
       const { disponible, clePublique } = await rep.json();
       if (!disponible) return;
@@ -743,11 +743,18 @@ window.copierLienInvitation = function () {
     return;
   }
 
+  const chargementDiv = document.getElementById("push-chargement");
+  const infoFrequenceP = document.getElementById("push-info-frequence");
+  const selectFrequence = document.getElementById("frequence");
   const btnActiver = document.getElementById("btn-activer-push");
   const btnDesactiver = document.getElementById("btn-desactiver-push");
   let pushClePublique = null;
   let pushAbonnement = null;
   let pushEnCours = false;
+
+  function estFrequenceJamais() {
+    return !selectFrequence || selectFrequence.value === "jamais";
+  }
 
   function afficherErreur(msg) {
     erreurDiv.textContent = msg;
@@ -759,6 +766,7 @@ window.copierLienInvitation = function () {
   }
 
   function majEtat() {
+    if (chargementDiv) chargementDiv.style.display = "none";
     permRefusee.style.display = "none";
     abonneDiv.style.display = "none";
     nonAbonneDiv.style.display = "none";
@@ -768,7 +776,14 @@ window.copierLienInvitation = function () {
       abonneDiv.style.display = "";
     } else {
       nonAbonneDiv.style.display = "";
+      const frequenceJamais = estFrequenceJamais();
+      if (infoFrequenceP) infoFrequenceP.style.display = frequenceJamais ? "" : "none";
+      if (btnActiver) btnActiver.disabled = frequenceJamais;
     }
+  }
+
+  if (selectFrequence) {
+    selectFrequence.addEventListener("change", majEtat);
   }
 
   async function chargerEtat() {
@@ -782,6 +797,7 @@ window.copierLienInvitation = function () {
       const repVapid = results[0];
       const registration = results[1];
       if (!repVapid.disponible) {
+        if (chargementDiv) chargementDiv.style.display = "none";
         vapidManquantDiv.style.display = "";
         return;
       }
@@ -789,6 +805,7 @@ window.copierLienInvitation = function () {
       pushAbonnement = await registration.pushManager.getSubscription();
       majEtat();
     } catch (_) {
+      if (chargementDiv) chargementDiv.style.display = "none";
       nonSupporteDiv.style.display = "";
     }
   }
@@ -826,7 +843,7 @@ window.copierLienInvitation = function () {
         return;
       }
       pushAbonnement = abonnement;
-      document.cookie = "push_opt_out=;path=/;max-age=0;SameSite=Lax";
+      document.cookie = "push_opt_in=1;path=/;max-age=31536000;SameSite=Strict";
       majEtat();
     } catch (e) {
       afficherErreur(e.message || "Une erreur est survenue.");
@@ -852,7 +869,7 @@ window.copierLienInvitation = function () {
         body: JSON.stringify({ endpoint: endpoint }),
       });
       pushAbonnement = null;
-      document.cookie = "push_opt_out=1;path=/;max-age=31536000;SameSite=Lax";
+      document.cookie = "push_opt_in=;path=/;max-age=0;SameSite=Strict";
       majEtat();
     } catch (e) {
       afficherErreur(e.message || "Une erreur est survenue.");

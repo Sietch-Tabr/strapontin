@@ -579,6 +579,10 @@ details[open].changelog-historique > summary::before {
   border-left: 3px solid var(--danger);
 }
 
+.param-bloc-push {
+  margin-top: 1.5rem;
+}
+
 .config-vapid-details {
   margin-bottom: 0.5rem;
 }

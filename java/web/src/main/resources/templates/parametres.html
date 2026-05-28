@@ -174,6 +174,7 @@
                   id="frequence"
                   name="frequenceNotifications"
                   th:disabled="${config == null or !config.resendDisponible}"
+                  th:attr="aria-describedby=${!config?.resendDisponible ? 'aide-resend' : null}"
                 >
                   <option
                     value="jamais"
@@ -194,13 +195,14 @@
                     À chaque nouveau concert
                   </option>
                 </select>
-                <p class="form-aide" th:unless="${config?.resendDisponible}">
+                <p id="aide-resend" class="form-aide" th:unless="${config?.resendDisponible}">
                   Les emails ne sont pas disponibles (clé Resend non
                   configurée).
                 </p>
               </div>
 
-              <div class="form-group form-checkboxes">
+              <fieldset class="form-group form-checkboxes">
+                <legend class="form-label">Inclure dans le digest</legend>
                 <label>
                   <input
                     type="checkbox"
@@ -221,7 +223,7 @@
                   />
                   Salles suivies
                 </label>
-              </div>
+              </fieldset>
 
               <button
                 type="submit"
@@ -234,8 +236,11 @@
           </div>
 
           <!-- Notifications push -->
-          <div id="push-section" class="param-bloc" style="margin-top: 1.5rem">
+          <div id="push-section" class="param-bloc param-bloc-push">
             <h3 class="param-label">Notifications push</h3>
+            <div id="push-chargement" aria-live="polite">
+              <p class="param-aide">Chargement…</p>
+            </div>
             <div
               id="push-erreur"
               class="alerte alerte-erreur"
@@ -277,6 +282,10 @@
               <p class="param-aide">
                 Recevez une notification sur cet appareil en même temps que vos
                 emails de digest.
+              </p>
+              <p id="push-info-frequence" class="form-aide" style="display: none">
+                Les notifications push ne fonctionneront qu'avec une fréquence
+                email active.
               </p>
               <button
                 type="button"
