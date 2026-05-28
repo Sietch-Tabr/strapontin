@@ -12,6 +12,11 @@ label {
   margin-bottom: 0.375rem;
 }
 
+input[type="file"] {
+  max-width: 100%;
+  width: 100%;
+}
+
 input[type="text"],
 input[type="email"],
 input[type="password"],

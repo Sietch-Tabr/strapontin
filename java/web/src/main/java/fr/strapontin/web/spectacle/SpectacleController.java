@@ -10,6 +10,7 @@ import fr.strapontin.web.utils.Dates;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -135,6 +136,7 @@ public class SpectacleController {
     LocalDate aujourd8 = LocalDate.now();
     LocalDate dans15Jours = LocalDate.now().plusDays(15);
     int pageNum = Math.max(0, page);
+    Instant seuilNew = Instant.now().minus(7, ChronoUnit.DAYS);
 
     // Filtre disponibles (lu depuis user_config, surchargeable via ?indisponibles=1)
     boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
@@ -233,7 +235,7 @@ public class SpectacleController {
         """
         SELECT c.id, c.artiste, c.date::text, c.heure::text, c.salle, c.ville,
                c.url, c.prix_min, c.prix_max, c.classification, c.first_seen, c.statut,
-               um.notifie_le, c.presale_debut, c.presale_nom
+               c.presale_debut, c.presale_nom
         FROM user_matches um
         INNER JOIN concerts c ON um.concert_id = c.id
         WHERE %s
@@ -254,7 +256,7 @@ public class SpectacleController {
                   rs.getTimestamp("first_seen") != null
                       ? rs.getTimestamp("first_seen").toInstant()
                       : null;
-              boolean estNew = rs.getTimestamp("notifie_le") == null;
+              boolean estNew = firstSeen != null && firstSeen.isAfter(seuilNew);
               Instant presaleDebut =
                   rs.getTimestamp("presale_debut") != null
                       ? rs.getTimestamp("presale_debut").toInstant()

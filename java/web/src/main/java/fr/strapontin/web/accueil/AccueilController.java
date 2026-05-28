@@ -7,7 +7,9 @@ package fr.strapontin.web.accueil;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import fr.strapontin.web.utilisateur.UserConfigService;
 import fr.strapontin.web.utils.Dates;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -26,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 ///
 /// Retourne les prochains concerts des artistes suivis par l'utilisateur,
 /// groupés par artiste. Limite à 50 concerts. `estNew` basé sur
-/// `user_matches.notifie_le IS NULL`.
+/// `concerts.first_seen` dans les 7 derniers jours.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -98,6 +100,8 @@ public class AccueilController {
     boolean inclureIndisponibles =
         indisponibles != null ? "1".equals(indisponibles) : !filtreDisponibles;
 
+    Instant seuilNew = Instant.now().minus(7, ChronoUnit.DAYS);
+
     StringBuilder where =
         new StringBuilder(
             """
@@ -112,7 +116,7 @@ public class AccueilController {
     }
 
     if (nouveau) {
-      where.append(" AND um.notifie_le IS NULL");
+      where.append(" AND c.first_seen >= :seuilNew");
     }
 
     where.append(
@@ -128,11 +132,12 @@ public class AccueilController {
     Map<String, Object> params = new HashMap<>();
     params.put(CLE_USER_ID, userId);
     params.put("aujourd8", aujourd8);
+    params.put("seuilNew", java.sql.Timestamp.from(seuilNew));
 
     String selectSql =
         """
         SELECT c.id, c.artiste, c.artiste_norm, c.date::text, c.heure::text,
-               c.salle, c.ville, c.url, c.statut, um.notifie_le
+               c.salle, c.ville, c.url, c.statut, c.first_seen
         FROM user_matches um
         INNER JOIN concerts c ON um.concert_id = c.id
         WHERE %s
@@ -155,7 +160,8 @@ public class AccueilController {
                     rs.getString("ville"),
                     rs.getString("url"),
                     rs.getString("statut"),
-                    rs.getTimestamp("notifie_le") == null));
+                    rs.getTimestamp("first_seen") != null
+                        && rs.getTimestamp("first_seen").toInstant().isAfter(seuilNew)));
 
     // Grouper par artiste en conservant l'ordre
     Map<String, List<ConcertAccueil>> groupes = new LinkedHashMap<>();

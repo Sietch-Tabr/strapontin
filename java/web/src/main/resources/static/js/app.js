@@ -213,35 +213,39 @@ document.addEventListener("turbo:load", function () {
   });
 })();
 
-// Select natif + liens onglets — paramètres/admin sur mobile, réinitialisé à chaque nav Turbo
+// Select natif + liens onglets — paramètres/admin, réinitialisé à chaque nav Turbo
+// Utilise une classe .actif plutôt que :target (incompatible avec Turbo Drive).
 function initOngletsPage() {
+  const sections = document.querySelectorAll(
+    ".parametres-section, .admin-section",
+  );
+  if (!sections.length) return;
+
+  function activerSection(hash) {
+    sections.forEach(function (s) {
+      s.classList.remove("actif");
+    });
+    if (hash) {
+      const cible = document.querySelector(hash);
+      if (cible) cible.classList.add("actif");
+    }
+  }
+
+  const hash = location.hash;
+  activerSection(hash || null);
+
   const select = document.querySelector(".param-onglets-mobile");
   if (select) {
-    function syncSelect() {
-      const hash = location.hash;
-      if (hash && select.querySelector('option[value="' + hash + '"]')) {
-        select.value = hash;
-      } else {
-        select.selectedIndex = 0;
-      }
+    if (hash && select.querySelector('option[value="' + hash + '"]')) {
+      select.value = hash;
+    } else {
+      select.selectedIndex = 0;
     }
-    syncSelect();
     select.addEventListener("change", function () {
       history.replaceState(null, "", select.value);
-      window.dispatchEvent(new HashChangeEvent("hashchange"));
+      activerSection(select.value);
       window.scrollTo({ top: 0 });
     });
-    if (!window._selectHashListenerInit) {
-      window._selectHashListenerInit = true;
-      window.addEventListener("hashchange", function () {
-        const s = document.querySelector(".param-onglets-mobile");
-        if (!s) return;
-        const hash = location.hash;
-        if (hash && s.querySelector('option[value="' + hash + '"]'))
-          s.value = hash;
-        else s.selectedIndex = 0;
-      });
-    }
   }
 
   document
@@ -249,7 +253,10 @@ function initOngletsPage() {
     .forEach(function (lien) {
       lien.addEventListener("click", function (e) {
         e.preventDefault();
-        history.replaceState(null, "", lien.getAttribute("href"));
+        const cibleHash = lien.getAttribute("href");
+        history.replaceState(null, "", cibleHash);
+        activerSection(cibleHash);
+        if (select) select.value = cibleHash;
         window.scrollTo({ top: 0 });
       });
     });
@@ -796,7 +803,7 @@ window.copierLienInvitation = function () {
 };
 
 // Push notifications (paramètres)
-(function () {
+function initPush() {
   const erreurDiv = document.getElementById("push-erreur");
   if (!erreurDiv) return;
 
@@ -968,7 +975,9 @@ window.copierLienInvitation = function () {
   });
 
   chargerEtat();
-})();
+}
+
+document.addEventListener("turbo:load", initPush);
 
 function urlBase64VersUint8Array(base64) {
   const rembourrage = "=".repeat((4 - (base64.length % 4)) % 4);

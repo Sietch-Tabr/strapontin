@@ -488,15 +488,15 @@ details[open].changelog-historique > summary::before {
 }
 
 /* Paramètres */
-.param-onglets:has(~ .parametres-sections #preferences:target) a[href="#preferences"],
-.param-onglets:has(~ .parametres-sections #notifications:target) a[href="#notifications"],
-.param-onglets:has(~ .parametres-sections #compte:target) a[href="#compte"],
-.param-onglets:has(~ .parametres-sections #donnees:target) a[href="#donnees"],
+.param-onglets:has(~ .parametres-sections #preferences.actif) a[href="#preferences"],
+.param-onglets:has(~ .parametres-sections #notifications.actif) a[href="#notifications"],
+.param-onglets:has(~ .parametres-sections #compte.actif) a[href="#compte"],
+.param-onglets:has(~ .parametres-sections #donnees.actif) a[href="#donnees"],
 /* Admin */
-.param-onglets:has(~ .admin-sections #utilisateurs:target) a[href="#utilisateurs"],
-.param-onglets:has(~ .admin-sections #configuration:target) a[href="#configuration"],
-.param-onglets:has(~ .admin-sections #jobs:target) a[href="#jobs"],
-.param-onglets:has(~ .admin-sections #logs:target) a[href="#logs"] {
+.param-onglets:has(~ .admin-sections #utilisateurs.actif) a[href="#utilisateurs"],
+.param-onglets:has(~ .admin-sections #configuration.actif) a[href="#configuration"],
+.param-onglets:has(~ .admin-sections #jobs.actif) a[href="#jobs"],
+.param-onglets:has(~ .admin-sections #logs.actif) a[href="#logs"] {
   color: var(--fg);
   border-bottom-color: var(--fg);
 }
@@ -541,14 +541,13 @@ details[open].changelog-historique > summary::before {
   scroll-margin-top: 3rem;
 }
 
-.parametres-section:target,
-.parametres-sections:not(:has(:target)) #preferences {
+.parametres-section.actif,
+.parametres-sections:not(:has(.actif)) #preferences {
   display: block;
 }
 
-/* Onglet actif par défaut (aucun hash) */
-.param-onglets:not(:has(~ .parametres-sections :target))
-  a[href="#preferences"] {
+/* Onglet actif par défaut (aucune section active) */
+.param-onglets:not(:has(~ .parametres-sections .actif)) a[href="#preferences"] {
   color: var(--fg);
   border-bottom-color: var(--fg);
 }
@@ -673,13 +672,13 @@ fieldset.form-checkboxes legend {
   scroll-margin-top: 3rem;
 }
 
-.admin-section:target,
-.admin-sections:not(:has(:target)) #jobs {
+.admin-section.actif,
+.admin-sections:not(:has(.actif)) #jobs {
   display: block;
 }
 
-/* Onglet actif par défaut (aucun hash) */
-.param-onglets:not(:has(~ .admin-sections :target)) a[href="#jobs"] {
+/* Onglet actif par défaut (aucune section active) */
+.param-onglets:not(:has(~ .admin-sections .actif)) a[href="#jobs"] {
   color: var(--fg);
   border-bottom-color: var(--fg);
 }
@@ -945,6 +944,15 @@ fieldset.form-checkboxes legend {
   align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
+}
+@media (max-width: 520px) {
+  .user-carte-entete {
+    flex-wrap: wrap;
+  }
+  .user-carte-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 .modif-ligne {
   border-top: 1px solid var(--border);

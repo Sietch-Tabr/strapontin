@@ -145,31 +145,40 @@ public class NotificationDigestService {
       for (Map.Entry<String, List<ConcertNotif>> entree : parUtilisateur.entrySet()) {
         String userId = entree.getKey();
         List<ConcertNotif> concerts = entree.getValue();
+        boolean notifEnvoyee = false;
         try {
           ResultatDigest res = envoyerDigest(userId, emailsUtilisateurs.get(userId), concerts);
           if (res.emailOk()) nbEmailsOk++;
           if (res.pushOk()) nbPushOk++;
+          notifEnvoyee = res.emailOk() || res.pushOk();
         } catch (Exception e) {
           nbErreurs++;
           log.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
         }
-        List<UUID> concertIds = concerts.stream().map(c -> UUID.fromString(c.concertId())).toList();
-        int updated =
-            jdbc.update(
-                """
-                UPDATE user_matches um
-                SET notifie_le = :maintenant, statut_notifie = c.statut
-                FROM concerts c
-                WHERE c.id = um.concert_id
-                  AND um.user_id = :userId
-                  AND um.concert_id IN (:concertIds)
-                """,
-                new MapSqlParameterSource()
-                    .addValue("userId", userId)
-                    .addValue("maintenant", maintenant)
-                    .addValue("concertIds", concertIds));
+        if (notifEnvoyee) {
+          List<UUID> concertIds =
+              concerts.stream().map(c -> UUID.fromString(c.concertId())).toList();
+          int updated =
+              jdbc.update(
+                  """
+                  UPDATE user_matches um
+                  SET notifie_le = :maintenant, statut_notifie = c.statut
+                  FROM concerts c
+                  WHERE c.id = um.concert_id
+                    AND um.user_id = :userId
+                    AND um.concert_id IN (:concertIds)
+                  """,
+                  new MapSqlParameterSource()
+                      .addValue("userId", userId)
+                      .addValue("maintenant", maintenant)
+                      .addValue("concertIds", concertIds));
+          nbMatchesNotifies += updated;
+        } else {
+          log.warn(
+              "notifier:digest — notification échouée pour user={}, notifie_le non mis à jour",
+              userId);
+        }
         nbUtilisateurs++;
-        nbMatchesNotifies += updated;
       }
     } catch (Exception e) {
       erreur = e.getMessage();
