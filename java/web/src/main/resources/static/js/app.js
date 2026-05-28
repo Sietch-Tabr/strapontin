@@ -227,10 +227,9 @@ function initOngletsPage() {
     }
     syncSelect();
     select.addEventListener("change", function () {
-      location.hash = select.value;
-      requestAnimationFrame(function () {
-        window.scrollTo({ top: 0 });
-      });
+      history.replaceState(null, "", select.value);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+      window.scrollTo({ top: 0 });
     });
     if (!window._selectHashListenerInit) {
       window._selectHashListenerInit = true;
@@ -250,10 +249,8 @@ function initOngletsPage() {
     .forEach(function (lien) {
       lien.addEventListener("click", function (e) {
         e.preventDefault();
-        location.hash = lien.getAttribute("href");
-        requestAnimationFrame(function () {
-          window.scrollTo({ top: 0 });
-        });
+        history.replaceState(null, "", lien.getAttribute("href"));
+        window.scrollTo({ top: 0 });
       });
     });
 }
