@@ -16,13 +16,6 @@ function appliquerTheme(t) {
   }
 })();
 
-// Ferme tous les dialogs ouverts avant une navigation Turbo pour éviter l'état incohérent iOS
-document.addEventListener("turbo:before-visit", function () {
-  document.querySelectorAll("dialog[open]").forEach(function (d) {
-    d.close();
-  });
-});
-
 // Soumission automatique des champs marqués js-auto-submit
 document.addEventListener("change", function (e) {
   if (e.target.classList.contains("js-auto-submit")) {
@@ -119,8 +112,6 @@ if ("serviceWorker" in navigator && "PushManager" in window) {
   majEtat();
 })();
 
-// Mise à jour de l'onglet actif de la nav mobile lors des navigations Turbo
-// (le #bottom-nav est data-turbo-permanent : il n'est pas re-rendu par le serveur)
 function majNavActif(chemin) {
   document
     .querySelectorAll("#bottom-nav a[href], #bottom-nav button[data-nav-path]")
@@ -153,12 +144,12 @@ function majNavActif(chemin) {
 }
 
 majNavActif(window.location.pathname);
-document.addEventListener("turbo:load", function () {
+document.addEventListener("DOMContentLoaded", function () {
   majNavActif(window.location.pathname);
 });
 
 // Réaffichage de concerts masqués (accueil)
-document.addEventListener("turbo:load", function () {
+document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll("[data-reafficher-id]").forEach(function (btn) {
     btn.addEventListener("click", function () {
       const id = btn.getAttribute("data-reafficher-id");
@@ -263,7 +254,7 @@ function initOngletsPage() {
 }
 
 initOngletsPage();
-document.addEventListener("turbo:load", initOngletsPage);
+document.addEventListener("DOMContentLoaded", initOngletsPage);
 
 // Compteur de longueur MDP + dialog suppression (/parametres) — réinitialisé à chaque navigation Turbo
 function initParametres() {
@@ -320,11 +311,9 @@ function initParametres() {
 }
 
 initParametres();
-document.addEventListener("turbo:load", initParametres);
+document.addEventListener("DOMContentLoaded", initParametres);
 
 // Drawer de navigation mobile (dialog natif)
-// #btn-nav-plus est data-turbo-permanent ; #dialog-nav-plus est remplacé à chaque nav Turbo.
-// Le click handler résout le dialog dynamiquement ; les listeners dialog sont re-bindés sur turbo:load.
 (function () {
   const btnPlus = document.getElementById("btn-nav-plus");
   if (!btnPlus || btnPlus.dataset.initDrawer) return;
@@ -373,7 +362,7 @@ function initDrawerDialog() {
 }
 
 initDrawerDialog();
-document.addEventListener("turbo:load", initDrawerDialog);
+document.addEventListener("DOMContentLoaded", initDrawerDialog);
 
 // Modale de signalement (page aide)
 (function () {
@@ -977,7 +966,7 @@ function initPush() {
   chargerEtat();
 }
 
-document.addEventListener("turbo:load", initPush);
+document.addEventListener("DOMContentLoaded", initPush);
 
 function urlBase64VersUint8Array(base64) {
   const rembourrage = "=".repeat((4 - (base64.length % 4)) % 4);
