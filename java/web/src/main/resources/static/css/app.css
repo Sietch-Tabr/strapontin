@@ -1203,31 +1203,6 @@ tr:hover td {
   border-bottom-color: var(--fg);
 }
 
-.param-bloc {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-}
-.param-bloc:last-child {
-  margin-bottom: 0;
-}
-
-.param-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 0.25rem;
-}
-.param-aide {
-  font-size: 0.75rem;
-  color: var(--fg-muted);
-  margin-bottom: 0.5rem;
-}
-
-.param-bloc-danger {
-  border-left: 3px solid var(--danger);
-}
 
 /* ── Toggle switch ───────────────────────────────────────── */
 .switch {

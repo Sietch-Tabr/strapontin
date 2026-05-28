@@ -22,6 +22,15 @@ public final class Normalisation {
     return ESPACES_MULTIPLES.matcher(s).replaceAll(" ").trim();
   }
 
+  /// Normalise un nom de salle en clé alphanumérique minuscule sans accents.
+  ///
+  /// @param nom le nom de la salle
+  /// @return clé alphanumérique (peut être vide si le nom ne contient aucun caractère valide)
+  public static String normaliserSalleCle(String nom) {
+    String nfd = java.text.Normalizer.normalize(nom.toLowerCase(), java.text.Normalizer.Form.NFD);
+    return nfd.replaceAll("[\\u0300-\\u036f]", "").replaceAll("[^a-z0-9]", "");
+  }
+
   public static String normaliserVille(String ville) {
     return normaliserTexte(ville).replaceAll("\\bsaint\\b", "st").replaceAll("\\bsainte\\b", "ste");
   }

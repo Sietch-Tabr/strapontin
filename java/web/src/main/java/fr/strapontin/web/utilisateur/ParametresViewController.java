@@ -100,6 +100,21 @@ public class ParametresViewController {
     modele.addAttribute("config", repConfig.getBody());
     modele.addAttribute("profil", repProfil.getBody());
     modele.addAttribute("currentPage", "parametres");
+
+    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+    Integer nbArtistes =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
+            Map.of("userId", userId),
+            Integer.class);
+    Integer nbSalles =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
+            Map.of("userId", userId),
+            Integer.class);
+    modele.addAttribute("nbArtistes", nbArtistes != null ? nbArtistes : 0);
+    modele.addAttribute("nbSalles", nbSalles != null ? nbSalles : 0);
+
     return "parametres";
   }
 
@@ -468,7 +483,16 @@ public class ParametresViewController {
       redirects.addFlashAttribute(
           CLE_ERREUR, corps != null ? corps.get(CLE_ERREUR) : ERREUR_DEFAUT);
     } else {
+      var corps = rep.getBody();
+      int artistes = corps != null && corps.get("artistes") instanceof Integer n ? n : 0;
+      int salles = corps != null && corps.get("salles") instanceof Integer n ? n : 0;
+      int rejetes = corps != null && corps.get("rejetes") instanceof Integer n ? n : 0;
+      String message =
+          artistes + " artiste" + (artistes > 1 ? "s" : "")
+              + " et " + salles + " salle" + (salles > 1 ? "s" : "")
+              + " importés" + (rejetes > 0 ? " (" + rejetes + " rejeté" + (rejetes > 1 ? "s" : "") + ")" : "") + ".";
       redirects.addFlashAttribute(CLE_SUCCES, "import");
+      redirects.addFlashAttribute("messageImport", message);
     }
     return "redirect:/parametres#donnees";
   }
