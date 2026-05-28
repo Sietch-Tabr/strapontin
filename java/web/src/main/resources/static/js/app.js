@@ -719,16 +719,8 @@ document.addEventListener("turbo:load", function () {
 
 window.copierLienInvitation = function () {
   const input = document.getElementById("lien-invitation");
-  if (!input) return;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(input.value).catch(function () {
-      input.select();
-      document.execCommand("copy");
-    });
-  } else {
-    input.select();
-    document.execCommand("copy");
-  }
+  if (!input || !navigator.clipboard) return;
+  navigator.clipboard.writeText(input.value);
 };
 
 // Push notifications (paramètres)
