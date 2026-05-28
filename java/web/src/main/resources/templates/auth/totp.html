@@ -20,11 +20,7 @@
         th:text="${erreur}"
       ></div>
 
-      <form
-        method="post"
-        th:action="@{/auth/totp}"
-        autocomplete="off"
-      >
+      <form method="post" th:action="@{/auth/totp}" autocomplete="off">
         <div class="form-group">
           <label for="code">Code à 6 chiffres</label>
           <input
