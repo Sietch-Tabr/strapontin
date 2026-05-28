@@ -7,7 +7,11 @@ package fr.strapontin.web.utilisateur;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.securite.UtilisateurDetails;
-import java.text.Normalizer;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -17,6 +21,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -39,13 +44,16 @@ public class PreferencesController {
 
   private static final Logger log = LoggerFactory.getLogger(PreferencesController.class);
   private static final String CLE_USER_ID = "userId";
+  private static final String WORKER_URL = "http://localhost:8081/trigger";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
+  private final HttpClient httpClient;
 
   public PreferencesController(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
+    this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
   }
 
   record ArtisteExport(String nom, String normalise) {}
@@ -67,6 +75,8 @@ public class PreferencesController {
       List<SalleExport> salles,
       ConfigExport config) {}
 
+  private record ResultatImport(int traites, int rejetes) {}
+
   /// Importe les préférences depuis un fichier JSON exporté par Strapontin.
   ///
   /// Mode `fusionner` : union des artistes, salles et départements existants.
@@ -78,7 +88,7 @@ public class PreferencesController {
   /// @param mode           `fusionner` ou `ecraser`
   /// @param importerConfig remplacer la config utilisateur si vrai
   /// @param auth           contexte d'authentification
-  /// @return 200 si importé, 400 si format invalide
+  /// @return 200 avec stats si importé, 400 si format invalide, 422 si version inconnue
   @Transactional
   @PostMapping(value = "/importer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Map<String, Object>> importer(
@@ -89,7 +99,13 @@ public class PreferencesController {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
       throw new IllegalStateException("Principal inattendu");
     }
-    String userId = ud.id();
+
+    String contentType = fichier.getContentType();
+    if (contentType == null || !contentType.equals(MediaType.APPLICATION_JSON_VALUE)) {
+      Map<String, Object> erreur = new HashMap<>();
+      erreur.put("erreur", "Le fichier doit être au format JSON.");
+      return ResponseEntity.badRequest().body(erreur);
+    }
 
     ExportComplet export;
     try {
@@ -101,14 +117,24 @@ public class PreferencesController {
       return ResponseEntity.badRequest().body(erreur);
     }
 
+    if (export.version() != 1) {
+      Map<String, Object> erreur = new HashMap<>();
+      erreur.put("erreur", "Version de fichier non supportée : " + export.version() + ".");
+      return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(erreur);
+    }
+
+    String userId = ud.id();
     boolean ecraser = "ecraser".equals(mode);
     if (ecraser) {
       jdbc.update("DELETE FROM user_artistes WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
       jdbc.update("DELETE FROM user_salles WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
     }
 
-    if (export.artistes() != null) importerArtistes(userId, export.artistes());
-    if (export.salles() != null) importerSalles(userId, export.salles());
+    ResultatImport resArtistes = new ResultatImport(0, 0);
+    ResultatImport resSalles = new ResultatImport(0, 0);
+
+    if (export.artistes() != null) resArtistes = importerArtistes(userId, export.artistes());
+    if (export.salles() != null) resSalles = importerSalles(userId, export.salles());
 
     if (importerConfig && export.config() != null) {
       importerConfig(userId, export.config());
@@ -116,10 +142,17 @@ public class PreferencesController {
       fusionnerDepartements(userId, export.config().departements().toArray(String[]::new));
     }
 
-    return ResponseEntity.ok(Map.of("importe", true));
+    declencherWorkerApresImport(export.salles());
+
+    Map<String, Object> corps = new HashMap<>();
+    corps.put("importe", true);
+    corps.put("artistes", resArtistes.traites());
+    corps.put("salles", resSalles.traites());
+    corps.put("rejetes", resArtistes.rejetes() + resSalles.rejetes());
+    return ResponseEntity.ok(corps);
   }
 
-  private void importerArtistes(String userId, List<ArtisteExport> artistes) {
+  private ResultatImport importerArtistes(String userId, List<ArtisteExport> artistes) {
     Integer nbExistants =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
@@ -127,9 +160,16 @@ public class PreferencesController {
             Integer.class);
     int restant = Math.max(0, 500 - (nbExistants != null ? nbExistants : 0));
     int traites = 0;
+    int rejetes = 0;
     for (ArtisteExport a : artistes) {
-      if (traites >= restant) break;
-      if (a.nom() == null || a.nom().isBlank()) continue;
+      if (a.nom() == null || a.nom().isBlank()) {
+        rejetes++;
+        continue;
+      }
+      if (traites >= restant) {
+        rejetes++;
+        continue;
+      }
       String normalise = Normalisation.normaliserTexte(a.nom());
       jdbc.update(
           """
@@ -140,9 +180,10 @@ public class PreferencesController {
           Map.of(CLE_USER_ID, userId, "normalise", normalise, "nom", a.nom().strip()));
       traites++;
     }
+    return new ResultatImport(traites, rejetes);
   }
 
-  private void importerSalles(String userId, List<SalleExport> salles) {
+  private ResultatImport importerSalles(String userId, List<SalleExport> salles) {
     Integer nbExistants =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
@@ -150,12 +191,22 @@ public class PreferencesController {
             Integer.class);
     int restant = Math.max(0, 200 - (nbExistants != null ? nbExistants : 0));
     int traites = 0;
+    int rejetes = 0;
     for (SalleExport s : salles) {
-      if (traites >= restant) break;
       String nomSalle = s.nom() != null && !s.nom().isBlank() ? s.nom().strip() : s.salleId();
-      if (nomSalle == null || nomSalle.isBlank()) continue;
-      String salleId = normaliserSalleCle(nomSalle);
-      if (salleId.isEmpty()) continue;
+      if (nomSalle == null || nomSalle.isBlank()) {
+        rejetes++;
+        continue;
+      }
+      String salleId = Normalisation.normaliserSalleCle(nomSalle);
+      if (salleId.isEmpty()) {
+        rejetes++;
+        continue;
+      }
+      if (traites >= restant) {
+        rejetes++;
+        continue;
+      }
       String tmVenueId = s.tmVenueId() != null && !s.tmVenueId().isBlank() ? s.tmVenueId() : null;
       String nomNorm = Normalisation.normaliserTexte(nomSalle);
       jdbc.update(
@@ -178,11 +229,33 @@ public class PreferencesController {
           paramsUs);
       traites++;
     }
+    return new ResultatImport(traites, rejetes);
   }
 
-  private static String normaliserSalleCle(String nom) {
-    String nfd = Normalizer.normalize(nom.toLowerCase(), Normalizer.Form.NFD);
-    return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}", "").replaceAll("[^a-z0-9]", "");
+  private void declencherWorkerApresImport(List<SalleExport> salles) {
+    envoyerPostWorker(WORKER_URL + "/artiste");
+    if (salles == null) return;
+    salles.stream()
+        .filter(s -> s.tmVenueId() != null && !s.tmVenueId().isBlank())
+        .map(SalleExport::tmVenueId)
+        .distinct()
+        .forEach(venueId -> envoyerPostWorker(WORKER_URL + "/salle/" + venueId));
+  }
+
+  private void envoyerPostWorker(String url) {
+    httpClient
+        .sendAsync(
+            HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .timeout(Duration.ofSeconds(5))
+                .build(),
+            HttpResponse.BodyHandlers.discarding())
+        .exceptionally(
+            e -> {
+              log.warn("Déclenchement worker impossible : {}", url, e);
+              return null;
+            });
   }
 
   private void importerConfig(String userId, ConfigExport c) {

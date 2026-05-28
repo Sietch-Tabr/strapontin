@@ -276,6 +276,10 @@ function initParametres() {
   const btnAnnuler = document.getElementById("btn-annuler-suppression");
   if (btnOuvrir && dialog) {
     btnOuvrir.addEventListener("click", function () {
+      const champConfirm = document.getElementById("confirmation-suppression");
+      const btnConfirmer = document.getElementById("btn-confirmer-suppression");
+      if (champConfirm) champConfirm.value = "";
+      if (btnConfirmer) btnConfirmer.disabled = true;
       dialog.showModal();
     });
     if (btnAnnuler) {
@@ -283,6 +287,21 @@ function initParametres() {
         dialog.close();
       });
     }
+    const champConfirm = document.getElementById("confirmation-suppression");
+    const btnConfirmer = document.getElementById("btn-confirmer-suppression");
+    if (champConfirm && btnConfirmer) {
+      champConfirm.addEventListener("input", function () {
+        btnConfirmer.disabled = champConfirm.value !== "supprimer";
+      });
+    }
+  }
+
+  const selectMode = document.getElementById("import-mode");
+  const avertissementEcraser = document.getElementById("avertissement-ecraser");
+  if (selectMode && avertissementEcraser) {
+    selectMode.addEventListener("change", function () {
+      avertissementEcraser.hidden = selectMode.value !== "ecraser";
+    });
   }
 }
 
