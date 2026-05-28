@@ -1,6 +1,6 @@
 // Strapontin — service worker
 
-const CACHE_NOM = "strapontin-v9";
+const CACHE_NOM = "strapontin-v10";
 const RESSOURCES_STATIQUES = [
   "/offline.html",
   "/css/app.css",
@@ -41,10 +41,25 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   if (url.pathname.startsWith("/api/")) return;
 
-  // Assets statiques : stale-while-revalidate (réponse cache immédiate + mise à jour en fond)
+  // JS et CSS : network-first (toujours la version fraîche, cache en fallback offline)
+  if (url.pathname.startsWith("/css/") || url.pathname.startsWith("/js/")) {
+    event.respondWith(
+      fetch(request)
+        .then(function (response) {
+          if (response.ok) {
+            caches
+              .open(CACHE_NOM)
+              .then(function (cache) { cache.put(request, response.clone()); });
+          }
+          return response;
+        })
+        .catch(function () { return caches.match(request); }),
+    );
+    return;
+  }
+
+  // Images et icônes : stale-while-revalidate (réponse cache immédiate + mise à jour en fond)
   if (
-    url.pathname.startsWith("/css/") ||
-    url.pathname.startsWith("/js/") ||
     url.pathname.startsWith("/images/") ||
     url.pathname.startsWith("/icons/")
   ) {
