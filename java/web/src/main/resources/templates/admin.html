@@ -67,7 +67,9 @@
         th:text="${erreur}"
       ></div>
 
-      <th:block th:insert="~{layout/fragments/onglets :: onglets(${ongletItems}, |Sections d'administration|)}"></th:block>
+      <th:block
+        th:insert="~{layout/fragments/onglets :: onglets(${ongletItems}, 'Sections administration')}"
+      ></th:block>
 
       <div class="admin-sections">
         <!-- Section Tableau de bord (Jobs) -->
@@ -235,7 +237,11 @@
                 <p class="worker-carte-detail" th:text="${workerDepuisTexte}">
                   —
                 </p>
-                <p class="worker-alerte-texte" th:if="${workerEnAlerte}" role="alert">
+                <p
+                  class="worker-alerte-texte"
+                  th:if="${workerEnAlerte}"
+                  role="alert"
+                >
                   Inactif depuis plus de 3 h
                 </p>
               </div>
@@ -379,7 +385,6 @@
 
         <!-- Section Configuration -->
         <section id="configuration" class="admin-section">
-
           <!-- Statut APP_CONFIG_SECRET -->
           <div class="param-bloc">
             <div class="param-label-ligne">
@@ -630,10 +635,7 @@
                       </form>
                     </div>
                   </div>
-                  <div
-                    th:id="'modif-' + ${u.id}"
-                    class="modif-ligne"
-                  >
+                  <div th:id="'modif-' + ${u.id}" class="modif-ligne">
                     <form
                       class="form-modif-utilisateur"
                       th:data-user-id="${u.id}"
