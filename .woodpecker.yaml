@@ -33,11 +33,34 @@ steps:
       LXC_JAVA_HOST:
         from_secret: lxc_host
     commands:
-      - apk add openssh-client
-      - echo "$$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
-      - scp -i /tmp/key -o StrictHostKeyChecking=no "$(find java/web/target -name 'web-*.jar' ! -name '*.original')" root@$$LXC_JAVA_HOST:/opt/strapontin/web.jar
-      - scp -i /tmp/key -o StrictHostKeyChecking=no "$(find java/worker/target -name 'worker-*.jar' ! -name '*.original')" root@$$LXC_JAVA_HOST:/opt/strapontin/worker.jar
-      - ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST "/opt/strapontin/update.sh"
+      - |
+        set -euo pipefail
+        apk add --no-cache openssh-client git
+
+        echo "$$SSH_KEY" > /tmp/key
+        chmod 600 /tmp/key
+
+        # Backup DB vers NAS si le commit contient des migrations Flyway
+        if git show HEAD --name-only --format= | grep -q 'db/migration/'; then
+          echo "[deploy] Migrations détectées — backup DB avant déploiement..."
+          ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST \
+            "/opt/strapontin/scripts/backup.sh"
+          echo "[deploy] Backup OK"
+        fi
+
+        # Validation : exactement un JAR par module
+        WEB_JAR=$(find java/web/target -name 'web-*.jar' ! -name '*.original')
+        WEB_COUNT=$(echo "$WEB_JAR" | grep -c .)
+        [ "$WEB_COUNT" -eq 1 ] || { echo "Ambiguïté JAR web : $WEB_COUNT trouvés" >&2; exit 1; }
+
+        WORKER_JAR=$(find java/worker/target -name 'worker-*.jar' ! -name '*.original')
+        WORKER_COUNT=$(echo "$WORKER_JAR" | grep -c .)
+        [ "$WORKER_COUNT" -eq 1 ] || { echo "Ambiguïté JAR worker : $WORKER_COUNT trouvés" >&2; exit 1; }
+
+        # Déploiement atomique : scp vers *.jar.new, update.sh fait le mv
+        scp -i /tmp/key -o StrictHostKeyChecking=no "$WEB_JAR" root@$$LXC_JAVA_HOST:/opt/strapontin/web.jar.new
+        scp -i /tmp/key -o StrictHostKeyChecking=no "$WORKER_JAR" root@$$LXC_JAVA_HOST:/opt/strapontin/worker.jar.new
+        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST "/opt/strapontin/update.sh"
     when:
       - event: push
         branch: main

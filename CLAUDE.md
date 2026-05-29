@@ -55,8 +55,8 @@ Commandes manuelles si besoin :
 
 ```bash
 mvn -f java/pom.xml -pl web,worker -am package
-scp "$(find java/web/target -name 'web-*.jar' ! -name '*.original')" root@192.168.20.78:/opt/strapontin/web.jar
-scp "$(find java/worker/target -name 'worker-*.jar' ! -name '*.original')" root@192.168.20.78:/opt/strapontin/worker.jar
+scp "$(find java/web/target -name 'web-*.jar' ! -name '*.original')" root@192.168.20.78:/opt/strapontin/web.jar.new
+scp "$(find java/worker/target -name 'worker-*.jar' ! -name '*.original')" root@192.168.20.78:/opt/strapontin/worker.jar.new
 ssh root@192.168.20.78 "/opt/strapontin/update.sh"
 ```
 
