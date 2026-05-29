@@ -7,7 +7,6 @@ package fr.strapontin.web.spectacle;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import fr.strapontin.web.utilisateur.UserConfigService;
 import fr.strapontin.web.utils.Dates;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -56,8 +55,6 @@ public class SpectacleController {
       String salle,
       String ville,
       String url,
-      BigDecimal prixMin,
-      BigDecimal prixMax,
       String classification,
       Instant firstSeen,
       String statut,
@@ -73,17 +70,6 @@ public class SpectacleController {
       return Dates.formaterAvecHeure(date, heure);
     }
 
-    public String prixFormate() {
-      if (prixMin == null) return "";
-      String min = formatBd(prixMin);
-      if (prixMax == null || prixMax.compareTo(prixMin) == 0) return min + " €";
-      return min + "–" + formatBd(prixMax) + " €";
-    }
-
-    private static String formatBd(BigDecimal v) {
-      return v.stripTrailingZeros().toPlainString().replace('.', ',');
-    }
-
     public boolean presaleActive() {
       return presaleDebut != null && presaleDebut.isAfter(Instant.now());
     }
@@ -96,7 +82,9 @@ public class SpectacleController {
       int totalConcerts,
       List<String> genresDisponibles,
       List<String> moisDisponibles,
-      List<String> classificationsDisponibles) {}
+      List<String> classificationsDisponibles,
+      boolean inclureIndisponibles,
+      boolean aSuivi) {}
 
   record RequeteMasque(boolean masquer) {}
 
@@ -111,7 +99,6 @@ public class SpectacleController {
   /// @param quinzaine       {@code true} pour les 15 prochains jours
   /// @param tri             {@code "date"} ou {@code "nouveaute"}
   /// @param masques         {@code true} pour afficher les concerts masqués
-  /// @param budget          prix max
   /// @param source          {@code "artistes"} et/ou {@code "salles"} (multi-valeurs)
   /// @param indisponibles   {@code "1"} pour inclure les concerts non disponibles
   /// @param page            numéro de page (0-indexé)
@@ -126,7 +113,6 @@ public class SpectacleController {
       @RequestParam(required = false, defaultValue = "false") boolean quinzaine,
       @RequestParam(required = false, defaultValue = "date") String tri,
       @RequestParam(required = false, defaultValue = "false") boolean masques,
-      @RequestParam(required = false, defaultValue = "") String budget,
       @RequestParam(name = "source", required = false) List<String> sources,
       @RequestParam(required = false) String indisponibles,
       @RequestParam(required = false, defaultValue = "0") int page,
@@ -179,8 +165,10 @@ public class SpectacleController {
     }
 
     if (!mois.isBlank() && mois.matches("\\d{4}-\\d{2}")) {
-      whereClause.append(" AND to_char(c.date, 'YYYY-MM') = :mois");
-      params.put("mois", mois);
+      LocalDate debutMois = LocalDate.parse(mois + "-01");
+      whereClause.append(" AND c.date >= :moisDebut AND c.date < :moisFin");
+      params.put("moisDebut", debutMois);
+      params.put("moisFin", debutMois.plusMonths(1));
     }
 
     if (!classification.isBlank()) {
@@ -192,11 +180,6 @@ public class SpectacleController {
     if (!genreStr.isEmpty()) {
       whereClause.append(" AND c.genre ILIKE :genre");
       params.put("genre", genreStr);
-    }
-
-    if (!budget.isBlank() && budget.matches("\\d+")) {
-      whereClause.append(" AND c.prix_min::numeric <= :budget");
-      params.put("budget", new BigDecimal(budget));
     }
 
     // Filtre source artistes/salles
@@ -234,7 +217,7 @@ public class SpectacleController {
     String selectSql =
         """
         SELECT c.id, c.artiste, c.date::text, c.heure::text, c.salle, c.ville,
-               c.url, c.prix_min, c.prix_max, c.classification, c.first_seen, c.statut,
+               c.url, c.classification, c.first_seen, c.statut,
                c.presale_debut, c.presale_nom
         FROM user_matches um
         INNER JOIN concerts c ON um.concert_id = c.id
@@ -269,8 +252,6 @@ public class SpectacleController {
                   rs.getString("salle"),
                   rs.getString("ville"),
                   rs.getString("url"),
-                  rs.getBigDecimal("prix_min"),
-                  rs.getBigDecimal("prix_max"),
                   rs.getString("classification"),
                   firstSeen,
                   rs.getString("statut"),
@@ -341,6 +322,17 @@ public class SpectacleController {
             baseParams,
             String.class);
 
+    int nbSuivi =
+        Objects.requireNonNullElse(
+            jdbc.queryForObject(
+                """
+                SELECT (SELECT COUNT(*) FROM user_artistes WHERE user_id = :u)
+                     + (SELECT COUNT(*) FROM user_salles WHERE user_id = :u)
+                """,
+                Map.of("u", userId),
+                Integer.class),
+            0);
+
     int totalPages = Math.max(1, (int) Math.ceil((double) total / CONCERTS_PAR_PAGE));
     return ResponseEntity.ok(
         new ReponseSpectacles(
@@ -350,7 +342,9 @@ public class SpectacleController {
             total,
             genresDisponibles,
             moisDisponibles,
-            classificationsDisponibles));
+            classificationsDisponibles,
+            inclureIndisponibles,
+            nbSuivi > 0));
   }
 
   /// Masque ou démasque un concert pour l'utilisateur courant.

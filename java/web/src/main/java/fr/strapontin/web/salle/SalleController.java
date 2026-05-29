@@ -6,6 +6,7 @@ package fr.strapontin.web.salle;
 
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.securite.UtilisateurDetails;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -56,11 +57,14 @@ public class SalleController {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigService configService;
+  private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
 
-  public SalleController(NamedParameterJdbcTemplate jdbc, ConfigService configService) {
+  public SalleController(
+      NamedParameterJdbcTemplate jdbc, ConfigService configService, ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.configService = configService;
+    this.objectMapper = objectMapper;
     this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
   }
 
@@ -146,7 +150,9 @@ public class SalleController {
       }
 
       resultats = listeResultats;
-      dejaLaSuivie = salles.stream().anyMatch(s -> s.nom().equalsIgnoreCase(recherche));
+      String rechercheNorm = normaliserSalleCle(recherche);
+      dejaLaSuivie = salles.stream()
+          .anyMatch(s -> normaliserSalleCle(s.nom()).equals(rechercheNorm));
     }
 
     return ResponseEntity.ok(new ReponseSalles(salles, resultats, dejaLaSuivie));
@@ -324,9 +330,7 @@ public class SalleController {
           httpClient.send(request, HttpResponse.BodyHandlers.ofString());
       if (response.statusCode() != 200) return List.of();
 
-      com.fasterxml.jackson.databind.ObjectMapper mapper =
-          new com.fasterxml.jackson.databind.ObjectMapper();
-      Map<String, Object> root = mapper.readValue(response.body(), Map.class);
+      Map<String, Object> root = objectMapper.readValue(response.body(), Map.class);
       Map<String, Object> embedded = (Map<String, Object>) root.get("_embedded");
       if (embedded == null) return List.of();
 

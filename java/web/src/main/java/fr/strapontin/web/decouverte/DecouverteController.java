@@ -6,7 +6,6 @@ package fr.strapontin.web.decouverte;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
 import fr.strapontin.web.utils.Dates;
-import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -18,7 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -62,8 +60,6 @@ public class DecouverteController {
       String ville,
       String dept,
       String url,
-      BigDecimal prixMin,
-      BigDecimal prixMax,
       String classification,
       String genre,
       String statut,
@@ -71,6 +67,10 @@ public class DecouverteController {
 
     public String dateFormatee() {
       return Dates.formater(date, false);
+    }
+
+    public String dateHeureFormatee() {
+      return Dates.formaterAvecHeure(date, heure);
     }
   }
 
@@ -97,7 +97,6 @@ public class DecouverteController {
   /// @param mois           filtre mois (YYYY-MM)
   /// @param genre          filtre genre
   /// @param classification filtre classification
-  /// @param budget         prix max
   /// @param tri            `"date"` ou `"nouveaute"`
   /// @param page           numéro de page (0-indexé)
   /// @param auth           contexte d'authentification
@@ -109,7 +108,6 @@ public class DecouverteController {
       @RequestParam(required = false, defaultValue = "") String mois,
       @RequestParam(required = false, defaultValue = "") String genre,
       @RequestParam(required = false, defaultValue = "") String classification,
-      @RequestParam(required = false, defaultValue = "") String budget,
       @RequestParam(required = false, defaultValue = "date") String tri,
       @RequestParam(required = false, defaultValue = "0") int page,
       Authentication auth) {
@@ -128,7 +126,7 @@ public class DecouverteController {
     String genreStr = genre.strip().substring(0, Math.min(genre.strip().length(), 50));
     StringBuilder where =
         construireFiltresWhere(
-            deptsActifs, rechercheNorm, mois, genreStr, classification, budget, aujourd8, params);
+            deptsActifs, rechercheNorm, mois, genreStr, classification, aujourd8, params);
 
     String orderBy =
         "nouveaute".equals(tri) ? "c.first_seen DESC, c.date ASC" : "c.date ASC, c.artiste ASC";
@@ -136,8 +134,7 @@ public class DecouverteController {
     String selectSql =
         """
         SELECT c.id, c.artiste, c.date::text, c.heure::text, c.salle, c.ville,
-               c.dept, c.url, c.prix_min, c.prix_max, c.classification, c.genre,
-               c.statut, c.first_seen
+               c.dept, c.url, c.classification, c.genre, c.statut, c.first_seen
         FROM concerts c
         WHERE %s
         ORDER BY %s
@@ -159,8 +156,6 @@ public class DecouverteController {
                     rs.getString("ville"),
                     rs.getString("dept"),
                     rs.getString("url"),
-                    rs.getBigDecimal("prix_min"),
-                    rs.getBigDecimal("prix_max"),
                     rs.getString("classification"),
                     rs.getString("genre"),
                     rs.getString("statut"),
@@ -207,17 +202,13 @@ public class DecouverteController {
             baseParams,
             String.class);
 
-    List<Instant> syncLignes =
-        jdbc
-            .queryForList(
-                "SELECT derniere_exec FROM fetch_jobs WHERE type_job = 'fetch:region' AND"
-                    + " derniere_exec IS NOT NULL",
-                Map.of(),
-                java.sql.Timestamp.class)
-            .stream()
-            .map(ts -> ts != null ? ts.toInstant() : null)
-            .collect(Collectors.toList());
-    Instant derniereSyncRegion = syncLignes.isEmpty() ? null : syncLignes.get(0);
+    java.sql.Timestamp syncTs =
+        jdbc.queryForObject(
+            "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE type_job = 'fetch:region'"
+                + " AND derniere_exec IS NOT NULL",
+            Map.of(),
+            java.sql.Timestamp.class);
+    Instant derniereSyncRegion = syncTs != null ? syncTs.toInstant() : null;
 
     List<SyncDept> syncParDept = List.of();
     if (!deptsActifs.isEmpty()) {
@@ -285,7 +276,6 @@ public class DecouverteController {
       String mois,
       String genreStr,
       String classification,
-      String budget,
       LocalDate aujourd8,
       Map<String, Object> params) {
     StringBuilder where = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
@@ -299,8 +289,10 @@ public class DecouverteController {
       params.put("q", "%" + rechercheNorm + "%");
     }
     if (!mois.isBlank() && mois.matches("\\d{4}-\\d{2}")) {
-      where.append(" AND to_char(c.date, 'YYYY-MM') = :mois");
-      params.put("mois", mois);
+      LocalDate debutMois = LocalDate.parse(mois + "-01");
+      where.append(" AND c.date >= :moisDebut AND c.date < :moisFin");
+      params.put("moisDebut", debutMois);
+      params.put("moisFin", debutMois.plusMonths(1));
     }
     if (!genreStr.isEmpty()) {
       where.append(" AND c.genre ILIKE :genre");
@@ -309,10 +301,6 @@ public class DecouverteController {
     if (!classification.isBlank()) {
       where.append(" AND c.classification = :classification");
       params.put("classification", classification);
-    }
-    if (!budget.isBlank() && budget.matches("\\d+")) {
-      where.append(" AND c.prix_min::numeric <= :budget");
-      params.put("budget", new BigDecimal(budget));
     }
     return where;
   }

@@ -23,35 +23,49 @@
       <!-- Chips source + mode -->
       <div class="chips">
         <a
-          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},budget=${budget},tri=${tri},masques=${masques},indisponibles=${indisponibles},source=${sources.contains('artistes') and !sources.contains('salles') ? null : 'artistes'})}"
+          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},tri=${tri},masques=${masques},indisponibles=${indisponibles},source=${sources.contains('artistes') and !sources.contains('salles') ? null : 'artistes'})}"
           th:classappend="${sources.contains('artistes') and !sources.contains('salles') ? ' actif' : ''}"
+          th:attr="aria-current=${sources.contains('artistes') and !sources.contains('salles') ? 'true' : null}"
         >
           Mes artistes
         </a>
         <a
-          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},budget=${budget},tri=${tri},masques=${masques},indisponibles=${indisponibles},source=${!sources.contains('artistes') and sources.contains('salles') ? null : 'salles'})}"
+          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},tri=${tri},masques=${masques},indisponibles=${indisponibles},source=${!sources.contains('artistes') and sources.contains('salles') ? null : 'salles'})}"
           th:classappend="${!sources.contains('artistes') and sources.contains('salles') ? ' actif' : ''}"
+          th:attr="aria-current=${!sources.contains('artistes') and sources.contains('salles') ? 'true' : null}"
         >
           Mes salles
         </a>
         <a
-          th:href="@{/spectacles(q=${q},classification=${classification},genre=${genre},budget=${budget},tri=${tri},masques=${masques},indisponibles=${indisponibles},quinzaine=true)}"
+          th:href="@{/spectacles(q=${q},classification=${classification},genre=${genre},tri=${tri},masques=${masques},indisponibles=${indisponibles},quinzaine=true)}"
           th:classappend="${quinzaine ? ' actif' : ''}"
+          th:attr="aria-current=${quinzaine ? 'true' : null}"
         >
           15 prochains jours
         </a>
         <a
-          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},budget=${budget},tri=${tri},masques=${masques ? null : true},indisponibles=${indisponibles})}"
+          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},tri=${tri},masques=${masques ? null : true},indisponibles=${indisponibles})}"
           th:classappend="${masques ? ' actif' : ''}"
+          th:attr="aria-current=${masques ? 'true' : null}"
         >
           Masqués
         </a>
         <a
-          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},budget=${budget},tri=${tri},masques=${masques},indisponibles=${indisponibles != null and indisponibles == '1' ? '0' : '1'})}"
-          th:classappend="${indisponibles == '1' ? ' actif' : ''}"
+          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},tri=${tri},masques=${masques},indisponibles=${donnees.inclureIndisponibles ? '0' : '1'})}"
+          th:classappend="${donnees.inclureIndisponibles ? ' actif' : ''}"
+          th:attr="aria-current=${donnees.inclureIndisponibles ? 'true' : null}"
         >
           Indisponibles
         </a>
+      </div>
+
+      <!-- Avertissement filtres mutuellement exclusifs -->
+      <div
+        th:if="${quinzaine and !mois.isEmpty()}"
+        class="alerte alerte-info"
+        role="status"
+      >
+        Le filtre « 15 prochains jours » et le filtre par mois sont actifs simultanément — les résultats affichés correspondent à leur intersection.
       </div>
 
       <!-- Bouton toggle filtres (mobile uniquement) -->
@@ -89,7 +103,8 @@
             autocomplete="off"
           />
 
-          <select name="mois" aria-label="Filtrer par mois">
+          <label for="filtre-mois" class="sr-only">Filtrer par mois</label>
+          <select id="filtre-mois" name="mois" class="js-auto-submit">
             <option value="">Tous les mois</option>
             <option
               th:each="m : ${donnees.moisDisponibles}"
@@ -101,7 +116,8 @@
             </option>
           </select>
 
-          <select name="genre" aria-label="Filtrer par genre">
+          <label for="filtre-genre" class="sr-only">Filtrer par genre</label>
+          <select id="filtre-genre" name="genre" class="js-auto-submit">
             <option value="">Tous les genres</option>
             <option
               th:each="g : ${donnees.genresDisponibles}"
@@ -113,7 +129,8 @@
             </option>
           </select>
 
-          <select name="classification" aria-label="Filtrer par classification">
+          <label for="filtre-classification" class="sr-only">Filtrer par classification</label>
+          <select id="filtre-classification" name="classification" class="js-auto-submit">
             <option value="">Toutes classifications</option>
             <option
               th:each="c : ${donnees.classificationsDisponibles}"
@@ -125,19 +142,8 @@
             </option>
           </select>
 
-          <select name="budget" aria-label="Filtrer par budget">
-            <option value="" th:selected="${budget == null or budget == ''}">
-              Tous les prix
-            </option>
-            <option value="30" th:selected="${budget == '30'}">≤ 30 €</option>
-            <option value="50" th:selected="${budget == '50'}">≤ 50 €</option>
-            <option value="80" th:selected="${budget == '80'}">≤ 80 €</option>
-            <option value="100" th:selected="${budget == '100'}">
-              ≤ 100 €
-            </option>
-          </select>
-
-          <select name="tri" aria-label="Trier les résultats">
+          <label for="filtre-tri" class="sr-only">Trier les résultats</label>
+          <select id="filtre-tri" name="tri" class="js-auto-submit">
             <option value="date" th:selected="${tri == 'date' or tri == null}">
               Par date
             </option>
@@ -153,8 +159,13 @@
 
       <!-- État vide -->
       <div th:if="${donnees.concerts.isEmpty()}" class="etat-vide">
-        <p class="etat-vide-titre">Aucun concert avec ces filtres.</p>
-        <p class="etat-vide-texte">
+        <p class="etat-vide-titre" th:if="${!donnees.aSuivi}">Aucun artiste ni salle suivi.</p>
+        <p class="etat-vide-titre" th:unless="${!donnees.aSuivi}">Aucun concert avec ces filtres.</p>
+        <p class="etat-vide-texte" th:if="${!donnees.aSuivi}">
+          <a th:href="@{/artistes}">Ajouter des artistes</a> ou
+          <a th:href="@{/salles}">des salles</a> pour commencer.
+        </p>
+        <p class="etat-vide-texte" th:unless="${!donnees.aSuivi}">
           <a th:href="@{/spectacles}">Réinitialiser les filtres</a>
         </p>
       </div>
@@ -168,13 +179,12 @@
           <table>
             <thead>
               <tr>
-                <th>Artiste</th>
-                <th>Date</th>
-                <th>Salle</th>
-                <th>Ville</th>
-                <th>Prix</th>
-                <th>Statut</th>
-                <th><span class="sr-only">Actions</span></th>
+                <th scope="col">Artiste</th>
+                <th scope="col">Date</th>
+                <th scope="col">Salle</th>
+                <th scope="col">Ville</th>
+                <th scope="col">Statut</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
@@ -205,16 +215,6 @@
                   th:classappend="${concert.ville == null} ? ' cel-vide' : ''"
                 >
                   Ville
-                </td>
-                <td
-                  data-label="Prix"
-                  th:classappend="${concert.prixMin == null} ? ' cel-vide' : ''"
-                >
-                  <span
-                    th:if="${concert.prixMin != null}"
-                    th:text="${concert.prixFormate()}"
-                    >Prix</span
-                  >
                 </td>
                 <td
                   data-label="Statut"
@@ -248,7 +248,7 @@
                     target="_blank"
                     rel="noopener noreferrer"
                     class="btn btn-xs btn-secondary"
-                    >Billets</a
+                    >Billets<span class="sr-only"> (ouvre dans un nouvel onglet)</span></a
                   >
                   <form
                     th:if="${masques}"
@@ -270,7 +270,7 @@
       <div class="pagination" th:if="${donnees.totalPages > 1}">
         <a
           th:if="${donnees.page > 0}"
-          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},budget=${budget},tri=${tri},masques=${masques},indisponibles=${indisponibles},page=${donnees.page - 1})}"
+          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},tri=${tri},masques=${masques},indisponibles=${indisponibles},page=${donnees.page - 1})}"
           class="btn btn-secondary"
           >Précédent</a
         >
@@ -280,7 +280,7 @@
         >
         <a
           th:if="${donnees.page + 1 < donnees.totalPages}"
-          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},budget=${budget},tri=${tri},masques=${masques},indisponibles=${indisponibles},page=${donnees.page + 1})}"
+          th:href="@{/spectacles(q=${q},mois=${mois},classification=${classification},genre=${genre},tri=${tri},masques=${masques},indisponibles=${indisponibles},page=${donnees.page + 1})}"
           class="btn btn-secondary"
           >Suivant</a
         >

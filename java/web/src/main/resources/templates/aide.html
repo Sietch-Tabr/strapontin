@@ -14,12 +14,13 @@
         <h1>Aide</h1>
       </div>
 
-      <div th:if="${succesSignalement}" class="alerte alerte-succes">
+      <div th:if="${succesSignalement}" class="alerte alerte-succes" role="alert">
         Signalement envoyé. Merci !
       </div>
       <div
         th:if="${erreurSignalement}"
         class="alerte alerte-erreur"
+        role="alert"
         th:text="${erreurSignalement}"
       ></div>
 
@@ -120,7 +121,7 @@
               <ul>
                 <li>
                   <strong>Mes spectacles</strong> : vos prochains concerts
-                  filtrables par catégorie, mois ou budget. Paginé par 100.
+                  filtrables par catégorie et mois. Paginé par 100.
                 </li>
                 <li>
                   <strong>Découverte</strong> : tous les concerts en base,
@@ -227,6 +228,7 @@
       <dialog
         id="dialog-signaler"
         aria-labelledby="titre-signalement"
+        aria-modal="true"
         th:if="${resendDisponible}"
       >
         <div class="dialog-entete">
@@ -252,7 +254,7 @@
         >
           <div class="form-group">
             <label for="type-signalement">Type</label>
-            <select id="type-signalement" name="type">
+            <select id="type-signalement" name="type" autofocus>
               <option value="bug">Bug</option>
               <option value="suggestion">Amélioration</option>
               <option value="question">Question</option>

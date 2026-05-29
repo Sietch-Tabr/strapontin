@@ -41,31 +41,35 @@
         </button>
       </form>
       <p class="form-aide">
-        La recherche propose des artistes déjà en base puis des suggestions
-        Deezer pour s'assurer de la bonne orthographe.
+        Saisissez au moins 2 caractères. La recherche propose les artistes déjà
+        en base, puis des suggestions Deezer.
       </p>
 
-      <!-- Message d'erreur flash -->
+      <!-- Messages flash -->
       <div
         th:if="${erreur}"
         class="alerte alerte-erreur"
+        role="alert"
         th:text="${erreur}"
       ></div>
 
-      <!-- Feedback visuel fetch artiste ajouté -->
       <div
         th:if="${fetchEnCours}"
         data-delai="10000"
         class="alerte alerte-info"
+        role="status"
       >
-        Fetch en cours pour « <strong th:text="${fetchEnCours}"></strong> »… Les
-        concerts apparaîtront dans quelques secondes.
+        Fetch en cours pour « <strong th:text="${fetchEnCours}"></strong> »…
+        Les concerts apparaîtront dans quelques secondes sur
+        <a th:href="@{/spectacles}">Mes spectacles</a>.
       </div>
 
       <!-- Résultats de recherche -->
       <section
         th:if="${donnees.suggestions != null and !donnees.suggestions.isEmpty()}"
         class="section-resultats"
+        aria-live="polite"
+        aria-atomic="false"
       >
         <h2 class="section-label" th:text="'Résultats pour « ' + ${q} + ' »'">
           Résultats
@@ -75,7 +79,11 @@
             <p class="carte-nom" th:text="${suggestion.nom}">Artiste</p>
             <form method="post" th:action="@{/artistes/ajouter}">
               <input type="hidden" name="nom" th:value="${suggestion.nom}" />
-              <button type="submit" class="btn btn-sm btn-secondary">
+              <button
+                type="submit"
+                class="btn btn-sm btn-secondary"
+                th:attr="aria-label='Suivre ' + ${suggestion.nom}"
+              >
                 Suivre
               </button>
             </form>
@@ -87,11 +95,12 @@
       <div
         th:if="${q != null and q.trim().length() >= 2 and (donnees.suggestions == null or donnees.suggestions.isEmpty())}"
         class="section-resultats"
+        aria-live="polite"
       >
-        <div th:if="${donnees.dejaLeSuivi}" class="alerte alerte-info">
+        <div th:if="${donnees.dejaLeSuivi}" class="alerte alerte-info" role="status">
           Vous suivez déjà « <span th:text="${q}">artiste</span> ».
         </div>
-        <div th:unless="${donnees.dejaLeSuivi}" class="alerte alerte-info">
+        <div th:unless="${donnees.dejaLeSuivi}" class="alerte alerte-info" role="status">
           <p>Aucun résultat pour « <span th:text="${q}">artiste</span> ».</p>
           <form
             method="post"
@@ -127,8 +136,9 @@
             >
               <button
                 type="submit"
-                class="btn btn-sm btn-danger-texte"
-                th:attr="aria-label='Supprimer ' + ${artiste.artisteAffiche}"
+                class="btn btn-sm btn-danger-texte js-confirmer-suppr"
+                data-nom-artiste="${artiste.artisteAffiche}"
+                th:attr="aria-label='Supprimer ' + ${artiste.artisteAffiche}, data-nom-artiste=${artiste.artisteAffiche}"
               >
                 Supprimer
               </button>
@@ -136,6 +146,39 @@
           </li>
         </ul>
       </section>
+
+      <!-- Dialog de confirmation de suppression d'artiste -->
+      <dialog
+        id="dialog-confirmer-suppr-artiste"
+        aria-labelledby="titre-confirmer-suppr-artiste"
+        aria-modal="true"
+      >
+        <div class="dialog-entete">
+          <h2 id="titre-confirmer-suppr-artiste" class="dialog-titre">
+            Supprimer l'artiste
+          </h2>
+        </div>
+        <p>
+          Arrêter de suivre «
+          <strong id="nom-artiste-a-supprimer"></strong> » ?
+        </p>
+        <div class="dialog-pied">
+          <button
+            type="button"
+            id="btn-confirmer-suppr-artiste"
+            class="btn btn-danger"
+          >
+            Supprimer
+          </button>
+          <button
+            type="button"
+            id="btn-annuler-suppr-artiste"
+            class="btn btn-texte"
+          >
+            Annuler
+          </button>
+        </div>
+      </dialog>
     </th:block>
   </body>
 </html>

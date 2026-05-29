@@ -17,24 +17,33 @@
         </p>
       </div>
 
-      <div th:if="${succes}" class="alerte alerte-succes">
+      <div th:if="${succes}" class="alerte alerte-succes" role="alert">
         Synchronisation déclenchée — les résultats seront mis à jour dans
         quelques minutes.
       </div>
       <div
         th:if="${erreur}"
         class="alerte alerte-erreur"
+        role="alert"
         th:text="${erreur}"
       ></div>
 
       <div class="decouverte-header">
         <span class="sync-info" th:if="${derniereSyncFormatee != null}">
           Dernière synchro :
-          <span th:text="${derniereSyncFormatee}">date</span>
+          <time th:datetime="${donnees?.derniereSyncRegion}" th:text="${derniereSyncFormatee}">date</time>
         </span>
         <span class="sync-info" th:unless="${derniereSyncFormatee != null}">
           Jamais synchronisé
         </span>
+        <form method="post" th:action="@{/decouverte/fetcher}" class="inline-form">
+          <button type="submit" class="btn btn-sm btn-secondary">
+            <svg class="icon" aria-hidden="true">
+              <use href="/icons/lucide-sprite.svg#icon-refresh-cw" />
+            </svg>
+            Actualiser
+          </button>
+        </form>
       </div>
 
       <!-- Chips départements -->
@@ -43,8 +52,9 @@
         <div class="chips">
           <th:block th:each="dept : ${donnees.deptsUtilisateur}">
             <a
-              th:href="@{/decouverte(dept=${depts.contains(dept) ? null : dept},q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri})}"
+              th:href="@{/decouverte(dept=${depts.contains(dept) ? null : dept},q=${q},mois=${mois},genre=${genre},classification=${classification},tri=${tri})}"
               th:classappend="${depts.contains(dept) ? ' actif' : ''}"
+              th:attr="aria-current=${depts.contains(dept) ? 'true' : null}"
               th:text="${dept}"
               th:title="${syncDepts[dept] != null ? 'Dernière synchro : ' + syncDepts[dept] : 'Jamais synchronisé'}"
               >75</a
@@ -94,7 +104,8 @@
             autocomplete="off"
           />
 
-          <select name="mois" aria-label="Filtrer par mois">
+          <label for="filtre-mois" class="sr-only">Filtrer par mois</label>
+          <select id="filtre-mois" name="mois" class="js-auto-submit">
             <option value="">Tous les mois</option>
             <option
               th:each="m : ${donnees?.moisDisponibles}"
@@ -106,7 +117,8 @@
             </option>
           </select>
 
-          <select name="genre" aria-label="Filtrer par genre">
+          <label for="filtre-genre" class="sr-only">Filtrer par genre</label>
+          <select id="filtre-genre" name="genre" class="js-auto-submit">
             <option value="">Tous les genres</option>
             <option
               th:each="g : ${donnees?.genresDisponibles}"
@@ -118,7 +130,8 @@
             </option>
           </select>
 
-          <select name="classification" aria-label="Filtrer par classification">
+          <label for="filtre-classification" class="sr-only">Filtrer par classification</label>
+          <select id="filtre-classification" name="classification" class="js-auto-submit">
             <option value="">Toutes classifications</option>
             <option
               th:each="c : ${donnees?.classificationsDisponibles}"
@@ -130,19 +143,8 @@
             </option>
           </select>
 
-          <select name="budget" aria-label="Filtrer par budget">
-            <option value="" th:selected="${budget == null or budget == ''}">
-              Tous les prix
-            </option>
-            <option value="30" th:selected="${budget == '30'}">≤ 30 €</option>
-            <option value="50" th:selected="${budget == '50'}">≤ 50 €</option>
-            <option value="80" th:selected="${budget == '80'}">≤ 80 €</option>
-            <option value="100" th:selected="${budget == '100'}">
-              ≤ 100 €
-            </option>
-          </select>
-
-          <select name="tri" aria-label="Trier les résultats">
+          <label for="filtre-tri" class="sr-only">Trier les résultats</label>
+          <select id="filtre-tri" name="tri">
             <option value="date" th:selected="${tri == 'date' or tri == null}">
               Par date
             </option>
@@ -161,6 +163,8 @@
         class="page-subtitle"
         th:if="${donnees != null}"
         th:text="${donnees.totalConcerts} + ' concert' + (${donnees.totalConcerts != 1} ? 's' : '') + ' trouvé' + (${donnees.totalConcerts != 1} ? 's' : '')"
+        aria-live="polite"
+        aria-atomic="true"
       >
         0 concert trouvé
       </p>
@@ -190,14 +194,14 @@
           <table>
             <thead>
               <tr>
-                <th>Artiste</th>
-                <th>Date</th>
-                <th>Salle</th>
-                <th>Ville</th>
-                <th>Dept</th>
-                <th>Genre</th>
-                <th>Prix</th>
-                <th><span class="sr-only">Lien</span></th>
+                <th scope="col">Artiste</th>
+                <th scope="col">Date</th>
+                <th scope="col">Salle</th>
+                <th scope="col">Ville</th>
+                <th scope="col">Dept</th>
+                <th scope="col">Genre</th>
+                <th scope="col">Statut</th>
+                <th scope="col"><span class="sr-only">Lien</span></th>
               </tr>
             </thead>
             <tbody>
@@ -205,8 +209,12 @@
                 <td data-label="Artiste" th:text="${concert.artiste}">
                   Artiste
                 </td>
-                <td data-label="Date" th:text="${concert.dateFormatee()}">
-                  date
+                <td data-label="Date">
+                  <time
+                    th:datetime="${concert.date}"
+                    th:text="${concert.dateHeureFormatee()}"
+                    >date</time
+                  >
                 </td>
                 <td
                   data-label="Salle"
@@ -231,13 +239,23 @@
                   genre
                 </td>
                 <td
-                  data-label="Prix"
-                  th:classappend="${concert.prixMin == null} ? ' cel-vide' : ''"
+                  data-label="Statut"
+                  th:classappend="${concert.statut == null or concert.statut == 'onsale'} ? ' cel-vide' : ''"
                 >
                   <span
-                    th:if="${concert.prixMin != null}"
-                    th:text="${concert.prixMin} + (${concert.prixMax != null and concert.prixMax != concert.prixMin} ? '–' + ${concert.prixMax} : '') + ' €'"
-                    >Prix</span
+                    class="badge badge-annule"
+                    th:if="${concert.statut == 'cancelled'}"
+                    >Annulé</span
+                  >
+                  <span
+                    class="badge badge-reporte"
+                    th:if="${concert.statut == 'rescheduled' or concert.statut == 'postponed'}"
+                    >Reporté</span
+                  >
+                  <span
+                    class="badge badge-complet"
+                    th:if="${concert.statut == 'offsale'}"
+                    >Complet</span
                   >
                 </td>
                 <td
@@ -250,7 +268,7 @@
                     target="_blank"
                     rel="noopener noreferrer"
                     class="btn btn-xs btn-secondary"
-                    >Billets</a
+                    >Billets<span class="sr-only"> (ouvre dans un nouvel onglet)</span></a
                   >
                 </td>
               </tr>
@@ -266,7 +284,7 @@
       >
         <a
           th:if="${donnees.page > 0}"
-          th:href="@{/decouverte(dept=${depts},q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri},page=${donnees.page - 1})}"
+          th:href="@{/decouverte(dept=${depts},q=${q},mois=${mois},genre=${genre},classification=${classification},tri=${tri},page=${donnees.page - 1})}"
           class="btn btn-secondary"
           >Précédent</a
         >
@@ -276,7 +294,7 @@
         >
         <a
           th:if="${donnees.page + 1 < donnees.totalPages}"
-          th:href="@{/decouverte(dept=${depts},q=${q},mois=${mois},genre=${genre},classification=${classification},budget=${budget},tri=${tri},page=${donnees.page + 1})}"
+          th:href="@{/decouverte(dept=${depts},q=${q},mois=${mois},genre=${genre},classification=${classification},tri=${tri},page=${donnees.page + 1})}"
           class="btn btn-secondary"
           >Suivant</a
         >
