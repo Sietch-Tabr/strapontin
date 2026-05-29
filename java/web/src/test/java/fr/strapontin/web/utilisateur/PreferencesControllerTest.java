@@ -71,7 +71,7 @@ class PreferencesControllerTest {
     ResponseEntity<Map<String, Object>> rep =
         controller.importer(fichier, "fusionner", false, auth);
 
-    assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, rep.getStatusCode());
+    assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, rep.getStatusCode());
     assertNotNull(rep.getBody());
     assertTrue(rep.getBody().containsKey("erreur"));
   }
