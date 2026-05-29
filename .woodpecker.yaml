@@ -47,13 +47,19 @@ steps:
         echo "[deploy] Backup OK"
 
         # Validation : exactement un JAR par module
+        WEB_COUNT=$(find java/web/target -name 'web-*.jar' ! -name '*.original' | wc -l)
         WEB_JAR=$(find java/web/target -name 'web-*.jar' ! -name '*.original')
-        WEB_COUNT=$(echo "$WEB_JAR" | grep -c .)
-        [ "$WEB_COUNT" -eq 1 ] || { echo "Ambiguïté JAR web : $WEB_COUNT trouvés" >&2; exit 1; }
+        if [ "$WEB_COUNT" -ne 1 ]; then
+          echo "Ambiguite JAR web : $WEB_COUNT trouves" >&2
+          exit 1
+        fi
 
+        WORKER_COUNT=$(find java/worker/target -name 'worker-*.jar' ! -name '*.original' | wc -l)
         WORKER_JAR=$(find java/worker/target -name 'worker-*.jar' ! -name '*.original')
-        WORKER_COUNT=$(echo "$WORKER_JAR" | grep -c .)
-        [ "$WORKER_COUNT" -eq 1 ] || { echo "Ambiguïté JAR worker : $WORKER_COUNT trouvés" >&2; exit 1; }
+        if [ "$WORKER_COUNT" -ne 1 ]; then
+          echo "Ambiguite JAR worker : $WORKER_COUNT trouves" >&2
+          exit 1
+        fi
 
         # Déploiement atomique : scp vers *.jar.new, update.sh fait le mv
         scp -i /tmp/key -o StrictHostKeyChecking=no "$WEB_JAR" root@$$LXC_JAVA_HOST:/opt/strapontin/web.jar.new
