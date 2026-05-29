@@ -30,6 +30,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -189,6 +190,7 @@ public class AuthController {
   ///
   /// @param req le corps contenant l'adresse email
   /// @return 200 dans tous les cas
+  @Transactional
   @PostMapping("/api/auth/forgot-password")
   public ResponseEntity<Map<String, Object>> motDePasseOublie(
       @RequestBody ForgotPasswordRequest req, HttpServletRequest httpRequest) {
@@ -237,6 +239,7 @@ public class AuthController {
   ///
   /// @param req le corps contenant le token et le nouveau mot de passe
   /// @return 200 si réinitialisé, 400 si token invalide ou expiré
+  @Transactional
   @PostMapping("/api/auth/reset-password")
   public ResponseEntity<Map<String, Object>> reinitialiserMotDePasse(
       @RequestBody ResetPasswordRequest req) {

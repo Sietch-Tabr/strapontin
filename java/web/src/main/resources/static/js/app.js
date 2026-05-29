@@ -67,7 +67,7 @@ if ("serviceWorker" in navigator && "PushManager" in window) {
 }
 
 // Toasts (Popover API — l'attribut est posé par JS pour contourner le filtrage Thymeleaf)
-(function () {
+function initToasts() {
   if (!("showPopover" in HTMLElement.prototype)) return;
   const alertes = document.querySelectorAll(".alerte");
 
@@ -96,10 +96,10 @@ if ("serviceWorker" in navigator && "PushManager" in window) {
       el.hidePopover();
     });
   });
-})();
+}
 
 // Bouton de recherche — activation dynamique selon la longueur du champ
-(function () {
+function initBoutonRecherche() {
   const input =
     document.getElementById("q-artiste") ?? document.getElementById("q-salle");
   if (!input) return;
@@ -110,7 +110,7 @@ if ("serviceWorker" in navigator && "PushManager" in window) {
   };
   input.addEventListener("input", majEtat);
   majEtat();
-})();
+}
 
 function majNavActif(chemin) {
   document
@@ -143,12 +143,8 @@ function majNavActif(chemin) {
   }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  majNavActif(window.location.pathname);
-});
-
 // Réaffichage de concerts masqués (accueil)
-document.addEventListener("DOMContentLoaded", function () {
+function initReafficher() {
   document.querySelectorAll("[data-reafficher-id]").forEach(function (btn) {
     btn.addEventListener("click", function () {
       const id = btn.getAttribute("data-reafficher-id");
@@ -166,10 +162,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
   });
-});
+}
 
 // Toggle filtres spectacles (mobile)
-(function () {
+function initFiltresToggle() {
   const btn = document.getElementById("btn-filtres");
   const form = document.getElementById("filtres-form");
   if (!btn || !form) return;
@@ -201,10 +197,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const ouvert = form.classList.toggle("visible");
     btn.setAttribute("aria-expanded", String(ouvert));
   });
-})();
+}
 
-// Select natif + liens onglets — paramètres/admin, réinitialisé à chaque nav Turbo
-// Utilise une classe .actif plutôt que :target (incompatible avec Turbo Drive).
+// Select natif + liens onglets — paramètres/admin, réinitialisé à chaque navigation HTMX.
 function initOngletsPage() {
   const sections = document.querySelectorAll(
     ".parametres-section, .admin-section",
@@ -249,8 +244,6 @@ function initOngletsPage() {
       });
     });
 }
-
-document.addEventListener("DOMContentLoaded", initOngletsPage);
 
 // Compteur de longueur MDP + dialog suppression (/parametres)
 function initParametres() {
@@ -306,13 +299,10 @@ function initParametres() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", initParametres);
-
 // Drawer de navigation mobile (dialog natif)
-(function () {
+function initDrawer() {
   const btnPlus = document.getElementById("btn-nav-plus");
-  if (!btnPlus || btnPlus.dataset.initDrawer) return;
-  btnPlus.dataset.initDrawer = "1";
+  if (!btnPlus) return;
 
   btnPlus.addEventListener("click", function () {
     const d = document.getElementById("dialog-nav-plus");
@@ -324,7 +314,7 @@ document.addEventListener("DOMContentLoaded", initParametres);
       btnPlus.setAttribute("aria-expanded", "true");
     }
   });
-})();
+}
 
 function initDrawerDialog() {
   const btnPlus = document.getElementById("btn-nav-plus");
@@ -356,10 +346,8 @@ function initDrawerDialog() {
   );
 }
 
-document.addEventListener("DOMContentLoaded", initDrawerDialog);
-
 // Modale de signalement (page aide)
-(function () {
+function initModalSignaler() {
   const dialog = document.getElementById("dialog-signaler");
   if (!dialog) return;
 
@@ -401,10 +389,10 @@ document.addEventListener("DOMContentLoaded", initDrawerDialog);
       messageArea.value = canevas[typeSelect.value] || "";
     });
   }
-})();
+}
 
 // Confirmation de suppression d'artiste
-(function () {
+function initConfirmSupprArtiste() {
   var dialog = document.getElementById("dialog-confirmer-suppr-artiste");
   if (!dialog) return;
   var nomEl = document.getElementById("nom-artiste-a-supprimer");
@@ -427,10 +415,10 @@ document.addEventListener("DOMContentLoaded", initDrawerDialog);
   });
   if (btnAnnuler) btnAnnuler.addEventListener("click", function () { dialog.close(); });
   dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });
-})();
+}
 
 // Confirmation de suppression de salle
-(function () {
+function initConfirmSupprSalle() {
   var dialog = document.getElementById("dialog-confirmer-suppr-salle");
   if (!dialog) return;
   var nomEl = document.getElementById("nom-salle-a-supprimer");
@@ -453,10 +441,10 @@ document.addEventListener("DOMContentLoaded", initDrawerDialog);
   });
   if (btnAnnuler) btnAnnuler.addEventListener("click", function () { dialog.close(); });
   dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });
-})();
+}
 
 // Bouton "Relancer les fetches" (admin) — AJAX + polling indicateur visuel
-(function () {
+function initBoutonRelancer() {
   const btn = document.getElementById("btn-relancer");
   if (!btn) return;
   const statut = document.getElementById("relancer-statut");
@@ -516,10 +504,10 @@ document.addEventListener("DOMContentLoaded", initDrawerDialog);
         if (statut) statut.textContent = "Erreur — worker inaccessible.";
       });
   });
-})();
+}
 
 // Logs admin — filtre multi-niveaux avec warn+error actifs par défaut
-(function () {
+function initLogsAdmin() {
   const table = document.getElementById("table-logs");
   const filtreSource = document.getElementById("filtre-source");
   const filtresActifs = new Set(["warn", "error"]);
@@ -704,10 +692,10 @@ document.addEventListener("DOMContentLoaded", initDrawerDialog);
   if (filtreSource) filtreSource.addEventListener("change", filtrerLogs);
   mettreAJourBoutonsLogs();
   filtrerLogs();
-})();
+}
 
 // Dialog confirmation VAPID (admin)
-(function () {
+function initDialogVapid() {
   const form = document.getElementById("form-vapid");
   const dialog = document.getElementById("dialog-vapid");
   if (!form || !dialog) return;
@@ -733,10 +721,10 @@ document.addEventListener("DOMContentLoaded", initDrawerDialog);
   dialog.addEventListener("click", function (e) {
     if (e.target === dialog) dialog.close();
   });
-})();
+}
 
 // Modification / suppression utilisateur (admin)
-(function () {
+function initGestionUtilisateurs() {
   const formsModif = document.querySelectorAll(".form-modif-utilisateur");
   const dialogSuppr = document.getElementById("dialog-supprimer-user");
   const dialogNom = document.getElementById("dialog-supprimer-user-nom");
@@ -824,13 +812,13 @@ document.addEventListener("DOMContentLoaded", initDrawerDialog);
         });
     });
   });
-})();
+}
 
 // Modale invitation (admin)
-(function () {
+function initModaleInvitation() {
   const dialog = document.getElementById("dialog-invitation");
   if (dialog) dialog.showModal();
-})();
+}
 
 window.copierLienInvitation = function () {
   const input = document.getElementById("lien-invitation");
@@ -1013,8 +1001,6 @@ function initPush() {
   chargerEtat();
 }
 
-document.addEventListener("DOMContentLoaded", initPush);
-
 function urlBase64VersUint8Array(base64) {
   const rembourrage = "=".repeat((4 - (base64.length % 4)) % 4);
   const b64 = (base64 + rembourrage).replace(/-/g, "+").replace(/_/g, "/");
@@ -1025,3 +1011,27 @@ function urlBase64VersUint8Array(base64) {
 function arrayBufferVersBase64(buffer) {
   return btoa(String.fromCharCode(...new Uint8Array(buffer)));
 }
+
+function initTout() {
+  majNavActif(window.location.pathname);
+  initToasts();
+  initBoutonRecherche();
+  initReafficher();
+  initFiltresToggle();
+  initOngletsPage();
+  initParametres();
+  initDrawer();
+  initDrawerDialog();
+  initModalSignaler();
+  initConfirmSupprArtiste();
+  initConfirmSupprSalle();
+  initBoutonRelancer();
+  initLogsAdmin();
+  initDialogVapid();
+  initGestionUtilisateurs();
+  initModaleInvitation();
+  initPush();
+}
+
+document.addEventListener("DOMContentLoaded", initTout);
+document.addEventListener("htmx:afterSettle", initTout);
