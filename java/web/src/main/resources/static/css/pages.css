@@ -400,9 +400,36 @@
 .changelog > section {
   padding-bottom: 2.5rem;
 }
-.changelog > section + section {
+.changelog > details {
+  padding-bottom: 2.5rem;
+}
+.changelog > section + details,
+.changelog > details + details {
   padding-top: 2.5rem;
   border-top: 1px solid var(--border);
+}
+.changelog > details > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.changelog > details > summary::-webkit-details-marker {
+  display: none;
+}
+.changelog > details > summary .changelog-version {
+  margin-bottom: 0;
+}
+.changelog > details > summary .changelog-version::before {
+  content: "▶";
+  font-size: 0.5rem;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.changelog > details[open] > summary .changelog-version::before {
+  transform: rotate(90deg);
+}
+.changelog > details[open] > .changelog-entrees {
+  padding-top: 1rem;
 }
 .changelog-version {
   font-size: 1rem;
@@ -422,34 +449,7 @@
   font-weight: 500;
   margin-bottom: 0.375rem;
 }
-.changelog-historique > summary {
-  cursor: pointer;
-  list-style: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--fg-muted);
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0;
-}
-.changelog-historique > summary::-webkit-details-marker {
-  display: none;
-}
-.changelog-historique > summary::before {
-  content: "▶";
-  font-size: 0.5rem;
-  transition: transform 0.2s;
-  flex-shrink: 0;
-}
-details[open].changelog-historique > summary::before {
-  transform: rotate(90deg);
-}
-.changelog-historique > section + section {
-  margin-top: 2.5rem;
-}
-.changelog section ul {
+.changelog-entrees ul {
   list-style: disc;
   padding-left: 1.25rem;
   font-size: 0.875rem;
