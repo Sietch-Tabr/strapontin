@@ -174,7 +174,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("filtres-form");
   if (!btn || !form) return;
 
-  const NOMS_FILTRES = ["q", "mois", "genre", "classification", "budget"];
+  const NOMS_FILTRES = ["q", "mois", "genre", "classification"];
 
   function compterActifs() {
     return NOMS_FILTRES.reduce(function (n, nom) {
@@ -378,7 +378,8 @@ document.addEventListener("DOMContentLoaded", initDrawerDialog);
 
   function ouvrir() {
     if (messageArea && !messageArea.value.trim()) {
-      messageArea.value = canevas["bug"] || "";
+      var type = typeSelect ? typeSelect.value : "bug";
+      messageArea.value = canevas[type] || canevas["bug"] || "";
     }
     dialog.showModal();
   }
@@ -400,6 +401,58 @@ document.addEventListener("DOMContentLoaded", initDrawerDialog);
       messageArea.value = canevas[typeSelect.value] || "";
     });
   }
+})();
+
+// Confirmation de suppression d'artiste
+(function () {
+  var dialog = document.getElementById("dialog-confirmer-suppr-artiste");
+  if (!dialog) return;
+  var nomEl = document.getElementById("nom-artiste-a-supprimer");
+  var btnConfirmer = document.getElementById("btn-confirmer-suppr-artiste");
+  var btnAnnuler = document.getElementById("btn-annuler-suppr-artiste");
+  var formEnAttente = null;
+
+  document.querySelectorAll(".js-confirmer-suppr").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      formEnAttente = btn.closest("form");
+      if (nomEl) nomEl.textContent = btn.getAttribute("data-nom-artiste") || "";
+      dialog.showModal();
+    });
+  });
+
+  if (btnConfirmer) btnConfirmer.addEventListener("click", function () {
+    dialog.close();
+    if (formEnAttente) formEnAttente.submit();
+  });
+  if (btnAnnuler) btnAnnuler.addEventListener("click", function () { dialog.close(); });
+  dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });
+})();
+
+// Confirmation de suppression de salle
+(function () {
+  var dialog = document.getElementById("dialog-confirmer-suppr-salle");
+  if (!dialog) return;
+  var nomEl = document.getElementById("nom-salle-a-supprimer");
+  var btnConfirmer = document.getElementById("btn-confirmer-suppr-salle");
+  var btnAnnuler = document.getElementById("btn-annuler-suppr-salle");
+  var formEnAttente = null;
+
+  document.querySelectorAll(".js-confirmer-suppr-salle").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      formEnAttente = btn.closest("form");
+      if (nomEl) nomEl.textContent = btn.getAttribute("data-nom-salle") || "";
+      dialog.showModal();
+    });
+  });
+
+  if (btnConfirmer) btnConfirmer.addEventListener("click", function () {
+    dialog.close();
+    if (formEnAttente) formEnAttente.submit();
+  });
+  if (btnAnnuler) btnAnnuler.addEventListener("click", function () { dialog.close(); });
+  dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });
 })();
 
 // Bouton "Relancer les fetches" (admin) — AJAX + polling indicateur visuel

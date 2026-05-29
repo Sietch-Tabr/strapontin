@@ -44,7 +44,6 @@ public class SpectacleViewController {
   /// @param quinzaine       {@code true} pour les 15 prochains jours
   /// @param tri             {@code "date"} ou {@code "nouveaute"}
   /// @param masques         {@code true} pour afficher les concerts masqués
-  /// @param budget          prix max
   /// @param sources         sources à inclure ({@code artistes} / {@code salles})
   /// @param indisponibles   {@code "1"} pour inclure les concerts non disponibles
   /// @param page            numéro de page (0-indexé)
@@ -60,7 +59,6 @@ public class SpectacleViewController {
       @RequestParam(required = false, defaultValue = "false") boolean quinzaine,
       @RequestParam(required = false, defaultValue = "date") String tri,
       @RequestParam(required = false, defaultValue = "false") boolean masques,
-      @RequestParam(required = false, defaultValue = "") String budget,
       @RequestParam(name = "source", required = false) List<String> sources,
       @RequestParam(required = false) String indisponibles,
       @RequestParam(required = false, defaultValue = "0") int page,
@@ -75,7 +73,6 @@ public class SpectacleViewController {
             quinzaine,
             tri,
             masques,
-            budget,
             sources,
             indisponibles,
             page,
@@ -87,7 +84,6 @@ public class SpectacleViewController {
     modele.addAttribute("genre", genre);
     modele.addAttribute("tri", tri);
     modele.addAttribute("masques", masques);
-    modele.addAttribute("budget", budget);
     modele.addAttribute("sources", sources != null ? sources : List.of());
     modele.addAttribute("indisponibles", indisponibles);
     modele.addAttribute("quinzaine", quinzaine);

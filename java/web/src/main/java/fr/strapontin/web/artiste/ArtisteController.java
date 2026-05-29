@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.artiste;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
@@ -55,10 +56,12 @@ public class ArtisteController {
   private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
 
-  public ArtisteController(NamedParameterJdbcTemplate jdbc) {
+  public ArtisteController(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
     this.jdbc = jdbc;
+    this.objectMapper = objectMapper;
     this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
   }
 
@@ -258,9 +261,7 @@ public class ArtisteController {
     // Format attendu : {"data":[{"name":"...","nb_fan":...},...]}
     List<SuggestionArtiste> resultats = new ArrayList<>();
     try {
-      com.fasterxml.jackson.databind.ObjectMapper mapper =
-          new com.fasterxml.jackson.databind.ObjectMapper();
-      Map<String, Object> root = mapper.readValue(json, Map.class);
+      Map<String, Object> root = objectMapper.readValue(json, Map.class);
       List<Map<String, Object>> data = (List<Map<String, Object>>) root.get("data");
       if (data == null) return resultats;
 

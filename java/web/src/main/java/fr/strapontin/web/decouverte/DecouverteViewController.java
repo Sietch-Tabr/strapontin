@@ -40,7 +40,6 @@ public class DecouverteViewController {
   /// @param mois           filtre mois (YYYY-MM)
   /// @param genre          filtre genre
   /// @param classification filtre classification
-  /// @param budget         budget maximum
   /// @param tri            critère de tri (`date` ou `nouveaute`)
   /// @param page           numéro de page (0-indexé)
   /// @param modele         le modèle Thymeleaf
@@ -53,7 +52,6 @@ public class DecouverteViewController {
       @RequestParam(required = false, defaultValue = "") String mois,
       @RequestParam(required = false, defaultValue = "") String genre,
       @RequestParam(required = false, defaultValue = "") String classification,
-      @RequestParam(required = false, defaultValue = "") String budget,
       @RequestParam(required = false, defaultValue = "date") String tri,
       @RequestParam(required = false, defaultValue = "0") int page,
       Model modele,
@@ -61,7 +59,7 @@ public class DecouverteViewController {
 
     ResponseEntity<DecouverteController.ReponseDecouverte> rep =
         decouverteController.decouvrir(
-            depts, q, mois, genre, classification, budget, tri, page, auth);
+            depts, q, mois, genre, classification, tri, page, auth);
 
     DecouverteController.ReponseDecouverte donnees = rep.getBody();
     modele.addAttribute("donnees", donnees);
@@ -70,7 +68,6 @@ public class DecouverteViewController {
     modele.addAttribute("mois", mois);
     modele.addAttribute("genre", genre);
     modele.addAttribute("classification", classification);
-    modele.addAttribute("budget", budget);
     modele.addAttribute("tri", tri);
     modele.addAttribute("page", page);
     modele.addAttribute("currentPage", "decouverte");

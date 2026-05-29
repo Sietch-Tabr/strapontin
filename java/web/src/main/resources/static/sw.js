@@ -47,13 +47,15 @@ self.addEventListener("fetch", (event) => {
       fetch(request)
         .then(function (response) {
           if (response.ok) {
-            caches
-              .open(CACHE_NOM)
-              .then(function (cache) { cache.put(request, response.clone()); });
+            caches.open(CACHE_NOM).then(function (cache) {
+              cache.put(request, response.clone());
+            });
           }
           return response;
         })
-        .catch(function () { return caches.match(request); }),
+        .catch(function () {
+          return caches.match(request);
+        }),
     );
     return;
   }
