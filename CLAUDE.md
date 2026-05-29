@@ -153,7 +153,7 @@ Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein n
 - **Navigation source de vérité** : `ModeleGlobalAdvice` (@ControllerAdvice) injecte `navPrincipal`, `navSecondaire`, `navFooter`, `pagesDrawer` dans tous les templates via `@ModelAttribute`
 - **Fragment onglets** : `layout/fragments/onglets.html` — réutilisé par `admin.html` et `parametres.html`
 - **`hx-boost="true"`** sur `<body>` — navigation via XHR, swap du body. `initTout()` dans `app.js` rebinde les handlers sur `DOMContentLoaded` et `htmx:afterSettle`
-- **Escape Thymeleaf** : apostrophe dans un paramètre de fragment → syntaxe `|...|` (ex. `|Sections d'admin|`). `\'` et `''` ne sont pas valides dans ce contexte.
+- **Escape Thymeleaf** : apostrophe dans un paramètre de fragment `~{...}` → impossible avec chaîne littérale. Utiliser une variable modèle `${var}` ou éviter l'apostrophe (`'Sections administration'`). `\'`, `''` et `|...|` sont tous invalides dans ce contexte.
 
 ## Schéma PostgreSQL
 
