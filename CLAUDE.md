@@ -15,7 +15,7 @@ strapontin/
     └── update.sh     ← restart services + healthcheck ; appelé par Woodpecker (prod) ou manuellement (dev)
 ```
 
-## Stack technique (v2.0.5)
+## Stack technique (v2.1.0)
 
 - **Spring Boot 4.0.6** + Thymeleaf — UI SSR + REST API (port 8080)
 - **Spring Security 7** — auth session, form login, TOTP 2FA optionnel (bucket4j rate-limiting)
@@ -24,6 +24,7 @@ strapontin/
 - **Flyway 12** — migrations DB (`java/web/src/main/resources/db/migration/`)
 - **Resend** — notifications email (tier gratuit 3 000/mois)
 - **web-push (VAPID)** — notifications push PWA
+- **HTMX 2.0.6** + **Alpine.js 3.14.9** — navigation SPA-like (`hx-boost`) + composants réactifs, servis via webjars
 - **Maven** — build (`mvn -f java/pom.xml -pl web,worker -am package`)
 
 ## Workflow de développement
@@ -149,6 +150,10 @@ Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein n
 - **PWA** : service worker JS vanilla + push. Cap 10 abonnements/user.
 - **Badge "Nouveau"** : basé sur `user_matches.notifie_le IS NULL`
 - **Thème** : cookie `theme` (1 an) + `user_config.theme` → pas de FOUC
+- **Navigation source de vérité** : `ModeleGlobalAdvice` (@ControllerAdvice) injecte `navPrincipal`, `navSecondaire`, `navFooter`, `pagesDrawer` dans tous les templates via `@ModelAttribute`
+- **Fragment onglets** : `layout/fragments/onglets.html` — réutilisé par `admin.html` et `parametres.html`
+- **`hx-boost="true"`** sur `<body>` — navigation via XHR, swap du body. `initTout()` dans `app.js` rebinde les handlers sur `DOMContentLoaded` et `htmx:afterSettle`
+- **Escape Thymeleaf** : apostrophe dans un paramètre de fragment → syntaxe `|...|` (ex. `|Sections d'admin|`). `\'` et `''` ne sont pas valides dans ce contexte.
 
 ## Schéma PostgreSQL
 
