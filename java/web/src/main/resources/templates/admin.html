@@ -67,42 +67,7 @@
         th:text="${erreur}"
       ></div>
 
-      <select
-        class="param-onglets-mobile"
-        aria-label="Section d'administration"
-      >
-        <option value="#jobs">Tableau de bord</option>
-        <option value="#logs">Logs</option>
-        <option value="#configuration">Configuration</option>
-        <option value="#utilisateurs">Utilisateurs</option>
-      </select>
-
-      <nav class="param-onglets" aria-label="Sections d'administration">
-        <a href="#jobs" class="param-onglet">
-          <svg width="16" height="16" aria-hidden="true">
-            <use href="/icons/lucide-sprite.svg#icon-activity" />
-          </svg>
-          Tableau de bord
-        </a>
-        <a href="#logs" class="param-onglet">
-          <svg width="16" height="16" aria-hidden="true">
-            <use href="/icons/lucide-sprite.svg#icon-scroll-text" />
-          </svg>
-          Logs
-        </a>
-        <a href="#configuration" class="param-onglet">
-          <svg width="16" height="16" aria-hidden="true">
-            <use href="/icons/lucide-sprite.svg#icon-settings" />
-          </svg>
-          Configuration
-        </a>
-        <a href="#utilisateurs" class="param-onglet">
-          <svg width="16" height="16" aria-hidden="true">
-            <use href="/icons/lucide-sprite.svg#icon-users" />
-          </svg>
-          Utilisateurs
-        </a>
-      </nav>
+      <th:block th:insert="~{layout/fragments/onglets :: onglets(${ongletItems}, 'Sections d\'administration')}"></th:block>
 
       <div class="admin-sections">
         <!-- Section Tableau de bord (Jobs) -->

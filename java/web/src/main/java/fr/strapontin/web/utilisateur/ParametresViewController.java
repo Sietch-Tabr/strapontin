@@ -8,6 +8,7 @@ import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.TotpService;
 import fr.strapontin.web.securite.UtilisateurDetails;
+import fr.strapontin.web.vue.OngletItem;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -114,6 +115,11 @@ public class ParametresViewController {
             Integer.class);
     modele.addAttribute("nbArtistes", nbArtistes != null ? nbArtistes : 0);
     modele.addAttribute("nbSalles", nbSalles != null ? nbSalles : 0);
+    modele.addAttribute("ongletItems", List.of(
+        new OngletItem("#preferences", "Préférences", "icon-sliders-horizontal"),
+        new OngletItem("#notifications", "Notifications", "icon-bell"),
+        new OngletItem("#compte", "Compte", "icon-user"),
+        new OngletItem("#donnees", "Données", "icon-database")));
 
     return "parametres";
   }

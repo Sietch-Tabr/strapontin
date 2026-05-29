@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -136,5 +137,37 @@ public class ModeleGlobalAdvice {
       return u;
     }
     return null;
+  }
+
+  /// Items de navigation principale : affichés dans la sidebar et la bottom nav.
+  @ModelAttribute("navPrincipal")
+  public List<NavigationItem> navPrincipal() {
+    return List.of(
+        new NavigationItem("/", "accueil", "Accueil", "icon-home"),
+        new NavigationItem("/spectacles", "spectacles", "Mes spectacles", "icon-ticket"),
+        new NavigationItem("/decouverte", "decouverte", "Découverte", "icon-compass"));
+  }
+
+  /// Items de navigation secondaire : affichés dans la sidebar et le drawer mobile.
+  @ModelAttribute("navSecondaire")
+  public List<NavigationItem> navSecondaire() {
+    return List.of(
+        new NavigationItem("/artistes", "artistes", "Mes artistes", "icon-music"),
+        new NavigationItem("/salles", "salles", "Mes salles", "icon-building-2"));
+  }
+
+  /// Items de navigation pied de sidebar : affichés dans la sidebar footer et le drawer mobile.
+  @ModelAttribute("navFooter")
+  public List<NavigationItem> navFooter() {
+    return List.of(
+        new NavigationItem("/parametres", "parametres", "Paramètres", "icon-settings"),
+        new NavigationItem("/aide", "aide", "Aide", "icon-help-circle"),
+        new NavigationItem("/changelog", "changelog", "Nouveautés", "icon-sparkles"));
+  }
+
+  /// Ensemble des identifiants de page qui activent le bouton « Plus » de la bottom nav.
+  @ModelAttribute("pagesDrawer")
+  public Set<String> pagesDrawer() {
+    return Set.of("artistes", "salles", "admin", "parametres", "aide", "changelog");
   }
 }
