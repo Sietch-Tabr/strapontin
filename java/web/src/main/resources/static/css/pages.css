@@ -150,6 +150,20 @@
   }
 }
 
+/* ── Concerts — hiérarchie typographique ────────────────── */
+.concert-artiste {
+  font-weight: 600;
+}
+
+.concert-date {
+  color: var(--primary);
+}
+
+.concert-ville {
+  color: var(--fg-muted);
+  font-size: 0.875em;
+}
+
 /* ── Logs admin — container query table → cartes ─────────── */
 .logs-conteneur {
   container-type: inline-size;

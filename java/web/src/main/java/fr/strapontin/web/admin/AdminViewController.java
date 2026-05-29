@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.web.vue.OngletItem;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.time.Instant;
@@ -126,6 +127,11 @@ public class AdminViewController {
             : null;
     modele.addAttribute("utilisateurCourantId", utilisateurCourantId);
     modele.addAttribute("currentPage", "admin");
+    modele.addAttribute("ongletItems", List.of(
+        new OngletItem("#jobs", "Tableau de bord", "icon-activity"),
+        new OngletItem("#logs", "Logs", "icon-scroll-text"),
+        new OngletItem("#configuration", "Configuration", "icon-settings"),
+        new OngletItem("#utilisateurs", "Utilisateurs", "icon-users")));
     DateTimeFormatter formateur =
         DateTimeFormatter.ofPattern("EEEE d MMMM yyyy à HH'h'mm", Locale.FRENCH);
     modele.addAttribute("heureActualisation", LocalDateTime.now().format(formateur));

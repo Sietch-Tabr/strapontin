@@ -196,67 +196,41 @@
               <tr>
                 <th scope="col">Artiste</th>
                 <th scope="col">Date</th>
-                <th scope="col">Salle</th>
-                <th scope="col">Ville</th>
-                <th scope="col">Dept</th>
+                <th scope="col">Où</th>
                 <th scope="col">Genre</th>
-                <th scope="col">Statut</th>
                 <th scope="col"><span class="sr-only">Lien</span></th>
               </tr>
             </thead>
             <tbody>
               <tr th:each="concert : ${donnees.concerts}">
-                <td data-label="Artiste" th:text="${concert.artiste}">
-                  Artiste
+                <td data-label="Artiste">
+                  <span class="concert-artiste" th:text="${concert.artiste}">Artiste</span>
+                  <span class="badge badge-annule" th:if="${concert.statut == 'cancelled'}">Annulé</span>
+                  <span class="badge badge-reporte" th:if="${concert.statut == 'rescheduled' or concert.statut == 'postponed'}">Reporté</span>
+                  <span class="badge badge-complet" th:if="${concert.statut == 'offsale'}">Complet</span>
                 </td>
                 <td data-label="Date">
                   <time
+                    class="concert-date"
                     th:datetime="${concert.date}"
                     th:text="${concert.dateHeureFormatee()}"
                     >date</time
                   >
                 </td>
                 <td
-                  data-label="Salle"
-                  th:text="${concert.salle}"
-                  th:classappend="${concert.salle == null} ? ' cel-vide' : ''"
+                  data-label="Où"
+                  th:classappend="${concert.salle == null and concert.ville == null} ? ' cel-vide' : ''"
                 >
-                  Salle
+                  <span th:if="${concert.salle != null}" th:text="${concert.salle}"></span>
+                  <span th:if="${concert.salle != null and concert.ville != null}" class="concert-separateur"> · </span>
+                  <span th:if="${concert.ville != null}" class="concert-ville" th:text="${concert.ville}"></span>
                 </td>
-                <td
-                  data-label="Ville"
-                  th:text="${concert.ville}"
-                  th:classappend="${concert.ville == null} ? ' cel-vide' : ''"
-                >
-                  Ville
-                </td>
-                <td data-label="Dept" th:text="${concert.dept}">dept</td>
                 <td
                   data-label="Genre"
                   th:text="${concert.genre}"
                   th:classappend="${concert.genre == null} ? ' cel-vide' : ''"
                 >
                   genre
-                </td>
-                <td
-                  data-label="Statut"
-                  th:classappend="${concert.statut == null or concert.statut == 'onsale'} ? ' cel-vide' : ''"
-                >
-                  <span
-                    class="badge badge-annule"
-                    th:if="${concert.statut == 'cancelled'}"
-                    >Annulé</span
-                  >
-                  <span
-                    class="badge badge-reporte"
-                    th:if="${concert.statut == 'rescheduled' or concert.statut == 'postponed'}"
-                    >Reporté</span
-                  >
-                  <span
-                    class="badge badge-complet"
-                    th:if="${concert.statut == 'offsale'}"
-                    >Complet</span
-                  >
                 </td>
                 <td
                   data-label=""
@@ -267,9 +241,13 @@
                     th:href="${concert.url}"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="btn btn-xs btn-secondary"
-                    >Billets<span class="sr-only"> (ouvre dans un nouvel onglet)</span></a
+                    class="btn btn-xs btn-secondary btn-icone"
+                    aria-label="Acheter des billets (ouvre dans un nouvel onglet)"
                   >
+                    <svg class="icon" aria-hidden="true">
+                      <use href="/icons/lucide-sprite.svg#icon-external-link" />
+                    </svg>
+                  </a>
                 </td>
               </tr>
             </tbody>
