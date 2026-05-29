@@ -50,6 +50,13 @@
             Reconnectez-vous à Internet pour accéder à vos concerts et à votre
             liste de suivi.
           </p>
+          <p
+            id="msg-reconnexion"
+            style="color: var(--fg-muted); max-width: 24rem; display: none"
+            role="status"
+          >
+            Connexion rétablie, rechargement…
+          </p>
           <button onclick="location.reload()" class="btn btn-secondary">
             Réessayer
           </button>
@@ -57,5 +64,14 @@
       </main>
     </div>
     <script src="/js/app.js" defer></script>
+    <script>
+      window.addEventListener("online", function () {
+        var msg = document.getElementById("msg-reconnexion");
+        if (msg) msg.style.display = "";
+        setTimeout(function () {
+          location.reload();
+        }, 800);
+      });
+    </script>
   </body>
 </html>

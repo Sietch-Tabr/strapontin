@@ -13,7 +13,7 @@
 
     <groupId>fr.strapontin</groupId>
     <artifactId>strapontin-parent</artifactId>
-    <version>2.0.4</version>
+    <version>2.1.0</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -27,7 +27,7 @@
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Override BOM : Flyway 12.x cible Java 25 + PostgreSQL 14+ -->
-        <flyway.version>12.6.1</flyway.version>
+        <flyway.version>12.6.2</flyway.version>
         <!-- Overrides BOM Spring Boot 4.0.6 -->
         <caffeine.version>3.2.4</caffeine.version>
         <postgresql.version>42.7.11</postgresql.version>
@@ -36,7 +36,7 @@
         <bouncycastle.version>1.84</bouncycastle.version>
         <webpush.version>5.1.2</webpush.version>
         <commons-text.version>1.15.0</commons-text.version>
-        <resend.version>4.13.0</resend.version>
+        <resend.version>v4.14.1</resend.version>
         <springdoc.version>3.0.3</springdoc.version>
         <bucket4j.version>8.19.0</bucket4j.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
