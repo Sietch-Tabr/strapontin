@@ -120,7 +120,7 @@ public class PreferencesController {
     if (export.version() != 1) {
       Map<String, Object> erreur = new HashMap<>();
       erreur.put("erreur", "Version de fichier non supportée : " + export.version() + ".");
-      return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(erreur);
+      return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(erreur);
     }
 
     String userId = ud.id();
