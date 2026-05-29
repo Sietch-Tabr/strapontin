@@ -69,11 +69,16 @@ public class ArtisteViewController {
   /// Supprime un artiste de la liste de suivi.
   ///
   /// @param artisteNormalise l'artiste normalisé à supprimer
+  /// @param redirects        les attributs de redirection
   /// @param auth             contexte d'authentification
   /// @return redirect vers /artistes (PRG)
   @PostMapping("/artistes/supprimer/{artisteNormalise}")
-  public String supprimer(@PathVariable String artisteNormalise, Authentication auth) {
+  public String supprimer(
+      @PathVariable String artisteNormalise,
+      RedirectAttributes redirects,
+      Authentication auth) {
     artisteController.supprimerArtiste(artisteNormalise, auth);
+    redirects.addFlashAttribute("supprime", true);
     return "redirect:/artistes";
   }
 }

@@ -72,12 +72,15 @@ public class SalleViewController {
 
   /// Supprime une salle de la liste de suivi.
   ///
-  /// @param salleId l'identifiant de la salle à supprimer
-  /// @param auth    contexte d'authentification
+  /// @param salleId   l'identifiant de la salle à supprimer
+  /// @param redirects les attributs de redirection
+  /// @param auth      contexte d'authentification
   /// @return redirect vers /salles (PRG)
   @PostMapping("/salles/supprimer/{salleId}")
-  public String supprimer(@PathVariable String salleId, Authentication auth) {
+  public String supprimer(
+      @PathVariable String salleId, RedirectAttributes redirects, Authentication auth) {
     salleController.supprimerSalle(salleId, auth);
+    redirects.addFlashAttribute("supprime", true);
     return "redirect:/salles";
   }
 }

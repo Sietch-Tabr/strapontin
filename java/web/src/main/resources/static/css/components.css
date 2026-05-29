@@ -167,6 +167,16 @@ textarea:focus {
   border-color: #1e3a8a;
   color: #93c5fd;
 }
+.alerte-avertissement {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+.dark .alerte-avertissement {
+  background: #1c1400;
+  border-color: #78350f;
+  color: #fcd34d;
+}
 
 /* ── Carte ───────────────────────────────────────────────── */
 .card {

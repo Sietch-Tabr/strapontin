@@ -47,11 +47,16 @@
         th:if="${erreur}"
         class="alerte alerte-erreur"
         role="alert"
+        aria-live="assertive"
         th:text="${erreur}"
       ></div>
 
-      <div th:if="${succes}" class="alerte alerte-succes" role="status">
+      <div th:if="${succes}" class="alerte alerte-succes" role="status" aria-live="polite">
         Salle ajoutée — les concerts apparaîtront dans quelques secondes.
+      </div>
+
+      <div th:if="${supprime}" class="alerte alerte-succes" role="status" aria-live="polite">
+        Salle retirée de votre liste.
       </div>
 
       <!-- Résultats de recherche -->

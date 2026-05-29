@@ -50,14 +50,25 @@
         th:if="${erreur}"
         class="alerte alerte-erreur"
         role="alert"
+        aria-live="assertive"
         th:text="${erreur}"
       ></div>
+
+      <div
+        th:if="${supprime}"
+        class="alerte alerte-succes"
+        role="status"
+        aria-live="polite"
+      >
+        Artiste retiré de votre liste.
+      </div>
 
       <div
         th:if="${fetchEnCours}"
         data-delai="10000"
         class="alerte alerte-info"
         role="status"
+        aria-live="polite"
       >
         Fetch en cours pour « <strong th:text="${fetchEnCours}"></strong> »…
         Les concerts apparaîtront dans quelques secondes sur
