@@ -57,7 +57,7 @@ Commandes manuelles si besoin :
 mvn -f java/pom.xml -pl web,worker -am package
 scp "$(find java/web/target -name 'web-*.jar' ! -name '*.original')" root@192.168.20.78:/opt/strapontin/web.jar.new
 scp "$(find java/worker/target -name 'worker-*.jar' ! -name '*.original')" root@192.168.20.78:/opt/strapontin/worker.jar.new
-ssh root@192.168.20.78 "/opt/strapontin/update.sh"
+ssh root@192.168.20.78 "/opt/strapontin/scripts/update.sh"
 ```
 
 Accès app : `http://192.168.20.78:8080` — config locale dans `CLAUDE.local.md` (tunnel SSH, URL sandbox).

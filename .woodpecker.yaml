@@ -36,47 +36,29 @@ steps:
       - |
         set -euo pipefail
         apk add --no-cache openssh-client
-
         echo "$$SSH_KEY" > /tmp/key
         chmod 600 /tmp/key
-
-        # Mise à jour des scripts d'exploitation depuis le repo
-        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST \
-          "mkdir -p /opt/strapontin/scripts"
-        scp -i /tmp/key -o StrictHostKeyChecking=no \
-          scripts/backup.sh scripts/restore.sh \
-          root@$$LXC_JAVA_HOST:/opt/strapontin/scripts/
-        scp -i /tmp/key -o StrictHostKeyChecking=no \
-          scripts/update.sh \
-          root@$$LXC_JAVA_HOST:/opt/strapontin/update.sh
-        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST \
-          "chmod +x /opt/strapontin/scripts/backup.sh /opt/strapontin/scripts/restore.sh /opt/strapontin/update.sh"
-
-        # Backup DB vers NAS avant chaque déploiement
-        echo "[deploy] Backup DB avant déploiement..."
-        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST \
-          "/opt/strapontin/scripts/backup.sh"
+        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST "mkdir -p /opt/strapontin/scripts"
+        scp -i /tmp/key -o StrictHostKeyChecking=no scripts/backup.sh scripts/restore.sh scripts/update.sh root@$$LXC_JAVA_HOST:/opt/strapontin/scripts/
+        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST "chmod +x /opt/strapontin/scripts/backup.sh /opt/strapontin/scripts/restore.sh /opt/strapontin/scripts/update.sh"
+        echo "[deploy] Backup DB avant deploiement..."
+        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST /opt/strapontin/scripts/backup.sh
         echo "[deploy] Backup OK"
-
-        # Validation : exactement un JAR par module
         WEB_COUNT=$(find java/web/target -name 'web-*.jar' ! -name '*.original' | wc -l)
         WEB_JAR=$(find java/web/target -name 'web-*.jar' ! -name '*.original')
         if [ "$WEB_COUNT" -ne 1 ]; then
           echo "Ambiguite JAR web : $WEB_COUNT trouves" >&2
           exit 1
         fi
-
         WORKER_COUNT=$(find java/worker/target -name 'worker-*.jar' ! -name '*.original' | wc -l)
         WORKER_JAR=$(find java/worker/target -name 'worker-*.jar' ! -name '*.original')
         if [ "$WORKER_COUNT" -ne 1 ]; then
           echo "Ambiguite JAR worker : $WORKER_COUNT trouves" >&2
           exit 1
         fi
-
-        # Déploiement atomique : scp vers *.jar.new, update.sh fait le mv
         scp -i /tmp/key -o StrictHostKeyChecking=no "$WEB_JAR" root@$$LXC_JAVA_HOST:/opt/strapontin/web.jar.new
         scp -i /tmp/key -o StrictHostKeyChecking=no "$WORKER_JAR" root@$$LXC_JAVA_HOST:/opt/strapontin/worker.jar.new
-        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST "/opt/strapontin/update.sh"
+        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST /opt/strapontin/scripts/update.sh
     when:
       - event: push
         branch: main

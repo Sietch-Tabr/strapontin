@@ -259,15 +259,12 @@ pct exec "$VMID" -- bash -c "
     chown -R $APP_USER:$APP_USER $APP_DIR
 "
 
-echo "[7] Script update.sh..."
-pct push "$VMID" "$(dirname "$0")/update.sh" "$APP_DIR/update.sh"
-pct exec "$VMID" -- chmod +x "$APP_DIR/update.sh"
-
-echo "[7] Scripts d'exploitation (backup, restore)..."
+echo "[7] Scripts d'exploitation..."
 pct exec "$VMID" -- mkdir -p "$APP_DIR/scripts"
+pct push "$VMID" "$(dirname "$0")/update.sh"  "$APP_DIR/scripts/update.sh"
 pct push "$VMID" "$(dirname "$0")/backup.sh"  "$APP_DIR/scripts/backup.sh"
 pct push "$VMID" "$(dirname "$0")/restore.sh" "$APP_DIR/scripts/restore.sh"
-pct exec "$VMID" -- chmod +x "$APP_DIR/scripts/backup.sh" "$APP_DIR/scripts/restore.sh"
+pct exec "$VMID" -- chmod +x "$APP_DIR/scripts/update.sh" "$APP_DIR/scripts/backup.sh" "$APP_DIR/scripts/restore.sh"
 
 echo "[7] Fichier de configuration .env..."
 if [ "$PROFIL" = "dev" ]; then
