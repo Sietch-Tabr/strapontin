@@ -509,9 +509,40 @@ tr:hover td {
   align-items: center;
   gap: 0.5rem;
   font-weight: normal;
+  cursor: pointer;
 }
-.form-checkboxes input {
-  width: auto;
+.form-checkboxes input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  min-width: 1.25rem;
+  border: 1.5px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--bg);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  vertical-align: middle;
+}
+.form-checkboxes input[type="checkbox"]:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' d='M3 8l3.5 3.5L13 5'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 75%;
+}
+.dark .form-checkboxes input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2309090b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' d='M3 8l3.5 3.5L13 5'/%3E%3C/svg%3E");
+}
+.form-checkboxes input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.form-checkboxes label:has(input:disabled) {
+  cursor: not-allowed;
 }
 
 /* ── Section résultats (artistes, salles) ────────────────── */
@@ -638,6 +669,9 @@ tr:hover td {
 }
 .switch input:checked + .switch-curseur::before {
   transform: translateX(1rem);
+}
+.switch--succes input:checked + .switch-curseur {
+  background: var(--success);
 }
 
 /* ── Toasts (Popover API + @starting-style) ──────────────── */

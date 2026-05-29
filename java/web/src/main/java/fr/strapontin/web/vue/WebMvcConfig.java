@@ -5,7 +5,9 @@
 package fr.strapontin.web.vue;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /// Configuration Spring MVC — enregistre les intercepteurs Thymeleaf.
@@ -19,6 +21,16 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
   public WebMvcConfig(FirstLoginIntercepteur firstLoginIntercepteur) {
     this.firstLoginIntercepteur = firstLoginIntercepteur;
+  }
+
+  @Override
+  public void addResourceHandlers(ResourceHandlerRegistry registry) {
+    // sw.js ne doit pas être mis en cache longue durée : le navigateur doit toujours vérifier les
+    // mises à jour
+    registry
+        .addResourceHandler("/sw.js")
+        .addResourceLocations("classpath:/static/")
+        .setCacheControl(CacheControl.noCache().mustRevalidate());
   }
 
   @Override
