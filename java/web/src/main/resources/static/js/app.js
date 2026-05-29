@@ -67,6 +67,14 @@ if ("serviceWorker" in navigator && "PushManager" in window) {
 }
 
 // Toasts (Popover API — l'attribut est posé par JS pour contourner le filtrage Thymeleaf)
+function delaiParType(el) {
+  if (el.dataset.delai) return parseInt(el.dataset.delai, 10);
+  if (el.classList.contains("alerte-erreur")) return 0;
+  if (el.classList.contains("alerte-avertissement")) return 10000;
+  if (el.querySelector("a")) return 15000;
+  return 5000;
+}
+
 function initToasts() {
   if (!("showPopover" in HTMLElement.prototype)) return;
   const alertes = document.querySelectorAll(".alerte");
@@ -83,18 +91,44 @@ function initToasts() {
     el.setAttribute("popover", "manual");
     el.showPopover();
 
-    let delai = 4000;
-    if (el.dataset.delai) {
-      delai = parseInt(el.dataset.delai, 10);
-    } else if (el.querySelector("a")) {
-      delai = 15000;
-    }
-
-    const minuterie = setTimeout(() => el.hidePopover(), delai);
+    const delai = delaiParType(el);
+    const minuterie = delai > 0 ? setTimeout(() => el.hidePopover(), delai) : null;
     fermer.addEventListener("click", () => {
-      clearTimeout(minuterie);
+      if (minuterie) clearTimeout(minuterie);
       el.hidePopover();
     });
+  });
+}
+
+function afficherToast(message, type) {
+  if (!("showPopover" in HTMLElement.prototype)) return;
+  const el = document.createElement("div");
+  el.className = "alerte alerte-" + type;
+  el.setAttribute("role", type === "erreur" ? "alert" : "status");
+  el.setAttribute("aria-live", type === "erreur" ? "assertive" : "polite");
+  el.textContent = message;
+
+  const nbExistants = document.querySelectorAll("[popover].alerte").length;
+  el.style.setProperty("--indice-toast", nbExistants);
+
+  const fermer = document.createElement("button");
+  fermer.textContent = "×";
+  fermer.setAttribute("aria-label", "Fermer");
+  fermer.className = "toast-fermer";
+  el.appendChild(fermer);
+
+  document.body.appendChild(el);
+  el.setAttribute("popover", "manual");
+  el.showPopover();
+
+  const delai = delaiParType(el);
+  const minuterie = delai > 0 ? setTimeout(() => el.hidePopover(), delai) : null;
+  fermer.addEventListener("click", () => {
+    if (minuterie) clearTimeout(minuterie);
+    el.hidePopover();
+  });
+  el.addEventListener("toggle", (e) => {
+    if (e.newState === "closed") el.remove();
   });
 }
 
@@ -963,6 +997,7 @@ function initPush() {
       pushAbonnement = abonnement;
       document.cookie = "push_opt_in=1;path=/;max-age=31536000;SameSite=Strict";
       majEtat();
+      afficherToast("Notifications push activées.", "succes");
     } catch (e) {
       afficherErreur(e.message || "Une erreur est survenue.");
     } finally {
@@ -989,6 +1024,7 @@ function initPush() {
       pushAbonnement = null;
       document.cookie = "push_opt_in=;path=/;max-age=0;SameSite=Strict";
       majEtat();
+      afficherToast("Notifications push désactivées.", "info");
     } catch (e) {
       afficherErreur(e.message || "Une erreur est survenue.");
     } finally {
