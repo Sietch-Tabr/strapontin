@@ -27,8 +27,10 @@
     <link rel="stylesheet" th:href="@{/css/components.css}" />
     <link rel="stylesheet" th:href="@{/css/pages.css}" />
     <title layout:title-pattern="$CONTENT_TITLE — Strapontin">Strapontin</title>
+    <script th:src="@{/webjars/htmx.org/dist/htmx.min.js}" defer></script>
+    <script th:src="@{/webjars/alpinejs/dist/cdn.min.js}" defer></script>
   </head>
-  <body th:class="${theme == 'sombre' ? 'dark' : ''}">
+  <body th:class="${theme == 'sombre' ? 'dark' : ''}" hx-boost="true">
     <div class="app-layout">
       <!-- Sidebar desktop -->
       <nav class="sidebar">

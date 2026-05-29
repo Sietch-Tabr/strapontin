@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -273,6 +274,7 @@ public class UserController {
   /// @param auth       contexte d'authentification
   /// @param httpRequest pour invalider la session après changement
   /// @return 200 si terminé, 400 si invalide
+  @Transactional
   @PostMapping("/first-login")
   public ResponseEntity<Map<String, Object>> premierLogin(
       @Valid @RequestBody RequetePremierLogin requete,

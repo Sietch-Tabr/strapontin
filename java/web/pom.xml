@@ -149,6 +149,21 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
 
+        <!-- HTMX + Alpine.js via webjars -->
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>htmx.org</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>alpinejs</artifactId>
+        </dependency>
+        <!-- Résolution automatique des webjars versionnés -->
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>webjars-locator-lite</artifactId>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

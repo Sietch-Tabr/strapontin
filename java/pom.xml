@@ -39,6 +39,8 @@
         <resend.version>v4.14.1</resend.version>
         <springdoc.version>3.0.3</springdoc.version>
         <bucket4j.version>8.19.0</bucket4j.version>
+        <htmx.version>2.0.6</htmx.version>
+        <alpinejs.version>3.14.9</alpinejs.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
     </properties>
@@ -118,6 +120,18 @@
                 <groupId>com.bucket4j</groupId>
                 <artifactId>bucket4j_jdk17-core</artifactId>
                 <version>${bucket4j.version}</version>
+            </dependency>
+
+            <!-- Webjars HTMX + Alpine.js -->
+            <dependency>
+                <groupId>org.webjars.npm</groupId>
+                <artifactId>htmx.org</artifactId>
+                <version>${htmx.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.webjars.npm</groupId>
+                <artifactId>alpinejs</artifactId>
+                <version>${alpinejs.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
