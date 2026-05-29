@@ -65,7 +65,9 @@
         class="alerte alerte-info"
         role="status"
       >
-        Le filtre « 15 prochains jours » et le filtre par mois sont actifs simultanément — les résultats affichés correspondent à leur intersection.
+        Le filtre « 15 prochains jours » et le filtre par mois sont actifs
+        simultanément — les résultats affichés correspondent à leur
+        intersection.
       </div>
 
       <!-- Bouton toggle filtres (mobile uniquement) -->
@@ -129,8 +131,14 @@
             </option>
           </select>
 
-          <label for="filtre-classification" class="sr-only">Filtrer par classification</label>
-          <select id="filtre-classification" name="classification" class="js-auto-submit">
+          <label for="filtre-classification" class="sr-only"
+            >Filtrer par classification</label
+          >
+          <select
+            id="filtre-classification"
+            name="classification"
+            class="js-auto-submit"
+          >
             <option value="">Toutes classifications</option>
             <option
               th:each="c : ${donnees.classificationsDisponibles}"
@@ -159,8 +167,12 @@
 
       <!-- État vide -->
       <div th:if="${donnees.concerts.isEmpty()}" class="etat-vide">
-        <p class="etat-vide-titre" th:if="${!donnees.aSuivi}">Aucun artiste ni salle suivi.</p>
-        <p class="etat-vide-titre" th:unless="${!donnees.aSuivi}">Aucun concert avec ces filtres.</p>
+        <p class="etat-vide-titre" th:if="${!donnees.aSuivi}">
+          Aucun artiste ni salle suivi.
+        </p>
+        <p class="etat-vide-titre" th:unless="${!donnees.aSuivi}">
+          Aucun concert avec ces filtres.
+        </p>
         <p class="etat-vide-texte" th:if="${!donnees.aSuivi}">
           <a th:href="@{/artistes}">Ajouter des artistes</a> ou
           <a th:href="@{/salles}">des salles</a> pour commencer.
@@ -188,12 +200,32 @@
             <tbody>
               <tr th:each="concert : ${donnees.concerts}">
                 <td data-label="Artiste">
-                  <span class="concert-artiste" th:text="${concert.artiste}">Artiste</span>
-                  <span class="badge badge-nouveau" th:if="${concert.estNew}">Nouveau</span>
-                  <span class="badge badge-annule" th:if="${concert.statut == 'cancelled'}">Annulé</span>
-                  <span class="badge badge-reporte" th:if="${concert.statut == 'rescheduled' or concert.statut == 'postponed'}">Reporté</span>
-                  <span class="badge badge-complet" th:if="${concert.statut == 'offsale'}">Complet</span>
-                  <span class="badge badge-prevente" th:if="${concert.presaleActive()}" th:text="'Prévente le ' + ${#temporals.format(concert.presaleDebut, 'dd/MM', #locale)}"></span>
+                  <span class="concert-artiste" th:text="${concert.artiste}"
+                    >Artiste</span
+                  >
+                  <span class="badge badge-nouveau" th:if="${concert.estNew}"
+                    >Nouveau</span
+                  >
+                  <span
+                    class="badge badge-annule"
+                    th:if="${concert.statut == 'cancelled'}"
+                    >Annulé</span
+                  >
+                  <span
+                    class="badge badge-reporte"
+                    th:if="${concert.statut == 'rescheduled' or concert.statut == 'postponed'}"
+                    >Reporté</span
+                  >
+                  <span
+                    class="badge badge-complet"
+                    th:if="${concert.statut == 'offsale'}"
+                    >Complet</span
+                  >
+                  <span
+                    class="badge badge-prevente"
+                    th:if="${concert.presaleActive()}"
+                    th:text="'Prévente le ' + ${#temporals.format(concert.presaleDebut, 'dd/MM', #locale)}"
+                  ></span>
                 </td>
                 <td data-label="Date">
                   <time
@@ -207,9 +239,21 @@
                   data-label="Où"
                   th:classappend="${concert.salle == null and concert.ville == null} ? ' cel-vide' : ''"
                 >
-                  <span th:if="${concert.salle != null}" th:text="${concert.salle}"></span>
-                  <span th:if="${concert.salle != null and concert.ville != null}" class="concert-separateur"> · </span>
-                  <span th:if="${concert.ville != null}" class="concert-ville" th:text="${concert.ville}"></span>
+                  <span
+                    th:if="${concert.salle != null}"
+                    th:text="${concert.salle}"
+                  ></span>
+                  <span
+                    th:if="${concert.salle != null and concert.ville != null}"
+                    class="concert-separateur"
+                  >
+                    ·
+                  </span>
+                  <span
+                    th:if="${concert.ville != null}"
+                    class="concert-ville"
+                    th:text="${concert.ville}"
+                  ></span>
                 </td>
                 <td data-label="" class="actions-cellule">
                   <a
