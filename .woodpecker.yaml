@@ -40,15 +40,6 @@ steps:
         echo "$$SSH_KEY" > /tmp/key
         chmod 600 /tmp/key
 
-        # Mise à jour des scripts d'exploitation
-        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST \
-          "mkdir -p /opt/strapontin/scripts"
-        scp -i /tmp/key -o StrictHostKeyChecking=no \
-          scripts/backup.sh scripts/restore.sh \
-          root@$$LXC_JAVA_HOST:/opt/strapontin/scripts/
-        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST \
-          "chmod +x /opt/strapontin/scripts/backup.sh /opt/strapontin/scripts/restore.sh"
-
         # Backup DB vers NAS avant chaque déploiement
         echo "[deploy] Backup DB avant déploiement..."
         ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST \
