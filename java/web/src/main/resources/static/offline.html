@@ -51,7 +51,10 @@
         padding: 0;
       }
       body {
-        font-family: system-ui, -apple-system, sans-serif;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
         background: var(--bg);
         color: var(--fg);
         min-height: 100vh;
@@ -88,13 +91,20 @@
         cursor: pointer;
         transition: opacity 0.15s;
       }
-      .btn:hover { opacity: 0.85; }
-      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btn:hover {
+        opacity: 0.85;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
     </style>
     <script>
       (function () {
         var theme = "auto";
-        try { theme = localStorage.getItem("strapontin-theme") || "auto"; } catch (_) {}
+        try {
+          theme = localStorage.getItem("strapontin-theme") || "auto";
+        } catch (_) {}
         var cookie = document.cookie.match(/(?:^|; )theme=([^;]*)/);
         if (cookie) theme = decodeURIComponent(cookie[1]);
         if (theme === "sombre") {
@@ -129,8 +139,8 @@
       </svg>
       <h1>Vous êtes hors ligne</h1>
       <p>
-        Reconnectez-vous à Internet pour accéder à vos concerts et à votre
-        liste de suivi.
+        Reconnectez-vous à Internet pour accéder à vos concerts et à votre liste
+        de suivi.
       </p>
       <p id="msg-reconnexion" style="display: none"></p>
       <button id="btn-reessayer" class="btn">Réessayer</button>
@@ -158,7 +168,9 @@
           });
       }
 
-      document.getElementById("btn-reessayer").addEventListener("click", reessayer);
+      document
+        .getElementById("btn-reessayer")
+        .addEventListener("click", reessayer);
 
       window.addEventListener("online", function () {
         setTimeout(reessayer, 400);

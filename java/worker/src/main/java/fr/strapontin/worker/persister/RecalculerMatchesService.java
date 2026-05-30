@@ -190,9 +190,9 @@ public class RecalculerMatchesService {
     jdbc.update(
         """
         UPDATE user_matches um
-        SET notifie_le = now()
+        SET notification_envoyee_le = now(), vu_le = now()
         WHERE um.user_id = :userId
-          AND um.notifie_le IS NULL
+          AND um.notification_envoyee_le IS NULL
           AND um.concert_id IN (
             SELECT c.id FROM concerts c
             WHERE c.id::text IN (:concertIds)
@@ -206,7 +206,7 @@ public class RecalculerMatchesService {
     jdbc.update(
         """
         UPDATE user_matches um
-        SET notifie_le = NULL, statut_notifie = NULL
+        SET notification_envoyee_le = NULL, statut_notifie = NULL, vu_le = NULL
         FROM concerts c
         WHERE c.id = um.concert_id
           AND um.user_id = :userId

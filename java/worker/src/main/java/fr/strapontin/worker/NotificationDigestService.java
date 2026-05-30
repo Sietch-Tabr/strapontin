@@ -97,7 +97,7 @@ public class NotificationDigestService {
               JOIN concerts    c  ON c.id      = um.concert_id
               JOIN users       u  ON u.id      = um.user_id
               JOIN user_config uc ON uc.user_id = um.user_id
-              WHERE um.notifie_le IS NULL
+              WHERE um.notification_envoyee_le IS NULL
                 AND um.masque_le  IS NULL
                 AND uc.frequence_notifications = CAST(:frequence AS frequence_notif)
                 AND (
@@ -162,7 +162,7 @@ public class NotificationDigestService {
               jdbc.update(
                   """
                   UPDATE user_matches um
-                  SET notifie_le = :maintenant, statut_notifie = c.statut
+                  SET notification_envoyee_le = :maintenant, statut_notifie = c.statut
                   FROM concerts c
                   WHERE c.id = um.concert_id
                     AND um.user_id = :userId
@@ -175,7 +175,7 @@ public class NotificationDigestService {
           nbMatchesNotifies += updated;
         } else {
           log.warn(
-              "notifier:digest — notification échouée pour user={}, notifie_le non mis à jour",
+              "notifier:digest — notification échouée pour user={}, notification_envoyee_le non mis à jour",
               userId);
         }
         nbUtilisateurs++;

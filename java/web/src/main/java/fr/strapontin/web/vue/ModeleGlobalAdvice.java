@@ -99,7 +99,7 @@ public class ModeleGlobalAdvice {
   ///
   /// @param auth    l'authentification Spring Security (peut être {@code null})
   /// @param request la requête HTTP
-  /// @return le nombre de matches artiste avec {@code notifie_le IS NULL}, ou 0
+  /// @return le nombre de matches artiste avec {@code vu_le IS NULL}, ou 0
   @ModelAttribute("nbNouveau")
   public int nbNouveau(Authentication auth, HttpServletRequest request) {
     if (auth == null
@@ -114,7 +114,7 @@ public class ModeleGlobalAdvice {
             SELECT COUNT(*) FROM user_matches um
             JOIN concerts c ON c.id = um.concert_id
             WHERE um.user_id = :userId
-              AND um.notifie_le IS NULL
+              AND um.vu_le IS NULL
               AND um.masque_le IS NULL
               AND EXISTS (
                 SELECT 1 FROM user_artistes ua

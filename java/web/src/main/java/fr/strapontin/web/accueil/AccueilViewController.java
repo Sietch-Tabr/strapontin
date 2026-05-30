@@ -46,6 +46,9 @@ public class AccueilViewController {
 
   /// Affiche la page d'accueil avec les concerts groupés par artiste.
   ///
+  /// Marque tous les matches non encore vus comme vus (`vu_le = now()`)
+  /// afin de réinitialiser le badge de navigation.
+  ///
   /// @param masques       `true` pour inclure les concerts masqués
   /// @param indisponibles {@code "1"} pour inclure les concerts non disponibles
   /// @param nouveau       `true` pour n'afficher que les concerts non encore vus
@@ -60,6 +63,9 @@ public class AccueilViewController {
       Model modele,
       Authentication auth) {
     String userId = utilisateur(auth).id();
+    jdbc.update(
+        "UPDATE user_matches SET vu_le = now() WHERE user_id = :userId AND vu_le IS NULL",
+        Map.of("userId", userId));
     boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
     boolean inclureIndisponibles =
         indisponibles != null ? "1".equals(indisponibles) : !filtreDisponibles;

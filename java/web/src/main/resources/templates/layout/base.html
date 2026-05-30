@@ -47,6 +47,12 @@
               <use th:attr="href='/icons/lucide-sprite.svg#' + ${item.icone}" />
             </svg>
             <span th:text="${item.label}">…</span>
+            <span
+              class="nav-badge nav-badge--sidebar"
+              th:if="${item.page == 'accueil' and nbNouveau != null and nbNouveau > 0}"
+              th:text="${nbNouveau > 99 ? '99+' : nbNouveau}"
+              th:attr="aria-label=${nbNouveau} + ' nouveaux concerts'"
+            ></span>
           </a>
           <hr style="margin: 0.5rem 0; border-color: var(--border)" />
           <a

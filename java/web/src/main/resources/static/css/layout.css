@@ -287,6 +287,27 @@
   line-height: 1;
 }
 
+/* Badge sidebar desktop — positionné sur le lien nav */
+.sidebar-nav a {
+  position: relative;
+}
+
+.nav-badge--sidebar {
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
+}
+
+/* Fix view-transition : isoler la bottom nav de la transition root */
+.bottom-nav {
+  view-transition-name: barre-nav-mobile;
+}
+
+::view-transition-old(barre-nav-mobile),
+::view-transition-new(barre-nav-mobile) {
+  animation: none;
+}
+
 @media (max-width: 1024px) {
   .sidebar {
     display: none;

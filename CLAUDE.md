@@ -149,7 +149,7 @@ Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein n
 - **Thymeleaf** + Layout Dialect — templates dans `java/web/src/main/resources/templates/`
 - **CSS vanilla** — variables CSS pour thème clair/sombre, dans `static/css/`
 - **PWA** : service worker JS vanilla + push. Cap 10 abonnements/user.
-- **Badge "Nouveau"** : basé sur `user_matches.notifie_le IS NULL`
+- **Badge "Nouveau"** : basé sur `user_matches.vu_le IS NULL` — remis à `NULL` à la visite de `/`. Affiché sur la sidebar desktop et la bottom nav mobile. `notification_envoyee_le` est une colonne distincte pour le suivi des envois email/push.
 - **Thème** : cookie `theme` (1 an) + `user_config.theme` → pas de FOUC
 - **Navigation source de vérité** : `ModeleGlobalAdvice` (@ControllerAdvice) injecte `navPrincipal`, `navSecondaire`, `navFooter`, `pagesDrawer` dans tous les templates via `@ModelAttribute`
 - **Fragment onglets** : `layout/fragments/onglets.html` — réutilisé par `admin.html` et `parametres.html`
