@@ -15,6 +15,20 @@ strapontin/
     └── update.sh     ← restart services + healthcheck ; appelé par Woodpecker (prod) ou manuellement (dev)
 ```
 
+## Architecture module web — couche service/repository
+
+Pattern 3-couches (depuis v2.1.0, ticket #433) :
+
+```
+XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → XxxRepository (SQL pur)
+```
+
+- **Repositories** (`@Repository`, package-private) : SQL pur, `NamedParameterJdbcTemplate`
+- **Services** (`@Service`) : logique métier, `@Transactional` sur les méthodes multi-JDBC
+- **Records** : top-level dans le package domaine (plus d'inner classes dans les contrôleurs)
+- `GlobalExceptionHandler` (`@RestControllerAdvice`) : `DuplicateKeyException` → 409, `DataAccessException` → 500
+- Référence : `PersisterConcerts` + `RecalculerMatchesService` dans `java/worker/`
+
 ## Stack technique (v2.1.0)
 
 - **Spring Boot 4.0.6** + Thymeleaf — UI SSR + REST API (port 8080)
