@@ -1191,6 +1191,15 @@ function initTout() {
 document.addEventListener("DOMContentLoaded", initTout);
 document.addEventListener("htmx:afterSettle", initTout);
 
+// Masque la bannière dismissée avant @starting-style (synchrone, avant le premier rendu)
+document.addEventListener("htmx:afterSwap", function (e) {
+  if (!e.detail.target || e.detail.target.id !== "banniere-container") return;
+  var el = document.getElementById("banniere");
+  if (el && sessionStorage.getItem("banniere_dismissed_id") === el.dataset.banniereId) {
+    el.style.display = "none";
+  }
+});
+
 (function () {
   var toastHorsLigne = null;
 
