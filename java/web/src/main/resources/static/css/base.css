@@ -36,6 +36,13 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 /* ── Variables ─────────────────────────────────────────── */
 :root {
   --bg: #ffffff;
@@ -84,6 +91,7 @@
 html {
   font-size: 16px;
   overflow-x: clip;
+  scroll-behavior: smooth;
 }
 body {
   font-family: var(--font);

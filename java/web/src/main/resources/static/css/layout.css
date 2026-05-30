@@ -193,6 +193,7 @@
   background: var(--bg);
   color: var(--fg);
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
   animation: drawer-entree 0.25s ease;
 }

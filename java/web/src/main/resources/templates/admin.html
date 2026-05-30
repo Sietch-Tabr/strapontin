@@ -154,8 +154,8 @@
                   <p class="job-carte-label" th:text="${label}">label</p>
                   <span
                     class="job-en-cours"
-                    th:if="${jobsEnCours != null and jobsEnCours.contains(stat.typeJob)}"
                     th:attr="data-job=${stat.typeJob}"
+                    th:style="${jobsEnCours != null and jobsEnCours.contains(stat.typeJob)} ? '' : 'display:none'"
                     aria-busy="true"
                     aria-label="En cours"
                   >

@@ -139,6 +139,16 @@ textarea:focus {
   line-height: 1.5;
   width: fit-content;
   max-width: 90%;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+@starting-style {
+  .banniere {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
 }
 .banniere-message {
   flex: 1;
@@ -658,6 +668,10 @@ tr:hover td {
   border-radius: var(--radius);
   padding: 0.75rem 1rem;
   gap: 0.75rem;
+  transition: background 0.15s;
+}
+.carte-item:hover {
+  background: var(--bg-muted);
 }
 
 .carte-nom {
