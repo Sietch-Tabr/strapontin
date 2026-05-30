@@ -1147,8 +1147,20 @@ function arrayBufferVersBase64(buffer) {
   return btoa(String.fromCharCode(...new Uint8Array(buffer)));
 }
 
+function mettreAJourBadgeApp() {
+  if (!("setAppBadge" in navigator)) return;
+  var badge = document.querySelector(".nav-badge");
+  var count = badge ? parseInt(badge.textContent, 10) || 0 : 0;
+  if (count > 0) {
+    navigator.setAppBadge(count);
+  } else {
+    navigator.clearAppBadge();
+  }
+}
+
 function initTout() {
   majNavActif(window.location.pathname);
+  mettreAJourBadgeApp();
   initToasts();
   initBanniere();
   initAdminBanniere();

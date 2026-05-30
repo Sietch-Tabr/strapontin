@@ -1,6 +1,6 @@
 // Strapontin — service worker
 
-const CACHE_NOM = "strapontin-v11";
+const CACHE_NOM = "strapontin-v12";
 const RESSOURCES_STATIQUES = [
   "/offline.html",
   "/css/base.css",
@@ -98,14 +98,19 @@ self.addEventListener("push", (event) => {
   } catch (_) {
     return;
   }
-  event.waitUntil(
+  var count = typeof data.count === "number" ? data.count : 0;
+  var taches = [
     self.registration.showNotification(data.title || "Strapontin", {
       body: data.body || "",
       icon: data.icon || "/images/icon-192.png",
       badge: "/images/icon-192.png",
       data: { url: data.url || "/" },
     }),
-  );
+  ];
+  if ("setAppBadge" in self.registration && count > 0) {
+    taches.push(self.registration.setAppBadge(count));
+  }
+  event.waitUntil(Promise.all(taches));
 });
 
 self.addEventListener("notificationclick", (event) => {

@@ -44,14 +44,14 @@ steps:
         echo "[deploy] Backup DB avant deploiement..."
         ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST /opt/strapontin/scripts/backup.sh
         echo "[deploy] Backup OK"
-        WEB_COUNT=$(find java/web/target -name 'web-*.jar' ! -name '*.original' | wc -l)
-        WEB_JAR=$(find java/web/target -name 'web-*.jar' ! -name '*.original')
+        WEB_COUNT=$(find java/web/target -name "web-*.jar" -not -name "*.original" | wc -l)
+        WEB_JAR=$(find java/web/target -name "web-*.jar" -not -name "*.original")
         if [ "$WEB_COUNT" -ne 1 ]; then
           echo "Ambiguite JAR web : $WEB_COUNT trouves" >&2
           exit 1
         fi
-        WORKER_COUNT=$(find java/worker/target -name 'worker-*.jar' ! -name '*.original' | wc -l)
-        WORKER_JAR=$(find java/worker/target -name 'worker-*.jar' ! -name '*.original')
+        WORKER_COUNT=$(find java/worker/target -name "worker-*.jar" -not -name "*.original" | wc -l)
+        WORKER_JAR=$(find java/worker/target -name "worker-*.jar" -not -name "*.original")
         if [ "$WORKER_COUNT" -ne 1 ]; then
           echo "Ambiguite JAR worker : $WORKER_COUNT trouves" >&2
           exit 1
