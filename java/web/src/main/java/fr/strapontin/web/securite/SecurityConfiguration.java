@@ -131,6 +131,8 @@ public class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers("/api/setup")
                     .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/webhooks/resend")
+                    .permitAll()
                     .requestMatchers("/auth/totp", "/parametres/totp", "/parametres/totp/**")
                     .authenticated()
                     .requestMatchers("/api/admin/**", "/admin", "/admin/**")

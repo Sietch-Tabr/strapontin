@@ -349,6 +349,36 @@ public class EmailService {
     }
   }
 
+  /// Envoie une notification à l'admin quand un email Strapontin est rejeté en bounce.
+  ///
+  /// @param emailBouncee l'adresse email qui a produit le bounce
+  public void envoyerNotificationBounce(String emailBouncee) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — notification bounce non envoyée");
+      return;
+    }
+
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("emailBouncee", emailBouncee);
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
+    String corps = rendreCours("alerte-bounce", vars);
+
+    try {
+      envoyer(
+          ctx.get(),
+          ctx.get().replyTo(),
+          ctx.get().replyTo(),
+          "Strapontin — bounce email : " + emailBouncee,
+          corps,
+          "Bounce détecté sur : " + emailBouncee + ". Consultez l'administration : "
+              + ctx.get().baseUrl() + "/admin");
+      log.info("Notification bounce envoyée pour : {}", emailBouncee);
+    } catch (Exception e) {
+      log.error("Échec envoi notification bounce", e);
+    }
+  }
+
   /// Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3 heures.
   ///
   /// @param email               l'adresse email de l'administrateur

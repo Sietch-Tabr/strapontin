@@ -41,7 +41,9 @@
         th:text="${erreur}"
       ></div>
 
-      <th:block th:insert="~{layout/fragments/onglets :: onglets(${ongletItems}, 'Sections des paramètres')}"></th:block>
+      <th:block
+        th:insert="~{layout/fragments/onglets :: onglets(${ongletItems}, 'Sections des paramètres')}"
+      ></th:block>
 
       <div class="parametres-sections">
         <!-- Section Préférences -->
@@ -234,11 +236,7 @@
             <div id="push-chargement" aria-live="polite" hidden>
               <p class="param-aide">Chargement…</p>
             </div>
-            <div
-              id="push-erreur"
-              class="alerte alerte-erreur"
-              hidden
-            ></div>
+            <div id="push-erreur" class="alerte alerte-erreur" hidden></div>
             <div id="push-non-supporte" hidden>
               <p class="param-aide">
                 Les notifications push nécessitent HTTPS. Elles seront
@@ -276,11 +274,7 @@
                 Recevez une notification sur cet appareil en même temps que vos
                 emails de digest.
               </p>
-              <p
-                id="push-info-frequence"
-                class="form-aide"
-                hidden
-              >
+              <p id="push-info-frequence" class="form-aide" hidden>
                 Les notifications push ne fonctionneront qu'avec une fréquence
                 email active.
               </p>

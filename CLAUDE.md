@@ -118,7 +118,8 @@ APP_CONFIG_SECRET=<clé AES-256-GCM de chiffrement de app_config>
 Chiffrement AES-256-GCM, clé = `APP_CONFIG_SECRET`.
 ⚠️ Changer `APP_CONFIG_SECRET` → toutes les valeurs `app_config` illisibles.
 ⚠️ Changer les clés VAPID → supprimer `push_abonnements` d'abord.
-Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_*`) configurables depuis `/admin`.
+Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_*`) configurables depuis `/admin`.
+`RESEND_WEBHOOK_SECRET` : clé de signature Svix pour l'endpoint `POST /api/webhooks/resend` (bounces email). À copier depuis le dashboard Resend → Webhooks.
 Bannière système : `BANNER_MESSAGE`, `BANNER_TYPE` (`info`|`warning`|`error`), `BANNER_ID` (timestamp ISO) — gérées via `POST /api/admin/banniere` et `DELETE /api/admin/banniere`.
 
 ## Sources de données
