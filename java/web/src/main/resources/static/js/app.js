@@ -622,9 +622,6 @@ function initBoutonRelancer() {
             arreterPolling();
             btn.disabled = false;
             if (statut) statut.textContent = "";
-            window.location.replace(
-              location.pathname + location.search + "#jobs",
-            );
           }
         })
         .catch(arreterPolling);
