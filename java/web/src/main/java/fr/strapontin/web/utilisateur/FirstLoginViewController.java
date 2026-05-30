@@ -71,7 +71,7 @@ public class FirstLoginViewController {
       RedirectAttributes redirects) {
 
     var requete =
-        new UserController.RequetePremierLogin(
+        new RequetePremierLogin(
             nom, identifiant, motDePasseActuel, motDePasseNouveau);
     ResponseEntity<?> rep = userController.premierLogin(requete, auth, request);
 

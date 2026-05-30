@@ -8,31 +8,27 @@ import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /// Contrôleur REST pour le profil utilisateur courant.
 ///
-/// <p>Gère la lecture et mise à jour du profil, le changement de mot de passe
-/// et la suppression de compte. Également le flow de première connexion
-/// ({@code must_change_credentials}).
+/// <p>HTTP pur — délègue l'accès aux données à {@link UtilisateurRepository}.
+/// Gère la lecture/mise à jour du profil, le mot de passe, la suppression de compte
+/// et le flow de première connexion ({@code must_change_credentials}).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -44,52 +40,16 @@ public class UserController {
       Pattern.compile("^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$");
   private static final Pattern FORMAT_IDENTIFIANT = Pattern.compile("^[a-zA-Z0-9_]+$");
 
-  private final NamedParameterJdbcTemplate jdbc;
+  private final UtilisateurRepository utilisateurRepository;
   private final PasswordEncoder passwordEncoder;
 
-  public UserController(NamedParameterJdbcTemplate jdbc, PasswordEncoder passwordEncoder) {
-    this.jdbc = jdbc;
+  /// @param utilisateurRepository accès aux données utilisateur
+  /// @param passwordEncoder        encodeur bcrypt
+  public UserController(
+      UtilisateurRepository utilisateurRepository, PasswordEncoder passwordEncoder) {
+    this.utilisateurRepository = utilisateurRepository;
     this.passwordEncoder = passwordEncoder;
   }
-
-  record ProfilUtilisateur(
-      String id, String nom, String email, String identifiant, String pendingEmail) {}
-
-  record RequeteProfil(
-      @Size(min = 1, max = 100, message = "Nom invalide (1-100 caractères).") String nom,
-      @Email(message = "Format d'email invalide.") @Size(max = 254) String email) {}
-
-  record RequeteIdentifiant(
-      @NotBlank(message = "L'identifiant est obligatoire.")
-          @Size(
-              min = 3,
-              max = 30,
-              message = "L'identifiant doit contenir entre 3 et 30 caractères.")
-          @jakarta.validation.constraints.Pattern(
-              regexp = "[a-zA-Z0-9_]+",
-              message = "L'identifiant ne peut contenir que des lettres, chiffres et underscores.")
-          String identifiant) {}
-
-  record RequeteMotDePasse(
-      @NotBlank(message = "Tous les champs sont obligatoires.") String motDePasseActuel,
-      @NotBlank(message = "Tous les champs sont obligatoires.")
-          @Size(min = 12, message = "Le nouveau mot de passe doit contenir au moins 12 caractères.")
-          String motDePasseNouveau) {}
-
-  record RequetePremierLogin(
-      @NotBlank(message = "Tous les champs sont obligatoires.")
-          @Size(max = 100, message = "Nom invalide (1-100 caractères).")
-          String nom,
-      @NotBlank(message = "Tous les champs sont obligatoires.")
-          @Size(
-              min = 3,
-              max = 30,
-              message = "L'identifiant doit contenir entre 3 et 30 caractères.")
-          String identifiant,
-      @NotBlank(message = "Tous les champs sont obligatoires.") String motDePasseActuel,
-      @NotBlank(message = "Tous les champs sont obligatoires.")
-          @Size(min = 12, message = "Le mot de passe doit contenir au moins 12 caractères.")
-          String motDePasseNouveau) {}
 
   /// Retourne le profil de l'utilisateur courant.
   ///
@@ -98,19 +58,16 @@ public class UserController {
   @GetMapping("/profile")
   public ResponseEntity<ProfilUtilisateur> lireProfil(Authentication auth) {
     UtilisateurDetails details = utilisateur(auth);
-    return jdbc
-        .query(
-            "SELECT email, pending_email FROM users WHERE id = :id",
-            Map.of("id", details.id()),
-            (rs, _) ->
+    return utilisateurRepository
+        .lireEmails(details.id())
+        .map(
+            e ->
                 new ProfilUtilisateur(
                     details.id(),
                     details.nom(),
-                    rs.getString("email"),
+                    e.email(),
                     details.identifiant(),
-                    rs.getString("pending_email")))
-        .stream()
-        .findFirst()
+                    e.pendingEmail()))
         .map(ResponseEntity::ok)
         .orElse(ResponseEntity.notFound().build());
   }
@@ -130,9 +87,7 @@ public class UserController {
       if (nom.isEmpty() || nom.length() > 100) {
         return erreur(400, "Nom invalide (1-100 caractères).");
       }
-      jdbc.update(
-          "UPDATE users SET name = :nom, updated_at = now() WHERE id = :userId",
-          Map.of("nom", nom, "userId", userId));
+      utilisateurRepository.majNom(userId, nom);
     }
 
     if (requete.email() != null) {
@@ -140,18 +95,10 @@ public class UserController {
       if (!FORMAT_EMAIL.matcher(email).matches() || email.length() > 254) {
         return erreur(400, "Format d'email invalide.");
       }
-      boolean emailDejaUtilise =
-          !jdbc.queryForList(
-                  "SELECT 1 FROM users WHERE email = :email AND id != :userId",
-                  Map.of("email", email, "userId", userId),
-                  Integer.class)
-              .isEmpty();
-      if (emailDejaUtilise) {
+      if (utilisateurRepository.emailDejaUtilise(email, userId)) {
         return erreur(400, "Cette adresse email est déjà utilisée.");
       }
-      jdbc.update(
-          "UPDATE users SET email = :email, updated_at = now() WHERE id = :userId",
-          Map.of("email", email, "userId", userId));
+      utilisateurRepository.majEmail(userId, email);
     }
 
     return ResponseEntity.ok(Map.of("succes", "profil"));
@@ -176,24 +123,11 @@ public class UserController {
       return erreur(
           400, "L'identifiant ne peut contenir que des lettres, chiffres et underscores.");
     }
-
-    boolean dejaUtilise =
-        !jdbc.queryForList(
-                "SELECT 1 FROM users WHERE lower(username) = :ident AND id != :userId",
-                Map.of("ident", identifiant, "userId", userId),
-                Integer.class)
-            .isEmpty();
-    if (dejaUtilise) {
+    if (utilisateurRepository.identifiantDejaUtilise(identifiant, userId)) {
       return erreur(400, "Cet identifiant est déjà utilisé.");
     }
 
-    jdbc.update(
-        """
-        UPDATE users SET username = :ident, display_username = :ident, updated_at = now()
-        WHERE id = :userId
-        """,
-        Map.of("ident", identifiant, "userId", userId));
-
+    utilisateurRepository.majIdentifiant(userId, identifiant);
     return ResponseEntity.ok(Map.of("succes", "identifiant"));
   }
 
@@ -220,11 +154,7 @@ public class UserController {
       return erreur(400, "Mot de passe actuel incorrect.");
     }
 
-    String nouveauHash = passwordEncoder.encode(requete.motDePasseNouveau());
-    jdbc.update(
-        "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id ="
-            + " 'credential'",
-        Map.of("hash", nouveauHash, "userId", details.id()));
+    utilisateurRepository.changerMotDePasse(details.id(), passwordEncoder.encode(requete.motDePasseNouveau()));
 
     HttpSession session = request.getSession(false);
     if (session != null) session.invalidate();
@@ -233,42 +163,31 @@ public class UserController {
     return ResponseEntity.ok(Map.of("succes", "motDePasse"));
   }
 
-  /// Active le TOTP pour l'utilisateur.
+  /// Active le TOTP pour l'utilisateur (appelé par {@link ParametresViewController}).
   ///
-  /// @param userId l'identifiant de l'utilisateur
+  /// @param userId identifiant de l'utilisateur
   /// @param secret le secret Base32 à persister
   void activerTotp(String userId, String secret) {
-    jdbc.update(
-        "UPDATE users SET two_factor_secret = :secret, two_factor_enabled = true WHERE id = :id",
-        Map.of("secret", secret, "id", userId));
+    utilisateurRepository.activerTotp(userId, secret);
   }
 
-  /// Retourne le secret TOTP stocké en base pour l'utilisateur.
+  /// Retourne le secret TOTP stocké (appelé par {@link ParametresViewController}).
   ///
-  /// @param userId l'identifiant de l'utilisateur
+  /// @param userId identifiant de l'utilisateur
   /// @return le secret Base32, ou {@code null} si absent
   String lireSecretTotp(String userId) {
-    return jdbc
-        .queryForList(
-            "SELECT two_factor_secret FROM users WHERE id = :id",
-            Map.of("id", userId),
-            String.class)
-        .stream()
-        .findFirst()
-        .orElse(null);
+    return utilisateurRepository.lireSecretTotp(userId);
   }
 
-  /// Désactive le TOTP pour l'utilisateur.
+  /// Désactive le TOTP (appelé par {@link ParametresViewController}).
   ///
-  /// @param userId l'identifiant de l'utilisateur
+  /// @param userId identifiant de l'utilisateur
   void desactiverTotp(String userId) {
-    jdbc.update(
-        "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false WHERE id = :id",
-        Map.of("id", userId));
+    utilisateurRepository.desactiverTotp(userId);
   }
 
-  /// Complète la première connexion : nom, identifiant, mot de passe, et lève {@code
-  // must_change_credentials}.
+  /// Complète la première connexion : nom, identifiant, mot de passe, et lève
+  /// {@code must_change_credentials}.
   ///
   /// @param requete    corps JSON avec nom, identifiant, motDePasseActuel, motDePasseNouveau
   /// @param auth       contexte d'authentification
@@ -284,12 +203,6 @@ public class UserController {
 
     if (!details.doitChangerCredentials()) {
       return erreur(403, "Accès refusé.");
-    }
-    if (requete.nom() == null
-        || requete.identifiant() == null
-        || requete.motDePasseActuel() == null
-        || requete.motDePasseNouveau() == null) {
-      return erreur(400, "Tous les champs sont obligatoires.");
     }
 
     String nom = requete.nom().strip();
@@ -311,31 +224,14 @@ public class UserController {
     if (!passwordEncoder.matches(requete.motDePasseActuel(), details.motDePasse())) {
       return erreur(400, "Mot de passe temporaire incorrect.");
     }
-
-    boolean identDejaUtilise =
-        !jdbc.queryForList(
-                "SELECT 1 FROM users WHERE lower(username) = :ident AND id != :userId",
-                Map.of("ident", identifiant, "userId", details.id()),
-                Integer.class)
-            .isEmpty();
-    if (identDejaUtilise) {
+    if (utilisateurRepository.identifiantDejaUtilise(identifiant, details.id())) {
       return erreur(400, "Cet identifiant est déjà utilisé.");
     }
 
-    String nouveauHash = passwordEncoder.encode(requete.motDePasseNouveau());
-    jdbc.update(
-        """
-        UPDATE users SET name = :nom, username = :ident, display_username = :ident,
-               must_change_credentials = false, updated_at = now()
-        WHERE id = :userId
-        """,
-        Map.of("nom", nom, "ident", identifiant, "userId", details.id()));
-    jdbc.update(
-        "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id ="
-            + " 'credential'",
-        Map.of("hash", nouveauHash, "userId", details.id()));
+    utilisateurRepository.majPremierLogin(details.id(), nom, identifiant);
+    utilisateurRepository.changerMotDePasse(
+        details.id(), passwordEncoder.encode(requete.motDePasseNouveau()));
 
-    // Invalider la session pour forcer une reconnexion avec le nouveau mot de passe
     HttpSession session = httpRequest.getSession(false);
     if (session != null) session.invalidate();
     SecurityContextHolder.clearContext();
@@ -351,7 +247,7 @@ public class UserController {
   @DeleteMapping
   public ResponseEntity<Void> supprimerCompte(Authentication auth, HttpServletRequest httpRequest) {
     String userId = utilisateur(auth).id();
-    jdbc.update("DELETE FROM users WHERE id = :userId", Map.of("userId", userId));
+    utilisateurRepository.supprimer(userId);
     HttpSession session = httpRequest.getSession(false);
     if (session != null) session.invalidate();
     SecurityContextHolder.clearContext();
