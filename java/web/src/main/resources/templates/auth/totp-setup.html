@@ -32,7 +32,7 @@
             <summary>Saisie manuelle (si QR indisponible)</summary>
             <p class="param-aide">Entrez ce code dans votre application :</p>
             <code class="totp-secret-code" th:text="${totpSecret}"></code>
-            <p class="param-aide" style="margin-top: 0.5rem">
+            <p class="param-aide param-aide--mt">
               Ou ouvrez ce lien depuis votre téléphone :
               <a th:href="${otpUri}" class="break-all" th:text="${otpUri}"></a>
             </p>

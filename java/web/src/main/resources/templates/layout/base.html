@@ -54,7 +54,7 @@
               th:attr="aria-label=${nbNouveau} + ' nouveaux concerts'"
             ></span>
           </a>
-          <hr style="margin: 0.5rem 0; border-color: var(--border)" />
+          <hr />
           <a
             th:each="item : ${navSecondaire}"
             th:href="@{${item.href}}"
@@ -87,7 +87,7 @@
             </svg>
             <span th:text="${item.label}">…</span>
           </a>
-          <hr style="margin: 0.25rem 0; border-color: var(--border)" />
+          <hr />
           <div class="sidebar-user">
             <span sec:authentication="principal.nom">Utilisateur</span>
             <form th:action="@{/logout}" method="post">

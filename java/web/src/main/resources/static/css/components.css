@@ -402,6 +402,12 @@ tr:hover td {
 .text-right {
   text-align: right;
 }
+.texte-centre {
+  text-align: center;
+}
+.cache {
+  display: none;
+}
 .page-title {
   font-size: 1.5rem;
   font-weight: 700;

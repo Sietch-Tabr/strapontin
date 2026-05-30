@@ -102,7 +102,7 @@
                 <div
                   class="quota-tm-barre-remplissage"
                   th:classappend="${quotaTM.total > 0 and quotaTM.dispo * 100 / quotaTM.total > 30 ? ' barre-ok' : (quotaTM.total > 0 and quotaTM.dispo * 100 / quotaTM.total > 10 ? ' barre-warn' : ' barre-danger')}"
-                  th:style="'width: ' + ${quotaTM.total > 0 ? (quotaTM.dispo * 100 / quotaTM.total) : 0} + '%'"
+                  th:attr="data-largeur=${quotaTM.total > 0 ? (quotaTM.dispo * 100 / quotaTM.total) : 0}"
                 ></div>
               </div>
               <p
@@ -155,7 +155,7 @@
                   <span
                     class="job-en-cours"
                     th:attr="data-job=${stat.typeJob}"
-                    th:style="${jobsEnCours != null and jobsEnCours.contains(stat.typeJob)} ? '' : 'display:none'"
+                    th:classappend="${jobsEnCours != null and jobsEnCours.contains(stat.typeJob)} ? '' : ' cache'"
                     aria-busy="true"
                     aria-label="En cours"
                   >

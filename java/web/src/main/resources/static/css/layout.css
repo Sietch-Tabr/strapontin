@@ -56,12 +56,22 @@
   view-transition-name: nav-actif;
 }
 
+.sidebar-nav hr {
+  margin: 0.5rem 0;
+  border-color: var(--border);
+}
+
 .sidebar-footer {
   padding: 0.5rem;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
+}
+
+.sidebar-footer hr {
+  margin: 0.25rem 0;
+  border-color: var(--border);
 }
 
 .sidebar-footer a {

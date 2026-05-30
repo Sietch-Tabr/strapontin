@@ -591,13 +591,13 @@ function initBoutonRelancer() {
 
   function mettreAJourBadges(jobsEnCours) {
     document.querySelectorAll(".job-en-cours[data-job]").forEach(function (el) {
-      el.style.display = "none";
+      el.classList.add("cache");
     });
     (jobsEnCours || []).forEach(function (nom) {
       const badge = document.querySelector(
         ".job-en-cours[data-job='" + nom + "']",
       );
-      if (badge) badge.style.display = "";
+      if (badge) badge.classList.remove("cache");
     });
   }
 
@@ -978,17 +978,17 @@ function initPush() {
   const nonAbonneDiv = document.getElementById("push-non-abonne");
 
   function masquerChargement() {
-    if (chargementDiv) chargementDiv.style.display = "none";
+    if (chargementDiv) chargementDiv.hidden = true;
   }
 
   if (location.protocol !== "https:" && location.hostname !== "localhost") {
     masquerChargement();
-    nonSupporteDiv.style.display = "";
+    nonSupporteDiv.hidden = false;
     return;
   }
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
     masquerChargement();
-    nonSupporteDiv.style.display = "";
+    nonSupporteDiv.hidden = false;
     return;
   }
   const infoFrequenceP = document.getElementById("push-info-frequence");
@@ -1005,27 +1005,26 @@ function initPush() {
 
   function afficherErreur(msg) {
     erreurDiv.textContent = msg;
-    erreurDiv.style.display = "";
+    erreurDiv.hidden = false;
   }
 
   function masquerErreur() {
-    erreurDiv.style.display = "none";
+    erreurDiv.hidden = true;
   }
 
   function majEtat() {
     masquerChargement();
-    permRefusee.style.display = "none";
-    abonneDiv.style.display = "none";
-    nonAbonneDiv.style.display = "none";
+    permRefusee.hidden = true;
+    abonneDiv.hidden = true;
+    nonAbonneDiv.hidden = true;
     if (Notification.permission === "denied") {
-      permRefusee.style.display = "";
+      permRefusee.hidden = false;
     } else if (pushAbonnement) {
-      abonneDiv.style.display = "";
+      abonneDiv.hidden = false;
     } else {
-      nonAbonneDiv.style.display = "";
+      nonAbonneDiv.hidden = false;
       const frequenceJamais = estFrequenceJamais();
-      if (infoFrequenceP)
-        infoFrequenceP.style.display = frequenceJamais ? "" : "none";
+      if (infoFrequenceP) infoFrequenceP.hidden = !frequenceJamais;
       if (btnActiver) btnActiver.disabled = frequenceJamais;
     }
   }
@@ -1035,7 +1034,7 @@ function initPush() {
   }
 
   async function chargerEtat() {
-    if (chargementDiv) chargementDiv.style.display = "";
+    if (chargementDiv) chargementDiv.hidden = false;
     const timeout = new Promise(function (_, reject) {
       setTimeout(function () {
         reject(new Error("timeout"));
@@ -1055,7 +1054,7 @@ function initPush() {
       const registration = results[1];
       if (!repVapid.disponible) {
         masquerChargement();
-        vapidManquantDiv.style.display = "";
+        vapidManquantDiv.hidden = false;
         return;
       }
       pushClePublique = repVapid.clePublique;
@@ -1063,9 +1062,10 @@ function initPush() {
       majEtat();
     } catch (_) {
       masquerChargement();
-      nonSupporteDiv.style.display = "";
+      nonSupporteDiv.hidden = false;
     }
   }
+
 
   btnActiver.addEventListener("click", async function () {
     if (!pushClePublique || pushEnCours) return;
@@ -1164,9 +1164,16 @@ function mettreAJourBadgeApp() {
   }
 }
 
+function initBarresProgression() {
+  document.querySelectorAll("[data-largeur]").forEach(function (el) {
+    el.style.width = el.dataset.largeur + "%";
+  });
+}
+
 function initTout() {
   majNavActif(window.location.pathname);
   mettreAJourBadgeApp();
+  initBarresProgression();
   initToasts();
   initBanniere();
   initAdminBanniere();

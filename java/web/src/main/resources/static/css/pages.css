@@ -598,6 +598,9 @@
   color: var(--fg-muted);
   margin-bottom: 0.5rem;
 }
+.param-aide--mt {
+  margin-top: 0.5rem;
+}
 
 .param-bloc-danger {
   border-left: 3px solid var(--danger);
@@ -798,6 +801,7 @@ fieldset.form-checkboxes legend {
   height: 100%;
   border-radius: 9999px;
   transition: width 0.3s;
+  width: 0%;
 }
 .barre-ok {
   background: #16a34a;
