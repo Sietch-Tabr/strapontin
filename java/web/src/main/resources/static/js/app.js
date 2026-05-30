@@ -92,7 +92,8 @@ function initToasts() {
     el.showPopover();
 
     const delai = delaiParType(el);
-    const minuterie = delai > 0 ? setTimeout(() => el.hidePopover(), delai) : null;
+    const minuterie =
+      delai > 0 ? setTimeout(() => el.hidePopover(), delai) : null;
     fermer.addEventListener("click", () => {
       if (minuterie) clearTimeout(minuterie);
       el.hidePopover();
@@ -122,7 +123,8 @@ function afficherToast(message, type) {
   el.showPopover();
 
   const delai = delaiParType(el);
-  const minuterie = delai > 0 ? setTimeout(() => el.hidePopover(), delai) : null;
+  const minuterie =
+    delai > 0 ? setTimeout(() => el.hidePopover(), delai) : null;
   fermer.addEventListener("click", () => {
     if (minuterie) clearTimeout(minuterie);
     el.hidePopover();
@@ -443,12 +445,18 @@ function initConfirmSupprArtiste() {
     });
   });
 
-  if (btnConfirmer) btnConfirmer.addEventListener("click", function () {
-    dialog.close();
-    if (formEnAttente) formEnAttente.submit();
+  if (btnConfirmer)
+    btnConfirmer.addEventListener("click", function () {
+      dialog.close();
+      if (formEnAttente) formEnAttente.submit();
+    });
+  if (btnAnnuler)
+    btnAnnuler.addEventListener("click", function () {
+      dialog.close();
+    });
+  dialog.addEventListener("click", function (e) {
+    if (e.target === dialog) dialog.close();
   });
-  if (btnAnnuler) btnAnnuler.addEventListener("click", function () { dialog.close(); });
-  dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });
 }
 
 // Confirmation de suppression de salle
@@ -460,21 +468,112 @@ function initConfirmSupprSalle() {
   var btnAnnuler = document.getElementById("btn-annuler-suppr-salle");
   var formEnAttente = null;
 
-  document.querySelectorAll(".js-confirmer-suppr-salle").forEach(function (btn) {
-    btn.addEventListener("click", function (e) {
-      e.preventDefault();
-      formEnAttente = btn.closest("form");
-      if (nomEl) nomEl.textContent = btn.getAttribute("data-nom-salle") || "";
-      dialog.showModal();
+  document
+    .querySelectorAll(".js-confirmer-suppr-salle")
+    .forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        formEnAttente = btn.closest("form");
+        if (nomEl) nomEl.textContent = btn.getAttribute("data-nom-salle") || "";
+        dialog.showModal();
+      });
     });
-  });
 
-  if (btnConfirmer) btnConfirmer.addEventListener("click", function () {
-    dialog.close();
-    if (formEnAttente) formEnAttente.submit();
+  if (btnConfirmer)
+    btnConfirmer.addEventListener("click", function () {
+      dialog.close();
+      if (formEnAttente) formEnAttente.submit();
+    });
+  if (btnAnnuler)
+    btnAnnuler.addEventListener("click", function () {
+      dialog.close();
+    });
+  dialog.addEventListener("click", function (e) {
+    if (e.target === dialog) dialog.close();
   });
-  if (btnAnnuler) btnAnnuler.addEventListener("click", function () { dialog.close(); });
-  dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });
+}
+
+// Bannière système — auto-dismiss et dismiss manuel via sessionStorage
+function initBanniere() {
+  const el = document.getElementById("banniere");
+  if (!el) return;
+
+  const id = el.dataset.banniereId;
+  const type = el.dataset.banniereType;
+
+  if (sessionStorage.getItem("banniere_dismissed_id") === id) {
+    el.style.display = "none";
+    return;
+  }
+
+  const btn = document.getElementById("btn-fermer-banniere");
+  if (btn) {
+    btn.onclick = function () {
+      sessionStorage.setItem("banniere_dismissed_id", id);
+      el.style.display = "none";
+    };
+  }
+
+  const delais = { info: 10000, warning: 20000 };
+  if (delais[type]) {
+    setTimeout(function () {
+      el.style.display = "none";
+    }, delais[type]);
+  }
+}
+
+// Formulaire bannière admin — Publier / Effacer
+function initAdminBanniere() {
+  const btnPublier = document.getElementById("btn-publier-banniere");
+  const btnEffacer = document.getElementById("btn-effacer-banniere");
+  if (!btnPublier && !btnEffacer) return;
+
+  if (btnPublier) {
+    btnPublier.onclick = function () {
+      const message = document.getElementById("banniere-message").value.trim();
+      const type = document.getElementById("banniere-type").value;
+      if (!message) return;
+      fetch("/api/admin/banniere", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message, type: type }),
+      })
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (data) {
+          if (data.succes) afficherToast("Bannière publiée.", "succes");
+          else
+            afficherToast(
+              data.erreur || "Erreur lors de la publication.",
+              "erreur",
+            );
+        })
+        .catch(function () {
+          afficherToast("Erreur réseau.", "erreur");
+        });
+    };
+  }
+
+  if (btnEffacer) {
+    btnEffacer.onclick = function () {
+      fetch("/api/admin/banniere", { method: "DELETE" })
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (data) {
+          if (data.succes) afficherToast("Bannière effacée.", "succes");
+          else
+            afficherToast(
+              data.erreur || "Erreur lors de l'effacement.",
+              "erreur",
+            );
+        })
+        .catch(function () {
+          afficherToast("Erreur réseau.", "erreur");
+        });
+    };
+  }
 }
 
 // Bouton "Relancer les fetches" (admin) — AJAX + polling indicateur visuel
@@ -1051,6 +1150,8 @@ function arrayBufferVersBase64(buffer) {
 function initTout() {
   majNavActif(window.location.pathname);
   initToasts();
+  initBanniere();
+  initAdminBanniere();
   initBoutonRecherche();
   initReafficher();
   initFiltresToggle();

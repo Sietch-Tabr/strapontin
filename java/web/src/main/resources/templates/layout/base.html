@@ -28,7 +28,6 @@
     <link rel="stylesheet" th:href="@{/css/pages.css}" />
     <title layout:title-pattern="$CONTENT_TITLE — Strapontin">Strapontin</title>
     <script th:src="@{/webjars/htmx.org/dist/htmx.min.js}" defer></script>
-    <script th:src="@{/webjars/alpinejs/dist/cdn.min.js}" defer></script>
   </head>
   <body th:class="${theme == 'sombre' ? 'dark' : ''}" hx-boost="true">
     <div class="app-layout">
@@ -93,6 +92,16 @@
 
       <!-- Contenu principal -->
       <main class="main-content">
+        <div
+          id="banniere-container"
+          hx-get="/api/banniere"
+          hx-trigger="every 60s"
+          hx-swap="innerHTML"
+        >
+          <th:block
+            th:insert="~{layout/fragments/banniere :: banniere}"
+          ></th:block>
+        </div>
         <div layout:fragment="contenu">
           <!-- contenu injecté par chaque template -->
         </div>
@@ -107,9 +116,14 @@
             th:href="@{${item.href}}"
             th:classappend="${currentPage == item.page ? ' actif' : ''}"
           >
-            <span th:if="${item.page == 'accueil'}" class="bottom-nav-badge-wrapper">
+            <span
+              th:if="${item.page == 'accueil'}"
+              class="bottom-nav-badge-wrapper"
+            >
               <svg class="icon" aria-hidden="true">
-                <use th:attr="href='/icons/lucide-sprite.svg#' + ${item.icone}" />
+                <use
+                  th:attr="href='/icons/lucide-sprite.svg#' + ${item.icone}"
+                />
               </svg>
               <span
                 class="nav-badge"
@@ -118,10 +132,17 @@
                 th:attr="aria-label=${nbNouveau} + ' nouveaux concerts'"
               ></span>
             </span>
-            <svg th:unless="${item.page == 'accueil'}" class="icon" aria-hidden="true">
+            <svg
+              th:unless="${item.page == 'accueil'}"
+              class="icon"
+              aria-hidden="true"
+            >
               <use th:attr="href='/icons/lucide-sprite.svg#' + ${item.icone}" />
             </svg>
-            <span th:text="${item.label == 'Mes spectacles' ? 'Spectacles' : item.label}">…</span>
+            <span
+              th:text="${item.label == 'Mes spectacles' ? 'Spectacles' : item.label}"
+              >…</span
+            >
           </a>
         </th:block>
         <button

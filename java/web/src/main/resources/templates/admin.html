@@ -489,6 +489,66 @@
           </div>
         </section>
 
+        <!-- Section Bannière système -->
+        <section id="section-banniere" class="admin-section">
+          <div class="param-bloc">
+            <h3 class="param-label">Message système</h3>
+            <p class="param-aide">
+              Publiez un message visible par tous les utilisateurs connectés
+              dans la minute. Le message disparaît automatiquement selon son
+              type ou manuellement sur fermeture.
+            </p>
+            <div class="form-champ">
+              <label for="banniere-message" class="form-label">Message</label>
+              <textarea
+                id="banniere-message"
+                name="message"
+                class="form-control"
+                rows="2"
+                maxlength="500"
+                placeholder="Maintenance planifiée ce soir à 22h…"
+                th:text="${banniereMessage}"
+              ></textarea>
+            </div>
+            <div class="form-champ">
+              <label for="banniere-type" class="form-label">Type</label>
+              <select id="banniere-type" name="type" class="form-control">
+                <option
+                  value="info"
+                  th:selected="${banniereType == null or banniereType == 'info'}"
+                >
+                  Information (auto-dismiss 10 s)
+                </option>
+                <option
+                  value="warning"
+                  th:selected="${banniereType == 'warning'}"
+                >
+                  Avertissement (auto-dismiss 20 s)
+                </option>
+                <option value="error" th:selected="${banniereType == 'error'}">
+                  Erreur (fermeture manuelle)
+                </option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                id="btn-publier-banniere"
+                class="btn btn-primary"
+              >
+                Publier
+              </button>
+              <button
+                type="button"
+                id="btn-effacer-banniere"
+                class="btn btn-secondaire"
+              >
+                Effacer
+              </button>
+            </div>
+          </div>
+        </section>
+
         <!-- Dialog confirmation VAPID -->
         <dialog id="dialog-vapid">
           <p class="dialog-titre">Régénérer les clés VAPID ?</p>

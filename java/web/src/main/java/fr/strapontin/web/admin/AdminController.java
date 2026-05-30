@@ -286,8 +286,16 @@ public class AdminController {
         "info", SOURCE_ADMIN, "compte créé", Map.of(CLE_EMAIL, email, CLE_PAR_ADMIN, adminId));
 
     return ResponseEntity.status(201)
-        .body(Map.of(CLE_SUCCES, true, CLE_EMAIL, email, "identifiant", usernameTemp,
-                     "lienReset", lienReset));
+        .body(
+            Map.of(
+                CLE_SUCCES,
+                true,
+                CLE_EMAIL,
+                email,
+                "identifiant",
+                usernameTemp,
+                "lienReset",
+                lienReset));
   }
 
   /// Modifie le nom et/ou l'email d'un utilisateur.
@@ -556,6 +564,45 @@ public class AdminController {
       log.error("Erreur génération clés VAPID", e);
       return erreur(500, "Erreur lors de la génération des clés VAPID.");
     }
+  }
+
+  // --- Endpoints bannière ---
+
+  record RequeteBanniere(
+      @NotBlank(message = "Le message est requis.")
+          @Size(max = 500, message = "Message trop long (500 caractères max).")
+          String message,
+      String type) {}
+
+  /// Publie un message de bannière système visible par tous les utilisateurs connectés.
+  ///
+  /// @param requete corps JSON avec `message` et `type` (info | warning | error)
+  /// @return 200 si publié
+  @PostMapping("/banniere")
+  public ResponseEntity<Map<String, Object>> publierBanniere(
+      @Valid @RequestBody RequeteBanniere requete) {
+    String type = "info";
+    if (Set.of("info", "warning", "error").contains(requete.type())) {
+      type = requete.type();
+    }
+    String id = java.time.Instant.now().toString();
+    configService.sauvegarderConfig("BANNER_MESSAGE", requete.message().strip());
+    configService.sauvegarderConfig("BANNER_TYPE", type);
+    configService.sauvegarderConfig("BANNER_ID", id);
+    logAdminService.logAdmin("info", SOURCE_ADMIN, "Bannière publiée : " + type);
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "publierBanniere"));
+  }
+
+  /// Efface la bannière système en cours.
+  ///
+  /// @return 200 si effacée
+  @DeleteMapping("/banniere")
+  public ResponseEntity<Map<String, Object>> effacerBanniere() {
+    configService.sauvegarderConfig("BANNER_MESSAGE", null);
+    configService.sauvegarderConfig("BANNER_TYPE", null);
+    configService.sauvegarderConfig("BANNER_ID", null);
+    logAdminService.logAdmin("info", SOURCE_ADMIN, "Bannière effacée");
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "effacerBanniere"));
   }
 
   // --- Endpoints logs & jobs ---

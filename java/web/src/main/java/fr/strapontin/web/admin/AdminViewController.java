@@ -67,8 +67,7 @@ public class AdminViewController {
   /// @param modele le modèle Thymeleaf
   /// @return le nom du template
   @GetMapping("/admin")
-  public String admin(
-      Model modele, org.springframework.security.core.Authentication auth) {
+  public String admin(Model modele, org.springframework.security.core.Authentication auth) {
     ResponseEntity<List<AdminController.UtilisateurAdmin>> repUsers =
         adminController.listerUtilisateurs();
     ResponseEntity<List<AdminController.ConfigStatut>> repConfig =
@@ -104,34 +103,36 @@ public class AdminViewController {
     modele.addAttribute("workerEnAlerte", workerEnAlerte);
     modele.addAttribute("workerDepuisTexte", workerDepuisTexte);
 
-    String etatQuota = corpsJobs != null ? (String) corpsJobs.getOrDefault("etatQuota", "ok") : "ok";
+    String etatQuota =
+        corpsJobs != null ? (String) corpsJobs.getOrDefault("etatQuota", "ok") : "ok";
     modele.addAttribute("etatQuota", etatQuota);
     modele.addAttribute("labelsJobs", LABELS_JOBS);
 
     @SuppressWarnings("unchecked")
     List<AdminController.StatJob> statsJobsList =
-        corpsJobs != null
-            ? (List<AdminController.StatJob>) corpsJobs.get("statsJobs")
-            : List.of();
+        corpsJobs != null ? (List<AdminController.StatJob>) corpsJobs.get("statsJobs") : List.of();
     long nbJobsOk = statsJobsList.stream().filter(j -> j.erreur() == null).count();
     long nbJobsErreur = statsJobsList.stream().filter(j -> j.erreur() != null).count();
     modele.addAttribute("nbJobsOk", nbJobsOk);
     modele.addAttribute("nbJobsErreur", nbJobsErreur);
 
     modele.addAttribute("descriptionsConfig", DESCRIPTIONS_CONFIG);
-    modele.addAttribute(
-        "appConfigSecretPresente", System.getenv("APP_CONFIG_SECRET") != null);
+    modele.addAttribute("appConfigSecretPresente", System.getenv("APP_CONFIG_SECRET") != null);
     String utilisateurCourantId =
-        auth != null && auth.getPrincipal() instanceof fr.strapontin.web.securite.UtilisateurDetails u
+        auth != null
+                && auth.getPrincipal() instanceof fr.strapontin.web.securite.UtilisateurDetails u
             ? u.id()
             : null;
     modele.addAttribute("utilisateurCourantId", utilisateurCourantId);
     modele.addAttribute("currentPage", "admin");
-    modele.addAttribute("ongletItems", List.of(
-        new OngletItem("#jobs", "Tableau de bord", "icon-activity"),
-        new OngletItem("#logs", "Logs", "icon-scroll-text"),
-        new OngletItem("#configuration", "Configuration", "icon-settings"),
-        new OngletItem("#utilisateurs", "Utilisateurs", "icon-users")));
+    modele.addAttribute(
+        "ongletItems",
+        List.of(
+            new OngletItem("#jobs", "Tableau de bord", "icon-activity"),
+            new OngletItem("#logs", "Logs", "icon-scroll-text"),
+            new OngletItem("#configuration", "Configuration", "icon-settings"),
+            new OngletItem("#section-banniere", "Bannière", "icon-bell"),
+            new OngletItem("#utilisateurs", "Utilisateurs", "icon-users")));
     DateTimeFormatter formateur =
         DateTimeFormatter.ofPattern("EEEE d MMMM yyyy à HH'h'mm", Locale.FRENCH);
     modele.addAttribute("heureActualisation", LocalDateTime.now().format(formateur));
