@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.vue;
 
+import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,9 +33,11 @@ public class ModeleGlobalAdvice {
   private boolean cookieSecure;
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final ConfigService configService;
 
-  public ModeleGlobalAdvice(NamedParameterJdbcTemplate jdbc) {
+  public ModeleGlobalAdvice(NamedParameterJdbcTemplate jdbc, ConfigService configService) {
     this.jdbc = jdbc;
+    this.configService = configService;
   }
 
   /// Injecte le thème courant.
@@ -120,8 +123,7 @@ public class ModeleGlobalAdvice {
                        OR c.artiste_norm LIKE ua.artiste_normalise || ' %')
               )
             """,
-            Map.of("userId", ud.id()),
-            Integer.class);
+            Map.of("userId", ud.id()), Integer.class);
     return count != null ? count : 0;
   }
 
@@ -137,6 +139,39 @@ public class ModeleGlobalAdvice {
       return u;
     }
     return null;
+  }
+
+  /// Injecte le message de bannière système pour le rendu SSR initial.
+  ///
+  /// <p>Ignoré pour les endpoints {@code /api/} afin d'éviter une lecture DB inutile
+  /// sur les appels AJAX et le poll HTMX lui-même.
+  ///
+  /// @param request la requête HTTP
+  /// @return le message de bannière, ou {@code null} si absent
+  @ModelAttribute("banniereMessage")
+  public String banniereMessage(HttpServletRequest request) {
+    if (request.getRequestURI().startsWith("/api/")) return null;
+    return configService.lireConfig("BANNER_MESSAGE").orElse(null);
+  }
+
+  /// Injecte le type de bannière système ({@code info}, {@code warning}, {@code error}).
+  ///
+  /// @param request la requête HTTP
+  /// @return le type de bannière
+  @ModelAttribute("banniereType")
+  public String banniereType(HttpServletRequest request) {
+    if (request.getRequestURI().startsWith("/api/")) return null;
+    return configService.lireConfig("BANNER_TYPE").orElse("info");
+  }
+
+  /// Injecte l'identifiant de bannière système (timestamp ISO de publication).
+  ///
+  /// @param request la requête HTTP
+  /// @return l'identifiant de bannière
+  @ModelAttribute("banniereId")
+  public String banniereId(HttpServletRequest request) {
+    if (request.getRequestURI().startsWith("/api/")) return null;
+    return configService.lireConfig("BANNER_ID").orElse("");
   }
 
   /// Items de navigation principale : affichés dans la sidebar et la bottom nav.

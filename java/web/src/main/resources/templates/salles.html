@@ -32,9 +32,7 @@
           minlength="2"
           autocomplete="off"
         />
-        <button type="submit" class="btn btn-secondary">
-          Rechercher
-        </button>
+        <button type="submit" class="btn btn-secondary">Rechercher</button>
       </form>
       <p class="form-aide">
         Saisissez au moins 2 caractères. La recherche porte sur les concerts en
@@ -51,11 +49,21 @@
         th:text="${erreur}"
       ></div>
 
-      <div th:if="${succes}" class="alerte alerte-succes" role="status" aria-live="polite">
+      <div
+        th:if="${succes}"
+        class="alerte alerte-succes"
+        role="status"
+        aria-live="polite"
+      >
         Salle ajoutée — les concerts apparaîtront dans quelques secondes.
       </div>
 
-      <div th:if="${supprime}" class="alerte alerte-succes" role="status" aria-live="polite">
+      <div
+        th:if="${supprime}"
+        class="alerte alerte-succes"
+        role="status"
+        aria-live="polite"
+      >
         Salle retirée de votre liste.
       </div>
 
@@ -112,10 +120,18 @@
         class="section-resultats"
         aria-live="polite"
       >
-        <div th:if="${donnees.dejaLaSuivie}" class="alerte alerte-info" role="status">
+        <div
+          th:if="${donnees.dejaLaSuivie}"
+          class="alerte alerte-info"
+          role="status"
+        >
           Vous suivez déjà « <span th:text="${q}">salle</span> ».
         </div>
-        <div th:unless="${donnees.dejaLaSuivie}" class="alerte alerte-info" role="status">
+        <div
+          th:unless="${donnees.dejaLaSuivie}"
+          class="alerte alerte-info"
+          role="status"
+        >
           Aucun résultat pour « <span th:text="${q}">salle</span> ».
         </div>
       </div>

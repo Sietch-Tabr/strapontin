@@ -154,10 +154,6 @@
             <groupId>org.webjars.npm</groupId>
             <artifactId>htmx.org</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.webjars.npm</groupId>
-            <artifactId>alpinejs</artifactId>
-        </dependency>
         <!-- Résolution automatique des webjars versionnés -->
         <dependency>
             <groupId>org.webjars</groupId>

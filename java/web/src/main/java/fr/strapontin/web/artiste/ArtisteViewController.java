@@ -74,9 +74,7 @@ public class ArtisteViewController {
   /// @return redirect vers /artistes (PRG)
   @PostMapping("/artistes/supprimer/{artisteNormalise}")
   public String supprimer(
-      @PathVariable String artisteNormalise,
-      RedirectAttributes redirects,
-      Authentication auth) {
+      @PathVariable String artisteNormalise, RedirectAttributes redirects, Authentication auth) {
     artisteController.supprimerArtiste(artisteNormalise, auth);
     redirects.addFlashAttribute("supprime", true);
     return "redirect:/artistes";

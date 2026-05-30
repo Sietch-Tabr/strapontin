@@ -70,8 +70,8 @@
         role="status"
         aria-live="polite"
       >
-        Fetch en cours pour « <strong th:text="${fetchEnCours}"></strong> »…
-        Les concerts apparaîtront dans quelques secondes sur
+        Fetch en cours pour « <strong th:text="${fetchEnCours}"></strong> »… Les
+        concerts apparaîtront dans quelques secondes sur
         <a th:href="@{/spectacles}">Mes spectacles</a>.
       </div>
 
@@ -108,10 +108,18 @@
         class="section-resultats"
         aria-live="polite"
       >
-        <div th:if="${donnees.dejaLeSuivi}" class="alerte alerte-info" role="status">
+        <div
+          th:if="${donnees.dejaLeSuivi}"
+          class="alerte alerte-info"
+          role="status"
+        >
           Vous suivez déjà « <span th:text="${q}">artiste</span> ».
         </div>
-        <div th:unless="${donnees.dejaLeSuivi}" class="alerte alerte-info" role="status">
+        <div
+          th:unless="${donnees.dejaLeSuivi}"
+          class="alerte alerte-info"
+          role="status"
+        >
           <p>Aucun résultat pour « <span th:text="${q}">artiste</span> ».</p>
           <form
             method="post"
