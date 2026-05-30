@@ -84,6 +84,18 @@
               </ul>
             </div>
             <div>
+              <p class="changelog-categorie">Administration</p>
+              <ul>
+                <li>
+                  Les bounces email (adresses invalides ou inexistantes) sont
+                  désormais détectés via les webhooks Resend. L'administrateur
+                  reçoit une notification email avec l'adresse concernée.
+                  Nécessite la configuration de la clé
+                  <code>RESEND_WEBHOOK_SECRET</code> depuis l'administration.
+                </li>
+              </ul>
+            </div>
+            <div>
               <p class="changelog-categorie">Correctifs</p>
               <ul>
                 <li>
@@ -93,6 +105,10 @@
                 <li>
                   La page Administration était inaccessible et renvoyait vers la
                   connexion — corrigé.
+                </li>
+                <li>
+                  Les boutons « Copier » et « Fermer » de la modale d'invitation
+                  (création d'utilisateur) n'avaient aucun effet — corrigé.
                 </li>
               </ul>
             </div>
