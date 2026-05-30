@@ -33,32 +33,8 @@ steps:
       LXC_JAVA_HOST:
         from_secret: lxc_host
     commands:
-      - |
-        set -euo pipefail
-        apk add --no-cache openssh-client
-        echo "$$SSH_KEY" > /tmp/key
-        chmod 600 /tmp/key
-        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST "mkdir -p /opt/strapontin/scripts"
-        scp -i /tmp/key -o StrictHostKeyChecking=no scripts/backup.sh scripts/restore.sh scripts/update.sh root@$$LXC_JAVA_HOST:/opt/strapontin/scripts/
-        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST "chmod +x /opt/strapontin/scripts/backup.sh /opt/strapontin/scripts/restore.sh /opt/strapontin/scripts/update.sh"
-        echo "[deploy] Backup DB avant deploiement..."
-        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST /opt/strapontin/scripts/backup.sh
-        echo "[deploy] Backup OK"
-        WEB_COUNT=$(find java/web/target -name "web-*.jar" -not -name "*.original" | wc -l)
-        WEB_JAR=$(find java/web/target -name "web-*.jar" -not -name "*.original")
-        if [ "$WEB_COUNT" -ne 1 ]; then
-          echo "Ambiguite JAR web : $WEB_COUNT trouves" >&2
-          exit 1
-        fi
-        WORKER_COUNT=$(find java/worker/target -name "worker-*.jar" -not -name "*.original" | wc -l)
-        WORKER_JAR=$(find java/worker/target -name "worker-*.jar" -not -name "*.original")
-        if [ "$WORKER_COUNT" -ne 1 ]; then
-          echo "Ambiguite JAR worker : $WORKER_COUNT trouves" >&2
-          exit 1
-        fi
-        scp -i /tmp/key -o StrictHostKeyChecking=no "$WEB_JAR" root@$$LXC_JAVA_HOST:/opt/strapontin/web.jar.new
-        scp -i /tmp/key -o StrictHostKeyChecking=no "$WORKER_JAR" root@$$LXC_JAVA_HOST:/opt/strapontin/worker.jar.new
-        ssh -i /tmp/key -o StrictHostKeyChecking=no root@$$LXC_JAVA_HOST /opt/strapontin/scripts/update.sh
+      - apk add --no-cache openssh-client bash
+      - bash scripts/woodpecker-deploy.sh
     when:
       - event: push
         branch: main
