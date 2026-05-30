@@ -884,6 +884,9 @@ fieldset.form-checkboxes legend {
   font-size: 0.75rem;
   color: var(--muted);
 }
+.job-en-cours.cache {
+  display: none;
+}
 .job-en-cours .spinner {
   animation: tourner 1s linear infinite;
   flex-shrink: 0;
