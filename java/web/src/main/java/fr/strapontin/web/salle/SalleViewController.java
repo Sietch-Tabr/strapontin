@@ -59,7 +59,7 @@ public class SalleViewController {
       @RequestParam(required = false) String tmVenueId,
       RedirectAttributes redirects,
       Authentication auth) {
-    var requete = new SalleController.RequeteAjouter(nom, tmVenueId);
+    var requete = new RequeteAjouter(nom, tmVenueId);
     var rep = salleController.ajouterSalle(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = (java.util.Map<?, ?>) rep.getBody();
