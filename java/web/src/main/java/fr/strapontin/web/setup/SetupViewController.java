@@ -35,8 +35,8 @@ public class SetupViewController {
   /// @return le nom du template Thymeleaf ou une redirection
   @GetMapping("/setup")
   public String afficherSetup() {
-    ResponseEntity<SetupController.ReponseSetup> reponse = setupController.verifierSetup();
-    SetupController.ReponseSetup corps = reponse.getBody();
+    ResponseEntity<ReponseSetup> reponse = setupController.verifierSetup();
+    ReponseSetup corps = reponse.getBody();
     if (corps != null && corps.dejaConfiguree()) {
       return "redirect:/login";
     }
@@ -64,8 +64,8 @@ public class SetupViewController {
       @RequestParam(required = false) String contactEmail,
       Model modele) {
 
-    SetupController.RequeteSetup requete =
-        new SetupController.RequeteSetup(
+    RequeteSetup requete =
+        new RequeteSetup(
             nom, identifiant, email, motDePasse, baseUrl, contactEmail);
 
     ResponseEntity<Map<String, Object>> reponse = setupController.initialiser(requete);

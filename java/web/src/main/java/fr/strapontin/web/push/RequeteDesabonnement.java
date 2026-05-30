@@ -1,0 +1,11 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025 Kwaite
+ */
+package fr.strapontin.web.push;
+
+/// Corps JSON de la requête DELETE /api/push (désabonnement push).
+///
+/// @since 2.1.0
+/// @author Kwaite
+public record RequeteDesabonnement(String endpoint) {}
