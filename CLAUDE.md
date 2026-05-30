@@ -24,7 +24,7 @@ strapontin/
 - **Flyway 12** — migrations DB (`java/web/src/main/resources/db/migration/`)
 - **Resend** — notifications email (tier gratuit 3 000/mois)
 - **web-push (VAPID)** — notifications push PWA
-- **HTMX 2.0.6** + **Alpine.js 3.14.9** — navigation SPA-like (`hx-boost`) + composants réactifs, servis via webjars
+- **HTMX 2.0.6** — navigation SPA-like (`hx-boost`) + bannière système (poll 60s), servi via webjar
 - **Maven** — build (`mvn -f java/pom.xml -pl web,worker -am package`)
 
 ## Workflow de développement
@@ -105,6 +105,7 @@ Chiffrement AES-256-GCM, clé = `APP_CONFIG_SECRET`.
 ⚠️ Changer `APP_CONFIG_SECRET` → toutes les valeurs `app_config` illisibles.
 ⚠️ Changer les clés VAPID → supprimer `push_abonnements` d'abord.
 Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_*`) configurables depuis `/admin`.
+Bannière système : `BANNER_MESSAGE`, `BANNER_TYPE` (`info`|`warning`|`error`), `BANNER_ID` (timestamp ISO) — gérées via `POST /api/admin/banniere` et `DELETE /api/admin/banniere`.
 
 ## Sources de données
 
