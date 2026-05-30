@@ -85,7 +85,11 @@ self.addEventListener("fetch", (event) => {
   // Pages HTML : réseau en priorité, page offline si indisponible
   if (request.headers.get("accept")?.includes("text/html")) {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/offline.html")),
+      fetch(request).catch(() =>
+        caches.match("/offline.html").then(
+          (r) => r ?? fetch("/offline.html"),
+        ),
+      ),
     );
   }
 });
