@@ -39,8 +39,11 @@
     </style>
     <script>
       (function () {
+        /* localStorage en priorité (cookie inaccessible sur iOS PWA standalone) */
+        var theme = "auto";
+        try { theme = localStorage.getItem("strapontin-theme") || "auto"; } catch (_) {}
         var cookie = document.cookie.match(/(?:^|; )theme=([^;]*)/);
-        var theme = cookie ? decodeURIComponent(cookie[1]) : "auto";
+        if (cookie) theme = decodeURIComponent(cookie[1]);
         if (theme === "sombre") {
           document.documentElement.classList.add("dark");
         } else if (theme === "clair") {
@@ -122,7 +125,7 @@
         fetch("/manifest.json", { method: "HEAD", cache: "no-store" })
           .then(function () {
             afficherMsg("Connexion rétablie, rechargement…");
-            window.location.href = "/";
+            window.location.href = "/?t=" + Date.now();
           })
           .catch(function () {
             afficherMsg("Toujours hors ligne — réessayez dans un instant.");

@@ -10,6 +10,7 @@ function appliquerTheme(t) {
 
 (function () {
   const theme = document.cookie.match(/(?:^|; )theme=([^;]*)/)?.[1] ?? "auto";
+  try { localStorage.setItem("strapontin-theme", theme); } catch (_) {}
   appliquerTheme(theme);
   if (theme === "auto") {
     prefSombre.addEventListener("change", () => appliquerTheme("auto"));
@@ -29,6 +30,7 @@ document.addEventListener("click", function (e) {
   if (!btn) return;
   const valeur = btn.value;
   document.cookie = "theme=" + valeur + "; path=/; max-age=" + 365 * 24 * 3600;
+  try { localStorage.setItem("strapontin-theme", valeur); } catch (_) {}
   appliquerTheme(valeur);
 });
 
