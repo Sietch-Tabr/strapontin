@@ -55,7 +55,7 @@ public class ArtisteViewController {
   @PostMapping("/artistes/ajouter")
   public String ajouter(
       @RequestParam String nom, RedirectAttributes redirects, Authentication auth) {
-    var requete = new ArtisteController.RequeteAjouter(nom);
+    var requete = new RequeteAjouter(nom);
     var rep = artisteController.ajouterArtiste(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
