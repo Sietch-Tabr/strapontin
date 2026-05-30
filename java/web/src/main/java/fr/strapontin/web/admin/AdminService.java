@@ -5,9 +5,9 @@
 package fr.strapontin.web.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
-import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -65,6 +65,7 @@ public class AdminService {
   private static final Set<String> CLES_OBLIGATOIRES = Set.of("CONTACT_EMAIL", "PUBLIC_BASE_URL");
   private static final Pattern FORMAT_TM_KEY = Pattern.compile("^[A-Za-z0-9]{16,64}$");
   private static final Pattern FORMAT_RESEND_KEY = Pattern.compile("^re_[A-Za-z0-9_-]{10,}$");
+  private static final Pattern FORMAT_WEBHOOK_SECRET = Pattern.compile("^whsec_[A-Za-z0-9+/=]{16,}$");
   private static final Set<String> ROLES_VALIDES = Set.of("user", "admin");
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -248,12 +249,16 @@ public class AdminService {
 
     if (!email.isEmpty()) {
       logAdminService.logAdmin(
-          "warn", "admin", "email modifié",
+          "warn",
+          "admin",
+          "email modifié",
           Map.of("userId", userId, "nouvelEmail", email, "parAdmin", adminId));
     }
     if (!role.isEmpty()) {
       logAdminService.logAdmin(
-          "warn", "admin", "rôle modifié",
+          "warn",
+          "admin",
+          "rôle modifié",
           Map.of("userId", userId, "nouveauRole", role, "parAdmin", adminId));
     }
   }
@@ -517,6 +522,9 @@ public class AdminService {
     }
     if ("RESEND_API_KEY".equals(cle) && !FORMAT_RESEND_KEY.matcher(valeur).matches()) {
       return "La clé Resend doit commencer par re_ suivi de caractères alphanumériques.";
+    }
+    if ("RESEND_WEBHOOK_SECRET".equals(cle) && !FORMAT_WEBHOOK_SECRET.matcher(valeur).matches()) {
+      return "La clé webhook Resend doit commencer par whsec_ suivi de caractères base64.";
     }
     if ("PUBLIC_BASE_URL".equals(cle)) {
       try {
