@@ -85,6 +85,8 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
   }
 
   private String obtenirIp(HttpServletRequest request) {
+    String realIp = request.getHeader("X-Real-IP");
+    if (realIp != null && !realIp.isBlank()) return realIp;
     return request.getRemoteAddr();
   }
 }

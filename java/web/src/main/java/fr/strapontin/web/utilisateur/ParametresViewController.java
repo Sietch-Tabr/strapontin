@@ -94,8 +94,7 @@ public class ParametresViewController {
   /// @return le nom du template
   @GetMapping("/parametres")
   public String parametres(Model modele, Authentication auth) {
-    ResponseEntity<ConfigUtilisateur> repConfig =
-        userConfigController.lireConfig(auth);
+    ResponseEntity<ConfigUtilisateur> repConfig = userConfigController.lireConfig(auth);
     ResponseEntity<ProfilUtilisateur> repProfil = userController.lireProfil(auth);
 
     modele.addAttribute("config", repConfig.getBody());
@@ -115,11 +114,13 @@ public class ParametresViewController {
             Integer.class);
     modele.addAttribute("nbArtistes", nbArtistes != null ? nbArtistes : 0);
     modele.addAttribute("nbSalles", nbSalles != null ? nbSalles : 0);
-    modele.addAttribute("ongletItems", List.of(
-        new OngletItem("#preferences", "Préférences", "icon-sliders-horizontal"),
-        new OngletItem("#notifications", "Notifications", "icon-bell"),
-        new OngletItem("#compte", "Compte", "icon-user"),
-        new OngletItem("#donnees", "Données", "icon-database")));
+    modele.addAttribute(
+        "ongletItems",
+        List.of(
+            new OngletItem("#preferences", "Préférences", "icon-sliders-horizontal"),
+            new OngletItem("#notifications", "Notifications", "icon-bell"),
+            new OngletItem("#compte", "Compte", "icon-user"),
+            new OngletItem("#donnees", "Données", "icon-database")));
 
     return "parametres";
   }
@@ -169,9 +170,7 @@ public class ParametresViewController {
       @RequestParam(required = false, defaultValue = "false") boolean notifSalles,
       RedirectAttributes redirects,
       Authentication auth) {
-    var requete =
-        new RequeteNotifications(
-            frequenceNotifications, notifArtistes, notifSalles);
+    var requete = new RequeteNotifications(frequenceNotifications, notifArtistes, notifSalles);
     ResponseEntity<Map<String, Object>> rep = userConfigController.majNotifications(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
@@ -322,10 +321,14 @@ public class ParametresViewController {
   ///
   /// @param token     le token de confirmation (paramètre URL)
   /// @param redirects attributs de redirection
+  /// @param auth      contexte d'authentification (vérifie que le token appartient à l'utilisateur
+  // courant)
   /// @return redirect vers /parametres#compte
   @GetMapping("/parametres/confirmer-email")
   public String confirmerEmail(
-      @RequestParam(required = false) String token, RedirectAttributes redirects) {
+      @RequestParam(required = false) String token,
+      RedirectAttributes redirects,
+      Authentication auth) {
     if (token == null || token.isBlank()) {
       redirects.addFlashAttribute(CLE_ERREUR, "Lien invalide.");
       return REDIRECT_COMPTE;
@@ -348,6 +351,12 @@ public class ParametresViewController {
     String identifier = (String) verifs.get(0).get("identifier");
     String userId = identifier.contains(":") ? identifier.split(":", 2)[1] : null;
     if (userId == null) {
+      redirects.addFlashAttribute(CLE_ERREUR, "Lien invalide.");
+      return REDIRECT_COMPTE;
+    }
+
+    String userIdAuthentifie = ((UtilisateurDetails) auth.getPrincipal()).id();
+    if (!userId.equals(userIdAuthentifie)) {
       redirects.addFlashAttribute(CLE_ERREUR, "Lien invalide.");
       return REDIRECT_COMPTE;
     }
@@ -494,9 +503,16 @@ public class ParametresViewController {
       int salles = corps != null && corps.get("salles") instanceof Integer n ? n : 0;
       int rejetes = corps != null && corps.get("rejetes") instanceof Integer n ? n : 0;
       String message =
-          artistes + " artiste" + (artistes > 1 ? "s" : "")
-              + " et " + salles + " salle" + (salles > 1 ? "s" : "")
-              + " importés" + (rejetes > 0 ? " (" + rejetes + " rejeté" + (rejetes > 1 ? "s" : "") + ")" : "") + ".";
+          artistes
+              + " artiste"
+              + (artistes > 1 ? "s" : "")
+              + " et "
+              + salles
+              + " salle"
+              + (salles > 1 ? "s" : "")
+              + " importés"
+              + (rejetes > 0 ? " (" + rejetes + " rejeté" + (rejetes > 1 ? "s" : "") + ")" : "")
+              + ".";
       redirects.addFlashAttribute(CLE_SUCCES, "import");
       redirects.addFlashAttribute("messageImport", message);
     }

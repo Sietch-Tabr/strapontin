@@ -287,12 +287,16 @@ public class PreferencesService {
         Map.of(CLE_USER_ID, userId, "depts", nouveauxDepts));
   }
 
+  private static final java.util.regex.Pattern VENUE_ID_PATTERN =
+      java.util.regex.Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
+
   private void declencherWorkerApresImport(List<SalleExport> salles) {
     envoyerPostWorker(WORKER_URL + "/artiste");
     if (salles == null) return;
     salles.stream()
         .filter(s -> s.tmVenueId() != null && !s.tmVenueId().isBlank())
         .map(SalleExport::tmVenueId)
+        .filter(venueId -> VENUE_ID_PATTERN.matcher(venueId).matches())
         .distinct()
         .forEach(venueId -> envoyerPostWorker(WORKER_URL + "/salle/" + venueId));
   }

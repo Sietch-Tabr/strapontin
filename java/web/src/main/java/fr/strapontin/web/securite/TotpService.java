@@ -40,6 +40,12 @@ public class TotpService {
   private static final int[] PUISSANCES_10 = {1, 10, 100, 1_000, 10_000, 100_000, 1_000_000};
 
   private final SecureRandom rng = new SecureRandom();
+  private final com.github.benmanes.caffeine.cache.Cache<String, java.util.Set<String>>
+      codesConsommes =
+          com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+              .expireAfterWrite(90, java.util.concurrent.TimeUnit.SECONDS)
+              .maximumSize(10_000)
+              .build();
 
   /// Génère un nouveau secret TOTP encodé en Base32.
   ///
@@ -88,10 +94,12 @@ public class TotpService {
   /// Vérifie un code TOTP saisi par l'utilisateur.
   ///
   /// <p>Accepte une dérive de ±1 fenêtre (30 s) pour la tolérance réseau/horloge.
+  /// Un code valide ne peut être accepté qu'une seule fois dans sa fenêtre (prévention du rejeu).
   ///
   /// @param secret le secret Base32 du compte
   /// @param code   le code à 6 chiffres saisi
-  /// @return {@code true} si le code est valide dans la fenêtre courante ou adjacente
+  /// @return {@code true} si le code est valide dans la fenêtre courante ou adjacente, et non déjà
+  // utilisé
   public boolean verifierCode(String secret, String code) {
     if (secret == null || code == null) return false;
     String codeNorm = code.strip();
@@ -100,7 +108,14 @@ public class TotpService {
       byte[] secretOctets = base32Decoder(secret);
       long compteur = System.currentTimeMillis() / 1000L / PERIODE_SECONDES;
       for (int derive = -1; derive <= 1; derive++) {
-        if (calculerCode(secretOctets, compteur + derive).equals(codeNorm)) return true;
+        long pas = compteur + derive;
+        if (calculerCode(secretOctets, pas).equals(codeNorm)) {
+          String cleCache = secret + ":" + pas;
+          java.util.Set<String> utilises =
+              codesConsommes.get(cleCache, _ -> java.util.concurrent.ConcurrentHashMap.newKeySet());
+          if (!utilises.add(codeNorm)) return false;
+          return true;
+        }
       }
       return false;
     } catch (Exception e) {
