@@ -632,8 +632,14 @@ function initBoutonRelancer() {
   }
 
   fetch("/api/admin/jobs")
-    .then(function (rep) { return rep.json(); })
-    .then(function (data) { mettreAJourBadges(data.jobsEnCours || []); })
+    .then(function (rep) {
+      return rep.json();
+    })
+    .then(function (data) {
+      var actifs = data.jobsEnCours || [];
+      mettreAJourBadges(actifs);
+      if (actifs.length > 0) demarrerPolling();
+    })
     .catch(function () {});
 
   btn.addEventListener("click", function () {
@@ -965,12 +971,17 @@ function initModaleInvitation() {
   dialog.showModal();
 
   const input = document.getElementById("lien-invitation");
-  document.getElementById("btn-copier-invitation")?.addEventListener("click", () => {
-    if (input && navigator.clipboard) navigator.clipboard.writeText(input.value);
-  });
-  document.getElementById("btn-fermer-invitation")?.addEventListener("click", () => {
-    dialog.close();
-  });
+  document
+    .getElementById("btn-copier-invitation")
+    ?.addEventListener("click", () => {
+      if (input && navigator.clipboard)
+        navigator.clipboard.writeText(input.value);
+    });
+  document
+    .getElementById("btn-fermer-invitation")
+    ?.addEventListener("click", () => {
+      dialog.close();
+    });
 }
 
 // Push notifications (paramètres)
