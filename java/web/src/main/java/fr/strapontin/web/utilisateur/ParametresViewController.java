@@ -94,9 +94,9 @@ public class ParametresViewController {
   /// @return le nom du template
   @GetMapping("/parametres")
   public String parametres(Model modele, Authentication auth) {
-    ResponseEntity<UserConfigController.ConfigUtilisateur> repConfig =
+    ResponseEntity<ConfigUtilisateur> repConfig =
         userConfigController.lireConfig(auth);
-    ResponseEntity<UserController.ProfilUtilisateur> repProfil = userController.lireProfil(auth);
+    ResponseEntity<ProfilUtilisateur> repProfil = userController.lireProfil(auth);
 
     modele.addAttribute("config", repConfig.getBody());
     modele.addAttribute("profil", repProfil.getBody());
@@ -135,7 +135,7 @@ public class ParametresViewController {
       @RequestParam(required = false, defaultValue = "") String departements,
       RedirectAttributes redirects,
       Authentication auth) {
-    var requete = new UserConfigController.RequeteDepartements(departements);
+    var requete = new RequeteDepartements(departements);
     ResponseEntity<Map<String, Object>> rep = userConfigController.majDepartements(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
@@ -170,7 +170,7 @@ public class ParametresViewController {
       RedirectAttributes redirects,
       Authentication auth) {
     var requete =
-        new UserConfigController.RequeteNotifications(
+        new RequeteNotifications(
             frequenceNotifications, notifArtistes, notifSalles);
     ResponseEntity<Map<String, Object>> rep = userConfigController.majNotifications(requete, auth);
     if (rep.getStatusCode().isError()) {
@@ -194,7 +194,7 @@ public class ParametresViewController {
       @RequestParam(required = false, defaultValue = "false") boolean filtreDisponibles,
       RedirectAttributes redirects,
       Authentication auth) {
-    var requete = new UserConfigController.RequeteFiltres(filtreDisponibles);
+    var requete = new RequeteFiltres(filtreDisponibles);
     userConfigController.majFiltres(requete, auth);
     redirects.addFlashAttribute(CLE_SUCCES, "filtres");
     return REDIRECT_PREFS;
@@ -213,7 +213,7 @@ public class ParametresViewController {
       RedirectAttributes redirects,
       HttpServletResponse response,
       Authentication auth) {
-    var requete = new UserConfigController.RequeteTheme(valeur);
+    var requete = new RequeteTheme(valeur);
     ResponseEntity<Map<String, Object>> rep = userConfigController.majTheme(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
@@ -259,7 +259,7 @@ public class ParametresViewController {
 
     if (nom != null) {
       ResponseEntity<Map<String, Object>> rep =
-          userController.majProfil(new UserController.RequeteProfil(nom, null), auth);
+          userController.majProfil(new RequeteProfil(nom, null), auth);
       if (rep.getStatusCode().isError()) {
         var corps = rep.getBody();
         redirects.addFlashAttribute(
@@ -425,7 +425,7 @@ public class ParametresViewController {
   @PostMapping("/parametres/identifiant")
   public String majIdentifiant(
       @RequestParam String identifiant, RedirectAttributes redirects, Authentication auth) {
-    var requete = new UserController.RequeteIdentifiant(identifiant);
+    var requete = new RequeteIdentifiant(identifiant);
     ResponseEntity<Map<String, Object>> rep = userController.majIdentifiant(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
@@ -452,7 +452,7 @@ public class ParametresViewController {
       RedirectAttributes redirects,
       Authentication auth,
       HttpServletRequest request) {
-    var requete = new UserController.RequeteMotDePasse(motDePasseActuel, motDePasseNouveau);
+    var requete = new RequeteMotDePasse(motDePasseActuel, motDePasseNouveau);
     ResponseEntity<Map<String, Object>> rep =
         userController.changerMotDePasse(requete, auth, request);
     if (rep.getStatusCode().isError()) {

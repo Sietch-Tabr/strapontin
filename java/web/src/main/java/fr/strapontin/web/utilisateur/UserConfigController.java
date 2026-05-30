@@ -4,17 +4,12 @@
  */
 package fr.strapontin.web.utilisateur;
 
-import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -23,9 +18,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /// Contrôleur REST pour la configuration utilisateur (portage de {@code
-// parametres/+page.server.ts}).
+/// parametres/+page.server.ts}).
 ///
-/// <p>Gère les départements, filtres de disponibilité, préférences de notification et thème.
+/// <p>HTTP pur — délègue toute la logique et l'accès aux données à {@link UserConfigService}.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -33,35 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/user/config")
 public class UserConfigController {
 
-  private static final Pattern FORMAT_DEPT = Pattern.compile("^\\d{2,3}$");
-  private static final Set<String> FREQUENCES_VALIDES = Set.of("jamais", "temps_reel", "quotidien");
-  private static final Set<String> THEMES_VALIDES = Set.of("auto", "clair", "sombre");
+  private final UserConfigService userConfigService;
 
-  private final NamedParameterJdbcTemplate jdbc;
-  private final ConfigService configService;
-
-  public UserConfigController(NamedParameterJdbcTemplate jdbc, ConfigService configService) {
-    this.jdbc = jdbc;
-    this.configService = configService;
+  /// @param userConfigService service de gestion de la configuration utilisateur
+  public UserConfigController(UserConfigService userConfigService) {
+    this.userConfigService = userConfigService;
   }
-
-  record ConfigUtilisateur(
-      List<String> departements,
-      boolean filtreDisponibles,
-      String frequenceNotifications,
-      boolean notifArtistes,
-      boolean notifSalles,
-      String theme,
-      boolean resendDisponible) {}
-
-  record RequeteDepartements(String departements) {}
-
-  record RequeteNotifications(
-      String frequenceNotifications, boolean notifArtistes, boolean notifSalles) {}
-
-  record RequeteFiltres(boolean filtreDisponibles) {}
-
-  record RequeteTheme(String valeur) {}
 
   /// Retourne la configuration de l'utilisateur courant.
   ///
@@ -70,50 +42,10 @@ public class UserConfigController {
   @GetMapping
   public ResponseEntity<ConfigUtilisateur> lireConfig(Authentication auth) {
     String userId = utilisateur(auth).id();
-
-    List<ConfigUtilisateur> lignes =
-        jdbc.query(
-            """
-            SELECT departements, filtre_disponibles, frequence_notifications,
-                   notif_artistes, notif_salles, theme
-            FROM user_config
-            WHERE user_id = :userId
-            """,
-            Map.of("userId", userId),
-            (rs, _) -> {
-              String[] depts = (String[]) rs.getArray("departements").getArray();
-              return new ConfigUtilisateur(
-                  Arrays.asList(depts),
-                  rs.getBoolean("filtre_disponibles"),
-                  rs.getString("frequence_notifications"),
-                  rs.getBoolean("notif_artistes"),
-                  rs.getBoolean("notif_salles"),
-                  rs.getString("theme"),
-                  false);
-            });
-
-    boolean resendDisponible = configService.lireConfig("RESEND_API_KEY").isPresent();
-
-    ConfigUtilisateur config =
-        lignes.isEmpty()
-            ? new ConfigUtilisateur(
-                List.of(), true, "jamais", true, false, "auto", resendDisponible)
-            : new ConfigUtilisateur(
-                lignes.get(0).departements(),
-                lignes.get(0).filtreDisponibles(),
-                lignes.get(0).frequenceNotifications(),
-                lignes.get(0).notifArtistes(),
-                lignes.get(0).notifSalles(),
-                lignes.get(0).theme(),
-                resendDisponible);
-
-    return ResponseEntity.ok(config);
+    return ResponseEntity.ok(userConfigService.lireConfig(userId));
   }
 
   /// Met à jour les départements de l'utilisateur.
-  ///
-  /// <p>Les codes non reconnus sont ignorés silencieusement et retournés dans {@code ignores}
-  /// pour permettre un retour utilisateur.
   ///
   /// @param requete corps JSON avec {@code departements} séparés par virgules
   /// @param auth    contexte d'authentification
@@ -129,22 +61,13 @@ public class UserConfigController {
             .filter(s -> !s.isEmpty())
             .toList();
 
-    List<String> depts =
-        bruts.stream()
-            .filter(s -> normaliserDept(s) != null)
-            .map(this::normaliserDept)
-            .distinct()
-            .collect(Collectors.toList());
-
-    List<String> ignores =
-        bruts.stream().filter(s -> normaliserDept(s) == null).toList();
-
-    upsertConfig(userId, Map.of("departements", depts.toArray(String[]::new)));
+    UserConfigService.ResultatMajDepartements resultat =
+        userConfigService.majDepartements(userId, bruts);
 
     Map<String, Object> rep = new HashMap<>();
     rep.put("succes", "departements");
-    if (!ignores.isEmpty()) {
-      rep.put("ignores", ignores);
+    if (!resultat.ignores().isEmpty()) {
+      rep.put("ignores", resultat.ignores());
     }
     return ResponseEntity.ok(rep);
   }
@@ -158,22 +81,9 @@ public class UserConfigController {
   public ResponseEntity<Map<String, Object>> majNotifications(
       @RequestBody RequeteNotifications requete, Authentication auth) {
     String userId = utilisateur(auth).id();
-
-    if (!FREQUENCES_VALIDES.contains(requete.frequenceNotifications())) {
+    if (!userConfigService.majNotifications(userId, requete)) {
       return erreur(400, "Valeur invalide.");
     }
-
-    if (!"jamais".equals(requete.frequenceNotifications())
-        && !requete.notifArtistes()
-        && !requete.notifSalles()) {
-      return erreur(400, "Activez au moins un type de contenu pour recevoir des notifications.");
-    }
-
-    Map<String, Object> champs = new HashMap<>();
-    champs.put("frequenceNotifications", requete.frequenceNotifications());
-    champs.put("notifArtistes", requete.notifArtistes());
-    champs.put("notifSalles", requete.notifSalles());
-    upsertConfig(userId, champs);
     return ResponseEntity.ok(Map.of("succes", "notifications"));
   }
 
@@ -186,7 +96,7 @@ public class UserConfigController {
   public ResponseEntity<Map<String, Object>> majFiltres(
       @RequestBody RequeteFiltres requete, Authentication auth) {
     String userId = utilisateur(auth).id();
-    upsertConfig(userId, Map.of("filtreDisponibles", requete.filtreDisponibles()));
+    userConfigService.majFiltres(userId, requete.filtreDisponibles());
     return ResponseEntity.ok(Map.of("succes", "filtres"));
   }
 
@@ -199,71 +109,10 @@ public class UserConfigController {
   public ResponseEntity<Map<String, Object>> majTheme(
       @RequestBody RequeteTheme requete, Authentication auth) {
     String userId = utilisateur(auth).id();
-
-    if (!THEMES_VALIDES.contains(requete.valeur())) {
+    if (!userConfigService.majTheme(userId, requete.valeur())) {
       return erreur(400, "Valeur de thème invalide.");
     }
-
-    jdbc.update(
-        """
-        INSERT INTO user_config (user_id, theme)
-        VALUES (:userId, CAST(:theme AS theme_interface))
-        ON CONFLICT (user_id) DO UPDATE SET theme = CAST(:theme AS theme_interface), updated_at = now()
-        """,
-        Map.of("userId", userId, "theme", requete.valeur()));
     return ResponseEntity.ok(Map.of("succes", "theme", "theme", requete.valeur()));
-  }
-
-  private void upsertConfig(String userId, Map<String, Object> champs) {
-    // Construire le ON CONFLICT DO UPDATE SET dynamiquement
-    StringBuilder setClauses = new StringBuilder();
-    Map<String, Object> params = new HashMap<>(champs);
-    params.put("userId", userId);
-
-    for (String cle : champs.keySet()) {
-      if (setClauses.length() > 0) setClauses.append(", ");
-      String colonne = versColonne(cle);
-      setClauses.append(colonne).append(" = :").append(cle);
-    }
-
-    // Pour le INSERT, on construit la liste des colonnes aussi
-    List<String> colonnes =
-        champs.keySet().stream().map(this::versColonne).collect(Collectors.toList());
-    List<String> placeholders =
-        champs.keySet().stream().map(c -> ":" + c).collect(Collectors.toList());
-
-    colonnes.add(0, "user_id");
-    placeholders.add(0, ":userId");
-
-    String sql =
-        """
-        INSERT INTO user_config (%s)
-        VALUES (%s)
-        ON CONFLICT (user_id) DO UPDATE SET %s, updated_at = now()
-        """
-            .formatted(String.join(", ", colonnes), String.join(", ", placeholders), setClauses);
-
-    jdbc.update(sql, params);
-  }
-
-  private String versColonne(String champJava) {
-    return switch (champJava) {
-      case "departements" -> "departements";
-      case "filtreDisponibles" -> "filtre_disponibles";
-      case "frequenceNotifications" -> "frequence_notifications";
-      case "notifArtistes" -> "notif_artistes";
-      case "notifSalles" -> "notif_salles";
-      case "theme" -> "theme";
-      default -> throw new IllegalArgumentException("Champ inconnu : " + champJava);
-    };
-  }
-
-  // Normalise 2A/2B → "20", sinon format 2-3 chiffres
-  private String normaliserDept(String d) {
-    String valeur = d.toUpperCase();
-    if (valeur.matches("2[AB]")) return "20";
-    if (FORMAT_DEPT.matcher(valeur).matches()) return valeur;
-    return null;
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
