@@ -1,0 +1,13 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025 Kwaite
+ */
+package fr.strapontin.web.decouverte;
+
+import java.time.Instant;
+
+/// Dernière synchronisation d'un département.
+///
+/// @since 2.1.0
+/// @author Kwaite
+public record SyncDept(String dept, Instant derniereExec) {}

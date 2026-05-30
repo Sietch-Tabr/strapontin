@@ -18,7 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link DecouverteController}.
+/// Tests unitaires de {@link DecouverteService}.
 ///
 /// <p>Couvre le filtre mois via bornes de dates (correction du {@code to_char()} non indexable).
 ///
@@ -29,17 +29,17 @@ class DecouverteControllerTest {
 
   @Mock private NamedParameterJdbcTemplate jdbc;
 
-  private DecouverteController controller;
+  private DecouverteService service;
 
   @BeforeEach
   void setUp() {
-    controller = new DecouverteController(jdbc);
+    service = new DecouverteService(jdbc);
   }
 
   @Test
   void filtresMois_moisValide_poseBornesCorrectesEnParamsSql() throws Exception {
     Map<String, Object> params = new HashMap<>();
-    invoquerConstruireFiltresWhere(controller, "2026-05", params);
+    invoquerConstruireFiltresWhere(service, "2026-05", params);
     assertEquals(LocalDate.of(2026, 5, 1), params.get("moisDebut"));
     assertEquals(LocalDate.of(2026, 6, 1), params.get("moisFin"));
   }
@@ -47,7 +47,7 @@ class DecouverteControllerTest {
   @Test
   void filtresMois_decembre_moisFinEstJanvierAnneeSuivante() throws Exception {
     Map<String, Object> params = new HashMap<>();
-    invoquerConstruireFiltresWhere(controller, "2026-12", params);
+    invoquerConstruireFiltresWhere(service, "2026-12", params);
     assertEquals(LocalDate.of(2026, 12, 1), params.get("moisDebut"));
     assertEquals(LocalDate.of(2027, 1, 1), params.get("moisFin"));
   }
@@ -55,7 +55,7 @@ class DecouverteControllerTest {
   @Test
   void filtresMois_formatSansZeroLeading_filtreIgnore() throws Exception {
     Map<String, Object> params = new HashMap<>();
-    invoquerConstruireFiltresWhere(controller, "2026-5", params);
+    invoquerConstruireFiltresWhere(service, "2026-5", params);
     assertFalse(params.containsKey("moisDebut"));
     assertFalse(params.containsKey("moisFin"));
   }
@@ -63,16 +63,16 @@ class DecouverteControllerTest {
   @Test
   void filtresMois_vide_filtreIgnore() throws Exception {
     Map<String, Object> params = new HashMap<>();
-    invoquerConstruireFiltresWhere(controller, "", params);
+    invoquerConstruireFiltresWhere(service, "", params);
     assertFalse(params.containsKey("moisDebut"));
     assertFalse(params.containsKey("moisFin"));
   }
 
   @SuppressWarnings("unchecked")
   private static void invoquerConstruireFiltresWhere(
-      DecouverteController ctrl, String mois, Map<String, Object> params) throws Exception {
+      DecouverteService svc, String mois, Map<String, Object> params) throws Exception {
     var m =
-        DecouverteController.class.getDeclaredMethod(
+        DecouverteService.class.getDeclaredMethod(
             "construireFiltresWhere",
             List.class,
             String.class,
@@ -82,6 +82,6 @@ class DecouverteControllerTest {
             LocalDate.class,
             Map.class);
     m.setAccessible(true);
-    m.invoke(ctrl, List.of(), "", mois, "", "", LocalDate.of(2026, 5, 29), params);
+    m.invoke(svc, List.of(), "", mois, "", "", LocalDate.of(2026, 5, 29), params);
   }
 }

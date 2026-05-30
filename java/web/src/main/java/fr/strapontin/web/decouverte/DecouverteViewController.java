@@ -57,11 +57,11 @@ public class DecouverteViewController {
       Model modele,
       Authentication auth) {
 
-    ResponseEntity<DecouverteController.ReponseDecouverte> rep =
+    ResponseEntity<ReponseDecouverte> rep =
         decouverteController.decouvrir(
             depts, q, mois, genre, classification, tri, page, auth);
 
-    DecouverteController.ReponseDecouverte donnees = rep.getBody();
+    ReponseDecouverte donnees = rep.getBody();
     modele.addAttribute("donnees", donnees);
     modele.addAttribute("depts", depts != null ? depts : List.of());
     modele.addAttribute("q", q);
@@ -74,7 +74,7 @@ public class DecouverteViewController {
 
     Map<String, String> syncDepts = new LinkedHashMap<>();
     if (donnees != null) {
-      for (DecouverteController.SyncDept s : donnees.syncParDept()) {
+      for (SyncDept s : donnees.syncParDept()) {
         if (s.derniereExec() != null) {
           syncDepts.put(s.dept(), Dates.formaterInstant(s.derniereExec()));
         }
@@ -93,7 +93,7 @@ public class DecouverteViewController {
   /// @return redirect vers /decouverte
   @PostMapping("/decouverte/fetcher")
   public String fetcher(RedirectAttributes redirects) {
-    var requete = new DecouverteController.RequeteFetch(List.of());
+    var requete = new RequeteFetch(List.of());
     var rep = decouverteController.fetcher(requete);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();

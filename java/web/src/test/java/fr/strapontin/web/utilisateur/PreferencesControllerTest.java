@@ -8,9 +8,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +19,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 
@@ -30,14 +29,14 @@ import org.springframework.security.core.Authentication;
 @ExtendWith(MockitoExtension.class)
 class PreferencesControllerTest {
 
-  @Mock private NamedParameterJdbcTemplate jdbc;
+  @Mock private PreferencesService preferencesService;
 
   private PreferencesController controller;
   private Authentication auth;
 
   @BeforeEach
   void setUp() {
-    controller = new PreferencesController(jdbc, new ObjectMapper());
+    controller = new PreferencesController(preferencesService);
     UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "Kwaite", "k@test.fr", "", "user", false, false);
     auth = mock(Authentication.class);
@@ -55,6 +54,7 @@ class PreferencesControllerTest {
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
     assertNotNull(rep.getBody());
     assertTrue(rep.getBody().containsKey("erreur"));
+    verifyNoInteractions(preferencesService);
   }
 
   @Test
@@ -67,6 +67,9 @@ class PreferencesControllerTest {
     MockMultipartFile fichier =
         new MockMultipartFile(
             "fichier", "prefs.json", "application/json", json.getBytes(StandardCharsets.UTF_8));
+
+    ExportComplet exportVersion2 = new ExportComplet(2, "2026-01-01T00:00:00Z", List.of(), List.of(), null);
+    when(preferencesService.deserialiserExport(any(byte[].class))).thenReturn(exportVersion2);
 
     ResponseEntity<Map<String, Object>> rep =
         controller.importer(fichier, "fusionner", false, auth);
@@ -90,8 +93,16 @@ class PreferencesControllerTest {
         new MockMultipartFile(
             "fichier", "prefs.json", "application/json", json.getBytes(StandardCharsets.UTF_8));
 
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+    ExportComplet exportV1 =
+        new ExportComplet(
+            1,
+            "2026-01-01T00:00:00Z",
+            List.of(new ArtisteExport("Daft Punk", "daft punk"), new ArtisteExport("Radiohead", "radiohead")),
+            List.of(),
+            null);
+    when(preferencesService.deserialiserExport(any(byte[].class))).thenReturn(exportV1);
+    when(preferencesService.importer(eq("user-1"), any(ExportComplet.class), eq(false), eq(false)))
+        .thenReturn(new PreferencesService.ResultatImportComplet(2, 0, 0));
 
     ResponseEntity<Map<String, Object>> rep =
         controller.importer(fichier, "fusionner", false, auth);
