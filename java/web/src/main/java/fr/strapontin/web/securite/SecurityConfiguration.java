@@ -137,6 +137,8 @@ public class SecurityConfiguration {
                     .authenticated()
                     .requestMatchers("/api/admin/**", "/admin", "/admin/**")
                     .hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.POST, "/api/decouverte/fetcher")
+                    .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())
         // CSRF désactivé : sessions SameSite=Strict (identique v1)
