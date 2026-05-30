@@ -14,32 +14,85 @@
       media="(prefers-color-scheme: dark)"
     />
     <link rel="icon" type="image/png" href="/images/favicon.png" />
-    <link rel="stylesheet" href="/css/base.css" />
-    <link rel="stylesheet" href="/css/layout.css" />
-    <link rel="stylesheet" href="/css/components.css" />
-    <link rel="stylesheet" href="/css/pages.css" />
     <title>Hors ligne — Strapontin</title>
     <style>
-      /* Fallback thème sombre par media query (document.cookie indisponible sur iOS PWA) */
+      :root {
+        --bg: #ffffff;
+        --fg: #111827;
+        --fg-muted: #6b7280;
+        --border: #e5e7eb;
+        --accent: #f3f4f6;
+        --accent-fg: #111827;
+        --radius: 0.5rem;
+      }
       @media (prefers-color-scheme: dark) {
         html:not(.clair) {
           --bg: #0a0a0a;
-          --bg-card: #111111;
-          --bg-muted: #1a1a1a;
           --fg: #fafafa;
           --fg-muted: #a1a1aa;
-          --fg-subtle: #71717a;
           --border: #27272a;
-          --primary: #fafafa;
-          --primary-fg: #09090b;
           --accent: #27272a;
           --accent-fg: #fafafa;
         }
       }
+      html.dark {
+        --bg: #0a0a0a;
+        --fg: #fafafa;
+        --fg-muted: #a1a1aa;
+        --border: #27272a;
+        --accent: #27272a;
+        --accent-fg: #fafafa;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        min-height: 100vh;
+      }
+      .conteneur {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        gap: 1rem;
+        text-align: center;
+        padding: 2rem;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+      p {
+        color: var(--fg-muted);
+        max-width: 24rem;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: 1px solid var(--border);
+        background: var(--accent);
+        color: var(--accent-fg);
+        cursor: pointer;
+        transition: opacity 0.15s;
+      }
+      .btn:hover { opacity: 0.85; }
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
     <script>
       (function () {
-        /* localStorage en priorité (cookie inaccessible sur iOS PWA standalone) */
         var theme = "auto";
         try { theme = localStorage.getItem("strapontin-theme") || "auto"; } catch (_) {}
         var cookie = document.cookie.match(/(?:^|; )theme=([^;]*)/);
@@ -49,66 +102,38 @@
         } else if (theme === "clair") {
           document.documentElement.classList.add("clair");
         }
-        /* "auto" : la media query prefers-color-scheme prend le relais */
       })();
     </script>
   </head>
   <body>
-    <div class="app-layout">
-      <main class="main-content">
-        <div
-          style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 60vh;
-            gap: 1rem;
-            text-align: center;
-            padding: 2rem;
-          "
-        >
-          <svg
-            width="48"
-            height="48"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            style="color: var(--fg-muted)"
-            aria-hidden="true"
-          >
-            <line x1="1" y1="1" x2="23" y2="23" />
-            <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
-            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
-            <path d="M10.71 5.05A16 16 0 0 1 22.56 9" />
-            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
-            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-            <line x1="12" y1="20" x2="12.01" y2="20" />
-          </svg>
-          <h1 style="font-size: 1.25rem; font-weight: 600">
-            Vous êtes hors ligne
-          </h1>
-          <p style="color: var(--fg-muted); max-width: 24rem">
-            Reconnectez-vous à Internet pour accéder à vos concerts et à votre
-            liste de suivi.
-          </p>
-          <p
-            id="msg-reconnexion"
-            style="color: var(--fg-muted); max-width: 24rem; display: none"
-            role="status"
-          ></p>
-          <button
-            id="btn-reessayer"
-            onclick="reessayer()"
-            class="btn btn-secondary"
-          >
-            Réessayer
-          </button>
-        </div>
-      </main>
+    <div class="conteneur">
+      <svg
+        width="48"
+        height="48"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        style="color: var(--fg-muted)"
+        aria-hidden="true"
+      >
+        <line x1="1" y1="1" x2="23" y2="23" />
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
+        <path d="M10.71 5.05A16 16 0 0 1 22.56 9" />
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+        <line x1="12" y1="20" x2="12.01" y2="20" />
+      </svg>
+      <h1>Vous êtes hors ligne</h1>
+      <p>
+        Reconnectez-vous à Internet pour accéder à vos concerts et à votre
+        liste de suivi.
+      </p>
+      <p id="msg-reconnexion" style="display: none"></p>
+      <button id="btn-reessayer" class="btn">Réessayer</button>
     </div>
     <script>
       function afficherMsg(texte) {
@@ -132,6 +157,8 @@
             if (btn) btn.disabled = false;
           });
       }
+
+      document.getElementById("btn-reessayer").addEventListener("click", reessayer);
 
       window.addEventListener("online", function () {
         setTimeout(reessayer, 400);
