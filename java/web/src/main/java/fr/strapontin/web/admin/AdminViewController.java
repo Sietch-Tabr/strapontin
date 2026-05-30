@@ -6,6 +6,7 @@ package fr.strapontin.web.admin;
 
 import fr.strapontin.web.vue.OngletItem;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -75,7 +77,11 @@ public class AdminViewController {
   /// @param modele le modèle Thymeleaf
   /// @return le nom du template
   @GetMapping("/admin")
-  public String admin(Model modele, org.springframework.security.core.Authentication auth) {
+  public String admin(
+      Model modele,
+      org.springframework.security.core.Authentication auth,
+      HttpServletRequest request,
+      HttpServletResponse response) {
     ResponseEntity<List<UtilisateurAdmin>> repUsers = adminController.listerUtilisateurs();
     ResponseEntity<List<ConfigStatut>> repConfig = adminController.lireConfigStatuts();
     ResponseEntity<List<LogAdminService.EntreeLogAdmin>> repLogs = adminController.lireLogs();
@@ -139,6 +145,11 @@ public class AdminViewController {
             + " avec l'URL " + baseUrl + "/api/webhooks/resend"
             + " (événements : email.bounced, email.complained).");
     modele.addAttribute("descriptionsConfig", descriptionsConfig);
+    Map<String, ConfigStatut> configParCle =
+        configStatuts == null
+            ? Map.of()
+            : configStatuts.stream().collect(Collectors.toMap(ConfigStatut::cle, s -> s));
+    modele.addAttribute("configParCle", configParCle);
     modele.addAttribute("appConfigSecretPresente", System.getenv("APP_CONFIG_SECRET") != null);
     String utilisateurCourantId =
         auth != null
@@ -158,6 +169,20 @@ public class AdminViewController {
     DateTimeFormatter formateur =
         DateTimeFormatter.ofPattern("EEEE d MMMM yyyy à HH'h'mm", Locale.FRENCH);
     modele.addAttribute("heureActualisation", LocalDateTime.now().format(formateur));
+
+    if ("true".equals(request.getHeader("HX-Request"))) {
+      Object succes = modele.asMap().get("succes");
+      String hash =
+          switch (String.valueOf(succes)) {
+            case "supprimerUtilisateur", "creerUtilisateur", "reinitialiserMdp" ->
+                "#utilisateurs";
+            case "config", "vapid" -> "#configuration";
+            case "relancer" -> "#jobs";
+            default -> null;
+          };
+      if (hash != null) response.setHeader("HX-Push-Url", "/admin" + hash);
+    }
+
     return "admin";
   }
 

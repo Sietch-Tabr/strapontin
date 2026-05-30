@@ -610,6 +610,12 @@
   margin-top: 1.5rem;
 }
 
+.config-groupe-item {
+  border-top: 1px solid var(--border);
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+}
+
 .totp-qr {
   width: 200px;
   height: 200px;

@@ -408,61 +408,188 @@
             </p>
           </div>
 
-          <div th:each="statut : ${configStatuts}" class="param-bloc">
-            <div class="param-label-ligne">
-              <h3 class="param-label" th:text="${statut.cle}">CLE</h3>
-              <span th:if="${statut.presente}" class="badge badge-succes"
-                >Configurée</span
-              >
-              <span
-                th:unless="${statut.presente}"
-                class="badge badge-manquant"
-                role="status"
-                >Non configurée</span
-              >
-            </div>
-            <p
-              th:id="'desc-' + ${statut.cle}"
-              class="param-aide"
-              th:text="${descriptionsConfig[statut.cle]}"
-            ></p>
-            <p
-              class="param-aide"
-              th:if="${!statut.secret and statut.valeur != null}"
-              th:text="${statut.valeur}"
-            ></p>
-            <form
-              method="post"
-              th:action="@{/admin/config}"
-              class="form-inline"
-              th:if="${statut.cle != 'VAPID_PUBLIC_KEY' and statut.cle != 'VAPID_PRIVATE_KEY'}"
-            >
-              <input type="hidden" name="cle" th:value="${statut.cle}" />
-              <input
-                th:if="${statut.secret}"
-                type="password"
-                name="valeur"
-                autocomplete="new-password"
-                placeholder="Nouvelle valeur…"
-                th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
-              />
-              <input
-                th:unless="${statut.secret}"
-                type="text"
-                name="valeur"
-                th:value="${statut.valeur}"
-                autocomplete="off"
-                th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
-              />
-              <button type="submit" class="btn btn-secondary">
-                Enregistrer
-              </button>
-            </form>
+          <!-- Groupe Ticketmaster -->
+          <div class="param-bloc">
+            <h3 class="param-label">Ticketmaster</h3>
+            <th:block th:with="statut=${configParCle['TICKETMASTER_API_KEY']}">
+              <div class="param-label-ligne">
+                <span class="param-label" th:text="${statut.cle}">CLE</span>
+                <span th:if="${statut.presente}" class="badge badge-succes"
+                  >Configurée</span
+                >
+                <span
+                  th:unless="${statut.presente}"
+                  class="badge badge-manquant"
+                  role="status"
+                  >Non configurée</span
+                >
+              </div>
+              <p
+                th:id="'desc-' + ${statut.cle}"
+                class="param-aide"
+                th:text="${descriptionsConfig[statut.cle]}"
+              ></p>
+              <form method="post" th:action="@{/admin/config}" class="form-inline">
+                <input type="hidden" name="cle" th:value="${statut.cle}" />
+                <input
+                  type="password"
+                  name="valeur"
+                  autocomplete="new-password"
+                  placeholder="Nouvelle valeur…"
+                  th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
+                />
+                <button type="submit" class="btn btn-secondary">Enregistrer</button>
+              </form>
+            </th:block>
           </div>
 
-          <!-- Régénération VAPID -->
+          <!-- Groupe Email (Resend) -->
+          <div class="param-bloc">
+            <h3 class="param-label">Email (Resend)</h3>
+            <th:block th:with="statut=${configParCle['RESEND_API_KEY']}">
+              <div class="param-label-ligne">
+                <span class="param-label" th:text="${statut.cle}">CLE</span>
+                <span th:if="${statut.presente}" class="badge badge-succes"
+                  >Configurée</span
+                >
+                <span
+                  th:unless="${statut.presente}"
+                  class="badge badge-manquant"
+                  role="status"
+                  >Non configurée</span
+                >
+              </div>
+              <p
+                th:id="'desc-' + ${statut.cle}"
+                class="param-aide"
+                th:text="${descriptionsConfig[statut.cle]}"
+              ></p>
+              <form method="post" th:action="@{/admin/config}" class="form-inline">
+                <input type="hidden" name="cle" th:value="${statut.cle}" />
+                <input
+                  type="password"
+                  name="valeur"
+                  autocomplete="new-password"
+                  placeholder="Nouvelle valeur…"
+                  th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
+                />
+                <button type="submit" class="btn btn-secondary">Enregistrer</button>
+              </form>
+            </th:block>
+            <th:block th:with="statut=${configParCle['RESEND_WEBHOOK_SECRET']}">
+              <div class="config-groupe-item">
+                <div class="param-label-ligne">
+                  <span class="param-label" th:text="${statut.cle}">CLE</span>
+                  <span th:if="${statut.presente}" class="badge badge-succes"
+                    >Configurée</span
+                  >
+                  <span
+                    th:unless="${statut.presente}"
+                    class="badge badge-manquant"
+                    role="status"
+                    >Non configurée</span
+                  >
+                </div>
+                <p
+                  th:id="'desc-' + ${statut.cle}"
+                  class="param-aide"
+                  th:text="${descriptionsConfig[statut.cle]}"
+                ></p>
+                <form method="post" th:action="@{/admin/config}" class="form-inline">
+                  <input type="hidden" name="cle" th:value="${statut.cle}" />
+                  <input
+                    type="password"
+                    name="valeur"
+                    autocomplete="new-password"
+                    placeholder="Nouvelle valeur…"
+                    th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
+                  />
+                  <button type="submit" class="btn btn-secondary">Enregistrer</button>
+                </form>
+              </div>
+            </th:block>
+          </div>
+
+          <!-- Groupe Général -->
+          <div class="param-bloc">
+            <h3 class="param-label">Général</h3>
+            <th:block th:with="statut=${configParCle['CONTACT_EMAIL']}">
+              <div class="param-label-ligne">
+                <span class="param-label" th:text="${statut.cle}">CLE</span>
+                <span th:if="${statut.presente}" class="badge badge-succes"
+                  >Configurée</span
+                >
+                <span
+                  th:unless="${statut.presente}"
+                  class="badge badge-manquant"
+                  role="status"
+                  >Non configurée</span
+                >
+              </div>
+              <p
+                th:id="'desc-' + ${statut.cle}"
+                class="param-aide"
+                th:text="${descriptionsConfig[statut.cle]}"
+              ></p>
+              <p
+                class="param-aide"
+                th:if="${statut.valeur != null}"
+                th:text="${statut.valeur}"
+              ></p>
+              <form method="post" th:action="@{/admin/config}" class="form-inline">
+                <input type="hidden" name="cle" th:value="${statut.cle}" />
+                <input
+                  type="text"
+                  name="valeur"
+                  th:value="${statut.valeur}"
+                  autocomplete="off"
+                  th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
+                />
+                <button type="submit" class="btn btn-secondary">Enregistrer</button>
+              </form>
+            </th:block>
+            <th:block th:with="statut=${configParCle['PUBLIC_BASE_URL']}">
+              <div class="config-groupe-item">
+                <div class="param-label-ligne">
+                  <span class="param-label" th:text="${statut.cle}">CLE</span>
+                  <span th:if="${statut.presente}" class="badge badge-succes"
+                    >Configurée</span
+                  >
+                  <span
+                    th:unless="${statut.presente}"
+                    class="badge badge-manquant"
+                    role="status"
+                    >Non configurée</span
+                  >
+                </div>
+                <p
+                  th:id="'desc-' + ${statut.cle}"
+                  class="param-aide"
+                  th:text="${descriptionsConfig[statut.cle]}"
+                ></p>
+                <p
+                  class="param-aide"
+                  th:if="${statut.valeur != null}"
+                  th:text="${statut.valeur}"
+                ></p>
+                <form method="post" th:action="@{/admin/config}" class="form-inline">
+                  <input type="hidden" name="cle" th:value="${statut.cle}" />
+                  <input
+                    type="text"
+                    name="valeur"
+                    th:value="${statut.valeur}"
+                    autocomplete="off"
+                    th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
+                  />
+                  <button type="submit" class="btn btn-secondary">Enregistrer</button>
+                </form>
+              </div>
+            </th:block>
+          </div>
+
+          <!-- Groupe Notifications push (VAPID) -->
           <div class="param-bloc param-bloc-danger">
-            <h3 class="param-label">Clés VAPID (Push)</h3>
+            <h3 class="param-label">Notifications push (VAPID)</h3>
             <details class="config-vapid-details">
               <summary>Qu'est-ce que les clés VAPID ?</summary>
               <p class="param-aide">
@@ -474,18 +601,50 @@
                 devront se réabonner.
               </p>
             </details>
-            <p class="param-aide config-vapid-avertissement">
-              Régénérer les clés invalide tous les abonnements push existants.
-            </p>
-            <form method="post" th:action="@{/admin/vapid}" id="form-vapid">
-              <button
-                type="submit"
-                class="btn btn-secondary"
-                id="btn-vapid-regenerer"
-              >
-                Régénérer les clés VAPID (invalide tous les abonnements push)
-              </button>
-            </form>
+            <th:block th:with="statut=${configParCle['VAPID_PUBLIC_KEY']}">
+              <div class="param-label-ligne">
+                <span class="param-label" th:text="${statut.cle}">CLE</span>
+                <span th:if="${statut.presente}" class="badge badge-succes"
+                  >Configurée</span
+                >
+                <span
+                  th:unless="${statut.presente}"
+                  class="badge badge-manquant"
+                  role="status"
+                  >Non configurée</span
+                >
+              </div>
+            </th:block>
+            <th:block th:with="statut=${configParCle['VAPID_PRIVATE_KEY']}">
+              <div class="config-groupe-item">
+                <div class="param-label-ligne">
+                  <span class="param-label" th:text="${statut.cle}">CLE</span>
+                  <span th:if="${statut.presente}" class="badge badge-succes"
+                    >Configurée</span
+                  >
+                  <span
+                    th:unless="${statut.presente}"
+                    class="badge badge-manquant"
+                    role="status"
+                    >Non configurée</span
+                  >
+                </div>
+              </div>
+            </th:block>
+            <div class="config-groupe-item">
+              <p class="param-aide config-vapid-avertissement">
+                Régénérer les clés invalide tous les abonnements push existants.
+              </p>
+              <form method="post" th:action="@{/admin/vapid}" id="form-vapid">
+                <button
+                  type="submit"
+                  class="btn btn-secondary"
+                  id="btn-vapid-regenerer"
+                >
+                  Régénérer les clés VAPID (invalide tous les abonnements push)
+                </button>
+              </form>
+            </div>
           </div>
         </section>
 
