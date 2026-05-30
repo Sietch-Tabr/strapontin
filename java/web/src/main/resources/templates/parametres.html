@@ -231,34 +231,34 @@
           <!-- Notifications push -->
           <div id="push-section" class="param-bloc param-bloc-push">
             <h3 class="param-label">Notifications push</h3>
-            <div id="push-chargement" aria-live="polite" style="display: none">
+            <div id="push-chargement" aria-live="polite" hidden>
               <p class="param-aide">Chargement…</p>
             </div>
             <div
               id="push-erreur"
               class="alerte alerte-erreur"
-              style="display: none"
+              hidden
             ></div>
-            <div id="push-non-supporte" style="display: none">
+            <div id="push-non-supporte" hidden>
               <p class="param-aide">
                 Les notifications push nécessitent HTTPS. Elles seront
                 disponibles une fois l'application déployée en production.
               </p>
             </div>
-            <div id="push-vapid-manquant" style="display: none">
+            <div id="push-vapid-manquant" hidden>
               <p class="param-aide">
                 Les notifications push ne sont pas configurées (clé VAPID
                 manquante dans la configuration admin).
               </p>
             </div>
-            <div id="push-permission-refusee" style="display: none">
+            <div id="push-permission-refusee" hidden>
               <p class="param-aide">
                 Les notifications sont bloquées dans votre navigateur. Pour les
                 activer, modifiez les permissions du site dans les paramètres de
                 votre navigateur.
               </p>
             </div>
-            <div id="push-abonne" style="display: none">
+            <div id="push-abonne" hidden>
               <p class="param-aide">
                 Les notifications push sont activées sur cet appareil. Vous
                 recevrez une alerte lors de chaque digest.
@@ -271,7 +271,7 @@
                 Désactiver les notifications push
               </button>
             </div>
-            <div id="push-non-abonne" style="display: none">
+            <div id="push-non-abonne" hidden>
               <p class="param-aide">
                 Recevez une notification sur cet appareil en même temps que vos
                 emails de digest.
@@ -279,7 +279,7 @@
               <p
                 id="push-info-frequence"
                 class="form-aide"
-                style="display: none"
+                hidden
               >
                 Les notifications push ne fonctionneront qu'avec une fréquence
                 email active.

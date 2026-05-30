@@ -4,12 +4,11 @@
  */
 package fr.strapontin.web.securite;
 
+import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.session.web.http.CookieSerializer;
-import org.springframework.session.web.http.DefaultCookieSerializer;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -26,19 +25,21 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
-import java.time.Duration;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
 import org.springframework.session.config.SessionRepositoryCustomizer;
 import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import org.springframework.session.security.SpringSessionBackedSessionRegistry;
+import org.springframework.session.web.http.CookieSerializer;
+import org.springframework.session.web.http.DefaultCookieSerializer;
 
 /// Configuration Spring Security 7 pour les vues Thymeleaf et l'API REST.
 ///
 /// <p>Sessions persistantes JDBC (survivent aux redémarrages). Rate limiting login
 /// via {@link RateLimitingLoginFilter} (intercepte {@code /login} et {@code /api/auth/login}).
 /// Accès direct par IP bloqué via {@link BloquerAccesDirectIpFilter}.
-/// CSRF désactivé (sessions SameSite=Strict). Form login Spring Security sur {@code /login}.
+/// CSRF désactivé (sessions {@code SameSite=Strict} + {@code form-action 'self'} en CSP).
+/// Form login Spring Security sur {@code /login}.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -88,8 +89,18 @@ public class SecurityConfiguration {
                     .contentSecurityPolicy(
                         csp ->
                             csp.policyDirectives(
-                                "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src"
-                                    + " 'self' data:; frame-ancestors 'none'; object-src 'none'"))
+                                "default-src 'none';"
+                                    + " script-src 'self';"
+                                    + " style-src 'self';"
+                                    + " img-src 'self' data:;"
+                                    + " font-src 'self';"
+                                    + " connect-src 'self';"
+                                    + " manifest-src 'self';"
+                                    + " worker-src 'self';"
+                                    + " frame-ancestors 'none';"
+                                    + " object-src 'none';"
+                                    + " base-uri 'self';"
+                                    + " form-action 'self'"))
                     .addHeaderWriter(new StaticHeadersWriter("X-Robots-Tag", "noindex, nofollow")))
         .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
@@ -229,8 +240,7 @@ public class SecurityConfiguration {
   /// @param cookieSecure {@code true} si le flag Secure doit être positionné (désactivé en dev)
   /// @return le sérialiseur de cookies configuré
   @Bean
-  CookieSerializer cookieSerializer(
-      @Value("${app.cookie.secure:true}") boolean cookieSecure) {
+  CookieSerializer cookieSerializer(@Value("${app.cookie.secure:true}") boolean cookieSecure) {
     DefaultCookieSerializer serialiseur = new DefaultCookieSerializer();
     serialiseur.setUseSecureCookie(cookieSecure);
     serialiseur.setSameSite("Strict");
