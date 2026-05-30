@@ -35,13 +35,21 @@ public class AdminViewController {
   private final AdminController adminController;
 
   private static final Map<String, String> DESCRIPTIONS_CONFIG =
-      Map.of(
-          "TICKETMASTER_API_KEY", "Clé d'API Ticketmaster Discovery v2.",
-          "RESEND_API_KEY", "Clé d'API Resend pour les notifications email.",
-          "CONTACT_EMAIL", "Adresse email affichée dans les emails envoyés.",
-          "PUBLIC_BASE_URL", "URL publique de l'application (ex. https://strapontin.kwaite.fr).",
-          "VAPID_PUBLIC_KEY", "Clé publique VAPID (générée automatiquement).",
-          "VAPID_PRIVATE_KEY", "Clé privée VAPID (générée automatiquement).");
+      Map.ofEntries(
+          Map.entry("TICKETMASTER_API_KEY", "Clé d'API Ticketmaster Discovery v2."),
+          Map.entry("RESEND_API_KEY", "Clé d'API Resend pour les notifications email."),
+          Map.entry(
+              "RESEND_WEBHOOK_SECRET",
+              "Clé de signature des webhooks Resend (détection des bounces email)."
+                  + " À récupérer dans le dashboard Resend → Webhooks → créer un endpoint"
+                  + " avec l'URL PUBLIC_BASE_URL/api/webhooks/resend"
+                  + " (événements : email.bounced, email.complained)."),
+          Map.entry("CONTACT_EMAIL", "Adresse email affichée dans les emails envoyés."),
+          Map.entry(
+              "PUBLIC_BASE_URL",
+              "URL publique de l'application (ex. https://strapontin.kwaite.fr)."),
+          Map.entry("VAPID_PUBLIC_KEY", "Clé publique VAPID (générée automatiquement)."),
+          Map.entry("VAPID_PRIVATE_KEY", "Clé privée VAPID (générée automatiquement)."));
 
   private static final Map<String, String> LABELS_JOBS =
       Map.of(

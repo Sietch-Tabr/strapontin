@@ -56,6 +56,7 @@ public class AdminService {
       List.of(
           "TICKETMASTER_API_KEY",
           "RESEND_API_KEY",
+          "RESEND_WEBHOOK_SECRET",
           "CONTACT_EMAIL",
           "PUBLIC_BASE_URL",
           "VAPID_PUBLIC_KEY",
