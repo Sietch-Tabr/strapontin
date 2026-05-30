@@ -1184,3 +1184,30 @@ function initTout() {
 
 document.addEventListener("DOMContentLoaded", initTout);
 document.addEventListener("htmx:afterSettle", initTout);
+
+(function () {
+  var toastHorsLigne = null;
+
+  window.addEventListener("offline", function () {
+    if (toastHorsLigne || !("showPopover" in HTMLElement.prototype)) return;
+    toastHorsLigne = document.createElement("div");
+    toastHorsLigne.className = "alerte alerte-avertissement";
+    toastHorsLigne.setAttribute("role", "status");
+    toastHorsLigne.setAttribute("aria-live", "polite");
+    toastHorsLigne.textContent = "Vous êtes hors ligne.";
+    var n = document.querySelectorAll("[popover].alerte").length;
+    toastHorsLigne.style.setProperty("--indice-toast", n);
+    toastHorsLigne.setAttribute("popover", "manual");
+    document.body.appendChild(toastHorsLigne);
+    toastHorsLigne.showPopover();
+  });
+
+  window.addEventListener("online", function () {
+    if (!toastHorsLigne) return;
+    try {
+      toastHorsLigne.hidePopover();
+    } catch (_) {}
+    toastHorsLigne.remove();
+    toastHorsLigne = null;
+  });
+})();

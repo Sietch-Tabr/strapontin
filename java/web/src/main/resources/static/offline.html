@@ -19,15 +19,34 @@
     <link rel="stylesheet" href="/css/components.css" />
     <link rel="stylesheet" href="/css/pages.css" />
     <title>Hors ligne — Strapontin</title>
+    <style>
+      /* Fallback thème sombre par media query (document.cookie indisponible sur iOS PWA) */
+      @media (prefers-color-scheme: dark) {
+        html:not(.clair) {
+          --bg: #0a0a0a;
+          --bg-card: #111111;
+          --bg-muted: #1a1a1a;
+          --fg: #fafafa;
+          --fg-muted: #a1a1aa;
+          --fg-subtle: #71717a;
+          --border: #27272a;
+          --primary: #fafafa;
+          --primary-fg: #09090b;
+          --accent: #27272a;
+          --accent-fg: #fafafa;
+        }
+      }
+    </style>
     <script>
       (function () {
         var cookie = document.cookie.match(/(?:^|; )theme=([^;]*)/);
         var theme = cookie ? decodeURIComponent(cookie[1]) : "auto";
-        var sombre =
-          theme === "sombre" ||
-          (theme === "auto" &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches);
-        if (sombre) document.documentElement.classList.add("dark");
+        if (theme === "sombre") {
+          document.documentElement.classList.add("dark");
+        } else if (theme === "clair") {
+          document.documentElement.classList.add("clair");
+        }
+        /* "auto" : la media query prefers-color-scheme prend le relais */
       })();
     </script>
   </head>
@@ -77,24 +96,42 @@
             id="msg-reconnexion"
             style="color: var(--fg-muted); max-width: 24rem; display: none"
             role="status"
+          ></p>
+          <button
+            id="btn-reessayer"
+            onclick="reessayer()"
+            class="btn btn-secondary"
           >
-            Connexion rétablie, rechargement…
-          </p>
-          <button onclick="reessayer()" class="btn btn-secondary">
             Réessayer
           </button>
         </div>
       </main>
     </div>
     <script>
+      function afficherMsg(texte) {
+        var el = document.getElementById("msg-reconnexion");
+        if (!el) return;
+        el.textContent = texte;
+        el.style.display = "";
+      }
+
       function reessayer() {
-        window.location.assign("/");
+        var btn = document.getElementById("btn-reessayer");
+        if (btn) btn.disabled = true;
+        afficherMsg("Vérification de la connexion…");
+        fetch("/manifest.json", { method: "HEAD", cache: "no-store" })
+          .then(function () {
+            afficherMsg("Connexion rétablie, rechargement…");
+            window.location.href = "/";
+          })
+          .catch(function () {
+            afficherMsg("Toujours hors ligne — réessayez dans un instant.");
+            if (btn) btn.disabled = false;
+          });
       }
 
       window.addEventListener("online", function () {
-        var msg = document.getElementById("msg-reconnexion");
-        if (msg) msg.style.display = "";
-        setTimeout(reessayer, 800);
+        setTimeout(reessayer, 400);
       });
     </script>
   </body>
