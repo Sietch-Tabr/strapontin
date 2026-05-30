@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.accueil;
 
@@ -58,8 +58,7 @@ public class AccueilService {
                 .formatted(masques ? "NOT NULL" : "NULL"));
 
     if (!inclureIndisponibles) {
-      where.append(
-          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled', 'postponed'))");
+      where.append(" AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled', 'postponed'))");
     }
     if (nouveau) {
       where.append(" AND um.vu_le IS NULL");

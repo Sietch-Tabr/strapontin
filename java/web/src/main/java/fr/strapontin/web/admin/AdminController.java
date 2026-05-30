@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.admin;
 
@@ -89,7 +89,7 @@ public class AdminController {
   /// @param userId  identifiant de l'utilisateur à modifier
   /// @param requete corps JSON avec {@code nom} et/ou {@code email}
   /// @param auth    contexte d'authentification admin
-  /// @return 200 si modifié, 400 en cas d'erreur
+  /// @return 200 si modifié — 400 si invalide (via {@link GlobalExceptionHandler})
   @PatchMapping("/utilisateurs/{userId}")
   public ResponseEntity<Map<String, Object>> modifierUtilisateur(
       @PathVariable String userId,
@@ -99,8 +99,7 @@ public class AdminController {
     if (userId.equals(adminId)) {
       return erreur(400, "Utilisez /parametres pour modifier votre propre compte.");
     }
-    String erreur = adminService.modifierUtilisateur(userId, requete, adminId);
-    if (erreur != null) return erreur(400, erreur);
+    adminService.modifierUtilisateur(userId, requete, adminId);
     return ResponseEntity.ok(Map.of("succes", true, "action", "modifierCompte"));
   }
 
@@ -155,7 +154,7 @@ public class AdminController {
   ///
   /// @param requete corps JSON avec {@code cle} et {@code valeur}
   /// @param auth    contexte d'authentification admin
-  /// @return 200 si sauvegardé, 400 si clé non autorisée ou format invalide
+  /// @return 200 si sauvegardé — 400 si invalide (via {@link GlobalExceptionHandler})
   @PatchMapping("/config")
   public ResponseEntity<Map<String, Object>> sauvegarderConfig(
       @Valid @RequestBody RequeteConfig requete, Authentication auth) {
@@ -163,8 +162,7 @@ public class AdminController {
     String cle = requete.cle() == null ? "" : requete.cle().strip();
     String valeur = requete.valeur() == null ? "" : requete.valeur().strip();
 
-    String erreur = adminService.sauvegarderConfig(cle, valeur, adminId);
-    if (erreur != null) return erreur(400, erreur);
+    adminService.sauvegarderConfig(cle, valeur, adminId);
     return ResponseEntity.ok(Map.of("succes", true, "action", "sauvegarderConfig", "cle", cle));
   }
 

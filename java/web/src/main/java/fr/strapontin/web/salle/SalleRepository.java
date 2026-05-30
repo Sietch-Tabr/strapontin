@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.salle;
 
@@ -72,8 +72,7 @@ class SalleRepository {
   /// @param salleId identifiant normalisé de la salle
   /// @return {@code true} si déjà présente
   boolean existePourUtilisateur(String userId, String salleId) {
-    return !jdbc
-        .queryForList(
+    return !jdbc.queryForList(
             """
             SELECT 1 FROM user_salles
             WHERE user_id = :userId AND salle_id = :salleId

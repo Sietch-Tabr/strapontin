@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.utilisateur;
 
@@ -154,7 +154,8 @@ public class UserController {
       return erreur(400, "Mot de passe actuel incorrect.");
     }
 
-    utilisateurRepository.changerMotDePasse(details.id(), passwordEncoder.encode(requete.motDePasseNouveau()));
+    utilisateurRepository.changerMotDePasse(
+        details.id(), passwordEncoder.encode(requete.motDePasseNouveau()));
 
     HttpSession session = request.getSession(false);
     if (session != null) session.invalidate();

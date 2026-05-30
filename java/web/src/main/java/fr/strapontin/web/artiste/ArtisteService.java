@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.artiste;
 
@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import fr.strapontin.web.ErreurMetier;
+import fr.strapontin.web.RessourceDejaExistante;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -107,22 +109,21 @@ public class ArtisteService {
   ///
   /// @param userId identifiant de l'utilisateur
   /// @param nom    nom de l'artiste (non-vide, max 200 car.)
-  /// @return {@link ResultatAjout#SUCCES}, {@link ResultatAjout#DEJA_PRESENT} ou
-  ///     {@link ResultatAjout#CAP_ATTEINT}
+  /// @throws RessourceDejaExistante si l'artiste est déjà suivi
+  /// @throws ErreurMetier si le cap de 500 artistes est atteint
   @Transactional
-  public ResultatAjout ajouter(String userId, String nom) {
+  public void ajouter(String userId, String nom) {
     String normalise = Normalisation.normaliserTexte(nom);
 
     if (artisteRepository.existePourUtilisateur(userId, normalise)) {
-      return ResultatAjout.DEJA_PRESENT;
+      throw new RessourceDejaExistante("Cet artiste est déjà dans votre liste.");
     }
     if (artisteRepository.compterPourUtilisateur(userId) >= CAP_ARTISTES) {
-      return ResultatAjout.CAP_ATTEINT;
+      throw new ErreurMetier("Limite de 500 artistes atteinte.");
     }
 
     artisteRepository.ajouter(userId, normalise, nom);
     declencherWorkerArtiste();
-    return ResultatAjout.SUCCES;
   }
 
   /// Supprime un artiste de la liste de suivi.

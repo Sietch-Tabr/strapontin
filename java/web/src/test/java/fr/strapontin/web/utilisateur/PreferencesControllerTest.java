@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.utilisateur;
 
@@ -68,7 +68,8 @@ class PreferencesControllerTest {
         new MockMultipartFile(
             "fichier", "prefs.json", "application/json", json.getBytes(StandardCharsets.UTF_8));
 
-    ExportComplet exportVersion2 = new ExportComplet(2, "2026-01-01T00:00:00Z", List.of(), List.of(), null);
+    ExportComplet exportVersion2 =
+        new ExportComplet(2, "2026-01-01T00:00:00Z", List.of(), List.of(), null);
     when(preferencesService.deserialiserExport(any(byte[].class))).thenReturn(exportVersion2);
 
     ResponseEntity<Map<String, Object>> rep =
@@ -97,7 +98,9 @@ class PreferencesControllerTest {
         new ExportComplet(
             1,
             "2026-01-01T00:00:00Z",
-            List.of(new ArtisteExport("Daft Punk", "daft punk"), new ArtisteExport("Radiohead", "radiohead")),
+            List.of(
+                new ArtisteExport("Daft Punk", "daft punk"),
+                new ArtisteExport("Radiohead", "radiohead")),
             List.of(),
             null);
     when(preferencesService.deserialiserExport(any(byte[].class))).thenReturn(exportV1);

@@ -1,11 +1,10 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.salle;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
-import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -51,26 +50,22 @@ public class SalleController {
   ///
   /// @param requete corps JSON avec le nom et l'ID TM optionnel
   /// @param auth    contexte d'authentification
-  /// @return 201 si créée, 400 si cap atteint ou nom invalide, 409 si doublon
+  /// @return 201 si créée — 409 si doublon, 400 si invalide/cap (via {@link GlobalExceptionHandler})
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterSalle(
       @RequestBody RequeteAjouter requete, Authentication auth) {
     String userId = utilisateur(auth).id();
     String nom = requete.nom() == null ? "" : requete.nom().strip();
     if (nom.isEmpty() || nom.length() > 200) {
-      return erreur(400, "Identifiant de salle invalide.");
+      return ResponseEntity.badRequest().body(Map.of("erreur", "Identifiant de salle invalide."));
     }
     String tmVenueId =
         requete.tmVenueId() == null || requete.tmVenueId().isBlank()
             ? null
             : requete.tmVenueId().strip();
 
-    return switch (salleService.ajouter(userId, nom, tmVenueId)) {
-      case SUCCES -> ResponseEntity.status(201).body(Map.of("succes", true));
-      case DEJA_PRESENTE -> erreur(409, "Cette salle est déjà dans votre liste.");
-      case CAP_ATTEINT -> erreur(400, "Limite de 200 salles atteinte.");
-      case NOM_INVALIDE -> erreur(400, "Nom de salle invalide.");
-    };
+    salleService.ajouter(userId, nom, tmVenueId);
+    return ResponseEntity.status(201).body(Map.of("succes", true));
   }
 
   /// Supprime une salle de la liste de suivi.
@@ -87,11 +82,5 @@ public class SalleController {
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

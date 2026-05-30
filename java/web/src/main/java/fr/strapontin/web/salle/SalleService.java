@@ -1,10 +1,12 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.salle;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.web.ErreurMetier;
+import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.config.ConfigService;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -75,12 +77,12 @@ public class SalleService {
       Set<String> sallesDejaAjoutees =
           salles.stream().map(SalleUtilisateur::salleId).collect(Collectors.toSet());
 
-      List<Map<String, Object>> enBase =
-          salleRepository.rechercherEnBase("%" + recherche + "%");
+      List<Map<String, Object>> enBase = salleRepository.rechercherEnBase("%" + recherche + "%");
 
       List<ResultatSalle> listeResultats =
           enBase.stream()
-              .filter(r -> !sallesDejaAjoutees.contains(normaliserSalleCle((String) r.get("salle"))))
+              .filter(
+                  r -> !sallesDejaAjoutees.contains(normaliserSalleCle((String) r.get("salle"))))
               .map(
                   r ->
                       new ResultatSalle(
@@ -104,7 +106,8 @@ public class SalleService {
 
       resultats = listeResultats;
       String rechercheNorm = normaliserSalleCle(recherche);
-      dejaLaSuivie = salles.stream().anyMatch(s -> normaliserSalleCle(s.nom()).equals(rechercheNorm));
+      dejaLaSuivie =
+          salles.stream().anyMatch(s -> normaliserSalleCle(s.nom()).equals(rechercheNorm));
     }
 
     return new ReponseSalles(salles, resultats, dejaLaSuivie);
@@ -114,22 +117,23 @@ public class SalleService {
   ///
   /// <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation.
   ///
-  /// @param userId     identifiant de l'utilisateur
-  /// @param nom        nom de la salle (non-vide, max 200 car.)
-  /// @param tmVenueId  identifiant Ticketmaster (nullable)
-  /// @return résultat de l'opération
+  /// @param userId    identifiant de l'utilisateur
+  /// @param nom       nom de la salle (non-vide, max 200 car.)
+  /// @param tmVenueId identifiant Ticketmaster (nullable)
+  /// @throws ErreurMetier          si le nom normalisé est vide ou le cap de 200 salles atteint
+  /// @throws RessourceDejaExistante si la salle est déjà suivie
   @Transactional
-  public ResultatAjout ajouter(String userId, String nom, String tmVenueId) {
+  public void ajouter(String userId, String nom, String tmVenueId) {
     String salleId = normaliserSalleCle(nom);
     if (salleId.isEmpty()) {
-      return ResultatAjout.NOM_INVALIDE;
+      throw new ErreurMetier("Nom de salle invalide.");
     }
 
     if (salleRepository.existePourUtilisateur(userId, salleId)) {
-      return ResultatAjout.DEJA_PRESENTE;
+      throw new RessourceDejaExistante("Cette salle est déjà dans votre liste.");
     }
     if (salleRepository.compterPourUtilisateur(userId) >= CAP_SALLES) {
-      return ResultatAjout.CAP_ATTEINT;
+      throw new ErreurMetier("Limite de 200 salles atteinte.");
     }
 
     salleRepository.upsertSalle(salleId, nom);
@@ -138,7 +142,6 @@ public class SalleService {
     if (tmVenueId != null) {
       declencherWorkerSalle(tmVenueId);
     }
-    return ResultatAjout.SUCCES;
   }
 
   /// Supprime une salle de la liste de suivi.

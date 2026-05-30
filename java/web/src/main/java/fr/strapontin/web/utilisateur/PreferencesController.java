@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.utilisateur;
 
@@ -8,7 +8,6 @@ import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -92,7 +91,8 @@ public class PreferencesController {
     }
     ExportComplet export = preferencesService.exporter(ud.id());
     return ResponseEntity.ok()
-        .header(HttpHeaders.CONTENT_DISPOSITION,
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION,
             "attachment; filename=\"" + PreferencesService.nomFichierExport() + "\"")
         .contentType(MediaType.APPLICATION_JSON)
         .body(export);

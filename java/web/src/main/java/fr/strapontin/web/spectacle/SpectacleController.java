@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.spectacle;
 
@@ -56,8 +56,17 @@ public class SpectacleController {
     String userId = utilisateur(auth).id();
     return ResponseEntity.ok(
         spectacleService.listerSpectacles(
-            userId, q, mois, classification, genre, quinzaine, tri, masques, sources,
-            indisponibles, page));
+            userId,
+            q,
+            mois,
+            classification,
+            genre,
+            quinzaine,
+            tri,
+            masques,
+            sources,
+            indisponibles,
+            page));
   }
 
   /// Masque ou démasque un concert pour l'utilisateur courant.

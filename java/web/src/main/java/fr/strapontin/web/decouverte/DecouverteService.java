@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.decouverte;
 
@@ -71,7 +71,8 @@ public class DecouverteService {
     String rechercheNorm = q.strip().substring(0, Math.min(q.strip().length(), 100));
     String genreStr = genre.strip().substring(0, Math.min(genre.strip().length(), 50));
     StringBuilder where =
-        construireFiltresWhere(deptsActifs, rechercheNorm, mois, genreStr, classification, aujourd8, params);
+        construireFiltresWhere(
+            deptsActifs, rechercheNorm, mois, genreStr, classification, aujourd8, params);
 
     String orderBy =
         "nouveaute".equals(tri) ? "c.first_seen DESC, c.date ASC" : "c.date ASC, c.artiste ASC";
@@ -110,7 +111,8 @@ public class DecouverteService {
     countParams.remove("offset");
     int total =
         Objects.requireNonNullElse(
-            jdbc.queryForObject("SELECT COUNT(*) FROM concerts c WHERE " + where, countParams, Integer.class),
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM concerts c WHERE " + where, countParams, Integer.class),
             0);
 
     Map<String, Object> baseParams = new HashMap<>();
@@ -123,25 +125,32 @@ public class DecouverteService {
 
     List<String> genresDisponibles =
         jdbc.queryForList(
-            "SELECT DISTINCT c.genre FROM concerts c WHERE " + whereBase
+            "SELECT DISTINCT c.genre FROM concerts c WHERE "
+                + whereBase
                 + " AND c.genre IS NOT NULL ORDER BY c.genre",
-            baseParams, String.class);
+            baseParams,
+            String.class);
     List<String> classificationsDisponibles =
         jdbc.queryForList(
-            "SELECT DISTINCT c.classification FROM concerts c WHERE " + whereBase
+            "SELECT DISTINCT c.classification FROM concerts c WHERE "
+                + whereBase
                 + " AND c.classification IS NOT NULL ORDER BY c.classification",
-            baseParams, String.class);
+            baseParams,
+            String.class);
     List<String> moisDisponibles =
         jdbc.queryForList(
-            "SELECT DISTINCT to_char(c.date, 'YYYY-MM') FROM concerts c WHERE " + whereBase
+            "SELECT DISTINCT to_char(c.date, 'YYYY-MM') FROM concerts c WHERE "
+                + whereBase
                 + " ORDER BY 1",
-            baseParams, String.class);
+            baseParams,
+            String.class);
 
     java.sql.Timestamp syncTs =
         jdbc.queryForObject(
             "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE type_job = 'fetch:region'"
                 + " AND derniere_exec IS NOT NULL",
-            Map.of(), java.sql.Timestamp.class);
+            Map.of(),
+            java.sql.Timestamp.class);
 
     List<SyncDept> syncParDept = List.of();
     if (!deptsActifs.isEmpty()) {

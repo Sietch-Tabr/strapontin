@@ -1,9 +1,10 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.securite;
 
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -77,23 +78,22 @@ public class AuthService {
   ///
   /// @param token      token brut (non hashé)
   /// @param motDePasse nouveau mot de passe en clair
-  /// @return {@code true} si le token est valide et le mot de passe mis à jour
+  /// @throws ErreurMetier si le token est invalide ou expiré
   @Transactional
-  public boolean reinitialiserMotDePasse(String token, String motDePasse) {
+  public void reinitialiserMotDePasse(String token, String motDePasse) {
     String tokenHash = sha256Hex(token);
-    return verificationRepository
-        .lireIdentifiantParTokenHash(tokenHash)
-        .map(
-            identifiant -> {
-              String email =
-                  identifiant.contains(":") ? identifiant.split(":", 2)[1] : identifiant;
-              verificationRepository.majMotDePasseParEmail(
-                  email, passwordEncoder.encode(motDePasse));
-              verificationRepository.majMustChangeFalseParEmail(email);
-              verificationRepository.supprimerParTokenHash(tokenHash);
-              return true;
-            })
-        .orElse(false);
+    String identifiant =
+        verificationRepository
+            .lireIdentifiantParTokenHash(tokenHash)
+            .orElseThrow(
+                () ->
+                    new ErreurMetier(
+                        "Lien invalide ou expiré. Recommencez depuis le formulaire."));
+
+    String email = identifiant.contains(":") ? identifiant.split(":", 2)[1] : identifiant;
+    verificationRepository.majMotDePasseParEmail(email, passwordEncoder.encode(motDePasse));
+    verificationRepository.majMustChangeFalseParEmail(email);
+    verificationRepository.supprimerParTokenHash(tokenHash);
   }
 
   private static String genererToken(int nbOctets) {

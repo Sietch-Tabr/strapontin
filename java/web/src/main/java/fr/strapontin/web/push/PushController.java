@@ -1,11 +1,10 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.push;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
-import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -45,17 +44,12 @@ public class PushController {
   ///
   /// @param requete corps JSON avec endpoint et clés
   /// @param auth    contexte d'authentification
-  /// @return 201 si créé, 400/429 en cas d'erreur
+  /// @return 201 si créé — 400/429 si invalide/cap (via {@link GlobalExceptionHandler})
   @PostMapping
   public ResponseEntity<Map<String, Object>> abonner(
       @RequestBody RequeteAbonnement requete, Authentication auth) {
-    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
-    return switch (pushService.abonner(userId, requete)) {
-      case SUCCES -> ResponseEntity.status(201).body(Map.of("ok", true));
-      case INCOMPLET -> erreur(400, "Abonnement incomplet.");
-      case INVALIDE -> erreur(400, "Données d'abonnement invalides.");
-      case CAP_ATTEINT -> erreur(429, "Trop d'abonnements push pour cet utilisateur.");
-    };
+    pushService.abonner(((UtilisateurDetails) auth.getPrincipal()).id(), requete);
+    return ResponseEntity.status(201).body(Map.of("ok", true));
   }
 
   /// Supprime un abonnement push.
@@ -67,15 +61,9 @@ public class PushController {
   public ResponseEntity<Map<String, Object>> desabonner(
       @RequestBody RequeteDesabonnement requete, Authentication auth) {
     if (requete.endpoint() == null || requete.endpoint().isBlank()) {
-      return erreur(400, "Endpoint manquant.");
+      return ResponseEntity.badRequest().body(Map.of("erreur", "Endpoint manquant."));
     }
     pushService.desabonner(((UtilisateurDetails) auth.getPrincipal()).id(), requete.endpoint());
     return ResponseEntity.ok(Map.of("ok", true));
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

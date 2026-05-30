@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.utilisateur;
 
@@ -48,8 +48,7 @@ class UtilisateurRepository {
   /// @param userId identifiant de l'utilisateur courant (exclu de la vérification)
   /// @return {@code true} si l'email est pris
   boolean emailDejaUtilise(String email, String userId) {
-    return !jdbc
-        .queryForList(
+    return !jdbc.queryForList(
             "SELECT 1 FROM users WHERE email = :email AND id != :userId",
             Map.of("email", email, CLE_USER_ID, userId),
             Integer.class)
@@ -82,8 +81,7 @@ class UtilisateurRepository {
   /// @param userId      identifiant de l'utilisateur courant (exclu)
   /// @return {@code true} si l'identifiant est pris
   boolean identifiantDejaUtilise(String identifiant, String userId) {
-    return !jdbc
-        .queryForList(
+    return !jdbc.queryForList(
             "SELECT 1 FROM users WHERE lower(username) = :ident AND id != :userId",
             Map.of("ident", identifiant, CLE_USER_ID, userId),
             Integer.class)
@@ -109,7 +107,8 @@ class UtilisateurRepository {
   /// @param nouveauHash hash bcrypt du nouveau mot de passe
   void changerMotDePasse(String userId, String nouveauHash) {
     jdbc.update(
-        "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id = 'credential'",
+        "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id ="
+            + " 'credential'",
         Map.of("hash", nouveauHash, CLE_USER_ID, userId));
   }
 
