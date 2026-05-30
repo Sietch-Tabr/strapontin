@@ -68,9 +68,9 @@ public class AdminViewController {
   /// @return le nom du template
   @GetMapping("/admin")
   public String admin(Model modele, org.springframework.security.core.Authentication auth) {
-    ResponseEntity<List<AdminController.UtilisateurAdmin>> repUsers =
+    ResponseEntity<List<UtilisateurAdmin>> repUsers =
         adminController.listerUtilisateurs();
-    ResponseEntity<List<AdminController.ConfigStatut>> repConfig =
+    ResponseEntity<List<ConfigStatut>> repConfig =
         adminController.lireConfigStatuts();
     ResponseEntity<List<LogAdminService.EntreeLogAdmin>> repLogs = adminController.lireLogs();
     ResponseEntity<Map<String, Object>> repJobs = adminController.lireJobs();
@@ -109,8 +109,8 @@ public class AdminViewController {
     modele.addAttribute("labelsJobs", LABELS_JOBS);
 
     @SuppressWarnings("unchecked")
-    List<AdminController.StatJob> statsJobsList =
-        corpsJobs != null ? (List<AdminController.StatJob>) corpsJobs.get("statsJobs") : List.of();
+    List<StatJob> statsJobsList =
+        corpsJobs != null ? (List<StatJob>) corpsJobs.get("statsJobs") : List.of();
     long nbJobsOk = statsJobsList.stream().filter(j -> j.erreur() == null).count();
     long nbJobsErreur = statsJobsList.stream().filter(j -> j.erreur() != null).count();
     modele.addAttribute("nbJobsOk", nbJobsOk);
@@ -151,7 +151,7 @@ public class AdminViewController {
       RedirectAttributes redirects,
       org.springframework.security.core.Authentication auth,
       HttpServletRequest request) {
-    var requete = new AdminController.RequeteCreerUtilisateur(email);
+    var requete = new RequeteCreerUtilisateur(email);
     ResponseEntity<Map<String, Object>> rep =
         adminController.creerUtilisateur(requete, auth, request);
     if (rep.getStatusCode().isError()) {
@@ -226,7 +226,7 @@ public class AdminViewController {
       @RequestParam(required = false, defaultValue = "") String valeur,
       RedirectAttributes redirects,
       org.springframework.security.core.Authentication auth) {
-    var requete = new AdminController.RequeteConfig(cle, valeur);
+    var requete = new RequeteConfig(cle, valeur);
     ResponseEntity<Map<String, Object>> rep = adminController.sauvegarderConfig(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();
