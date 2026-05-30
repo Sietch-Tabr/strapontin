@@ -631,6 +631,11 @@ function initBoutonRelancer() {
     }, 3000);
   }
 
+  fetch("/api/admin/jobs")
+    .then(function (rep) { return rep.json(); })
+    .then(function (data) { mettreAJourBadges(data.jobsEnCours || []); })
+    .catch(function () {});
+
   btn.addEventListener("click", function () {
     btn.disabled = true;
     if (statut) statut.textContent = "Fetches en cours…";
