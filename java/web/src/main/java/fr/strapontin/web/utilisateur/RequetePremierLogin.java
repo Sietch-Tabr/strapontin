@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.utilisateur;
 
@@ -16,10 +16,7 @@ public record RequetePremierLogin(
         @Size(max = 100, message = "Nom invalide (1-100 caractères).")
         String nom,
     @NotBlank(message = "Tous les champs sont obligatoires.")
-        @Size(
-            min = 3,
-            max = 30,
-            message = "L'identifiant doit contenir entre 3 et 30 caractères.")
+        @Size(min = 3, max = 30, message = "L'identifiant doit contenir entre 3 et 30 caractères.")
         String identifiant,
     @NotBlank(message = "Tous les champs sont obligatoires.") String motDePasseActuel,
     @NotBlank(message = "Tous les champs sont obligatoires.")

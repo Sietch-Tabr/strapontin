@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.securite;
 
@@ -143,7 +143,7 @@ public class AuthController {
   /// Réinitialise le mot de passe via un token de vérification.
   ///
   /// @param req le corps contenant le token et le nouveau mot de passe
-  /// @return 200 si réinitialisé, 400 si token invalide ou expiré
+  /// @return 200 si réinitialisé — 400 si invalide (via {@link GlobalExceptionHandler})
   @PostMapping("/api/auth/reset-password")
   public ResponseEntity<Map<String, Object>> reinitialiserMotDePasse(
       @RequestBody ResetPasswordRequest req) {
@@ -154,10 +154,7 @@ public class AuthController {
       return ResponseEntity.badRequest()
           .body(Map.of("erreur", "Le mot de passe doit contenir au moins 12 caractères."));
     }
-    if (!authService.reinitialiserMotDePasse(req.token(), req.motDePasse())) {
-      return ResponseEntity.badRequest()
-          .body(Map.of("erreur", "Lien invalide ou expiré. Recommencez depuis le formulaire."));
-    }
+    authService.reinitialiserMotDePasse(req.token(), req.motDePasse());
     return ResponseEntity.ok(Map.of("succes", true));
   }
 

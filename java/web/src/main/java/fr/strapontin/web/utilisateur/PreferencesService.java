@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.utilisateur;
 
@@ -111,7 +111,8 @@ public class PreferencesService {
             """,
             Map.of(CLE_USER_ID, userId),
             (rs, _) ->
-                new ArtisteExport(rs.getString("artiste_affiche"), rs.getString("artiste_normalise")));
+                new ArtisteExport(
+                    rs.getString("artiste_affiche"), rs.getString("artiste_normalise")));
 
     List<SalleExport> salles =
         jdbc.query(
@@ -149,7 +150,10 @@ public class PreferencesService {
             });
 
     return new ExportComplet(
-        1, Instant.now().toString(), artistes, salles,
+        1,
+        Instant.now().toString(),
+        artistes,
+        salles,
         configRows.isEmpty() ? null : configRows.get(0));
   }
 
@@ -157,12 +161,19 @@ public class PreferencesService {
     Integer nbExistants =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId), Integer.class);
+            Map.of(CLE_USER_ID, userId),
+            Integer.class);
     int restant = Math.max(0, 500 - (nbExistants != null ? nbExistants : 0));
     int traites = 0, rejetes = 0;
     for (ArtisteExport a : artistes) {
-      if (a.nom() == null || a.nom().isBlank()) { rejetes++; continue; }
-      if (traites >= restant) { rejetes++; continue; }
+      if (a.nom() == null || a.nom().isBlank()) {
+        rejetes++;
+        continue;
+      }
+      if (traites >= restant) {
+        rejetes++;
+        continue;
+      }
       String normalise = Normalisation.normaliserTexte(a.nom());
       jdbc.update(
           """
@@ -173,22 +184,32 @@ public class PreferencesService {
           Map.of(CLE_USER_ID, userId, "normalise", normalise, "nom", a.nom().strip()));
       traites++;
     }
-    return new int[]{traites, rejetes};
+    return new int[] {traites, rejetes};
   }
 
   private int[] importerSalles(String userId, List<SalleExport> salles) {
     Integer nbExistants =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId), Integer.class);
+            Map.of(CLE_USER_ID, userId),
+            Integer.class);
     int restant = Math.max(0, 200 - (nbExistants != null ? nbExistants : 0));
     int traites = 0, rejetes = 0;
     for (SalleExport s : salles) {
       String nomSalle = s.nom() != null && !s.nom().isBlank() ? s.nom().strip() : s.salleId();
-      if (nomSalle == null || nomSalle.isBlank()) { rejetes++; continue; }
+      if (nomSalle == null || nomSalle.isBlank()) {
+        rejetes++;
+        continue;
+      }
       String salleId = Normalisation.normaliserSalleCle(nomSalle);
-      if (salleId.isEmpty()) { rejetes++; continue; }
-      if (traites >= restant) { rejetes++; continue; }
+      if (salleId.isEmpty()) {
+        rejetes++;
+        continue;
+      }
+      if (traites >= restant) {
+        rejetes++;
+        continue;
+      }
       String tmVenueId = s.tmVenueId() != null && !s.tmVenueId().isBlank() ? s.tmVenueId() : null;
       String nomNorm = Normalisation.normaliserTexte(nomSalle);
       jdbc.update(
@@ -211,7 +232,7 @@ public class PreferencesService {
           paramsUs);
       traites++;
     }
-    return new int[]{traites, rejetes};
+    return new int[] {traites, rejetes};
   }
 
   private void importerConfig(String userId, ConfigExport c) {
@@ -234,13 +255,20 @@ public class PreferencesService {
             updated_at              = now()
         """,
         Map.of(
-            CLE_USER_ID, userId,
-            "depts", depts,
-            "filtreDisponibles", c.filtreDisponibles(),
-            "frequence", c.frequenceNotifications() != null ? c.frequenceNotifications() : "jamais",
-            "notifArtistes", c.notifArtistes(),
-            "notifSalles", c.notifSalles(),
-            "theme", c.theme() != null ? c.theme() : "auto"));
+            CLE_USER_ID,
+            userId,
+            "depts",
+            depts,
+            "filtreDisponibles",
+            c.filtreDisponibles(),
+            "frequence",
+            c.frequenceNotifications() != null ? c.frequenceNotifications() : "jamais",
+            "notifArtistes",
+            c.notifArtistes(),
+            "notifSalles",
+            c.notifSalles(),
+            "theme",
+            c.theme() != null ? c.theme() : "auto"));
   }
 
   private void fusionnerDepartements(String userId, String[] nouveauxDepts) {
@@ -278,7 +306,11 @@ public class PreferencesService {
                 .timeout(Duration.ofSeconds(5))
                 .build(),
             HttpResponse.BodyHandlers.discarding())
-        .exceptionally(e -> { log.warn("Déclenchement worker impossible : {}", url, e); return null; });
+        .exceptionally(
+            e -> {
+              log.warn("Déclenchement worker impossible : {}", url, e);
+              return null;
+            });
   }
 
   /// Résultat d'un import de préférences.

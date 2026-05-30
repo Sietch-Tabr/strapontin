@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.securite;
 
@@ -34,19 +34,18 @@ public class VerificationRepository {
   /// @param email adresse email (normalisée)
   /// @return {@code true} si un utilisateur existe avec cet email
   public boolean utilisateurExistePourEmail(String email) {
-    return !jdbc
-        .queryForList(
+    return !jdbc.queryForList(
             "SELECT id FROM users WHERE email = :email", Map.of("email", email), String.class)
         .isEmpty();
   }
 
   /// Supprime les entrées de vérification pour un identifiant donné.
   ///
-  /// @param identifiant préfixe/identifiant de la vérification (ex. {@code "reset:user@example.com"})
+  /// @param identifiant préfixe/identifiant de la vérification (ex. {@code
+  // "reset:user@example.com"})
   public void supprimerParIdentifiant(String identifiant) {
     jdbc.update(
-        "DELETE FROM verifications WHERE identifier = :prefixe",
-        Map.of("prefixe", identifiant));
+        "DELETE FROM verifications WHERE identifier = :prefixe", Map.of("prefixe", identifiant));
   }
 
   /// Insère une entrée de vérification.
@@ -71,7 +70,8 @@ public class VerificationRepository {
   /// Cherche l'identifiant associé à un token hash non expiré.
   ///
   /// @param tokenHash hash SHA-256 du token
-  /// @return l'identifiant (ex. {@code "reset:email"}), ou {@link Optional#empty()} si invalide/expiré
+  /// @return l'identifiant (ex. {@code "reset:email"}), ou {@link Optional#empty()} si
+  // invalide/expiré
   public Optional<String> lireIdentifiantParTokenHash(String tokenHash) {
     List<String> lignes =
         jdbc.queryForList(

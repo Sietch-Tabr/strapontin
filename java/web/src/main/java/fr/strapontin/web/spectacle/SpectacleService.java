@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.spectacle;
 
@@ -66,8 +66,7 @@ public class SpectacleService {
     boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
     boolean inclureIndisponibles =
         indisponibles != null ? "1".equals(indisponibles) : !filtreDisponibles;
-    boolean sourceArtistes =
-        sources == null || sources.isEmpty() || sources.contains("artistes");
+    boolean sourceArtistes = sources == null || sources.isEmpty() || sources.contains("artistes");
     boolean sourceSalles = sources == null || sources.isEmpty() || sources.contains("salles");
 
     StringBuilder whereClause =
@@ -89,7 +88,8 @@ public class SpectacleService {
     }
     if (!inclureIndisponibles) {
       whereClause.append(
-          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'presale', 'rescheduled', 'postponed'))");
+          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'presale', 'rescheduled',"
+              + " 'postponed'))");
     }
 
     String recherche = q.strip().substring(0, Math.min(q.strip().length(), 100));
@@ -193,7 +193,8 @@ public class SpectacleService {
         Objects.requireNonNullElse(
             jdbc.queryForObject(
                 "SELECT COUNT(*) FROM user_matches um INNER JOIN concerts c ON um.concert_id = c.id"
-                    + " WHERE " + whereClause,
+                    + " WHERE "
+                    + whereClause,
                 countParams,
                 Integer.class),
             0);
@@ -206,19 +207,24 @@ public class SpectacleService {
     List<String> genresDisponibles =
         jdbc.queryForList(
             "SELECT DISTINCT c.genre FROM user_matches um INNER JOIN concerts c ON um.concert_id"
-                + " = c.id WHERE " + whereBase + " AND c.genre IS NOT NULL ORDER BY c.genre",
+                + " = c.id WHERE "
+                + whereBase
+                + " AND c.genre IS NOT NULL ORDER BY c.genre",
             baseParams,
             String.class);
     List<String> moisDisponibles =
         jdbc.queryForList(
             "SELECT DISTINCT to_char(c.date, 'YYYY-MM') as mois FROM user_matches um INNER JOIN"
-                + " concerts c ON um.concert_id = c.id WHERE " + whereBase + " ORDER BY mois",
+                + " concerts c ON um.concert_id = c.id WHERE "
+                + whereBase
+                + " ORDER BY mois",
             baseParams,
             String.class);
     List<String> classificationsDisponibles =
         jdbc.queryForList(
             "SELECT DISTINCT c.classification FROM user_matches um INNER JOIN concerts c ON"
-                + " um.concert_id = c.id WHERE " + whereBase
+                + " um.concert_id = c.id WHERE "
+                + whereBase
                 + " AND c.classification IS NOT NULL ORDER BY c.classification",
             baseParams,
             String.class);

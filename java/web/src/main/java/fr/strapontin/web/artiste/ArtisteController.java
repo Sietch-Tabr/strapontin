@@ -1,12 +1,11 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.artiste;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
-import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -52,16 +51,13 @@ public class ArtisteController {
   ///
   /// @param requete corps JSON avec le nom de l'artiste
   /// @param auth    contexte d'authentification
-  /// @return 201 si créé, 400 si cap atteint, 409 si doublon
+  /// @return 201 si créé — 409 si doublon, 400 si cap atteint (via {@link GlobalExceptionHandler})
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterArtiste(
       @Valid @RequestBody RequeteAjouter requete, Authentication auth) {
     String userId = utilisateur(auth).id();
-    return switch (artisteService.ajouter(userId, requete.nom().strip())) {
-      case SUCCES -> ResponseEntity.status(201).body(Map.of("succes", true));
-      case DEJA_PRESENT -> erreur(409, "Cet artiste est déjà dans votre liste.");
-      case CAP_ATTEINT -> erreur(400, "Limite de 500 artistes atteinte.");
-    };
+    artisteService.ajouter(userId, requete.nom().strip());
+    return ResponseEntity.status(201).body(Map.of("succes", true));
   }
 
   /// Supprime un artiste de la liste de suivi.
@@ -82,11 +78,5 @@ public class ArtisteController {
       throw new IllegalStateException("Principal inattendu");
     }
     return ud;
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

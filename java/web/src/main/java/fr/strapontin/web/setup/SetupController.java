@@ -1,11 +1,10 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.setup;
 
 import jakarta.validation.Valid;
-import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,20 +42,10 @@ public class SetupController {
   /// Crée le premier administrateur et initialise la configuration applicative.
   ///
   /// @param requete les données d'initialisation
-  /// @return 201 si créé, 400 si validation échoue, 409 si déjà configuré
+  /// @return 201 si créé — 409 si déjà configuré, 400 si invalide (via {@link GlobalExceptionHandler})
   @PostMapping
   public ResponseEntity<Map<String, Object>> initialiser(@Valid @RequestBody RequeteSetup requete) {
-    String erreur = setupService.initialiser(requete);
-    if (erreur != null) {
-      int status = erreur.contains("déjà configurée") ? 409 : 400;
-      return erreur(status, erreur);
-    }
+    setupService.initialiser(requete);
     return ResponseEntity.status(201).body(Map.of("succes", true));
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

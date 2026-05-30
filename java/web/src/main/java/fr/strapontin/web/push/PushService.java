@@ -1,9 +1,10 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.push;
 
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.util.Map;
@@ -49,30 +50,22 @@ public class PushService {
         : new ReponseVapid(false, null);
   }
 
-  /// Résultat de l'opération d'abonnement.
-  public enum ResultatAbonnement {
-    SUCCES,
-    INCOMPLET,
-    INVALIDE,
-    CAP_ATTEINT
-  }
-
   /// Enregistre un nouvel abonnement push.
   ///
   /// @param userId  identifiant de l'utilisateur
   /// @param requete données de l'abonnement
-  /// @return résultat de l'opération
-  public ResultatAbonnement abonner(String userId, RequeteAbonnement requete) {
+  /// @throws ErreurMetier 400 si données incomplètes/invalides, 429 si cap atteint
+  public void abonner(String userId, RequeteAbonnement requete) {
     if (requete.endpoint() == null
         || requete.keys() == null
         || requete.keys().p256dh() == null
         || requete.keys().auth() == null) {
-      return ResultatAbonnement.INCOMPLET;
+      throw new ErreurMetier("Abonnement incomplet.");
     }
     if (requete.endpoint().length() > 2048
         || requete.keys().p256dh().length() > 256
         || requete.keys().auth().length() > 256) {
-      return ResultatAbonnement.INVALIDE;
+      throw new ErreurMetier("Données d'abonnement invalides.");
     }
 
     int total =
@@ -82,7 +75,9 @@ public class PushService {
                 Map.of(CLE_USER_ID, userId),
                 Integer.class),
             0);
-    if (total >= CAP_ABONNEMENTS) return ResultatAbonnement.CAP_ATTEINT;
+    if (total >= CAP_ABONNEMENTS) {
+      throw new ErreurMetier("Trop d'abonnements push pour cet utilisateur.", 429);
+    }
 
     jdbc.update(
         """
@@ -97,7 +92,6 @@ public class PushService {
             "auth", requete.keys().auth()));
 
     logAdminService.logAdmin("info", "push", "abonnement push créé", Map.of(CLE_USER_ID, userId));
-    return ResultatAbonnement.SUCCES;
   }
 
   /// Supprime un abonnement push.

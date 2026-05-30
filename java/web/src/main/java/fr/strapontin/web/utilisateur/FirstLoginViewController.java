@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.utilisateur;
 
@@ -70,9 +70,7 @@ public class FirstLoginViewController {
       HttpServletResponse response,
       RedirectAttributes redirects) {
 
-    var requete =
-        new RequetePremierLogin(
-            nom, identifiant, motDePasseActuel, motDePasseNouveau);
+    var requete = new RequetePremierLogin(nom, identifiant, motDePasseActuel, motDePasseNouveau);
     ResponseEntity<?> rep = userController.premierLogin(requete, auth, request);
 
     if (rep.getStatusCode().isError()) {

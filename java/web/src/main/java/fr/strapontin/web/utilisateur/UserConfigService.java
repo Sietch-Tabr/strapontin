@@ -1,9 +1,10 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.utilisateur;
 
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.config.ConfigService;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -25,8 +26,7 @@ import org.springframework.stereotype.Service;
 public class UserConfigService {
 
   private static final Pattern FORMAT_DEPT = Pattern.compile("^\\d{2,3}$");
-  private static final Set<String> FREQUENCES_VALIDES =
-      Set.of("jamais", "temps_reel", "quotidien");
+  private static final Set<String> FREQUENCES_VALIDES = Set.of("jamais", "temps_reel", "quotidien");
   private static final Set<String> THEMES_VALIDES = Set.of("auto", "clair", "sombre");
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -81,7 +81,8 @@ public class UserConfigService {
     boolean resendDisponible = configService.lireConfig("RESEND_API_KEY").isPresent();
 
     if (lignes.isEmpty()) {
-      return new ConfigUtilisateur(List.of(), true, "jamais", true, false, "auto", resendDisponible);
+      return new ConfigUtilisateur(
+          List.of(), true, "jamais", true, false, "auto", resendDisponible);
     }
     ConfigUtilisateur base = lignes.get(0);
     return new ConfigUtilisateur(
@@ -115,19 +116,20 @@ public class UserConfigService {
     return new ResultatMajDepartements(ignores);
   }
 
-  /// Vérifie la validité et met à jour les préférences de notification.
+  /// Met à jour les préférences de notification.
   ///
-  /// @param userId   identifiant de l'utilisateur
-  /// @param requete  données de la requête
-  /// @return {@code true} si les données sont valides et la mise à jour effectuée
-  public boolean majNotifications(String userId, RequeteNotifications requete) {
+  /// @param userId  identifiant de l'utilisateur
+  /// @param requete données de la requête
+  /// @throws ErreurMetier si la fréquence est invalide ou aucun type de notification sélectionné
+  public void majNotifications(String userId, RequeteNotifications requete) {
     if (!FREQUENCES_VALIDES.contains(requete.frequenceNotifications())) {
-      return false;
+      throw new ErreurMetier("Valeur invalide.");
     }
     if (!"jamais".equals(requete.frequenceNotifications())
         && !requete.notifArtistes()
         && !requete.notifSalles()) {
-      return false;
+      throw new ErreurMetier(
+          "Activez au moins un type de contenu pour recevoir des notifications.");
     }
 
     Map<String, Object> champs = new HashMap<>();
@@ -135,7 +137,6 @@ public class UserConfigService {
     champs.put("notifArtistes", requete.notifArtistes());
     champs.put("notifSalles", requete.notifSalles());
     upsertConfig(userId, champs);
-    return true;
   }
 
   /// Met à jour le filtre de disponibilité.
@@ -146,14 +147,14 @@ public class UserConfigService {
     upsertConfig(userId, Map.of("filtreDisponibles", filtreDisponibles));
   }
 
-  /// Vérifie la validité et met à jour le thème de l'interface.
+  /// Met à jour le thème de l'interface.
   ///
   /// @param userId identifiant de l'utilisateur
   /// @param valeur nouvelle valeur du thème ({@code auto}, {@code clair} ou {@code sombre})
-  /// @return {@code true} si le thème est valide et la mise à jour effectuée
-  public boolean majTheme(String userId, String valeur) {
+  /// @throws ErreurMetier si la valeur du thème est invalide
+  public void majTheme(String userId, String valeur) {
     if (!THEMES_VALIDES.contains(valeur)) {
-      return false;
+      throw new ErreurMetier("Valeur de thème invalide.");
     }
     jdbc.update(
         """
@@ -162,7 +163,6 @@ public class UserConfigService {
         ON CONFLICT (user_id) DO UPDATE SET theme = CAST(:theme AS theme_interface), updated_at = now()
         """,
         Map.of("userId", userId, "theme", valeur));
-    return true;
   }
 
   private void upsertConfig(String userId, Map<String, Object> champs) {

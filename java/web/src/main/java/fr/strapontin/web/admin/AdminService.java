@@ -1,12 +1,13 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -33,9 +34,9 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -118,9 +119,7 @@ public class AdminService {
         """,
         Map.of(),
         (org.springframework.jdbc.core.RowCallbackHandler)
-            rs ->
-                activiteParUsername.put(
-                    rs.getString("PRINCIPAL_NAME"), rs.getLong("derniere")));
+            rs -> activiteParUsername.put(rs.getString("PRINCIPAL_NAME"), rs.getLong("derniere")));
 
     return tousLesUsers.stream()
         .map(
@@ -147,8 +146,7 @@ public class AdminService {
   /// @param baseUrl  URL de base pour construire le lien d'invitation
   /// @return résultat de la création, ou {@link Optional#empty()} si l'email est déjà pris
   @Transactional
-  public Optional<ResultatCreation> creerUtilisateur(
-      String email, String adminId, String baseUrl) {
+  public Optional<ResultatCreation> creerUtilisateur(String email, String adminId, String baseUrl) {
     boolean emailExistant =
         !jdbc.queryForList(
                 "SELECT 1 FROM users WHERE email = :email", Map.of("email", email), Integer.class)
@@ -185,8 +183,7 @@ public class AdminService {
         INSERT INTO accounts (id, account_id, provider_id, user_id, password, created_at, updated_at)
         VALUES (:id, :accountId, 'credential', :userId, :password, now(), now())
         """,
-        Map.of(
-            "id", accountId, "accountId", userId, "userId", userId, "password", hashMdp));
+        Map.of("id", accountId, "accountId", userId, "userId", userId, "password", hashMdp));
 
     String token = genererToken(32);
     Instant expiresAt = Instant.now().plus(24, ChronoUnit.HOURS);
@@ -206,22 +203,24 @@ public class AdminService {
   /// @param userId  identifiant de l'utilisateur cible
   /// @param requete champs à modifier
   /// @param adminId identifiant de l'admin demandeur
-  /// @return {@code null} si succès, message d'erreur sinon
-  public String modifierUtilisateur(
+  /// @throws ErreurMetier si les données sont invalides ou l'email est déjà utilisé
+  public void modifierUtilisateur(
       String userId, RequeteModifierUtilisateur requete, String adminId) {
     String nom = requete.nom() == null ? "" : requete.nom().strip();
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
     String role = requete.role() == null ? "" : requete.role().strip().toLowerCase();
 
     if (nom.isEmpty() && email.isEmpty() && role.isEmpty()) {
-      return "Au moins un champ à modifier est requis.";
+      throw new ErreurMetier("Au moins un champ à modifier est requis.");
     }
-    if (!nom.isEmpty() && nom.length() > 100) return "Nom trop long (100 caractères max).";
+    if (!nom.isEmpty() && nom.length() > 100) {
+      throw new ErreurMetier("Nom trop long (100 caractères max).");
+    }
     if (!email.isEmpty() && !FORMAT_EMAIL.matcher(email).matches()) {
-      return "Format d'email invalide.";
+      throw new ErreurMetier("Format d'email invalide.");
     }
     if (!role.isEmpty() && !ROLES_VALIDES.contains(role)) {
-      return "Rôle invalide. Valeurs acceptées : user, admin.";
+      throw new ErreurMetier("Rôle invalide. Valeurs acceptées : user, admin.");
     }
     if (!email.isEmpty()) {
       boolean emailPris =
@@ -230,7 +229,7 @@ public class AdminService {
                   Map.of("email", email, "id", userId),
                   Integer.class)
               .isEmpty();
-      if (emailPris) return "Cette adresse email est déjà utilisée.";
+      if (emailPris) throw new ErreurMetier("Cette adresse email est déjà utilisée.");
     }
 
     Map<String, Object> miseAJour = new HashMap<>();
@@ -256,7 +255,6 @@ public class AdminService {
           "warn", "admin", "rôle modifié",
           Map.of("userId", userId, "nouveauRole", role, "parAdmin", adminId));
     }
-    return null;
   }
 
   /// Supprime un compte utilisateur.
@@ -266,8 +264,7 @@ public class AdminService {
   public void supprimerUtilisateur(String userId, String adminId) {
     jdbc.update("DELETE FROM users WHERE id = :userId", Map.of("userId", userId));
     logAdminService.logAdmin(
-        "warn", "admin", "compte supprimé",
-        Map.of("userId", userId, "parAdmin", adminId));
+        "warn", "admin", "compte supprimé", Map.of("userId", userId, "parAdmin", adminId));
   }
 
   /// Envoie un email de réinitialisation de mot de passe à un utilisateur.
@@ -294,7 +291,9 @@ public class AdminService {
 
     emailService.envoyerResetMotDePasse(email, baseUrl + "/reset-password?token=" + token);
     logAdminService.logAdmin(
-        "warn", "admin", "mot de passe réinitialisé",
+        "warn",
+        "admin",
+        "mot de passe réinitialisé",
         Map.of("userId", userId, "parAdmin", adminId));
 
     return Optional.of(email);
@@ -308,8 +307,10 @@ public class AdminService {
     List<ConfigStatut> statuts = new ArrayList<>();
     for (String cle : CLES_AUTORISEES) {
       boolean presente = presentes.contains(cle);
-      String valeur = (presente && CLES_EN_CLAIR.contains(cle))
-          ? configService.lireConfig(cle).orElse(null) : null;
+      String valeur =
+          (presente && CLES_EN_CLAIR.contains(cle))
+              ? configService.lireConfig(cle).orElse(null)
+              : null;
       statuts.add(new ConfigStatut(cle, presente, valeur, !CLES_EN_CLAIR.contains(cle)));
     }
     return statuts;
@@ -317,22 +318,23 @@ public class AdminService {
 
   /// Valide et sauvegarde une clé de configuration.
   ///
-  /// @param cle    clé à mettre à jour
-  /// @param valeur nouvelle valeur (null pour effacer)
+  /// @param cle     clé à mettre à jour
+  /// @param valeur  nouvelle valeur (null pour effacer)
   /// @param adminId identifiant de l'admin
-  /// @return {@code null} si succès, message d'erreur sinon
-  public String sauvegarderConfig(String cle, String valeur, String adminId) {
-    if (!CLES_AUTORISEES.contains(cle)) return "Clé de configuration invalide.";
+  /// @throws ErreurMetier si la clé est non autorisée ou le format invalide
+  public void sauvegarderConfig(String cle, String valeur, String adminId) {
+    if (!CLES_AUTORISEES.contains(cle)) {
+      throw new ErreurMetier("Clé de configuration invalide.");
+    }
     if (valeur != null && valeur.isEmpty() && CLES_OBLIGATOIRES.contains(cle)) {
-      return "La valeur ne peut pas être vide pour " + cle + ".";
+      throw new ErreurMetier("La valeur ne peut pas être vide pour " + cle + ".");
     }
     if (valeur != null && !valeur.isEmpty()) {
       String erreur = validerFormatConfig(cle, valeur);
-      if (erreur != null) return erreur;
+      if (erreur != null) throw new ErreurMetier(erreur);
     }
     configService.sauvegarderConfig(cle, valeur == null || valeur.isEmpty() ? null : valeur);
     logAdminService.logAdmin("info", "admin", "Config sauvegardée : " + cle, Map.of("cle", cle));
-    return null;
   }
 
   /// Génère une paire de clés VAPID EC P-256 et supprime les abonnements push existants.
@@ -363,7 +365,8 @@ public class AdminService {
 
     int nbSupprimes = jdbc.update("DELETE FROM push_abonnements", Map.of());
     logAdminService.logAdmin(
-        "info", "admin",
+        "info",
+        "admin",
         "Clés VAPID régénérées — " + nbSupprimes + " abonnement(s) supprimé(s)",
         Map.of("nbAbonnements", nbSupprimes));
 
@@ -426,8 +429,16 @@ public class AdminService {
     QuotaTM quotaFinal = quotaTM;
     List<StatJob> statsComplets =
         statsJobs.stream()
-            .map(j -> new StatJob(j.typeJob(), j.derniereExec(), j.dureeMs(), j.nbInseres(),
-                j.nbMisAJour(), j.erreur(), prochainesExec.get(j.typeJob())))
+            .map(
+                j ->
+                    new StatJob(
+                        j.typeJob(),
+                        j.derniereExec(),
+                        j.dureeMs(),
+                        j.nbInseres(),
+                        j.nbMisAJour(),
+                        j.erreur(),
+                        prochainesExec.get(j.typeJob())))
             .toList();
 
     String etatQuota = "ok";
@@ -450,7 +461,9 @@ public class AdminService {
       java.net.http.HttpRequest req =
           java.net.http.HttpRequest.newBuilder()
               .uri(java.net.URI.create("http://localhost:8081/trigger/actif"))
-              .GET().timeout(java.time.Duration.ofSeconds(2)).build();
+              .GET()
+              .timeout(java.time.Duration.ofSeconds(2))
+              .build();
       java.net.http.HttpResponse<String> rep =
           client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
       if (rep.statusCode() == 200) {
@@ -475,7 +488,9 @@ public class AdminService {
       java.net.http.HttpRequest req =
           java.net.http.HttpRequest.newBuilder()
               .uri(java.net.URI.create("http://localhost:8081/trigger/prochaines-exec"))
-              .GET().timeout(java.time.Duration.ofSeconds(2)).build();
+              .GET()
+              .timeout(java.time.Duration.ofSeconds(2))
+              .build();
       java.net.http.HttpResponse<String> rep =
           client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
       if (rep.statusCode() == 200) {

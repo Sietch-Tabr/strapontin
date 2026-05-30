@@ -1,9 +1,11 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.setup;
 
+import fr.strapontin.web.ErreurMetier;
+import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.config.ConfigService;
 import java.math.BigInteger;
 import java.security.KeyPair;
@@ -58,10 +60,13 @@ public class SetupService {
   /// Crée le premier administrateur et initialise la configuration.
   ///
   /// @param requete données d'initialisation
-  /// @return {@code null} si succès, message d'erreur sinon
+  /// @throws RessourceDejaExistante si l'application est déjà configurée
+  /// @throws ErreurMetier           si les données sont invalides
   @Transactional
-  public String initialiser(RequeteSetup requete) {
-    if (estDejaConfiguree()) return "L'application est déjà configurée.";
+  public void initialiser(RequeteSetup requete) {
+    if (estDejaConfiguree()) {
+      throw new RessourceDejaExistante("L'application est déjà configurée.");
+    }
 
     String nom = requete.nom() == null ? "" : requete.nom().strip();
     String identifiant =
@@ -69,12 +74,13 @@ public class SetupService {
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
     String motDePasse = requete.motDePasse() == null ? "" : requete.motDePasse();
 
-    if (nom.isEmpty()) return "Le nom est requis.";
+    if (nom.isEmpty()) throw new ErreurMetier("Le nom est requis.");
     if (identifiant.length() < 3 || !identifiant.matches("[a-z0-9_]+")) {
-      return "L'identifiant doit contenir au moins 3 caractères (lettres minuscules, chiffres, _).";
+      throw new ErreurMetier(
+          "L'identifiant doit contenir au moins 3 caractères (lettres minuscules, chiffres, _).");
     }
-    if (email.isEmpty() || !email.contains("@")) return "L'adresse email est invalide.";
-    if (motDePasse.length() < 12) return "Le mot de passe doit contenir au moins 12 caractères.";
+    if (email.isEmpty() || !email.contains("@")) throw new ErreurMetier("L'adresse email est invalide.");
+    if (motDePasse.length() < 12) throw new ErreurMetier("Le mot de passe doit contenir au moins 12 caractères.");
 
     String userId = UUID.randomUUID().toString();
     String hashMdp = bcrypt.encode(motDePasse);
@@ -95,7 +101,7 @@ public class SetupService {
           """,
           paramsUser);
     } catch (DataIntegrityViolationException e) {
-      return "L'application est déjà configurée.";
+      throw new RessourceDejaExistante("L'application est déjà configurée.");
     }
 
     String accountId = UUID.randomUUID().toString();
@@ -114,7 +120,6 @@ public class SetupService {
 
     genererVapid();
     log.info("Premier administrateur créé : {}", identifiant);
-    return null;
   }
 
   private void genererVapid() {

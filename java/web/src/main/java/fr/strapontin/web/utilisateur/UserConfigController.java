@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.utilisateur;
 
@@ -76,14 +76,12 @@ public class UserConfigController {
   ///
   /// @param requete corps JSON avec fréquence et types de notification
   /// @param auth    contexte d'authentification
-  /// @return 200 si mis à jour, 400 en cas d'erreur
+  /// @return 200 si mis à jour — 400 si invalide (via {@link GlobalExceptionHandler})
   @PatchMapping("/notifications")
   public ResponseEntity<Map<String, Object>> majNotifications(
       @RequestBody RequeteNotifications requete, Authentication auth) {
     String userId = utilisateur(auth).id();
-    if (!userConfigService.majNotifications(userId, requete)) {
-      return erreur(400, "Valeur invalide.");
-    }
+    userConfigService.majNotifications(userId, requete);
     return ResponseEntity.ok(Map.of("succes", "notifications"));
   }
 
@@ -104,14 +102,12 @@ public class UserConfigController {
   ///
   /// @param requete corps JSON avec {@code valeur} ({@code auto}, {@code clair} ou {@code sombre})
   /// @param auth    contexte d'authentification
-  /// @return 200 si mis à jour, 400 si thème invalide
+  /// @return 200 si mis à jour — 400 si invalide (via {@link GlobalExceptionHandler})
   @PatchMapping("/theme")
   public ResponseEntity<Map<String, Object>> majTheme(
       @RequestBody RequeteTheme requete, Authentication auth) {
     String userId = utilisateur(auth).id();
-    if (!userConfigService.majTheme(userId, requete.valeur())) {
-      return erreur(400, "Valeur de thème invalide.");
-    }
+    userConfigService.majTheme(userId, requete.valeur());
     return ResponseEntity.ok(Map.of("succes", "theme", "theme", requete.valeur()));
   }
 
@@ -119,9 +115,4 @@ public class UserConfigController {
     return (UtilisateurDetails) auth.getPrincipal();
   }
 
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
-  }
 }

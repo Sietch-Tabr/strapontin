@@ -1,6 +1,6 @@
 /*
  * Strapontin — concert finder
- * Copyright (C) 2025 Kwaite
+ * Copyright (C) 2025-2026 Kwaite
  */
 package fr.strapontin.web.artiste;
 
@@ -70,8 +70,7 @@ class ArtisteRepository {
   /// @param normalise nom normalisé de l'artiste
   /// @return {@code true} si déjà présent
   boolean existePourUtilisateur(String userId, String normalise) {
-    return !jdbc
-        .queryForList(
+    return !jdbc.queryForList(
             """
             SELECT 1 FROM user_artistes
             WHERE user_id = :userId AND artiste_normalise = :normalise
