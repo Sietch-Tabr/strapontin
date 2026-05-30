@@ -76,10 +76,8 @@ public class AdminViewController {
   /// @return le nom du template
   @GetMapping("/admin")
   public String admin(Model modele, org.springframework.security.core.Authentication auth) {
-    ResponseEntity<List<UtilisateurAdmin>> repUsers =
-        adminController.listerUtilisateurs();
-    ResponseEntity<List<ConfigStatut>> repConfig =
-        adminController.lireConfigStatuts();
+    ResponseEntity<List<UtilisateurAdmin>> repUsers = adminController.listerUtilisateurs();
+    ResponseEntity<List<ConfigStatut>> repConfig = adminController.lireConfigStatuts();
     ResponseEntity<List<LogAdminService.EntreeLogAdmin>> repLogs = adminController.lireLogs();
     ResponseEntity<Map<String, Object>> repJobs = adminController.lireJobs();
 
@@ -124,7 +122,23 @@ public class AdminViewController {
     modele.addAttribute("nbJobsOk", nbJobsOk);
     modele.addAttribute("nbJobsErreur", nbJobsErreur);
 
-    modele.addAttribute("descriptionsConfig", DESCRIPTIONS_CONFIG);
+    List<ConfigStatut> configStatuts = repConfig.getBody();
+    String baseUrl =
+        configStatuts != null
+            ? configStatuts.stream()
+                .filter(s -> "PUBLIC_BASE_URL".equals(s.cle()) && s.valeur() != null)
+                .map(ConfigStatut::valeur)
+                .findFirst()
+                .orElse("PUBLIC_BASE_URL")
+            : "PUBLIC_BASE_URL";
+    Map<String, String> descriptionsConfig = new java.util.HashMap<>(DESCRIPTIONS_CONFIG);
+    descriptionsConfig.put(
+        "RESEND_WEBHOOK_SECRET",
+        "Clé de signature des webhooks Resend (détection des bounces email)."
+            + " À récupérer dans le dashboard Resend → Webhooks → créer un endpoint"
+            + " avec l'URL " + baseUrl + "/api/webhooks/resend"
+            + " (événements : email.bounced, email.complained).");
+    modele.addAttribute("descriptionsConfig", descriptionsConfig);
     modele.addAttribute("appConfigSecretPresente", System.getenv("APP_CONFIG_SECRET") != null);
     String utilisateurCourantId =
         auth != null
