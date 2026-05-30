@@ -4,9 +4,12 @@
  */
 package fr.strapontin.web.securite;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.session.web.http.CookieSerializer;
+import org.springframework.session.web.http.DefaultCookieSerializer;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -216,5 +219,21 @@ public class SecurityConfiguration {
   @Bean
   HttpSessionEventPublisher httpSessionEventPublisher() {
     return new HttpSessionEventPublisher();
+  }
+
+  /// Sérialiseur de cookies Spring Session — force {@code Secure} et {@code SameSite=Strict}.
+  ///
+  /// <p>Les propriétés {@code server.servlet.session.cookie.*} sont ignorées par Spring Session
+  /// JDBC ; ce bean prend le relais.
+  ///
+  /// @param cookieSecure {@code true} si le flag Secure doit être positionné (désactivé en dev)
+  /// @return le sérialiseur de cookies configuré
+  @Bean
+  CookieSerializer cookieSerializer(
+      @Value("${app.cookie.secure:true}") boolean cookieSecure) {
+    DefaultCookieSerializer serialiseur = new DefaultCookieSerializer();
+    serialiseur.setUseSecureCookie(cookieSecure);
+    serialiseur.setSameSite("Strict");
+    return serialiseur;
   }
 }
