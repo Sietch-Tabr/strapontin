@@ -956,14 +956,17 @@ function initGestionUtilisateurs() {
 // Modale invitation (admin)
 function initModaleInvitation() {
   const dialog = document.getElementById("dialog-invitation");
-  if (dialog) dialog.showModal();
-}
+  if (!dialog) return;
+  dialog.showModal();
 
-window.copierLienInvitation = function () {
   const input = document.getElementById("lien-invitation");
-  if (!input || !navigator.clipboard) return;
-  navigator.clipboard.writeText(input.value);
-};
+  document.getElementById("btn-copier-invitation")?.addEventListener("click", () => {
+    if (input && navigator.clipboard) navigator.clipboard.writeText(input.value);
+  });
+  document.getElementById("btn-fermer-invitation")?.addEventListener("click", () => {
+    dialog.close();
+  });
+}
 
 // Push notifications (paramètres)
 function initPush() {
@@ -1065,7 +1068,6 @@ function initPush() {
       nonSupporteDiv.hidden = false;
     }
   }
-
 
   btnActiver.addEventListener("click", async function () {
     if (!pushClePublique || pushEnCours) return;
@@ -1202,7 +1204,10 @@ document.addEventListener("htmx:afterSettle", initTout);
 document.addEventListener("htmx:afterSwap", function (e) {
   if (!e.detail.target || e.detail.target.id !== "banniere-container") return;
   var el = document.getElementById("banniere");
-  if (el && sessionStorage.getItem("banniere_dismissed_id") === el.dataset.banniereId) {
+  if (
+    el &&
+    sessionStorage.getItem("banniere_dismissed_id") === el.dataset.banniereId
+  ) {
     el.style.display = "none";
   }
 });
