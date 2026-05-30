@@ -3,10 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#111827" />
+    <meta
+      name="theme-color"
+      content="#ffffff"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#0a0a0a"
+      media="(prefers-color-scheme: dark)"
+    />
     <link rel="icon" type="image/png" href="/images/favicon.png" />
-    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/layout.css" />
+    <link rel="stylesheet" href="/css/components.css" />
+    <link rel="stylesheet" href="/css/pages.css" />
     <title>Hors ligne — Strapontin</title>
+    <script>
+      (function () {
+        var cookie = document.cookie.match(/(?:^|; )theme=([^;]*)/);
+        var theme = cookie ? decodeURIComponent(cookie[1]) : "auto";
+        var sombre =
+          theme === "sombre" ||
+          (theme === "auto" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (sombre) document.documentElement.classList.add("dark");
+      })();
+    </script>
   </head>
   <body>
     <div class="app-layout">
@@ -57,20 +80,21 @@
           >
             Connexion rétablie, rechargement…
           </p>
-          <button onclick="location.reload()" class="btn btn-secondary">
+          <button onclick="reessayer()" class="btn btn-secondary">
             Réessayer
           </button>
         </div>
       </main>
     </div>
-    <script src="/js/app.js" defer></script>
     <script>
+      function reessayer() {
+        window.location.assign("/");
+      }
+
       window.addEventListener("online", function () {
         var msg = document.getElementById("msg-reconnexion");
         if (msg) msg.style.display = "";
-        setTimeout(function () {
-          location.reload();
-        }, 800);
+        setTimeout(reessayer, 800);
       });
     </script>
   </body>
