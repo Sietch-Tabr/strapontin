@@ -429,7 +429,11 @@
                 class="param-aide"
                 th:text="${descriptionsConfig[statut.cle]}"
               ></p>
-              <form method="post" th:action="@{/admin/config}" class="form-inline">
+              <form
+                method="post"
+                th:action="@{/admin/config}"
+                class="form-inline"
+              >
                 <input type="hidden" name="cle" th:value="${statut.cle}" />
                 <input
                   type="password"
@@ -438,7 +442,9 @@
                   placeholder="Nouvelle valeur…"
                   th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
                 />
-                <button type="submit" class="btn btn-secondary">Enregistrer</button>
+                <button type="submit" class="btn btn-secondary">
+                  Enregistrer
+                </button>
               </form>
             </th:block>
           </div>
@@ -464,7 +470,11 @@
                 class="param-aide"
                 th:text="${descriptionsConfig[statut.cle]}"
               ></p>
-              <form method="post" th:action="@{/admin/config}" class="form-inline">
+              <form
+                method="post"
+                th:action="@{/admin/config}"
+                class="form-inline"
+              >
                 <input type="hidden" name="cle" th:value="${statut.cle}" />
                 <input
                   type="password"
@@ -473,7 +483,9 @@
                   placeholder="Nouvelle valeur…"
                   th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
                 />
-                <button type="submit" class="btn btn-secondary">Enregistrer</button>
+                <button type="submit" class="btn btn-secondary">
+                  Enregistrer
+                </button>
               </form>
             </th:block>
             <th:block th:with="statut=${configParCle['RESEND_WEBHOOK_SECRET']}">
@@ -495,7 +507,11 @@
                   class="param-aide"
                   th:text="${descriptionsConfig[statut.cle]}"
                 ></p>
-                <form method="post" th:action="@{/admin/config}" class="form-inline">
+                <form
+                  method="post"
+                  th:action="@{/admin/config}"
+                  class="form-inline"
+                >
                   <input type="hidden" name="cle" th:value="${statut.cle}" />
                   <input
                     type="password"
@@ -504,7 +520,9 @@
                     placeholder="Nouvelle valeur…"
                     th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
                   />
-                  <button type="submit" class="btn btn-secondary">Enregistrer</button>
+                  <button type="submit" class="btn btn-secondary">
+                    Enregistrer
+                  </button>
                 </form>
               </div>
             </th:block>
@@ -536,7 +554,11 @@
                 th:if="${statut.valeur != null}"
                 th:text="${statut.valeur}"
               ></p>
-              <form method="post" th:action="@{/admin/config}" class="form-inline">
+              <form
+                method="post"
+                th:action="@{/admin/config}"
+                class="form-inline"
+              >
                 <input type="hidden" name="cle" th:value="${statut.cle}" />
                 <input
                   type="text"
@@ -545,7 +567,9 @@
                   autocomplete="off"
                   th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
                 />
-                <button type="submit" class="btn btn-secondary">Enregistrer</button>
+                <button type="submit" class="btn btn-secondary">
+                  Enregistrer
+                </button>
               </form>
             </th:block>
             <th:block th:with="statut=${configParCle['PUBLIC_BASE_URL']}">
@@ -572,7 +596,11 @@
                   th:if="${statut.valeur != null}"
                   th:text="${statut.valeur}"
                 ></p>
-                <form method="post" th:action="@{/admin/config}" class="form-inline">
+                <form
+                  method="post"
+                  th:action="@{/admin/config}"
+                  class="form-inline"
+                >
                   <input type="hidden" name="cle" th:value="${statut.cle}" />
                   <input
                     type="text"
@@ -581,7 +609,9 @@
                     autocomplete="off"
                     th:attr="aria-label='Valeur de ' + ${statut.cle},aria-describedby='desc-' + ${statut.cle}"
                   />
-                  <button type="submit" class="btn btn-secondary">Enregistrer</button>
+                  <button type="submit" class="btn btn-secondary">
+                    Enregistrer
+                  </button>
                 </form>
               </div>
             </th:block>

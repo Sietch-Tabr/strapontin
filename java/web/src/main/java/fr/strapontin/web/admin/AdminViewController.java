@@ -142,7 +142,9 @@ public class AdminViewController {
         "RESEND_WEBHOOK_SECRET",
         "Clé de signature des webhooks Resend (détection des bounces email)."
             + " À récupérer dans le dashboard Resend → Webhooks → créer un endpoint"
-            + " avec l'URL " + baseUrl + "/api/webhooks/resend"
+            + " avec l'URL "
+            + baseUrl
+            + "/api/webhooks/resend"
             + " (événements : email.bounced, email.complained).");
     modele.addAttribute("descriptionsConfig", descriptionsConfig);
     Map<String, ConfigStatut> configParCle =
@@ -174,8 +176,7 @@ public class AdminViewController {
       Object succes = modele.asMap().get("succes");
       String hash =
           switch (String.valueOf(succes)) {
-            case "supprimerUtilisateur", "creerUtilisateur", "reinitialiserMdp" ->
-                "#utilisateurs";
+            case "supprimerUtilisateur", "creerUtilisateur", "reinitialiserMdp" -> "#utilisateurs";
             case "config", "vapid" -> "#configuration";
             case "relancer" -> "#jobs";
             default -> null;
