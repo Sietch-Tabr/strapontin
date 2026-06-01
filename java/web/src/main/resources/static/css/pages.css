@@ -578,14 +578,25 @@
 }
 
 .param-bloc {
+  position: relative;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.25rem;
+  padding: 1.75rem 1.25rem 1.25rem;
   margin-bottom: 1rem;
 }
 .param-bloc:last-child {
   margin-bottom: 0;
+}
+.param-bloc > h3.param-label:first-child {
+  position: absolute;
+  top: -0.6em;
+  left: 1rem;
+  padding: 0 0.25rem;
+  background: var(--bg-card);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0;
 }
 
 .param-label {
