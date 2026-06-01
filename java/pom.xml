@@ -26,9 +26,8 @@
     <properties>
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Override BOM : Flyway 12.x cible Java 25 + PostgreSQL 14+ -->
-        <flyway.version>12.6.2</flyway.version>
-        <!-- Overrides BOM Spring Boot 4.0.6 -->
+        <!-- Override BOM : Spring Boot 4.0.6 tire Flyway 11.x ; on requiert 12.x -->
+        <flyway.version>12.7.0</flyway.version>
         <caffeine.version>3.2.4</caffeine.version>
         <postgresql.version>42.7.11</postgresql.version>
         <thymeleaf-layout-dialect.version>4.0.1</thymeleaf-layout-dialect.version>
