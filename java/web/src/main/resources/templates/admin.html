@@ -664,7 +664,7 @@
               <p class="param-aide config-vapid-avertissement">
                 Régénérer les clés invalide tous les abonnements push existants.
               </p>
-              <form method="post" th:action="@{/admin/vapid}" id="form-vapid">
+              <form method="post" th:action="@{/admin/vapid}" id="form-vapid" hx-boost="false">
                 <button
                   type="submit"
                   class="btn btn-secondary"
@@ -876,6 +876,7 @@
                         th:action="@{/admin/utilisateurs/{id}/supprimer(id=${u.id})}"
                         class="form-action-inline form-supprimer-user"
                         th:data-nom="${u.name}"
+                        hx-boost="false"
                       >
                         <button type="submit" class="btn btn-sm btn-danger">
                           Supprimer
