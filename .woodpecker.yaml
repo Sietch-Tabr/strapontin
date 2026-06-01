@@ -7,8 +7,9 @@ steps:
     image: maven:3.9-eclipse-temurin-25
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
+      - /var/run/docker.sock:/var/run/docker.sock
     commands:
-      - mvn -f java/pom.xml -pl core,sources,web -am test
+      - mvn -f java/pom.xml -pl core,sources,web,worker -am test
     when:
       - event: push
         branch: main
@@ -24,9 +25,29 @@ steps:
       - event: push
         branch: main
 
-  - name: deploy
+  - name: backup
     image: alpine
     depends_on: [build]
+    environment:
+      SSH_KEY:
+        from_secret: ssh_key
+      LXC_JAVA_HOST:
+        from_secret: lxc_host
+    commands:
+      - apk add --no-cache openssh-client
+      - echo "$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
+      - scp -i /tmp/key -o StrictHostKeyChecking=no scripts/backup-local.sh
+        root@${LXC_JAVA_HOST}:/opt/strapontin/scripts/backup-local.sh
+      - ssh -i /tmp/key -o StrictHostKeyChecking=no root@${LXC_JAVA_HOST}
+        "chmod +x /opt/strapontin/scripts/backup-local.sh && bash /opt/strapontin/scripts/backup-local.sh"
+      - rm /tmp/key
+    when:
+      - event: push
+        branch: main
+
+  - name: deploy
+    image: alpine
+    depends_on: [backup]
     environment:
       SSH_KEY:
         from_secret: ssh_key
