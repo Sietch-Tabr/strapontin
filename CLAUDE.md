@@ -74,8 +74,8 @@ Commandes manuelles si besoin :
 
 ```bash
 mvn -f java/pom.xml -pl web,worker -am package
-scp "$(find java/web/target -name 'web-*.jar' ! -name '*.original')" root@192.168.20.78:/opt/strapontin/web.jar.new
-scp "$(find java/worker/target -name 'worker-*.jar' ! -name '*.original')" root@192.168.20.78:/opt/strapontin/worker.jar.new
+scp "$(ls -t java/web/target/web-*.jar | grep -v '.original' | head -1)" root@192.168.20.78:/opt/strapontin/web.jar.new
+scp "$(ls -t java/worker/target/worker-*.jar | grep -v '.original' | head -1)" root@192.168.20.78:/opt/strapontin/worker.jar.new
 ssh root@192.168.20.78 "/opt/strapontin/scripts/update.sh"
 ```
 
@@ -125,7 +125,6 @@ Chiffrement AES-256-GCM, clé = `APP_CONFIG_SECRET`.
 ⚠️ Changer les clés VAPID → supprimer `push_abonnements` d'abord.
 Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_*`) configurables depuis `/admin`.
 `RESEND_WEBHOOK_SECRET` : clé de signature Svix pour l'endpoint `POST /api/webhooks/resend` (bounces email). À copier depuis le dashboard Resend → Webhooks.
-Bannière système : `BANNER_MESSAGE`, `BANNER_TYPE` (`info`|`warning`|`error`), `BANNER_ID` (timestamp ISO) — gérées via `POST /api/admin/banniere` et `DELETE /api/admin/banniere`.
 
 ## Sources de données
 
