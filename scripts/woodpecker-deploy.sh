@@ -9,11 +9,13 @@ SCP="scp -i /tmp/key -o StrictHostKeyChecking=no"
 HOST="root@${LXC_JAVA_HOST}"
 
 $SSH "$HOST" "mkdir -p /opt/strapontin/scripts"
-$SCP scripts/backup.sh scripts/restore.sh scripts/update.sh "$HOST":/opt/strapontin/scripts/
-$SSH "$HOST" "chmod +x /opt/strapontin/scripts/backup.sh /opt/strapontin/scripts/restore.sh /opt/strapontin/scripts/update.sh"
+$SCP scripts/backup.sh scripts/backup-local.sh scripts/restore.sh scripts/update.sh "$HOST":/opt/strapontin/scripts/
+$SSH "$HOST" "chmod +x /opt/strapontin/scripts/backup.sh /opt/strapontin/scripts/backup-local.sh /opt/strapontin/scripts/restore.sh /opt/strapontin/scripts/update.sh"
 
-echo "[deploy] Backup DB avant deploiement..."
-$SSH "$HOST" /opt/strapontin/scripts/backup.sh
+echo "[deploy] Backup NAS avant deploiement..."
+$SSH "$HOST" /opt/strapontin/scripts/backup.sh || echo "[deploy] Backup NAS ignoré (NAS non monté)"
+echo "[deploy] Backup local avant deploiement..."
+$SSH "$HOST" /opt/strapontin/scripts/backup-local.sh
 echo "[deploy] Backup OK"
 
 WEB_JAR=$(find java/web/target -maxdepth 1 -name "web-*.jar" -not -name "*.original" -type f)

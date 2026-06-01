@@ -355,7 +355,31 @@ Persistent=true
 WantedBy=timers.target
 UNIT"
 
-pct exec "$VMID" -- bash -c "systemctl daemon-reload && systemctl enable strapontin-web strapontin-worker strapontin-backup.timer && systemctl start strapontin-backup.timer"
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-backup-local.service << 'UNIT'
+[Unit]
+Description=Strapontin — backup local (dump + .env + logs)
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/strapontin/scripts/backup-local.sh
+UNIT"
+
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-backup-local.timer << 'UNIT'
+[Unit]
+Description=Backup local quotidien Strapontin
+After=network.target
+
+[Timer]
+OnCalendar=*-*-* 01:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+UNIT"
+
+pct exec "$VMID" -- bash -c "systemctl daemon-reload && systemctl enable strapontin-web strapontin-worker strapontin-backup.timer strapontin-backup-local.timer && systemctl start strapontin-backup-local.timer"
 
 # ---------------------------------------------------------------
 # 8. SSH développeur
