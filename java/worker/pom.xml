@@ -13,6 +13,11 @@
 
     <artifactId>worker</artifactId>
 
+    <properties>
+        <!-- JNA (Testcontainers) appelle System::load, restreint en Java 25+ -->
+        <argLine>--enable-native-access=ALL-UNNAMED</argLine>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>fr.strapontin</groupId>
