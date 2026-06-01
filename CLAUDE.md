@@ -11,8 +11,13 @@ strapontin/
 │   ├── web/          ← Spring Boot (REST API + Thymeleaf UI, port 8080)
 │   └── worker/       ← Spring Boot + Quartz (port 8081)
 └── scripts/
-    ├── provision.sh  ← provisionnement LXC dev|prod (Proxmox) ; copie update.sh via pct push
-    └── update.sh     ← restart services + healthcheck ; appelé par Woodpecker (prod) ou manuellement (dev)
+    ├── provision.sh          ← provisionnement LXC dev|prod (Proxmox)
+    ├── update.sh             ← restart services + healthcheck ; appelé par Woodpecker
+    ├── backup.sh             ← dump PostgreSQL + .env + logs → NAS (/mnt/backup/)
+    ├── backup-local.sh       ← dump PostgreSQL + .env + logs → local (/opt/strapontin/backup/, rétention 7j)
+    ├── woodpecker-backup.sh  ← appelé par le step backup Woodpecker (copie + exécute backup-local.sh)
+    ├── woodpecker-deploy.sh  ← appelé par le step deploy Woodpecker
+    └── restore.sh            ← restauration depuis archive tar.gz (NAS ou local)
 ```
 
 ## Architecture module web — couche service/repository
@@ -26,10 +31,10 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - **Repositories** (`@Repository`, package-private) : SQL pur, `NamedParameterJdbcTemplate`
 - **Services** (`@Service`) : logique métier, `@Transactional` sur les méthodes multi-JDBC
 - **Records** : top-level dans le package domaine (plus d'inner classes dans les contrôleurs)
-- `GlobalExceptionHandler` (`@RestControllerAdvice`) : `DuplicateKeyException` → 409, `DataAccessException` → 500
+- `GlobalExceptionHandler` (`@RestControllerAdvice`) : `NoResourceFoundException` → 404, `HttpRequestMethodNotSupportedException` → 405, `AuthenticationException` → 401, `DuplicateKeyException` → 409, `DataAccessException` → 500
 - Référence : `PersisterConcerts` + `RecalculerMatchesService` dans `java/worker/`
 
-## Stack technique (v2.1.0)
+## Stack technique (v2.1.1)
 
 - **Spring Boot 4.0.6** + Thymeleaf — UI SSR + REST API (port 8080)
 - **Spring Security 7** — auth session, form login, TOTP 2FA optionnel (bucket4j rate-limiting)
@@ -102,7 +107,7 @@ Labels : `Bug`, `Feature`, `Question`, `Task`, `Duplicate`, `Invalid`.
 
 ### Pipeline Woodpecker (.woodpecker.yaml)
 
-Pipeline Maven actif : test → build → deploy, tous restreints à `branch: main`. Secrets requis : `ssh_key`, `lxc_host`.
+Pipeline Maven active : **test → build → backup → deploy**, tous restreints à `branch: main`. Secrets requis : `ssh_key`, `lxc_host`. Le step `backup` exécute `woodpecker-backup.sh` (backup local sur le LXC prod avant déploiement).
 
 > **Woodpecker — repo trusted** : le repo doit être marqué "trusted" (Settings → repo → cocher "Trusted") pour autoriser les volumes Maven dans le pipeline.
 
@@ -183,7 +188,7 @@ Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de
 - Identifiants en français (`nombreUtilisateurs`, `calculerTotal`)
 - Logging : SLF4J, jamais `System.out`
 - **Tests Java** : `mvn -pl core,sources test` (unitaires). `mvn -pl worker test -am` requiert Docker (Testcontainers).
-- **Tests E2E** : Playwright (`e2e/`) — 52 tests, nécessite LXC dev actif (port 8080)
+- **Tests E2E** : Playwright (`e2e/`) — 56 tests (smoke tests navigation + auth + admin + toasts), nécessite LXC dev actif (port 8080)
   - Lancer : `cd e2e && npx playwright test`
   - Credentials : `E2E_IDENTIFIANT=kwaite E2E_MOT_DE_PASSE=... npx playwright test` (si session expirée)
   - Résultats : `e2e/test-results/results.json` (reporter JSON)
