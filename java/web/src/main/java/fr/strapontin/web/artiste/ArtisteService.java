@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
+import fr.strapontin.web.admin.LogAdminService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -42,12 +43,18 @@ public class ArtisteService {
   private final ArtisteRepository artisteRepository;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
+  private final LogAdminService logAdminService;
 
   /// @param artisteRepository accès aux données artistes
   /// @param objectMapper      désérialiseur JSON (pour l'API Deezer)
-  public ArtisteService(ArtisteRepository artisteRepository, ObjectMapper objectMapper) {
+  /// @param logAdminService   journalisation des actions admin
+  public ArtisteService(
+      ArtisteRepository artisteRepository,
+      ObjectMapper objectMapper,
+      LogAdminService logAdminService) {
     this.artisteRepository = artisteRepository;
     this.objectMapper = objectMapper;
+    this.logAdminService = logAdminService;
     this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
   }
 
@@ -132,6 +139,9 @@ public class ArtisteService {
   /// @param artisteNormalise nom normalisé de l'artiste
   public void supprimer(String userId, String artisteNormalise) {
     artisteRepository.supprimer(userId, artisteNormalise);
+    log.info("artiste supprimé userId={} artiste={}", userId, artisteNormalise);
+    logAdminService.logAdmin(
+        "warn", "web", "artiste supprimé", Map.of("userId", userId, "artiste", artisteNormalise));
   }
 
   private List<SuggestionArtiste> rechercherDeezer(String terme) {

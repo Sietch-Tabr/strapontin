@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 /// La clé de signature doit être configurée dans `app_config` sous la clé
 /// `RESEND_WEBHOOK_SECRET` (visible depuis `/admin`).
 ///
-/// @since 2.2.0
+/// @since 2.1.0
 /// @author Kwaite
 @RestController
 public class ResendWebhookController {

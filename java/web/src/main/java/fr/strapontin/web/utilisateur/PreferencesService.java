@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import fr.strapontin.web.admin.LogAdminService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -39,12 +40,18 @@ public class PreferencesService {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
+  private final LogAdminService logAdminService;
 
-  /// @param jdbc         accès JDBC
-  /// @param objectMapper désérialiseur JSON
-  public PreferencesService(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
+  /// @param jdbc            accès JDBC
+  /// @param objectMapper    désérialiseur JSON
+  /// @param logAdminService journalisation des actions admin
+  public PreferencesService(
+      NamedParameterJdbcTemplate jdbc,
+      ObjectMapper objectMapper,
+      LogAdminService logAdminService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
+    this.logAdminService = logAdminService;
     this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
   }
 
@@ -95,7 +102,20 @@ public class PreferencesService {
     }
 
     declencherWorkerApresImport(export.salles());
-    return new ResultatImportComplet(artistes[0], salles[0], artistes[1] + salles[1]);
+    ResultatImportComplet resultat = new ResultatImportComplet(artistes[0], salles[0], artistes[1] + salles[1]);
+    log.info(
+        "import préférences userId={} artistes={} salles={} rejetes={} mode={}",
+        userId, resultat.artistes(), resultat.salles(), resultat.rejetes(),
+        ecraser ? "ecraser" : "fusionner");
+    logAdminService.logAdmin(
+        "info", "web", "import préférences",
+        Map.of(
+            "userId", userId,
+            "artistes", resultat.artistes(),
+            "salles", resultat.salles(),
+            "rejetes", resultat.rejetes(),
+            "mode", ecraser ? "ecraser" : "fusionner"));
+    return resultat;
   }
 
   /// Exporte les préférences de l'utilisateur (artistes, salles, config).
