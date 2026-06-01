@@ -11,14 +11,26 @@ APP_DIR="/opt/strapontin"
 mkdir -p "$BACKUP_DIR"
 
 HORODATAGE=$(date +%Y%m%d_%H%M%S)
+ARCHIVE="$BACKUP_DIR/strapontin_${HORODATAGE}.tar.gz"
 
-notifier_echec() {
+_appel_statut() {
     curl -sf -X POST \
-        "http://localhost:8080/api/interne/backup-alerte?horodatage=$HORODATAGE" \
+        --data-urlencode "statut=$1" \
+        --data-urlencode "horodatage=$HORODATAGE" \
+        --data-urlencode "raison=${2:-}" \
+        --data-urlencode "archive=${3:-}" \
+        "http://localhost:8080/api/interne/backup-statut" \
         >/dev/null 2>&1 || true
 }
-trap notifier_echec ERR
-ARCHIVE="$BACKUP_DIR/strapontin_${HORODATAGE}.tar.gz"
+
+notifier_echec() {
+    _appel_statut "echec" "Échec à la ligne $ERREUR_LIGNE : $ERREUR_CMD" ""
+}
+
+ERREUR_CMD=""
+ERREUR_LIGNE=0
+trap 'ERREUR_CMD=$BASH_COMMAND; ERREUR_LIGNE=$LINENO' ERR
+trap notifier_echec EXIT
 
 echo "Sauvegarde locale en cours — $HORODATAGE"
 
@@ -45,3 +57,7 @@ find "$BACKUP_DIR" -name "strapontin_*.tar.gz" -mtime +7 -delete
 echo "  purge   : OK (rétention 7 jours)"
 
 echo "Sauvegarde locale terminée"
+
+# Succès — désarmer le trap d'échec avant d'appeler le statut succès
+trap - EXIT
+_appel_statut "succes" "" "$ARCHIVE"
