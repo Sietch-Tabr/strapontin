@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# backup.sh — dump PostgreSQL + .env dans une archive tar.gz vers le NAS
+# backup.sh — dump PostgreSQL + .env + logs dans une archive tar.gz vers le NAS
 # Usage : bash /opt/strapontin/scripts/backup.sh
 # À exécuter en tant que root depuis le LXC.
 
@@ -22,13 +22,20 @@ echo "Sauvegarde en cours — $HORODATAGE"
 su - postgres -c "pg_dump strapontin" > /tmp/dump.sql
 echo "  dump DB : OK"
 
-# Archive tar.gz : dump.sql + .env
+# Archive tar.gz : dump.sql + .env + logs
+TAR_ARGS=(-czf "$ARCHIVE" -C /tmp dump.sql)
+
 if [ -f "$APP_DIR/.env" ]; then
-    tar -czf "$ARCHIVE" -C /tmp dump.sql -C "$APP_DIR" .env
+    TAR_ARGS+=(-C "$APP_DIR" .env)
     echo "  .env    : OK"
-else
-    tar -czf "$ARCHIVE" -C /tmp dump.sql
 fi
+
+if [ -d "$APP_DIR/logs" ]; then
+    TAR_ARGS+=(-C "$APP_DIR" logs)
+    echo "  logs    : OK"
+fi
+
+tar "${TAR_ARGS[@]}"
 rm /tmp/dump.sql
 echo "  archive : $ARCHIVE"
 
