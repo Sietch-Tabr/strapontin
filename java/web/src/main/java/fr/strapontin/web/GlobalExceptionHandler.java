@@ -11,10 +11,13 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /// Gestionnaire centralisé des exceptions pour tous les contrôleurs REST.
 ///
@@ -72,6 +75,36 @@ public class GlobalExceptionHandler {
   public Map<String, Object> gererDoublon(DuplicateKeyException ex) {
     log.debug("Contrainte d'unicité violée : {}", ex.getMessage());
     return Map.of("erreur", "Cette ressource existe déjà.");
+  }
+
+  /// Retourne 404 pour les ressources statiques introuvables (favicon, etc.).
+  ///
+  /// @param ex l'exception de ressource absente
+  /// @return `{"erreur": "Ressource introuvable."}`
+  @ExceptionHandler(NoResourceFoundException.class)
+  @ResponseStatus(HttpStatus.NOT_FOUND)
+  public Map<String, Object> gererRessourceIntrouvable(NoResourceFoundException ex) {
+    return Map.of("erreur", "Ressource introuvable.");
+  }
+
+  /// Retourne 405 pour les méthodes HTTP non supportées sur un endpoint.
+  ///
+  /// @param ex l'exception de méthode non supportée
+  /// @return `{"erreur": "Méthode non supportée."}`
+  @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+  @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+  public Map<String, Object> gererMethodeNonSupportee(HttpRequestMethodNotSupportedException ex) {
+    return Map.of("erreur", "Méthode non supportée.");
+  }
+
+  /// Retourne 401 pour les exceptions d'authentification Spring Security.
+  ///
+  /// @param ex l'exception d'authentification
+  /// @return `{"erreur": "Authentification requise."}`
+  @ExceptionHandler(AuthenticationException.class)
+  @ResponseStatus(HttpStatus.UNAUTHORIZED)
+  public Map<String, Object> gererErreurAuthentification(AuthenticationException ex) {
+    return Map.of("erreur", "Authentification requise.");
   }
 
   /// Retourne 500 en cas d'erreur d'accès aux données (hors doublon).

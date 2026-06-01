@@ -9,6 +9,7 @@ import fr.strapontin.web.utilisateur.UserConfigService;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -85,6 +86,11 @@ public class AccueilViewController {
   /// @return redirect vers la page d'accueil (PRG)
   @PostMapping("/masquer/{concertId}")
   public String masquer(@PathVariable String concertId, Authentication auth) {
+    try {
+      UUID.fromString(concertId);
+    } catch (IllegalArgumentException _) {
+      return REDIRECT_ACCUEIL;
+    }
     jdbc.update(
         """
         UPDATE user_matches SET masque_le = NOW()
@@ -151,6 +157,11 @@ public class AccueilViewController {
   /// @return redirect vers la page d'accueil (PRG)
   @PostMapping("/demasquer/{concertId}")
   public String demasquer(@PathVariable String concertId, Authentication auth) {
+    try {
+      UUID.fromString(concertId);
+    } catch (IllegalArgumentException _) {
+      return REDIRECT_ACCUEIL;
+    }
     jdbc.update(
         """
         UPDATE user_matches SET masque_le = NULL
