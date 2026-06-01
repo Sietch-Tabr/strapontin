@@ -379,6 +379,37 @@ public class EmailService {
     }
   }
 
+  /// Envoie une alerte à l'admin quand le backup nocturne a échoué.
+  ///
+  /// @param horodatage l'horodatage du backup (format YYYYMMDD_HHMMSS), ou chaîne vide
+  public void envoyerAlerteBackup(String horodatage) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — alerte backup non envoyée");
+      return;
+    }
+
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("horodatage", horodatage);
+    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
+    String corps = rendreCours("alerte-backup", vars);
+
+    String sujet = "Strapontin — échec backup nocturne";
+    try {
+      envoyer(
+          ctx.get(),
+          ctx.get().replyTo(),
+          ctx.get().replyTo(),
+          sujet,
+          corps,
+          "Échec du backup nocturne. Horodatage : %s. Consultez l'administration : %s/admin"
+              .formatted(horodatage.isBlank() ? "inconnu" : horodatage, ctx.get().baseUrl()));
+      log.info("Alerte backup envoyée");
+    } catch (Exception e) {
+      log.error("Échec envoi alerte backup", e);
+    }
+  }
+
   /// Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3 heures.
   ///
   /// @param email               l'adresse email de l'administrateur

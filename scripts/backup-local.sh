@@ -11,6 +11,20 @@ APP_DIR="/opt/strapontin"
 mkdir -p "$BACKUP_DIR"
 
 HORODATAGE=$(date +%Y%m%d_%H%M%S)
+
+notifier_echec() {
+    local token=""
+    if [ -f "$APP_DIR/.env" ]; then
+        token=$(grep '^BACKUP_ALERTE_TOKEN=' "$APP_DIR/.env" | cut -d= -f2- || true)
+    fi
+    if [ -n "$token" ]; then
+        curl -sf -X POST \
+            -H "X-Backup-Token: $token" \
+            "http://localhost:8080/api/interne/backup-alerte?horodatage=$HORODATAGE" \
+            >/dev/null 2>&1 || true
+    fi
+}
+trap notifier_echec ERR
 ARCHIVE="$BACKUP_DIR/strapontin_${HORODATAGE}.tar.gz"
 
 echo "Sauvegarde locale en cours — $HORODATAGE"
