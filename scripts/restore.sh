@@ -19,15 +19,24 @@ echo "[1/5] Arrêt des services..."
 systemctl stop strapontin-web strapontin-worker
 
 echo "[2/5] Extraction de l'archive..."
-tar -xzf "$FICHIER" -C /tmp dump.sql
-echo "  dump.sql extrait"
+if tar -tzf "$FICHIER" | grep -q "^dump\.sql$"; then
+    tar -xzf "$FICHIER" -C /tmp dump.sql
+    DUMP=/tmp/dump.sql
+elif tar -tzf "$FICHIER" | grep -q "^dump_local\.sql$"; then
+    tar -xzf "$FICHIER" -C /tmp dump_local.sql
+    DUMP=/tmp/dump_local.sql
+else
+    echo "ERREUR : aucun dump SQL trouvé dans l'archive" >&2
+    exit 1
+fi
+echo "  $DUMP extrait"
 
 echo "[3/5] Réinitialisation de la base..."
 su - postgres -c "dropdb --if-exists strapontin && createdb strapontin"
 
 echo "[4/5] Restauration du dump..."
-su - postgres -c "psql strapontin" < /tmp/dump.sql
-rm /tmp/dump.sql
+su - postgres -c "psql strapontin" < "$DUMP"
+rm "$DUMP"
 
 echo "[5/5] Redémarrage des services..."
 systemctl start strapontin-web strapontin-worker
@@ -36,7 +45,7 @@ echo ""
 echo "================================================================"
 echo "  Restauration terminée"
 echo "  Vérifiez l'application : curl -sf http://localhost:8080/actuator/health"
-echo "  IMPORTANT : restaurer aussi le .env de l'archive pour que"
+echo "  IMPORTANT : si l'archive contient un .env, le restaurer pour que"
 echo "  APP_CONFIG_SECRET corresponde aux donnees chiffrees du dump :"
 echo "    tar -xzf $FICHIER -C $APP_DIR .env"
 echo "    systemctl restart strapontin-web strapontin-worker"

@@ -133,7 +133,7 @@ public class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/webhooks/resend")
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/interne/backup-alerte")
+                    .requestMatchers(HttpMethod.POST, "/api/interne/backup-statut")
                     .permitAll()
                     .requestMatchers("/auth/totp", "/parametres/totp", "/parametres/totp/**")
                     .authenticated()

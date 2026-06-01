@@ -371,8 +371,11 @@ public class EmailService {
           ctx.get().replyTo(),
           "Strapontin — bounce email : " + emailBouncee,
           corps,
-          "Bounce détecté sur : " + emailBouncee + ". Consultez l'administration : "
-              + ctx.get().baseUrl() + "/admin");
+          "Bounce détecté sur : "
+              + emailBouncee
+              + ". Consultez l'administration : "
+              + ctx.get().baseUrl()
+              + "/admin");
       log.info("Notification bounce envoyée pour : {}", emailBouncee);
     } catch (Exception e) {
       log.error("Échec envoi notification bounce", e);
@@ -382,7 +385,8 @@ public class EmailService {
   /// Envoie une alerte à l'admin quand le backup nocturne a échoué.
   ///
   /// @param horodatage l'horodatage du backup (format YYYYMMDD_HHMMSS), ou chaîne vide
-  public void envoyerAlerteBackup(String horodatage) {
+  /// @param raison     la commande bash ayant déclenché l'échec, ou chaîne vide
+  public void envoyerAlerteBackup(String horodatage, String raison) {
     Optional<ContexteEmail> ctx = obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — alerte backup non envoyée");
@@ -391,19 +395,19 @@ public class EmailService {
 
     Map<String, Object> vars = new HashMap<>();
     vars.put("horodatage", horodatage);
+    vars.put("raison", raison);
     vars.put(CLE_BASE_URL, ctx.get().baseUrl());
     String corps = rendreCours("alerte-backup", vars);
 
     String sujet = "Strapontin — échec backup nocturne";
+    String texte =
+        "Échec du backup nocturne. Horodatage : %s.%s Consultez l'administration : %s/admin"
+            .formatted(
+                horodatage.isBlank() ? "inconnu" : horodatage,
+                raison.isBlank() ? "" : " Raison : " + raison + ".",
+                ctx.get().baseUrl());
     try {
-      envoyer(
-          ctx.get(),
-          ctx.get().replyTo(),
-          ctx.get().replyTo(),
-          sujet,
-          corps,
-          "Échec du backup nocturne. Horodatage : %s. Consultez l'administration : %s/admin"
-              .formatted(horodatage.isBlank() ? "inconnu" : horodatage, ctx.get().baseUrl()));
+      envoyer(ctx.get(), ctx.get().replyTo(), ctx.get().replyTo(), sujet, corps, texte);
       log.info("Alerte backup envoyée");
     } catch (Exception e) {
       log.error("Échec envoi alerte backup", e);

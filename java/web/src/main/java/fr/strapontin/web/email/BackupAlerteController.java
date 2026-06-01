@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.email;
 
+import fr.strapontin.web.admin.LogAdminService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -11,9 +12,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Endpoint interne appelé par backup-local.sh en cas d'échec du backup nocturne.
+/// Endpoint interne appelé par backup-local.sh pour signaler le statut du backup nocturne.
 ///
-/// <p>Accessible uniquement depuis localhost (127.0.0.1) — pas de token requis.
+/// <p>Accessible uniquement depuis localhost (127.0.0.1).
+/// Enregistre le statut dans {@code logs_admin} et envoie un email d'alerte sur échec.
 ///
 /// @since 2.1.1
 /// @author Kwaite
@@ -21,24 +23,45 @@ import org.springframework.web.bind.annotation.RestController;
 public class BackupAlerteController {
 
   private final EmailService emailService;
+  private final LogAdminService logAdminService;
 
-  public BackupAlerteController(EmailService emailService) {
+  public BackupAlerteController(EmailService emailService, LogAdminService logAdminService) {
     this.emailService = emailService;
+    this.logAdminService = logAdminService;
   }
 
-  /// Notifie l'admin par email qu'un backup nocturne a échoué.
+  /// Notifie l'app du statut du backup nocturne.
   ///
-  /// @param horodatage l'horodatage du backup échoué (optionnel)
-  /// @param request    la requête HTTP (pour vérification de l'IP source)
-  /// @return 200 si l'email est envoyé, 403 si l'appel ne vient pas de localhost
-  @PostMapping("/api/interne/backup-alerte")
-  public ResponseEntity<Map<String, Object>> alerterBackup(
-      @RequestParam(defaultValue = "") String horodatage, HttpServletRequest request) {
-    if (!"127.0.0.1".equals(request.getRemoteAddr())
-        && !"0:0:0:0:0:0:0:1".equals(request.getRemoteAddr())) {
+  /// <p>Sur {@code statut=echec} : log warn dans {@code logs_admin} + email admin.
+  /// Sur {@code statut=succes} : log info dans {@code logs_admin}.
+  ///
+  /// @param statut     {@code succes} ou {@code echec}
+  /// @param horodatage l'horodatage du backup (format YYYYMMDD_HHMMSS)
+  /// @param raison     la commande ayant échoué (optionnel, échec uniquement)
+  /// @param archive    le chemin de l'archive créée (optionnel, succès uniquement)
+  /// @param request    la requête HTTP (vérification IP source)
+  /// @return 200 si traité, 403 si l'appel ne vient pas de localhost
+  @PostMapping("/api/interne/backup-statut")
+  public ResponseEntity<Map<String, Object>> signalerStatut(
+      @RequestParam(defaultValue = "") String statut,
+      @RequestParam(defaultValue = "") String horodatage,
+      @RequestParam(defaultValue = "") String raison,
+      @RequestParam(defaultValue = "") String archive,
+      HttpServletRequest request) {
+    String adresse = request.getRemoteAddr();
+    if (!"127.0.0.1".equals(adresse) && !"0:0:0:0:0:0:0:1".equals(adresse)) {
       return ResponseEntity.status(403).body(Map.of("erreur", "Accès refusé."));
     }
-    emailService.envoyerAlerteBackup(horodatage);
+    if ("succes".equals(statut)) {
+      logAdminService.logAdmin(
+          "info", "web", "backup local terminé",
+          Map.of("horodatage", horodatage, "archive", archive));
+    } else {
+      logAdminService.logAdmin(
+          "warn", "web", "backup local échoué",
+          Map.of("horodatage", horodatage, "raison", raison));
+      emailService.envoyerAlerteBackup(horodatage, raison);
+    }
     return ResponseEntity.ok(Map.of("ok", true));
   }
 }
