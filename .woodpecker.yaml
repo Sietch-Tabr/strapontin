@@ -34,13 +34,8 @@ steps:
       LXC_JAVA_HOST:
         from_secret: lxc_host
     commands:
-      - apk add --no-cache openssh-client
-      - echo "$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
-      - scp -i /tmp/key -o StrictHostKeyChecking=no scripts/backup-local.sh
-        root@${LXC_JAVA_HOST}:/opt/strapontin/scripts/backup-local.sh
-      - ssh -i /tmp/key -o StrictHostKeyChecking=no root@${LXC_JAVA_HOST}
-        "chmod +x /opt/strapontin/scripts/backup-local.sh && bash /opt/strapontin/scripts/backup-local.sh"
-      - rm /tmp/key
+      - apk add --no-cache openssh-client bash
+      - bash scripts/woodpecker-backup.sh
     when:
       - event: push
         branch: main
