@@ -32,9 +32,10 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - **Services** (`@Service`) : logique métier, `@Transactional` sur les méthodes multi-JDBC
 - **Records** : top-level dans le package domaine (plus d'inner classes dans les contrôleurs)
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) : `NoResourceFoundException` → 404, `HttpRequestMethodNotSupportedException` → 405, `AuthenticationException` → 401, `DuplicateKeyException` → 409, `DataAccessException` → 500
+- `ClientController` (`/api/client/erreur`) : remontée des erreurs JS des navigateurs vers `logs_admin`, source `client-js`
 - Référence : `PersisterConcerts` + `RecalculerMatchesService` dans `java/worker/`
 
-## Stack technique (v2.1.1)
+## Stack technique (v2.1.2)
 
 - **Spring Boot 4.0.6** + Thymeleaf — UI SSR + REST API (port 8080)
 - **Spring Security 7** — auth session, form login, TOTP 2FA optionnel (bucket4j rate-limiting)
