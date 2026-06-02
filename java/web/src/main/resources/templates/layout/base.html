@@ -122,7 +122,12 @@
     </div>
 
     <!-- Navigation mobile — masquée pour les requêtes HTMX (fragment rendering) -->
-    <nav id="bottom-nav" class="bottom-nav" th:if="${!reqHtmx}" aria-label="Navigation principale">
+    <nav
+      id="bottom-nav"
+      class="bottom-nav"
+      th:if="${!reqHtmx}"
+      aria-label="Navigation principale"
+    >
       <div class="bottom-nav-items">
         <th:block th:each="item : ${navPrincipal}">
           <a
@@ -175,7 +180,11 @@
     </nav>
 
     <!-- Drawer navigation mobile — masqué pour les requêtes HTMX (fragment rendering) -->
-    <dialog id="dialog-nav-plus" th:if="${!reqHtmx}" aria-label="Menu supplémentaire">
+    <dialog
+      id="dialog-nav-plus"
+      th:if="${!reqHtmx}"
+      aria-label="Menu supplémentaire"
+    >
       <div class="dialog-nav-handle" aria-hidden="true"></div>
       <div class="dialog-nav-contenu">
         <a
