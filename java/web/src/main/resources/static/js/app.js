@@ -1083,77 +1083,80 @@ function initPush() {
     }
   }
 
-  if (btnActiver) btnActiver.addEventListener("click", async function () {
-    if (!pushClePublique || pushEnCours) return;
-    pushEnCours = true;
-    masquerErreur();
-    btnActiver.disabled = true;
-    btnActiver.textContent = "Activation…";
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        if (permission === "denied") majEtat();
-        return;
+  if (btnActiver)
+    btnActiver.addEventListener("click", async function () {
+      if (!pushClePublique || pushEnCours) return;
+      pushEnCours = true;
+      masquerErreur();
+      btnActiver.disabled = true;
+      btnActiver.textContent = "Activation…";
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          if (permission === "denied") majEtat();
+          return;
+        }
+        const registration = await navigator.serviceWorker.ready;
+        const abonnement = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64VersUint8Array(pushClePublique),
+        });
+        const rep = await fetch("/api/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            endpoint: abonnement.endpoint,
+            keys: {
+              p256dh: arrayBufferVersBase64(abonnement.getKey("p256dh")),
+              auth: arrayBufferVersBase64(abonnement.getKey("auth")),
+            },
+          }),
+        });
+        if (!rep.ok) {
+          afficherErreur("Échec enregistrement");
+          return;
+        }
+        pushAbonnement = abonnement;
+        document.cookie =
+          "push_opt_in=1;path=/;max-age=31536000;SameSite=Strict";
+        majEtat();
+        afficherToast("Notifications push activées.", "succes");
+      } catch (e) {
+        afficherErreur(e.message || "Une erreur est survenue.");
+      } finally {
+        pushEnCours = false;
+        btnActiver.disabled = false;
+        btnActiver.textContent = "Activer les notifications push";
       }
-      const registration = await navigator.serviceWorker.ready;
-      const abonnement = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64VersUint8Array(pushClePublique),
-      });
-      const rep = await fetch("/api/push", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endpoint: abonnement.endpoint,
-          keys: {
-            p256dh: arrayBufferVersBase64(abonnement.getKey("p256dh")),
-            auth: arrayBufferVersBase64(abonnement.getKey("auth")),
-          },
-        }),
-      });
-      if (!rep.ok) {
-        afficherErreur("Échec enregistrement");
-        return;
-      }
-      pushAbonnement = abonnement;
-      document.cookie = "push_opt_in=1;path=/;max-age=31536000;SameSite=Strict";
-      majEtat();
-      afficherToast("Notifications push activées.", "succes");
-    } catch (e) {
-      afficherErreur(e.message || "Une erreur est survenue.");
-    } finally {
-      pushEnCours = false;
-      btnActiver.disabled = false;
-      btnActiver.textContent = "Activer les notifications push";
-    }
-  });
+    });
 
-  if (btnDesactiver) btnDesactiver.addEventListener("click", async function () {
-    if (!pushAbonnement || pushEnCours) return;
-    pushEnCours = true;
-    masquerErreur();
-    btnDesactiver.disabled = true;
-    btnDesactiver.textContent = "Désactivation…";
-    try {
-      const endpoint = pushAbonnement.endpoint;
-      await pushAbonnement.unsubscribe();
-      await fetch("/api/push", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpoint: endpoint }),
-      });
-      pushAbonnement = null;
-      document.cookie = "push_opt_in=;path=/;max-age=0;SameSite=Strict";
-      majEtat();
-      afficherToast("Notifications push désactivées.", "info");
-    } catch (e) {
-      afficherErreur(e.message || "Une erreur est survenue.");
-    } finally {
-      pushEnCours = false;
-      btnDesactiver.disabled = false;
-      btnDesactiver.textContent = "Désactiver les notifications push";
-    }
-  });
+  if (btnDesactiver)
+    btnDesactiver.addEventListener("click", async function () {
+      if (!pushAbonnement || pushEnCours) return;
+      pushEnCours = true;
+      masquerErreur();
+      btnDesactiver.disabled = true;
+      btnDesactiver.textContent = "Désactivation…";
+      try {
+        const endpoint = pushAbonnement.endpoint;
+        await pushAbonnement.unsubscribe();
+        await fetch("/api/push", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: endpoint }),
+        });
+        pushAbonnement = null;
+        document.cookie = "push_opt_in=;path=/;max-age=0;SameSite=Strict";
+        majEtat();
+        afficherToast("Notifications push désactivées.", "info");
+      } catch (e) {
+        afficherErreur(e.message || "Une erreur est survenue.");
+      } finally {
+        pushEnCours = false;
+        btnDesactiver.disabled = false;
+        btnDesactiver.textContent = "Désactiver les notifications push";
+      }
+    });
 
   chargerEtat();
 }
@@ -1277,6 +1280,18 @@ function initTout() {
 
 document.addEventListener("DOMContentLoaded", initTout);
 document.addEventListener("htmx:afterSettle", initTout);
+
+if (navigator.serviceWorker) {
+  navigator.serviceWorker.addEventListener("message", function (e) {
+    if (e.data?.type !== "nav-ancre") return;
+    var cible = new URL(e.data.url, location.origin);
+    if (location.pathname === cible.pathname && cible.hash) {
+      document.querySelector(cible.hash)?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      window.location.href = e.data.url;
+    }
+  });
+}
 
 // Masque la bannière dismissée avant @starting-style (synchrone, avant le premier rendu)
 document.addEventListener("htmx:afterSwap", function (e) {

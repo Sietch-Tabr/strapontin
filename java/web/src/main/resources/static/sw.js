@@ -138,7 +138,11 @@ self.addEventListener("notificationclick", (event) => {
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((liste) => {
         for (const client of liste) {
-          if (client.url === url && "focus" in client) return client.focus();
+          if ("focus" in client) {
+            return client
+              .focus()
+              .then(() => client.postMessage({ type: "nav-ancre", url }));
+          }
         }
         if (clients.openWindow) return clients.openWindow(url);
       }),

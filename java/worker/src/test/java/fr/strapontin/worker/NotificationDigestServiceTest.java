@@ -82,7 +82,8 @@ class NotificationDigestServiceTest {
   void construirePayloadPush_unConcert_contientArtisteEtSalle() throws Exception {
     var concert =
         new NotificationDigestService.ConcertNotif(
-            "Stromae", "2026-09-15", "Olympia", "Paris", "https://example.com", UUID.randomUUID().toString());
+            "Stromae", "2026-09-15", "Olympia", "Paris", "https://example.com",
+            UUID.randomUUID().toString(), "stromae");
 
     String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.kwaite.fr");
 
@@ -90,16 +91,18 @@ class NotificationDigestServiceTest {
     assertTrue(payload.contains("Olympia"), "Le payload push doit contenir la salle");
     assertTrue(payload.contains("\"title\""), "Le payload push doit avoir un champ title");
     assertTrue(payload.contains("\"body\""), "Le payload push doit avoir un champ body");
+    assertTrue(payload.contains("/#artiste-stromae"), "L'URL push doit pointer sur l'ancre accueil");
   }
 
   @Test
   void construirePayloadPush_plusieursConcerts_contientNombre() throws Exception {
     var c1 =
         new NotificationDigestService.ConcertNotif(
-            "Stromae", "2026-09-15", "Olympia", "Paris", null, UUID.randomUUID().toString());
+            "Stromae", "2026-09-15", "Olympia", "Paris", null, UUID.randomUUID().toString(), "stromae");
     var c2 =
         new NotificationDigestService.ConcertNotif(
-            "Aya Nakamura", "2026-10-01", "Accor Arena", "Paris", null, UUID.randomUUID().toString());
+            "Aya Nakamura", "2026-10-01", "Accor Arena", "Paris", null,
+            UUID.randomUUID().toString(), "aya nakamura");
 
     String payload = invoquerPayloadPush(List.of(c1, c2), "https://strapontin.kwaite.fr");
 
@@ -110,7 +113,8 @@ class NotificationDigestServiceTest {
   void construireCorpsEmail_formatHtml_contientArtiste() throws Exception {
     var concert =
         new NotificationDigestService.ConcertNotif(
-            "Indochine", "2026-08-20", "Zénith Paris", "Paris", "https://example.com", UUID.randomUUID().toString());
+            "Indochine", "2026-08-20", "Zénith Paris", "Paris", "https://example.com",
+            UUID.randomUUID().toString(), "indochine");
 
     String html = invoquerCorpsEmail("1 nouveau concert", List.of(concert), "https://strapontin.kwaite.fr");
 
@@ -130,6 +134,7 @@ class NotificationDigestServiceTest {
     ligne.put("salle", "Salle Test");
     ligne.put("ville", "Paris");
     ligne.put("url", null);
+    ligne.put("artiste_norm", "artiste test");
     return ligne;
   }
 
