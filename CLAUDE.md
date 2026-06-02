@@ -35,7 +35,7 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - `ClientController` (`/api/client/erreur`) : remontée des erreurs JS des navigateurs vers `logs_admin`, source `client-js`
 - Référence : `PersisterConcerts` + `RecalculerMatchesService` dans `java/worker/`
 
-## Stack technique (v2.1.2)
+## Stack technique (v2.1.3)
 
 - **Spring Boot 4.0.6** + Thymeleaf — UI SSR + REST API (port 8080)
 - **Spring Security 7** — auth session, form login, TOTP 2FA optionnel (bucket4j rate-limiting)
