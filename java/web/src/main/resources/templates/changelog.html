@@ -20,8 +20,27 @@
         </p>
 
         <section>
-          <h2 class="changelog-version">v 2.1.1 — 1er juin 2026</h2>
+          <h2 class="changelog-version">v 2.1.1 — 2 juin 2026</h2>
           <div class="changelog-entrees">
+            <div>
+              <p class="changelog-categorie">Performance</p>
+              <ul>
+                <li>
+                  La navigation entre les pages est plus rapide : seule la zone
+                  de contenu est rechargée côté serveur, sans renvoyer la barre
+                  latérale et la navigation mobile à chaque clic.
+                </li>
+                <li>
+                  Les pages HTML, CSS et JSON sont désormais compressés (Gzip)
+                  avant envoi, réduisant la taille des réponses de 60 à 70 %.
+                </li>
+                <li>
+                  La police et HTMX sont mis en cache par le service worker dès
+                  la première visite, évitant de les recharger à chaque session
+                  sur mobile et en mode PWA.
+                </li>
+              </ul>
+            </div>
             <div>
               <p class="changelog-categorie">Interface</p>
               <ul>
