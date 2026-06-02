@@ -65,7 +65,8 @@ public class AdminService {
   private static final Set<String> CLES_OBLIGATOIRES = Set.of("CONTACT_EMAIL", "PUBLIC_BASE_URL");
   private static final Pattern FORMAT_TM_KEY = Pattern.compile("^[A-Za-z0-9]{16,64}$");
   private static final Pattern FORMAT_RESEND_KEY = Pattern.compile("^re_[A-Za-z0-9_-]{10,}$");
-  private static final Pattern FORMAT_WEBHOOK_SECRET = Pattern.compile("^whsec_[A-Za-z0-9+/=]{16,}$");
+  private static final Pattern FORMAT_WEBHOOK_SECRET =
+      Pattern.compile("^whsec_[A-Za-z0-9+/=]{16,}$");
   private static final Set<String> ROLES_VALIDES = Set.of("user", "admin");
 
   private final NamedParameterJdbcTemplate jdbc;

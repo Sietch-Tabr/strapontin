@@ -6,6 +6,7 @@ package fr.strapontin.web.utilisateur;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.web.admin.LogAdminService;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -17,7 +18,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import fr.strapontin.web.admin.LogAdminService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -46,9 +46,7 @@ public class PreferencesService {
   /// @param objectMapper    désérialiseur JSON
   /// @param logAdminService journalisation des actions admin
   public PreferencesService(
-      NamedParameterJdbcTemplate jdbc,
-      ObjectMapper objectMapper,
-      LogAdminService logAdminService) {
+      NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper, LogAdminService logAdminService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.logAdminService = logAdminService;
@@ -81,13 +79,17 @@ public class PreferencesService {
     int nbSupprimesArtistes = 0;
     int nbSupprimesSalles = 0;
     if (ecraser) {
-      nbSupprimesArtistes = jdbc.update(
-          "DELETE FROM user_artistes WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
-      nbSupprimesSalles = jdbc.update(
-          "DELETE FROM user_salles WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
+      nbSupprimesArtistes =
+          jdbc.update(
+              "DELETE FROM user_artistes WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
+      nbSupprimesSalles =
+          jdbc.update(
+              "DELETE FROM user_salles WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
       log.warn(
           "import préférences mode écraser : {} artiste(s) et {} salle(s) supprimés userId={}",
-          nbSupprimesArtistes, nbSupprimesSalles, userId);
+          nbSupprimesArtistes,
+          nbSupprimesSalles,
+          userId);
     }
 
     int[] artistes = {0, 0};
@@ -109,10 +111,14 @@ public class PreferencesService {
     }
 
     declencherWorkerApresImport(export.salles());
-    ResultatImportComplet resultat = new ResultatImportComplet(artistes[0], salles[0], artistes[1] + salles[1]);
+    ResultatImportComplet resultat =
+        new ResultatImportComplet(artistes[0], salles[0], artistes[1] + salles[1]);
     log.info(
         "import préférences userId={} artistes={} salles={} rejetes={} mode={}",
-        userId, resultat.artistes(), resultat.salles(), resultat.rejetes(),
+        userId,
+        resultat.artistes(),
+        resultat.salles(),
+        resultat.rejetes(),
         ecraser ? "ecraser" : "fusionner");
     String niveauLog = ecraser ? "warn" : "info";
     Map<String, Object> metaImport = new java.util.LinkedHashMap<>();

@@ -34,6 +34,58 @@ test.describe("Scénario: admin — sections et contenus", () => {
   });
 });
 
+test.describe("Scénario: admin — gestion des utilisateurs", () => {
+  test("admin_creerPuisSupprimerUtilisateur_fluxComplet", async ({ page }) => {
+    const emailTest = `e2e-test-${Date.now()}@example.com`;
+
+    // Créer l'utilisateur
+    await page.goto("/admin#utilisateurs");
+    await page.fill('input[name="email"][type="email"]', emailTest);
+    await Promise.all([
+      page.waitForURL(/\/admin/, { waitUntil: "domcontentloaded" }),
+      page.click(
+        'form[action*="/admin/utilisateurs/creer"] button[type="submit"]',
+      ),
+    ]);
+
+    // Vérifier le dialog d'invitation
+    const dialog = page.locator("dialog#dialog-invitation");
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    const lienInvitation = await page
+      .locator("input#lien-invitation")
+      .inputValue();
+    expect(lienInvitation.length).toBeGreaterThan(0);
+    await page.click("button#btn-fermer-invitation");
+
+    // Retrouver la carte du compte créé
+    const carteUser = page
+      .locator(".user-carte")
+      .filter({ hasText: emailTest });
+    await expect(carteUser).toBeVisible({ timeout: 3000 });
+
+    // Supprimer via le form (hx-boost="false" → submit classique)
+    const formSupprimer = carteUser.locator("form.form-supprimer-user");
+    await expect(formSupprimer).toBeVisible();
+
+    // Le click sur "Supprimer" doit ouvrir le dialog de confirmation via JS
+    await formSupprimer.locator('button[type="submit"]').click();
+    await expect(page.locator("dialog#dialog-supprimer-user")).toBeVisible({
+      timeout: 3000,
+    });
+
+    // Confirmer la suppression
+    await Promise.all([
+      page.waitForURL(/\/admin/, { waitUntil: "domcontentloaded" }),
+      page.click("button#dialog-supprimer-user-confirmer"),
+    ]);
+
+    // Vérifier que l'utilisateur a disparu de la liste
+    await expect(
+      page.locator(".user-carte").filter({ hasText: emailTest }),
+    ).not.toBeVisible({ timeout: 5000 });
+  });
+});
+
 test.describe("Scénario: admin — API endpoints", () => {
   test("api_admin_quota_retourne_200", async ({ request }) => {
     const rep = await request.get("/api/admin/quota");

@@ -4,11 +4,11 @@
  */
 package fr.strapontin.web.email;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
 import com.resend.core.exception.ResendException;
 import com.resend.services.webhooks.model.VerifyWebhookOptions;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.util.Map;

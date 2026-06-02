@@ -14,7 +14,6 @@ const RESSOURCES_STATIQUES = [
   "/offline.html",
 ];
 
-
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
