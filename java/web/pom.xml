@@ -149,7 +149,7 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
 
-        <!-- HTMX + Alpine.js via webjars -->
+        <!-- HTMX via webjars -->
         <dependency>
             <groupId>org.webjars.npm</groupId>
             <artifactId>htmx.org</artifactId>

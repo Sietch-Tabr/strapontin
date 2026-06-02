@@ -137,6 +137,8 @@ public class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers("/auth/totp", "/parametres/totp", "/parametres/totp/**")
                     .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/client/erreur")
+                    .authenticated()
                     .requestMatchers("/api/admin/**", "/admin", "/admin/**")
                     .hasRole("ADMIN")
                     .requestMatchers(HttpMethod.POST, "/api/decouverte/fetcher")

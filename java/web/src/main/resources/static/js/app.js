@@ -342,26 +342,19 @@ function initParametres() {
 }
 
 // Drawer de navigation mobile (dialog natif)
-function initDrawer() {
-  const btnPlus = document.getElementById("btn-nav-plus");
-  if (!btnPlus) return;
-
-  btnPlus.addEventListener("click", function () {
-    const d = document.getElementById("dialog-nav-plus");
-    if (!d) return;
-    if (d.open) {
-      d.close();
-    } else {
-      d.showModal();
-      btnPlus.setAttribute("aria-expanded", "true");
-    }
-  });
-}
-
-function initDrawerDialog() {
+function initDrawerNavigation() {
   const btnPlus = document.getElementById("btn-nav-plus");
   const dialog = document.getElementById("dialog-nav-plus");
   if (!btnPlus || !dialog) return;
+
+  btnPlus.addEventListener("click", function () {
+    if (dialog.open) {
+      dialog.close();
+    } else {
+      dialog.showModal();
+      btnPlus.setAttribute("aria-expanded", "true");
+    }
+  });
 
   dialog.addEventListener("click", function (e) {
     if (e.target === dialog) dialog.close();
@@ -903,14 +896,14 @@ function initGestionUtilisateurs() {
 
     document
       .getElementById("dialog-supprimer-user-confirmer")
-      .addEventListener("click", function () {
+      ?.addEventListener("click", function () {
         dialogSuppr.close();
         if (formSupprEnAttente) formSupprEnAttente.submit();
       });
 
     document
       .getElementById("dialog-supprimer-user-annuler")
-      .addEventListener("click", function () {
+      ?.addEventListener("click", function () {
         dialogSuppr.close();
         formSupprEnAttente = null;
       });
@@ -1185,6 +1178,71 @@ function initBarresProgression() {
   });
 }
 
+// Observabilité JS — remontée des erreurs client vers logs_admin
+(function () {
+  var MAX_ERREURS = 5;
+  var FENETRE_MS = 60000;
+
+  function peutSignalerErreur() {
+    var maintenant = Date.now();
+    var compte = parseInt(sessionStorage.getItem("err_compte") || "0", 10);
+    var depuis = parseInt(sessionStorage.getItem("err_depuis") || "0", 10);
+    if (maintenant - depuis > FENETRE_MS) {
+      compte = 0;
+      depuis = maintenant;
+    }
+    if (compte >= MAX_ERREURS) return false;
+    sessionStorage.setItem("err_compte", compte + 1);
+    sessionStorage.setItem("err_depuis", depuis);
+    return true;
+  }
+
+  function signalerErreur(charge) {
+    if (!peutSignalerErreur()) return;
+    fetch("/api/client/erreur", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(charge),
+    }).catch(function () {});
+  }
+
+  window.addEventListener("error", function (e) {
+    signalerErreur({
+      message: e.message || "Erreur inconnue",
+      type: "js-error",
+      url: e.filename || "",
+      ligne: e.lineno || 0,
+      colonne: e.colno || 0,
+    });
+  });
+
+  window.addEventListener("unhandledrejection", function (e) {
+    signalerErreur({
+      message: String(e.reason) || "Rejection non gérée",
+      type: "promise-rejection",
+    });
+  });
+
+  document.addEventListener("htmx:sendError", function (e) {
+    var chemin = (e.detail.requestConfig && e.detail.requestConfig.path) || "";
+    signalerErreur({
+      message: "htmx:sendError — " + chemin,
+      type: "htmx-error",
+      url: chemin,
+    });
+  });
+
+  document.addEventListener("htmx:responseError", function (e) {
+    var statut = (e.detail.xhr && e.detail.xhr.status) || "";
+    var chemin = (e.detail.requestConfig && e.detail.requestConfig.path) || "";
+    signalerErreur({
+      message: "htmx:responseError " + statut + " — " + chemin,
+      type: "htmx-error",
+      url: chemin,
+    });
+  });
+})();
+
 function initTout() {
   majNavActif(window.location.pathname);
   mettreAJourBadgeApp();
@@ -1197,8 +1255,7 @@ function initTout() {
   initFiltresToggle();
   initOngletsPage();
   initParametres();
-  initDrawer();
-  initDrawerDialog();
+  initDrawerNavigation();
   initModalSignaler();
   initConfirmSupprArtiste();
   initConfirmSupprSalle();
