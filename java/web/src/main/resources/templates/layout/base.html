@@ -29,6 +29,7 @@
     <link rel="stylesheet" th:href="@{/css/pages.css}" />
     <title layout:title-pattern="$CONTENT_TITLE — Strapontin">Strapontin</title>
     <script th:src="@{/webjars/htmx.org/dist/htmx.min.js}" defer></script>
+    <script th:src="@{/js/app.js}" defer></script>
   </head>
   <body
     th:class="${theme == 'sombre' ? 'dark' : ''}"
@@ -227,7 +228,5 @@
         </div>
       </div>
     </dialog>
-
-    <script th:src="@{/js/app.js}" defer></script>
   </body>
 </html>
