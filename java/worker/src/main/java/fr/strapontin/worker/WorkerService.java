@@ -289,9 +289,9 @@ public class WorkerService {
     long debut = System.currentTimeMillis();
     String erreur = null;
     try {
-      recalculerMatchesService.recalculerMatches(userIds);
+      int nbUsers = recalculerMatchesService.recalculerMatches(userIds);
       notificationDigestService.executerDigest("temps_reel");
-      log.info("recalculer:matches terminé");
+      log.info("recalculer:matches terminé users={}", nbUsers);
     } catch (Exception e) {
       erreur = e.getMessage();
       log.error("recalculer:matches échoué", e);

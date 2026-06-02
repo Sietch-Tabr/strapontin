@@ -371,7 +371,7 @@ public class AdminService {
 
     int nbSupprimes = jdbc.update("DELETE FROM push_abonnements", Map.of());
     logAdminService.logAdmin(
-        "info",
+        "warn",
         "admin",
         "Clés VAPID régénérées — " + nbSupprimes + " abonnement(s) supprimé(s)",
         Map.of("nbAbonnements", nbSupprimes));

@@ -43,8 +43,9 @@ public class RecalculerMatchesService {
   /// Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
   ///
   /// @param userIds liste d'IDs à recalculer, ou `null` pour tous les utilisateurs
+  /// @return nombre d'utilisateurs traités
   @Transactional
-  public void recalculerMatches(List<String> userIds) {
+  public int recalculerMatches(List<String> userIds) {
     Set<String> usersAvecArtistes =
         new LinkedHashSet<>(
             jdbc.queryForList(
@@ -69,6 +70,7 @@ public class RecalculerMatchesService {
     }
 
     purgerMatchesOrphelins(usersSet);
+    return usersARecalculer.size();
   }
 
   private void recalculerPourUser(String userId, String aujourdhui) {
@@ -100,6 +102,7 @@ public class RecalculerMatchesService {
 
     if (concertIds.isEmpty()) {
       jdbc.update("DELETE FROM user_matches WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
+      log.info("matches supprimés userId={} aucun concert correspondant", userId);
       return;
     }
 

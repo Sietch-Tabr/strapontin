@@ -86,6 +86,7 @@ public class ConfigService {
     cache.invalidate(cle);
     if (valeur == null || valeur.isBlank()) {
       jdbc.update("DELETE FROM app_config WHERE cle = :cle", Map.of("cle", cle));
+      log.info("config supprimée cle={}", cle);
       return;
     }
     String valeurChiffree = chiffrer(valeur);

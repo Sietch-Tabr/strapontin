@@ -9,6 +9,7 @@ import com.resend.core.exception.ResendException;
 import com.resend.services.webhooks.model.VerifyWebhookOptions;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.util.Map;
 import java.util.Optional;
@@ -40,12 +41,17 @@ public class ResendWebhookController {
   private final ConfigService configService;
   private final EmailService emailService;
   private final ObjectMapper objectMapper;
+  private final LogAdminService logAdminService;
 
   public ResendWebhookController(
-      ConfigService configService, EmailService emailService, ObjectMapper objectMapper) {
+      ConfigService configService,
+      EmailService emailService,
+      ObjectMapper objectMapper,
+      LogAdminService logAdminService) {
     this.configService = configService;
     this.emailService = emailService;
     this.objectMapper = objectMapper;
+    this.logAdminService = logAdminService;
   }
 
   /// Reçoit et traite un événement webhook Resend.
@@ -101,6 +107,8 @@ public class ResendWebhookController {
       if ("email.bounced".equals(type)) {
         String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");
         log.warn("Bounce email Resend : {}", emailDestinataire);
+        logAdminService.logAdmin(
+            "warn", "web", "bounce email reçu", Map.of("email", emailDestinataire));
         notifierAdminBounce(emailDestinataire);
       } else if ("email.complained".equals(type)) {
         String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");

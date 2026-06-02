@@ -78,9 +78,16 @@ public class PreferencesService {
   @Transactional
   public ResultatImportComplet importer(
       String userId, ExportComplet export, boolean ecraser, boolean importerConfig) {
+    int nbSupprimesArtistes = 0;
+    int nbSupprimesSalles = 0;
     if (ecraser) {
-      jdbc.update("DELETE FROM user_artistes WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
-      jdbc.update("DELETE FROM user_salles WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
+      nbSupprimesArtistes = jdbc.update(
+          "DELETE FROM user_artistes WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
+      nbSupprimesSalles = jdbc.update(
+          "DELETE FROM user_salles WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
+      log.warn(
+          "import préférences mode écraser : {} artiste(s) et {} salle(s) supprimés userId={}",
+          nbSupprimesArtistes, nbSupprimesSalles, userId);
     }
 
     int[] artistes = {0, 0};
@@ -107,14 +114,18 @@ public class PreferencesService {
         "import préférences userId={} artistes={} salles={} rejetes={} mode={}",
         userId, resultat.artistes(), resultat.salles(), resultat.rejetes(),
         ecraser ? "ecraser" : "fusionner");
-    logAdminService.logAdmin(
-        "info", "web", "import préférences",
-        Map.of(
-            "userId", userId,
-            "artistes", resultat.artistes(),
-            "salles", resultat.salles(),
-            "rejetes", resultat.rejetes(),
-            "mode", ecraser ? "ecraser" : "fusionner"));
+    String niveauLog = ecraser ? "warn" : "info";
+    Map<String, Object> metaImport = new java.util.LinkedHashMap<>();
+    metaImport.put("userId", userId);
+    metaImport.put("artistes", resultat.artistes());
+    metaImport.put("salles", resultat.salles());
+    metaImport.put("rejetes", resultat.rejetes());
+    metaImport.put("mode", ecraser ? "ecraser" : "fusionner");
+    if (ecraser) {
+      metaImport.put("supprimesArtistes", nbSupprimesArtistes);
+      metaImport.put("supprimesSalles", nbSupprimesSalles);
+    }
+    logAdminService.logAdmin(niveauLog, "web", "import préférences", metaImport);
     return resultat;
   }
 
