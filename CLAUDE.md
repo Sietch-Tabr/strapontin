@@ -187,8 +187,8 @@ Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de
 
 - Identifiants en français (`nombreUtilisateurs`, `calculerTotal`)
 - Logging : SLF4J, jamais `System.out`
-- **Tests Java** : `mvn -pl core,sources test` (unitaires). `mvn -pl worker test -am` requiert Docker (Testcontainers).
-- **Tests E2E** : Playwright (`e2e/`) — 56 tests (smoke tests navigation + auth + admin + toasts), nécessite LXC dev actif (port 8080)
+- **Tests Java** : `mvn -pl core,sources,web test` (unitaires). `mvn -pl worker test -am` requiert Docker (Testcontainers).
+- **Tests E2E** : Playwright (`e2e/`) — 60 tests (smoke tests + flux fonctionnels catalogue, admin), nécessite LXC dev actif (port 8080)
   - Lancer : `cd e2e && npx playwright test`
   - Credentials : `E2E_IDENTIFIANT=kwaite E2E_MOT_DE_PASSE=... npx playwright test` (si session expirée)
   - Résultats : `e2e/test-results/results.json` (reporter JSON)
