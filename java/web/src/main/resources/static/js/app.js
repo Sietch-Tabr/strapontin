@@ -156,7 +156,9 @@ function initBoutonRecherche() {
 
 function majNavActif(chemin) {
   document
-    .querySelectorAll("#bottom-nav a[href], #bottom-nav button[data-nav-path]")
+    .querySelectorAll(
+      "#bottom-nav a[href], #bottom-nav button[data-nav-path], .sidebar a[href], #dialog-nav-plus a[href]",
+    )
     .forEach(function (el) {
       var href =
         el.getAttribute("href") || el.getAttribute("data-nav-path") || "";
