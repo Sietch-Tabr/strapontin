@@ -348,6 +348,8 @@ function initDrawerNavigation() {
   const btnPlus = document.getElementById("btn-nav-plus");
   const dialog = document.getElementById("dialog-nav-plus");
   if (!btnPlus || !dialog) return;
+  if (btnPlus.dataset.drawerInit) return;
+  btnPlus.dataset.drawerInit = "1";
 
   btnPlus.addEventListener("click", function () {
     if (dialog.open) {
@@ -359,7 +361,7 @@ function initDrawerNavigation() {
   });
 
   dialog.addEventListener("click", function (e) {
-    if (e.target === dialog) dialog.close();
+    if (e.target === dialog || e.target.closest("a[href]")) dialog.close();
   });
 
   dialog.addEventListener("close", function () {
