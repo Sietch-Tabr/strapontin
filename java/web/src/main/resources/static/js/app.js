@@ -583,6 +583,8 @@ function initAdminBanniere() {
 function initBoutonRelancer() {
   const btn = document.getElementById("btn-relancer");
   if (!btn) return;
+  if (btn.dataset.relancerInit) return;
+  btn.dataset.relancerInit = "1";
   const statut = document.getElementById("relancer-statut");
   let intervalId = null;
 
@@ -851,14 +853,14 @@ function initDialogVapid() {
 
   document
     .getElementById("dialog-vapid-confirmer")
-    .addEventListener("click", function () {
+    ?.addEventListener("click", function () {
       dialog.close();
       form.submit();
     });
 
   document
     .getElementById("dialog-vapid-annuler")
-    .addEventListener("click", function () {
+    ?.addEventListener("click", function () {
       dialog.close();
     });
 
@@ -926,11 +928,11 @@ function initGestionUtilisateurs() {
       e.preventDefault();
       const userId = form.getAttribute("data-user-id");
       const erreurSpan = form.querySelector(".erreur-modif");
-      erreurSpan.hidden = true;
+      if (erreurSpan) erreurSpan.hidden = true;
       const corps = {
-        nom: form.querySelector("[name=nom]").value.trim(),
-        email: form.querySelector("[name=email]").value.trim(),
-        role: form.querySelector("[name=role]").value,
+        nom: form.querySelector("[name=nom]")?.value.trim() ?? "",
+        email: form.querySelector("[name=email]")?.value.trim() ?? "",
+        role: form.querySelector("[name=role]")?.value ?? "",
       };
       fetch("/api/admin/utilisateurs/" + userId, {
         method: "PATCH",
@@ -945,14 +947,16 @@ function initGestionUtilisateurs() {
             location.replace(
               location.pathname + location.search + "#utilisateurs",
             );
-          } else {
+          } else if (erreurSpan) {
             erreurSpan.textContent = d.erreur || "Erreur.";
             erreurSpan.hidden = false;
           }
         })
         .catch(function () {
-          erreurSpan.textContent = "Erreur réseau.";
-          erreurSpan.hidden = false;
+          if (erreurSpan) {
+            erreurSpan.textContent = "Erreur réseau.";
+            erreurSpan.hidden = false;
+          }
         });
     });
   });
@@ -962,7 +966,7 @@ function initGestionUtilisateurs() {
 function initModaleInvitation() {
   const dialog = document.getElementById("dialog-invitation");
   if (!dialog) return;
-  dialog.showModal();
+  if (!dialog.open) dialog.showModal();
 
   const input = document.getElementById("lien-invitation");
   document
@@ -996,12 +1000,12 @@ function initPush() {
 
   if (location.protocol !== "https:" && location.hostname !== "localhost") {
     masquerChargement();
-    nonSupporteDiv.hidden = false;
+    if (nonSupporteDiv) nonSupporteDiv.hidden = false;
     return;
   }
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
     masquerChargement();
-    nonSupporteDiv.hidden = false;
+    if (nonSupporteDiv) nonSupporteDiv.hidden = false;
     return;
   }
   const infoFrequenceP = document.getElementById("push-info-frequence");
@@ -1079,7 +1083,7 @@ function initPush() {
     }
   }
 
-  btnActiver.addEventListener("click", async function () {
+  if (btnActiver) btnActiver.addEventListener("click", async function () {
     if (!pushClePublique || pushEnCours) return;
     pushEnCours = true;
     masquerErreur();
@@ -1124,7 +1128,7 @@ function initPush() {
     }
   });
 
-  btnDesactiver.addEventListener("click", async function () {
+  if (btnDesactiver) btnDesactiver.addEventListener("click", async function () {
     if (!pushAbonnement || pushEnCours) return;
     pushEnCours = true;
     masquerErreur();
