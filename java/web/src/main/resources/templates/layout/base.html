@@ -96,7 +96,7 @@
           <hr />
           <div class="sidebar-user">
             <span sec:authentication="principal.nom">Utilisateur</span>
-            <form th:action="@{/logout}" method="post">
+            <form th:action="@{/logout}" method="post" hx-boost="false">
               <button type="submit" class="btn-deconnexion">Déconnexion</button>
             </form>
           </div>
@@ -221,7 +221,7 @@
         <hr class="dialog-nav-sep" />
         <div class="dialog-nav-user">
           <span sec:authentication="principal.nom">Utilisateur</span>
-          <form th:action="@{/logout}" method="post">
+          <form th:action="@{/logout}" method="post" hx-boost="false">
             <button type="submit" class="btn-deconnexion">Déconnexion</button>
           </form>
         </div>

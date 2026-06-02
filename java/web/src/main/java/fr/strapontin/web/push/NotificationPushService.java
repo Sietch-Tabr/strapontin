@@ -117,10 +117,11 @@ public class NotificationPushService {
   private int envoyerAUnAbonnement(
       Map<String, Object> ab, PushService pushService, String userId, String payload) {
     try {
+      String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
+      String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
       Subscription subscription =
           new Subscription(
-              (String) ab.get(CLE_ENDPOINT),
-              new Subscription.Keys((String) ab.get("p256dh"), (String) ab.get("auth")));
+              (String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
       Notification notification = new Notification(subscription, payload);
       HttpResponse response = pushService.send(notification);
       int status = response.getStatusLine().getStatusCode();

@@ -258,10 +258,10 @@ public class NotificationDigestService {
     int nbEnvoyes = 0;
     for (Map<String, Object> ab : abonnements) {
       try {
+        String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
+        String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
         Subscription subscription =
-            new Subscription(
-                (String) ab.get("endpoint"),
-                new Subscription.Keys((String) ab.get("p256dh"), (String) ab.get("auth")));
+            new Subscription((String) ab.get("endpoint"), new Subscription.Keys(p256dh, auth));
         Notification notification = new Notification(subscription, payload);
         HttpResponse response = pushService.send(notification);
         int status = response.getStatusLine().getStatusCode();
