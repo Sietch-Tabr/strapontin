@@ -30,10 +30,16 @@
     <title layout:title-pattern="$CONTENT_TITLE — Strapontin">Strapontin</title>
     <script th:src="@{/webjars/htmx.org/dist/htmx.min.js}" defer></script>
   </head>
-  <body th:class="${theme == 'sombre' ? 'dark' : ''}" hx-boost="true">
+  <body
+    th:class="${theme == 'sombre' ? 'dark' : ''}"
+    hx-boost="true"
+    hx-target="#contenu-principal"
+    hx-select="#contenu-principal"
+    hx-swap="outerHTML"
+  >
     <div class="app-layout">
-      <!-- Sidebar desktop -->
-      <nav class="sidebar">
+      <!-- Sidebar desktop — masquée pour les requêtes HTMX (fragment rendering) -->
+      <nav class="sidebar" th:if="${!reqHtmx}">
         <div class="sidebar-logo">
           <a th:href="@{/}">Strapontin</a>
         </div>
@@ -98,7 +104,7 @@
       </nav>
 
       <!-- Contenu principal -->
-      <main class="main-content">
+      <main id="contenu-principal" class="main-content">
         <div
           id="banniere-container"
           hx-get="/api/banniere"
@@ -115,8 +121,8 @@
       </main>
     </div>
 
-    <!-- Navigation mobile -->
-    <nav id="bottom-nav" class="bottom-nav" aria-label="Navigation principale">
+    <!-- Navigation mobile — masquée pour les requêtes HTMX (fragment rendering) -->
+    <nav id="bottom-nav" class="bottom-nav" th:if="${!reqHtmx}" aria-label="Navigation principale">
       <div class="bottom-nav-items">
         <th:block th:each="item : ${navPrincipal}">
           <a
@@ -168,8 +174,8 @@
       </div>
     </nav>
 
-    <!-- Drawer navigation mobile (dialog natif) -->
-    <dialog id="dialog-nav-plus" aria-label="Menu supplémentaire">
+    <!-- Drawer navigation mobile — masqué pour les requêtes HTMX (fragment rendering) -->
+    <dialog id="dialog-nav-plus" th:if="${!reqHtmx}" aria-label="Menu supplémentaire">
       <div class="dialog-nav-handle" aria-hidden="true"></div>
       <div class="dialog-nav-contenu">
         <a
