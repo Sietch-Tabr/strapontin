@@ -342,26 +342,19 @@ function initParametres() {
 }
 
 // Drawer de navigation mobile (dialog natif)
-function initDrawer() {
-  const btnPlus = document.getElementById("btn-nav-plus");
-  if (!btnPlus) return;
-
-  btnPlus.addEventListener("click", function () {
-    const d = document.getElementById("dialog-nav-plus");
-    if (!d) return;
-    if (d.open) {
-      d.close();
-    } else {
-      d.showModal();
-      btnPlus.setAttribute("aria-expanded", "true");
-    }
-  });
-}
-
-function initDrawerDialog() {
+function initDrawerNavigation() {
   const btnPlus = document.getElementById("btn-nav-plus");
   const dialog = document.getElementById("dialog-nav-plus");
   if (!btnPlus || !dialog) return;
+
+  btnPlus.addEventListener("click", function () {
+    if (dialog.open) {
+      dialog.close();
+    } else {
+      dialog.showModal();
+      btnPlus.setAttribute("aria-expanded", "true");
+    }
+  });
 
   dialog.addEventListener("click", function (e) {
     if (e.target === dialog) dialog.close();
@@ -903,14 +896,14 @@ function initGestionUtilisateurs() {
 
     document
       .getElementById("dialog-supprimer-user-confirmer")
-      .addEventListener("click", function () {
+      ?.addEventListener("click", function () {
         dialogSuppr.close();
         if (formSupprEnAttente) formSupprEnAttente.submit();
       });
 
     document
       .getElementById("dialog-supprimer-user-annuler")
-      .addEventListener("click", function () {
+      ?.addEventListener("click", function () {
         dialogSuppr.close();
         formSupprEnAttente = null;
       });
@@ -1197,8 +1190,7 @@ function initTout() {
   initFiltresToggle();
   initOngletsPage();
   initParametres();
-  initDrawer();
-  initDrawerDialog();
+  initDrawerNavigation();
   initModalSignaler();
   initConfirmSupprArtiste();
   initConfirmSupprSalle();
