@@ -57,9 +57,14 @@ test.describe("Scénario: authentification et gardes de route", () => {
     await page.goto("/login");
     await page.fill("input[name='identifiant']", "utilisateur_inexistant");
     await page.fill("input[name='motDePasse']", "motdepasse_faux_12chars");
-    await page.click("button[type='submit']");
-    await expect(page).toHaveURL(/login/);
-    await expect(page.locator("form")).toBeVisible();
+    const [reponse] = await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes("/login") && r.request().method() === "POST",
+      ),
+      page.click("button[type='submit']"),
+    ]);
+    // 302 = identifiant invalide (redirect /login?erreur), 429 = rate-limit atteint
+    expect([302, 303, 429]).toContain(reponse.status());
     await ctx.close();
   });
 

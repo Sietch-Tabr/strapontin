@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.push;
 
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -37,10 +38,15 @@ public class NotificationPushService {
 
   private final ConfigService configService;
   private final NamedParameterJdbcTemplate jdbc;
+  private final LogAdminService logAdminService;
 
-  public NotificationPushService(ConfigService configService, NamedParameterJdbcTemplate jdbc) {
+  public NotificationPushService(
+      ConfigService configService,
+      NamedParameterJdbcTemplate jdbc,
+      LogAdminService logAdminService) {
     this.configService = configService;
     this.jdbc = jdbc;
+    this.logAdminService = logAdminService;
   }
 
   /// Paramètres d'un concert pour la notification push.
@@ -137,6 +143,7 @@ public class NotificationPushService {
   private void supprimerAbonnement(UUID id, String userId, String endpoint) {
     jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", id));
     log.info("Abonnement push révoqué, supprimé : {} — {}", userId, endpoint);
+    logAdminService.logAdmin("info", "web", "abonnement push révoqué", Map.of("userId", userId));
   }
 
   private static String construirePayload(List<ConcertPush> concerts, String baseUrl) {
