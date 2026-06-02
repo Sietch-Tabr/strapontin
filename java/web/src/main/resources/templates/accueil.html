@@ -84,6 +84,7 @@
         <div
           class="concert-groupe"
           th:each="groupe : ${donnees.artistesGroupes}"
+          th:id="'artiste-' + ${groupe.artisteNorm}"
         >
           <!-- En-tête du groupe artiste -->
           <div class="groupe-header">

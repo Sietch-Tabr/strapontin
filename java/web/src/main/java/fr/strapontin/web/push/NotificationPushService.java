@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.push;
 
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.net.URLEncoder;
@@ -120,8 +121,7 @@ public class NotificationPushService {
       String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
       String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
       Subscription subscription =
-          new Subscription(
-              (String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
+          new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
       Notification notification = new Notification(subscription, payload);
       HttpResponse response = pushService.send(notification);
       int status = response.getStatusLine().getStatusCode();
@@ -164,9 +164,10 @@ public class NotificationPushService {
     String url =
         concerts.size() == 1
             ? baseUrl
-                + "/spectacles?artiste="
-                + URLEncoder.encode(premier.artiste(), StandardCharsets.UTF_8)
-            : baseUrl + "/spectacles";
+                + "/#artiste-"
+                + URLEncoder.encode(
+                    Normalisation.normaliserTexte(premier.artiste()), StandardCharsets.UTF_8)
+            : baseUrl + "/";
 
     // JSON construit manuellement (pas de dépendance Jackson pour ce payload simple)
     return """

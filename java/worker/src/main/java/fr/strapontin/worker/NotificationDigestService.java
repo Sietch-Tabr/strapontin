@@ -62,14 +62,21 @@ public class NotificationDigestService {
 
   /// Données d'un concert pour le digest.
   ///
-  /// @param artiste   nom de l'artiste
-  /// @param date      date ISO (yyyy-MM-dd)
-  /// @param salle     nom de la salle
-  /// @param ville     ville (peut être nulle)
-  /// @param url       URL de billetterie (peut être nulle)
-  /// @param concertId UUID du concert (string)
+  /// @param artiste     nom de l'artiste
+  /// @param date        date ISO (yyyy-MM-dd)
+  /// @param salle       nom de la salle
+  /// @param ville       ville (peut être nulle)
+  /// @param url         URL de billetterie (peut être nulle)
+  /// @param concertId   UUID du concert (string)
+  /// @param artisteNorm nom de l'artiste normalisé (identique à `artiste_norm` en base)
   public record ConcertNotif(
-      String artiste, String date, String salle, String ville, String url, String concertId) {}
+      String artiste,
+      String date,
+      String salle,
+      String ville,
+      String url,
+      String concertId,
+      String artisteNorm) {}
 
   private record ResultatDigest(boolean emailOk, boolean pushOk) {}
 
@@ -92,7 +99,7 @@ public class NotificationDigestService {
           jdbc.queryForList(
               """
               SELECT um.user_id, u.email, CAST(c.id AS text) AS concert_id,
-                     c.artiste, CAST(c.date AS text) AS date, c.salle, c.ville, c.url
+                     c.artiste, CAST(c.date AS text) AS date, c.salle, c.ville, c.url, c.artiste_norm
               FROM user_matches um
               JOIN concerts    c  ON c.id      = um.concert_id
               JOIN users       u  ON u.id      = um.user_id
@@ -138,7 +145,8 @@ public class NotificationDigestService {
                     (String) ligne.get("salle"),
                     (String) ligne.get("ville"),
                     (String) ligne.get("url"),
-                    (String) ligne.get("concert_id")));
+                    (String) ligne.get("concert_id"),
+                    (String) ligne.get("artiste_norm")));
       }
 
       Timestamp maintenant = Timestamp.from(Instant.now());
@@ -175,7 +183,8 @@ public class NotificationDigestService {
           nbMatchesNotifies += updated;
         } else {
           log.warn(
-              "notifier:digest — notification échouée pour user={}, notification_envoyee_le non mis à jour",
+              "notifier:digest — notification échouée pour user={}, notification_envoyee_le non mis"
+                  + " à jour",
               userId);
         }
         nbUtilisateurs++;
@@ -295,9 +304,9 @@ public class NotificationDigestService {
     String url =
         concerts.size() == 1
             ? baseUrl
-                + "/spectacles?artiste="
-                + URLEncoder.encode(premier.artiste(), StandardCharsets.UTF_8)
-            : baseUrl + "/spectacles";
+                + "/#artiste-"
+                + URLEncoder.encode(premier.artisteNorm(), StandardCharsets.UTF_8)
+            : baseUrl + "/";
     return """
     {"title":"%s","body":"%s","icon":"%s/images/icon-192.png","url":"%s"}\
     """
