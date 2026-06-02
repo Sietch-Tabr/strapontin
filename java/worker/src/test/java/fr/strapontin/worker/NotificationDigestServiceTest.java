@@ -82,8 +82,14 @@ class NotificationDigestServiceTest {
   void construirePayloadPush_unConcert_contientArtisteEtSalle() throws Exception {
     var concert =
         new NotificationDigestService.ConcertNotif(
-            "Stromae", "2026-09-15", "Olympia", "Paris", "https://example.com",
-            UUID.randomUUID().toString(), "stromae");
+            "Stromae",
+            "2026-09-15",
+            "Olympia",
+            "Paris",
+            "https://example.com",
+            UUID.randomUUID().toString(),
+            "stromae",
+            "ARTISTE");
 
     String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.kwaite.fr");
 
@@ -91,32 +97,74 @@ class NotificationDigestServiceTest {
     assertTrue(payload.contains("Olympia"), "Le payload push doit contenir la salle");
     assertTrue(payload.contains("\"title\""), "Le payload push doit avoir un champ title");
     assertTrue(payload.contains("\"body\""), "Le payload push doit avoir un champ body");
-    assertTrue(payload.contains("/#artiste-stromae"), "L'URL push doit pointer sur l'ancre accueil");
+    assertTrue(
+        payload.contains("/#artiste-stromae"), "L'URL push doit pointer sur l'ancre accueil");
   }
 
   @Test
   void construirePayloadPush_plusieursConcerts_contientNombre() throws Exception {
     var c1 =
         new NotificationDigestService.ConcertNotif(
-            "Stromae", "2026-09-15", "Olympia", "Paris", null, UUID.randomUUID().toString(), "stromae");
+            "Stromae",
+            "2026-09-15",
+            "Olympia",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "stromae",
+            "ARTISTE");
     var c2 =
         new NotificationDigestService.ConcertNotif(
-            "Aya Nakamura", "2026-10-01", "Accor Arena", "Paris", null,
-            UUID.randomUUID().toString(), "aya nakamura");
+            "Aya Nakamura",
+            "2026-10-01",
+            "Accor Arena",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "aya nakamura",
+            "ARTISTE");
 
     String payload = invoquerPayloadPush(List.of(c1, c2), "https://strapontin.kwaite.fr");
 
-    assertTrue(payload.contains("2 nouveaux concerts"), "Le titre doit indiquer le nombre de concerts");
+    assertTrue(
+        payload.contains("2 nouveaux concerts"), "Le titre doit indiquer le nombre de concerts");
+  }
+
+  @Test
+  void construirePayloadPush_concertDeSalle_urlPointeVersSpectacles() throws Exception {
+    var concert =
+        new NotificationDigestService.ConcertNotif(
+            "Divers",
+            "2026-11-10",
+            "Olympia",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "divers",
+            "SALLE");
+
+    String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.kwaite.fr");
+
+    assertTrue(
+        payload.contains("/spectacles?source=salles"),
+        "L'URL push d'un concert de salle doit pointer vers /spectacles?source=salles");
   }
 
   @Test
   void construireCorpsEmail_formatHtml_contientArtiste() throws Exception {
     var concert =
         new NotificationDigestService.ConcertNotif(
-            "Indochine", "2026-08-20", "Zénith Paris", "Paris", "https://example.com",
-            UUID.randomUUID().toString(), "indochine");
+            "Indochine",
+            "2026-08-20",
+            "Zénith Paris",
+            "Paris",
+            "https://example.com",
+            UUID.randomUUID().toString(),
+            "indochine",
+            "ARTISTE");
 
-    String html = invoquerCorpsEmail("1 nouveau concert", List.of(concert), "https://strapontin.kwaite.fr");
+    String html =
+        invoquerCorpsEmail("1 nouveau concert", List.of(concert), "https://strapontin.kwaite.fr");
 
     assertTrue(html.contains("<!DOCTYPE html>"), "L'email doit être du HTML valide");
     assertTrue(html.contains("Indochine"), "L'email doit contenir l'artiste");
@@ -150,9 +198,7 @@ class NotificationDigestServiceTest {
 
   @SuppressWarnings("unchecked")
   private static String invoquerCorpsEmail(
-      String sujet,
-      List<NotificationDigestService.ConcertNotif> concerts,
-      String baseUrl)
+      String sujet, List<NotificationDigestService.ConcertNotif> concerts, String baseUrl)
       throws Exception {
     Method m =
         NotificationDigestService.class.getDeclaredMethod(

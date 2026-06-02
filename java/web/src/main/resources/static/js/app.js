@@ -1280,13 +1280,18 @@ function initTout() {
 
 document.addEventListener("DOMContentLoaded", initTout);
 document.addEventListener("htmx:afterSettle", initTout);
+document.addEventListener("htmx:beforeRequest", function () {
+  htmx.config.globalViewTransitions = document.visibilityState === "visible";
+});
 
 if (navigator.serviceWorker) {
   navigator.serviceWorker.addEventListener("message", function (e) {
     if (e.data?.type !== "nav-ancre") return;
     var cible = new URL(e.data.url, location.origin);
     if (location.pathname === cible.pathname && cible.hash) {
-      document.querySelector(cible.hash)?.scrollIntoView({ behavior: "smooth" });
+      document
+        .getElementById(cible.hash.slice(1))
+        ?.scrollIntoView({ behavior: "smooth" });
     } else {
       window.location.href = e.data.url;
     }
