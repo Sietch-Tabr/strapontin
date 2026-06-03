@@ -158,6 +158,7 @@
               method="post"
               th:action="@{/parametres/notifications}"
               class="form-vertical"
+              hx-push-url="/parametres#notifications"
             >
               <div class="form-group">
                 <label for="frequence">Fréquence des emails</label>
@@ -251,15 +252,26 @@
 
               <!-- Préserve les valeurs email/fréquence quand Resend est absent (champs disabled non soumis) -->
               <th:block th:if="${!config?.resendDisponible}">
-                <input type="hidden" name="frequenceNotifications" th:value="${config?.frequenceNotifications ?: 'jamais'}"/>
-                <input th:if="${config?.notifArtistes}" type="hidden" name="notifArtistes" value="true"/>
-                <input th:if="${config?.notifSalles}" type="hidden" name="notifSalles" value="true"/>
+                <input
+                  type="hidden"
+                  name="frequenceNotifications"
+                  th:value="${config?.frequenceNotifications ?: 'jamais'}"
+                />
+                <input
+                  th:if="${config?.notifArtistes}"
+                  type="hidden"
+                  name="notifArtistes"
+                  value="true"
+                />
+                <input
+                  th:if="${config?.notifSalles}"
+                  type="hidden"
+                  name="notifSalles"
+                  value="true"
+                />
               </th:block>
 
-              <button
-                type="submit"
-                class="btn btn-secondary"
-              >
+              <button type="submit" class="btn btn-secondary">
                 Enregistrer
               </button>
             </form>
