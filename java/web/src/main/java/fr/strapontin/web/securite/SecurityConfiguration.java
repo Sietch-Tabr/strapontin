@@ -111,6 +111,7 @@ public class SecurityConfiguration {
                 auth.requestMatchers(
                         "/css/**",
                         "/js/**",
+                        "/fonts/**",
                         "/images/**",
                         "/icons/**",
                         "/favicon.ico",
@@ -240,7 +241,8 @@ public class SecurityConfiguration {
     return new HttpSessionEventPublisher();
   }
 
-  /// Sérialiseur de cookies Spring Session — force {@code Secure} et {@code SameSite=Strict}.
+  /// Sérialiseur de cookies Spring Session — force {@code Secure}, {@code SameSite=Strict}
+  /// et {@code max-age} 30 jours.
   ///
   /// <p>Les propriétés {@code server.servlet.session.cookie.*} sont ignorées par Spring Session
   /// JDBC ; ce bean prend le relais.
@@ -252,6 +254,8 @@ public class SecurityConfiguration {
     DefaultCookieSerializer serialiseur = new DefaultCookieSerializer();
     serialiseur.setUseSecureCookie(cookieSecure);
     serialiseur.setSameSite("Strict");
+    serialiseur.setCookieHttpOnly(true);
+    serialiseur.setCookieMaxAge(2592000);
     return serialiseur;
   }
 }

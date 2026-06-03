@@ -158,7 +158,8 @@ public class UserConfigService {
     upsertConfig(userId, champs);
 
     log.info(
-        "notifications modifiées userId={} frequence={} artistes={} salles={} artistesPush={} sallesPush={}",
+        "notifications modifiées userId={} frequence={} artistes={} salles={} artistesPush={}"
+            + " sallesPush={}",
         userId,
         requete.frequenceNotifications(),
         requete.notifArtistes(),
