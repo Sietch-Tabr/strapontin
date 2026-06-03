@@ -123,3 +123,67 @@ test.describe("Scénario: spectacles — robustesse des filtres", () => {
     await expect(page.locator("main")).toBeVisible();
   });
 });
+
+test.describe("Scénario: navigation HTMX sans rechargement complet", () => {
+  test("bottomnav_decouverte_htmx_sans_navigation_document", async ({
+    page,
+    isMobile,
+  }) => {
+    await page.goto("/spectacles");
+    await page.evaluate(() => {
+      (window as any).__testMarqueur = 1;
+    });
+
+    let navigationDocument = false;
+    page.on("request", (req) => {
+      if (
+        req.resourceType() === "document" &&
+        new URL(req.url()).pathname === "/decouverte"
+      ) {
+        navigationDocument = true;
+      }
+    });
+
+    if (isMobile) {
+      await page.locator("#bottom-nav a[href='/decouverte']").click();
+    } else {
+      await page.locator(".sidebar a[href='/decouverte']").click();
+    }
+
+    await expect(page.locator("main#contenu-principal")).toBeVisible();
+    expect(navigationDocument).toBe(false);
+    const marqueur = await page.evaluate(() => (window as any).__testMarqueur);
+    expect(marqueur).toBe(1);
+  });
+
+  test("drawer_artistes_htmx_sans_navigation_document", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+
+    await page.goto("/spectacles");
+    await page.evaluate(() => {
+      (window as any).__testMarqueur = 1;
+    });
+
+    let navigationDocument = false;
+    page.on("request", (req) => {
+      if (
+        req.resourceType() === "document" &&
+        new URL(req.url()).pathname === "/artistes"
+      ) {
+        navigationDocument = true;
+      }
+    });
+
+    await page.locator("#btn-nav-plus").click();
+    await expect(page.locator("#dialog-nav-plus")).toBeVisible();
+    await page.locator("#dialog-nav-plus a[href='/artistes']").click();
+
+    await expect(page.locator("main#contenu-principal")).toBeVisible();
+    expect(navigationDocument).toBe(false);
+    const marqueur = await page.evaluate(() => (window as any).__testMarqueur);
+    expect(marqueur).toBe(1);
+  });
+});
