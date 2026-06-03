@@ -82,6 +82,12 @@ public class NotificationDigestService {
 
   private record ResultatDigest(boolean emailOk, boolean pushOk) {}
 
+  private record ConfigNotifUser(
+      boolean notifArtistes,
+      boolean notifSalles,
+      boolean notifArtistesPush,
+      boolean notifSallesPush) {}
+
   /// Parcourt les matches non notifiés pour une fréquence donnée, envoie le digest,
   /// met à jour `notifie_le`.
   ///
@@ -102,8 +108,10 @@ public class NotificationDigestService {
               """
               SELECT um.user_id, u.email, CAST(c.id AS text) AS concert_id,
                      c.artiste, CAST(c.date AS text) AS date, c.salle, c.ville, c.url, c.artiste_norm,
+                     uc.notif_artistes, uc.notif_salles,
+                     uc.notif_artistes_push, uc.notif_salles_push,
                      CASE
-                       WHEN uc.notif_artistes = true AND EXISTS (
+                       WHEN EXISTS (
                          SELECT 1 FROM user_artistes ua
                          WHERE ua.user_id = um.user_id
                            AND (c.artiste_norm = ua.artiste_normalise
@@ -119,14 +127,14 @@ public class NotificationDigestService {
                 AND um.masque_le  IS NULL
                 AND uc.frequence_notifications = CAST(:frequence AS frequence_notif)
                 AND (
-                  (uc.notif_artistes = true AND EXISTS (
+                  ((uc.notif_artistes = true OR uc.notif_artistes_push = true) AND EXISTS (
                     SELECT 1 FROM user_artistes ua
                     WHERE ua.user_id = um.user_id
                       AND (c.artiste_norm = ua.artiste_normalise
                            OR c.artiste_norm LIKE (ua.artiste_normalise || ' %'))
                   ))
                   OR
-                  (uc.notif_salles = true AND EXISTS (
+                  ((uc.notif_salles = true OR uc.notif_salles_push = true) AND EXISTS (
                     SELECT 1 FROM user_salles us
                     JOIN salles s ON s.id = us.salle_id
                     WHERE us.user_id = um.user_id
@@ -143,10 +151,18 @@ public class NotificationDigestService {
       }
 
       Map<String, String> emailsUtilisateurs = new LinkedHashMap<>();
+      Map<String, ConfigNotifUser> configsUtilisateurs = new LinkedHashMap<>();
       Map<String, List<ConcertNotif>> parUtilisateur = new LinkedHashMap<>();
       for (Map<String, Object> ligne : lignes) {
         String userId = (String) ligne.get("user_id");
         emailsUtilisateurs.putIfAbsent(userId, (String) ligne.get("email"));
+        configsUtilisateurs.putIfAbsent(
+            userId,
+            new ConfigNotifUser(
+                Boolean.TRUE.equals(ligne.get("notif_artistes")),
+                Boolean.TRUE.equals(ligne.get("notif_salles")),
+                Boolean.TRUE.equals(ligne.get("notif_artistes_push")),
+                Boolean.TRUE.equals(ligne.get("notif_salles_push"))));
         parUtilisateur
             .computeIfAbsent(userId, _ -> new ArrayList<>())
             .add(
@@ -167,7 +183,8 @@ public class NotificationDigestService {
         List<ConcertNotif> concerts = entree.getValue();
         boolean notifEnvoyee = false;
         try {
-          ResultatDigest res = envoyerDigest(userId, emailsUtilisateurs.get(userId), concerts);
+          ResultatDigest res = envoyerDigest(
+              userId, emailsUtilisateurs.get(userId), concerts, configsUtilisateurs.get(userId));
           if (res.emailOk()) nbEmailsOk++;
           if (res.pushOk()) nbPushOk++;
           notifEnvoyee = res.emailOk() || res.pushOk();
@@ -211,13 +228,29 @@ public class NotificationDigestService {
     }
   }
 
-  private ResultatDigest envoyerDigest(String userId, String email, List<ConcertNotif> concerts) {
-    boolean emailOk = envoyerEmail(email, concerts);
-    boolean pushOk = envoyerPush(userId, concerts);
+  private ResultatDigest envoyerDigest(
+      String userId, String email, List<ConcertNotif> concerts, ConfigNotifUser config) {
+    List<ConcertNotif> concertsEmail =
+        concerts.stream()
+            .filter(
+                c ->
+                    ("ARTISTE".equals(c.source()) && config.notifArtistes())
+                        || ("SALLE".equals(c.source()) && config.notifSalles()))
+            .toList();
+    List<ConcertNotif> concertsPush =
+        concerts.stream()
+            .filter(
+                c ->
+                    ("ARTISTE".equals(c.source()) && config.notifArtistesPush())
+                        || ("SALLE".equals(c.source()) && config.notifSallesPush()))
+            .toList();
+    boolean emailOk = envoyerEmail(email, concertsEmail);
+    boolean pushOk = envoyerPush(userId, concertsPush);
     return new ResultatDigest(emailOk, pushOk);
   }
 
   private boolean envoyerEmail(String email, List<ConcertNotif> concerts) {
+    if (concerts.isEmpty()) return false;
     Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) {
       log.debug("RESEND_API_KEY absent — digest email ignoré");
@@ -252,6 +285,7 @@ public class NotificationDigestService {
   }
 
   private boolean envoyerPush(String userId, List<ConcertNotif> concerts) {
+    if (concerts.isEmpty()) return false;
     Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
     Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
     if (clePublique.isEmpty() || clePrivee.isEmpty()) {

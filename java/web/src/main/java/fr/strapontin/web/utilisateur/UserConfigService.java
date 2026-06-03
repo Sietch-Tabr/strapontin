@@ -61,7 +61,7 @@ public class UserConfigService {
         jdbc.query(
             """
             SELECT departements, filtre_disponibles, frequence_notifications,
-                   notif_artistes, notif_salles, theme
+                   notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
             FROM user_config
             WHERE user_id = :userId
             """,
@@ -74,6 +74,8 @@ public class UserConfigService {
                   rs.getString("frequence_notifications"),
                   rs.getBoolean("notif_artistes"),
                   rs.getBoolean("notif_salles"),
+                  rs.getBoolean("notif_artistes_push"),
+                  rs.getBoolean("notif_salles_push"),
                   rs.getString("theme"),
                   false);
             });
@@ -82,7 +84,7 @@ public class UserConfigService {
 
     if (lignes.isEmpty()) {
       return new ConfigUtilisateur(
-          List.of(), true, "jamais", true, false, "auto", resendDisponible);
+          List.of(), true, "jamais", true, false, true, true, "auto", resendDisponible);
     }
     ConfigUtilisateur base = lignes.get(0);
     return new ConfigUtilisateur(
@@ -91,6 +93,8 @@ public class UserConfigService {
         base.frequenceNotifications(),
         base.notifArtistes(),
         base.notifSalles(),
+        base.notifArtistesPush(),
+        base.notifSallesPush(),
         base.theme(),
         resendDisponible);
   }
@@ -120,14 +124,16 @@ public class UserConfigService {
   ///
   /// @param userId  identifiant de l'utilisateur
   /// @param requete données de la requête
-  /// @throws ErreurMetier si la fréquence est invalide ou aucun type de notification sélectionné
+  /// @throws ErreurMetier si la fréquence est invalide ou aucun canal de notification sélectionné
   public void majNotifications(String userId, RequeteNotifications requete) {
     if (!FREQUENCES_VALIDES.contains(requete.frequenceNotifications())) {
       throw new ErreurMetier("Valeur invalide.");
     }
-    if (!"jamais".equals(requete.frequenceNotifications())
-        && !requete.notifArtistes()
-        && !requete.notifSalles()) {
+    boolean aucunCanal = !requete.notifArtistes()
+        && !requete.notifSalles()
+        && !requete.notifArtistesPush()
+        && !requete.notifSallesPush();
+    if (!"jamais".equals(requete.frequenceNotifications()) && aucunCanal) {
       throw new ErreurMetier(
           "Activez au moins un type de contenu pour recevoir des notifications.");
     }
@@ -136,6 +142,8 @@ public class UserConfigService {
     champs.put("frequenceNotifications", requete.frequenceNotifications());
     champs.put("notifArtistes", requete.notifArtistes());
     champs.put("notifSalles", requete.notifSalles());
+    champs.put("notifArtistesPush", requete.notifArtistesPush());
+    champs.put("notifSallesPush", requete.notifSallesPush());
     upsertConfig(userId, champs);
   }
 
@@ -202,6 +210,8 @@ public class UserConfigService {
       case "frequenceNotifications" -> "frequence_notifications";
       case "notifArtistes" -> "notif_artistes";
       case "notifSalles" -> "notif_salles";
+      case "notifArtistesPush" -> "notif_artistes_push";
+      case "notifSallesPush" -> "notif_salles_push";
       case "theme" -> "theme";
       default -> throw new IllegalArgumentException("Champ inconnu : " + champJava);
     };

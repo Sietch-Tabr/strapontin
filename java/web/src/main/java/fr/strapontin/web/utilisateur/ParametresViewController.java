@@ -158,8 +158,10 @@ public class ParametresViewController {
   /// Met à jour les préférences de notification.
   ///
   /// @param frequenceNotifications la fréquence de notification
-  /// @param notifArtistes          notifier pour les artistes
-  /// @param notifSalles            notifier pour les salles
+  /// @param notifArtistes          email pour les artistes
+  /// @param notifSalles            email pour les salles
+  /// @param notifArtistesPush      push pour les artistes
+  /// @param notifSallesPush        push pour les salles
   /// @param redirects              attributs de redirection
   /// @param auth                   contexte d'authentification
   /// @return redirect vers /parametres
@@ -168,9 +170,12 @@ public class ParametresViewController {
       @RequestParam(required = false, defaultValue = "jamais") String frequenceNotifications,
       @RequestParam(required = false, defaultValue = "false") boolean notifArtistes,
       @RequestParam(required = false, defaultValue = "false") boolean notifSalles,
+      @RequestParam(required = false, defaultValue = "false") boolean notifArtistesPush,
+      @RequestParam(required = false, defaultValue = "false") boolean notifSallesPush,
       RedirectAttributes redirects,
       Authentication auth) {
-    var requete = new RequeteNotifications(frequenceNotifications, notifArtistes, notifSalles);
+    var requete = new RequeteNotifications(
+        frequenceNotifications, notifArtistes, notifSalles, notifArtistesPush, notifSallesPush);
     ResponseEntity<Map<String, Object>> rep = userConfigController.majNotifications(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();

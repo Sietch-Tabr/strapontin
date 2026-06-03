@@ -183,6 +183,11 @@ class NotificationDigestServiceTest {
     ligne.put("ville", "Paris");
     ligne.put("url", null);
     ligne.put("artiste_norm", "artiste test");
+    ligne.put("source", "ARTISTE");
+    ligne.put("notif_artistes", true);
+    ligne.put("notif_salles", false);
+    ligne.put("notif_artistes_push", true);
+    ligne.put("notif_salles_push", false);
     return ligne;
   }
 
