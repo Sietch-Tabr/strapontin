@@ -168,7 +168,7 @@ public class PreferencesService {
         jdbc.query(
             """
             SELECT departements, filtre_disponibles, frequence_notifications,
-                   notif_artistes, notif_salles, theme
+                   notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
             FROM user_config WHERE user_id = :userId
             """,
             Map.of(CLE_USER_ID, userId),
@@ -183,6 +183,8 @@ public class PreferencesService {
                   rs.getString("frequence_notifications"),
                   rs.getBoolean("notif_artistes"),
                   rs.getBoolean("notif_salles"),
+                  rs.getBoolean("notif_artistes_push"),
+                  rs.getBoolean("notif_salles_push"),
                   rs.getString("theme"));
             });
 
@@ -279,15 +281,19 @@ public class PreferencesService {
         """
         INSERT INTO user_config
             (user_id, departements, filtre_disponibles, frequence_notifications,
-             notif_artistes, notif_salles, theme, updated_at)
+             notif_artistes, notif_salles, notif_artistes_push, notif_salles_push,
+             theme, updated_at)
         VALUES (:userId, :depts, :filtreDisponibles, CAST(:frequence AS frequence_notif),
-                :notifArtistes, :notifSalles, CAST(:theme AS theme_interface), now())
+                :notifArtistes, :notifSalles, :notifArtistesPush, :notifSallesPush,
+                CAST(:theme AS theme_interface), now())
         ON CONFLICT (user_id) DO UPDATE SET
             departements            = EXCLUDED.departements,
             filtre_disponibles      = EXCLUDED.filtre_disponibles,
             frequence_notifications = EXCLUDED.frequence_notifications,
             notif_artistes          = EXCLUDED.notif_artistes,
             notif_salles            = EXCLUDED.notif_salles,
+            notif_artistes_push     = EXCLUDED.notif_artistes_push,
+            notif_salles_push       = EXCLUDED.notif_salles_push,
             theme                   = EXCLUDED.theme,
             updated_at              = now()
         """,
@@ -304,6 +310,10 @@ public class PreferencesService {
             c.notifArtistes(),
             "notifSalles",
             c.notifSalles(),
+            "notifArtistesPush",
+            c.notifArtistesPush(),
+            "notifSallesPush",
+            c.notifSallesPush(),
             "theme",
             c.theme() != null ? c.theme() : "auto"));
   }

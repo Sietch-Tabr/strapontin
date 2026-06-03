@@ -9,4 +9,8 @@ package fr.strapontin.web.utilisateur;
 /// @since 2.1.0
 /// @author Kwaite
 public record RequeteNotifications(
-    String frequenceNotifications, boolean notifArtistes, boolean notifSalles) {}
+    String frequenceNotifications,
+    boolean notifArtistes,
+    boolean notifSalles,
+    boolean notifArtistesPush,
+    boolean notifSallesPush) {}

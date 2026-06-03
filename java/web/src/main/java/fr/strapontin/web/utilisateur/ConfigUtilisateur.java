@@ -16,5 +16,7 @@ public record ConfigUtilisateur(
     String frequenceNotifications,
     boolean notifArtistes,
     boolean notifSalles,
+    boolean notifArtistesPush,
+    boolean notifSallesPush,
     String theme,
     boolean resendDisponible) {}
