@@ -5,6 +5,7 @@
 package fr.strapontin.web.utilisateur;
 
 import fr.strapontin.web.ErreurMetier;
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -13,6 +14,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -25,18 +28,25 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserConfigService {
 
+  private static final Logger log = LoggerFactory.getLogger(UserConfigService.class);
   private static final Pattern FORMAT_DEPT = Pattern.compile("^\\d{2,3}$");
   private static final Set<String> FREQUENCES_VALIDES = Set.of("jamais", "temps_reel", "quotidien");
   private static final Set<String> THEMES_VALIDES = Set.of("auto", "clair", "sombre");
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigService configService;
+  private final LogAdminService logAdminService;
 
-  /// @param jdbc          accès JDBC
-  /// @param configService lecture des clés applicatives (RESEND_API_KEY)
-  public UserConfigService(NamedParameterJdbcTemplate jdbc, ConfigService configService) {
+  /// @param jdbc             accès JDBC
+  /// @param configService    lecture des clés applicatives (RESEND_API_KEY)
+  /// @param logAdminService  journalisation des actions utilisateur
+  public UserConfigService(
+      NamedParameterJdbcTemplate jdbc,
+      ConfigService configService,
+      LogAdminService logAdminService) {
     this.jdbc = jdbc;
     this.configService = configService;
+    this.logAdminService = logAdminService;
   }
 
   /// Lit le filtre "concerts disponibles uniquement" de l'utilisateur.
@@ -84,7 +94,7 @@ public class UserConfigService {
 
     if (lignes.isEmpty()) {
       return new ConfigUtilisateur(
-          List.of(), true, "jamais", true, false, true, true, "auto", resendDisponible);
+          List.of(), true, "jamais", false, false, false, false, "auto", resendDisponible);
     }
     ConfigUtilisateur base = lignes.get(0);
     return new ConfigUtilisateur(
@@ -146,6 +156,26 @@ public class UserConfigService {
     champs.put("notifArtistesPush", requete.notifArtistesPush());
     champs.put("notifSallesPush", requete.notifSallesPush());
     upsertConfig(userId, champs);
+
+    log.info(
+        "notifications modifiées userId={} frequence={} artistes={} salles={} artistesPush={} sallesPush={}",
+        userId,
+        requete.frequenceNotifications(),
+        requete.notifArtistes(),
+        requete.notifSalles(),
+        requete.notifArtistesPush(),
+        requete.notifSallesPush());
+    logAdminService.logAdmin(
+        "info",
+        "web",
+        "notifications modifiées",
+        Map.of(
+            "userId", userId,
+            "frequence", requete.frequenceNotifications(),
+            "notifArtistes", requete.notifArtistes(),
+            "notifSalles", requete.notifSalles(),
+            "notifArtistesPush", requete.notifArtistesPush(),
+            "notifSallesPush", requete.notifSallesPush()));
   }
 
   /// Met à jour le filtre de disponibilité.
