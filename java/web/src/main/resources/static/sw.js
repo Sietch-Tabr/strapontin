@@ -15,13 +15,11 @@ const RESSOURCES_STATIQUES = [
 ];
 
 self.addEventListener("error", function (e) {
-  self.clients
-    .matchAll({ includeUncontrolled: true })
-    .then(function (clients) {
-      clients.forEach(function (c) {
-        c.postMessage({ type: "sw-error", message: e.message || "erreur SW" });
-      });
+  self.clients.matchAll({ includeUncontrolled: true }).then(function (clients) {
+    clients.forEach(function (c) {
+      c.postMessage({ type: "sw-error", message: e.message || "erreur SW" });
     });
+  });
 });
 
 self.addEventListener("install", (event) => {
@@ -37,7 +35,9 @@ self.addEventListener("install", (event) => {
             clients.forEach(function (c) {
               c.postMessage({
                 type: "sw-error",
-                message: "install: " + (e && e.message ? e.message : "échec précachage"),
+                message:
+                  "install: " +
+                  (e && e.message ? e.message : "échec précachage"),
               });
             });
           });
@@ -112,12 +112,20 @@ self.addEventListener("fetch", (event) => {
   // Navigation browser : NavigationPreload + timeout 6 s, offline.html depuis le cache sinon
   if (request.mode === "navigate") {
     var chemin = url.pathname;
-    if (chemin !== "/" && !chemin.startsWith("/login") && !chemin.startsWith("/setup") && !chemin.startsWith("/forgot-password") && !chemin.startsWith("/reset-password")) {
-      self.clients.matchAll({ includeUncontrolled: false }).then(function (clients) {
-        clients.forEach(function (c) {
-          c.postMessage({ type: "sw-navigate-app", path: chemin });
+    if (
+      chemin !== "/" &&
+      !chemin.startsWith("/login") &&
+      !chemin.startsWith("/setup") &&
+      !chemin.startsWith("/forgot-password") &&
+      !chemin.startsWith("/reset-password")
+    ) {
+      self.clients
+        .matchAll({ includeUncontrolled: false })
+        .then(function (clients) {
+          clients.forEach(function (c) {
+            c.postMessage({ type: "sw-navigate-app", path: chemin });
+          });
         });
-      });
     }
     event.respondWith(
       (async () => {

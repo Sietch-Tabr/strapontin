@@ -92,3 +92,33 @@ test.describe("Scénario: import préférences — validation", () => {
     await ctx.close();
   });
 });
+
+test.describe("Scénario: API push — VAPID et validation", () => {
+  test("push_get_retourne_objet_disponible", async ({ request }) => {
+    const rep = await request.get("/api/push");
+    expect(rep.status()).toBe(200);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("disponible");
+  });
+
+  test("push_desabonner_endpoint_vide_retourne_400", async ({ request }) => {
+    const rep = await request.delete("/api/push", {
+      data: { endpoint: "" },
+    });
+    expect(rep.status()).toBe(400);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("erreur");
+  });
+
+  test("push_abonner_sans_session_retourne_401_ou_302", async ({ browser }) => {
+    const ctx = await browser.newContext({ storageState: undefined });
+    const rep = await ctx.request.post("/api/push", {
+      data: {
+        endpoint: "https://exemple.test/push",
+        keys: { p256dh: "cle-test", auth: "auth-test" },
+      },
+    });
+    expect([401, 302, 403]).toContain(rep.status());
+    await ctx.close();
+  });
+});

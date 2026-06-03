@@ -39,7 +39,9 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
     if (isMobile) {
       // Sur mobile, /changelog est dans le drawer — vérifier qu'il y est
       await page.click("#btn-nav-plus");
-      await expect(page.locator("#dialog-nav-plus a[href='/changelog']")).toBeVisible();
+      await expect(
+        page.locator("#dialog-nav-plus a[href='/changelog']"),
+      ).toBeVisible();
       await page.keyboard.press("Escape");
     } else {
       await expect(page.locator(".sidebar a[href='/changelog']")).toBeVisible();

@@ -91,3 +91,17 @@ test.describe("Scénario: authentification et gardes de route", () => {
     await ctx.close();
   });
 });
+
+test.describe("Scénario: cookie de session — durée", () => {
+  test("cookie_session_non_expire_et_duree_max_30_jours", async ({
+    context,
+  }) => {
+    await context.request.get("/");
+    const cookies = await context.cookies();
+    const cookie = cookies.find((c) => c.name === "SESSION");
+    expect(cookie).toBeDefined();
+    const maintenant = Date.now() / 1000;
+    expect(cookie!.expires).toBeGreaterThan(maintenant);
+    expect(cookie!.expires).toBeLessThan(maintenant + 31 * 24 * 3600);
+  });
+});
