@@ -174,8 +174,9 @@ public class ParametresViewController {
       @RequestParam(required = false, defaultValue = "false") boolean notifSallesPush,
       RedirectAttributes redirects,
       Authentication auth) {
-    var requete = new RequeteNotifications(
-        frequenceNotifications, notifArtistes, notifSalles, notifArtistesPush, notifSallesPush);
+    var requete =
+        new RequeteNotifications(
+            frequenceNotifications, notifArtistes, notifSalles, notifArtistesPush, notifSallesPush);
     ResponseEntity<Map<String, Object>> rep = userConfigController.majNotifications(requete, auth);
     if (rep.getStatusCode().isError()) {
       var corps = rep.getBody();

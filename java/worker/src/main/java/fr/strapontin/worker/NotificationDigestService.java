@@ -183,8 +183,12 @@ public class NotificationDigestService {
         List<ConcertNotif> concerts = entree.getValue();
         boolean notifEnvoyee = false;
         try {
-          ResultatDigest res = envoyerDigest(
-              userId, emailsUtilisateurs.get(userId), concerts, configsUtilisateurs.get(userId));
+          ResultatDigest res =
+              envoyerDigest(
+                  userId,
+                  emailsUtilisateurs.get(userId),
+                  concerts,
+                  configsUtilisateurs.get(userId));
           if (res.emailOk()) nbEmailsOk++;
           if (res.pushOk()) nbPushOk++;
           notifEnvoyee = res.emailOk() || res.pushOk();

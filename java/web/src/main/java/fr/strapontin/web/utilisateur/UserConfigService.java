@@ -129,10 +129,11 @@ public class UserConfigService {
     if (!FREQUENCES_VALIDES.contains(requete.frequenceNotifications())) {
       throw new ErreurMetier("Valeur invalide.");
     }
-    boolean aucunCanal = !requete.notifArtistes()
-        && !requete.notifSalles()
-        && !requete.notifArtistesPush()
-        && !requete.notifSallesPush();
+    boolean aucunCanal =
+        !requete.notifArtistes()
+            && !requete.notifSalles()
+            && !requete.notifArtistesPush()
+            && !requete.notifSallesPush();
     if (!"jamais".equals(requete.frequenceNotifications()) && aucunCanal) {
       throw new ErreurMetier(
           "Activez au moins un type de contenu pour recevoir des notifications.");
