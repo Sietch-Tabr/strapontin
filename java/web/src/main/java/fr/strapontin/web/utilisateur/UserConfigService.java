@@ -182,13 +182,13 @@ public class UserConfigService {
     for (String cle : champs.keySet()) {
       if (setClauses.length() > 0) setClauses.append(", ");
       String colonne = versColonne(cle);
-      setClauses.append(colonne).append(" = :").append(cle);
+      setClauses.append(colonne).append(" = ").append(versCast(cle, ":" + cle));
     }
 
     List<String> colonnes =
         champs.keySet().stream().map(this::versColonne).collect(Collectors.toList());
     List<String> placeholders =
-        champs.keySet().stream().map(c -> ":" + c).collect(Collectors.toList());
+        champs.keySet().stream().map(c -> versCast(c, ":" + c)).collect(Collectors.toList());
 
     colonnes.add(0, "user_id");
     placeholders.add(0, ":userId");
@@ -202,6 +202,13 @@ public class UserConfigService {
             .formatted(String.join(", ", colonnes), String.join(", ", placeholders), setClauses);
 
     jdbc.update(sql, params);
+  }
+
+  private static String versCast(String champJava, String placeholder) {
+    return switch (champJava) {
+      case "frequenceNotifications" -> "CAST(" + placeholder + " AS frequence_notif)";
+      default -> placeholder;
+    };
   }
 
   private String versColonne(String champJava) {
