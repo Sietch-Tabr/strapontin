@@ -34,10 +34,16 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
     await expect(page.locator("#form-signalement")).toBeVisible();
   });
 
-  test("aide_lien_changelog_present", async ({ page }) => {
+  test("aide_lien_changelog_present", async ({ page, isMobile }) => {
     await page.goto("/aide");
-    const lienChangelog = page.locator("a[href='/changelog']");
-    await expect(lienChangelog.first()).toBeVisible();
+    if (isMobile) {
+      // Sur mobile, /changelog est dans le drawer — vérifier qu'il y est
+      await page.click("#btn-nav-plus");
+      await expect(page.locator("#dialog-nav-plus a[href='/changelog']")).toBeVisible();
+      await page.keyboard.press("Escape");
+    } else {
+      await expect(page.locator(".sidebar a[href='/changelog']")).toBeVisible();
+    }
   });
 
   test("changelog_contenu_visible", async ({ page }) => {
