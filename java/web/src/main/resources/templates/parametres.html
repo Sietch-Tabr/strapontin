@@ -249,10 +249,16 @@
                 </div>
               </fieldset>
 
+              <!-- Préserve les valeurs email/fréquence quand Resend est absent (champs disabled non soumis) -->
+              <th:block th:if="${!config?.resendDisponible}">
+                <input type="hidden" name="frequenceNotifications" th:value="${config?.frequenceNotifications ?: 'jamais'}"/>
+                <input th:if="${config?.notifArtistes}" type="hidden" name="notifArtistes" value="true"/>
+                <input th:if="${config?.notifSalles}" type="hidden" name="notifSalles" value="true"/>
+              </th:block>
+
               <button
                 type="submit"
                 class="btn btn-secondary"
-                th:disabled="${config == null or !config.resendDisponible}"
               >
                 Enregistrer
               </button>
