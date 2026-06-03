@@ -1,10 +1,12 @@
 // Strapontin v2 — JS minimal (thème, push)
 
 // Applique le thème depuis le cookie au chargement pour éviter le FOUC
-const prefSombre = window.matchMedia("(prefers-color-scheme: dark)");
+window.__prefSombre =
+  window.__prefSombre || window.matchMedia("(prefers-color-scheme: dark)");
 
 function appliquerTheme(t) {
-  const sombre = t === "sombre" || (t === "auto" && prefSombre.matches);
+  const sombre =
+    t === "sombre" || (t === "auto" && window.__prefSombre.matches);
   document.documentElement.classList.toggle("dark", sombre);
 }
 
@@ -15,7 +17,9 @@ function appliquerTheme(t) {
   } catch (_) {}
   appliquerTheme(theme);
   if (theme === "auto") {
-    prefSombre.addEventListener("change", () => appliquerTheme("auto"));
+    window.__prefSombre.addEventListener("change", () =>
+      appliquerTheme("auto"),
+    );
   }
 })();
 
@@ -1228,6 +1232,11 @@ function initBarresProgression() {
   });
 
   window.addEventListener("unhandledrejection", function (e) {
+    if (
+      e.reason instanceof DOMException &&
+      e.reason.name === "InvalidStateError"
+    )
+      return;
     signalerErreur({
       message: String(e.reason) || "Rejection non gérée",
       type: "promise-rejection",
