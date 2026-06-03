@@ -1155,7 +1155,9 @@ function initPush() {
       nonSupporteDiv.hidden = false;
       window.signalerErreur &&
         window.signalerErreur({
-          message: "push.chargerEtat: " + (e && e.message ? e.message : "timeout ou erreur"),
+          message:
+            "push.chargerEtat: " +
+            (e && e.message ? e.message : "timeout ou erreur"),
           type: "js-error",
           url: "/api/push",
         });
@@ -1356,7 +1358,11 @@ function initBarresProgression() {
     var chemin = (e.detail.requestConfig && e.detail.requestConfig.path) || "";
     signalerErreur(
       Object.assign(
-        { message: "htmx:timeout — " + chemin, type: "htmx-error", url: chemin },
+        {
+          message: "htmx:timeout — " + chemin,
+          type: "htmx-error",
+          url: chemin,
+        },
         contexteReseau(),
       ),
     );
