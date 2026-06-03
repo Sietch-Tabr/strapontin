@@ -378,7 +378,17 @@ function initDrawerNavigation() {
   });
 
   dialog.addEventListener("click", function (e) {
-    if (e.target === dialog || e.target.closest("a[href]")) dialog.close();
+    if (e.target === dialog) {
+      dialog.close();
+      return;
+    }
+    if (e.target.closest("a[href]")) {
+      // Délai d'un tick : laisse HTMX intercepter le click avant la fermeture
+      // (Android Chrome annule la propagation si dialog.close() est synchrone)
+      setTimeout(function () {
+        dialog.close();
+      }, 0);
+    }
   });
 
   dialog.addEventListener("close", function () {
@@ -1426,6 +1436,15 @@ if (navigator.serviceWorker) {
           message: "sw: " + (e.data.message || "erreur service worker"),
           type: "js-error",
           url: "/sw.js",
+        });
+      return;
+    }
+    if (e.data?.type === "sw-navigate-app") {
+      window.signalerErreur &&
+        window.signalerErreur({
+          message: "sw.navigate intercepté (route app) : " + e.data.path,
+          type: "js-error",
+          url: e.data.path,
         });
       return;
     }

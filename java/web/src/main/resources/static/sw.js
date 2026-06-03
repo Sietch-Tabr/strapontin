@@ -111,6 +111,14 @@ self.addEventListener("fetch", (event) => {
 
   // Navigation browser : NavigationPreload + timeout 6 s, offline.html depuis le cache sinon
   if (request.mode === "navigate") {
+    var chemin = url.pathname;
+    if (chemin !== "/" && !chemin.startsWith("/login") && !chemin.startsWith("/setup") && !chemin.startsWith("/forgot-password") && !chemin.startsWith("/reset-password")) {
+      self.clients.matchAll({ includeUncontrolled: false }).then(function (clients) {
+        clients.forEach(function (c) {
+          c.postMessage({ type: "sw-navigate-app", path: chemin });
+        });
+      });
+    }
     event.respondWith(
       (async () => {
         try {
