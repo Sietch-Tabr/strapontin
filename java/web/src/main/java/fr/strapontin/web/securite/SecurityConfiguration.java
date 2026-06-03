@@ -254,7 +254,7 @@ public class SecurityConfiguration {
     DefaultCookieSerializer serialiseur = new DefaultCookieSerializer();
     serialiseur.setUseSecureCookie(cookieSecure);
     serialiseur.setSameSite("Strict");
-    serialiseur.setCookieHttpOnly(true);
+    serialiseur.setUseHttpOnlyCookie(true);
     serialiseur.setCookieMaxAge(2592000);
     return serialiseur;
   }
