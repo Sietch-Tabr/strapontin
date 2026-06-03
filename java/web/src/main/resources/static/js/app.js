@@ -73,7 +73,14 @@ if ("serviceWorker" in navigator && "PushManager" in window) {
         }),
       });
     })
-    .catch(() => {});
+    .catch(function (e) {
+      window.signalerErreur &&
+        window.signalerErreur({
+          message: "sw.register: " + (e && e.message ? e.message : "échec"),
+          type: "js-error",
+          url: "/sw.js",
+        });
+    });
 }
 
 // Toasts (Popover API — l'attribut est posé par JS pour contourner le filtrage Thymeleaf)
@@ -207,6 +214,12 @@ function initReafficher() {
         })
         .catch(function () {
           btn.disabled = false;
+          window.signalerErreur &&
+            window.signalerErreur({
+              message: "reafficher: PATCH échec id=" + id,
+              type: "htmx-error",
+              url: "/api/spectacles/matches/" + id,
+            });
         });
     });
   });
@@ -558,6 +571,12 @@ function initAdminBanniere() {
         })
         .catch(function () {
           afficherToast("Erreur réseau.", "erreur");
+          window.signalerErreur &&
+            window.signalerErreur({
+              message: "banniere.publier: erreur réseau",
+              type: "js-error",
+              url: "/api/admin/banniere",
+            });
         });
     };
   }
@@ -578,6 +597,12 @@ function initAdminBanniere() {
         })
         .catch(function () {
           afficherToast("Erreur réseau.", "erreur");
+          window.signalerErreur &&
+            window.signalerErreur({
+              message: "banniere.effacer: erreur réseau",
+              type: "js-error",
+              url: "/api/admin/banniere",
+            });
         });
     };
   }
@@ -627,7 +652,15 @@ function initBoutonRelancer() {
             if (statut) statut.textContent = "";
           }
         })
-        .catch(arreterPolling);
+        .catch(function () {
+          arreterPolling();
+          window.signalerErreur &&
+            window.signalerErreur({
+              message: "relancer: polling jobs échoué",
+              type: "js-error",
+              url: "/api/admin/jobs",
+            });
+        });
     }, 3000);
   }
 
@@ -640,7 +673,14 @@ function initBoutonRelancer() {
       mettreAJourBadges(actifs);
       if (actifs.length > 0) demarrerPolling();
     })
-    .catch(function () {});
+    .catch(function () {
+      window.signalerErreur &&
+        window.signalerErreur({
+          message: "relancer: vérification état jobs échouée",
+          type: "js-error",
+          url: "/api/admin/jobs",
+        });
+    });
 
   btn.addEventListener("click", function () {
     btn.disabled = true;
@@ -652,6 +692,12 @@ function initBoutonRelancer() {
       .catch(function () {
         btn.disabled = false;
         if (statut) statut.textContent = "Erreur — worker inaccessible.";
+        window.signalerErreur &&
+          window.signalerErreur({
+            message: "relancer: worker inaccessible",
+            type: "js-error",
+            url: "/api/admin/relancer",
+          });
       });
   });
 }
@@ -808,7 +854,14 @@ function initLogsAdmin() {
         });
         filtrerLogs();
       })
-      .catch(function () {});
+      .catch(function () {
+        window.signalerErreur &&
+          window.signalerErreur({
+            message: "logs.rafraichir: erreur réseau",
+            type: "js-error",
+            url: "/api/admin/logs",
+          });
+      });
   }
 
   function reinitialiserFiltres() {
@@ -961,6 +1014,12 @@ function initGestionUtilisateurs() {
             erreurSpan.textContent = "Erreur réseau.";
             erreurSpan.hidden = false;
           }
+          window.signalerErreur &&
+            window.signalerErreur({
+              message: "utilisateurs.modifier: erreur réseau userId=" + userId,
+              type: "js-error",
+              url: "/api/admin/utilisateurs/" + userId,
+            });
         });
     });
   });
@@ -1081,9 +1140,15 @@ function initPush() {
       pushClePublique = repVapid.clePublique;
       pushAbonnement = await registration.pushManager.getSubscription();
       majEtat();
-    } catch (_) {
+    } catch (e) {
       masquerChargement();
       nonSupporteDiv.hidden = false;
+      window.signalerErreur &&
+        window.signalerErreur({
+          message: "push.chargerEtat: " + (e && e.message ? e.message : "timeout ou erreur"),
+          type: "js-error",
+          url: "/api/push",
+        });
     }
   }
 
@@ -1127,6 +1192,12 @@ function initPush() {
         afficherToast("Notifications push activées.", "succes");
       } catch (e) {
         afficherErreur(e.message || "Une erreur est survenue.");
+        window.signalerErreur &&
+          window.signalerErreur({
+            message: "push.activer: " + (e.message || "erreur"),
+            type: "js-error",
+            url: "/api/push",
+          });
       } finally {
         pushEnCours = false;
         btnActiver.disabled = false;
@@ -1155,6 +1226,12 @@ function initPush() {
         afficherToast("Notifications push désactivées.", "info");
       } catch (e) {
         afficherErreur(e.message || "Une erreur est survenue.");
+        window.signalerErreur &&
+          window.signalerErreur({
+            message: "push.desactiver: " + (e.message || "erreur"),
+            type: "js-error",
+            url: "/api/push",
+          });
       } finally {
         pushEnCours = false;
         btnDesactiver.disabled = false;
@@ -1195,7 +1272,7 @@ function initBarresProgression() {
 
 // Observabilité JS — remontée des erreurs client vers logs_admin
 (function () {
-  var MAX_ERREURS = 5;
+  var MAX_ERREURS = 10;
   var FENETRE_MS = 60000;
 
   function peutSignalerErreur() {
@@ -1262,6 +1339,18 @@ function initBarresProgression() {
     }
     return ctx;
   }
+
+  window.signalerErreur = signalerErreur;
+
+  document.addEventListener("htmx:timeout", function (e) {
+    var chemin = (e.detail.requestConfig && e.detail.requestConfig.path) || "";
+    signalerErreur(
+      Object.assign(
+        { message: "htmx:timeout — " + chemin, type: "htmx-error", url: chemin },
+        contexteReseau(),
+      ),
+    );
+  });
 
   document.addEventListener("htmx:sendError", function (e) {
     var chemin = (e.detail.requestConfig && e.detail.requestConfig.path) || "";
@@ -1331,6 +1420,15 @@ document.addEventListener("htmx:beforeRequest", function () {
 
 if (navigator.serviceWorker) {
   navigator.serviceWorker.addEventListener("message", function (e) {
+    if (e.data?.type === "sw-error") {
+      window.signalerErreur &&
+        window.signalerErreur({
+          message: "sw: " + (e.data.message || "erreur service worker"),
+          type: "js-error",
+          url: "/sw.js",
+        });
+      return;
+    }
     if (e.data?.type !== "nav-ancre") return;
     var cible = new URL(e.data.url, location.origin);
     if (location.pathname === cible.pathname && cible.hash) {
