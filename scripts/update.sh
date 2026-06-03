@@ -32,9 +32,9 @@ mv "$APP_DIR/worker.jar.new" "$APP_DIR/worker.jar"
 echo "[update] Redémarrage des services..."
 systemctl restart strapontin-web strapontin-worker
 
-echo "[update] Attente démarrage web (max 30 s)..."
+echo "[update] Attente démarrage web (max 60 s)..."
 HEALTH_OK=false
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
     if curl -sf "http://localhost:8080/actuator/health" | grep -q '"status":"UP"'; then
         echo "[update] Service web UP (${i}s)"
         HEALTH_OK=true
@@ -44,7 +44,7 @@ for i in $(seq 1 30); do
 done
 
 if [ "$HEALTH_OK" = false ]; then
-    echo "[update] ERREUR : service web non UP après 30s" >&2
+    echo "[update] ERREUR : service web non UP après 60s" >&2
     journalctl -u strapontin-web -n 30 --no-pager >&2
     rollback
     exit 1
