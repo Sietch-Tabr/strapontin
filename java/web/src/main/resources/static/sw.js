@@ -14,12 +14,35 @@ const RESSOURCES_STATIQUES = [
   "/offline.html",
 ];
 
+self.addEventListener("error", function (e) {
+  self.clients
+    .matchAll({ includeUncontrolled: true })
+    .then(function (clients) {
+      clients.forEach(function (c) {
+        c.postMessage({ type: "sw-error", message: e.message || "erreur SW" });
+      });
+    });
+});
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NOM)
       .then((cache) => cache.addAll(RESSOURCES_STATIQUES))
-      .then(() => self.skipWaiting()),
+      .then(() => self.skipWaiting())
+      .catch(function (e) {
+        self.clients
+          .matchAll({ includeUncontrolled: true })
+          .then(function (clients) {
+            clients.forEach(function (c) {
+              c.postMessage({
+                type: "sw-error",
+                message: "install: " + (e && e.message ? e.message : "échec précachage"),
+              });
+            });
+          });
+        throw e;
+      }),
   );
 });
 
