@@ -1243,23 +1243,59 @@ function initBarresProgression() {
     });
   });
 
+  function contexteReseau() {
+    var ctx = {
+      enLigne: navigator.onLine,
+      visibilite: document.visibilityState,
+      swActif: !!(
+        navigator.serviceWorker && navigator.serviceWorker.controller
+      ),
+      swEtat:
+        (navigator.serviceWorker &&
+          navigator.serviceWorker.controller &&
+          navigator.serviceWorker.controller.state) ||
+        "",
+    };
+    if (navigator.connection) {
+      ctx.typeConnexion =
+        navigator.connection.effectiveType || navigator.connection.type || "";
+    }
+    return ctx;
+  }
+
   document.addEventListener("htmx:sendError", function (e) {
     var chemin = (e.detail.requestConfig && e.detail.requestConfig.path) || "";
-    signalerErreur({
-      message: "htmx:sendError — " + chemin,
-      type: "htmx-error",
-      url: chemin,
-    });
+    signalerErreur(
+      Object.assign(
+        {
+          message: "htmx:sendError — " + chemin,
+          type: "htmx-error",
+          url: chemin,
+        },
+        contexteReseau(),
+      ),
+    );
   });
 
   document.addEventListener("htmx:responseError", function (e) {
     var statut = (e.detail.xhr && e.detail.xhr.status) || "";
     var chemin = (e.detail.requestConfig && e.detail.requestConfig.path) || "";
-    signalerErreur({
-      message: "htmx:responseError " + statut + " — " + chemin,
-      type: "htmx-error",
-      url: chemin,
-    });
+    var urlReponse =
+      (e.detail.xhr && (e.detail.xhr.responseURL || e.detail.xhr.url)) || "";
+    var ctx = contexteReseau();
+    if (urlReponse && urlReponse !== location.origin + chemin) {
+      ctx.urlReponse = urlReponse;
+    }
+    signalerErreur(
+      Object.assign(
+        {
+          message: "htmx:responseError " + statut + " — " + chemin,
+          type: "htmx-error",
+          url: chemin,
+        },
+        ctx,
+      ),
+    );
   });
 })();
 

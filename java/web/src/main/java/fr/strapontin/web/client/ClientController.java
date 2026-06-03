@@ -6,7 +6,7 @@ package fr.strapontin.web.client;
 
 import fr.strapontin.web.admin.LogAdminService;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.http.ResponseEntity;
@@ -46,7 +46,8 @@ public class ClientController {
   @PostMapping("/erreur")
   public ResponseEntity<Map<String, Object>> signalerErreur(
       @RequestBody Map<String, Object> corps, HttpServletRequest request) {
-    String message = tronquer(String.valueOf(corps.getOrDefault("message", "")), LONGUEUR_MAX_MESSAGE);
+    String message =
+        tronquer(String.valueOf(corps.getOrDefault("message", "")), LONGUEUR_MAX_MESSAGE);
     String type = String.valueOf(corps.getOrDefault("type", "js-error"));
     if (!TYPES_VALIDES.contains(type)) {
       type = "js-error";
@@ -60,16 +61,17 @@ public class ClientController {
       return ResponseEntity.badRequest().body(Map.of("erreur", "Message requis."));
     }
 
-    logAdminService.logAdmin(
-        "error",
-        "client-js",
-        "[" + type + "] " + message,
-        Map.of(
-            "type", type,
-            "url", url != null ? url : "",
-            "ligne", ligne != null ? ligne : "",
-            "colonne", colonne != null ? colonne : "",
-            "userAgent", userAgent != null ? userAgent : ""));
+    Map<String, Object> meta = new HashMap<>();
+    for (var entree : corps.entrySet()) {
+      String cle = entree.getKey();
+      if (!"message".equals(cle) && !"type".equals(cle)) {
+        meta.put(cle, entree.getValue() != null ? entree.getValue() : "");
+      }
+    }
+    meta.put("url", url != null ? url : "");
+    meta.put("userAgent", userAgent != null ? userAgent : "");
+
+    logAdminService.logAdmin("error", "client-js", "[" + type + "] " + message, meta);
 
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }
