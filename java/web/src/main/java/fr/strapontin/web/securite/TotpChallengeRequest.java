@@ -1,0 +1,12 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.web.securite;
+
+/// Corps de la requête de vérification du challenge TOTP.
+///
+/// @param code le code à 6 chiffres saisi par l'utilisateur
+/// @since 2.2.0
+/// @author Kwaite
+public record TotpChallengeRequest(String code) {}

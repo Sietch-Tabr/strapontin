@@ -20,8 +20,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,8 +36,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 /// Contrôleur MVC Thymeleaf pour les pages d'authentification.
 ///
-/// Gère les vues `/login`, `/forgot-password` et `/reset-password`.
-/// Le traitement du formulaire `POST /login` est délégué à Spring Security.
+/// <p>Gère les vues `/login`, `/forgot-password`, `/reset-password` et `/auth/totp`.
+/// Le handler `POST /login` est temporaire : il sera supprimé avec ce contrôleur lors de
+/// l'implémentation de la page Vue de login (#511).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -39,6 +46,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class AuthViewController {
 
   private static final SecureRandom rng = new SecureRandom();
+  private static final String VUE_LOGIN = "auth/login";
   private static final String VUE_FORGOT_PASSWORD = "auth/forgot-password";
   private static final String VUE_RESET_PASSWORD = "auth/reset-password";
   private static final String VUE_TOTP = "auth/totp";
@@ -53,18 +61,21 @@ public class AuthViewController {
   private final EmailService emailService;
   private final PasswordEncoder passwordEncoder;
   private final TotpService totpService;
+  private final AuthenticationManager authenticationManager;
 
   public AuthViewController(
       NamedParameterJdbcTemplate jdbc,
       ConfigService configService,
       EmailService emailService,
       PasswordEncoder passwordEncoder,
-      TotpService totpService) {
+      TotpService totpService,
+      AuthenticationManager authenticationManager) {
     this.jdbc = jdbc;
     this.configService = configService;
     this.emailService = emailService;
     this.passwordEncoder = passwordEncoder;
     this.totpService = totpService;
+    this.authenticationManager = authenticationManager;
   }
 
   /// Affiche la page de connexion.
@@ -72,7 +83,51 @@ public class AuthViewController {
   /// @return le nom du template Thymeleaf
   @GetMapping("/login")
   public String login() {
-    return "auth/login";
+    return VUE_LOGIN;
+  }
+
+  /// Traite le formulaire Thymeleaf de connexion — handler de transition pendant la migration SPA.
+  ///
+  /// <p>Remplace le formLogin Spring Security supprimé en #509. Sera retiré avec
+  /// {@code AuthViewController} lors de l'implémentation de la page Vue (#511).
+  ///
+  /// @param identifiant le nom d'utilisateur saisi
+  /// @param motDePasse  le mot de passe saisi
+  /// @param modele      le modèle Thymeleaf pour les messages d'erreur
+  /// @param request     la requête HTTP (pour créer/invalider la session)
+  /// @return redirect vers {@code /auth/totp} si TOTP requis, vers {@code /} si succès, ou
+  ///     ré-affichage de la page login avec erreur
+  @PostMapping("/login")
+  public String traiterLogin(
+      @RequestParam(defaultValue = "") String identifiant,
+      @RequestParam(defaultValue = "") String motDePasse,
+      Model modele,
+      HttpServletRequest request) {
+    try {
+      Authentication auth =
+          authenticationManager.authenticate(
+              UsernamePasswordAuthenticationToken.unauthenticated(identifiant, motDePasse));
+
+      HttpSession sessionExistante = request.getSession(false);
+      if (sessionExistante != null) sessionExistante.invalidate();
+
+      SecurityContext contexte = SecurityContextHolder.createEmptyContext();
+      contexte.setAuthentication(auth);
+      SecurityContextHolder.setContext(contexte);
+
+      HttpSession session = request.getSession(true);
+      session.setAttribute(
+          HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, contexte);
+
+      if (auth.getPrincipal() instanceof UtilisateurDetails details && details.twoFactorActif()) {
+        session.setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
+        return "redirect:/auth/totp";
+      }
+      return "redirect:/";
+    } catch (BadCredentialsException _) {
+      modele.addAttribute(CLE_ERREUR, "Identifiant ou mot de passe incorrect.");
+      return VUE_LOGIN;
+    }
   }
 
   /// Affiche la page de challenge TOTP post-login.
