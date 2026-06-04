@@ -2,6 +2,8 @@ node_modules/
 .env
 .env.local
 dist/
+java/web/src/main/resources/static/assets/
+java/web/src/main/resources/static/index.html
 .svelte-kit/
 *.sql.gz
 .DS_Store
