@@ -14,9 +14,20 @@ steps:
       - event: push
         branch: main
 
+  - name: build-front
+    image: node:24-alpine
+    volumes:
+      - /var/cache/woodpecker/npm:/root/.npm
+    commands:
+      - rm -rf java/web/src/main/resources/static/assets java/web/src/main/resources/static/index.html
+      - cd front && npm ci && npm run build
+    when:
+      - event: push
+        branch: main
+
   - name: build
     image: maven:3.9-eclipse-temurin-25
-    depends_on: [test]
+    depends_on: [test, build-front]
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
     commands:
