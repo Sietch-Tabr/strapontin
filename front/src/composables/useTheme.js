@@ -1,0 +1,51 @@
+import { onMounted, onUnmounted } from "vue";
+
+const prefSombre = window.matchMedia("(prefers-color-scheme: dark)");
+
+function appliquerTheme(valeur) {
+  const sombre =
+    valeur === "sombre" || (valeur === "auto" && prefSombre.matches);
+  document.documentElement.classList.toggle("dark", sombre);
+}
+
+function lireThemeCookie() {
+  return document.cookie.match(/(?:^|; )theme=([^;]*)/)?.[1] ?? "auto";
+}
+
+function enregistrerTheme(valeur) {
+  document.cookie =
+    "theme=" +
+    valeur +
+    "; path=/; max-age=" +
+    365 * 24 * 3600 +
+    "; SameSite=Strict";
+  try {
+    localStorage.setItem("strapontin-theme", valeur);
+  } catch (_) {}
+  appliquerTheme(valeur);
+}
+
+export function useTheme() {
+  let ecouteurAuto = null;
+
+  onMounted(() => {
+    const theme = lireThemeCookie();
+    try {
+      localStorage.setItem("strapontin-theme", theme);
+    } catch (_) {}
+    appliquerTheme(theme);
+
+    if (theme === "auto") {
+      ecouteurAuto = () => appliquerTheme("auto");
+      prefSombre.addEventListener("change", ecouteurAuto);
+    }
+  });
+
+  onUnmounted(() => {
+    if (ecouteurAuto) {
+      prefSombre.removeEventListener("change", ecouteurAuto);
+    }
+  });
+
+  return { enregistrerTheme, lireThemeCookie };
+}
