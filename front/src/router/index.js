@@ -14,6 +14,7 @@ import AidePage from "../pages/AidePage.vue";
 import ChangelogPage from "../pages/ChangelogPage.vue";
 import ParametresPage from "../pages/ParametresPage.vue";
 import ParametresTotpPage from "../pages/ParametresTotpPage.vue";
+import AdminPage from "../pages/AdminPage.vue";
 
 const routes = [
   { path: "/login", component: LoginPage, meta: { authPage: true } },
@@ -43,6 +44,7 @@ const routes = [
   { path: "/changelog", component: ChangelogPage },
   { path: "/parametres", component: ParametresPage },
   { path: "/parametres/totp", component: ParametresTotpPage },
+  { path: "/admin", component: AdminPage },
 ];
 
 const router = createRouter({

@@ -4,30 +4,19 @@
  */
 package fr.strapontin.web.admin;
 
-import fr.strapontin.web.vue.OngletItem;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/// Contrôleur MVC Thymeleaf pour la page d'administration.
+/// Contrôleur des actions POST Thymeleaf admin — conservé pendant la coexistence Thymeleaf/Vue.
 ///
-/// Charge les quatre sources de données en parallèle et délègue toutes les mutations
-/// à [AdminController]. Pattern PRG sur toutes les actions.
+/// La route GET /admin est désormais gérée par SpaFallbackController (Vue). Ce contrôleur
+/// sera supprimé après validation de AdminPage.vue sur LXC dev (ticket #523).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -36,32 +25,6 @@ public class AdminViewController {
 
   private final AdminController adminController;
 
-  private static final Map<String, String> DESCRIPTIONS_CONFIG =
-      Map.ofEntries(
-          Map.entry("TICKETMASTER_API_KEY", "Clé d'API Ticketmaster Discovery v2."),
-          Map.entry("RESEND_API_KEY", "Clé d'API Resend pour les notifications email."),
-          Map.entry(
-              "RESEND_WEBHOOK_SECRET",
-              "Clé de signature des webhooks Resend (détection des bounces email)."
-                  + " À récupérer dans le dashboard Resend → Webhooks → créer un endpoint"
-                  + " avec l'URL PUBLIC_BASE_URL/api/webhooks/resend"
-                  + " (événements : email.bounced, email.complained)."),
-          Map.entry("CONTACT_EMAIL", "Adresse email affichée dans les emails envoyés."),
-          Map.entry(
-              "PUBLIC_BASE_URL",
-              "URL publique de l'application (ex. https://strapontin.kwaite.fr)."),
-          Map.entry("VAPID_PUBLIC_KEY", "Clé publique VAPID (générée automatiquement)."),
-          Map.entry("VAPID_PRIVATE_KEY", "Clé privée VAPID (générée automatiquement)."));
-
-  private static final Map<String, String> LABELS_JOBS =
-      Map.of(
-          "fetch:artistes:batch", "Artistes suivis",
-          "fetch:region", "Concerts par région",
-          "notifier:digest", "Notifications digest",
-          "purger:concerts", "Purge concerts",
-          "recalculer:matches", "Recalcul matchs",
-          "fetch:salle", "Salle");
-
   private static final String CLE_ERREUR = "erreur";
   private static final String CLE_SUCCES = "succes";
   private static final String ERREUR_DEFAUT = "Erreur.";
@@ -69,122 +32,6 @@ public class AdminViewController {
 
   public AdminViewController(AdminController adminController) {
     this.adminController = adminController;
-  }
-
-  /// Affiche la page d'administration avec les utilisateurs, la configuration,
-  /// les logs et les statistiques de jobs.
-  ///
-  /// @param modele le modèle Thymeleaf
-  /// @return le nom du template
-  @GetMapping("/admin")
-  public String admin(
-      Model modele,
-      org.springframework.security.core.Authentication auth,
-      HttpServletRequest request,
-      HttpServletResponse response) {
-    ResponseEntity<List<UtilisateurAdmin>> repUsers = adminController.listerUtilisateurs();
-    ResponseEntity<List<ConfigStatut>> repConfig = adminController.lireConfigStatuts();
-    ResponseEntity<List<LogAdminService.EntreeLogAdmin>> repLogs = adminController.lireLogs();
-    ResponseEntity<Map<String, Object>> repJobs = adminController.lireJobs();
-
-    modele.addAttribute("utilisateurs", repUsers.getBody());
-    modele.addAttribute("configStatuts", repConfig.getBody());
-    modele.addAttribute("logs", repLogs.getBody());
-    var corpsJobs = repJobs.getBody();
-    modele.addAttribute("statsJobs", corpsJobs != null ? corpsJobs.get("statsJobs") : null);
-    modele.addAttribute("quotaTM", corpsJobs != null ? corpsJobs.get("quotaTM") : null);
-    modele.addAttribute(
-        "jobsEnCours",
-        corpsJobs != null ? corpsJobs.getOrDefault("jobsEnCours", List.of()) : List.of());
-
-    Instant workerLastSuccess =
-        corpsJobs != null ? (Instant) corpsJobs.get("workerLastSuccess") : null;
-    boolean workerEnAlerte = workerLastSuccess == null;
-    String workerDepuisTexte = null;
-    if (workerLastSuccess != null) {
-      long minutesSince = Duration.between(workerLastSuccess, Instant.now()).toMinutes();
-      workerEnAlerte = minutesSince > 180;
-      if (minutesSince < 1) workerDepuisTexte = "à l'instant";
-      else if (minutesSince < 60) workerDepuisTexte = "il y a " + minutesSince + " min";
-      else {
-        long h = minutesSince / 60;
-        long m = minutesSince % 60;
-        workerDepuisTexte = m > 0 ? "il y a " + h + " h " + m + " min" : "il y a " + h + " h";
-      }
-    }
-    modele.addAttribute("workerEnAlerte", workerEnAlerte);
-    modele.addAttribute("workerDepuisTexte", workerDepuisTexte);
-
-    String etatQuota =
-        corpsJobs != null ? (String) corpsJobs.getOrDefault("etatQuota", "ok") : "ok";
-    modele.addAttribute("etatQuota", etatQuota);
-    modele.addAttribute("labelsJobs", LABELS_JOBS);
-
-    @SuppressWarnings("unchecked")
-    List<StatJob> statsJobsList =
-        corpsJobs != null ? (List<StatJob>) corpsJobs.get("statsJobs") : List.of();
-    long nbJobsOk = statsJobsList.stream().filter(j -> j.erreur() == null).count();
-    long nbJobsErreur = statsJobsList.stream().filter(j -> j.erreur() != null).count();
-    modele.addAttribute("nbJobsOk", nbJobsOk);
-    modele.addAttribute("nbJobsErreur", nbJobsErreur);
-
-    List<ConfigStatut> configStatuts = repConfig.getBody();
-    String baseUrl =
-        configStatuts != null
-            ? configStatuts.stream()
-                .filter(s -> "PUBLIC_BASE_URL".equals(s.cle()) && s.valeur() != null)
-                .map(ConfigStatut::valeur)
-                .findFirst()
-                .orElse("PUBLIC_BASE_URL")
-            : "PUBLIC_BASE_URL";
-    Map<String, String> descriptionsConfig = new java.util.HashMap<>(DESCRIPTIONS_CONFIG);
-    descriptionsConfig.put(
-        "RESEND_WEBHOOK_SECRET",
-        "Clé de signature des webhooks Resend (détection des bounces email)."
-            + " À récupérer dans le dashboard Resend → Webhooks → créer un endpoint"
-            + " avec l'URL "
-            + baseUrl
-            + "/api/webhooks/resend"
-            + " (événements : email.bounced, email.complained).");
-    modele.addAttribute("descriptionsConfig", descriptionsConfig);
-    Map<String, ConfigStatut> configParCle =
-        configStatuts == null
-            ? Map.of()
-            : configStatuts.stream().collect(Collectors.toMap(ConfigStatut::cle, s -> s));
-    modele.addAttribute("configParCle", configParCle);
-    modele.addAttribute("appConfigSecretPresente", System.getenv("APP_CONFIG_SECRET") != null);
-    String utilisateurCourantId =
-        auth != null
-                && auth.getPrincipal() instanceof fr.strapontin.web.securite.UtilisateurDetails u
-            ? u.id()
-            : null;
-    modele.addAttribute("utilisateurCourantId", utilisateurCourantId);
-    modele.addAttribute("currentPage", "admin");
-    modele.addAttribute(
-        "ongletItems",
-        List.of(
-            new OngletItem("#jobs", "Tableau de bord", "icon-activity"),
-            new OngletItem("#logs", "Logs", "icon-scroll-text"),
-            new OngletItem("#configuration", "Configuration", "icon-settings"),
-            new OngletItem("#section-banniere", "Bannière", "icon-bell"),
-            new OngletItem("#utilisateurs", "Utilisateurs", "icon-users")));
-    DateTimeFormatter formateur =
-        DateTimeFormatter.ofPattern("EEEE d MMMM yyyy à HH'h'mm", Locale.FRENCH);
-    modele.addAttribute("heureActualisation", LocalDateTime.now().format(formateur));
-
-    if ("true".equals(request.getHeader("HX-Request"))) {
-      Object succes = modele.asMap().get("succes");
-      String hash =
-          switch (String.valueOf(succes)) {
-            case "supprimerUtilisateur", "creerUtilisateur", "reinitialiserMdp" -> "#utilisateurs";
-            case "config", "vapid" -> "#configuration";
-            case "relancer" -> "#jobs";
-            default -> null;
-          };
-      if (hash != null) response.setHeader("HX-Push-Url", "/admin" + hash);
-    }
-
-    return "admin";
   }
 
   /// Crée un nouveau compte utilisateur.

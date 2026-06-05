@@ -10,11 +10,13 @@ test.describe("Scénario: admin — sections et contenus", () => {
 
   test("admin_section_utilisateurs_visible", async ({ page }) => {
     await page.goto("/admin#utilisateurs");
+    await page.locator('a[href="#utilisateurs"]').click();
     await expect(page.locator("section#utilisateurs")).toBeVisible();
   });
 
   test("admin_section_configuration_visible", async ({ page }) => {
     await page.goto("/admin#configuration");
+    await page.locator('a[href="#configuration"]').click();
     await expect(page.locator("section#configuration")).toBeVisible();
   });
 
@@ -25,11 +27,19 @@ test.describe("Scénario: admin — sections et contenus", () => {
 
   test("admin_section_logs_visible", async ({ page }) => {
     await page.goto("/admin#logs");
+    await page.locator('a[href="#logs"]').click();
     await expect(page.locator("section#logs")).toBeVisible();
+  });
+
+  test("admin_section_banniere_visible", async ({ page }) => {
+    await page.goto("/admin#banniere");
+    await page.locator('a[href="#banniere"]').click();
+    await expect(page.locator("section#banniere")).toBeVisible();
   });
 
   test("admin_anchor_utilisateurs_scroll", async ({ page }) => {
     await page.goto("/admin#utilisateurs");
+    await page.locator('a[href="#utilisateurs"]').click();
     await expect(page.locator("section#utilisateurs")).toBeVisible();
   });
 });
@@ -40,13 +50,9 @@ test.describe("Scénario: admin — gestion des utilisateurs", () => {
 
     // Créer l'utilisateur
     await page.goto("/admin#utilisateurs");
-    await page.fill('input[name="email"][type="email"]', emailTest);
-    await Promise.all([
-      page.waitForURL(/\/admin/, { waitUntil: "domcontentloaded" }),
-      page.click(
-        'form[action*="/admin/utilisateurs/creer"] button[type="submit"]',
-      ),
-    ]);
+    await page.locator('a[href="#utilisateurs"]').click();
+    await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
+    await page.click('.form-creer-utilisateur button[type="submit"]');
 
     // Vérifier le dialog d'invitation
     const dialog = page.locator("dialog#dialog-invitation");
@@ -63,21 +69,14 @@ test.describe("Scénario: admin — gestion des utilisateurs", () => {
       .filter({ hasText: emailTest });
     await expect(carteUser).toBeVisible({ timeout: 3000 });
 
-    // Supprimer via le form (hx-boost="false" → submit classique)
-    const formSupprimer = carteUser.locator("form.form-supprimer-user");
-    await expect(formSupprimer).toBeVisible();
-
-    // Le click sur "Supprimer" doit ouvrir le dialog de confirmation via JS
-    await formSupprimer.locator('button[type="submit"]').click();
+    // Cliquer sur Supprimer → ouvre le dialog de confirmation
+    await carteUser.locator("button.btn-danger").click();
     await expect(page.locator("dialog#dialog-supprimer-user")).toBeVisible({
       timeout: 3000,
     });
 
     // Confirmer la suppression
-    await Promise.all([
-      page.waitForURL(/\/admin/, { waitUntil: "domcontentloaded" }),
-      page.click("button#dialog-supprimer-user-confirmer"),
-    ]);
+    await page.click("button#dialog-supprimer-user-confirmer");
 
     // Vérifier que l'utilisateur a disparu de la liste
     await expect(
@@ -87,14 +86,19 @@ test.describe("Scénario: admin — gestion des utilisateurs", () => {
 });
 
 test.describe("Scénario: admin — API endpoints", () => {
-  test("api_admin_quota_retourne_200", async ({ request }) => {
-    const rep = await request.get("/api/admin/quota");
-    expect([200, 404]).toContain(rep.status());
+  test("api_admin_jobs_retourne_200", async ({ request }) => {
+    const rep = await request.get("/api/admin/jobs");
+    expect(rep.status()).toBe(200);
+  });
+
+  test("api_admin_info_retourne_200", async ({ request }) => {
+    const rep = await request.get("/api/admin/info");
+    expect(rep.status()).toBe(200);
   });
 
   test("api_admin_non_accessible_sans_session", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: undefined });
-    const rep = await ctx.request.get("/api/admin/quota");
+    const rep = await ctx.request.get("/api/admin/jobs");
     expect([401, 302, 403]).toContain(rep.status());
     await ctx.close();
   });

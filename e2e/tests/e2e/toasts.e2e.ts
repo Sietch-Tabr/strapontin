@@ -5,14 +5,14 @@ async function soumettreDepartements(page: import("@playwright/test").Page) {
   const input = page.locator('input[name="departements"]');
   await input.waitFor({ state: "visible" });
   await input.fill((await input.inputValue()) || "75");
-  // regex strict : ne matche pas /parametres/departements (URL intermédiaire du POST)
-  // waitUntil:"load" garantit l'exécution des scripts defer
-  await Promise.all([
-    page.waitForURL(/\/parametres(?:\?|#|$)/, { waitUntil: "load" }),
-    page.click(
-      'form[action*="/parametres/departements"] button[type="submit"]',
-    ),
-  ]);
+  await page.click(
+    'form:has(input[name="departements"]) button[type="submit"]',
+  );
+  // Pas de rechargement en Vue — on attend l'apparition du toast
+  await page
+    .locator(".alerte-succes")
+    .first()
+    .waitFor({ state: "visible", timeout: 5000 });
 }
 
 test.describe("Toasts (Popover API)", () => {
@@ -22,7 +22,7 @@ test.describe("Toasts (Popover API)", () => {
     await soumettreDepartements(page);
     const toast = page.locator(".alerte-succes");
     await expect(toast.first()).toBeVisible({ timeout: 3000 });
-    await expect(toast.first()).toContainText("Paramètres enregistrés");
+    await expect(toast.first()).toContainText("Départements enregistrés");
   });
 
   test("toast succes admin relancer fetches", async ({ page }) => {
@@ -64,15 +64,9 @@ test.describe("Toasts (Popover API)", () => {
 
   test("toast auto-dismiss après 4 s", async ({ page }) => {
     await soumettreDepartements(page);
-    await page.waitForFunction(
-      () => {
-        const el = document.querySelector(".alerte-succes");
-        // Le toast DOIT avoir été ouvert (JS a tourné) puis fermé par le timer
-        return (
-          !!el && !el.matches(":popover-open") && el.hasAttribute("popover")
-        );
-      },
-      { timeout: 6000 },
-    );
+    // Le toast est supprimé du DOM à la fermeture (afficherToast → el.remove() sur beforetoggle closed)
+    await expect(page.locator(".alerte-succes").first()).toBeHidden({
+      timeout: 8000,
+    });
   });
 });
