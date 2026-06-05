@@ -418,6 +418,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'ChangelogPage' })
+
 import { onMounted } from 'vue'
 
 onMounted(async () => {

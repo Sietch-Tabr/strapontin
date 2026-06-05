@@ -37,6 +37,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'App' })
+
 import { ref, computed, watchEffect, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import SidebarNav from './components/layout/SidebarNav.vue'

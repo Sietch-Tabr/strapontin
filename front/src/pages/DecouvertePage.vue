@@ -179,6 +179,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'DecouvertePage' })
+
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formaterAvecHeure, formaterInstant } from '../composables/useDates.js'

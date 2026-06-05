@@ -102,7 +102,10 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'ArtistesPage' })
+
 import { ref, onMounted } from 'vue'
+import { useDialog } from '../composables/useDialog.js'
 import { useToasts } from '../composables/useToasts.js'
 
 const { afficherToast } = useToasts()
@@ -112,7 +115,7 @@ const q = ref('')
 const qSoumis = ref('')
 const erreur = ref('')
 const artisteASupprimer = ref(null)
-const dialogRef = ref(null)
+const { dialogRef, ouvrir: ouvrirDialog, fermer: fermerDialog } = useDialog()
 
 async function charger(recherche = '') {
   const params = recherche.trim().length >= 2 ? '?q=' + encodeURIComponent(recherche) : ''
@@ -159,11 +162,11 @@ async function ajouter(nom) {
 
 function demanderSuppression(artiste) {
   artisteASupprimer.value = artiste
-  dialogRef.value?.showModal()
+  ouvrirDialog()
 }
 
 async function confirmerSuppression() {
-  dialogRef.value?.close()
+  fermerDialog()
   if (!artisteASupprimer.value) return
   try {
     const rep = await fetch('/api/artistes/' + encodeURIComponent(artisteASupprimer.value.artisteNormalise), {

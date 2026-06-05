@@ -61,10 +61,11 @@
   --danger-bg: #fef2f2;
   --danger-border: #fecaca;
   --danger-text: #991b1b;
-  --success: #16a34a;
+  --succes: #16a34a;
   --succes-bg: #f0fdf4;
   --succes-border: #bbf7d0;
   --succes-text: #166534;
+  --muted: var(--fg-muted);
   --info-bg: #eff6ff;
   --info-border: #bfdbfe;
   --info-text: #1e40af;

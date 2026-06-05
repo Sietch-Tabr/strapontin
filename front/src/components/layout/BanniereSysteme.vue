@@ -15,6 +15,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'BanniereSysteme' })
+
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({

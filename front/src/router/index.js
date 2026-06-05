@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { sessionRef } from "../composables/useSession.js";
 import LoginPage from "../pages/auth/LoginPage.vue";
 import TotpChallengePage from "../pages/auth/TotpChallengePage.vue";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage.vue";
@@ -50,6 +51,10 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+router.beforeEach((to) => {
+  if (to.meta.authPage && sessionRef.value) return "/";
 });
 
 export default router;

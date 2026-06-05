@@ -429,8 +429,11 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'ParametresPage' })
+
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useDialog } from "../composables/useDialog.js";
 import { useToasts } from "../composables/useToasts.js";
 import { useTheme } from "../composables/useTheme.js";
 
@@ -499,7 +502,7 @@ const importMode = ref("fusionner");
 const importerConfig = ref(false);
 
 // Dialog suppression
-const dialogSuppressionRef = ref(null);
+const { dialogRef: dialogSuppressionRef, ouvrir: ouvrirDialogSuppressionModal, fermer: fermerDialogSuppressionModal } = useDialog();
 const confirmationSuppression = ref("");
 
 // --- Chargement initial ---
@@ -868,11 +871,11 @@ async function importerPreferences() {
 
 function ouvrirDialogSuppression() {
   confirmationSuppression.value = "";
-  dialogSuppressionRef.value?.showModal();
+  ouvrirDialogSuppressionModal();
 }
 
 function fermerDialogSuppression() {
-  dialogSuppressionRef.value?.close();
+  fermerDialogSuppressionModal();
 }
 
 async function supprimerCompte() {

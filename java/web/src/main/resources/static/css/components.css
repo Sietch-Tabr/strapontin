@@ -739,7 +739,7 @@ tr:hover td {
   transform: translateX(1rem);
 }
 .switch--succes input:checked + .switch-curseur {
-  background: var(--success);
+  background: var(--succes);
 }
 
 /* ── Toasts (Popover API + @starting-style) ──────────────── */

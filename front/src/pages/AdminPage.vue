@@ -488,8 +488,11 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'AdminPage' })
+
 import { ref, computed, onMounted, onUnmounted, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useDialog } from "../composables/useDialog.js";
 import { useToasts } from "../composables/useToasts.js";
 import { formaterInstant, formaterTs } from "../composables/useDates.js";
 
@@ -557,9 +560,9 @@ const modifErreurs = reactive({});
 const userASupprimer = ref(null);
 const lienInvitation = ref("");
 
-const dialogVapidRef = ref(null);
-const dialogSupprimerUserRef = ref(null);
-const dialogInvitationRef = ref(null);
+const { dialogRef: dialogVapidRef, ouvrir: ouvrirDialogVapidModal, fermer: fermerDialogVapidModal } = useDialog();
+const { dialogRef: dialogSupprimerUserRef, ouvrir: ouvrirDialogSupprimerModal, fermer: fermerDialogSupprimerModal } = useDialog();
+const { dialogRef: dialogInvitationRef, ouvrir: ouvrirDialogInvitationModal, fermer: fermerDialogInvitationModal } = useDialog();
 
 // --- Computed ---
 
@@ -791,11 +794,11 @@ async function sauvegarderConfig(cle, event) {
 }
 
 function ouvrirDialogVapid() {
-  dialogVapidRef.value?.showModal();
+  ouvrirDialogVapidModal();
 }
 
 function fermerDialogVapid() {
-  dialogVapidRef.value?.close();
+  fermerDialogVapidModal();
 }
 
 async function confirmerVapid() {
@@ -847,7 +850,7 @@ async function creerUtilisateur() {
   if (rep.ok || rep.status === 201) {
     nouvelEmail.value = "";
     lienInvitation.value = corps.lienReset ?? "";
-    dialogInvitationRef.value?.showModal();
+    ouvrirDialogInvitationModal();
     const repUsers = await fetch("/api/admin/utilisateurs");
     if (repUsers.ok) {
       utilisateurs.value = await repUsers.json();
@@ -863,7 +866,7 @@ function copierLien() {
 }
 
 function fermerDialogInvitation() {
-  dialogInvitationRef.value?.close();
+  fermerDialogInvitationModal();
 }
 
 function toggleModif(userId) {
@@ -904,11 +907,11 @@ async function reinitMdp(u) {
 
 function ouvrirDialogSupprimer(u) {
   userASupprimer.value = u;
-  dialogSupprimerUserRef.value?.showModal();
+  ouvrirDialogSupprimerModal();
 }
 
 function fermerDialogSupprimer() {
-  dialogSupprimerUserRef.value?.close();
+  fermerDialogSupprimerModal();
   userASupprimer.value = null;
 }
 

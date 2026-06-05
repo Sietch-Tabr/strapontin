@@ -56,6 +56,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'DrawerNav' })
+
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 

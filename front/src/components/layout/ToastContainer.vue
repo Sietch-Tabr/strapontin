@@ -17,6 +17,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'ToastContainer' })
+
 import { useToasts } from '../../composables/useToasts.js'
 
 const { toasts, fermerToast } = useToasts()

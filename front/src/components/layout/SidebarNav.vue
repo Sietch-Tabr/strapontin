@@ -71,6 +71,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'SidebarNav' })
+
 import { useRouter, useRoute } from 'vue-router'
 
 const props = defineProps({

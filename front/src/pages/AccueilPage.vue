@@ -134,6 +134,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'AccueilPage' })
+
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formaterAvecHeure } from '../composables/useDates.js'

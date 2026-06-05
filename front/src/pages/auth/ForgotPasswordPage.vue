@@ -34,6 +34,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'ForgotPasswordPage' })
+
 import { ref, onMounted } from 'vue'
 import AuthLayout from '../../components/auth/AuthLayout.vue'
 

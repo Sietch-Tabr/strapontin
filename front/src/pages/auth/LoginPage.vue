@@ -48,6 +48,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'LoginPage' })
+
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AuthLayout from '../../components/auth/AuthLayout.vue'

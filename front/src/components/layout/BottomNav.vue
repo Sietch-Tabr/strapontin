@@ -42,6 +42,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'BottomNav' })
+
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 

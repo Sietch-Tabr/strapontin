@@ -35,6 +35,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'TotpChallengePage' })
+
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '../../components/auth/AuthLayout.vue'

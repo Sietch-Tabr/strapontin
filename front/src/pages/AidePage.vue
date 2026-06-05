@@ -194,6 +194,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'AidePage' })
+
 import { ref, onMounted } from 'vue'
 import { useToasts } from '../composables/useToasts.js'
 

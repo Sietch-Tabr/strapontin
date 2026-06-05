@@ -80,6 +80,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'ParametresTotpPage' })
+
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useToasts } from "../composables/useToasts.js";

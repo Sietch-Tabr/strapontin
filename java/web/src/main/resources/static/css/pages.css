@@ -271,6 +271,10 @@
     display: none;
   }
 
+  #filtres-form.visible {
+    animation: section-entree 0.2s ease-out;
+  }
+
   .concert-lieu {
     white-space: normal;
     overflow: visible;
@@ -570,6 +574,18 @@
 .parametres-section.actif,
 .parametres-sections:not(:has(.actif)) #preferences {
   display: block;
+  animation: section-entree 0.2s ease-out;
+}
+
+@keyframes section-entree {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Onglet actif par défaut (aucune section active) */
@@ -773,6 +789,7 @@ fieldset.notif-grille legend {
 .admin-section.actif,
 .admin-sections:not(:has(.actif)) #jobs {
   display: block;
+  animation: section-entree 0.2s ease-out;
 }
 
 /* Onglet actif par défaut (aucune section active) */
