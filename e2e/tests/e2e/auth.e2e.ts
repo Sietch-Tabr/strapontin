@@ -51,26 +51,6 @@ test.describe("Scénario: authentification et gardes de route", () => {
     await ctx.close();
   });
 
-  test("login_invalide_affiche_erreur_sans_planter", async ({ browser }) => {
-    const ctx = await browser.newContext({ storageState: undefined });
-    const page = await ctx.newPage();
-    await page.goto("/login");
-    await page.fill("input[name='identifiant']", "utilisateur_inexistant");
-    await page.fill("input[name='motDePasse']", "motdepasse_faux_12chars");
-    // Phase de transition : le form POST cible /api/auth/login (Vue) ou /login (Thymeleaf).
-    // Dans les deux cas, le formulaire reste visible après une tentative invalide.
-    const [reponse] = await Promise.all([
-      page.waitForResponse(
-        (r) => r.url().includes("/login") && r.request().method() === "POST",
-      ),
-      page.click("button[type='submit']"),
-    ]);
-    // POST /api/auth/login (Vue) → 401 ; POST /login (Thymeleaf) → 200.
-    expect([200, 401]).toContain(reponse.status());
-    await expect(page.locator("form")).toBeVisible();
-    await ctx.close();
-  });
-
   test("setup_redirige_vers_login_si_deja_configure", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: undefined });
     const page = await ctx.newPage();
@@ -96,6 +76,24 @@ test.describe("Scénario: authentification et gardes de route", () => {
 });
 
 test.describe("Scénario: API auth — endpoints Vue", () => {
+  test("login_invalide_affiche_erreur_sans_planter", async ({ browser }) => {
+    const ctx = await browser.newContext({ storageState: undefined });
+    const page = await ctx.newPage();
+    await page.goto("/login");
+    await page.fill("input[name='identifiant']", "utilisateur_inexistant");
+    await page.fill("input[name='motDePasse']", "motdepasse_faux_12chars");
+    const [reponse] = await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("/api/auth/login") && r.request().method() === "POST",
+      ),
+      page.click("button[type='submit']"),
+    ]);
+    expect(reponse.status()).toBe(401);
+    await expect(page.locator("form")).toBeVisible();
+    await ctx.close();
+  });
+
   test("api_login_credentials_invalides_retourne_401", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: undefined });
     const rep = await ctx.request.post("/api/auth/login", {
