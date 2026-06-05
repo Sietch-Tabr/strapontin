@@ -5,19 +5,14 @@
 package fr.strapontin.web.banniere;
 
 import fr.strapontin.web.config.ConfigService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
-/// Retourne le fragment de bannière système, interrogé par HTMX toutes les 60 secondes.
-///
-/// Si `BANNER_MESSAGE` est absent de la configuration, le fragment est vide
-/// et HTMX efface la bannière existante.
+/// Expose les données de la bannière système en JSON pour le layout Vue.
 ///
 /// @since 2.2.0
 /// @author Kwaite
-@Controller
+@RestController
 public class BanniereController {
 
   private final ConfigService configService;
@@ -26,31 +21,10 @@ public class BanniereController {
     this.configService = configService;
   }
 
-  /// Retourne le fragment de bannière pour le poll HTMX.
+  /// Retourne les données de la bannière active, ou {@code null} si aucune n'est configurée.
   ///
-  /// @param modele le modèle Thymeleaf alimenté avec les données de bannière
-  /// @return le nom du fragment Thymeleaf à rendre
-  @GetMapping("/api/banniere")
-  public String banniere(Model modele) {
-    configService
-        .lireConfig("BANNER_MESSAGE")
-        .ifPresent(
-            msg -> {
-              modele.addAttribute("banniereMessage", msg);
-              modele.addAttribute(
-                  "banniereType", configService.lireConfig("BANNER_TYPE").orElse("info"));
-              modele.addAttribute("banniereId", configService.lireConfig("BANNER_ID").orElse(""));
-            });
-    return "layout/fragments/banniere :: banniere";
-  }
-
-  /// Retourne les données de bannière en JSON pour le layout Vue.
-  ///
-  /// <p>Retourne {@code null} si aucune bannière n'est configurée.
-  ///
-  /// @return les données de bannière, ou {@code null}
+  /// @return le DTO de bannière, ou {@code null}
   @GetMapping("/api/banniere/json")
-  @ResponseBody
   public BanniereDto banniereJson() {
     return configService
         .lireConfig("BANNER_MESSAGE")

@@ -21,19 +21,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.TemplateEngine;
-import org.thymeleaf.context.Context;
 
-/// Service d'email transactionnel via Resend (portage de `email.ts`).
+/// Service d'email transactionnel via Resend.
 ///
-/// Si `RESEND_API_KEY` est absent de la configuration, toutes les méthodes
-/// retournent silencieusement sans erreur (comportement identique au TypeScript).
+/// <p>Si `RESEND_API_KEY` est absent de la configuration, toutes les méthodes
+/// retournent silencieusement sans erreur.
 ///
-/// Les corps d'emails sont rendus depuis des templates Thymeleaf situés dans
-/// `classpath:/templates/email/`.
-///
-/// Couvre l'ensemble des emails : invitation, reset MDP, signalement,
-/// digest concerts, alerte worker inactif.
+/// <p>Les corps HTML sont générés par {@link EmailTemplates}.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -42,16 +36,12 @@ public class EmailService {
 
   private static final Logger log = LoggerFactory.getLogger(EmailService.class);
   private static final String EXPEDITEUR = "Strapontin <noreply@strapontin.kwaite.fr>";
-  private static final String CLE_BASE_URL = "baseUrl";
 
   private final ConfigService configService;
-  private final TemplateEngine templateEngine;
   private final JdbcTemplate jdbcTemplate;
 
-  public EmailService(
-      ConfigService configService, TemplateEngine templateEngine, JdbcTemplate jdbcTemplate) {
+  public EmailService(ConfigService configService, JdbcTemplate jdbcTemplate) {
     this.configService = configService;
-    this.templateEngine = templateEngine;
     this.jdbcTemplate = jdbcTemplate;
   }
 
@@ -92,12 +82,6 @@ public class EmailService {
     }
   }
 
-  private String rendreCours(String nomTemplate, Map<String, Object> variables) {
-    Context ctx = new Context(Locale.FRANCE);
-    ctx.setVariables(variables);
-    return templateEngine.process("email/" + nomTemplate, ctx);
-  }
-
   private void envoyer(
       ContexteEmail ctx,
       String destinataire,
@@ -133,11 +117,7 @@ public class EmailService {
       return;
     }
 
-    Map<String, Object> vars = new HashMap<>();
-    vars.put("identifiant", identifiant);
-    vars.put("lienReset", lienReset);
-    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
-    String corps = rendreCours("invitation", vars);
+    String corps = EmailTemplates.invitation(identifiant, lienReset, ctx.get().baseUrl());
 
     String texte =
         """
@@ -172,10 +152,7 @@ public class EmailService {
       return;
     }
 
-    Map<String, Object> vars = new HashMap<>();
-    vars.put("lienReset", lienReset);
-    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
-    String corps = rendreCours("reset-mdp", vars);
+    String corps = EmailTemplates.resetMotDePasse(lienReset, ctx.get().baseUrl());
 
     String texte =
         """
@@ -214,10 +191,7 @@ public class EmailService {
       return;
     }
 
-    Map<String, Object> vars = new HashMap<>();
-    vars.put("lien", lien);
-    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
-    String corps = rendreCours("confirmation-email", vars);
+    String corps = EmailTemplates.confirmationEmail(lien, ctx.get().baseUrl());
 
     String texte =
         """
@@ -274,13 +248,8 @@ public class EmailService {
           default -> type;
         };
 
-    Map<String, Object> vars = new HashMap<>();
-    vars.put("typeLabel", typeLabel);
-    vars.put("expediteurNom", expediteurNom);
-    vars.put("expediteurEmail", expediteurEmail);
-    vars.put("message", message);
-    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
-    String corps = rendreCours("signalement", vars);
+    String corps =
+        EmailTemplates.signalement(typeLabel, expediteurNom, expediteurEmail, message, ctx.get().baseUrl());
 
     String texte =
         "Signalement — %s%n%nUtilisateur : %s%nEmail : %s%n%n%s"
@@ -328,16 +297,11 @@ public class EmailService {
                   ligne.put("artiste", c.artiste());
                   ligne.put("dateFormatee", formaterDate(c.date()));
                   ligne.put("lieu", c.ville() != null ? c.salle() + " · " + c.ville() : c.salle());
-                  ligne.put("url", c.url());
+                  if (c.url() != null) ligne.put("url", c.url());
                   return ligne;
                 })
             .toList();
-
-    Map<String, Object> vars = new HashMap<>();
-    vars.put("sujet", sujet);
-    vars.put("lignes", lignes);
-    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
-    String corps = rendreCours("digest-concerts", vars);
+    String corps = EmailTemplates.digestConcerts(sujet, lignes, ctx.get().baseUrl());
 
     try {
       envoyer(ctx.get(), email, ctx.get().replyTo(), sujet, corps, sujet);
@@ -359,10 +323,7 @@ public class EmailService {
       return;
     }
 
-    Map<String, Object> vars = new HashMap<>();
-    vars.put("emailBouncee", emailBouncee);
-    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
-    String corps = rendreCours("alerte-bounce", vars);
+    String corps = EmailTemplates.alerteBounce(emailBouncee, ctx.get().baseUrl());
 
     try {
       envoyer(
@@ -393,11 +354,7 @@ public class EmailService {
       return;
     }
 
-    Map<String, Object> vars = new HashMap<>();
-    vars.put("horodatage", horodatage);
-    vars.put("raison", raison);
-    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
-    String corps = rendreCours("alerte-backup", vars);
+    String corps = EmailTemplates.alerteBackup(horodatage, raison, ctx.get().baseUrl());
 
     String sujet = "Strapontin — échec backup nocturne";
     String texte =
@@ -430,10 +387,7 @@ public class EmailService {
             ? "Dernier job complété : %s.".formatted(derniereActiviteIso)
             : "Aucun job complété enregistré.";
 
-    Map<String, Object> vars = new HashMap<>();
-    vars.put("detail", detail);
-    vars.put(CLE_BASE_URL, ctx.get().baseUrl());
-    String corps = rendreCours("alerte-worker", vars);
+    String corps = EmailTemplates.alerteWorker(detail, ctx.get().baseUrl());
 
     String sujet = "Strapontin — worker inactif";
     try {

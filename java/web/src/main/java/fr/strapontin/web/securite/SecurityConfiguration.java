@@ -142,7 +142,7 @@ public class SecurityConfiguration {
                     .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/client/erreur")
                     .authenticated()
-                    .requestMatchers("/api/admin/**", "/admin", "/admin/**")
+                    .requestMatchers("/api/admin/**")
                     .hasRole("ADMIN")
                     .requestMatchers(HttpMethod.POST, "/api/decouverte/fetcher")
                     .hasRole("ADMIN")
