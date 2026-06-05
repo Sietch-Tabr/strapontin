@@ -8,7 +8,7 @@ const E2E_IDENTIFIANT = process.env["E2E_IDENTIFIANT"] ?? "";
 const E2E_MOT_DE_PASSE = process.env["E2E_MOT_DE_PASSE"] ?? "";
 
 export default async function setup(): Promise<() => Promise<void>> {
-  if (!E2E_IDENTIFIANT && existsSync(FICHIER_STATE)) {
+  if (existsSync(FICHIER_STATE)) {
     const etat = JSON.parse(readFileSync(FICHIER_STATE, "utf-8")) as {
       cookies?: { name: string; value: string; expires?: number }[];
     };

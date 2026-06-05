@@ -77,7 +77,10 @@ test.describe("Scénario: authentification et gardes de route", () => {
 
 test.describe("Scénario: API auth — endpoints Vue", () => {
   test("login_invalide_affiche_erreur_sans_planter", async ({ browser }) => {
-    const ctx = await browser.newContext({ storageState: undefined });
+    const ctx = await browser.newContext({
+      storageState: undefined,
+      extraHTTPHeaders: { "X-Real-IP": "192.0.2.10" },
+    });
     const page = await ctx.newPage();
     await page.goto("/login");
     await page.fill("input[name='identifiant']", "utilisateur_inexistant");
@@ -99,6 +102,7 @@ test.describe("Scénario: API auth — endpoints Vue", () => {
     const ctx = await browser.newContext({ storageState: undefined });
     const rep = await ctx.request.post("/api/auth/login", {
       data: { identifiant: "inexistant", motDePasse: "motdepassefaux12" },
+      headers: { "X-Real-IP": "192.0.2.11" },
     });
     expect(rep.status()).toBe(401);
     await ctx.close();
@@ -110,6 +114,7 @@ test.describe("Scénario: API auth — endpoints Vue", () => {
     const ctx = await browser.newContext({ storageState: undefined });
     const rep = await ctx.request.post("/api/auth/forgot-password", {
       data: { email: "inconnu@inexistant.fr" },
+      headers: { "X-Real-IP": "192.0.2.12" },
     });
     expect(rep.status()).toBe(200);
     const corps = await rep.json();
