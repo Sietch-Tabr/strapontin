@@ -30,7 +30,10 @@ test.describe("Scénario: paramètres — sections", () => {
 });
 
 test.describe("Scénario: navigation SPA vers paramètres", () => {
-  test("accueil_vers_parametres_affiche_page", async ({ page, isMobile }) => {
+  test("accueil_vers_parametres_desktop_affiche_page", async ({
+    page,
+    isMobile,
+  }) => {
     if (isMobile) test.skip();
     await page.goto("/");
     await page.locator("nav.sidebar a[href='/parametres']").click();
@@ -41,7 +44,22 @@ test.describe("Scénario: navigation SPA vers paramètres", () => {
     await expect(page.locator("section#preferences")).toBeVisible();
   });
 
-  test("parametres_clic_onglet_notifications_affiche_section", async ({
+  test("accueil_vers_parametres_mobile_drawer", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/");
+    await page.locator("button#btn-nav-plus").click();
+    await page.locator("dialog#dialog-nav-plus a[href='/parametres']").click();
+    await expect(page).toHaveURL(/\/parametres/);
+    await expect(
+      page.getByRole("heading", { name: "Paramètres", level: 1 }),
+    ).toBeVisible();
+    await expect(page.locator("section#preferences")).toBeVisible();
+  });
+
+  test("parametres_desktop_onglet_notifications_affiche_section", async ({
     page,
     isMobile,
   }) => {
@@ -52,7 +70,7 @@ test.describe("Scénario: navigation SPA vers paramètres", () => {
     await expect(page.locator("section#preferences")).not.toBeVisible();
   });
 
-  test("parametres_clic_onglet_compte_affiche_section", async ({
+  test("parametres_desktop_onglet_compte_affiche_section", async ({
     page,
     isMobile,
   }) => {
@@ -60,9 +78,10 @@ test.describe("Scénario: navigation SPA vers paramètres", () => {
     await page.goto("/parametres");
     await page.locator("nav.param-onglets a[href='#compte']").click();
     await expect(page.locator("section#compte")).toBeVisible();
+    await expect(page.locator("section#preferences")).not.toBeVisible();
   });
 
-  test("parametres_clic_onglet_donnees_affiche_section", async ({
+  test("parametres_desktop_onglet_donnees_affiche_section", async ({
     page,
     isMobile,
   }) => {
@@ -70,6 +89,52 @@ test.describe("Scénario: navigation SPA vers paramètres", () => {
     await page.goto("/parametres");
     await page.locator("nav.param-onglets a[href='#donnees']").click();
     await expect(page.locator("section#donnees")).toBeVisible();
+    await expect(page.locator("section#preferences")).not.toBeVisible();
+  });
+
+  test("parametres_mobile_select_notifications_affiche_section", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/parametres");
+    await page.selectOption("select.param-onglets-mobile", "#notifications");
+    await expect(page.locator("section#notifications")).toBeVisible();
+    await expect(page.locator("section#preferences")).not.toBeVisible();
+  });
+
+  test("parametres_mobile_select_compte_affiche_section", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/parametres");
+    await page.selectOption("select.param-onglets-mobile", "#compte");
+    await expect(page.locator("section#compte")).toBeVisible();
+    await expect(page.locator("section#preferences")).not.toBeVisible();
+  });
+
+  test("parametres_mobile_select_donnees_affiche_section", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/parametres");
+    await page.selectOption("select.param-onglets-mobile", "#donnees");
+    await expect(page.locator("section#donnees")).toBeVisible();
+    await expect(page.locator("section#preferences")).not.toBeVisible();
+  });
+
+  test("parametres_mobile_select_retour_preferences", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/parametres");
+    await page.selectOption("select.param-onglets-mobile", "#compte");
+    await page.selectOption("select.param-onglets-mobile", "#preferences");
+    await expect(page.locator("section#preferences")).toBeVisible();
+    await expect(page.locator("section#compte")).not.toBeVisible();
   });
 });
 
@@ -209,7 +274,7 @@ test.describe("Scénario: API push — VAPID et validation", () => {
 });
 
 test.describe("Scénario: Préférences — thème", () => {
-  test("theme_changer_sombre_affiche_classe_actif", async ({
+  test("theme_desktop_sombre_affiche_classe_actif", async ({
     page,
     isMobile,
   }) => {
@@ -228,12 +293,43 @@ test.describe("Scénario: Préférences — thème", () => {
     ).toHaveClass(/actif/);
   });
 
-  test("theme_changer_clair_affiche_classe_actif", async ({
+  test("theme_desktop_clair_affiche_classe_actif", async ({
     page,
     isMobile,
   }) => {
     if (isMobile) test.skip();
     await page.goto("/parametres#preferences");
+    await page.locator(".btn-theme", { hasText: "Clair" }).click();
+    await expect(page.locator(".btn-theme", { hasText: "Clair" })).toHaveClass(
+      /actif/,
+    );
+    await page.locator(".btn-theme", { hasText: "Automatique" }).click();
+  });
+
+  test("theme_mobile_sombre_affiche_classe_actif", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/parametres");
+    await page.selectOption("select.param-onglets-mobile", "#preferences");
+    await page.locator(".btn-theme", { hasText: "Sombre" }).click();
+    await expect(page.locator(".btn-theme", { hasText: "Sombre" })).toHaveClass(
+      /actif/,
+    );
+    await expect(
+      page.locator(".btn-theme", { hasText: "Automatique" }),
+    ).not.toHaveClass(/actif/);
+    await page.locator(".btn-theme", { hasText: "Automatique" }).click();
+  });
+
+  test("theme_mobile_clair_affiche_classe_actif", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/parametres");
+    await page.selectOption("select.param-onglets-mobile", "#preferences");
     await page.locator(".btn-theme", { hasText: "Clair" }).click();
     await expect(page.locator(".btn-theme", { hasText: "Clair" })).toHaveClass(
       /actif/,

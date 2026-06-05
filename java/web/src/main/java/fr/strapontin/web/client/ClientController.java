@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 /// Endpoint de remontée des erreurs JavaScript côté client.
 ///
 /// <p>Permet aux navigateurs des utilisateurs authentifiés de signaler les erreurs
-/// JS non catchées, les rejections de promesses et les erreurs de navigation HTMX.
+/// JS non catchées et les rejections de promesses.
 /// Les entrées sont stockées dans {@code logs_admin} avec la source {@code client-js}.
 ///
 /// @since 2.1.2
@@ -30,7 +30,7 @@ public class ClientController {
   private static final int LONGUEUR_MAX_MESSAGE = 1000;
   private static final int LONGUEUR_MAX_URL = 500;
   private static final Set<String> TYPES_VALIDES =
-      Set.of("js-error", "htmx-error", "promise-rejection");
+      Set.of("js-error", "promise-rejection");
 
   private final LogAdminService logAdminService;
 
