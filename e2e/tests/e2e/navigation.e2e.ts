@@ -124,7 +124,7 @@ test.describe("Scénario: spectacles — robustesse des filtres", () => {
   });
 });
 
-test.describe("Scénario: navigation HTMX sans rechargement complet", () => {
+test.describe("Scénario: navigation Vue Router sans rechargement complet", () => {
   test("bottomnav_decouverte_htmx_sans_navigation_document", async ({
     page,
     isMobile,
