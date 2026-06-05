@@ -1,15 +1,15 @@
 <template>
   <div
     v-if="visible"
-    id="banniere"
+    id="banniere-systeme"
     class="banniere"
-    :class="'banniere-' + banniere.type"
+    :class="'banniere--' + banniere.type"
     :data-banniere-id="banniere.id"
     :data-banniere-type="banniere.type"
   >
-    <span>{{ banniere.message }}</span>
-    <button type="button" id="btn-fermer-banniere" class="banniere-fermer" aria-label="Fermer" @click="fermer">
-      ×
+    <span class="banniere-message">{{ banniere.message }}</span>
+    <button type="button" id="btn-fermer-banniere" class="banniere-fermer" aria-label="Fermer la bannière" @click="fermer">
+      <svg class="icon" aria-hidden="true"><use href="/icons/lucide-sprite.svg#icon-x" /></svg>
     </button>
   </div>
 </template>

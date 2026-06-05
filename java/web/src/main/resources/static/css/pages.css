@@ -521,7 +521,8 @@
 .param-onglets:has(~ .admin-sections #utilisateurs.actif) a[href="#utilisateurs"],
 .param-onglets:has(~ .admin-sections #configuration.actif) a[href="#configuration"],
 .param-onglets:has(~ .admin-sections #jobs.actif) a[href="#jobs"],
-.param-onglets:has(~ .admin-sections #logs.actif) a[href="#logs"] {
+.param-onglets:has(~ .admin-sections #logs.actif) a[href="#logs"],
+.param-onglets:has(~ .admin-sections #banniere.actif) a[href="#banniere"] {
   color: var(--fg);
   border-bottom-color: var(--fg);
 }

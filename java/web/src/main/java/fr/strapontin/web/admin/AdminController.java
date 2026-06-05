@@ -226,6 +226,15 @@ public class AdminController {
     return adminService.relancerFetches();
   }
 
+  /// Retourne les informations système non liées à la configuration chiffrée.
+  ///
+  /// @return map avec {@code appConfigSecretPresente}
+  @GetMapping("/info")
+  public ResponseEntity<Map<String, Object>> lireInfo() {
+    return ResponseEntity.ok(
+        Map.of("appConfigSecretPresente", System.getenv("APP_CONFIG_SECRET") != null));
+  }
+
   private static UtilisateurDetails utilisateur(Authentication auth) {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
       throw new IllegalStateException("Principal inattendu");

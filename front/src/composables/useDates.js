@@ -48,6 +48,29 @@ export function formaterAvecHeure(dateIso, heureStr) {
   }
 }
 
+export function formaterTs(epochMs) {
+  if (!epochMs) return "";
+  try {
+    const d = new Date(epochMs);
+    const dateStr = new Intl.DateTimeFormat("fr-FR", {
+      timeZone: "Europe/Paris",
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    }).format(d);
+    const timeStr = new Intl.DateTimeFormat("fr-FR", {
+      timeZone: "Europe/Paris",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(d);
+    const [h, m] = timeStr.split(":");
+    return dateStr + " " + h + "h" + (m === "00" ? "" : m);
+  } catch {
+    return String(epochMs);
+  }
+}
+
 export function formaterInstant(instantIso) {
   if (!instantIso) return "";
   try {

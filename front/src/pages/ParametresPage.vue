@@ -34,6 +34,7 @@
             <form class="form-inline" @submit.prevent="sauvegarderDepartements">
               <input
                 v-model="departements"
+                name="departements"
                 type="text"
                 placeholder="75, 92, 93…"
                 autocomplete="off"
