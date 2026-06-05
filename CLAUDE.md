@@ -188,10 +188,11 @@ Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de
 - Identifiants en français (`nombreUtilisateurs`, `calculerTotal`)
 - Logging : SLF4J, jamais `System.out`
 - **Tests Java** : `mvn -pl core,sources,web test` (unitaires). `mvn -pl worker test -am` requiert Docker (Testcontainers).
-- **Tests E2E** : Playwright (`e2e/`) — 60 tests (smoke tests + flux fonctionnels catalogue, admin), nécessite LXC dev actif (port 8080)
+- **Tests E2E** : Playwright (`e2e/`) — ~60 tests (auth, navigation, catalogue, admin, PWA), nécessite LXC dev actif (port 8080)
+  - Tests "Scénario: API auth" restreints à chromium (grepInvert) pour ne pas épuiser le rate limiter bucket4j
   - Lancer : `cd e2e && npx playwright test`
   - Credentials : `E2E_IDENTIFIANT=kwaite E2E_MOT_DE_PASSE=... npx playwright test` (si session expirée)
-  - Résultats : `e2e/test-results/results.json` (reporter JSON)
+  - global-setup login : `POST /api/auth/login` direct (pas de form browser)
 - Nommage tests : `<methode>_<scenario>_<resultatAttendu>`
 
 ## Skills projet (`.claude/commands/`)
