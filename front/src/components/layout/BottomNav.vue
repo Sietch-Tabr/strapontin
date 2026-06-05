@@ -68,6 +68,10 @@ function estActif(href) {
 }
 
 function naviguer(href) {
-  router.push(href)
+  if (router.resolve(href).matched.length === 0) {
+    window.location.href = href
+  } else {
+    router.push(href)
+  }
 }
 </script>

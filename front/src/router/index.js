@@ -12,6 +12,8 @@ import SpectaclesPage from "../pages/SpectaclesPage.vue";
 import DecouvertePage from "../pages/DecouvertePage.vue";
 import AidePage from "../pages/AidePage.vue";
 import ChangelogPage from "../pages/ChangelogPage.vue";
+import ParametresPage from "../pages/ParametresPage.vue";
+import ParametresTotpPage from "../pages/ParametresTotpPage.vue";
 
 const routes = [
   { path: "/login", component: LoginPage, meta: { authPage: true } },
@@ -39,6 +41,8 @@ const routes = [
   { path: "/decouverte", component: DecouvertePage },
   { path: "/aide", component: AidePage },
   { path: "/changelog", component: ChangelogPage },
+  { path: "/parametres", component: ParametresPage },
+  { path: "/parametres/totp", component: ParametresTotpPage },
 ];
 
 const router = createRouter({

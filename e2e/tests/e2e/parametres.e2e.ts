@@ -29,6 +29,91 @@ test.describe("Scénario: paramètres — sections", () => {
   });
 });
 
+test.describe("Scénario: navigation SPA vers paramètres", () => {
+  test("accueil_vers_parametres_affiche_page", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
+    await page.goto("/");
+    await page.locator("nav.sidebar a[href='/parametres']").click();
+    await expect(page).toHaveURL(/\/parametres/);
+    await expect(
+      page.getByRole("heading", { name: "Paramètres", level: 1 }),
+    ).toBeVisible();
+    await expect(page.locator("section#preferences")).toBeVisible();
+  });
+
+  test("parametres_clic_onglet_notifications_affiche_section", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/parametres");
+    await page.locator("nav.param-onglets a[href='#notifications']").click();
+    await expect(page.locator("section#notifications")).toBeVisible();
+    await expect(page.locator("section#preferences")).not.toBeVisible();
+  });
+
+  test("parametres_clic_onglet_compte_affiche_section", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/parametres");
+    await page.locator("nav.param-onglets a[href='#compte']").click();
+    await expect(page.locator("section#compte")).toBeVisible();
+  });
+
+  test("parametres_clic_onglet_donnees_affiche_section", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/parametres");
+    await page.locator("nav.param-onglets a[href='#donnees']").click();
+    await expect(page.locator("section#donnees")).toBeVisible();
+  });
+});
+
+test.describe("Scénario: API paramètres — stats et TOTP", () => {
+  test("api_parametres_stats_retourne_compteurs", async ({ request }) => {
+    const rep = await request.get("/api/parametres/stats");
+    expect(rep.status()).toBe(200);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("nbArtistes");
+    expect(corps).toHaveProperty("nbSalles");
+    expect(typeof corps.nbArtistes).toBe("number");
+    expect(typeof corps.nbSalles).toBe("number");
+  });
+
+  test("api_parametres_stats_sans_session_retourne_401_ou_302", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ storageState: undefined });
+    const rep = await ctx.request.get("/api/parametres/stats");
+    expect([401, 302, 403]).toContain(rep.status());
+    await ctx.close();
+  });
+
+  test("api_totp_setup_retourne_qr_et_secret", async ({ request }) => {
+    const rep = await request.get("/api/totp/setup");
+    expect(rep.status()).toBe(200);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("otpUri");
+    expect(corps).toHaveProperty("totpSecret");
+    expect(corps).toHaveProperty("qrCodeSvg");
+    expect(corps.qrCodeSvg).toContain("<svg");
+  });
+
+  test("api_totp_confirmer_code_invalide_retourne_400", async ({ request }) => {
+    await request.get("/api/totp/setup");
+    const rep = await request.post("/api/totp/confirmer", {
+      data: { code: "000000" },
+    });
+    expect(rep.status()).toBe(400);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("erreur");
+  });
+});
+
 test.describe("Scénario: export préférences JSON", () => {
   test("api_preferences_retourne_json_telechargeable", async ({ request }) => {
     const rep = await request.get("/api/preferences");
