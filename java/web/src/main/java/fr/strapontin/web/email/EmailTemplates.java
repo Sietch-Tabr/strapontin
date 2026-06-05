@@ -134,7 +134,7 @@ final class EmailTemplates {
   /// Digest de nouveaux concerts.
   ///
   /// <p>Chaque entrée de {@code lignes} doit contenir les clés :
-   /// {@code artiste}, {@code dateFormatee}, {@code lieu} (toutes non nulles),
+  /// {@code artiste}, {@code dateFormatee}, {@code lieu} (toutes non nulles),
   /// et optionnellement {@code url} (null → pas de lien "Billets →").
   ///
   /// @param sujet   le sujet de l'email (aussi utilisé comme titre H2)
@@ -152,14 +152,14 @@ final class EmailTemplates {
                               .formatted(e(c.get("url")))
                           : "";
                   return """
-                      <tr>
-                        <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top">
-                          <div style="font-weight: 600; color: #111; font-size: 14px">%s</div>
-                          <div style="color: #666; font-size: 13px; margin-top: 2px"><span>%s</span>%s</div>
-                          <div style="color: #999; font-size: 12px; margin-top: 2px">%s</div>
-                        </td>
-                      </tr>
-                      """
+                  <tr>
+                    <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top">
+                      <div style="font-weight: 600; color: #111; font-size: 14px">%s</div>
+                      <div style="color: #666; font-size: 13px; margin-top: 2px"><span>%s</span>%s</div>
+                      <div style="color: #999; font-size: 12px; margin-top: 2px">%s</div>
+                    </td>
+                  </tr>
+                  """
                       .formatted(
                           e(c.get("artiste")),
                           e(c.get("dateFormatee")),
@@ -191,9 +191,9 @@ final class EmailTemplates {
     String raisonHtml =
         (raison != null && !raison.isBlank())
             ? """
-              <p style="color: #333; font-size: 13px; font-family: monospace; background: #f5f5f5; \
-              border-left: 3px solid #c00; padding: 8px 12px; margin: 0 0 16px; word-break: break-all">%s</p>
-              """
+            <p style="color: #333; font-size: 13px; font-family: monospace; background: #f5f5f5; \
+            border-left: 3px solid #c00; padding: 8px 12px; margin: 0 0 16px; word-break: break-all">%s</p>
+            """
                 .formatted(e(raison))
             : "";
     String corps =
@@ -206,7 +206,10 @@ final class EmailTemplates {
         </p>
         <p style="margin-top: 24px">%s</p>
         """
-            .formatted(horodatageHtml, raisonHtml, bouton(baseUrl + "/admin", "Aller à l'administration →"));
+            .formatted(
+                horodatageHtml,
+                raisonHtml,
+                bouton(baseUrl + "/admin", "Aller à l'administration →"));
     return enveloppErreur("Échec du backup nocturne", corps, baseUrl);
   }
 
@@ -264,30 +267,30 @@ final class EmailTemplates {
   private static String enveloppAvecCouleur(
       String couleur, String titre, String corps, String baseUrl) {
     return """
-        <!doctype html>
-        <html lang="fr">
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-        </head>
-        <body style="font-family: system-ui, sans-serif; background: #f9f9f9; margin: 0; padding: 32px 16px">
-          <div style="max-width: 520px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px; border: 1px solid #e5e5e5">
-            <h2 style="font-size: 20px; font-weight: 600; color: %s; margin: 0 0 8px">%s</h2>
-            %s
-          </div>
-          <p style="text-align: center; color: #aaa; font-size: 12px; margin-top: 24px">
-            Strapontin — <a href="%s/parametres" style="color: #aaa">Gérer mes préférences</a>
-          </p>
-        </body>
-        </html>
-        """
+    <!doctype html>
+    <html lang="fr">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+    </head>
+    <body style="font-family: system-ui, sans-serif; background: #f9f9f9; margin: 0; padding: 32px 16px">
+      <div style="max-width: 520px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px; border: 1px solid #e5e5e5">
+        <h2 style="font-size: 20px; font-weight: 600; color: %s; margin: 0 0 8px">%s</h2>
+        %s
+      </div>
+      <p style="text-align: center; color: #aaa; font-size: 12px; margin-top: 24px">
+        Strapontin — <a href="%s/parametres" style="color: #aaa">Gérer mes préférences</a>
+      </p>
+    </body>
+    </html>
+    """
         .formatted(couleur, titre, corps, baseUrl);
   }
 
   private static String bouton(String href, String texte) {
     return """
-        <a href="%s" style="display: inline-block; background: #111; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500">%s</a>
-        """
+    <a href="%s" style="display: inline-block; background: #111; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500">%s</a>
+    """
         .formatted(href, texte);
   }
 

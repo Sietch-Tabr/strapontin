@@ -34,7 +34,8 @@ class EmailTemplatesTest {
 
   @Test
   void invitation_contientIdentifiantEtLien() {
-    String html = EmailTemplates.invitation("kwaite", "https://exemple.fr/reset/abc", "https://app.fr");
+    String html =
+        EmailTemplates.invitation("kwaite", "https://exemple.fr/reset/abc", "https://app.fr");
     assertThat(html).contains("kwaite");
     assertThat(html).contains("href=\"https://exemple.fr/reset/abc\"");
     assertThat(html).contains("Créer mon mot de passe");
@@ -63,7 +64,8 @@ class EmailTemplatesTest {
 
   @Test
   void confirmationEmail_contientLienEtMessage() {
-    String html = EmailTemplates.confirmationEmail("https://exemple.fr/confirm/abc", "https://app.fr");
+    String html =
+        EmailTemplates.confirmationEmail("https://exemple.fr/confirm/abc", "https://app.fr");
     assertThat(html).contains("href=\"https://exemple.fr/confirm/abc\"");
     assertThat(html).contains("Confirmer ma nouvelle adresse");
     assertThat(html).contains("24 heures");
@@ -73,8 +75,13 @@ class EmailTemplatesTest {
 
   @Test
   void signalement_contientToutesLesDonnees() {
-    String html = EmailTemplates.signalement(
-        "Bug", "Alice Dupont", "alice@exemple.fr", "Le bouton ne fonctionne pas.", "https://app.fr");
+    String html =
+        EmailTemplates.signalement(
+            "Bug",
+            "Alice Dupont",
+            "alice@exemple.fr",
+            "Le bouton ne fonctionne pas.",
+            "https://app.fr");
     assertThat(html).contains("Alice Dupont");
     assertThat(html).contains("alice@exemple.fr");
     assertThat(html).contains("Le bouton ne fonctionne pas.");
@@ -83,8 +90,9 @@ class EmailTemplatesTest {
 
   @Test
   void signalement_messageAvecBalises_estEchappe() {
-    String html = EmailTemplates.signalement(
-        "Bug", "Bob", "bob@ex.fr", "<b>injection</b> & 'test'", "https://app.fr");
+    String html =
+        EmailTemplates.signalement(
+            "Bug", "Bob", "bob@ex.fr", "<b>injection</b> & 'test'", "https://app.fr");
     assertThat(html).contains("&lt;b&gt;injection&lt;/b&gt; &amp; &#39;test&#39;");
     assertThat(html).doesNotContain("<b>injection</b>");
   }
@@ -93,10 +101,22 @@ class EmailTemplatesTest {
 
   @Test
   void digestConcerts_afficheTousConcerts() {
-    var lignes = List.of(
-        Map.<String, Object>of("artiste", "Daft Punk", "dateFormatee", "samedi 1 mars 2025", "lieu", "AccorHotels Arena"),
-        Map.<String, Object>of("artiste", "Téléphone", "dateFormatee", "dimanche 2 mars 2025", "lieu", "Zénith Paris")
-    );
+    var lignes =
+        List.of(
+            Map.<String, Object>of(
+                "artiste",
+                "Daft Punk",
+                "dateFormatee",
+                "samedi 1 mars 2025",
+                "lieu",
+                "AccorHotels Arena"),
+            Map.<String, Object>of(
+                "artiste",
+                "Téléphone",
+                "dateFormatee",
+                "dimanche 2 mars 2025",
+                "lieu",
+                "Zénith Paris"));
     String html = EmailTemplates.digestConcerts("2 nouveaux concerts", lignes, "https://app.fr");
     assertThat(html).contains("Daft Punk");
     assertThat(html).contains("Téléphone");
@@ -108,11 +128,17 @@ class EmailTemplatesTest {
 
   @Test
   void digestConcerts_concertAvecUrl_afficheLienBillets() {
-    var lignes = List.of(
-        Map.<String, Object>of(
-            "artiste", "Stromae", "dateFormatee", "lundi 3 mars 2025",
-            "lieu", "Bercy", "url", "https://billets.fr/123")
-    );
+    var lignes =
+        List.of(
+            Map.<String, Object>of(
+                "artiste",
+                "Stromae",
+                "dateFormatee",
+                "lundi 3 mars 2025",
+                "lieu",
+                "Bercy",
+                "url",
+                "https://billets.fr/123"));
     String html = EmailTemplates.digestConcerts("1 nouveau concert", lignes, "https://app.fr");
     assertThat(html).contains("Billets →");
     assertThat(html).contains("href=\"https://billets.fr/123\"");
@@ -120,9 +146,15 @@ class EmailTemplatesTest {
 
   @Test
   void digestConcerts_concertSansUrl_nAffichePasLienBillets() {
-    var lignes = List.of(
-        Map.<String, Object>of("artiste", "Indochine", "dateFormatee", "mardi 4 mars 2025", "lieu", "Stade de France")
-    );
+    var lignes =
+        List.of(
+            Map.<String, Object>of(
+                "artiste",
+                "Indochine",
+                "dateFormatee",
+                "mardi 4 mars 2025",
+                "lieu",
+                "Stade de France"));
     String html = EmailTemplates.digestConcerts("1 nouveau concert", lignes, "https://app.fr");
     assertThat(html).doesNotContain("Billets →");
   }
@@ -145,7 +177,8 @@ class EmailTemplatesTest {
 
   @Test
   void alerteBackup_avecRaison_afficheBlocMonospace() {
-    String html = EmailTemplates.alerteBackup("20260605_020000", "pg_dump: fatal", "https://app.fr");
+    String html =
+        EmailTemplates.alerteBackup("20260605_020000", "pg_dump: fatal", "https://app.fr");
     assertThat(html).contains("pg_dump: fatal");
     assertThat(html).contains("border-left: 3px solid #c00");
   }
@@ -176,7 +209,9 @@ class EmailTemplatesTest {
 
   @Test
   void alerteWorker_contientDetailEtCta() {
-    String html = EmailTemplates.alerteWorker("Dernier job complété : 2026-06-05T00:00:00Z.", "https://app.fr");
+    String html =
+        EmailTemplates.alerteWorker(
+            "Dernier job complété : 2026-06-05T00:00:00Z.", "https://app.fr");
     assertThat(html).contains("Dernier job complété");
     assertThat(html).contains("Aller à l'administration");
     assertThat(html).contains("color: #c00");
@@ -204,8 +239,11 @@ class EmailTemplatesTest {
 
   @Test
   void emailsNormaux_ontTitreNoir() {
-    assertThat(EmailTemplates.invitation("id", "https://reset", "https://app.fr")).contains("color: #111");
-    assertThat(EmailTemplates.resetMotDePasse("https://reset", "https://app.fr")).contains("color: #111");
-    assertThat(EmailTemplates.confirmationEmail("https://confirm", "https://app.fr")).contains("color: #111");
+    assertThat(EmailTemplates.invitation("id", "https://reset", "https://app.fr"))
+        .contains("color: #111");
+    assertThat(EmailTemplates.resetMotDePasse("https://reset", "https://app.fr"))
+        .contains("color: #111");
+    assertThat(EmailTemplates.confirmationEmail("https://confirm", "https://app.fr"))
+        .contains("color: #111");
   }
 }

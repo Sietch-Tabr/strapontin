@@ -43,10 +43,7 @@ test.describe("Scénario: admin — sections et contenus", () => {
     await expect(page.locator("section#jobs")).not.toBeVisible();
   });
 
-  test("admin_desktop_section_banniere_visible", async ({
-    page,
-    isMobile,
-  }) => {
+  test("admin_desktop_section_banniere_visible", async ({ page, isMobile }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
     await page.locator('a[href="#banniere"]').click();

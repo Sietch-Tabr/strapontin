@@ -44,10 +44,7 @@ test.describe("Scénario: navigation SPA vers paramètres", () => {
     await expect(page.locator("section#preferences")).toBeVisible();
   });
 
-  test("accueil_vers_parametres_mobile_drawer", async ({
-    page,
-    isMobile,
-  }) => {
+  test("accueil_vers_parametres_mobile_drawer", async ({ page, isMobile }) => {
     if (!isMobile) test.skip();
     await page.goto("/");
     await page.locator("button#btn-nav-plus").click();

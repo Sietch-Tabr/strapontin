@@ -91,7 +91,7 @@ class NotificationDigestServiceTest {
             "stromae",
             "ARTISTE");
 
-    String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.kwaite.fr");
+    String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.exemple.fr");
 
     assertTrue(payload.contains("Stromae"), "Le payload push doit contenir l'artiste");
     assertTrue(payload.contains("Olympia"), "Le payload push doit contenir la salle");
@@ -124,7 +124,7 @@ class NotificationDigestServiceTest {
             "aya nakamura",
             "ARTISTE");
 
-    String payload = invoquerPayloadPush(List.of(c1, c2), "https://strapontin.kwaite.fr");
+    String payload = invoquerPayloadPush(List.of(c1, c2), "https://strapontin.exemple.fr");
 
     assertTrue(
         payload.contains("2 nouveaux concerts"), "Le titre doit indiquer le nombre de concerts");
@@ -143,7 +143,7 @@ class NotificationDigestServiceTest {
             "divers",
             "SALLE");
 
-    String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.kwaite.fr");
+    String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.exemple.fr");
 
     assertTrue(
         payload.contains("/spectacles?source=salles"),
@@ -164,7 +164,7 @@ class NotificationDigestServiceTest {
             "ARTISTE");
 
     String html =
-        invoquerCorpsEmail("1 nouveau concert", List.of(concert), "https://strapontin.kwaite.fr");
+        invoquerCorpsEmail("1 nouveau concert", List.of(concert), "https://strapontin.exemple.fr");
 
     assertTrue(html.contains("<!DOCTYPE html>"), "L'email doit être du HTML valide");
     assertTrue(html.contains("Indochine"), "L'email doit contenir l'artiste");

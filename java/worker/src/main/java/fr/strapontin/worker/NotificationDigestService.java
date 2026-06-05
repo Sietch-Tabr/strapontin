@@ -46,8 +46,6 @@ import org.springframework.stereotype.Service;
 public class NotificationDigestService {
 
   private static final Logger log = LoggerFactory.getLogger(NotificationDigestService.class);
-  private static final String BASE_URL_DEFAUT = "https://strapontin.kwaite.fr";
-  private static final String EXPEDITEUR = "Strapontin <noreply@strapontin.kwaite.fr>";
 
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
@@ -260,8 +258,8 @@ public class NotificationDigestService {
       log.debug("RESEND_API_KEY absent — digest email ignoré");
       return false;
     }
-    String replyTo = configService.lireConfig("CONTACT_EMAIL").orElse("admin@strapontin.kwaite.fr");
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse(BASE_URL_DEFAUT);
+    String expediteur = configService.lireConfig("CONTACT_EMAIL").orElse("");
+    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
 
     int nb = concerts.size();
     String sujet =
@@ -272,8 +270,8 @@ public class NotificationDigestService {
       Resend resend = new Resend(cle.get());
       CreateEmailOptions options =
           CreateEmailOptions.builder()
-              .from(EXPEDITEUR)
-              .replyTo(replyTo)
+              .from(expediteur)
+              .replyTo(expediteur)
               .to(List.of(email))
               .subject(sujet)
               .html(construireCorpsEmail(sujet, concerts, baseUrl))
@@ -302,9 +300,8 @@ public class NotificationDigestService {
             Map.of("userId", userId));
     if (abonnements.isEmpty()) return false;
 
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse(BASE_URL_DEFAUT);
-    String contactEmail =
-        configService.lireConfig("CONTACT_EMAIL").orElse("admin@strapontin.kwaite.fr");
+    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
+    String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
     PushService pushService;
     try {
       pushService = new PushService(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
