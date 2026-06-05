@@ -67,7 +67,8 @@ public class UserController {
                     details.nom(),
                     e.email(),
                     details.identifiant(),
-                    e.pendingEmail()))
+                    e.pendingEmail(),
+                    details.twoFactorActif()))
         .map(ResponseEntity::ok)
         .orElse(ResponseEntity.notFound().build());
   }
@@ -164,26 +165,26 @@ public class UserController {
     return ResponseEntity.ok(Map.of("succes", "motDePasse"));
   }
 
-  /// Active le TOTP pour l'utilisateur (appelé par {@link ParametresViewController}).
+  /// Active le TOTP pour l'utilisateur.
   ///
   /// @param userId identifiant de l'utilisateur
   /// @param secret le secret Base32 à persister
-  void activerTotp(String userId, String secret) {
+  public void activerTotp(String userId, String secret) {
     utilisateurRepository.activerTotp(userId, secret);
   }
 
-  /// Retourne le secret TOTP stocké (appelé par {@link ParametresViewController}).
+  /// Retourne le secret TOTP stocké.
   ///
   /// @param userId identifiant de l'utilisateur
   /// @return le secret Base32, ou {@code null} si absent
-  String lireSecretTotp(String userId) {
+  public String lireSecretTotp(String userId) {
     return utilisateurRepository.lireSecretTotp(userId);
   }
 
-  /// Désactive le TOTP (appelé par {@link ParametresViewController}).
+  /// Désactive le TOTP.
   ///
   /// @param userId identifiant de l'utilisateur
-  void desactiverTotp(String userId) {
+  public void desactiverTotp(String userId) {
     utilisateurRepository.desactiverTotp(userId);
   }
 

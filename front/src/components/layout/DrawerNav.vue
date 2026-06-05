@@ -92,9 +92,12 @@ function estActif(href) {
 }
 
 function naviguerEtFermer(href) {
-  // Délai d'un tick pour laisser la navigation se propager
   setTimeout(() => dialogRef.value?.close(), 0)
-  router.push(href)
+  if (router.resolve(href).matched.length === 0) {
+    window.location.href = href
+  } else {
+    router.push(href)
+  }
 }
 
 function clicBackdrop(e) {
