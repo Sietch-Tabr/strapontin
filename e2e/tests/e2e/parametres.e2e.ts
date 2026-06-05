@@ -209,34 +209,54 @@ test.describe("Scénario: API push — VAPID et validation", () => {
 });
 
 test.describe("Scénario: Préférences — thème", () => {
-  test("theme_changer_sombre_affiche_classe_actif", async ({ page, isMobile }) => {
+  test("theme_changer_sombre_affiche_classe_actif", async ({
+    page,
+    isMobile,
+  }) => {
     if (isMobile) test.skip();
     await page.goto("/parametres#preferences");
     await page.locator(".btn-theme", { hasText: "Sombre" }).click();
-    await expect(page.locator(".btn-theme", { hasText: "Sombre" })).toHaveClass(/actif/);
-    await expect(page.locator(".btn-theme", { hasText: "Automatique" })).not.toHaveClass(/actif/);
+    await expect(page.locator(".btn-theme", { hasText: "Sombre" })).toHaveClass(
+      /actif/,
+    );
+    await expect(
+      page.locator(".btn-theme", { hasText: "Automatique" }),
+    ).not.toHaveClass(/actif/);
     await page.locator(".btn-theme", { hasText: "Automatique" }).click();
-    await expect(page.locator(".btn-theme", { hasText: "Automatique" })).toHaveClass(/actif/);
+    await expect(
+      page.locator(".btn-theme", { hasText: "Automatique" }),
+    ).toHaveClass(/actif/);
   });
 
-  test("theme_changer_clair_affiche_classe_actif", async ({ page, isMobile }) => {
+  test("theme_changer_clair_affiche_classe_actif", async ({
+    page,
+    isMobile,
+  }) => {
     if (isMobile) test.skip();
     await page.goto("/parametres#preferences");
     await page.locator(".btn-theme", { hasText: "Clair" }).click();
-    await expect(page.locator(".btn-theme", { hasText: "Clair" })).toHaveClass(/actif/);
+    await expect(page.locator(".btn-theme", { hasText: "Clair" })).toHaveClass(
+      /actif/,
+    );
     await page.locator(".btn-theme", { hasText: "Automatique" }).click();
   });
 });
 
 test.describe("Scénario: Préférences — départements", () => {
-  test("departements_code_inconnu_affiche_toast_avertissement", async ({ page }) => {
+  test("departements_code_inconnu_affiche_toast_avertissement", async ({
+    page,
+  }) => {
     await page.goto("/parametres#preferences");
     await page.locator("input[placeholder='75, 92, 93…']").fill("ZZZZZ");
     await page.locator("section#preferences button[type='submit']").click();
-    await expect(page.locator(".alerte-avertissement").filter({ hasText: "ignoré" })).toBeVisible({ timeout: 5000 });
+    await expect(
+      page.locator(".alerte-avertissement").filter({ hasText: "ignoré" }),
+    ).toBeVisible({ timeout: 5000 });
   });
 
-  test("api_departements_code_valide_sauvegarde_sans_avertissement", async ({ request }) => {
+  test("api_departements_code_valide_sauvegarde_sans_avertissement", async ({
+    request,
+  }) => {
     const rep = await request.patch("/api/user/config/departements", {
       data: { departements: "75, 92" },
     });
@@ -250,7 +270,9 @@ test.describe("Scénario: Préférences — départements", () => {
 test.describe("Scénario: Préférences — filtre disponibles", () => {
   test("filtre_disponibles_toggle_change_etat", async ({ page }) => {
     await page.goto("/parametres#preferences");
-    const toggle = page.locator("input[type='checkbox'][aria-labelledby='label-filtre-disponibles']");
+    const toggle = page.locator(
+      "input[type='checkbox'][aria-labelledby='label-filtre-disponibles']",
+    );
     const etatInitial = await toggle.isChecked();
     await page.locator("label.switch").click();
     await expect(toggle).toBeChecked({ checked: !etatInitial });
@@ -273,7 +295,9 @@ test.describe("Scénario: Compte — nom d'affichage", () => {
     const nomOriginal = await champNom.inputValue();
     await champNom.fill("Test Playwright");
     await page.getByRole("button", { name: "Enregistrer" }).click();
-    await expect(page.locator(".alerte-succes").filter({ hasText: "enregistré" })).toBeVisible({ timeout: 5000 });
+    await expect(
+      page.locator(".alerte-succes").filter({ hasText: "enregistré" }),
+    ).toBeVisible({ timeout: 5000 });
     await champNom.fill(nomOriginal);
     await page.getByRole("button", { name: "Enregistrer" }).click();
   });
@@ -289,7 +313,9 @@ test.describe("Scénario: API compte — identifiant", () => {
     expect(corps).toHaveProperty("erreur");
   });
 
-  test("api_identifiant_caracteres_invalides_retourne_400", async ({ request }) => {
+  test("api_identifiant_caracteres_invalides_retourne_400", async ({
+    request,
+  }) => {
     const rep = await request.patch("/api/user/identifiant", {
       data: { identifiant: "kwaite@test" },
     });
@@ -335,7 +361,9 @@ test.describe("Scénario: API compte — mot de passe", () => {
 });
 
 test.describe("Scénario: Données — suppression de compte", () => {
-  test("suppression_compte_bouton_dialog_desactive_sans_texte", async ({ page }) => {
+  test("suppression_compte_bouton_dialog_desactive_sans_texte", async ({
+    page,
+  }) => {
     await page.goto("/parametres#donnees");
     await page.locator("section#donnees button.btn-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
@@ -343,7 +371,9 @@ test.describe("Scénario: Données — suppression de compte", () => {
     await expect(dialog.locator("button.btn-danger")).toBeDisabled();
   });
 
-  test("suppression_compte_dialog_actif_avec_texte_correct", async ({ page }) => {
+  test("suppression_compte_dialog_actif_avec_texte_correct", async ({
+    page,
+  }) => {
     await page.goto("/parametres#donnees");
     await page.locator("section#donnees button.btn-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
