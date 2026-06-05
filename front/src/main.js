@@ -9,13 +9,18 @@ if ("serviceWorker" in navigator) {
 
   navigator.serviceWorker.addEventListener("message", (e) => {
     if (e.data?.type === "sw-error") {
-      window.afficherToast?.("Erreur service worker : " + e.data.message, "erreur");
+      window.afficherToast?.(
+        "Erreur service worker : " + e.data.message,
+        "erreur",
+      );
       return;
     }
     if (e.data?.type !== "nav-ancre") return;
     const cible = new URL(e.data.url, location.origin);
     if (location.pathname === cible.pathname && cible.hash) {
-      document.getElementById(cible.hash.slice(1))?.scrollIntoView({ behavior: "smooth" });
+      document
+        .getElementById(cible.hash.slice(1))
+        ?.scrollIntoView({ behavior: "smooth" });
     } else {
       router.push(e.data.url);
     }
