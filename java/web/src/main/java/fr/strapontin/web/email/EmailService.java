@@ -35,7 +35,6 @@ import org.springframework.stereotype.Service;
 public class EmailService {
 
   private static final Logger log = LoggerFactory.getLogger(EmailService.class);
-  private static final String EXPEDITEUR = "Strapontin <noreply@strapontin.kwaite.fr>";
 
   private final ConfigService configService;
   private final JdbcTemplate jdbcTemplate;
@@ -55,20 +54,20 @@ public class EmailService {
   public record ConcertDigest(
       String artiste, String date, String salle, String ville, String url) {}
 
-  private record ContexteEmail(Resend client, String replyTo, String baseUrl) {}
+  private record ContexteEmail(Resend client, String expediteur, String baseUrl) {}
 
   private Optional<ContexteEmail> obtenirContexte() {
     Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) {
       return Optional.empty();
     }
-    String replyTo =
+    String expediteur =
         configService
             .lireConfig("CONTACT_EMAIL")
             .or(this::obtenirEmailPremierAdmin)
-            .orElse("admin@strapontin.kwaite.fr");
+            .orElse("");
     String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
-    return Optional.of(new ContexteEmail(new Resend(cle.get()), replyTo, baseUrl));
+    return Optional.of(new ContexteEmail(new Resend(cle.get()), expediteur, baseUrl));
   }
 
   private Optional<String> obtenirEmailPremierAdmin() {
@@ -92,7 +91,7 @@ public class EmailService {
     try {
       CreateEmailOptions options =
           CreateEmailOptions.builder()
-              .from(EXPEDITEUR)
+              .from(ctx.expediteur())
               .replyTo(replyTo)
               .to(List.of(destinataire))
               .subject(sujet)
@@ -134,7 +133,7 @@ public class EmailService {
             .formatted(lienReset, identifiant);
 
     try {
-      envoyer(ctx.get(), email, ctx.get().replyTo(), "Votre invitation Strapontin", corps, texte);
+      envoyer(ctx.get(), email, ctx.get().expediteur(), "Votre invitation Strapontin", corps, texte);
       log.info("Invitation envoyée : {}", email);
     } catch (Exception e) {
       log.error("Échec envoi invitation : {}", email, e);
@@ -170,7 +169,7 @@ public class EmailService {
       envoyer(
           ctx.get(),
           email,
-          ctx.get().replyTo(),
+          ctx.get().expediteur(),
           "Réinitialisation de votre mot de passe Strapontin",
           corps,
           texte);
@@ -209,7 +208,7 @@ public class EmailService {
       envoyer(
           ctx.get(),
           email,
-          ctx.get().replyTo(),
+          ctx.get().expediteur(),
           "Confirmez votre nouvelle adresse email — Strapontin",
           corps,
           texte);
@@ -249,7 +248,8 @@ public class EmailService {
         };
 
     String corps =
-        EmailTemplates.signalement(typeLabel, expediteurNom, expediteurEmail, message, ctx.get().baseUrl());
+        EmailTemplates.signalement(
+            typeLabel, expediteurNom, expediteurEmail, message, ctx.get().baseUrl());
 
     String texte =
         "Signalement — %s%n%nUtilisateur : %s%nEmail : %s%n%n%s"
@@ -258,7 +258,7 @@ public class EmailService {
     try {
       envoyer(
           ctx.get(),
-          ctx.get().replyTo(),
+          ctx.get().expediteur(),
           expediteurEmail,
           "[Strapontin] Signalement — %s — %s".formatted(typeLabel, expediteurNom),
           corps,
@@ -304,7 +304,7 @@ public class EmailService {
     String corps = EmailTemplates.digestConcerts(sujet, lignes, ctx.get().baseUrl());
 
     try {
-      envoyer(ctx.get(), email, ctx.get().replyTo(), sujet, corps, sujet);
+      envoyer(ctx.get(), email, ctx.get().expediteur(), sujet, corps, sujet);
       log.info("Digest envoyé : {} ({} concert(s))", email, nb);
       return true;
     } catch (Exception e) {
@@ -328,8 +328,8 @@ public class EmailService {
     try {
       envoyer(
           ctx.get(),
-          ctx.get().replyTo(),
-          ctx.get().replyTo(),
+          ctx.get().expediteur(),
+          ctx.get().expediteur(),
           "Strapontin — bounce email : " + emailBouncee,
           corps,
           "Bounce détecté sur : "
@@ -364,7 +364,7 @@ public class EmailService {
                 raison.isBlank() ? "" : " Raison : " + raison + ".",
                 ctx.get().baseUrl());
     try {
-      envoyer(ctx.get(), ctx.get().replyTo(), ctx.get().replyTo(), sujet, corps, texte);
+      envoyer(ctx.get(), ctx.get().expediteur(), ctx.get().expediteur(), sujet, corps, texte);
       log.info("Alerte backup envoyée");
     } catch (Exception e) {
       log.error("Échec envoi alerte backup", e);
@@ -394,7 +394,7 @@ public class EmailService {
       envoyer(
           ctx.get(),
           email,
-          ctx.get().replyTo(),
+          ctx.get().expediteur(),
           sujet,
           corps,
           "Worker inactif — %s Consultez l'administration : %s/admin"

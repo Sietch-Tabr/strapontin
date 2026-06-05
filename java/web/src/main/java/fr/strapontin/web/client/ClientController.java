@@ -29,8 +29,7 @@ public class ClientController {
 
   private static final int LONGUEUR_MAX_MESSAGE = 1000;
   private static final int LONGUEUR_MAX_URL = 500;
-  private static final Set<String> TYPES_VALIDES =
-      Set.of("js-error", "promise-rejection");
+  private static final Set<String> TYPES_VALIDES = Set.of("js-error", "promise-rejection");
 
   private final LogAdminService logAdminService;
 

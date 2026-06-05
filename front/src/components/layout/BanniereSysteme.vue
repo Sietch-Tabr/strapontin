@@ -44,6 +44,7 @@ watch(
     if (delai) {
       minuterie = setTimeout(() => {
         visible.value = false
+        if (val.id) sessionStorage.setItem('banniere_dismissed_id', val.id)
       }, delai)
     }
   },

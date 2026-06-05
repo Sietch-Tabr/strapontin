@@ -32,7 +32,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/aide")
 public class AideRestController {
 
-  private static final String EMAIL_CONTACT_DEFAUT = "admin@strapontin.kwaite.fr";
   private static final int MAX_LONGUEUR_MESSAGE = 2000;
   private static final int MAX_SIGNALEMENTS_PAR_HEURE = 3;
 
@@ -59,8 +58,7 @@ public class AideRestController {
   public ResponseEntity<Map<String, Object>> config() {
     Map<String, Object> corps = new HashMap<>();
     corps.put("resendDisponible", emailService.estDisponible());
-    corps.put(
-        "contactEmail", configService.lireConfig("CONTACT_EMAIL").orElse(EMAIL_CONTACT_DEFAUT));
+    corps.put("contactEmail", configService.lireConfig("CONTACT_EMAIL").orElse(""));
     return ResponseEntity.ok(corps);
   }
 

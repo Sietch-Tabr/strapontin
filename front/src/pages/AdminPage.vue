@@ -523,7 +523,7 @@ const LABELS_JOBS = {
 };
 
 const DESCRIPTIONS_CONFIG = {
-  CONTACT_EMAIL:  "Adresse email affichée dans les emails envoyés.",
+  CONTACT_EMAIL:  "Adresse d'expédition des emails (From: et Reply-To:). Doit appartenir à un domaine vérifié dans Resend.",
   PUBLIC_BASE_URL: "URL publique de l'application (ex. https://strapontin.kwaite.fr).",
 };
 

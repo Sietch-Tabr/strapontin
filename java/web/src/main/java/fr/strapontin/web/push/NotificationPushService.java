@@ -92,8 +92,7 @@ public class NotificationPushService {
     if (abonnements.isEmpty()) return false;
 
     String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
-    String contactEmail =
-        configService.lireConfig("CONTACT_EMAIL").orElse("admin@strapontin.kwaite.fr");
+    String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
     String payload = construirePayload(concerts, baseUrl);
 
     PushService pushService;
