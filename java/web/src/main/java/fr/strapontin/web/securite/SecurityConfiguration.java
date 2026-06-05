@@ -111,6 +111,7 @@ public class SecurityConfiguration {
                 auth.requestMatchers(
                         "/css/**",
                         "/js/**",
+                        "/assets/**",
                         "/fonts/**",
                         "/images/**",
                         "/icons/**",
@@ -148,7 +149,7 @@ public class SecurityConfiguration {
                     .requestMatchers("/api/**")
                     .authenticated()
                     .anyRequest()
-                    .permitAll())
+                    .authenticated())
         // CSRF désactivé : sessions SameSite=Strict (identique v1)
         .csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(
@@ -160,16 +161,24 @@ public class SecurityConfiguration {
         .exceptionHandling(
             ex ->
                 ex.authenticationEntryPoint(
-                        (_, response, _) -> {
-                          response.setStatus(401);
-                          response.setContentType("application/json;charset=UTF-8");
-                          response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
+                        (request, response, _) -> {
+                          if (request.getServletPath().startsWith("/api/")) {
+                            response.setStatus(401);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
+                          } else {
+                            response.sendRedirect("/login");
+                          }
                         })
                     .accessDeniedHandler(
-                        (_, response, _) -> {
-                          response.setStatus(403);
-                          response.setContentType("application/json;charset=UTF-8");
-                          response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
+                        (request, response, _) -> {
+                          if (request.getServletPath().startsWith("/api/")) {
+                            response.setStatus(403);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
+                          } else {
+                            response.sendRedirect("/login");
+                          }
                         }));
 
     return http.build();

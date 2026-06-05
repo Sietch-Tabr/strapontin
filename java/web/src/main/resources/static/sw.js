@@ -1,6 +1,6 @@
 // Strapontin — service worker
 
-const CACHE_NOM = "strapontin-v19";
+const CACHE_NOM = "strapontin-v20";
 // CSS et JS exclus : fingerprinting Spring → URL avec hash, précachage inutile.
 // Ils sont gérés en network-first dans le handler fetch.
 const RESSOURCES_STATIQUES = [
@@ -72,7 +72,12 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/")) return;
 
   // JS et CSS : network-first (toujours la version fraîche, cache en fallback offline)
-  if (url.pathname.startsWith("/css/") || url.pathname.startsWith("/js/")) {
+  // /assets/ couvre les bundles Vite (noms hashés), /css/ et /js/ les assets Thymeleaf legacy.
+  if (
+    url.pathname.startsWith("/css/") ||
+    url.pathname.startsWith("/js/") ||
+    url.pathname.startsWith("/assets/")
+  ) {
     event.respondWith(
       fetch(request)
         .then(function (response) {
@@ -111,22 +116,6 @@ self.addEventListener("fetch", (event) => {
 
   // Navigation browser : NavigationPreload + timeout 6 s, offline.html depuis le cache sinon
   if (request.mode === "navigate") {
-    var chemin = url.pathname;
-    if (
-      chemin !== "/" &&
-      !chemin.startsWith("/login") &&
-      !chemin.startsWith("/setup") &&
-      !chemin.startsWith("/forgot-password") &&
-      !chemin.startsWith("/reset-password")
-    ) {
-      self.clients
-        .matchAll({ includeUncontrolled: false })
-        .then(function (clients) {
-          clients.forEach(function (c) {
-            c.postMessage({ type: "sw-navigate-app", path: chemin });
-          });
-        });
-    }
     event.respondWith(
       (async () => {
         try {
