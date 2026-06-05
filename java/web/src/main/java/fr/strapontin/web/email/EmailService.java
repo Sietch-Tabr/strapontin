@@ -62,10 +62,7 @@ public class EmailService {
       return Optional.empty();
     }
     String expediteur =
-        configService
-            .lireConfig("CONTACT_EMAIL")
-            .or(this::obtenirEmailPremierAdmin)
-            .orElse("");
+        configService.lireConfig("CONTACT_EMAIL").or(this::obtenirEmailPremierAdmin).orElse("");
     String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     return Optional.of(new ContexteEmail(new Resend(cle.get()), expediteur, baseUrl));
   }
@@ -133,7 +130,8 @@ public class EmailService {
             .formatted(lienReset, identifiant);
 
     try {
-      envoyer(ctx.get(), email, ctx.get().expediteur(), "Votre invitation Strapontin", corps, texte);
+      envoyer(
+          ctx.get(), email, ctx.get().expediteur(), "Votre invitation Strapontin", corps, texte);
       log.info("Invitation envoyée : {}", email);
     } catch (Exception e) {
       log.error("Échec envoi invitation : {}", email, e);
