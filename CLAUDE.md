@@ -207,16 +207,7 @@ Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de
 
 Plan complet : [wiki Migration-Vue-2.2.0](https://codeberg.org/Kwaite/strapontin/wiki/Migration-Vue-2.2.0)
 
-### Protocole obligatoire par ticket
-
-1. Lire le template Thymeleaf + ViewController + RestController concernés
-2. Lire la page wiki correspondante (si absente, la créer avant de continuer)
-3. Rédiger la spec (ce que fait la page, API, cas limites) — attendre validation
-4. Coder uniquement après validation explicite
-5. Build → LXC dev → validation visuelle → tests E2E créés/mis à jour → supprimer ViewController
-
-Ne jamais sauter l'étape spec. Ne jamais supprimer un ViewController sans validation LXC dev.
-En début de ticket : relire la spec même si elle semble mémorisée — le compactage efface.
+**État** : toutes les pages migrées — aucun ViewController restant. Thymeleaf encore présent pour `ModeleGlobalAdvice`, `HtmxModelAdvice`, `BanniereController` (fragment `/api/banniere` — suppression prévue Epic F). Templates `aide.html`, `changelog.html` devenus dead code (remplacés par `AidePage.vue`, `ChangelogPage.vue`).
 
 ## Outils Claude Code
 
