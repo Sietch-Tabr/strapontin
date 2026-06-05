@@ -8,7 +8,7 @@ strapontin/
 │   ├── pom.xml       ← parent BOM (Java 25, Spring Boot 4.0.6)
 │   ├── core/         ← normalisation, dédup, types partagés
 │   ├── sources/      ← clients TM, Eventim, Deezer
-│   ├── web/          ← Spring Boot (REST API + Thymeleaf UI, port 8080)
+│   ├── web/          ← Spring Boot REST API + Vue SPA (port 8080)
 │   └── worker/       ← Spring Boot + Quartz (port 8081)
 └── scripts/
     ├── provision.sh          ← provisionnement LXC dev|prod (Proxmox)
@@ -35,16 +35,15 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - `ClientController` (`/api/client/erreur`) : remontée des erreurs JS des navigateurs vers `logs_admin`, source `client-js`
 - Référence : `PersisterConcerts` + `RecalculerMatchesService` dans `java/worker/`
 
-## Stack technique (v2.1.3)
+## Stack technique (v2.2.0)
 
-- **Spring Boot 4.0.6** + Thymeleaf (hybride en migration) + **Vue 3 + Vite** (`front/` → `static/`) — port 8080
+- **Spring Boot 4.0.6** + **Vue 3 + Vite** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
 - **Spring Security 7** — auth session, TOTP 2FA optionnel (bucket4j rate-limiting) ; `anyRequest().authenticated()` — non-API sans session → redirect `/login`, API → 401 JSON
 - **Spring Data JDBC** + PostgreSQL 18 — données persistantes
 - **Quartz** — jobs background (fetch concerts)
 - **Flyway 12** — migrations DB (`java/web/src/main/resources/db/migration/`)
-- **Resend** — notifications email (tier gratuit 3 000/mois)
+- **Resend** — notifications email (tier gratuit 3 000/mois) ; gabarits HTML via `EmailTemplates.java` (text blocks Java)
 - **web-push (VAPID)** — notifications push PWA
-- **HTMX 2.0.6** — navigation SPA-like (`hx-boost`) + bannière système (poll 60s), servi via webjar
 - **Maven** — build (`mvn -f java/pom.xml -pl web,worker -am package`)
 
 ## Workflow de développement
@@ -164,18 +163,16 @@ Détails : [wiki Authentification](https://codeberg.org/Kwaite/strapontin/wiki/A
 Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein normalisé ≥ 0.85.
 → Détails : [wiki Architecture](https://codeberg.org/Kwaite/strapontin/wiki/Architecture)
 
-## UI / Design system (v2 — Thymeleaf)
+## UI / Design system (v2.2.0 — Vue SPA)
 
-- **Thymeleaf** + Layout Dialect — templates dans `java/web/src/main/resources/templates/`
+- **Vue 3 + Vite** — SPA intégralement côté client. `front/src/pages/` (pages), `front/src/components/` (composants), `front/src/composables/` (logique réutilisable)
 - **CSS vanilla** — variables CSS pour thème clair/sombre, dans `static/css/`
 - **PWA** : service worker JS vanilla + push. Cap 10 abonnements/user.
 - **Badge "Nouveau"** : basé sur `user_matches.vu_le IS NULL` — remis à `NULL` à la visite de `/`. Affiché sur la sidebar desktop et la bottom nav mobile. `notification_envoyee_le` est une colonne distincte pour le suivi des envois email/push.
 - **Thème** : cookie `theme` (1 an) + `user_config.theme` → pas de FOUC
-- **Navigation source de vérité** : `ModeleGlobalAdvice` (@ControllerAdvice) injecte `navPrincipal`, `navSecondaire`, `navFooter`, `pagesDrawer` dans tous les templates via `@ModelAttribute`
-- **Fragment onglets** : `layout/fragments/onglets.html` — réutilisé par `admin.html` et `parametres.html`
-- **`hx-boost="true"`** sur `<body>` + `hx-target="#contenu-principal"` + `hx-select` + `hx-swap="outerHTML"` — navigation via XHR, swap ciblé sur `<main id="contenu-principal">`. `HtmxModelAdvice` (@ControllerAdvice) injecte `reqHtmx` : sidebar/nav masquées côté serveur sur requêtes HTMX (payload -30 à -50 %). `initTout()` rebinde les handlers sur `DOMContentLoaded` et `htmx:afterSettle`
-- **Toasts** : Popover API + `initToasts()` dans `app.js`. Timer par classe : 5 s (succes/info), 10 s (avertissement), pas d'auto-dismiss (erreur). `afficherToast(message, type)` crée un toast depuis JS (callbacks AJAX). Flash PRG → template → `initToasts()` pour les actions form.
-- **Escape Thymeleaf** : apostrophe dans un paramètre de fragment `~{...}` → impossible avec chaîne littérale. Utiliser une variable modèle `${var}` ou éviter l'apostrophe (`'Sections administration'`). `\'`, `''` et `|...|` sont tous invalides dans ce contexte.
+- **Navigation** : Vue Router (`front/src/router/`) — sidebar desktop, bottom nav + drawer mobile
+- **Pages à onglets** (`admin`, `parametres`) : `<select class="param-onglets-mobile">` sur mobile, `<nav class="param-onglets">` + ancres sur desktop
+- **Toasts** : Popover API, `afficherToast(message, type)` depuis les composants Vue
 
 ## Schéma PostgreSQL
 
@@ -207,7 +204,7 @@ Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de
 
 Plan complet : [wiki Migration-Vue-2.2.0](https://codeberg.org/Kwaite/strapontin/wiki/Migration-Vue-2.2.0)
 
-**État** : toutes les pages migrées — aucun ViewController restant. Thymeleaf encore présent pour `ModeleGlobalAdvice`, `HtmxModelAdvice`, `BanniereController` (fragment `/api/banniere` — suppression prévue Epic F). Templates `aide.html`, `changelog.html` devenus dead code (remplacés par `AidePage.vue`, `ChangelogPage.vue`).
+**État** : migration terminée (Epics A–F). Aucun ViewController ni dépendance Thymeleaf/HTMX dans le module web. `EmailTemplates.java` remplace les 7 gabarits HTML Thymeleaf pour les emails (text blocks Java, zéro dépendance).
 
 ## Outils Claude Code
 
