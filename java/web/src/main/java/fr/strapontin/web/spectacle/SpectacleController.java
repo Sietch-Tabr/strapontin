@@ -97,6 +97,21 @@ public class SpectacleController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
+  /// Démasque tous les concerts d'un artiste pour l'utilisateur courant.
+  ///
+  /// @param requete corps JSON avec {@code artisteNorm}
+  /// @param auth    contexte d'authentification
+  /// @return 200 si mis à jour, 400 si artisteNorm manquant
+  @PostMapping("/demasquer-artiste")
+  public ResponseEntity<Map<String, Object>> demasquerArtiste(
+      @RequestBody RequeteMasquerArtiste requete, Authentication auth) {
+    if (requete.artisteNorm() == null || requete.artisteNorm().isBlank()) {
+      return erreur(400, "Identifiant artiste manquant.");
+    }
+    spectacleService.demasquerArtiste(utilisateur(auth).id(), requete.artisteNorm());
+    return ResponseEntity.ok(Map.of("succes", true));
+  }
+
   private static UtilisateurDetails utilisateur(Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
   }

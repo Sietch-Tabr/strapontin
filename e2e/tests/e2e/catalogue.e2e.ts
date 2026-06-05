@@ -8,9 +8,9 @@ async function supprimerArtisteDeListe(
     has: page.locator(".carte-nom", { hasText: nomRegex }),
   });
   if ((await carte.count()) === 0) return;
-  await carte.locator("button.js-confirmer-suppr").first().click();
+  await carte.locator("button.btn-danger-texte").first().click();
   await page.locator("dialog#dialog-confirmer-suppr-artiste").waitFor();
-  await page.click("button#btn-confirmer-suppr-artiste");
+  await page.click("dialog#dialog-confirmer-suppr-artiste button.btn-danger");
   await expect(page.locator(".alerte-succes").first()).toBeVisible({
     timeout: 5000,
   });
@@ -24,9 +24,9 @@ async function supprimerSalleDeListe(
     has: page.locator(".carte-nom", { hasText: nomRegex }),
   });
   if ((await carte.count()) === 0) return;
-  await carte.locator("button.js-confirmer-suppr-salle").first().click();
+  await carte.locator("button.btn-danger-texte").first().click();
   await page.locator("dialog#dialog-confirmer-suppr-salle").waitFor();
-  await page.click("button#btn-confirmer-suppr-salle");
+  await page.click("dialog#dialog-confirmer-suppr-salle button.btn-danger");
   await expect(page.locator(".alerte-succes").first()).toBeVisible({
     timeout: 5000,
   });
@@ -59,12 +59,12 @@ test.describe("Scénario: catalogue — artistes", () => {
 
     // Suppression post-test — laisse toujours l'état propre
     const btnSupprimer = page.locator(
-      `button.js-confirmer-suppr[data-nom-artiste="${nomArtiste}"]`,
+      `button[aria-label="Supprimer ${nomArtiste}"]`,
     );
     await expect(btnSupprimer).toBeVisible({ timeout: 5000 });
     await btnSupprimer.click();
     await page.locator("dialog#dialog-confirmer-suppr-artiste").waitFor();
-    await page.click("button#btn-confirmer-suppr-artiste");
+    await page.click("dialog#dialog-confirmer-suppr-artiste button.btn-danger");
     await expect(page.locator(".alerte-succes").first()).toBeVisible({
       timeout: 5000,
     });
@@ -97,12 +97,12 @@ test.describe("Scénario: catalogue — salles", () => {
 
     // Suppression post-test — laisse toujours l'état propre
     const btnSupprimer = page.locator(
-      `button.js-confirmer-suppr-salle[data-nom-salle="${nomSalle}"]`,
+      `button[aria-label="Supprimer ${nomSalle}"]`,
     );
     await expect(btnSupprimer).toBeVisible({ timeout: 5000 });
     await btnSupprimer.click();
     await page.locator("dialog#dialog-confirmer-suppr-salle").waitFor();
-    await page.click("button#btn-confirmer-suppr-salle");
+    await page.click("dialog#dialog-confirmer-suppr-salle button.btn-danger");
     await expect(page.locator(".alerte-succes").first()).toBeVisible({
       timeout: 5000,
     });

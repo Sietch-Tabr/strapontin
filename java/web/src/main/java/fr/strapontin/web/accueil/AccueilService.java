@@ -34,12 +34,24 @@ public class AccueilService {
     this.userConfigService = userConfigService;
   }
 
+  /// Marque tous les matches non encore vus comme vus pour l'utilisateur.
+  ///
+  /// <p>Appelé à la visite de l'accueil pour réinitialiser le badge de navigation.
+  ///
+  /// @param userId identifiant de l'utilisateur
+  public void marquerVus(String userId) {
+    jdbc.update(
+        "UPDATE user_matches SET vu_le = now() WHERE user_id = :userId AND vu_le IS NULL",
+        Map.of(CLE_USER_ID, userId));
+  }
+
   /// Retourne les prochains concerts des artistes suivis, groupés par artiste.
   ///
   /// @param userId            identifiant de l'utilisateur
   /// @param masques           {@code true} pour afficher les concerts masqués
   /// @param indisponibles     {@code "1"} pour inclure les concerts non disponibles
-  /// @param nouveau           {@code true} pour n'afficher que les concerts non encore vus
+  /// @param nouveau           {@code true} pour afficher uniquement les concerts ajoutés
+  ///                          en base depuis moins de 7 jours
   /// @return groupes artiste/concerts avec compteurs
   public ReponseAccueil accueil(
       String userId, boolean masques, String indisponibles, boolean nouveau) {
@@ -61,7 +73,7 @@ public class AccueilService {
       where.append(" AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled', 'postponed'))");
     }
     if (nouveau) {
-      where.append(" AND um.vu_le IS NULL");
+      where.append(" AND c.first_seen >= (CURRENT_TIMESTAMP - INTERVAL '7 days')");
     }
     where.append(
         """
@@ -81,7 +93,8 @@ public class AccueilService {
         jdbc.query(
             """
             SELECT c.id, c.artiste, c.artiste_norm, c.date::text, c.heure::text,
-                   c.salle, c.ville, c.url, c.statut, um.vu_le
+                   c.salle, c.ville, c.url, c.statut,
+                   c.first_seen >= (CURRENT_TIMESTAMP - INTERVAL '7 days') AS est_nouveau
             FROM user_matches um
             INNER JOIN concerts c ON um.concert_id = c.id
             WHERE %s
@@ -100,7 +113,7 @@ public class AccueilService {
                     rs.getString("ville"),
                     rs.getString("url"),
                     rs.getString("statut"),
-                    rs.getTimestamp("vu_le") == null));
+                    rs.getBoolean("est_nouveau")));
 
     Map<String, List<ConcertAccueil>> groupes = new LinkedHashMap<>();
     for (ConcertAccueil c : lignes) {

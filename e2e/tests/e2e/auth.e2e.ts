@@ -85,7 +85,8 @@ test.describe("Scénario: API auth — endpoints Vue", () => {
     const [reponse] = await Promise.all([
       page.waitForResponse(
         (r) =>
-          r.url().includes("/api/auth/login") && r.request().method() === "POST",
+          r.url().includes("/api/auth/login") &&
+          r.request().method() === "POST",
       ),
       page.click("button[type='submit']"),
     ]);
