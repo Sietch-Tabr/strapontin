@@ -282,4 +282,21 @@ public class SpectacleService {
         """,
         Map.of("userId", userId, "artisteNorm", artisteNorm, "aujourd8", LocalDate.now()));
   }
+
+  /// Démasque tous les concerts d'un artiste pour l'utilisateur courant.
+  ///
+  /// @param userId      identifiant de l'utilisateur
+  /// @param artisteNorm identifiant normalisé de l'artiste
+  public void demasquerArtiste(String userId, String artisteNorm) {
+    jdbc.update(
+        """
+        UPDATE user_matches SET masque_le = NULL
+        WHERE user_id = :userId
+          AND concert_id IN (
+            SELECT id FROM concerts
+            WHERE artiste_norm = :artisteNorm AND date >= :aujourd8
+          )
+        """,
+        Map.of("userId", userId, "artisteNorm", artisteNorm, "aujourd8", LocalDate.now()));
+  }
 }

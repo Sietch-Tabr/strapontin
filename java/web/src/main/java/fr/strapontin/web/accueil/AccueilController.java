@@ -8,6 +8,7 @@ import fr.strapontin.web.securite.UtilisateurDetails;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,11 +30,24 @@ public class AccueilController {
     this.accueilService = accueilService;
   }
 
+  /// Marque tous les matches non encore vus comme vus pour l'utilisateur courant.
+  ///
+  /// <p>Appelé par le SPA Vue à l'ouverture de la page d'accueil pour réinitialiser le badge.
+  ///
+  /// @param auth contexte d'authentification
+  /// @return 204 No Content
+  @PostMapping("/marquer-vus")
+  public ResponseEntity<Void> marquerVus(Authentication auth) {
+    accueilService.marquerVus(((UtilisateurDetails) auth.getPrincipal()).id());
+    return ResponseEntity.noContent().build();
+  }
+
   /// Retourne les prochains concerts des artistes et salles suivis, groupés par artiste.
   ///
   /// @param masques       {@code true} pour afficher les concerts masqués
   /// @param indisponibles {@code "1"} pour inclure les concerts non disponibles
-  /// @param nouveau       {@code true} pour n'afficher que les concerts non encore vus
+  /// @param nouveau       {@code true} pour afficher uniquement les concerts ajoutés
+  ///                      en base depuis moins de 7 jours
   /// @param auth          contexte d'authentification
   /// @return les groupes artiste/concerts avec compteurs
   @GetMapping
