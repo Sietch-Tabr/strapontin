@@ -100,7 +100,7 @@ onMounted(async () => {
     const rep = await fetch('/api/setup')
     if (rep.ok) {
       const data = await rep.json()
-      if (data.dejaConfiguree) {
+      if (data.deja_configure) {
         router.replace('/login')
       }
     }
