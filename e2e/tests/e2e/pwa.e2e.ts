@@ -8,8 +8,10 @@ test.describe("Scénario: service worker — présence et accessibilité", () =>
     expect(contentType).toContain("javascript");
   });
 
-  test("sw_enregistre_apres_chargement", async ({ page, browserName }) => {
-    // WebKit headless ne supporte pas navigator.serviceWorker de façon fiable
+  test("sw_enregistre_et_actif_apres_chargement", async ({
+    page,
+    browserName,
+  }) => {
     test.skip(
       browserName === "webkit",
       "WebKit headless ne supporte pas navigator.serviceWorker de façon fiable",
@@ -19,10 +21,42 @@ test.describe("Scénario: service worker — présence et accessibilité", () =>
       async () => {
         if (!("serviceWorker" in navigator)) return false;
         const reg = await navigator.serviceWorker.getRegistration("/");
-        return reg !== undefined;
+        return reg !== undefined && reg.active !== null;
       },
       undefined,
-      { timeout: 10000 },
+      { timeout: 15000 },
     );
+  });
+});
+
+test.describe("Scénario: PWA — manifest et installabilité", () => {
+  test("manifest_json_accessible_et_valide", async ({ request }) => {
+    const rep = await request.get("/manifest.json");
+    expect(rep.status()).toBe(200);
+    const contentType = rep.headers()["content-type"] ?? "";
+    expect(contentType).toContain("json");
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("name");
+    expect(corps).toHaveProperty("start_url");
+    expect(corps).toHaveProperty("display");
+    expect(corps.icons).toBeInstanceOf(Array);
+    expect(corps.icons.length).toBeGreaterThan(0);
+  });
+
+  test("manifest_json_icons_accessibles", async ({ request }) => {
+    const manifest = await (await request.get("/manifest.json")).json();
+    for (const icon of manifest.icons as { src: string }[]) {
+      const rep = await request.get(icon.src);
+      expect(rep.status()).toBe(200);
+    }
+  });
+
+  test("index_html_contient_lien_manifest", async ({ request }) => {
+    const rep = await request.get("/");
+    expect(rep.status()).toBe(200);
+    const html = await rep.text();
+    expect(html).toContain('rel="manifest"');
+    // Thymeleaf fingerprinte l'URL (/manifest-{hash}.json), Vue l'utilise directement (/manifest.json)
+    expect(html).toMatch(/href="\/manifest[^"]*\.json"/);
   });
 });
