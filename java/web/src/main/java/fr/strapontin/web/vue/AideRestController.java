@@ -77,7 +77,7 @@ public class AideRestController {
       return erreur(401, "Non authentifié.");
     }
 
-    String ip = request.getRemoteAddr();
+    String ip = obtenirIp(request);
     Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
     if (!bucket.tryConsume(1)) {
       return erreur(429, "Trop de signalements. Réessayez dans une heure.");
@@ -104,6 +104,11 @@ public class AideRestController {
     Map<String, Object> corps = new HashMap<>();
     corps.put("erreur", message);
     return ResponseEntity.status(status).body(corps);
+  }
+
+  private static String obtenirIp(HttpServletRequest request) {
+    String realIp = request.getHeader("X-Real-IP");
+    return (realIp != null && !realIp.isBlank()) ? realIp : request.getRemoteAddr();
   }
 
   private Bucket creerBucketSignalement() {
