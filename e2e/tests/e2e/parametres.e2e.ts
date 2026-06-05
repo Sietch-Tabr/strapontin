@@ -207,3 +207,173 @@ test.describe("Scénario: API push — VAPID et validation", () => {
     await ctx.close();
   });
 });
+
+test.describe("Scénario: Préférences — thème", () => {
+  test("theme_changer_sombre_affiche_classe_actif", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
+    await page.goto("/parametres#preferences");
+    await page.locator(".btn-theme", { hasText: "Sombre" }).click();
+    await expect(page.locator(".btn-theme", { hasText: "Sombre" })).toHaveClass(/actif/);
+    await expect(page.locator(".btn-theme", { hasText: "Automatique" })).not.toHaveClass(/actif/);
+    await page.locator(".btn-theme", { hasText: "Automatique" }).click();
+    await expect(page.locator(".btn-theme", { hasText: "Automatique" })).toHaveClass(/actif/);
+  });
+
+  test("theme_changer_clair_affiche_classe_actif", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
+    await page.goto("/parametres#preferences");
+    await page.locator(".btn-theme", { hasText: "Clair" }).click();
+    await expect(page.locator(".btn-theme", { hasText: "Clair" })).toHaveClass(/actif/);
+    await page.locator(".btn-theme", { hasText: "Automatique" }).click();
+  });
+});
+
+test.describe("Scénario: Préférences — départements", () => {
+  test("departements_code_inconnu_affiche_toast_avertissement", async ({ page }) => {
+    await page.goto("/parametres#preferences");
+    await page.locator("input[placeholder='75, 92, 93…']").fill("ZZZZZ");
+    await page.locator("section#preferences button[type='submit']").click();
+    await expect(page.locator(".alerte-avertissement").filter({ hasText: "ignoré" })).toBeVisible({ timeout: 5000 });
+  });
+
+  test("api_departements_code_valide_sauvegarde_sans_avertissement", async ({ request }) => {
+    const rep = await request.patch("/api/user/config/departements", {
+      data: { departements: "75, 92" },
+    });
+    expect(rep.ok()).toBeTruthy();
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("succes");
+    expect(corps.ignores ?? []).toHaveLength(0);
+  });
+});
+
+test.describe("Scénario: Préférences — filtre disponibles", () => {
+  test("filtre_disponibles_toggle_change_etat", async ({ page }) => {
+    await page.goto("/parametres#preferences");
+    const toggle = page.locator("input[type='checkbox'][aria-labelledby='label-filtre-disponibles']");
+    const etatInitial = await toggle.isChecked();
+    await page.locator("label.switch").click();
+    await expect(toggle).toBeChecked({ checked: !etatInitial });
+    await page.locator("label.switch").click();
+    await expect(toggle).toBeChecked({ checked: etatInitial });
+  });
+
+  test("api_filtres_patch_retourne_succes", async ({ request }) => {
+    const rep = await request.patch("/api/user/config/filtres", {
+      data: { filtreDisponibles: false },
+    });
+    expect(rep.ok()).toBeTruthy();
+  });
+});
+
+test.describe("Scénario: Compte — nom d'affichage", () => {
+  test("profil_modification_nom_affiche_toast_succes", async ({ page }) => {
+    await page.goto("/parametres#compte");
+    const champNom = page.locator("input#nom");
+    const nomOriginal = await champNom.inputValue();
+    await champNom.fill("Test Playwright");
+    await page.getByRole("button", { name: "Enregistrer" }).click();
+    await expect(page.locator(".alerte-succes").filter({ hasText: "enregistré" })).toBeVisible({ timeout: 5000 });
+    await champNom.fill(nomOriginal);
+    await page.getByRole("button", { name: "Enregistrer" }).click();
+  });
+});
+
+test.describe("Scénario: API compte — identifiant", () => {
+  test("api_identifiant_trop_court_retourne_400", async ({ request }) => {
+    const rep = await request.patch("/api/user/identifiant", {
+      data: { identifiant: "ab" },
+    });
+    expect(rep.status()).toBe(400);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("erreur");
+  });
+
+  test("api_identifiant_caracteres_invalides_retourne_400", async ({ request }) => {
+    const rep = await request.patch("/api/user/identifiant", {
+      data: { identifiant: "kwaite@test" },
+    });
+    expect(rep.status()).toBe(400);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("erreur");
+  });
+
+  test("api_identifiant_valide_retourne_succes", async ({ request }) => {
+    const rep = await request.patch("/api/user/identifiant", {
+      data: { identifiant: "kwaite" },
+    });
+    expect(rep.ok()).toBeTruthy();
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("succes");
+  });
+});
+
+test.describe("Scénario: API compte — mot de passe", () => {
+  test("api_mdp_mauvais_actuel_retourne_400", async ({ request }) => {
+    const rep = await request.post("/api/user/password", {
+      data: {
+        motDePasseActuel: "mauvais-mot-de-passe-incorrect",
+        motDePasseNouveau: "nouveau-mot-de-passe-valide-12chars",
+      },
+    });
+    expect(rep.status()).toBe(400);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("erreur");
+  });
+
+  test("api_mdp_nouveau_trop_court_retourne_400", async ({ request }) => {
+    const rep = await request.post("/api/user/password", {
+      data: {
+        motDePasseActuel: "Q%IypKZT37u77*Vr",
+        motDePasseNouveau: "court",
+      },
+    });
+    expect(rep.status()).toBe(400);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("erreur");
+  });
+});
+
+test.describe("Scénario: Données — suppression de compte", () => {
+  test("suppression_compte_bouton_dialog_desactive_sans_texte", async ({ page }) => {
+    await page.goto("/parametres#donnees");
+    await page.locator("section#donnees button.btn-danger").click();
+    const dialog = page.locator("dialog#dialog-supprimer-compte");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator("button.btn-danger")).toBeDisabled();
+  });
+
+  test("suppression_compte_dialog_actif_avec_texte_correct", async ({ page }) => {
+    await page.goto("/parametres#donnees");
+    await page.locator("section#donnees button.btn-danger").click();
+    const dialog = page.locator("dialog#dialog-supprimer-compte");
+    await dialog.locator("input#confirmation-suppression").fill("supprimer");
+    await expect(dialog.locator("button.btn-danger")).not.toBeDisabled();
+    await dialog.locator("button.btn-secondary").click();
+    await expect(dialog).not.toBeVisible();
+  });
+
+  test("suppression_compte_annuler_ferme_dialog", async ({ page }) => {
+    await page.goto("/parametres#donnees");
+    await page.locator("section#donnees button.btn-danger").click();
+    const dialog = page.locator("dialog#dialog-supprimer-compte");
+    await expect(dialog).toBeVisible();
+    await dialog.locator("button.btn-secondary").click();
+    await expect(dialog).not.toBeVisible();
+  });
+});
+
+test.describe("Scénario: page TOTP enrollment", () => {
+  test("totp_page_affiche_formulaire_confirmation", async ({ page }) => {
+    await page.goto("/parametres/totp");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.locator("input#code")).toBeVisible();
+    await expect(page.locator(".totp-qr")).toBeVisible({ timeout: 10000 });
+  });
+
+  test("totp_page_annuler_retourne_parametres", async ({ page }) => {
+    await page.goto("/parametres/totp");
+    await page.locator("a[href='/parametres#compte']").click();
+    await expect(page).toHaveURL(/\/parametres/);
+  });
+});
