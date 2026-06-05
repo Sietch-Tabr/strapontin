@@ -1,4 +1,4 @@
-import { chromium } from "@playwright/test";
+import { request } from "@playwright/test";
 import { existsSync, readFileSync } from "fs";
 
 const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
@@ -32,28 +32,22 @@ export default async function setup(): Promise<() => Promise<void>> {
     );
   }
 
-  const navigateur = await chromium.launch();
-  const contexte = await navigateur.newContext({ baseURL: BASE_URL });
-  const page = await contexte.newPage();
+  const contexte = await request.newContext({ baseURL: BASE_URL });
 
-  await page.goto("/login");
-  await page.fill('input[name="identifiant"]', E2E_IDENTIFIANT);
-  await page.fill('input[name="motDePasse"]', E2E_MOT_DE_PASSE);
-  await Promise.all([
-    page.waitForURL(/\/(?!login)/, { waitUntil: "domcontentloaded" }),
-    page.click('button[type="submit"]'),
-  ]);
+  const rep = await contexte.post("/api/auth/login", {
+    data: { identifiant: E2E_IDENTIFIANT, motDePasse: E2E_MOT_DE_PASSE },
+  });
 
-  if (page.url().includes("/login")) {
-    await navigateur.close();
+  if (!rep.ok()) {
+    await contexte.dispose();
     throw new Error(
-      `Échec du login E2E (identifiant ou mot de passe incorrect) sur ${BASE_URL}.`,
+      `Échec du login E2E (HTTP ${rep.status()}) sur ${BASE_URL}.`,
     );
   }
 
   await contexte.storageState({ path: FICHIER_STATE });
-  await navigateur.close();
+  await contexte.dispose();
 
-  console.log("[e2e setup] session Playwright obtenue via form login");
+  console.log("[e2e setup] session Playwright obtenue via API /api/auth/login");
   return async () => {};
 }

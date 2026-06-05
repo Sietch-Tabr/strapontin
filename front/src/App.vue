@@ -1,40 +1,43 @@
 <template>
-  <div class="app-layout">
-    <SidebarNav
+  <template v-if="!estPageAuth">
+    <div class="app-layout">
+      <SidebarNav
+        :nav-principal="navPrincipal"
+        :nav-secondaire="navSecondaire"
+        :nav-footer="navFooter"
+        :nb-nouveau="nbNouveau"
+        :nom-utilisateur="nomUtilisateur"
+        :est-admin="estAdmin"
+      />
+      <main id="contenu-principal" class="main-content">
+        <BanniereSysteme :banniere="banniere" @update:banniere="banniere = $event" />
+        <RouterView />
+      </main>
+    </div>
+
+    <BottomNav
       :nav-principal="navPrincipal"
+      :nb-nouveau="nbNouveau"
+      :drawer-ouvert="drawerOuvert"
+      @ouvrir-drawer="drawerOuvert = true"
+    />
+
+    <DrawerNav
+      :ouvert="drawerOuvert"
       :nav-secondaire="navSecondaire"
       :nav-footer="navFooter"
-      :nb-nouveau="nbNouveau"
       :nom-utilisateur="nomUtilisateur"
       :est-admin="estAdmin"
+      @fermer="drawerOuvert = false"
     />
-    <main id="contenu-principal" class="main-content">
-      <BanniereSysteme :banniere="banniere" @update:banniere="banniere = $event" />
-      <RouterView />
-    </main>
-  </div>
-
-  <BottomNav
-    :nav-principal="navPrincipal"
-    :nb-nouveau="nbNouveau"
-    :drawer-ouvert="drawerOuvert"
-    @ouvrir-drawer="drawerOuvert = true"
-  />
-
-  <DrawerNav
-    :ouvert="drawerOuvert"
-    :nav-secondaire="navSecondaire"
-    :nav-footer="navFooter"
-    :nom-utilisateur="nomUtilisateur"
-    :est-admin="estAdmin"
-    @fermer="drawerOuvert = false"
-  />
+  </template>
+  <RouterView v-else />
 
   <ToastContainer />
 </template>
 
 <script setup>
-import { ref, computed, watchEffect, onMounted } from 'vue'
+import { ref, computed, watchEffect, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import SidebarNav from './components/layout/SidebarNav.vue'
 import BottomNav from './components/layout/BottomNav.vue'
@@ -51,6 +54,8 @@ const route = useRoute()
 
 const drawerOuvert = ref(false)
 const banniere = ref(null)
+
+const estPageAuth = computed(() => !!route.meta.authPage)
 
 const navPrincipal = [
   { href: '/', label: 'Accueil', icone: 'icon-home' },
@@ -71,13 +76,11 @@ const nbNouveau = computed(() => session.value?.nbNouveau ?? 0)
 const nomUtilisateur = computed(() => session.value?.nom ?? '')
 const estAdmin = computed(() => session.value?.role === 'admin')
 
-// Fermer le drawer à chaque navigation
 watchEffect(() => {
   void route.path
   drawerOuvert.value = false
 })
 
-// Badge PWA
 watchEffect(() => {
   if (!('setAppBadge' in navigator)) return
   const n = nbNouveau.value
@@ -85,6 +88,14 @@ watchEffect(() => {
     navigator.setAppBadge(n)
   } else {
     navigator.clearAppBadge()
+  }
+})
+
+// Recharger la session et la bannière au retour sur une page applicative
+watch(estPageAuth, (nouveau, ancien) => {
+  if (ancien && !nouveau) {
+    chargerSession()
+    chargerBanniere()
   }
 })
 

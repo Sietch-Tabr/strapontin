@@ -22,9 +22,27 @@ export default defineConfig({
 
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
-    { name: "mobile-chrome", use: { ...devices["Pixel 5"] } },
-    { name: "mobile-safari", use: { ...devices["iPhone 12"] } },
+    // Les tests purement API (non liés au rendu) tournent sur chromium uniquement.
+    // Sur les autres projets, on les exclut pour éviter d'épuiser le rate limiter bucket4j.
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+      grepInvert: /Scénario: API auth/,
+    },
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"] },
+      grepInvert: /Scénario: API auth/,
+    },
+    {
+      name: "mobile-chrome",
+      use: { ...devices["Pixel 5"] },
+      grepInvert: /Scénario: API auth/,
+    },
+    {
+      name: "mobile-safari",
+      use: { ...devices["iPhone 12"] },
+      grepInvert: /Scénario: API auth/,
+    },
   ],
 });
