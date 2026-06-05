@@ -7,6 +7,15 @@
     <div v-if="chargement" class="etat-chargement" aria-live="polite">Chargement…</div>
 
     <template v-else>
+      <select
+        class="param-onglets-mobile"
+        :value="ongletActif"
+        aria-label="Sections de l'administration"
+        @change="naviguerVers($event.target.value)"
+      >
+        <option v-for="onglet in onglets" :key="onglet.ancre" :value="onglet.ancre">{{ onglet.label }}</option>
+      </select>
+
       <nav class="param-onglets" aria-label="Sections de l'administration">
         <a
           v-for="onglet in onglets"

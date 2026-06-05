@@ -8,13 +8,15 @@ test.describe("Scénario: admin — sections et contenus", () => {
     ).toBeVisible();
   });
 
-  test("admin_section_utilisateurs_visible", async ({ page }) => {
+  test("admin_section_utilisateurs_visible", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
     await page.goto("/admin#utilisateurs");
     await page.locator('a[href="#utilisateurs"]').click();
     await expect(page.locator("section#utilisateurs")).toBeVisible();
   });
 
-  test("admin_section_configuration_visible", async ({ page }) => {
+  test("admin_section_configuration_visible", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
     await page.goto("/admin#configuration");
     await page.locator('a[href="#configuration"]').click();
     await expect(page.locator("section#configuration")).toBeVisible();
@@ -25,32 +27,67 @@ test.describe("Scénario: admin — sections et contenus", () => {
     await expect(page.locator("section#jobs")).toBeVisible();
   });
 
-  test("admin_section_logs_visible", async ({ page }) => {
+  test("admin_section_logs_visible", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
     await page.goto("/admin#logs");
     await page.locator('a[href="#logs"]').click();
     await expect(page.locator("section#logs")).toBeVisible();
   });
 
-  test("admin_section_banniere_visible", async ({ page }) => {
+  test("admin_section_banniere_visible", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
     await page.goto("/admin#banniere");
     await page.locator('a[href="#banniere"]').click();
     await expect(page.locator("section#banniere")).toBeVisible();
   });
 
-  test("admin_anchor_utilisateurs_scroll", async ({ page }) => {
+  test("admin_anchor_utilisateurs_scroll", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
     await page.goto("/admin#utilisateurs");
     await page.locator('a[href="#utilisateurs"]').click();
+    await expect(page.locator("section#utilisateurs")).toBeVisible();
+  });
+
+  test("admin_mobile_select_navigation_logs", async ({ page, isMobile }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/admin");
+    await page.selectOption("select.param-onglets-mobile", "#logs");
+    await expect(page.locator("section#logs")).toBeVisible();
+  });
+
+  test("admin_mobile_select_navigation_configuration", async ({ page, isMobile }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/admin");
+    await page.selectOption("select.param-onglets-mobile", "#configuration");
+    await expect(page.locator("section#configuration")).toBeVisible();
+  });
+
+  test("admin_mobile_select_navigation_banniere", async ({ page, isMobile }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/admin");
+    await page.selectOption("select.param-onglets-mobile", "#banniere");
+    await expect(page.locator("section#banniere")).toBeVisible();
+  });
+
+  test("admin_mobile_select_navigation_utilisateurs", async ({ page, isMobile }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/admin");
+    await page.selectOption("select.param-onglets-mobile", "#utilisateurs");
     await expect(page.locator("section#utilisateurs")).toBeVisible();
   });
 });
 
 test.describe("Scénario: admin — gestion des utilisateurs", () => {
-  test("admin_creerPuisSupprimerUtilisateur_fluxComplet", async ({ page }) => {
+  test("admin_creerPuisSupprimerUtilisateur_fluxComplet", async ({ page, isMobile }) => {
     const emailTest = `e2e-test-${Date.now()}@example.com`;
 
     // Créer l'utilisateur
     await page.goto("/admin#utilisateurs");
-    await page.locator('a[href="#utilisateurs"]').click();
+    if (isMobile) {
+      await page.selectOption("select.param-onglets-mobile", "#utilisateurs");
+    } else {
+      await page.locator('a[href="#utilisateurs"]').click();
+    }
     await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
     await page.click('.form-creer-utilisateur button[type="submit"]');
 
