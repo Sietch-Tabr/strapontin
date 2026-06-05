@@ -6,6 +6,7 @@ package fr.strapontin.web.securite;
 
 /// Représentation publique d'un utilisateur authentifié.
 ///
+/// @param totpRequis {@code true} si un challenge TOTP est en attente pour cette session
 /// @since 2.1.0
 /// @author Kwaite
 public record UtilisateurDto(
@@ -14,4 +15,5 @@ public record UtilisateurDto(
     String nom,
     String email,
     String role,
-    boolean mustChangeCredentials) {}
+    boolean mustChangeCredentials,
+    boolean totpRequis) {}

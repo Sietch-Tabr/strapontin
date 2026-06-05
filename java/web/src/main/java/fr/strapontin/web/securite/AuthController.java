@@ -4,14 +4,18 @@
  */
 package fr.strapontin.web.securite;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -25,9 +29,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Endpoints d'authentification de l'API REST.
 ///
-/// <p>HTTP pur — délègue les flux reset MDP à {@link AuthService}.
-/// Gère le login, logout, récupération de l'utilisateur courant,
-/// et la réinitialisation de mot de passe.
+/// <p>HTTP pur — délègue les flux reset MDP à {@link AuthService} et la vérification TOTP
+/// à {@link TotpService}. Gère le login, logout, challenge TOTP, récupération de l'utilisateur
+/// courant et la réinitialisation de mot de passe.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -35,15 +39,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
   private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+  private static final String SESSION_ECHECS_TOTP = "TOTP_ECHECS";
+  private static final int MAX_ECHECS_TOTP = 5;
 
   private final AuthenticationManager authenticationManager;
   private final AuthService authService;
+  private final TotpService totpService;
+  private final NamedParameterJdbcTemplate jdbc;
 
   /// @param authenticationManager gestionnaire d'authentification Spring Security
   /// @param authService           service de réinitialisation de mot de passe
-  public AuthController(AuthenticationManager authenticationManager, AuthService authService) {
+  /// @param totpService           service de vérification des codes TOTP
+  /// @param jdbc                  accès JDBC pour récupérer le secret TOTP de l'utilisateur
+  public AuthController(
+      AuthenticationManager authenticationManager,
+      AuthService authService,
+      TotpService totpService,
+      NamedParameterJdbcTemplate jdbc) {
     this.authenticationManager = authenticationManager;
     this.authService = authService;
+    this.totpService = totpService;
+    this.jdbc = jdbc;
   }
 
   /// Authentifie un utilisateur et crée une session persistante.
@@ -76,7 +92,8 @@ public class AuthController {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails details)) {
       throw new IllegalStateException("Principal inattendu après authentification");
     }
-    if (details.twoFactorActif()) {
+    boolean totpRequis = details.twoFactorActif();
+    if (totpRequis) {
       session.setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
     }
     log.debug("Connexion réussie : {}", details.identifiant());
@@ -87,32 +104,103 @@ public class AuthController {
             details.nom(),
             details.email(),
             details.role(),
-            details.doitChangerCredentials()));
+            details.doitChangerCredentials(),
+            totpRequis));
   }
 
-  /// Invalide la session courante et déconnecte l'utilisateur.
+  /// Invalide la session courante, efface le cookie SESSION et déconnecte l'utilisateur.
   ///
-  /// @param httpRequest la requête HTTP (pour invalider la session)
+  /// @param httpRequest  la requête HTTP (pour invalider la session)
+  /// @param httpResponse la réponse HTTP (pour supprimer le cookie SESSION)
   /// @return 204 No Content
   @PostMapping("/api/auth/logout")
-  public ResponseEntity<Void> logout(HttpServletRequest httpRequest) {
+  public ResponseEntity<Void> logout(
+      HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
     HttpSession session = httpRequest.getSession(false);
     if (session != null) session.invalidate();
     SecurityContextHolder.clearContext();
+    Cookie cookie = new Cookie("SESSION", "");
+    cookie.setMaxAge(0);
+    cookie.setPath("/");
+    cookie.setHttpOnly(true);
+    httpResponse.addCookie(cookie);
     return ResponseEntity.noContent().build();
+  }
+
+  /// Vérifie le code TOTP soumis pendant le challenge post-login.
+  ///
+  /// <p>Après {@value MAX_ECHECS_TOTP} échecs consécutifs, la session est invalidée.
+  ///
+  /// @param req         le corps contenant le code à 6 chiffres
+  /// @param httpRequest la requête HTTP (pour lire et modifier la session)
+  /// @param auth        le contexte d'authentification Spring Security
+  /// @return 200 si valide — 422 si code incorrect — 409 si pas de challenge en attente — 401 si
+  ///     trop d'échecs
+  @PostMapping("/api/auth/totp")
+  public ResponseEntity<Map<String, Object>> verifierTotp(
+      @RequestBody TotpChallengeRequest req, HttpServletRequest httpRequest, Authentication auth) {
+    HttpSession session = httpRequest.getSession(false);
+    if (session == null
+        || !Boolean.TRUE.equals(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))) {
+      return ResponseEntity.status(409).body(Map.of("erreur", "Aucun challenge TOTP en attente"));
+    }
+
+    if (!(auth != null
+        && auth.isAuthenticated()
+        && auth.getPrincipal() instanceof UtilisateurDetails principal)) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("erreur", "Authentification requise"));
+    }
+
+    List<String> secrets =
+        jdbc.queryForList(
+            "SELECT two_factor_secret FROM users WHERE id = :id",
+            Map.of("id", principal.id()),
+            String.class);
+
+    String secret = secrets.isEmpty() ? null : secrets.get(0);
+    if (totpService.verifierCode(secret, req.code())) {
+      session.removeAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE);
+      session.removeAttribute(SESSION_ECHECS_TOTP);
+      log.debug("Challenge TOTP validé : {}", principal.identifiant());
+      return ResponseEntity.ok(Map.of("succes", true));
+    }
+
+    int echecs = (session.getAttribute(SESSION_ECHECS_TOTP) instanceof Integer n) ? n + 1 : 1;
+
+    if (echecs >= MAX_ECHECS_TOTP) {
+      session.invalidate();
+      log.debug("Trop de tentatives TOTP, session invalidée : {}", principal.identifiant());
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("erreur", "Trop de tentatives"));
+    }
+
+    session.setAttribute(SESSION_ECHECS_TOTP, echecs);
+    int restants = MAX_ECHECS_TOTP - echecs;
+    return ResponseEntity.unprocessableEntity()
+        .body(Map.of("erreur", "Code incorrect. " + restants + " essai(s) restant(s)."));
   }
 
   /// Retourne l'utilisateur actuellement authentifié.
   ///
-  /// @param auth l'authentification Spring Security (injectée automatiquement)
+  /// <p>Le champ {@code totpRequis} est {@code true} si un challenge TOTP est encore en attente
+  /// pour la session courante (l'utilisateur s'est connecté mais n'a pas encore validé le 2FA).
+  ///
+  /// @param auth        l'authentification Spring Security (injectée automatiquement)
+  /// @param httpRequest la requête HTTP (pour lire l'état TOTP de la session)
   /// @return l'utilisateur courant ou 401 si non authentifié
   @GetMapping("/api/auth/me")
-  public ResponseEntity<UtilisateurDto> moi(Authentication auth) {
+  public ResponseEntity<UtilisateurDto> moi(Authentication auth, HttpServletRequest httpRequest) {
     if (!(auth != null
         && auth.isAuthenticated()
         && auth.getPrincipal() instanceof UtilisateurDetails details)) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
+    HttpSession session = httpRequest.getSession(false);
+    boolean totpRequis =
+        session != null
+            && Boolean.TRUE.equals(
+                session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE));
     return ResponseEntity.ok(
         new UtilisateurDto(
             details.id(),
@@ -120,7 +208,8 @@ public class AuthController {
             details.nom(),
             details.email(),
             details.role(),
-            details.doitChangerCredentials()));
+            details.doitChangerCredentials(),
+            totpRequis));
   }
 
   /// Déclenche l'envoi d'un email de réinitialisation de mot de passe.

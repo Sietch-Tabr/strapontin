@@ -33,13 +33,13 @@ import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 
-/// Configuration Spring Security 7 pour les vues Thymeleaf et l'API REST.
+/// Configuration Spring Security 7 pour le mode SPA Vue 3.
 ///
 /// <p>Sessions persistantes JDBC (survivent aux redémarrages). Rate limiting login
-/// via {@link RateLimitingLoginFilter} (intercepte {@code /login} et {@code /api/auth/login}).
+/// via {@link RateLimitingLoginFilter} (intercepte {@code /api/auth/login}).
 /// Accès direct par IP bloqué via {@link BloquerAccesDirectIpFilter}.
 /// CSRF désactivé (sessions {@code SameSite=Strict} + {@code form-action 'self'} en CSP).
-/// Form login Spring Security sur {@code /login}.
+/// Login via {@code POST /api/auth/login}, logout via {@code POST /api/auth/logout}.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -63,6 +63,7 @@ public class SecurityConfiguration {
   /// @param correlationIdFilter le filtre de corrélation MDC (premier dans la chaîne)
   /// @param rateLimitingFilter  le filtre de rate limiting sur le login
   /// @param bloquerIpFilter     le filtre de blocage d'accès direct par IP
+  /// @param totpGuardFilter     le filtre de garde TOTP post-login
   /// @param sessionRegistry     le registre de sessions persisté en JDBC
   /// @return la SecurityFilterChain configurée
   /// @throws Exception en cas d'erreur de configuration
@@ -73,7 +74,6 @@ public class SecurityConfiguration {
       RateLimitingLoginFilter rateLimitingFilter,
       BloquerAccesDirectIpFilter bloquerIpFilter,
       TotpGuardFilter totpGuardFilter,
-      TotpSuccessHandler totpSuccessHandler,
       SessionRegistry sessionRegistry)
       throws Exception {
     http.headers(
@@ -117,7 +117,8 @@ public class SecurityConfiguration {
                         "/favicon.ico",
                         "/manifest.json",
                         "/sw.js",
-                        "/offline.html")
+                        "/offline.html",
+                        "/index.html")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/push")
                     .permitAll()
@@ -128,7 +129,7 @@ public class SecurityConfiguration {
                     .requestMatchers(
                         "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password")
                     .permitAll()
-                    .requestMatchers("/forgot-password", "/reset-password", "/setup")
+                    .requestMatchers("/login", "/forgot-password", "/reset-password", "/setup")
                     .permitAll()
                     .requestMatchers("/api/setup")
                     .permitAll()
@@ -136,7 +137,7 @@ public class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/interne/backup-statut")
                     .permitAll()
-                    .requestMatchers("/auth/totp", "/parametres/totp", "/parametres/totp/**")
+                    .requestMatchers(HttpMethod.POST, "/api/auth/totp")
                     .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/client/erreur")
                     .authenticated()
@@ -144,28 +145,12 @@ public class SecurityConfiguration {
                     .hasRole("ADMIN")
                     .requestMatchers(HttpMethod.POST, "/api/decouverte/fetcher")
                     .hasRole("ADMIN")
+                    .requestMatchers("/api/**")
+                    .authenticated()
                     .anyRequest()
-                    .authenticated())
+                    .permitAll())
         // CSRF désactivé : sessions SameSite=Strict (identique v1)
         .csrf(AbstractHttpConfigurer::disable)
-        // Form login Thymeleaf
-        .formLogin(
-            form ->
-                form.loginPage("/login")
-                    .loginProcessingUrl("/login")
-                    .usernameParameter("identifiant")
-                    .passwordParameter("motDePasse")
-                    .successHandler(totpSuccessHandler)
-                    .failureUrl("/login?erreur=true")
-                    .permitAll())
-        // Logout
-        .logout(
-            logout ->
-                logout
-                    .logoutUrl("/logout")
-                    .logoutSuccessUrl("/login?deconnecte=true")
-                    .deleteCookies("SESSION")
-                    .permitAll())
         .sessionManagement(
             session ->
                 session
@@ -175,25 +160,16 @@ public class SecurityConfiguration {
         .exceptionHandling(
             ex ->
                 ex.authenticationEntryPoint(
-                        (request, response, _) -> {
-                          // API → 401 JSON ; pages Thymeleaf → redirect /login
-                          if (request.getServletPath().startsWith("/api/")) {
-                            response.setStatus(401);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
-                          } else {
-                            response.sendRedirect("/login");
-                          }
+                        (_, response, _) -> {
+                          response.setStatus(401);
+                          response.setContentType("application/json;charset=UTF-8");
+                          response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
                         })
                     .accessDeniedHandler(
-                        (request, response, _) -> {
-                          if (request.getServletPath().startsWith("/api/")) {
-                            response.setStatus(403);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
-                          } else {
-                            response.sendRedirect("/login");
-                          }
+                        (_, response, _) -> {
+                          response.setStatus(403);
+                          response.setContentType("application/json;charset=UTF-8");
+                          response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
                         }));
 
     return http.build();

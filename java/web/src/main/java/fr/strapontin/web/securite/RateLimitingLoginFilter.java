@@ -37,7 +37,7 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
   private static final int MAX_TENTATIVES = 5;
   private static final Duration FENETRE = Duration.ofMinutes(15);
   private static final Set<String> URLS_LOGIN =
-      Set.of("/api/auth/login", "/login", "/api/auth/forgot-password", "/forgot-password");
+      Set.of("/api/auth/login", "/api/auth/forgot-password");
 
   private final LogAdminService logAdminService;
 
