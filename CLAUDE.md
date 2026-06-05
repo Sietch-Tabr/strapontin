@@ -37,8 +37,8 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 
 ## Stack technique (v2.1.3)
 
-- **Spring Boot 4.0.6** + Thymeleaf — UI SSR + REST API (port 8080)
-- **Spring Security 7** — auth session, form login, TOTP 2FA optionnel (bucket4j rate-limiting)
+- **Spring Boot 4.0.6** + Thymeleaf (hybride en migration) + **Vue 3 + Vite** (`front/` → `static/`) — port 8080
+- **Spring Security 7** — auth session, TOTP 2FA optionnel (bucket4j rate-limiting) ; `anyRequest().authenticated()` — non-API sans session → redirect `/login`, API → 401 JSON
 - **Spring Data JDBC** + PostgreSQL 18 — données persistantes
 - **Quartz** — jobs background (fetch concerts)
 - **Flyway 12** — migrations DB (`java/web/src/main/resources/db/migration/`)

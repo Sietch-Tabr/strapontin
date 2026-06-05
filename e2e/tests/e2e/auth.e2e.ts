@@ -63,8 +63,10 @@ test.describe("Scénario: authentification et gardes de route", () => {
       ),
       page.click("button[type='submit']"),
     ]);
-    // 302 = identifiant invalide (redirect /login?erreur), 429 = rate-limit atteint
-    expect([302, 303, 429]).toContain(reponse.status());
+    // En mode hybride (AuthViewController Thymeleaf actif pendant la migration) :
+    // POST /login invalide retourne 200 avec la page login + message d'erreur.
+    expect(reponse.status()).toBe(200);
+    await expect(page.locator("form")).toBeVisible();
     await ctx.close();
   });
 
