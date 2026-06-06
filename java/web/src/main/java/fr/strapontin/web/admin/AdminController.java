@@ -40,12 +40,16 @@ public class AdminController {
 
   private final AdminService adminService;
   private final EmailService emailService;
+  private final VapidService vapidService;
 
   /// @param adminService service d'administration
   /// @param emailService service d'envoi d'emails
-  public AdminController(AdminService adminService, EmailService emailService) {
+  /// @param vapidService service de gestion des clés VAPID
+  public AdminController(
+      AdminService adminService, EmailService emailService, VapidService vapidService) {
     this.adminService = adminService;
     this.emailService = emailService;
+    this.vapidService = vapidService;
   }
 
   /// Retourne la liste des utilisateurs avec leur dernière activité.
@@ -176,7 +180,7 @@ public class AdminController {
   @PostMapping("/vapid/generer")
   public ResponseEntity<Map<String, Object>> genererVapid() {
     try {
-      adminService.genererVapid();
+      vapidService.genererVapid();
       return ResponseEntity.ok(Map.of("succes", true, "action", "genererVapid"));
     } catch (Exception e) {
       log.error("Erreur génération clés VAPID", e);

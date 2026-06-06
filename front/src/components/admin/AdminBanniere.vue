@@ -28,11 +28,20 @@
       </div>
       <div class="form-actions">
         <button type="button" class="btn btn-primary" @click="publierBanniere">Publier</button>
-        <button type="button" class="btn btn-secondary" @click="effacerBanniere">Effacer</button>
+        <button type="button" class="btn btn-danger-outline" @click="effacerBanniere">Effacer</button>
       </div>
     </div>
   </section>
 </template>
+
+<style scoped>
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+</style>
 
 <script setup>
 defineOptions({ name: 'AdminBanniere' })

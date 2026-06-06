@@ -33,6 +33,10 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - **Records** : top-level dans le package domaine (plus d'inner classes dans les contrôleurs)
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) : `NoResourceFoundException` → 404, `HttpRequestMethodNotSupportedException` → 405, `AuthenticationException` → 401, `DuplicateKeyException` → 409, `DataAccessException` → 500
 - `ClientController` (`/api/client/erreur`) : remontée des erreurs JS des navigateurs vers `logs_admin`, source `client-js`
+- `VapidService` : génération clés VAPID EC P-256 (extrait d'`AdminService` en v2.2.0)
+- `SpectacleService` : COUNT et filtres disponibles calculés en parallèle via `CompletableFuture` (threads virtuels)
+- `RecalculerMatchesService` : recalcul parallèle par utilisateur via `Executors.newVirtualThreadPerTaskExecutor()`, 1 transaction par user (`TransactionTemplate`)
+- `WebConfiguration` : beans `ObjectMapper` + `RestClient` (timeout 5 s / 10 s)
 - Référence : `PersisterConcerts` + `RecalculerMatchesService` dans `java/worker/`
 
 ## Stack technique (v2.2.0)

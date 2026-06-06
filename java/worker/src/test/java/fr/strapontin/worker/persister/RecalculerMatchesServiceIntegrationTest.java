@@ -69,7 +69,7 @@ class RecalculerMatchesServiceIntegrationTest {
     jdbc.update(
         "INSERT INTO salles (id, nom, nom_norm) VALUES (:id, :nom, :norm)",
         Map.of("id", salleId, "nom", salleId, "norm", salleId));
-    }
+  }
 
   private void insererUserSalle(String userId, String salleId) {
     jdbc.update(
@@ -172,7 +172,28 @@ class RecalculerMatchesServiceIntegrationTest {
     jdbc.update("DELETE FROM user_artistes WHERE user_id = :userId", Map.of("userId", "u7"));
 
     service.recalculerMatches(List.of("u7"));
-    assertEquals(0, compterMatches("u7"), "Le match doit être supprimé si l'artiste n'est plus suivi");
+    assertEquals(
+        0, compterMatches("u7"), "Le match doit être supprimé si l'artiste n'est plus suivi");
+  }
+
+  @Test
+  void recalculerMatches_utilisateursMultiples_tousRecalcules() {
+    insererUser("u10");
+    insererUser("u11");
+    insererUser("u12");
+    insererArtiste("u10", "daft punk", "Daft Punk");
+    insererArtiste("u11", "justice", "Justice");
+    insererArtiste("u12", "moderat", "Moderat");
+    insererConcert("Daft Punk", "daft punk", DATE_FUTURE, "bercy");
+    insererConcert("Justice", "justice", DATE_FUTURE, "rex");
+    insererConcert("Moderat", "moderat", DATE_FUTURE, "trabendo");
+
+    int traites = service.recalculerMatches(null);
+
+    assertTrue(traites >= 3, "Au moins 3 utilisateurs doivent être traités");
+    assertEquals(1, compterMatches("u10"), "u10 doit avoir son match");
+    assertEquals(1, compterMatches("u11"), "u11 doit avoir son match");
+    assertEquals(1, compterMatches("u12"), "u12 doit avoir son match");
   }
 
   @Test

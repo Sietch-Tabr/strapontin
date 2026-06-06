@@ -30,7 +30,6 @@
         <flyway.version>12.8.1</flyway.version>
         <caffeine.version>3.2.4</caffeine.version>
         <postgresql.version>42.7.11</postgresql.version>
-        <thymeleaf-layout-dialect.version>4.0.1</thymeleaf-layout-dialect.version>
         <!-- Versions non gérées par le BOM -->
         <bouncycastle.version>1.84</bouncycastle.version>
         <webpush.version>5.1.2</webpush.version>
@@ -38,7 +37,6 @@
         <resend.version>v4.14.1</resend.version>
         <springdoc.version>3.0.3</springdoc.version>
         <bucket4j.version>8.19.0</bucket4j.version>
-        <htmx.version>2.0.6</htmx.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
     </properties>
@@ -134,12 +132,6 @@
                 <version>${bucket4j.version}</version>
             </dependency>
 
-            <!-- Webjar HTMX -->
-            <dependency>
-                <groupId>org.webjars.npm</groupId>
-                <artifactId>htmx.org</artifactId>
-                <version>${htmx.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 </project>

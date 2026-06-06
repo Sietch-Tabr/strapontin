@@ -43,6 +43,8 @@ for i in $(seq 1 60); do
     sleep 1
 done
 
+sleep 5
+
 if [ "$HEALTH_OK" = false ]; then
     echo "[update] ERREUR : service web non UP après 60s" >&2
     journalctl -u strapontin-web -n 30 --no-pager >&2

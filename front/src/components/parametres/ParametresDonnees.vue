@@ -21,14 +21,24 @@
       </p>
       <form class="form-vertical form-compact" @submit.prevent="importerPreferences">
         <div class="form-group">
-          <label for="import-fichier">Fichier JSON</label>
-          <input
-            id="import-fichier"
-            ref="importFichierRef"
-            type="file"
-            accept=".json,application/json"
-            required
-          />
+          <label>Fichier JSON</label>
+          <div class="form-fichier">
+            <input
+              id="import-fichier"
+              ref="importFichierRef"
+              type="file"
+              accept=".json,application/json"
+              required
+              class="form-fichier__input"
+              @change="majNomFichier"
+            />
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="importFichierRef?.click()"
+            >Choisir un fichier</button>
+            <span class="form-fichier__nom">{{ nomFichier }}</span>
+          </div>
           <p class="form-aide">Fichier .json exporté depuis Strapontin</p>
         </div>
         <div class="form-group">
@@ -117,6 +127,12 @@ const importFichierRef = ref(null)
 const importMode = ref('fusionner')
 const importerConfig = ref(false)
 const confirmationSuppression = ref('')
+const nomFichier = ref('Aucun fichier sélectionné')
+
+function majNomFichier() {
+  const fichierEl = importFichierRef.value
+  nomFichier.value = fichierEl?.files?.[0]?.name ?? 'Aucun fichier sélectionné'
+}
 
 async function charger() {
   try {
@@ -154,6 +170,7 @@ async function importerPreferences() {
     const repStats = await fetch('/api/parametres/stats')
     if (repStats.ok) stats.value = await repStats.json()
     fichierEl.value = ''
+    nomFichier.value = 'Aucun fichier sélectionné'
   } else {
     afficherToast(corps.erreur || "Erreur lors de l'import.", 'erreur')
   }
