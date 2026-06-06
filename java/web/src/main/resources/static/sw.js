@@ -1,6 +1,6 @@
 // Strapontin — service worker
 
-const CACHE_NOM = "strapontin-v24";
+const CACHE_NOM = "strapontin-v25";
 // CSS et JS exclus : fingerprinting Spring → URL avec hash, précachage inutile.
 // Ils sont gérés en network-first dans le handler fetch.
 const RESSOURCES_STATIQUES = [
