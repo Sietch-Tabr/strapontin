@@ -149,7 +149,9 @@ public class GlobalExceptionHandler {
       meta.put("chemin", request.getServletPath());
       meta.put("methode", request.getMethod());
       meta.put("exception", ex.getClass().getSimpleName());
-      logAdminService.logAdmin("error", "web", "Erreur serveur : " + request.getServletPath(), meta);
-    } catch (Exception ignored) {}
+      logAdminService.logAdmin(
+          "error", "web", "Erreur serveur : " + request.getServletPath(), meta);
+    } catch (Exception ignored) {
+    }
   }
 }

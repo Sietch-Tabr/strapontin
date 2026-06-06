@@ -173,9 +173,16 @@ public class SecurityConfiguration {
                               meta.put("chemin", request.getServletPath());
                               meta.put("ip", request.getRemoteAddr());
                               String ua = request.getHeader("User-Agent");
-                              meta.put("userAgent", ua != null ? ua.substring(0, Math.min(ua.length(), 200)) : "");
-                              logAdminService.logAdmin("warn", "web", "Accès API non authentifié : " + request.getServletPath(), meta);
-                            } catch (Exception ignored) {}
+                              meta.put(
+                                  "userAgent",
+                                  ua != null ? ua.substring(0, Math.min(ua.length(), 200)) : "");
+                              logAdminService.logAdmin(
+                                  "warn",
+                                  "web",
+                                  "Accès API non authentifié : " + request.getServletPath(),
+                                  meta);
+                            } catch (Exception ignored) {
+                            }
                             response.setStatus(401);
                             response.setContentType("application/json;charset=UTF-8");
                             response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
@@ -190,10 +197,18 @@ public class SecurityConfiguration {
                               Map<String, Object> meta = new HashMap<>();
                               meta.put("chemin", request.getServletPath());
                               meta.put("ip", request.getRemoteAddr());
-                              var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                              var auth =
+                                  org.springframework.security.core.context.SecurityContextHolder
+                                      .getContext()
+                                      .getAuthentication();
                               if (auth != null) meta.put("userId", auth.getName());
-                              logAdminService.logAdmin("warn", "web", "Accès API refusé : " + request.getServletPath(), meta);
-                            } catch (Exception ignored) {}
+                              logAdminService.logAdmin(
+                                  "warn",
+                                  "web",
+                                  "Accès API refusé : " + request.getServletPath(),
+                                  meta);
+                            } catch (Exception ignored) {
+                            }
                             response.setStatus(403);
                             response.setContentType("application/json;charset=UTF-8");
                             response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
