@@ -4,7 +4,7 @@
       <h3 class="param-label">Message système</h3>
       <p class="param-aide">
         Publiez un message visible par tous les utilisateurs connectés dans la minute.
-        Le message disparaît automatiquement selon son type ou manuellement sur fermeture.
+        Le message réapparaît à chaque changement de page, sauf si l'utilisateur le ferme manuellement.
       </p>
       <div class="form-champ">
         <label for="banniere-message" class="form-label">Message</label>
@@ -21,9 +21,9 @@
       <div class="form-champ">
         <label for="banniere-type" class="form-label">Type</label>
         <select id="banniere-type" v-model="banniereType" name="type" class="form-control">
-          <option value="info">Information (auto-dismiss 10 s)</option>
-          <option value="warning">Avertissement (auto-dismiss 20 s)</option>
-          <option value="error">Erreur (fermeture manuelle)</option>
+          <option value="info">Information (se cache après 10 s, réapparaît à la prochaine page)</option>
+          <option value="warning">Avertissement (se cache après 20 s, réapparaît à la prochaine page)</option>
+          <option value="error">Erreur (fermeture manuelle uniquement)</option>
         </select>
       </div>
       <div class="form-actions">

@@ -47,7 +47,8 @@
   .admin-section,
   .parametres-section,
   #dialog-nav-plus,
-  .banniere,
+  .banniere-overlay,
+  .banniere-progression,
   .job-en-cours .spinner {
     animation: none;
     transition: none;

@@ -11,7 +11,7 @@
         :est-admin="estAdmin"
       />
       <main id="contenu-principal" class="main-content">
-        <BanniereSysteme :banniere="banniere" @update:banniere="banniere = $event" />
+        <BanniereSysteme />
         <RouterView />
       </main>
     </div>
@@ -48,6 +48,7 @@ import BottomNav from './components/layout/BottomNav.vue'
 import DrawerNav from './components/layout/DrawerNav.vue'
 import BanniereSysteme from './components/layout/BanniereSysteme.vue'
 import ToastContainer from './components/layout/ToastContainer.vue'
+import { chargerBanniere } from './composables/useBanniere.js'
 import { useTheme } from './composables/useTheme.js'
 import { useSession } from './composables/useSession.js'
 import { useEstMobile } from './composables/useBreakpoint.js'
@@ -59,7 +60,6 @@ const { session, chargerSession } = useSession()
 const route = useRoute()
 
 const drawerOuvert = ref(false)
-const banniere = ref(null)
 
 const estPageAuth = computed(() => !!route.meta.authPage)
 
@@ -96,7 +96,6 @@ watchEffect(() => {
   }
 })
 
-// Recharger la session et la bannière au retour sur une page applicative
 watch(estPageAuth, (nouveau, ancien) => {
   if (ancien && !nouveau) {
     chargerSession()
@@ -106,7 +105,7 @@ watch(estPageAuth, (nouveau, ancien) => {
 
 onMounted(async () => {
   await chargerSession()
-  await chargerBanniere()
+  chargerBanniere()
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       window.location.reload()
@@ -114,10 +113,4 @@ onMounted(async () => {
   }
 })
 
-async function chargerBanniere() {
-  try {
-    const rep = await fetch('/api/banniere/json')
-    banniere.value = rep.ok ? await rep.json() : null
-  } catch (_) {}
-}
 </script>

@@ -42,6 +42,9 @@ const ICONES = [
   'menu',
   'sparkles',
   'refresh-cw',
+  'info',
+  'triangle-alert',
+  'circle-x',
 ];
 
 const pkgLucide = resolve(RACINE, 'node_modules/lucide-static/package.json');
