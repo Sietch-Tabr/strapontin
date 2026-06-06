@@ -171,7 +171,9 @@ Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein n
 - **Badge "Nouveau"** : basé sur `user_matches.vu_le IS NULL` — remis à `NULL` à la visite de `/`. Affiché sur la sidebar desktop et la bottom nav mobile. `notification_envoyee_le` est une colonne distincte pour le suivi des envois email/push.
 - **Thème** : cookie `theme` (1 an) + `user_config.theme` → pas de FOUC
 - **Navigation** : Vue Router (`front/src/router/`) — sidebar desktop, bottom nav + drawer mobile
-- **Pages à onglets** (`admin`, `parametres`) : `<select class="param-onglets-mobile">` sur mobile, `<nav class="param-onglets">` + ancres sur desktop
+- **Pages à onglets** (`admin`, `parametres`) : orchestrateur léger + sous-composants autonomes (`KeepAlive` + `v-if`). Chaque sous-composant fetch ses données dans `onMounted`. `<select class="param-onglets-mobile">` sur mobile, `<nav class="param-onglets">` + ancres sur desktop. Onglet actif géré par Vue (`:class="{ actif }"`) — pas de sélecteurs CSS `:has()`.
+  - Admin : `front/src/components/admin/` (AdminJobs, AdminLogs, AdminConfig, AdminBanniere, AdminUtilisateurs)
+  - Paramètres : `front/src/components/parametres/` (ParametresPreferences, ParametresNotifications, ParametresCompte, ParametresDonnees)
 - **Toasts** : Popover API, `afficherToast(message, type)` depuis les composants Vue
 
 ## Schéma PostgreSQL
