@@ -1,6 +1,6 @@
 // Strapontin — service worker
 
-const CACHE_NOM = "strapontin-v23";
+const CACHE_NOM = "strapontin-v24";
 // CSS et JS exclus : fingerprinting Spring → URL avec hash, précachage inutile.
 // Ils sont gérés en network-first dans le handler fetch.
 const RESSOURCES_STATIQUES = [
@@ -237,7 +237,10 @@ self.addEventListener("push", (event) => {
       body: data.body || "",
       icon: data.icon || "/images/icon-192.png",
       badge: "/images/icon-192.png",
+      tag: "strapontin-concerts",
+      renotify: count > 0,
       data: { url: data.url || "/" },
+      actions: [{ action: "voir", title: "Voir les concerts" }],
     }),
   ];
   if ("setAppBadge" in self.registration && count > 0) {
@@ -248,7 +251,10 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/";
+  const url =
+    event.action === "voir"
+      ? "/spectacles"
+      : event.notification.data?.url || "/";
   event.waitUntil(
     clients
       .matchAll({ type: "window", includeUncontrolled: true })

@@ -5,21 +5,24 @@
     <div class="param-bloc">
       <h3 class="param-label">Notifications email</h3>
       <form class="form-vertical" @submit.prevent="sauvegarderNotifications">
-        <div class="form-group">
-          <label for="frequence">Fréquence des emails</label>
-          <select
-            id="frequence"
-            v-model="frequenceNotifications"
-            :disabled="!resendDisponible"
-          >
-            <option value="jamais">Jamais</option>
-            <option value="quotidien">Récapitulatif quotidien (8h)</option>
-            <option value="temps_reel">À chaque nouveau concert</option>
-          </select>
+        <fieldset class="form-checkboxes" :disabled="!resendDisponible">
+          <legend class="form-label">Fréquence des emails</legend>
+          <label class="notif-radio">
+            <input v-model="frequenceNotifications" type="radio" value="jamais" />
+            <span>Jamais</span>
+          </label>
+          <label class="notif-radio">
+            <input v-model="frequenceNotifications" type="radio" value="quotidien" />
+            <span>Récapitulatif quotidien (8h)</span>
+          </label>
+          <label class="notif-radio">
+            <input v-model="frequenceNotifications" type="radio" value="temps_reel" />
+            <span>À chaque nouveau concert</span>
+          </label>
           <p v-if="!resendDisponible" class="form-aide">
             Les emails ne sont pas disponibles (clé Resend non configurée).
           </p>
-        </div>
+        </fieldset>
 
         <fieldset class="notif-grille">
           <legend class="form-label">Concerts à notifier</legend>
@@ -225,8 +228,8 @@ async function abonnerPush() {
       body: JSON.stringify({
         endpoint: abonnement.endpoint,
         keys: {
-          p256dh: btoa(String.fromCharCode(...new Uint8Array(abonnement.getKey('p256dh')))),
-          auth: btoa(String.fromCharCode(...new Uint8Array(abonnement.getKey('auth')))),
+          p256dh: new Uint8Array(abonnement.getKey('p256dh')).toBase64(),
+          auth: new Uint8Array(abonnement.getKey('auth')).toBase64(),
         },
       }),
     })
