@@ -35,12 +35,21 @@
           <span class="param-label">TICKETMASTER_API_KEY</span>
           <span v-if="configParCle['TICKETMASTER_API_KEY'].presente" class="badge badge-succes">Configurée</span>
           <span v-else class="badge badge-manquant" role="status">Non configurée</span>
+          <span v-if="etatTm === 'valide'" class="badge badge-succes">Valide</span>
+          <span v-else-if="etatTm === 'invalide'" class="badge badge-erreur">Invalide</span>
         </div>
         <p class="param-aide">Clé d'API Ticketmaster Discovery v2.</p>
         <form class="form-inline" @submit.prevent="sauvegarderConfig('TICKETMASTER_API_KEY', $event)">
           <input type="password" name="valeur" autocomplete="new-password" placeholder="Nouvelle valeur…" aria-label="Valeur de TICKETMASTER_API_KEY" />
           <button type="submit" class="btn btn-secondary">Enregistrer</button>
         </form>
+        <button
+          v-if="configParCle['TICKETMASTER_API_KEY'].presente"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="testTmEnCours"
+          @click="testerTm"
+        >{{ testTmEnCours ? 'Test en cours…' : 'Tester la clé' }}</button>
       </template>
     </div>
 
@@ -52,12 +61,21 @@
           <span class="param-label">RESEND_API_KEY</span>
           <span v-if="configParCle['RESEND_API_KEY'].presente" class="badge badge-succes">Configurée</span>
           <span v-else class="badge badge-manquant" role="status">Non configurée</span>
+          <span v-if="etatEmail === 'envoye'" class="badge badge-succes">Email envoyé</span>
+          <span v-else-if="etatEmail === 'erreur'" class="badge badge-erreur">Échec</span>
         </div>
         <p class="param-aide">Clé d'API Resend pour les notifications email.</p>
         <form class="form-inline" @submit.prevent="sauvegarderConfig('RESEND_API_KEY', $event)">
           <input type="password" name="valeur" autocomplete="new-password" placeholder="Nouvelle valeur…" aria-label="Valeur de RESEND_API_KEY" />
           <button type="submit" class="btn btn-secondary">Enregistrer</button>
         </form>
+        <button
+          v-if="configParCle['RESEND_API_KEY'].presente"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="testEmailEnCours"
+          @click="testerEmail"
+        >{{ testEmailEnCours ? 'Envoi en cours…' : 'Envoyer un email de test' }}</button>
       </template>
       <template v-if="configParCle['RESEND_WEBHOOK_SECRET']">
         <div class="config-groupe-item">
@@ -144,6 +162,10 @@ const DESCRIPTIONS_CONFIG = {
 
 const configs = shallowRef([])
 const appConfigSecretPresente = ref(false)
+const etatTm = ref(null)
+const testTmEnCours = ref(false)
+const etatEmail = ref(null)
+const testEmailEnCours = ref(false)
 
 const configParCle = computed(() => {
   const map = {}
@@ -177,6 +199,42 @@ async function charger() {
   }
 }
 
+async function testerTm() {
+  testTmEnCours.value = true
+  etatTm.value = null
+  try {
+    const rep = await fetch('/api/admin/config/tester-tm', { method: 'POST' })
+    etatTm.value = rep.ok ? 'valide' : 'invalide'
+    if (!rep.ok) afficherToast('Clé Ticketmaster invalide.', 'erreur')
+  } catch (_) {
+    etatTm.value = 'invalide'
+    afficherToast('Erreur réseau.', 'erreur')
+  } finally {
+    testTmEnCours.value = false
+  }
+}
+
+async function testerEmail() {
+  testEmailEnCours.value = true
+  etatEmail.value = null
+  try {
+    const rep = await fetch('/api/admin/config/tester-email', { method: 'POST' })
+    if (rep.ok) {
+      etatEmail.value = 'envoye'
+      afficherToast('Email de test envoyé.', 'succes')
+    } else {
+      etatEmail.value = 'erreur'
+      const corps = await rep.json()
+      afficherToast(corps.erreur || 'Envoi impossible.', 'erreur')
+    }
+  } catch (_) {
+    etatEmail.value = 'erreur'
+    afficherToast('Erreur réseau.', 'erreur')
+  } finally {
+    testEmailEnCours.value = false
+  }
+}
+
 async function sauvegarderConfig(cle, event) {
   const valeur = event.target.querySelector('[name=valeur]')?.value ?? ''
   const rep = await fetch('/api/admin/config', {
@@ -187,6 +245,8 @@ async function sauvegarderConfig(cle, event) {
   const corps = await rep.json()
   if (rep.ok) {
     afficherToast('Configuration sauvegardée.', 'succes')
+    if (cle === 'TICKETMASTER_API_KEY') etatTm.value = null
+    if (cle === 'RESEND_API_KEY') etatEmail.value = null
     const repConfig = await fetch('/api/admin/config')
     if (repConfig.ok) configs.value = await repConfig.json()
   } else {

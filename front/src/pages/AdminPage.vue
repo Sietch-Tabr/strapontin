@@ -5,15 +5,15 @@
     </div>
 
     <select
+      v-if="estMobile"
+      v-model="ongletActif"
       class="param-onglets-mobile"
-      :value="ongletActif"
       aria-label="Sections de l'administration"
-      @change="naviguerVers($event.target.value)"
     >
       <option v-for="onglet in onglets" :key="onglet.ancre" :value="onglet.ancre">{{ onglet.label }}</option>
     </select>
 
-    <nav class="param-onglets" aria-label="Sections de l'administration">
+    <nav v-else class="param-onglets" aria-label="Sections de l'administration">
       <a
         v-for="onglet in onglets"
         :key="onglet.ancre"
@@ -40,6 +40,7 @@ defineOptions({ name: 'AdminPage' })
 
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useEstMobile } from '../composables/useBreakpoint.js'
 import AdminJobs         from '../components/admin/AdminJobs.vue'
 import AdminLogs         from '../components/admin/AdminLogs.vue'
 import AdminConfig       from '../components/admin/AdminConfig.vue'
@@ -48,6 +49,7 @@ import AdminUtilisateurs from '../components/admin/AdminUtilisateurs.vue'
 
 const route = useRoute()
 const router = useRouter()
+const estMobile = useEstMobile()
 
 const onglets = [
   { ancre: '#jobs',          label: 'Tableau de bord' },

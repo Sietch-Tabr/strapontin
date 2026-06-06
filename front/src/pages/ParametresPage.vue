@@ -5,15 +5,15 @@
     </div>
 
     <select
+      v-if="estMobile"
+      v-model="ongletActif"
       class="param-onglets-mobile"
-      :value="ongletActif"
       aria-label="Sections des paramètres"
-      @change="naviguerVers($event.target.value)"
     >
       <option v-for="onglet in onglets" :key="onglet.ancre" :value="onglet.ancre">{{ onglet.label }}</option>
     </select>
 
-    <nav class="param-onglets" aria-label="Sections des paramètres">
+    <nav v-else class="param-onglets" aria-label="Sections des paramètres">
       <a
         v-for="onglet in onglets"
         :key="onglet.ancre"
@@ -40,6 +40,9 @@ defineOptions({ name: 'ParametresPage' })
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToasts } from '../composables/useToasts.js'
+import { useEstMobile } from '../composables/useBreakpoint.js'
+
+const estMobile = useEstMobile()
 import ParametresPreferences   from '../components/parametres/ParametresPreferences.vue'
 import ParametresNotifications from '../components/parametres/ParametresNotifications.vue'
 import ParametresCompte        from '../components/parametres/ParametresCompte.vue'

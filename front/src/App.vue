@@ -2,6 +2,7 @@
   <template v-if="!estPageAuth">
     <div class="app-layout">
       <SidebarNav
+        v-if="!estMobile"
         :nav-principal="navPrincipal"
         :nav-secondaire="navSecondaire"
         :nav-footer="navFooter"
@@ -15,21 +16,22 @@
       </main>
     </div>
 
-    <BottomNav
-      :nav-principal="navPrincipal"
-      :nb-nouveau="nbNouveau"
-      :drawer-ouvert="drawerOuvert"
-      @ouvrir-drawer="drawerOuvert = true"
-    />
-
-    <DrawerNav
-      :ouvert="drawerOuvert"
-      :nav-secondaire="navSecondaire"
-      :nav-footer="navFooter"
-      :nom-utilisateur="nomUtilisateur"
-      :est-admin="estAdmin"
-      @fermer="drawerOuvert = false"
-    />
+    <template v-if="estMobile">
+      <BottomNav
+        :nav-principal="navPrincipal"
+        :nb-nouveau="nbNouveau"
+        :drawer-ouvert="drawerOuvert"
+        @ouvrir-drawer="drawerOuvert = true"
+      />
+      <DrawerNav
+        :ouvert="drawerOuvert"
+        :nav-secondaire="navSecondaire"
+        :nav-footer="navFooter"
+        :nom-utilisateur="nomUtilisateur"
+        :est-admin="estAdmin"
+        @fermer="drawerOuvert = false"
+      />
+    </template>
   </template>
   <RouterView v-else />
 
@@ -48,8 +50,10 @@ import BanniereSysteme from './components/layout/BanniereSysteme.vue'
 import ToastContainer from './components/layout/ToastContainer.vue'
 import { useTheme } from './composables/useTheme.js'
 import { useSession } from './composables/useSession.js'
+import { useEstMobile } from './composables/useBreakpoint.js'
 
 useTheme()
+const estMobile = useEstMobile()
 
 const { session, chargerSession } = useSession()
 const route = useRoute()
@@ -103,6 +107,11 @@ watch(estPageAuth, (nouveau, ancien) => {
 onMounted(async () => {
   await chargerSession()
   await chargerBanniere()
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload()
+    })
+  }
 })
 
 async function chargerBanniere() {

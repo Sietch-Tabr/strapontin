@@ -152,7 +152,6 @@
 
 /* ── Navigation mobile (bottom nav) ─────────────────────── */
 .bottom-nav {
-  display: none;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -324,11 +323,7 @@
 }
 
 @media (max-width: 1024px) {
-  .sidebar {
-    display: none;
-  }
   .bottom-nav {
-    display: block;
     padding-bottom: env(safe-area-inset-bottom);
     height: calc(var(--nav-h) + env(safe-area-inset-bottom));
   }

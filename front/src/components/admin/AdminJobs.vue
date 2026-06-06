@@ -45,13 +45,10 @@
 
     <div class="param-bloc">
       <h3 class="param-label">Actualisations</h3>
-      <div v-if="statsJobs.length" class="jobs-resume">
-        <span v-if="nbJobsOk > 0" class="jobs-resume-ok"><strong>{{ nbJobsOk }}</strong> OK</span>
-        <span v-if="nbJobsErreur > 0" class="jobs-resume-erreur"><strong>{{ nbJobsErreur }}</strong> en erreur</span>
-      </div>
       <div v-if="statsJobs.length" class="jobs-liste">
         <div v-for="stat in statsJobs" :key="stat.typeJob" class="job-carte">
           <div class="job-carte-entete">
+            <span class="job-pastille" :class="classePastille(stat)" aria-hidden="true"></span>
             <p class="job-carte-label">{{ LABELS_JOBS[stat.typeJob] ?? stat.typeJob }}</p>
             <span
               v-if="jobsEnCours.includes(stat.typeJob)"
@@ -59,10 +56,9 @@
               aria-busy="true"
               aria-label="En cours"
             >
-              <svg class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <svg class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
-              En cours
             </span>
           </div>
           <p class="job-carte-detail">
@@ -149,9 +145,6 @@ const classeBarre = computed(() => {
   return 'barre-danger'
 })
 
-const nbJobsOk = computed(() => statsJobs.value.filter((j) => !j.erreur).length)
-const nbJobsErreur = computed(() => statsJobs.value.filter((j) => j.erreur).length)
-
 const workerEnAlerte = computed(() => {
   if (!workerLastSuccess.value) return false
   return (Date.now() - new Date(workerLastSuccess.value).getTime()) / 60000 > 180
@@ -166,6 +159,13 @@ const workerDepuisTexte = computed(() => {
   const m = min % 60
   return m > 0 ? 'il y a ' + h + ' h ' + m + ' min' : 'il y a ' + h + ' h'
 })
+
+function classePastille(stat) {
+  if (jobsEnCours.value.includes(stat.typeJob)) return 'pastille-en-cours'
+  if (stat.erreur) return 'pastille-erreur'
+  if (stat.derniereExec) return 'pastille-ok'
+  return 'pastille-vide'
+}
 
 function formaterDuree(ms) {
   if (ms == null) return ''

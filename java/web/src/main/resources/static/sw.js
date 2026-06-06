@@ -1,6 +1,6 @@
 // Strapontin — service worker
 
-const CACHE_NOM = "strapontin-v21";
+const CACHE_NOM = "strapontin-v23";
 // CSS et JS exclus : fingerprinting Spring → URL avec hash, précachage inutile.
 // Ils sont gérés en network-first dans le handler fetch.
 const RESSOURCES_STATIQUES = [
@@ -167,11 +167,27 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Images et icônes : stale-while-revalidate
-  if (
-    url.pathname.startsWith("/images/") ||
-    url.pathname.startsWith("/icons/")
-  ) {
+  // Icônes (sprites SVG) : network-first — mise à jour immédiate, offline via cache
+  if (url.pathname.startsWith("/icons/")) {
+    event.respondWith(
+      fetch(request)
+        .then(function (response) {
+          if (response.ok) {
+            caches.open(CACHE_NOM).then(function (cache) {
+              cache.put(request, response.clone());
+            });
+          }
+          return response;
+        })
+        .catch(function () {
+          return caches.match(request);
+        }),
+    );
+    return;
+  }
+
+  // Images : stale-while-revalidate (changent rarement)
+  if (url.pathname.startsWith("/images/")) {
     event.respondWith(
       caches.open(CACHE_NOM).then(function (cache) {
         return cache.match(request).then(function (cached) {

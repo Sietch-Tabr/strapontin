@@ -240,7 +240,6 @@
 }
 
 .param-onglets-mobile {
-  display: none;
   width: 100%;
   font-size: 0.9375rem;
   font-weight: 600;
@@ -907,30 +906,44 @@ fieldset.notif-grille {
 .relancer-actions {
   margin-top: 0.75rem;
 }
-.jobs-resume {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.8125rem;
-  margin-bottom: 0.75rem;
+.job-pastille {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
-.jobs-resume-ok {
-  color: var(--succes);
+.pastille-ok {
+  background: var(--succes);
 }
-.jobs-resume-erreur {
-  color: var(--danger);
+.pastille-erreur {
+  background: var(--danger);
+}
+.pastille-vide {
+  background: var(--fg-subtle);
+}
+.pastille-en-cours {
+  background: var(--info-text);
+  animation: pastille-pulse 1.2s ease-in-out infinite;
+}
+@keyframes pastille-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.6);
+  }
 }
 .job-en-cours {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-.job-en-cours.cache {
-  display: none;
+  margin-left: auto;
+  color: var(--info-text);
 }
 .job-en-cours .spinner {
-  animation: tourner 1s linear infinite;
+  animation: tourner 0.9s linear infinite;
   flex-shrink: 0;
 }
 @keyframes tourner {
@@ -1239,16 +1252,4 @@ fieldset.notif-grille {
 }
 .form-details .form-group {
   margin-top: 0.75rem;
-}
-
-/* ── Onglets → select natif sur mobile ──────────────────────
-   Ces règles doivent rester après .param-onglets { display: flex }
-   pour l'emporter dans la cascade CSS.                          */
-@media (max-width: 1024px) {
-  .param-onglets {
-    display: none;
-  }
-  .param-onglets-mobile {
-    display: block;
-  }
 }

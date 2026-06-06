@@ -39,6 +39,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
 /// Service d'administration : gestion des utilisateurs, jobs, configuration et clés VAPID.
 ///
@@ -69,6 +70,11 @@ public class AdminService {
       Pattern.compile("^whsec_[A-Za-z0-9+/=]{16,}$");
   private static final Set<String> ROLES_VALIDES = Set.of("user", "admin");
 
+  private static final String TM_URL_TEST =
+      "https://app.ticketmaster.com/discovery/v2/events.json"
+          + "?apikey={cle}&size=1&countryCode=FR&classificationName=music";
+  private static final RestClient REST_CLIENT = RestClient.create();
+
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigService configService;
   private final EmailService emailService;
@@ -97,6 +103,21 @@ public class AdminService {
     this.logAdminService = logAdminService;
     this.objectMapper = objectMapper;
     this.verificationRepository = verificationRepository;
+  }
+
+  /// Teste la validité de la clé Ticketmaster API en effectuant un appel minimal.
+  ///
+  /// @return {@code true} si la clé est configurée et acceptée par l'API TM (HTTP 200)
+  public boolean testerApiTm() {
+    Optional<String> cle = configService.lireConfig("TICKETMASTER_API_KEY");
+    if (cle.isEmpty()) return false;
+    try {
+      REST_CLIENT.get().uri(TM_URL_TEST, cle.get()).retrieve().toBodilessEntity();
+      return true;
+    } catch (Exception e) {
+      log.warn("Test clé TM : réponse invalide — {}", e.getMessage());
+      return false;
+    }
   }
 
   /// Retourne la liste des utilisateurs avec leur dernière activité.
