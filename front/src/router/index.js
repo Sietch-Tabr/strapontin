@@ -1,20 +1,22 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { sessionRef } from "../composables/useSession.js";
 import LoginPage from "../pages/auth/LoginPage.vue";
 import TotpChallengePage from "../pages/auth/TotpChallengePage.vue";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage.vue";
 import ResetPasswordPage from "../pages/auth/ResetPasswordPage.vue";
 import FirstLoginPage from "../pages/auth/FirstLoginPage.vue";
 import SetupPage from "../pages/auth/SetupPage.vue";
-import AccueilPage from "../pages/AccueilPage.vue";
-import ArtistesPage from "../pages/ArtistesPage.vue";
-import SallesPage from "../pages/SallesPage.vue";
-import SpectaclesPage from "../pages/SpectaclesPage.vue";
-import DecouvertePage from "../pages/DecouvertePage.vue";
-import AidePage from "../pages/AidePage.vue";
-import ChangelogPage from "../pages/ChangelogPage.vue";
-import ParametresPage from "../pages/ParametresPage.vue";
-import ParametresTotpPage from "../pages/ParametresTotpPage.vue";
-import AdminPage from "../pages/AdminPage.vue";
+
+const AccueilPage = () => import("../pages/AccueilPage.vue");
+const ArtistesPage = () => import("../pages/ArtistesPage.vue");
+const SallesPage = () => import("../pages/SallesPage.vue");
+const SpectaclesPage = () => import("../pages/SpectaclesPage.vue");
+const DecouvertePage = () => import("../pages/DecouvertePage.vue");
+const AidePage = () => import("../pages/AidePage.vue");
+const ChangelogPage = () => import("../pages/ChangelogPage.vue");
+const ParametresPage = () => import("../pages/ParametresPage.vue");
+const ParametresTotpPage = () => import("../pages/ParametresTotpPage.vue");
+const AdminPage = () => import("../pages/AdminPage.vue");
 
 const routes = [
   { path: "/login", component: LoginPage, meta: { authPage: true } },
@@ -50,6 +52,10 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+router.beforeEach((to) => {
+  if (to.meta.authPage && sessionRef.value) return "/";
 });
 
 export default router;

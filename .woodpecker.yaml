@@ -15,7 +15,7 @@ steps:
         branch: main
 
   - name: build-front
-    image: node:24-alpine
+    image: node:26-alpine
     volumes:
       - /var/cache/woodpecker/npm:/root/.npm
     commands:

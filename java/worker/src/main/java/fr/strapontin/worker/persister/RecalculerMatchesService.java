@@ -11,20 +11,26 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /// Service de recalcul des correspondances utilisateurs (table `user_matches`).
 ///
 /// Pour chaque utilisateur, calcule l'intersection entre ses artistes/salles suivis
 /// et les concerts futurs. Met à jour `user_matches` en conséquence.
-/// Les concerts indisponibles sont marqués `notifie_le = now()` immédiatement
+/// Les concerts indisponibles sont marqués `notification_envoyee_le = now()` immédiatement
 /// pour ne pas déclencher de badge "Nouveau".
+///
+/// <p>Les recalculs par utilisateur sont parallélisés via des threads virtuels,
+/// chacun dans sa propre transaction ({@link TransactionTemplate}).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -35,16 +41,24 @@ public class RecalculerMatchesService {
   private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final TransactionTemplate txParUser;
 
-  public RecalculerMatchesService(NamedParameterJdbcTemplate jdbc) {
+  /// @param jdbc      accès JDBC
+  /// @param txManager gestionnaire de transactions (transaction par utilisateur)
+  public RecalculerMatchesService(
+      NamedParameterJdbcTemplate jdbc, PlatformTransactionManager txManager) {
     this.jdbc = jdbc;
+    this.txParUser = new TransactionTemplate(txManager);
   }
 
   /// Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
   ///
-  /// @param userIds liste d'IDs à recalculer, ou `null` pour tous les utilisateurs
+  /// <p>Les recalculs sont exécutés en parallèle via des threads virtuels.
+  /// Chaque utilisateur est traité dans sa propre transaction : un échec isolé
+  /// n'interrompt pas les autres recalculs.
+  ///
+  /// @param userIds liste d'IDs à recalculer, ou {@code null} pour tous les utilisateurs
   /// @return nombre d'utilisateurs traités
-  @Transactional
   public int recalculerMatches(List<String> userIds) {
     Set<String> usersAvecArtistes =
         new LinkedHashSet<>(
@@ -65,8 +79,24 @@ public class RecalculerMatchesService {
 
     String aujourdhui = LocalDate.now().toString();
 
-    for (String userId : usersARecalculer) {
-      recalculerPourUser(userId, aujourdhui);
+    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      var futures =
+          usersARecalculer.stream()
+              .map(
+                  userId ->
+                      CompletableFuture.runAsync(
+                          () -> {
+                            try {
+                              txParUser.executeWithoutResult(
+                                  _ -> recalculerPourUser(userId, aujourdhui));
+                            } catch (Exception e) {
+                              log.error(
+                                  "erreur recalcul userId={} : {}", userId, e.getMessage(), e);
+                            }
+                          },
+                          executor))
+              .toList();
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
     purgerMatchesOrphelins(usersSet);

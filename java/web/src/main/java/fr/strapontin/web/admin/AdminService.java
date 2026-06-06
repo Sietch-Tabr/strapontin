@@ -9,17 +9,10 @@ import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.VerificationRepository;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.ECPublicKey;
-import java.security.spec.ECGenParameterSpec;
-import java.security.spec.ECPoint;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -39,11 +32,13 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
-/// Service d'administration : gestion des utilisateurs, jobs, configuration et clés VAPID.
+/// Service d'administration : gestion des utilisateurs, jobs et configuration applicative.
 ///
 /// <p>Contient la logique métier et l'accès aux données pour le domaine admin.
-/// {@link AdminController.creerUtilisateur} est atomique ({@code @Transactional}).
+/// {@link AdminController#creerUtilisateur} est atomique ({@code @Transactional}).
+/// La gestion des clés VAPID est déléguée à {@link VapidService}.
 ///
 /// @since 2.1.0
 /// @author Kwaite
@@ -69,34 +64,57 @@ public class AdminService {
       Pattern.compile("^whsec_[A-Za-z0-9+/=]{16,}$");
   private static final Set<String> ROLES_VALIDES = Set.of("user", "admin");
 
+  private static final String TM_URL_TEST =
+      "https://app.ticketmaster.com/discovery/v2/events.json"
+          + "?apikey={cle}&size=1&countryCode=FR&classificationName=music";
+
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigService configService;
   private final EmailService emailService;
   private final LogAdminService logAdminService;
   private final ObjectMapper objectMapper;
   private final VerificationRepository verificationRepository;
+  private final RestClient restClient;
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
   private final SecureRandom rng = new SecureRandom();
 
-  /// @param jdbc                  accès JDBC
-  /// @param configService         lecture/écriture de la configuration applicative
-  /// @param emailService          service d'envoi d'emails
-  /// @param logAdminService       service de logs admin
-  /// @param objectMapper          désérialiseur JSON (quota TM)
+  /// @param jdbc                   accès JDBC
+  /// @param configService          lecture/écriture de la configuration applicative
+  /// @param emailService           service d'envoi d'emails
+  /// @param logAdminService        service de logs admin
+  /// @param objectMapper           désérialiseur JSON (quota TM)
   /// @param verificationRepository accès aux tokens de vérification
+  /// @param restClient             client HTTP pour les tests d'API externes
   public AdminService(
       NamedParameterJdbcTemplate jdbc,
       ConfigService configService,
       EmailService emailService,
       LogAdminService logAdminService,
       ObjectMapper objectMapper,
-      VerificationRepository verificationRepository) {
+      VerificationRepository verificationRepository,
+      RestClient restClient) {
     this.jdbc = jdbc;
     this.configService = configService;
     this.emailService = emailService;
     this.logAdminService = logAdminService;
     this.objectMapper = objectMapper;
     this.verificationRepository = verificationRepository;
+    this.restClient = restClient;
+  }
+
+  /// Teste la validité de la clé Ticketmaster API en effectuant un appel minimal.
+  ///
+  /// @return {@code true} si la clé est configurée et acceptée par l'API TM (HTTP 200)
+  public boolean testerApiTm() {
+    Optional<String> cle = configService.lireConfig("TICKETMASTER_API_KEY");
+    if (cle.isEmpty()) return false;
+    try {
+      restClient.get().uri(TM_URL_TEST, cle.get()).retrieve().toBodilessEntity();
+      return true;
+    } catch (Exception e) {
+      log.warn("Test clé TM : réponse invalide — {}", e.getMessage());
+      return false;
+    }
   }
 
   /// Retourne la liste des utilisateurs avec leur dernière activité.
@@ -344,42 +362,6 @@ public class AdminService {
     logAdminService.logAdmin("info", "admin", "Config sauvegardée : " + cle, Map.of("cle", cle));
   }
 
-  /// Génère une paire de clés VAPID EC P-256 et supprime les abonnements push existants.
-  ///
-  /// @return paire de clés encodées en Base64 URL-safe
-  /// @throws Exception si la génération de clés échoue
-  public ResultatVapid genererVapid() throws Exception {
-    KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
-    kpg.initialize(new ECGenParameterSpec("secp256r1"));
-    KeyPair paire = kpg.generateKeyPair();
-
-    ECPublicKey pubKey = (ECPublicKey) paire.getPublic();
-    ECPoint w = pubKey.getW();
-    byte[] uncompressed = new byte[65];
-    uncompressed[0] = 0x04;
-    byte[] x = vers32Octets(w.getAffineX());
-    byte[] y = vers32Octets(w.getAffineY());
-    System.arraycopy(x, 0, uncompressed, 1, 32);
-    System.arraycopy(y, 0, uncompressed, 33, 32);
-    String clePublique = Base64.getUrlEncoder().withoutPadding().encodeToString(uncompressed);
-
-    ECPrivateKey privKey = (ECPrivateKey) paire.getPrivate();
-    byte[] d = vers32Octets(privKey.getS());
-    String clePrivee = Base64.getUrlEncoder().withoutPadding().encodeToString(d);
-
-    configService.sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique);
-    configService.sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee);
-
-    int nbSupprimes = jdbc.update("DELETE FROM push_abonnements", Map.of());
-    logAdminService.logAdmin(
-        "warn",
-        "admin",
-        "Clés VAPID régénérées — " + nbSupprimes + " abonnement(s) supprimé(s)",
-        Map.of("nbAbonnements", nbSupprimes));
-
-    return new ResultatVapid(clePublique, nbSupprimes);
-  }
-
   /// Retourne les statistiques des jobs Quartz et le quota TM.
   ///
   /// @return map contenant statsJobs, quotaTM, etatQuota, workerLastSuccess, jobsEnCours
@@ -571,18 +553,6 @@ public class AdminService {
     }
   }
 
-  private static byte[] vers32Octets(BigInteger n) {
-    byte[] raw = n.toByteArray();
-    if (raw.length == 32) return raw;
-    byte[] result = new byte[32];
-    if (raw.length > 32) {
-      System.arraycopy(raw, raw.length - 32, result, 0, 32);
-    } else {
-      System.arraycopy(raw, 0, result, 32 - raw.length, raw.length);
-    }
-    return result;
-  }
-
   /// Retourne les N derniers logs admin.
   ///
   /// @return liste des entrées de log
@@ -643,7 +613,4 @@ public class AdminService {
 
   /// Résultat de la création d'un utilisateur.
   public record ResultatCreation(String email, String identifiant, String lienReset) {}
-
-  /// Résultat de la génération des clés VAPID.
-  public record ResultatVapid(String clePublique, int nbAbonnementsSupprimes) {}
 }

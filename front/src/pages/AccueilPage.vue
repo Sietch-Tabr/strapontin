@@ -134,7 +134,9 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+defineOptions({ name: 'AccueilPage' })
+
+import { ref, shallowRef, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formaterAvecHeure } from '../composables/useDates.js'
 import { useToasts } from '../composables/useToasts.js'
@@ -143,7 +145,7 @@ const route = useRoute()
 const router = useRouter()
 const { afficherToast } = useToasts()
 
-const donnees = ref(null)
+const donnees = shallowRef(null)
 const chargement = ref(false)
 
 const filtreNouveau = computed(() => route.query.nouveau === 'true')

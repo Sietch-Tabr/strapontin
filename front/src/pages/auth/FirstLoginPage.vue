@@ -69,6 +69,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'FirstLoginPage' })
+
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '../../components/auth/AuthLayout.vue'

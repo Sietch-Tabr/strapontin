@@ -1,7 +1,8 @@
 import { ref, readonly } from "vue";
 import { useRouter, useRoute } from "vue-router";
 
-const session = ref(null);
+export const sessionRef = ref(null);
+const session = sessionRef;
 const chargement = ref(false);
 
 export function useSession() {

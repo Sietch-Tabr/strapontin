@@ -240,7 +240,6 @@
 }
 
 .param-onglets-mobile {
-  display: none;
   width: 100%;
   font-size: 0.9375rem;
   font-weight: 600;
@@ -269,6 +268,10 @@
 
   #filtres-form:not(.visible) {
     display: none;
+  }
+
+  #filtres-form.visible {
+    animation: section-entree 0.2s ease-out;
   }
 
   .concert-lieu {
@@ -446,7 +449,17 @@
 .changelog > details[open] > summary .changelog-version::before {
   transform: rotate(90deg);
 }
-.changelog > details[open] > .changelog-entrees {
+.changelog > details > .details-corps {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+.changelog > details[open] > .details-corps {
+  grid-template-rows: 1fr;
+}
+.changelog > details > .details-corps > .changelog-entrees {
+  overflow: hidden;
+  min-height: 0;
   padding-top: 1rem;
 }
 .changelog-version {
@@ -512,17 +525,7 @@
   border-bottom-color: var(--border);
 }
 
-/* Paramètres */
-.param-onglets:has(~ .parametres-sections #preferences.actif) a[href="#preferences"],
-.param-onglets:has(~ .parametres-sections #notifications.actif) a[href="#notifications"],
-.param-onglets:has(~ .parametres-sections #compte.actif) a[href="#compte"],
-.param-onglets:has(~ .parametres-sections #donnees.actif) a[href="#donnees"],
-/* Admin */
-.param-onglets:has(~ .admin-sections #utilisateurs.actif) a[href="#utilisateurs"],
-.param-onglets:has(~ .admin-sections #configuration.actif) a[href="#configuration"],
-.param-onglets:has(~ .admin-sections #jobs.actif) a[href="#jobs"],
-.param-onglets:has(~ .admin-sections #logs.actif) a[href="#logs"],
-.param-onglets:has(~ .admin-sections #banniere.actif) a[href="#banniere"] {
+.param-onglet.actif {
   color: var(--fg);
   border-bottom-color: var(--fg);
 }
@@ -563,19 +566,19 @@
 }
 
 .parametres-section {
-  display: none;
   scroll-margin-top: 3rem;
+  animation: section-entree 0.2s ease-out;
 }
 
-.parametres-section.actif,
-.parametres-sections:not(:has(.actif)) #preferences {
-  display: block;
-}
-
-/* Onglet actif par défaut (aucune section active) */
-.param-onglets:not(:has(~ .parametres-sections .actif)) a[href="#preferences"] {
-  color: var(--fg);
-  border-bottom-color: var(--fg);
+@keyframes section-entree {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .param-bloc {
@@ -662,7 +665,8 @@ fieldset.form-checkboxes {
   margin: 0;
 }
 
-fieldset.form-checkboxes legend {
+fieldset.form-checkboxes legend,
+fieldset.notif-grille legend {
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--fg-muted);
@@ -676,16 +680,6 @@ fieldset.notif-grille {
   border: none;
   padding: 0;
   margin: 0;
-}
-
-fieldset.notif-grille legend {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--fg-muted);
-  margin-bottom: 0.5rem;
-  padding: 0;
-  float: left;
-  width: 100%;
 }
 
 .notif-grille__entete,
@@ -766,19 +760,8 @@ fieldset.notif-grille legend {
 }
 
 .admin-section {
-  display: none;
   scroll-margin-top: 3rem;
-}
-
-.admin-section.actif,
-.admin-sections:not(:has(.actif)) #jobs {
-  display: block;
-}
-
-/* Onglet actif par défaut (aucune section active) */
-.param-onglets:not(:has(~ .admin-sections .actif)) a[href="#jobs"] {
-  color: var(--fg);
-  border-bottom-color: var(--fg);
+  animation: section-entree 0.2s ease-out;
 }
 
 .badge-info {
@@ -789,10 +772,7 @@ fieldset.notif-grille legend {
   background: #f0fdf4;
   color: #166534;
 }
-.badge-manquant {
-  background: #fef2f2;
-  color: #991b1b;
-}
+.badge-manquant,
 .badge-erreur {
   background: #fef2f2;
   color: #991b1b;
@@ -806,10 +786,7 @@ fieldset.notif-grille legend {
   background: #14532d;
   color: #86efac;
 }
-.dark .badge-manquant {
-  background: #7f1d1d;
-  color: #fca5a5;
-}
+.dark .badge-manquant,
 .dark .badge-erreur {
   background: #7f1d1d;
   color: #fca5a5;
@@ -874,13 +851,13 @@ fieldset.notif-grille legend {
   width: 0%;
 }
 .barre-ok {
-  background: #16a34a;
+  background: var(--succes);
 }
 .barre-warn {
-  background: #ca8a04;
+  background: var(--warning);
 }
 .barre-danger {
-  background: #dc2626;
+  background: var(--danger);
 }
 .badge-quota {
   display: inline-block;
@@ -889,10 +866,10 @@ fieldset.notif-grille legend {
   margin-top: 0.375rem;
 }
 .badge-quota-critique {
-  color: #dc2626;
+  color: var(--danger);
 }
 .badge-quota-attention {
-  color: #ca8a04;
+  color: var(--warning);
 }
 
 /* ── Jobs actualisations ─────────────────────────────────── */
@@ -929,30 +906,44 @@ fieldset.notif-grille legend {
 .relancer-actions {
   margin-top: 0.75rem;
 }
-.jobs-resume {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.8125rem;
-  margin-bottom: 0.75rem;
+.job-pastille {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
-.jobs-resume-ok {
-  color: #16a34a;
+.pastille-ok {
+  background: var(--succes);
 }
-.jobs-resume-erreur {
-  color: #dc2626;
+.pastille-erreur {
+  background: var(--danger);
+}
+.pastille-vide {
+  background: var(--fg-subtle);
+}
+.pastille-en-cours {
+  background: var(--info-text);
+  animation: pastille-pulse 1.2s ease-in-out infinite;
+}
+@keyframes pastille-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.6);
+  }
 }
 .job-en-cours {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-.job-en-cours.cache {
-  display: none;
+  margin-left: auto;
+  color: var(--info-text);
 }
 .job-en-cours .spinner {
-  animation: tourner 1s linear infinite;
+  animation: tourner 0.9s linear infinite;
   flex-shrink: 0;
 }
 @keyframes tourner {
@@ -971,11 +962,8 @@ fieldset.notif-grille legend {
   padding: 1rem;
 }
 .worker-carte.worker-alerte {
-  border-color: #ca8a04;
-  background: #fefce8;
-}
-.dark .worker-carte.worker-alerte {
-  background: rgba(202, 138, 4, 0.05);
+  border-color: var(--warning);
+  background: var(--avertissement-bg);
 }
 .worker-carte-label {
   font-size: 0.875rem;
@@ -988,11 +976,8 @@ fieldset.notif-grille legend {
 }
 .worker-alerte-texte {
   font-size: 0.75rem;
-  color: #92400e;
+  color: var(--avertissement-text);
   margin-top: 0.375rem;
-}
-.dark .worker-alerte-texte {
-  color: #fbbf24;
 }
 
 /* ── Cartes utilisateurs (admin) ─────────────────────────── */
@@ -1096,13 +1081,13 @@ fieldset.notif-grille legend {
 .logs-filtres-source {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 .logs-filtres-niveaux {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.25rem;
 }
 
 .logs-btn-action {
@@ -1267,16 +1252,4 @@ fieldset.notif-grille legend {
 }
 .form-details .form-group {
   margin-top: 0.75rem;
-}
-
-/* ── Onglets → select natif sur mobile ──────────────────────
-   Ces règles doivent rester après .param-onglets { display: flex }
-   pour l'emporter dans la cascade CSS.                          */
-@media (max-width: 1024px) {
-  .param-onglets {
-    display: none;
-  }
-  .param-onglets-mobile {
-    display: block;
-  }
 }

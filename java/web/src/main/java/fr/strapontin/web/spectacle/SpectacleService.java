@@ -6,16 +6,20 @@ package fr.strapontin.web.spectacle;
 
 import fr.strapontin.web.utilisateur.UserConfigService;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /// Service de gestion des spectacles suivis par un utilisateur.
 ///
 /// <p>Requêtes SQL dynamiques avec filtres multiples. Pagination à 100 concerts par page.
+/// Les requêtes indépendantes (COUNT, filtres disponibles, suivi) sont parallélisées
+/// via {@link CompletableFuture} sur les threads virtuels Spring.
 ///
 /// @since 2.1.0
 /// @author Kwaite
@@ -35,6 +39,9 @@ public class SpectacleService {
   }
 
   /// Liste les spectacles selon les filtres fournis, paginés à 100 par page.
+  ///
+  /// <p>COUNT(*), filtres disponibles et nbSuivi sont calculés en parallèle avec la requête
+  /// principale pour réduire le nombre de round-trips séquentiels.
   ///
   /// @param userId            identifiant de l'utilisateur
   /// @param q                 terme de recherche artiste (optionnel)
@@ -69,6 +76,8 @@ public class SpectacleService {
     boolean sourceArtistes = sources == null || sources.isEmpty() || sources.contains("artistes");
     boolean sourceSalles = sources == null || sources.isEmpty() || sources.contains("salles");
 
+    String conditionMasque = masques ? "NOT NULL" : "NULL";
+
     StringBuilder whereClause =
         new StringBuilder(
             """
@@ -76,7 +85,7 @@ public class SpectacleService {
             AND c.date >= :aujourd8
             AND um.masque_le IS %s
             """
-                .formatted(masques ? "NOT NULL" : "NULL"));
+                .formatted(conditionMasque));
 
     Map<String, Object> params = new HashMap<>();
     params.put("userId", userId);
@@ -154,13 +163,41 @@ public class SpectacleService {
         """
             .formatted(whereClause, orderBy);
 
-    params.put("limit", CONCERTS_PAR_PAGE);
-    params.put("offset", pageNum * CONCERTS_PAR_PAGE);
+    Map<String, Object> paramsPage = new HashMap<>(params);
+    paramsPage.put("limit", CONCERTS_PAR_PAGE);
+    paramsPage.put("offset", pageNum * CONCERTS_PAR_PAGE);
 
+    // COUNT et nbSuivi démarrés en parallèle pendant l'exécution de la requête principale
+    Map<String, Object> countParams = new HashMap<>(params);
+    var futureTotal =
+        CompletableFuture.supplyAsync(
+            () ->
+                Objects.requireNonNullElse(
+                    jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM user_matches um INNER JOIN concerts c"
+                            + " ON um.concert_id = c.id WHERE "
+                            + whereClause,
+                        countParams,
+                        Integer.class),
+                    0));
+
+    Map<String, Object> baseParams = Map.of("userId", userId, "aujourd8", aujourd8);
+    var futureNbSuivi =
+        CompletableFuture.supplyAsync(
+            () ->
+                Objects.requireNonNullElse(
+                    jdbc.queryForObject(
+                        "SELECT (SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId)"
+                            + " + (SELECT COUNT(*) FROM user_salles WHERE user_id = :userId)",
+                        baseParams,
+                        Integer.class),
+                    0));
+
+    // Requête principale sur le thread courant pendant que les futures s'exécutent
     List<SpectacleDto> concerts =
         jdbc.query(
             selectSql,
-            params,
+            paramsPage,
             (rs, _) -> {
               java.time.Instant firstSeen =
                   rs.getTimestamp("first_seen") != null
@@ -186,57 +223,46 @@ public class SpectacleService {
                   rs.getString("presale_nom"));
             });
 
-    Map<String, Object> countParams = new HashMap<>(params);
-    countParams.remove("limit");
-    countParams.remove("offset");
-    int total =
-        Objects.requireNonNullElse(
-            jdbc.queryForObject(
-                "SELECT COUNT(*) FROM user_matches um INNER JOIN concerts c ON um.concert_id = c.id"
-                    + " WHERE "
-                    + whereClause,
-                countParams,
-                Integer.class),
-            0);
+    // CTE : 3 DISTINCT fusionnés en une seule requête
+    String cteFiltresSql =
+        """
+        WITH filtres_base AS (
+          SELECT c.genre, to_char(c.date, 'YYYY-MM') AS mois, c.classification
+          FROM user_matches um
+          INNER JOIN concerts c ON um.concert_id = c.id
+          WHERE um.user_id = :userId
+            AND c.date >= :aujourd8
+            AND um.masque_le IS %s
+        )
+        SELECT 'genre'          AS type, genre          AS valeur
+          FROM (SELECT DISTINCT genre FROM filtres_base WHERE genre IS NOT NULL) g
+        UNION ALL
+        SELECT 'mois'           AS type, mois           AS valeur
+          FROM (SELECT DISTINCT mois  FROM filtres_base) m
+        UNION ALL
+        SELECT 'classification' AS type, classification AS valeur
+          FROM (SELECT DISTINCT classification FROM filtres_base
+                WHERE classification IS NOT NULL) cl
+        ORDER BY type, valeur
+        """
+            .formatted(conditionMasque);
 
-    String whereBase =
-        "um.user_id = :userId AND c.date >= :aujourd8 AND um.masque_le IS "
-            + (masques ? "NOT NULL" : "NULL");
-    Map<String, Object> baseParams = Map.of("userId", userId, "aujourd8", aujourd8);
+    List<String> genresDisponibles = new ArrayList<>();
+    List<String> moisDisponibles = new ArrayList<>();
+    List<String> classificationsDisponibles = new ArrayList<>();
+    jdbc.query(
+        cteFiltresSql,
+        baseParams,
+        rs -> {
+          switch (rs.getString("type")) {
+            case "genre" -> genresDisponibles.add(rs.getString("valeur"));
+            case "mois" -> moisDisponibles.add(rs.getString("valeur"));
+            case "classification" -> classificationsDisponibles.add(rs.getString("valeur"));
+          }
+        });
 
-    List<String> genresDisponibles =
-        jdbc.queryForList(
-            "SELECT DISTINCT c.genre FROM user_matches um INNER JOIN concerts c ON um.concert_id"
-                + " = c.id WHERE "
-                + whereBase
-                + " AND c.genre IS NOT NULL ORDER BY c.genre",
-            baseParams,
-            String.class);
-    List<String> moisDisponibles =
-        jdbc.queryForList(
-            "SELECT DISTINCT to_char(c.date, 'YYYY-MM') as mois FROM user_matches um INNER JOIN"
-                + " concerts c ON um.concert_id = c.id WHERE "
-                + whereBase
-                + " ORDER BY mois",
-            baseParams,
-            String.class);
-    List<String> classificationsDisponibles =
-        jdbc.queryForList(
-            "SELECT DISTINCT c.classification FROM user_matches um INNER JOIN concerts c ON"
-                + " um.concert_id = c.id WHERE "
-                + whereBase
-                + " AND c.classification IS NOT NULL ORDER BY c.classification",
-            baseParams,
-            String.class);
-
-    int nbSuivi =
-        Objects.requireNonNullElse(
-            jdbc.queryForObject(
-                "SELECT (SELECT COUNT(*) FROM user_artistes WHERE user_id = :u)"
-                    + " + (SELECT COUNT(*) FROM user_salles WHERE user_id = :u)",
-                Map.of("u", userId),
-                Integer.class),
-            0);
+    int total = futureTotal.join();
+    int nbSuivi = futureNbSuivi.join();
 
     return new ReponseSpectacles(
         concerts,

@@ -3,17 +3,22 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/generer-sprite.mjs && vite build",
+    "generer-sprite": "node scripts/generer-sprite.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
     "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "vue-router": "^5.1.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.2.1",
-    "vite": "^6.3.5"
+    "@vitejs/plugin-vue": "^6.0.7",
+    "lucide-static": "*",
+    "vite": "^8.0.16"
   }
 }

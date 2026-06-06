@@ -43,9 +43,36 @@ test.describe("Scénario: PWA — manifest et installabilité", () => {
     expect(corps.icons.length).toBeGreaterThan(0);
   });
 
+  test("manifest_json_contient_launch_handler", async ({ request }) => {
+    const corps = await (await request.get("/manifest.json")).json();
+    expect(corps).toHaveProperty("launch_handler");
+    expect(corps.launch_handler).toHaveProperty("client_mode");
+    expect(corps.launch_handler.client_mode).toBe("navigate-existing");
+  });
+
+  test("manifest_json_contient_categories", async ({ request }) => {
+    const corps = await (await request.get("/manifest.json")).json();
+    expect(corps.categories).toBeInstanceOf(Array);
+    expect(corps.categories.length).toBeGreaterThan(0);
+  });
+
+  test("manifest_json_icone_maskable_separee_de_any", async ({ request }) => {
+    const corps = await (await request.get("/manifest.json")).json();
+    const icons = corps.icons as { src: string; purpose?: string }[];
+    const maskable = icons.filter((i) => i.purpose === "maskable");
+    const any = icons.filter((i) => i.purpose === "any");
+    expect(maskable.length).toBeGreaterThan(0);
+    expect(any.length).toBeGreaterThan(0);
+    const purposes = icons.map((i) => i.purpose ?? "");
+    expect(purposes).not.toContain("any maskable");
+  });
+
   test("manifest_json_icons_accessibles", async ({ request }) => {
     const manifest = await (await request.get("/manifest.json")).json();
+    const vus = new Set<string>();
     for (const icon of manifest.icons as { src: string }[]) {
+      if (vus.has(icon.src)) continue;
+      vus.add(icon.src);
       const rep = await request.get(icon.src);
       expect(rep.status()).toBe(200);
     }
@@ -56,7 +83,6 @@ test.describe("Scénario: PWA — manifest et installabilité", () => {
     expect(rep.status()).toBe(200);
     const html = await rep.text();
     expect(html).toContain('rel="manifest"');
-    // Thymeleaf fingerprinte l'URL (/manifest-{hash}.json), Vue l'utilise directement (/manifest.json)
     expect(html).toMatch(/href="\/manifest[^"]*\.json"/);
   });
 });

@@ -194,12 +194,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+defineOptions({ name: 'AidePage' })
+
+import { ref, shallowRef, onMounted } from 'vue'
 import { useToasts } from '../composables/useToasts.js'
 
 const { afficherToast } = useToasts()
 
-const config = ref(null)
+const config = shallowRef(null)
 const dialogRef = ref(null)
 const typeSignalement = ref('bug')
 const messageSignalement = ref('')

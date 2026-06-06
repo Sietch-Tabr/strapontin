@@ -8,7 +8,35 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
-        <h2 class="changelog-version">v 2.1.3 — 3 juin 2026</h2>
+        <h2 class="changelog-version">v 2.2.0 — 6 juin 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Navigation</p>
+            <ul>
+              <li>L'application est désormais entièrement côté client (Vue 3) — la navigation entre pages est instantanée, sans rechargement.</li>
+              <li>Les transitions entre pages sont animées : le contenu glisse ou fondu en douceur lors de chaque changement de page.</li>
+              <li>L'icône « Mes spectacles » dans la barre de navigation est maintenant distincte du bouton « Acheter des billets ».</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Paramètres &amp; Administration</p>
+            <ul>
+              <li>Les onglets chargent leur contenu à la demande — le premier onglet s'affiche immédiatement, les autres au premier clic.</li>
+              <li>L'état de chaque onglet est conservé quand on navigue vers une autre page puis qu'on revient.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Interface</p>
+            <ul>
+              <li>Les versions précédentes dans cette page s'ouvrent et se referment avec une animation progressive.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.1.3 — 3 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Notifications</p>
@@ -26,10 +54,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.1.2 — 2 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Notifications push</p>
@@ -47,10 +77,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.1.1 — 2 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Performance</p>
@@ -68,10 +100,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.1.0 — 29 mai 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Interface</p>
@@ -114,10 +148,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.0.5 — 29 mai 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Mes spectacles</p>
@@ -154,10 +190,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.0.4 — 28 mai 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Paramètres</p>
@@ -181,10 +219,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.0.3 — 27 mai 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Correctif</p>
@@ -214,10 +254,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.0.2 — 26 mai 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Accueil</p>
@@ -248,10 +290,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.0.1 — 24 mai 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Spectacles</p>
@@ -267,10 +311,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.0.0 — 24 mai 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Infrastructure</p>
@@ -306,10 +352,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 1.4.0 — 23 mai 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Accueil</p>
@@ -345,10 +393,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 1.3.1 — Mai 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Recherche d'artiste</p>
@@ -358,10 +408,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 1.3.0 — Mai 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Découverte</p>
@@ -383,10 +435,12 @@
             </ul>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 1.2 — Avril 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Notifications push</p>
@@ -405,12 +459,15 @@
             <p>Réinitialisez votre mot de passe depuis la page de connexion sans passer par l'admin.</p>
           </div>
         </div>
+        </div>
       </details>
 
       <details>
         <summary><h2 class="changelog-version">v 1.0 — Avril 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div><p>Version initiale.</p></div>
+        </div>
         </div>
       </details>
     </div>
@@ -418,6 +475,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'ChangelogPage' })
+
 import { onMounted } from 'vue'
 
 onMounted(async () => {

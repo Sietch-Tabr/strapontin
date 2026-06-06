@@ -41,6 +41,7 @@
   color: var(--fg-muted);
   font-size: 0.875rem;
   font-weight: 500;
+  position: relative;
   transition:
     background 0.15s,
     color 0.15s;
@@ -100,6 +101,10 @@
   color: var(--accent-fg);
 }
 
+.sidebar-footer a.actif {
+  view-transition-name: nav-actif;
+}
+
 .sidebar-user {
   display: flex;
   align-items: center;
@@ -147,7 +152,6 @@
 
 /* ── Navigation mobile (bottom nav) ─────────────────────── */
 .bottom-nav {
-  display: none;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -186,6 +190,10 @@
 .bottom-nav-plus.actif,
 .bottom-nav-plus:hover {
   color: var(--fg);
+}
+
+.bottom-nav-items a.actif {
+  view-transition-name: nav-actif;
 }
 
 /* Drawer navigation mobile (dialog natif) */
@@ -298,10 +306,6 @@
 }
 
 /* Badge sidebar desktop — positionné sur le lien nav */
-.sidebar-nav a {
-  position: relative;
-}
-
 .nav-badge--sidebar {
   top: 50%;
   right: 0.5rem;
@@ -319,11 +323,7 @@
 }
 
 @media (max-width: 1024px) {
-  .sidebar {
-    display: none;
-  }
   .bottom-nav {
-    display: block;
     padding-bottom: env(safe-area-inset-bottom);
     height: calc(var(--nav-h) + env(safe-area-inset-bottom));
   }

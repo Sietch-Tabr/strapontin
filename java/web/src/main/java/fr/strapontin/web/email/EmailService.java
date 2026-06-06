@@ -369,6 +369,33 @@ public class EmailService {
     }
   }
 
+  /// Envoie un email de test pour vérifier la configuration Resend.
+  ///
+  /// @param emailAdmin l'adresse email de l'administrateur destinataire
+  /// @return {@code true} si l'email a été envoyé avec succès
+  public boolean envoyerEmailTest(String emailAdmin) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — email de test non envoyé");
+      return false;
+    }
+    try {
+      envoyer(
+          ctx.get(),
+          emailAdmin,
+          ctx.get().expediteur(),
+          "Strapontin — test de configuration email",
+          EmailTemplates.emailTest(ctx.get().baseUrl()),
+          "Test de configuration email Strapontin. Si vous recevez cet email, la configuration"
+              + " Resend est correcte.");
+      log.info("Email de test envoyé : {}", emailAdmin);
+      return true;
+    } catch (Exception e) {
+      log.error("Échec envoi email de test : {}", emailAdmin, e);
+      return false;
+    }
+  }
+
   /// Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3 heures.
   ///
   /// @param email               l'adresse email de l'administrateur

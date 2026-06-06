@@ -177,7 +177,7 @@ public class AuthController {
 
     session.setAttribute(SESSION_ECHECS_TOTP, echecs);
     int restants = MAX_ECHECS_TOTP - echecs;
-    return ResponseEntity.unprocessableEntity()
+    return ResponseEntity.status(422)
         .body(Map.of("erreur", "Code incorrect. " + restants + " essai(s) restant(s)."));
   }
 

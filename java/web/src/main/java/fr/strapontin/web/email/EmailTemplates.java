@@ -254,6 +254,23 @@ final class EmailTemplates {
     return enveloppErreur("Worker inactif", corps, baseUrl);
   }
 
+  /// Email de test de configuration Resend.
+  ///
+  /// @param baseUrl l'URL publique de base de l'application
+  /// @return le HTML de l'email de test
+  static String emailTest(String baseUrl) {
+    String corps =
+        """
+        <p style="color: #555; margin: 0 0 16px">
+          Si vous recevez cet email, la configuration Resend est correcte.
+        </p>
+        <p style="color: #aaa; font-size: 13px; margin: 0">
+          Envoyé depuis l'administration Strapontin.
+        </p>
+        """;
+    return envelopper("Test de configuration email", corps, baseUrl);
+  }
+
   // ---- Helpers privés ----
 
   private static String envelopper(String titre, String corps, String baseUrl) {

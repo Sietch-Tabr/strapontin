@@ -35,14 +35,16 @@ public class ManifestController {
     Map<String, Object> manifest = new LinkedHashMap<>();
     manifest.put("name", "Strapontin");
     manifest.put("short_name", "Strapontin");
-    manifest.put("description", "Trouvez les concerts de vos artistes préférés");
+    manifest.put("description", "Concert finder — suivez vos artistes et salles préférés");
     manifest.put("id", baseUrl + "/");
     manifest.put("start_url", baseUrl + "/");
     manifest.put("scope", "/");
     manifest.put("display", "standalone");
-    manifest.put("background_color", "#111827");
-    manifest.put("theme_color", "#111827");
+    manifest.put("background_color", "#ffffff");
+    manifest.put("theme_color", "#ffffff");
     manifest.put("lang", "fr");
+    manifest.put("categories", List.of("entertainment", "lifestyle"));
+    manifest.put("launch_handler", Map.of("client_mode", "navigate-existing"));
     manifest.put(
         "icons",
         List.of(
@@ -50,12 +52,17 @@ public class ManifestController {
                 "src", "/images/icon-192.png",
                 "sizes", "192x192",
                 "type", "image/png",
-                "purpose", "any maskable"),
+                "purpose", "any"),
             Map.of(
                 "src", "/images/icon-512.png",
                 "sizes", "512x512",
                 "type", "image/png",
-                "purpose", "any maskable")));
+                "purpose", "any"),
+            Map.of(
+                "src", "/images/icon-512.png",
+                "sizes", "512x512",
+                "type", "image/png",
+                "purpose", "maskable")));
 
     return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(manifest);
   }

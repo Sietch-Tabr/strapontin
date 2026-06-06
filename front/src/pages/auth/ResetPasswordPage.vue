@@ -34,6 +34,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'ResetPasswordPage' })
+
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AuthLayout from '../../components/auth/AuthLayout.vue'

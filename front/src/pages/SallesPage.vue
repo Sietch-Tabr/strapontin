@@ -101,17 +101,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+defineOptions({ name: 'SallesPage' })
+
+import { ref, shallowRef, onMounted } from 'vue'
+import { useDialog } from '../composables/useDialog.js'
 import { useToasts } from '../composables/useToasts.js'
 
 const { afficherToast } = useToasts()
 
-const donnees = ref(null)
+const donnees = shallowRef(null)
 const q = ref('')
 const qSoumis = ref('')
 const erreur = ref('')
 const salleASupprimer = ref(null)
-const dialogRef = ref(null)
+const { dialogRef, ouvrir: ouvrirDialog, fermer: fermerDialog } = useDialog()
 
 async function charger(recherche = '') {
   const params = recherche.trim().length >= 2 ? '?q=' + encodeURIComponent(recherche) : ''
@@ -158,11 +161,11 @@ async function ajouter(nom, tmVenueId) {
 
 function demanderSuppression(salle) {
   salleASupprimer.value = salle
-  dialogRef.value?.showModal()
+  ouvrirDialog()
 }
 
 async function confirmerSuppression() {
-  dialogRef.value?.close()
+  fermerDialog()
   if (!salleASupprimer.value) return
   try {
     const rep = await fetch('/api/salles/' + encodeURIComponent(salleASupprimer.value.salleId), {

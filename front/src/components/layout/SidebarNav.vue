@@ -71,7 +71,10 @@
 </template>
 
 <script setup>
-import { useRouter, useRoute } from 'vue-router'
+defineOptions({ name: 'SidebarNav' })
+
+import { useRoute } from 'vue-router'
+import { useNavigation } from '../../composables/useNavigation.js'
 
 const props = defineProps({
   navPrincipal: { type: Array, default: () => [] },
@@ -82,20 +85,12 @@ const props = defineProps({
   estAdmin: { type: Boolean, default: false },
 })
 
-const router = useRouter()
 const route = useRoute()
+const { naviguer } = useNavigation()
 
 function estActif(href) {
   if (href === '/') return route.path === '/'
   return route.path === href || route.path.startsWith(href + '/')
-}
-
-function naviguer(href) {
-  if (router.resolve(href).matched.length === 0) {
-    window.location.href = href
-  } else {
-    router.push(href)
-  }
 }
 
 async function deconnecter() {

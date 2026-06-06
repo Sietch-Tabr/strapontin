@@ -1,0 +1,176 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.web.spectacle;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import fr.strapontin.web.utilisateur.UserConfigService;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.RowCallbackHandler;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+
+/// Tests unitaires de {@link SpectacleService}.
+///
+/// @since 2.2.0
+/// @author Kwaite
+@ExtendWith(MockitoExtension.class)
+class SpectacleServiceTest {
+
+  @Mock private NamedParameterJdbcTemplate jdbc;
+  @Mock private UserConfigService userConfigService;
+
+  private SpectacleService service;
+
+  @BeforeEach
+  void setUp() {
+    service = new SpectacleService(jdbc, userConfigService);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void listerSpectacles_sansFiltre_retournePremierePage() {
+    when(userConfigService.lireFiltreDisponibles("u1")).thenReturn(false);
+    when(jdbc.query(contains("LIMIT"), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(contains("COUNT(*)"), anyMap(), eq(Integer.class))).thenReturn(5);
+    when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(2);
+    doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
+
+    ReponseSpectacles rep =
+        service.listerSpectacles("u1", "", "", "", "", false, "date", false, null, null, 0);
+
+    assertNotNull(rep);
+    assertEquals(0, rep.page());
+    assertEquals(5, rep.totalConcerts());
+    assertEquals(1, rep.totalPages());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void listerSpectacles_avecQuinzaine_ajouteConditionDans15Jours() {
+    when(userConfigService.lireFiltreDisponibles("u1")).thenReturn(false);
+    when(jdbc.query(contains("LIMIT"), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(contains("COUNT(*)"), anyMap(), eq(Integer.class))).thenReturn(0);
+    when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(0);
+    doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
+
+    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+
+    service.listerSpectacles("u1", "", "", "", "", true, "date", false, null, null, 0);
+
+    verify(jdbc).query(contains("dans15Jours"), captor.capture(), any(RowMapper.class));
+    assertTrue(captor.getValue().containsKey("dans15Jours"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void listerSpectacles_sourceArtistesSeuls_filtreParNormes() {
+    when(userConfigService.lireFiltreDisponibles("u1")).thenReturn(false);
+    when(jdbc.queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(String.class)))
+        .thenReturn(List.of("radiohead", "portishead"));
+    when(jdbc.query(contains("LIMIT"), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(contains("COUNT(*)"), anyMap(), eq(Integer.class))).thenReturn(0);
+    when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(2);
+    doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
+
+    service.listerSpectacles(
+        "u1", "", "", "", "", false, "date", false, List.of("artistes"), null, 0);
+
+    verify(jdbc, atLeastOnce())
+        .queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(String.class));
+    verify(jdbc).query(contains("artisteNorms"), anyMap(), any(RowMapper.class));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void listerSpectacles_sourceArtistesVide_ajouteFalse() {
+    when(userConfigService.lireFiltreDisponibles("u1")).thenReturn(false);
+    when(jdbc.queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(String.class)))
+        .thenReturn(List.of());
+    when(jdbc.query(contains("LIMIT"), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(contains("COUNT(*)"), anyMap(), eq(Integer.class))).thenReturn(0);
+    when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(0);
+    doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
+
+    service.listerSpectacles(
+        "u1", "", "", "", "", false, "date", false, List.of("artistes"), null, 0);
+
+    verify(jdbc).query(contains("AND false"), anyMap(), any(RowMapper.class));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void listerSpectacles_triNouveaute_utiliseOrderByFirstSeen() {
+    when(userConfigService.lireFiltreDisponibles("u1")).thenReturn(false);
+    when(jdbc.query(contains("first_seen DESC"), anyMap(), any(RowMapper.class)))
+        .thenReturn(List.of());
+    when(jdbc.queryForObject(contains("COUNT(*)"), anyMap(), eq(Integer.class))).thenReturn(0);
+    when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(0);
+    doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
+
+    service.listerSpectacles("u1", "", "", "", "", false, "nouveaute", false, null, null, 0);
+
+    verify(jdbc).query(contains("first_seen DESC"), anyMap(), any(RowMapper.class));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void listerSpectacles_pageDeux_calculeOffsetCorrect() {
+    when(userConfigService.lireFiltreDisponibles("u1")).thenReturn(false);
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(contains("COUNT(*)"), anyMap(), eq(Integer.class))).thenReturn(250);
+    when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(1);
+    doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
+
+    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+
+    service.listerSpectacles("u1", "", "", "", "", false, "date", false, null, null, 2);
+
+    verify(jdbc).query(contains("LIMIT"), captor.capture(), any(RowMapper.class));
+    assertEquals(200, captor.getValue().get("offset"));
+  }
+
+  @Test
+  void modifierMatch_masquer_executeUpdateAvecMasqueLe() {
+    service.modifierMatch("u1", "concert-uuid-123", true);
+
+    verify(jdbc).update(contains("masque_le = now()"), anyMap());
+  }
+
+  @Test
+  void modifierMatch_demasquer_executeUpdateAvecNull() {
+    service.modifierMatch("u1", "concert-uuid-123", false);
+
+    verify(jdbc).update(contains("masque_le = NULL"), anyMap());
+  }
+
+  @Test
+  void masquerArtiste_executeMiseAJourAvecNom() {
+    service.masquerArtiste("u1", "radiohead");
+
+    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    verify(jdbc).update(contains("masque_le = now()"), captor.capture());
+    assertEquals("radiohead", captor.getValue().get("artisteNorm"));
+    assertEquals("u1", captor.getValue().get("userId"));
+  }
+
+  @Test
+  void demasquerArtiste_executeMiseAJourAvecNull() {
+    service.demasquerArtiste("u1", "radiohead");
+
+    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    verify(jdbc).update(contains("masque_le = NULL"), captor.capture());
+    assertEquals("radiohead", captor.getValue().get("artisteNorm"));
+  }
+}

@@ -2,6 +2,7 @@
   <template v-if="!estPageAuth">
     <div class="app-layout">
       <SidebarNav
+        v-if="!estMobile"
         :nav-principal="navPrincipal"
         :nav-secondaire="navSecondaire"
         :nav-footer="navFooter"
@@ -10,26 +11,27 @@
         :est-admin="estAdmin"
       />
       <main id="contenu-principal" class="main-content">
-        <BanniereSysteme :banniere="banniere" @update:banniere="banniere = $event" />
+        <BanniereSysteme />
         <RouterView />
       </main>
     </div>
 
-    <BottomNav
-      :nav-principal="navPrincipal"
-      :nb-nouveau="nbNouveau"
-      :drawer-ouvert="drawerOuvert"
-      @ouvrir-drawer="drawerOuvert = true"
-    />
-
-    <DrawerNav
-      :ouvert="drawerOuvert"
-      :nav-secondaire="navSecondaire"
-      :nav-footer="navFooter"
-      :nom-utilisateur="nomUtilisateur"
-      :est-admin="estAdmin"
-      @fermer="drawerOuvert = false"
-    />
+    <template v-if="estMobile">
+      <BottomNav
+        :nav-principal="navPrincipal"
+        :nb-nouveau="nbNouveau"
+        :drawer-ouvert="drawerOuvert"
+        @ouvrir-drawer="drawerOuvert = true"
+      />
+      <DrawerNav
+        :ouvert="drawerOuvert"
+        :nav-secondaire="navSecondaire"
+        :nav-footer="navFooter"
+        :nom-utilisateur="nomUtilisateur"
+        :est-admin="estAdmin"
+        @fermer="drawerOuvert = false"
+      />
+    </template>
   </template>
   <RouterView v-else />
 
@@ -37,6 +39,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'App' })
+
 import { ref, computed, watchEffect, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import SidebarNav from './components/layout/SidebarNav.vue'
@@ -44,22 +48,24 @@ import BottomNav from './components/layout/BottomNav.vue'
 import DrawerNav from './components/layout/DrawerNav.vue'
 import BanniereSysteme from './components/layout/BanniereSysteme.vue'
 import ToastContainer from './components/layout/ToastContainer.vue'
+import { chargerBanniere } from './composables/useBanniere.js'
 import { useTheme } from './composables/useTheme.js'
 import { useSession } from './composables/useSession.js'
+import { useEstMobile } from './composables/useBreakpoint.js'
 
 useTheme()
+const estMobile = useEstMobile()
 
 const { session, chargerSession } = useSession()
 const route = useRoute()
 
 const drawerOuvert = ref(false)
-const banniere = ref(null)
 
 const estPageAuth = computed(() => !!route.meta.authPage)
 
 const navPrincipal = [
   { href: '/', label: 'Accueil', icone: 'icon-home' },
-  { href: '/spectacles', label: 'Mes spectacles', icone: 'icon-ticket' },
+  { href: '/spectacles', label: 'Mes spectacles', icone: 'icon-calendar-heart' },
   { href: '/decouverte', label: 'Découverte', icone: 'icon-compass' },
 ]
 const navSecondaire = [
@@ -76,8 +82,7 @@ const nbNouveau = computed(() => session.value?.nbNouveau ?? 0)
 const nomUtilisateur = computed(() => session.value?.nom ?? '')
 const estAdmin = computed(() => session.value?.role === 'admin')
 
-watchEffect(() => {
-  void route.path
+watch(() => route.path, () => {
   drawerOuvert.value = false
 })
 
@@ -91,7 +96,6 @@ watchEffect(() => {
   }
 })
 
-// Recharger la session et la bannière au retour sur une page applicative
 watch(estPageAuth, (nouveau, ancien) => {
   if (ancien && !nouveau) {
     chargerSession()
@@ -101,13 +105,12 @@ watch(estPageAuth, (nouveau, ancien) => {
 
 onMounted(async () => {
   await chargerSession()
-  await chargerBanniere()
+  chargerBanniere()
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload()
+    })
+  }
 })
 
-async function chargerBanniere() {
-  try {
-    const rep = await fetch('/api/banniere/json')
-    banniere.value = rep.ok ? await rep.json() : null
-  } catch (_) {}
-}
 </script>

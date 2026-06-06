@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -38,10 +39,17 @@ public class AdminController {
   private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
   private final AdminService adminService;
+  private final EmailService emailService;
+  private final VapidService vapidService;
 
   /// @param adminService service d'administration
-  public AdminController(AdminService adminService) {
+  /// @param emailService service d'envoi d'emails
+  /// @param vapidService service de gestion des clés VAPID
+  public AdminController(
+      AdminService adminService, EmailService emailService, VapidService vapidService) {
     this.adminService = adminService;
+    this.emailService = emailService;
+    this.vapidService = vapidService;
   }
 
   /// Retourne la liste des utilisateurs avec leur dernière activité.
@@ -172,12 +180,36 @@ public class AdminController {
   @PostMapping("/vapid/generer")
   public ResponseEntity<Map<String, Object>> genererVapid() {
     try {
-      adminService.genererVapid();
+      vapidService.genererVapid();
       return ResponseEntity.ok(Map.of("succes", true, "action", "genererVapid"));
     } catch (Exception e) {
       log.error("Erreur génération clés VAPID", e);
       return erreur(500, "Erreur lors de la génération des clés VAPID.");
     }
+  }
+
+  /// Teste la validité de la clé Ticketmaster API via un appel minimal.
+  ///
+  /// @return 200 si la clé est valide, 400 sinon
+  @PostMapping("/config/tester-tm")
+  public ResponseEntity<Map<String, Object>> testerApiTm() {
+    boolean valide = adminService.testerApiTm();
+    return valide
+        ? ResponseEntity.ok(Map.of("valide", true))
+        : erreur(400, "Clé Ticketmaster invalide ou absente.");
+  }
+
+  /// Envoie un email de test pour vérifier la configuration Resend.
+  ///
+  /// @param auth contexte d'authentification admin
+  /// @return 200 si l'email a été envoyé, 400 sinon
+  @PostMapping("/config/tester-email")
+  public ResponseEntity<Map<String, Object>> testerEmail(Authentication auth) {
+    String emailAdmin = utilisateur(auth).email();
+    boolean succes = emailService.envoyerEmailTest(emailAdmin);
+    return succes
+        ? ResponseEntity.ok(Map.of("succes", true))
+        : erreur(400, "Envoi impossible — vérifiez RESEND_API_KEY et CONTACT_EMAIL.");
   }
 
   /// Publie un message de bannière système.
