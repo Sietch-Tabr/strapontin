@@ -4,6 +4,9 @@
  */
 package fr.strapontin.web;
 
+import fr.strapontin.web.admin.LogAdminService;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +27,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 /// <p>Retourne systématiquement `{"erreur": "..."}`, cohérent avec le format d'erreur de l'API.
 /// L'ordre de résolution Spring choisit automatiquement le handler le plus spécifique
 /// ({@link DuplicateKeyException} avant {@link DataAccessException}, etc.).
+/// Les erreurs 500 sont aussi consignées dans {@code logs_admin} (source {@code web}).
 ///
 /// @since 2.1.0
 /// @author Kwaite
@@ -31,6 +35,12 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+  private final LogAdminService logAdminService;
+
+  public GlobalExceptionHandler(LogAdminService logAdminService) {
+    this.logAdminService = logAdminService;
+  }
 
   /// Retourne le code HTTP porté par l'exception et son message.
   ///
@@ -109,23 +119,37 @@ public class GlobalExceptionHandler {
 
   /// Retourne 500 en cas d'erreur d'accès aux données (hors doublon).
   ///
-  /// @param ex l'exception JDBC/Spring Data
+  /// @param ex      l'exception JDBC/Spring Data
+  /// @param request la requête HTTP entrante
   /// @return `{"erreur": "Erreur de base de données."}`
   @ExceptionHandler(DataAccessException.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-  public Map<String, Object> gererErreurBd(DataAccessException ex) {
+  public Map<String, Object> gererErreurBd(DataAccessException ex, HttpServletRequest request) {
     log.error("Erreur d'accès aux données", ex);
+    logErreurServeur(request, ex);
     return Map.of("erreur", "Erreur de base de données.");
   }
 
   /// Retourne 500 pour toute exception non traitée par les handlers précédents.
   ///
-  /// @param ex l'exception inattendue
+  /// @param ex      l'exception inattendue
+  /// @param request la requête HTTP entrante
   /// @return `{"erreur": "Une erreur inattendue s'est produite."}`
   @ExceptionHandler(Exception.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-  public Map<String, Object> gererErreurInattendue(Exception ex) {
+  public Map<String, Object> gererErreurInattendue(Exception ex, HttpServletRequest request) {
     log.error("Erreur inattendue", ex);
+    logErreurServeur(request, ex);
     return Map.of("erreur", "Une erreur inattendue s'est produite.");
+  }
+
+  private void logErreurServeur(HttpServletRequest request, Exception ex) {
+    try {
+      Map<String, Object> meta = new HashMap<>();
+      meta.put("chemin", request.getServletPath());
+      meta.put("methode", request.getMethod());
+      meta.put("exception", ex.getClass().getSimpleName());
+      logAdminService.logAdmin("error", "web", "Erreur serveur : " + request.getServletPath(), meta);
+    } catch (Exception ignored) {}
   }
 }

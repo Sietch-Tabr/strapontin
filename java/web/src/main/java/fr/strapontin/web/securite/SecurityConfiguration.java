@@ -4,7 +4,10 @@
  */
 package fr.strapontin.web.securite;
 
+import fr.strapontin.web.admin.LogAdminService;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -65,6 +68,7 @@ public class SecurityConfiguration {
   /// @param bloquerIpFilter     le filtre de blocage d'accès direct par IP
   /// @param totpGuardFilter     le filtre de garde TOTP post-login
   /// @param sessionRegistry     le registre de sessions persisté en JDBC
+  /// @param logAdminService     le service de journalisation admin
   /// @return la SecurityFilterChain configurée
   /// @throws Exception en cas d'erreur de configuration
   @Bean
@@ -74,7 +78,8 @@ public class SecurityConfiguration {
       RateLimitingLoginFilter rateLimitingFilter,
       BloquerAccesDirectIpFilter bloquerIpFilter,
       TotpGuardFilter totpGuardFilter,
-      SessionRegistry sessionRegistry)
+      SessionRegistry sessionRegistry,
+      LogAdminService logAdminService)
       throws Exception {
     http.headers(
             headers ->
@@ -163,6 +168,14 @@ public class SecurityConfiguration {
                 ex.authenticationEntryPoint(
                         (request, response, _) -> {
                           if (request.getServletPath().startsWith("/api/")) {
+                            try {
+                              Map<String, Object> meta = new HashMap<>();
+                              meta.put("chemin", request.getServletPath());
+                              meta.put("ip", request.getRemoteAddr());
+                              String ua = request.getHeader("User-Agent");
+                              meta.put("userAgent", ua != null ? ua.substring(0, Math.min(ua.length(), 200)) : "");
+                              logAdminService.logAdmin("warn", "web", "Accès API non authentifié : " + request.getServletPath(), meta);
+                            } catch (Exception ignored) {}
                             response.setStatus(401);
                             response.setContentType("application/json;charset=UTF-8");
                             response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
@@ -173,6 +186,14 @@ public class SecurityConfiguration {
                     .accessDeniedHandler(
                         (request, response, _) -> {
                           if (request.getServletPath().startsWith("/api/")) {
+                            try {
+                              Map<String, Object> meta = new HashMap<>();
+                              meta.put("chemin", request.getServletPath());
+                              meta.put("ip", request.getRemoteAddr());
+                              var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                              if (auth != null) meta.put("userId", auth.getName());
+                              logAdminService.logAdmin("warn", "web", "Accès API refusé : " + request.getServletPath(), meta);
+                            } catch (Exception ignored) {}
                             response.setStatus(403);
                             response.setContentType("application/json;charset=UTF-8");
                             response.getWriter().write("{\"erreur\":\"Accès refusé\"}");

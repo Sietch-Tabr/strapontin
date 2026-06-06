@@ -7,11 +7,14 @@ package fr.strapontin.web;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.admin.LogAdminService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.dao.DuplicateKeyException;
@@ -32,11 +35,14 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @ExtendWith(MockitoExtension.class)
 class GlobalExceptionHandlerTest {
 
+  @Mock private LogAdminService logAdminService;
+  @Mock private HttpServletRequest request;
+
   private GlobalExceptionHandler handler;
 
   @BeforeEach
   void setUp() {
-    handler = new GlobalExceptionHandler();
+    handler = new GlobalExceptionHandler(logAdminService);
   }
 
   @Test
@@ -93,8 +99,10 @@ class GlobalExceptionHandlerTest {
 
   @Test
   void gererErreurBd_dataAccessException_retourne500() {
+    when(request.getServletPath()).thenReturn("/api/test");
+    when(request.getMethod()).thenReturn("GET");
     Map<String, Object> rep =
-        handler.gererErreurBd(new DataRetrievalFailureException("connexion JDBC perdue"));
+        handler.gererErreurBd(new DataRetrievalFailureException("connexion JDBC perdue"), request);
     assertEquals("Erreur de base de données.", rep.get("erreur"));
   }
 
