@@ -103,13 +103,13 @@
 <script setup>
 defineOptions({ name: 'SallesPage' })
 
-import { ref, onMounted } from 'vue'
+import { ref, shallowRef, onMounted } from 'vue'
 import { useDialog } from '../composables/useDialog.js'
 import { useToasts } from '../composables/useToasts.js'
 
 const { afficherToast } = useToasts()
 
-const donnees = ref(null)
+const donnees = shallowRef(null)
 const q = ref('')
 const qSoumis = ref('')
 const erreur = ref('')

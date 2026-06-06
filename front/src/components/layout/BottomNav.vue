@@ -45,7 +45,8 @@
 defineOptions({ name: 'BottomNav' })
 
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
+import { useNavigation } from '../../composables/useNavigation.js'
 
 const props = defineProps({
   navPrincipal: { type: Array, default: () => [] },
@@ -56,7 +57,7 @@ const props = defineProps({
 defineEmits(['ouvrirDrawer'])
 
 const route = useRoute()
-const router = useRouter()
+const { naviguer } = useNavigation()
 
 const pagesDrawer = ['/artistes', '/salles', '/parametres', '/admin', '/aide', '/changelog']
 
@@ -67,13 +68,5 @@ const estDansDrawer = computed(() =>
 function estActif(href) {
   if (href === '/') return route.path === '/'
   return route.path === href || route.path.startsWith(href + '/')
-}
-
-function naviguer(href) {
-  if (router.resolve(href).matched.length === 0) {
-    window.location.href = href
-  } else {
-    router.push(href)
-  }
 }
 </script>

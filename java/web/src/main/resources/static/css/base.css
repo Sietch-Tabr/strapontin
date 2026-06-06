@@ -41,6 +41,17 @@
   ::view-transition-new(*) {
     animation: none !important;
   }
+  html {
+    scroll-behavior: auto;
+  }
+  .admin-section,
+  .parametres-section,
+  #dialog-nav-plus,
+  .banniere,
+  .job-en-cours .spinner {
+    animation: none;
+    transition: none;
+  }
 }
 
 /* ── Variables ─────────────────────────────────────────── */

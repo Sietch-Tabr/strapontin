@@ -78,8 +78,7 @@ const nbNouveau = computed(() => session.value?.nbNouveau ?? 0)
 const nomUtilisateur = computed(() => session.value?.nom ?? '')
 const estAdmin = computed(() => session.value?.role === 'admin')
 
-watchEffect(() => {
-  void route.path
+watch(() => route.path, () => {
   drawerOuvert.value = false
 })
 

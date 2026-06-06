@@ -41,6 +41,7 @@
   color: var(--fg-muted);
   font-size: 0.875rem;
   font-weight: 500;
+  position: relative;
   transition:
     background 0.15s,
     color 0.15s;
@@ -188,6 +189,10 @@
   color: var(--fg);
 }
 
+.bottom-nav-items a.actif {
+  view-transition-name: nav-actif;
+}
+
 /* Drawer navigation mobile (dialog natif) */
 #dialog-nav-plus {
   position: fixed;
@@ -298,10 +303,6 @@
 }
 
 /* Badge sidebar desktop — positionné sur le lien nav */
-.sidebar-nav a {
-  position: relative;
-}
-
 .nav-badge--sidebar {
   top: 50%;
   right: 0.5rem;

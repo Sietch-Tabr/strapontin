@@ -248,7 +248,6 @@ textarea:focus {
   color: var(--avertissement-text);
 }
 
-
 /* ── Tableau ─────────────────────────────────────────────── */
 .table-wrapper {
   overflow-x: auto;
@@ -389,16 +388,13 @@ tr:hover td {
 }
 
 /* ── En-tête de page ─────────────────────────────────────── */
-.page-header h1 {
-  view-transition-name: titre-page;
-}
-
 .page-header {
   margin-bottom: 1.5rem;
 }
 .page-header h1 {
   font-size: 1.5rem;
   font-weight: 700;
+  view-transition-name: titre-page;
 }
 .page-subtitle {
   font-size: 0.875rem;
@@ -495,12 +491,8 @@ tr:hover td {
     color 0.15s;
 }
 .btn-danger-texte:hover {
-  background: #fef2f2;
-  color: var(--danger);
-}
-.dark .btn-danger-texte:hover {
-  background: #1c0a0a;
-  color: #fca5a5;
+  background: var(--danger-bg);
+  color: var(--danger-text);
 }
 
 /* ── Formulaires spéciaux ────────────────────────────────── */
