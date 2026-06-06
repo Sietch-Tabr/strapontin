@@ -450,7 +450,17 @@
 .changelog > details[open] > summary .changelog-version::before {
   transform: rotate(90deg);
 }
-.changelog > details[open] > .changelog-entrees {
+.changelog > details > .details-corps {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+.changelog > details[open] > .details-corps {
+  grid-template-rows: 1fr;
+}
+.changelog > details > .details-corps > .changelog-entrees {
+  overflow: hidden;
+  min-height: 0;
   padding-top: 1rem;
 }
 .changelog-version {

@@ -61,7 +61,7 @@ const estPageAuth = computed(() => !!route.meta.authPage)
 
 const navPrincipal = [
   { href: '/', label: 'Accueil', icone: 'icon-home' },
-  { href: '/spectacles', label: 'Mes spectacles', icone: 'icon-ticket' },
+  { href: '/spectacles', label: 'Mes spectacles', icone: 'icon-calendar-heart' },
   { href: '/decouverte', label: 'Découverte', icone: 'icon-compass' },
 ]
 const navSecondaire = [

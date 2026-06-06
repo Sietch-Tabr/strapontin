@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/generer-sprite.mjs && vite build",
+    "generer-sprite": "node scripts/generer-sprite.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.7",
+    "lucide-static": "*",
     "vite": "^8.0.16"
   }
 }

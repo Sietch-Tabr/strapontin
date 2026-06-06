@@ -101,6 +101,10 @@
   color: var(--accent-fg);
 }
 
+.sidebar-footer a.actif {
+  view-transition-name: nav-actif;
+}
+
 .sidebar-user {
   display: flex;
   align-items: center;
