@@ -35,7 +35,7 @@ const routes = [
     component: ResetPasswordPage,
     meta: { authPage: true },
   },
-  { path: "/first-login", component: FirstLoginPage, meta: { authPage: true } },
+  { path: "/first-login", component: FirstLoginPage },
   { path: "/setup", component: SetupPage, meta: { authPage: true } },
   { path: "/", component: AccueilPage },
   { path: "/artistes", component: ArtistesPage },
