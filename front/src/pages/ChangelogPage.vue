@@ -31,6 +31,12 @@
               <li>Les versions précédentes dans cette page s'ouvrent et se referment avec une animation progressive.</li>
             </ul>
           </div>
+          <div>
+            <p class="changelog-categorie">Correctifs</p>
+            <ul>
+              <li>La création de compte par invitation fonctionne désormais correctement — le formulaire de premier login (choix de l'identifiant) était ignoré dans certains cas, rendant le compte inaccessible.</li>
+            </ul>
+          </div>
         </div>
       </section>
 
