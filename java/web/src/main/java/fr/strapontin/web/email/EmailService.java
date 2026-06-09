@@ -228,9 +228,7 @@ public class EmailService {
   /// @param type            le type (`bug`, `suggestion`, `question`)
   /// @param message         le message
   /// @param expediteurEmail l'email de l'expéditeur
-  /// @param expediteurNom   le nom de l'expéditeur
-  public void envoyerSignalement(
-      String type, String message, String expediteurEmail, String expediteurNom) {
+  public void envoyerSignalement(String type, String message, String expediteurEmail) {
     Optional<ContexteEmail> ctx = obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — signalement non envoyé");
@@ -246,19 +244,17 @@ public class EmailService {
         };
 
     String corps =
-        EmailTemplates.signalement(
-            typeLabel, expediteurNom, expediteurEmail, message, ctx.get().baseUrl());
+        EmailTemplates.signalement(typeLabel, expediteurEmail, message, ctx.get().baseUrl());
 
     String texte =
-        "Signalement — %s%n%nUtilisateur : %s%nEmail : %s%n%n%s"
-            .formatted(typeLabel, expediteurNom, expediteurEmail, message);
+        "Signalement — %s%n%nEmail : %s%n%n%s".formatted(typeLabel, expediteurEmail, message);
 
     try {
       envoyer(
           ctx.get(),
           ctx.get().expediteur(),
           expediteurEmail,
-          "[Strapontin] Signalement — %s — %s".formatted(typeLabel, expediteurNom),
+          "[Strapontin] Signalement — %s".formatted(typeLabel),
           corps,
           texte);
       log.info("Signalement envoyé : {}", expediteurEmail);

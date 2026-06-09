@@ -6,16 +6,6 @@
       <h3 class="param-label">Profil</h3>
       <form class="form-vertical form-compact" @submit.prevent="sauvegarderProfil">
         <div class="form-group">
-          <label for="nom">Nom d'affichage</label>
-          <input
-            id="nom"
-            v-model="nom"
-            type="text"
-            maxlength="100"
-            autocomplete="name"
-          />
-        </div>
-        <div class="form-group">
           <label for="email">Email</label>
           <input
             id="email"
@@ -128,7 +118,6 @@ const router = useRouter()
 const { afficherToast } = useToasts()
 
 const profil = ref(null)
-const nom = ref('')
 const email = ref('')
 const identifiant = ref('')
 const twoFactorActif = ref(false)
@@ -141,7 +130,6 @@ async function charger() {
     const rep = await fetch('/api/user/profile')
     if (rep.ok) {
       profil.value = await rep.json()
-      nom.value = profil.value.nom ?? ''
       email.value = profil.value.email ?? ''
       identifiant.value = profil.value.identifiant ?? ''
       twoFactorActif.value = profil.value.twoFactorActif ?? false
@@ -154,21 +142,6 @@ async function charger() {
 async function sauvegarderProfil() {
   const emailActuel = profil.value?.email ?? ''
   const emailChange = email.value && email.value.toLowerCase() !== emailActuel.toLowerCase()
-  const nomChange = nom.value.trim() !== (profil.value?.nom ?? '')
-
-  if (nomChange) {
-    const rep = await fetch('/api/user/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nom: nom.value.trim() }),
-    })
-    if (!rep.ok) {
-      const corps = await rep.json()
-      afficherToast(corps.erreur || 'Erreur lors de la mise à jour du profil.', 'erreur')
-      return
-    }
-    if (profil.value) profil.value.nom = nom.value.trim()
-  }
 
   if (emailChange) {
     const rep = await fetch('/api/parametres/email-change', {
@@ -187,10 +160,6 @@ async function sauvegarderProfil() {
       afficherToast(corps.erreur || "Erreur lors du changement d'email.", 'erreur')
     }
     return
-  }
-
-  if (nomChange) {
-    afficherToast('Profil enregistré.', 'succes')
   }
 }
 

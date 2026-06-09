@@ -9,22 +9,10 @@
 
     <form @submit.prevent="soumettre">
       <div class="form-group">
-        <label for="nom">Nom d'affichage</label>
-        <input
-          id="nom"
-          ref="champNom"
-          v-model="nom"
-          name="nom"
-          type="text"
-          maxlength="100"
-          autocomplete="name"
-          required
-        />
-      </div>
-      <div class="form-group">
         <label for="identifiant">Identifiant de connexion</label>
         <input
           id="identifiant"
+          ref="champIdentifiant"
           v-model="identifiant"
           name="identifiant"
           type="text"
@@ -87,17 +75,16 @@ import AuthLayout from '../../components/auth/AuthLayout.vue'
 
 const router = useRouter()
 
-const nom = ref('')
 const identifiant = ref('')
 const email = ref('')
 const motDePasse = ref('')
 const baseUrl = ref('')
 const erreur = ref('')
 const chargement = ref(false)
-const champNom = ref(null)
+const champIdentifiant = ref(null)
 
 onMounted(async () => {
-  champNom.value?.focus()
+  champIdentifiant.value?.focus()
   try {
     const rep = await fetch('/api/setup')
     if (rep.ok) {
@@ -117,7 +104,6 @@ async function soumettre() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        nom: nom.value,
         identifiant: identifiant.value,
         email: email.value,
         motDePasse: motDePasse.value,

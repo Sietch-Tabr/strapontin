@@ -38,7 +38,7 @@ class AideRestControllerTest {
   void setUp() {
     controller = new AideRestController(emailService, configService);
     UtilisateurDetails utilisateur =
-        new UtilisateurDetails("user-1", "kwaite", "Kwaite", "k@test.fr", "", "user", false, false);
+        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
     when(auth.getPrincipal()).thenReturn(utilisateur);
   }
 

@@ -55,16 +55,6 @@ class UtilisateurRepository {
         .isEmpty();
   }
 
-  /// Met à jour le nom d'affichage.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param nom    nouveau nom (déjà validé)
-  void majNom(String userId, String nom) {
-    jdbc.update(
-        "UPDATE users SET name = :nom, updated_at = now() WHERE id = :userId",
-        Map.of("nom", nom, CLE_USER_ID, userId));
-  }
-
   /// Met à jour l'email.
   ///
   /// @param userId identifiant de l'utilisateur
@@ -144,19 +134,18 @@ class UtilisateurRepository {
         Map.of("id", userId));
   }
 
-  /// Met à jour les champs du premier login (nom, identifiant, flag must_change_credentials).
+  /// Met à jour les champs du premier login (identifiant, flag must_change_credentials).
   ///
   /// @param userId      identifiant de l'utilisateur
-  /// @param nom         nouveau nom
   /// @param identifiant nouvel identifiant (en minuscules)
-  void majPremierLogin(String userId, String nom, String identifiant) {
+  void majPremierLogin(String userId, String identifiant) {
     jdbc.update(
         """
-        UPDATE users SET name = :nom, username = :ident, display_username = :ident,
+        UPDATE users SET username = :ident, display_username = :ident,
                must_change_credentials = false, updated_at = now()
         WHERE id = :userId
         """,
-        Map.of("nom", nom, "ident", identifiant, CLE_USER_ID, userId));
+        Map.of("ident", identifiant, CLE_USER_ID, userId));
   }
 
   /// Supprime un utilisateur (cascade sur toutes ses données).

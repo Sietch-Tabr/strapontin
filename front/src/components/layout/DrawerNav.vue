@@ -45,12 +45,9 @@
         <span>{{ item.label }}</span>
       </a>
       <hr class="dialog-nav-sep" />
-      <div class="dialog-nav-user">
-        <span>{{ nomUtilisateur }}</span>
-        <form action="/logout" method="post" @submit.prevent="deconnecter">
-          <button type="submit" class="btn-deconnexion">Déconnexion</button>
-        </form>
-      </div>
+      <form action="/logout" method="post" @submit.prevent="deconnecter">
+        <button type="submit" class="btn-deconnexion">Déconnexion</button>
+      </form>
     </div>
   </dialog>
 </template>
@@ -65,7 +62,6 @@ const props = defineProps({
   ouvert: { type: Boolean, default: false },
   navSecondaire: { type: Array, default: () => [] },
   navFooter: { type: Array, default: () => [] },
-  nomUtilisateur: { type: String, default: '' },
   estAdmin: { type: Boolean, default: false },
 })
 

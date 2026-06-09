@@ -124,7 +124,7 @@ public class AdminService {
     List<Map<String, Object>> tousLesUsers =
         jdbc.queryForList(
             """
-            SELECT id, name, email, role::text, username, must_change_credentials, created_at
+            SELECT id, email, role::text, username, must_change_credentials, created_at
             FROM users
             ORDER BY created_at
             """,
@@ -149,7 +149,6 @@ public class AdminService {
               Long derniereMs = activiteParUsername.get(username);
               return new UtilisateurAdmin(
                   (String) u.get("id"),
-                  (String) u.get("name"),
                   (String) u.get("email"),
                   (String) u.get("role"),
                   username,
@@ -180,20 +179,17 @@ public class AdminService {
     String usernameTemp = "u_" + genererHex(4);
     String motDePasseTemp = genererToken(12);
     String hashMdp = bcrypt.encode(motDePasseTemp);
-    String nomInitial =
-        email.split("@")[0].substring(0, Math.min(email.split("@")[0].length(), 100));
 
     Map<String, Object> paramsUser = new HashMap<>();
     paramsUser.put("id", userId);
-    paramsUser.put("name", nomInitial);
     paramsUser.put("email", email);
     paramsUser.put("username", usernameTemp);
     paramsUser.put("displayUsername", usernameTemp);
     jdbc.update(
         """
-        INSERT INTO users (id, name, email, email_verified, role, username, display_username,
+        INSERT INTO users (id, email, email_verified, role, username, display_username,
                            must_change_credentials, created_at, updated_at)
-        VALUES (:id, :name, :email, false, 'user', :username, :displayUsername,
+        VALUES (:id, :email, false, 'user', :username, :displayUsername,
                 true, now(), now())
         """,
         paramsUser);
@@ -227,15 +223,11 @@ public class AdminService {
   /// @throws ErreurMetier si les données sont invalides ou l'email est déjà utilisé
   public void modifierUtilisateur(
       String userId, RequeteModifierUtilisateur requete, String adminId) {
-    String nom = requete.nom() == null ? "" : requete.nom().strip();
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
     String role = requete.role() == null ? "" : requete.role().strip().toLowerCase();
 
-    if (nom.isEmpty() && email.isEmpty() && role.isEmpty()) {
+    if (email.isEmpty() && role.isEmpty()) {
       throw new ErreurMetier("Au moins un champ à modifier est requis.");
-    }
-    if (!nom.isEmpty() && nom.length() > 100) {
-      throw new ErreurMetier("Nom trop long (100 caractères max).");
     }
     if (!email.isEmpty() && !FORMAT_EMAIL.matcher(email).matches()) {
       throw new ErreurMetier("Format d'email invalide.");
@@ -256,12 +248,10 @@ public class AdminService {
     Map<String, Object> miseAJour = new HashMap<>();
     miseAJour.put("updatedAt", Timestamp.from(Instant.now()));
     miseAJour.put("userId", userId);
-    if (!nom.isEmpty()) miseAJour.put("nom", nom);
     if (!email.isEmpty()) miseAJour.put("email", email);
     if (!role.isEmpty()) miseAJour.put("role", role);
 
     StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
-    if (!nom.isEmpty()) setClauses.append(", name = :nom");
     if (!email.isEmpty()) setClauses.append(", email = :email");
     if (!role.isEmpty()) setClauses.append(", role = CAST(:role AS user_role)");
     jdbc.update("UPDATE users SET " + setClauses + " WHERE id = :userId", miseAJour);

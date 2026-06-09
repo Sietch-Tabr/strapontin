@@ -2,25 +2,12 @@
   <AuthLayout>
     <h1 class="auth-title">Bienvenue sur Strapontin</h1>
     <p class="auth-subtitle">
-      Veuillez personnaliser vos identifiants avant de continuer.
+      Veuillez choisir votre identifiant avant de continuer.
     </p>
 
     <div v-if="erreur" class="alerte alerte-erreur">{{ erreur }}</div>
 
     <form @submit.prevent="soumettre" class="form-vertical">
-      <div class="form-group">
-        <label for="nom">Nom d'affichage</label>
-        <input
-          id="nom"
-          v-model="nom"
-          name="nom"
-          type="text"
-          required
-          maxlength="100"
-          autocomplete="name"
-          placeholder="Votre prénom ou pseudo"
-        />
-      </div>
       <div class="form-group">
         <label for="identifiant">Identifiant de connexion</label>
         <input
@@ -77,7 +64,6 @@ import AuthLayout from '../../components/auth/AuthLayout.vue'
 
 const router = useRouter()
 
-const nom = ref('')
 const identifiant = ref('')
 const motDePasseActuel = ref('')
 const motDePasseNouveau = ref('')
@@ -92,7 +78,6 @@ async function soumettre() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        nom: nom.value,
         identifiant: identifiant.value,
         motDePasseActuel: motDePasseActuel.value,
         motDePasseNouveau: motDePasseNouveau.value,

@@ -12,7 +12,6 @@ package fr.strapontin.web.securite;
 public record UtilisateurDto(
     String id,
     String identifiant,
-    String nom,
     String email,
     String role,
     boolean mustChangeCredentials,

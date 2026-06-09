@@ -13,7 +13,6 @@ import jakarta.validation.constraints.Size;
 /// @since 2.1.0
 /// @author Kwaite
 public record RequeteSetup(
-    @NotBlank(message = "Le nom est requis.") @Size(max = 100) String nom,
     @NotBlank(message = "L'identifiant est requis.")
         @Size(min = 3, message = "L'identifiant doit contenir au moins 3 caractères.")
         String identifiant,

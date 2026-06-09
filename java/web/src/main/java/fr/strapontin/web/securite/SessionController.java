@@ -26,13 +26,13 @@ public class SessionController {
   /// Retourne les données de navigation de l'utilisateur courant.
   ///
   /// @param auth l'authentification Spring Security
-  /// @return les données de session : nom, rôle, nbNouveau
+  /// @return les données de session : rôle, nbNouveau
   @GetMapping("/api/session")
   public SessionDto session(Authentication auth) {
     if (auth == null
         || !auth.isAuthenticated()
         || !(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
-      return new SessionDto("", "user", 0);
+      return new SessionDto("user", 0);
     }
     Integer count =
         jdbc.queryForObject(
@@ -50,13 +50,12 @@ public class SessionController {
               )
             """,
             Map.of("userId", ud.id()), Integer.class);
-    return new SessionDto(ud.nom(), ud.role(), count != null ? count : 0);
+    return new SessionDto(ud.role(), count != null ? count : 0);
   }
 
   /// DTO de session pour le layout Vue.
   ///
-  /// @param nom       le nom d'affichage de l'utilisateur
   /// @param role      le rôle ({@code user} ou {@code admin})
   /// @param nbNouveau le nombre de concerts non encore vus
-  public record SessionDto(String nom, String role, int nbNouveau) {}
+  public record SessionDto(String role, int nbNouveau) {}
 }
