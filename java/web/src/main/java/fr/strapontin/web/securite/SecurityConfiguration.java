@@ -133,7 +133,10 @@ public class SecurityConfiguration {
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                     .permitAll()
                     .requestMatchers(
-                        "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password")
+                        "/api/auth/login",
+                        "/api/auth/forgot-password",
+                        "/api/auth/reset-password",
+                        "/api/auth/type-token")
                     .permitAll()
                     .requestMatchers("/login", "/forgot-password", "/reset-password", "/setup")
                     .permitAll()
