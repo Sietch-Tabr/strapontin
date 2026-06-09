@@ -8,4 +8,4 @@ package fr.strapontin.web.securite;
 ///
 /// @since 2.1.0
 /// @author Kwaite
-public record ResetPasswordRequest(String token, String motDePasse) {}
+public record ResetPasswordRequest(String token, String motDePasse, String identifiant) {}

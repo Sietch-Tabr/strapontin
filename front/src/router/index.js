@@ -4,7 +4,6 @@ import LoginPage from "../pages/auth/LoginPage.vue";
 import TotpChallengePage from "../pages/auth/TotpChallengePage.vue";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage.vue";
 import ResetPasswordPage from "../pages/auth/ResetPasswordPage.vue";
-import FirstLoginPage from "../pages/auth/FirstLoginPage.vue";
 import SetupPage from "../pages/auth/SetupPage.vue";
 
 const AccueilPage = () => import("../pages/AccueilPage.vue");
@@ -35,7 +34,6 @@ const routes = [
     component: ResetPasswordPage,
     meta: { authPage: true },
   },
-  { path: "/first-login", component: FirstLoginPage },
   { path: "/setup", component: SetupPage, meta: { authPage: true } },
   { path: "/", component: AccueilPage },
   { path: "/artistes", component: ArtistesPage },

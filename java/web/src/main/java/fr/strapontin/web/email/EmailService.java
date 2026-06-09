@@ -103,31 +103,27 @@ public class EmailService {
 
   /// Envoie un email d'invitation à un nouvel utilisateur.
   ///
-  /// @param email       l'adresse email du destinataire
-  /// @param identifiant l'identifiant temporaire
-  /// @param lienReset   le lien de création de mot de passe (valable 24 heures)
-  public void envoyerInvitation(String email, String identifiant, String lienReset) {
+  /// @param email     l'adresse email du destinataire
+  /// @param lienReset le lien de création de compte (valable 24 heures)
+  public void envoyerInvitation(String email, String lienReset) {
     Optional<ContexteEmail> ctx = obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email invitation non envoyé");
       return;
     }
 
-    String corps = EmailTemplates.invitation(identifiant, lienReset, ctx.get().baseUrl());
+    String corps = EmailTemplates.invitation(lienReset, ctx.get().baseUrl());
 
     String texte =
         """
         Bienvenue sur Strapontin
 
-        Votre compte a été créé. Commencez par choisir votre mot de passe (lien valable 24 heures) :
+        Votre compte a été créé. Cliquez sur le lien ci-dessous pour choisir
+        votre identifiant et votre mot de passe (lien valable 24 heures) :
 
         %s
-
-        Une fois votre mot de passe créé, connectez-vous avec votre identifiant temporaire : %s
-
-        Il vous sera demandé de choisir un identifiant définitif à la première connexion.
         """
-            .formatted(lienReset, identifiant);
+            .formatted(lienReset);
 
     try {
       envoyer(

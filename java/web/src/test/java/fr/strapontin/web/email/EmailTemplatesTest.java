@@ -33,21 +33,13 @@ class EmailTemplatesTest {
   // ---- invitation() ----
 
   @Test
-  void invitation_contientIdentifiantEtLien() {
-    String html =
-        EmailTemplates.invitation("kwaite", "https://exemple.fr/reset/abc", "https://app.fr");
-    assertThat(html).contains("kwaite");
+  void invitation_contientLienEtBouton() {
+    String html = EmailTemplates.invitation("https://exemple.fr/reset/abc", "https://app.fr");
     assertThat(html).contains("href=\"https://exemple.fr/reset/abc\"");
-    assertThat(html).contains("Créer mon mot de passe");
+    assertThat(html).contains("Créer mon compte");
+    assertThat(html).contains("identifiant");
     assertThat(html).contains("https://app.fr/parametres");
     assertThat(html).contains("color: #111");
-  }
-
-  @Test
-  void invitation_identifiantAvecCaracteresSpeciaux_estEchappe() {
-    String html = EmailTemplates.invitation("<admin>", "https://reset", "https://app.fr");
-    assertThat(html).contains("&lt;admin&gt;");
-    assertThat(html).doesNotContain("<admin>");
   }
 
   // ---- resetMotDePasse() ----
@@ -217,7 +209,7 @@ class EmailTemplatesTest {
   @Test
   void tousLesEmails_contiennentLienGererPreferences() {
     String baseUrl = "https://app.fr";
-    assertThat(EmailTemplates.invitation("id", "https://reset", baseUrl))
+    assertThat(EmailTemplates.invitation("https://reset", baseUrl))
         .contains(baseUrl + "/parametres");
     assertThat(EmailTemplates.resetMotDePasse("https://reset", baseUrl))
         .contains(baseUrl + "/parametres");
@@ -234,7 +226,7 @@ class EmailTemplatesTest {
 
   @Test
   void emailsNormaux_ontTitreNoir() {
-    assertThat(EmailTemplates.invitation("id", "https://reset", "https://app.fr"))
+    assertThat(EmailTemplates.invitation("https://reset", "https://app.fr"))
         .contains("color: #111");
     assertThat(EmailTemplates.resetMotDePasse("https://reset", "https://app.fr"))
         .contains("color: #111");

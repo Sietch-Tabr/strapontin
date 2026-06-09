@@ -32,27 +32,22 @@ final class EmailTemplates {
 
   /// Invitation d'un nouvel utilisateur.
   ///
-  /// @param identifiant l'identifiant temporaire attribué
-  /// @param lienReset   le lien de création de mot de passe (valable 24 heures)
-  /// @param baseUrl     l'URL publique de base de l'application
+  /// @param lienReset le lien de création de compte (valable 24 heures)
+  /// @param baseUrl   l'URL publique de base de l'application
   /// @return le HTML de l'email d'invitation
-  static String invitation(String identifiant, String lienReset, String baseUrl) {
+  static String invitation(String lienReset, String baseUrl) {
     String corps =
         """
         <p style="color: #555; margin: 0 0 24px">
-          Votre compte a été créé. Commencez par choisir votre mot de passe :
+          Votre compte a été créé. Cliquez sur le bouton ci-dessous pour choisir
+          votre identifiant et votre mot de passe :
         </p>
         %s
         <p style="color: #aaa; font-size: 13px; margin: 16px 0 0">
-          Ce lien est valable 24 heures. Une fois votre mot de passe créé,
-          connectez-vous avec votre identifiant temporaire :
-          <code style="font-family: monospace; background: #f5f5f5; padding: 2px 6px; border-radius: 4px">%s</code>
-        </p>
-        <p style="color: #aaa; font-size: 13px; margin: 8px 0 0">
-          Il vous sera demandé de choisir un identifiant définitif à la première connexion.
+          Ce lien est valable 24 heures.
         </p>
         """
-            .formatted(bouton(lienReset, "Créer mon mot de passe →"), e(identifiant));
+            .formatted(bouton(lienReset, "Créer mon compte →"));
     return envelopper("Bienvenue sur Strapontin", corps, baseUrl);
   }
 

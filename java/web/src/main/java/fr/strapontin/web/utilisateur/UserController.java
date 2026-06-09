@@ -15,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -27,8 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 /// Contrôleur REST pour le profil utilisateur courant.
 ///
 /// <p>HTTP pur — délègue l'accès aux données à {@link UtilisateurRepository}.
-/// Gère la lecture/mise à jour du profil, le mot de passe, la suppression de compte
-/// et le flow de première connexion ({@code must_change_credentials}).
+/// Gère la lecture/mise à jour du profil, le mot de passe et la suppression de compte.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -177,55 +175,6 @@ public class UserController {
   /// @param userId identifiant de l'utilisateur
   public void desactiverTotp(String userId) {
     utilisateurRepository.desactiverTotp(userId);
-  }
-
-  /// Complète la première connexion : identifiant, mot de passe, et lève
-  /// {@code must_change_credentials}.
-  ///
-  /// @param requete    corps JSON avec identifiant, motDePasseActuel, motDePasseNouveau
-  /// @param auth       contexte d'authentification
-  /// @param httpRequest pour invalider la session après changement
-  /// @return 200 si terminé, 400 si invalide
-  @Transactional
-  @PostMapping("/first-login")
-  public ResponseEntity<Map<String, Object>> premierLogin(
-      @Valid @RequestBody RequetePremierLogin requete,
-      Authentication auth,
-      HttpServletRequest httpRequest) {
-    UtilisateurDetails details = utilisateur(auth);
-
-    if (!details.doitChangerCredentials()) {
-      return erreur(403, "Accès refusé.");
-    }
-
-    String identifiant = requete.identifiant().strip().toLowerCase();
-
-    if (identifiant.length() < 3 || identifiant.length() > 30) {
-      return erreur(400, "L'identifiant doit contenir entre 3 et 30 caractères.");
-    }
-    if (!FORMAT_IDENTIFIANT.matcher(identifiant).matches()) {
-      return erreur(
-          400, "L'identifiant ne peut contenir que des lettres, chiffres et underscores.");
-    }
-    if (requete.motDePasseNouveau().length() < 12) {
-      return erreur(400, "Le mot de passe doit contenir au moins 12 caractères.");
-    }
-    if (!passwordEncoder.matches(requete.motDePasseActuel(), details.motDePasse())) {
-      return erreur(400, "Mot de passe temporaire incorrect.");
-    }
-    if (utilisateurRepository.identifiantDejaUtilise(identifiant, details.id())) {
-      return erreur(400, "Cet identifiant est déjà utilisé.");
-    }
-
-    utilisateurRepository.majPremierLogin(details.id(), identifiant);
-    utilisateurRepository.changerMotDePasse(
-        details.id(), passwordEncoder.encode(requete.motDePasseNouveau()));
-
-    HttpSession session = httpRequest.getSession(false);
-    if (session != null) session.invalidate();
-    SecurityContextHolder.clearContext();
-
-    return ResponseEntity.ok(Map.of("succes", true));
   }
 
   /// Supprime le compte de l'utilisateur courant (cascade sur toutes ses données).

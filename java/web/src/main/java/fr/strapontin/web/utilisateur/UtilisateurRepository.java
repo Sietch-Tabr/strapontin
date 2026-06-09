@@ -134,20 +134,6 @@ class UtilisateurRepository {
         Map.of("id", userId));
   }
 
-  /// Met à jour les champs du premier login (identifiant, flag must_change_credentials).
-  ///
-  /// @param userId      identifiant de l'utilisateur
-  /// @param identifiant nouvel identifiant (en minuscules)
-  void majPremierLogin(String userId, String identifiant) {
-    jdbc.update(
-        """
-        UPDATE users SET username = :ident, display_username = :ident,
-               must_change_credentials = false, updated_at = now()
-        WHERE id = :userId
-        """,
-        Map.of("ident", identifiant, CLE_USER_ID, userId));
-  }
-
   /// Supprime un utilisateur (cascade sur toutes ses données).
   ///
   /// @param userId identifiant de l'utilisateur à supprimer

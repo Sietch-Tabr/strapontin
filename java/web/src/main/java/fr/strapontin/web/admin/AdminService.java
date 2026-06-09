@@ -208,7 +208,7 @@ public class AdminService {
         UUID.randomUUID().toString(), "invite:" + email, sha256Hex(token), expiresAt);
 
     String lienReset = baseUrl + "/reset-password?token=" + token;
-    emailService.envoyerInvitation(email, usernameTemp, lienReset);
+    emailService.envoyerInvitation(email, lienReset);
     logAdminService.logAdmin(
         "info", "admin", "compte créé", Map.of("email", email, "parAdmin", adminId));
 

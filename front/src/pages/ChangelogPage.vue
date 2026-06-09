@@ -34,7 +34,7 @@
           <div>
             <p class="changelog-categorie">Correctifs</p>
             <ul>
-              <li>La création de compte par invitation fonctionne désormais correctement — le formulaire de premier login (choix de l'identifiant) était ignoré dans certains cas, rendant le compte inaccessible.</li>
+              <li>La création de compte par invitation se fait en une seule étape — le lien d'invitation ouvre directement un formulaire pour choisir son identifiant et son mot de passe, sans connexion intermédiaire requise.</li>
             </ul>
           </div>
         </div>
