@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /// Endpoints d'authentification de l'API REST.
@@ -41,6 +43,7 @@ public class AuthController {
   private static final Logger log = LoggerFactory.getLogger(AuthController.class);
   private static final String SESSION_ECHECS_TOTP = "TOTP_ECHECS";
   private static final int MAX_ECHECS_TOTP = 5;
+  private static final Pattern FORMAT_IDENTIFIANT = Pattern.compile("^[a-zA-Z0-9_]+$");
 
   private final AuthenticationManager authenticationManager;
   private final AuthService authService;
@@ -227,13 +230,29 @@ public class AuthController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
+  /// Retourne le type d'un token de vérification sans le consommer.
+  ///
+  /// <p>Retourne toujours 200 — {@code "reset"} si le token est absent ou invalide (opacité).
+  ///
+  /// @param token token brut (non hashé)
+  /// @return {@code {type: "invite"}} ou {@code {type: "reset"}}
+  @GetMapping("/api/auth/type-token")
+  public ResponseEntity<Map<String, Object>> typeToken(@RequestParam String token) {
+    boolean estInvite = authService.estTokenInvite(token);
+    return ResponseEntity.ok(Map.of("type", estInvite ? "invite" : "reset"));
+  }
+
   /// Réinitialise le mot de passe via un token de vérification.
   ///
-  /// @param req le corps contenant le token et le nouveau mot de passe
-  /// @return 200 si réinitialisé — 400 si invalide (via {@link GlobalExceptionHandler})
+  /// <p>Si le token est de type {@code invite:} et que {@code identifiant} est fourni,
+  /// active le compte en une seule opération (identifiant + mot de passe) et ouvre une session.
+  ///
+  /// @param req        le corps contenant le token, le mot de passe et optionnellement l'identifiant
+  /// @param httpRequest pour créer la session lors de l'activation d'une invitation
+  /// @return 200 si réinitialisé — 400 si invalide
   @PostMapping("/api/auth/reset-password")
-  public ResponseEntity<Map<String, Object>> reinitialiserMotDePasse(
-      @RequestBody ResetPasswordRequest req) {
+  public ResponseEntity<?> reinitialiserMotDePasse(
+      @RequestBody ResetPasswordRequest req, HttpServletRequest httpRequest) {
     if (req.token() == null || req.motDePasse() == null) {
       return ResponseEntity.badRequest().body(Map.of("erreur", "Token et mot de passe requis."));
     }
@@ -241,6 +260,46 @@ public class AuthController {
       return ResponseEntity.badRequest()
           .body(Map.of("erreur", "Le mot de passe doit contenir au moins 12 caractères."));
     }
+
+    if (req.identifiant() != null && !req.identifiant().isBlank()) {
+      String ident = req.identifiant().strip().toLowerCase();
+      if (ident.length() < 3 || ident.length() > 30) {
+        return ResponseEntity.badRequest()
+            .body(Map.of("erreur", "L'identifiant doit contenir entre 3 et 30 caractères."));
+      }
+      if (!FORMAT_IDENTIFIANT.matcher(ident).matches()) {
+        return ResponseEntity.badRequest()
+            .body(
+                Map.of(
+                    "erreur",
+                    "L'identifiant ne peut contenir que des lettres, chiffres et underscores."));
+      }
+      String identFinal = authService.activerCompteInvite(req.token(), ident, req.motDePasse());
+
+      Authentication auth =
+          authenticationManager.authenticate(
+              UsernamePasswordAuthenticationToken.unauthenticated(identFinal, req.motDePasse()));
+
+      HttpSession sessionExistante = httpRequest.getSession(false);
+      if (sessionExistante != null) sessionExistante.invalidate();
+
+      SecurityContext contexte = SecurityContextHolder.createEmptyContext();
+      contexte.setAuthentication(auth);
+      SecurityContextHolder.setContext(contexte);
+
+      HttpSession session = httpRequest.getSession(true);
+      session.setAttribute(
+          HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, contexte);
+
+      if (!(auth.getPrincipal() instanceof UtilisateurDetails details)) {
+        throw new IllegalStateException("Principal inattendu après activation invitation");
+      }
+      log.debug("Activation compte invitation, connexion : {}", details.identifiant());
+      return ResponseEntity.ok(
+          new UtilisateurDto(
+              details.id(), details.identifiant(), details.email(), details.role(), false, false));
+    }
+
     authService.reinitialiserMotDePasse(req.token(), req.motDePasse());
     return ResponseEntity.ok(Map.of("succes", true));
   }

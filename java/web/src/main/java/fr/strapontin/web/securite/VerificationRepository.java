@@ -110,4 +110,31 @@ public class VerificationRepository {
         "UPDATE users SET must_change_credentials = false, updated_at = NOW() WHERE email = :email",
         Map.of("email", email));
   }
+
+  /// Définit l'identifiant et désactive le flag {@code must_change_credentials} par email.
+  ///
+  /// @param email      email de l'utilisateur
+  /// @param identifiant nouvel identifiant (déjà normalisé en minuscules)
+  public void majUsernameEtActiverParEmail(String email, String identifiant) {
+    jdbc.update(
+        """
+        UPDATE users SET username = :ident, display_username = :ident,
+               must_change_credentials = false, updated_at = NOW()
+        WHERE lower(email) = lower(:email)
+        """,
+        Map.of("ident", identifiant, "email", email));
+  }
+
+  /// Vérifie si un identifiant est déjà pris par un autre utilisateur (exclusion par email).
+  ///
+  /// @param identifiant identifiant à vérifier (en minuscules)
+  /// @param email       email de l'utilisateur courant (exclu)
+  /// @return {@code true} si l'identifiant est pris
+  public boolean identifiantDejaUtiliseParEmail(String identifiant, String email) {
+    return !jdbc.queryForList(
+            "SELECT 1 FROM users WHERE lower(username) = :ident AND lower(email) != lower(:email)",
+            Map.of("ident", identifiant, "email", email),
+            Integer.class)
+        .isEmpty();
+  }
 }

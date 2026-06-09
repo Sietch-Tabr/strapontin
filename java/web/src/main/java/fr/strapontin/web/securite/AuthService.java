@@ -74,6 +74,55 @@ public class AuthService {
     log.debug("Email reset MDP envoyé pour email hashé {}", email.hashCode());
   }
 
+  /// Indique si un token est de type invitation, sans le consommer.
+  ///
+  /// @param token token brut (non hashé)
+  /// @return {@code true} si le token est de type {@code invite:}
+  public boolean estTokenInvite(String token) {
+    return verificationRepository
+        .lireIdentifiantParTokenHash(sha256Hex(token))
+        .map(s -> s.startsWith("invite:"))
+        .orElse(false);
+  }
+
+  /// Active un compte invité : définit identifiant et mot de passe en une seule opération.
+  ///
+  /// <p>Après activation, {@code must_change_credentials} est {@code false} — aucun passage
+  /// par {@code /first-login} requis.
+  ///
+  /// @param token       token brut (non hashé), doit être de type {@code invite:}
+  /// @param identifiant identifiant choisi (déjà normalisé en minuscules, format validé)
+  /// @param motDePasse  mot de passe en clair (longueur validée)
+  /// @return l'identifiant normalisé, pour l'auto-login en aval
+  /// @throws ErreurMetier si le token est invalide, expiré, non-invite ou l'identifiant pris
+  @Transactional
+  public String activerCompteInvite(String token, String identifiant, String motDePasse) {
+    String tokenHash = sha256Hex(token);
+    String fullIdentifiant =
+        verificationRepository
+            .lireIdentifiantParTokenHash(tokenHash)
+            .orElseThrow(
+                () ->
+                    new ErreurMetier("Lien invalide ou expiré. Recommencez depuis le formulaire."));
+
+    if (!fullIdentifiant.startsWith("invite:")) {
+      throw new ErreurMetier("Ce lien n'est pas un lien d'invitation.");
+    }
+
+    String email = fullIdentifiant.split(":", 2)[1];
+
+    if (verificationRepository.identifiantDejaUtiliseParEmail(identifiant, email)) {
+      throw new ErreurMetier("Cet identifiant est déjà utilisé.");
+    }
+
+    log.info("Activation compte invitation : emailHash={}", email.hashCode());
+    verificationRepository.majMotDePasseParEmail(email, passwordEncoder.encode(motDePasse));
+    verificationRepository.majUsernameEtActiverParEmail(email, identifiant);
+    verificationRepository.supprimerParTokenHash(tokenHash);
+
+    return identifiant;
+  }
+
   /// Réinitialise le mot de passe via un token de vérification.
   ///
   /// @param token      token brut (non hashé)
