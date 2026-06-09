@@ -87,12 +87,15 @@ public class AuthService {
             .lireIdentifiantParTokenHash(tokenHash)
             .orElseThrow(
                 () ->
-                    new ErreurMetier(
-                        "Lien invalide ou expiré. Recommencez depuis le formulaire."));
+                    new ErreurMetier("Lien invalide ou expiré. Recommencez depuis le formulaire."));
 
     String email = identifiant.contains(":") ? identifiant.split(":", 2)[1] : identifiant;
+    boolean estInvitation = identifiant.startsWith("invite:");
+    log.info("Réinitialisation mot de passe : type={}, emailHash={}", estInvitation ? "invite" : "reset", email.hashCode());
     verificationRepository.majMotDePasseParEmail(email, passwordEncoder.encode(motDePasse));
-    verificationRepository.majMustChangeFalseParEmail(email);
+    if (!estInvitation) {
+      verificationRepository.majMustChangeFalseParEmail(email);
+    }
     verificationRepository.supprimerParTokenHash(tokenHash);
   }
 

@@ -41,7 +41,7 @@ public class UtilisateurDetailsService implements UserDetailsService {
   public UserDetails loadUserByUsername(String identifiant) throws UsernameNotFoundException {
     String sql =
         """
-        SELECT u.id, u.username, u.name, u.email, u.role,
+        SELECT u.id, u.username, u.email, u.role,
                u.two_factor_enabled, u.must_change_credentials,
                a.password
         FROM users u
@@ -60,7 +60,6 @@ public class UtilisateurDetailsService implements UserDetailsService {
           return new UtilisateurDetails(
               rs.getString("id"),
               rs.getString("username"),
-              rs.getString("name"),
               rs.getString("email"),
               rs.getString("password"),
               rs.getString("role"),

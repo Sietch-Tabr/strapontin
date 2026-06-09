@@ -102,32 +102,23 @@ final class EmailTemplates {
   /// Signalement utilisateur transmis à l'adresse de contact.
   ///
   /// @param typeLabel       le libellé du type ("Bug", "Amélioration", "Question")
-  /// @param expediteurNom   le nom de l'expéditeur
   /// @param expediteurEmail l'adresse email de l'expéditeur
   /// @param message         le corps du signalement
   /// @param baseUrl         l'URL publique de base de l'application
   /// @return le HTML de l'email de signalement
   static String signalement(
-      String typeLabel,
-      String expediteurNom,
-      String expediteurEmail,
-      String message,
-      String baseUrl) {
+      String typeLabel, String expediteurEmail, String message, String baseUrl) {
     String corps =
         """
         <table style="border-collapse: collapse; width: 100%%; margin-bottom: 24px">
           <tr>
-            <td style="padding: 8px 0; color: #888; font-size: 14px; width: 130px">Utilisateur</td>
-            <td style="padding: 8px 0; font-size: 14px; color: #111">%s</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; color: #888; font-size: 14px">Email</td>
+            <td style="padding: 8px 0; color: #888; font-size: 14px; width: 130px">Email</td>
             <td style="padding: 8px 0; font-size: 14px; color: #111">%s</td>
           </tr>
         </table>
         <p style="color: #555; font-size: 14px; white-space: pre-wrap; border-left: 3px solid #e5e5e5; padding-left: 12px; margin: 0">%s</p>
         """
-            .formatted(e(expediteurNom), e(expediteurEmail), e(message));
+            .formatted(e(expediteurEmail), e(message));
     return envelopper("Signalement — " + e(typeLabel), corps, baseUrl);
   }
 

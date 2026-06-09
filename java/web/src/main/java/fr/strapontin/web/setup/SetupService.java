@@ -68,35 +68,34 @@ public class SetupService {
       throw new RessourceDejaExistante("L'application est déjà configurée.");
     }
 
-    String nom = requete.nom() == null ? "" : requete.nom().strip();
     String identifiant =
         requete.identifiant() == null ? "" : requete.identifiant().strip().toLowerCase();
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
     String motDePasse = requete.motDePasse() == null ? "" : requete.motDePasse();
 
-    if (nom.isEmpty()) throw new ErreurMetier("Le nom est requis.");
     if (identifiant.length() < 3 || !identifiant.matches("[a-z0-9_]+")) {
       throw new ErreurMetier(
           "L'identifiant doit contenir au moins 3 caractères (lettres minuscules, chiffres, _).");
     }
-    if (email.isEmpty() || !email.contains("@")) throw new ErreurMetier("L'adresse email est invalide.");
-    if (motDePasse.length() < 12) throw new ErreurMetier("Le mot de passe doit contenir au moins 12 caractères.");
+    if (email.isEmpty() || !email.contains("@"))
+      throw new ErreurMetier("L'adresse email est invalide.");
+    if (motDePasse.length() < 12)
+      throw new ErreurMetier("Le mot de passe doit contenir au moins 12 caractères.");
 
     String userId = UUID.randomUUID().toString();
     String hashMdp = bcrypt.encode(motDePasse);
 
     Map<String, Object> paramsUser = new HashMap<>();
     paramsUser.put("id", userId);
-    paramsUser.put("name", nom);
     paramsUser.put("email", email);
     paramsUser.put("username", identifiant);
     paramsUser.put("displayUsername", identifiant);
     try {
       jdbc.update(
           """
-          INSERT INTO users (id, name, email, email_verified, role, username, display_username,
+          INSERT INTO users (id, email, email_verified, role, username, display_username,
                              must_change_credentials, created_at, updated_at)
-          VALUES (:id, :name, :email, true, 'admin', :username, :displayUsername,
+          VALUES (:id, :email, true, 'admin', :username, :displayUsername,
                   false, now(), now())
           """,
           paramsUser);

@@ -13,9 +13,6 @@ import jakarta.validation.constraints.Size;
 /// @author Kwaite
 public record RequetePremierLogin(
     @NotBlank(message = "Tous les champs sont obligatoires.")
-        @Size(max = 100, message = "Nom invalide (1-100 caractères).")
-        String nom,
-    @NotBlank(message = "Tous les champs sont obligatoires.")
         @Size(min = 3, max = 30, message = "L'identifiant doit contenir entre 3 et 30 caractères.")
         String identifiant,
     @NotBlank(message = "Tous les champs sont obligatoires.") String motDePasseActuel,

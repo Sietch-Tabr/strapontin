@@ -23,7 +23,6 @@
           <div class="user-carte-entete">
             <div class="user-carte-info">
               <div class="user-carte-badges">
-                <span class="user-nom">{{ u.name }}</span>
                 <span v-if="u.username" class="badge badge-mono">@{{ u.username }}</span>
                 <span v-if="u.role === 'admin'" class="badge badge-info">admin</span>
                 <span v-if="u.mustChangeCredentials" class="badge badge-warn">premier login en attente</span>
@@ -42,7 +41,6 @@
           </div>
           <div :id="'modif-' + u.id" class="modif-ligne" :class="{ visible: modifOuverts.has(u.id) }">
             <form class="form-modif-utilisateur" @submit.prevent="sauvegarderModif(u)">
-              <input v-model="modifData[u.id].nom" type="text" maxlength="100" placeholder="Nom" aria-label="Nom de l'utilisateur" />
               <input v-model="modifData[u.id].email" type="email" placeholder="Email" aria-label="Adresse email de l'utilisateur" />
               <select v-model="modifData[u.id].role" aria-label="Rôle de l'utilisateur">
                 <option value="user">user</option>
@@ -61,7 +59,7 @@
 
   <dialog ref="dialogSupprimerUserRef" id="dialog-supprimer-user">
     <p class="dialog-titre">Supprimer ce compte ?</p>
-    <p id="dialog-supprimer-user-nom" class="dialog-corps">{{ userASupprimer?.name }}</p>
+    <p id="dialog-supprimer-user-nom" class="dialog-corps">{{ userASupprimer?.email }}</p>
     <div class="dialog-pied">
       <button type="button" id="dialog-supprimer-user-confirmer" class="btn btn-danger" @click="confirmerSuppression">Supprimer</button>
       <button type="button" id="dialog-supprimer-user-annuler" class="btn btn-secondary" @click="fermerDialogSupprimer">Annuler</button>
@@ -126,7 +124,7 @@ async function charger() {
 function initialiserModifData() {
   for (const u of utilisateurs.value) {
     if (!modifData[u.id]) {
-      modifData[u.id] = { nom: u.name ?? '', email: u.email ?? '', role: u.role ?? 'user' }
+      modifData[u.id] = { email: u.email ?? '', role: u.role ?? 'user' }
     }
   }
 }
@@ -175,7 +173,7 @@ async function sauvegarderModif(u) {
   const rep = await fetch('/api/admin/utilisateurs/' + u.id, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nom: d.nom, email: d.email, role: d.role }),
+    body: JSON.stringify({ email: d.email, role: d.role }),
   })
   const corps = await rep.json()
   if (rep.ok) {

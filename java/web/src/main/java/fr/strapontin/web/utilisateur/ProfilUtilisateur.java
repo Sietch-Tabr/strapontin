@@ -9,9 +9,4 @@ package fr.strapontin.web.utilisateur;
 /// @since 2.1.0
 /// @author Kwaite
 public record ProfilUtilisateur(
-    String id,
-    String nom,
-    String email,
-    String identifiant,
-    String pendingEmail,
-    boolean twoFactorActif) {}
+    String id, String email, String identifiant, String pendingEmail, boolean twoFactorActif) {}

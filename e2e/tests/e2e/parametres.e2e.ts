@@ -381,20 +381,6 @@ test.describe("Scénario: Préférences — filtre disponibles", () => {
   });
 });
 
-test.describe("Scénario: Compte — nom d'affichage", () => {
-  test("profil_modification_nom_affiche_toast_succes", async ({ page }) => {
-    await page.goto("/parametres#compte");
-    const champNom = page.locator("input#nom");
-    const nomOriginal = await champNom.inputValue();
-    await champNom.fill("Test Playwright");
-    await page.getByRole("button", { name: "Enregistrer" }).click();
-    await expect(
-      page.locator(".alerte-succes").filter({ hasText: "enregistré" }),
-    ).toBeVisible({ timeout: 5000 });
-    await champNom.fill(nomOriginal);
-    await page.getByRole("button", { name: "Enregistrer" }).click();
-  });
-});
 
 test.describe("Scénario: API compte — identifiant", () => {
   test("api_identifiant_trop_court_retourne_400", async ({ request }) => {

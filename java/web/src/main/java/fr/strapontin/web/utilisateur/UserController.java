@@ -54,7 +54,7 @@ public class UserController {
   /// Retourne le profil de l'utilisateur courant.
   ///
   /// @param auth contexte d'authentification
-  /// @return le profil (id, nom, email, identifiant, pendingEmail)
+  /// @return le profil (id, email, identifiant, pendingEmail)
   @GetMapping("/profile")
   public ResponseEntity<ProfilUtilisateur> lireProfil(Authentication auth) {
     UtilisateurDetails details = utilisateur(auth);
@@ -64,7 +64,6 @@ public class UserController {
             e ->
                 new ProfilUtilisateur(
                     details.id(),
-                    details.nom(),
                     e.email(),
                     details.identifiant(),
                     e.pendingEmail(),
@@ -73,23 +72,15 @@ public class UserController {
         .orElse(ResponseEntity.notFound().build());
   }
 
-  /// Met à jour le nom et/ou l'email de l'utilisateur courant.
+  /// Met à jour l'email de l'utilisateur courant.
   ///
-  /// @param requete corps JSON avec {@code nom} et/ou {@code email}
+  /// @param requete corps JSON avec {@code email}
   /// @param auth    contexte d'authentification
   /// @return 200 si mis à jour, 400 si invalide
   @PatchMapping("/profile")
   public ResponseEntity<Map<String, Object>> majProfil(
       @Valid @RequestBody RequeteProfil requete, Authentication auth) {
     String userId = utilisateur(auth).id();
-
-    if (requete.nom() != null) {
-      String nom = requete.nom().strip();
-      if (nom.isEmpty() || nom.length() > 100) {
-        return erreur(400, "Nom invalide (1-100 caractères).");
-      }
-      utilisateurRepository.majNom(userId, nom);
-    }
 
     if (requete.email() != null) {
       String email = requete.email().strip().toLowerCase();
@@ -188,10 +179,10 @@ public class UserController {
     utilisateurRepository.desactiverTotp(userId);
   }
 
-  /// Complète la première connexion : nom, identifiant, mot de passe, et lève
+  /// Complète la première connexion : identifiant, mot de passe, et lève
   /// {@code must_change_credentials}.
   ///
-  /// @param requete    corps JSON avec nom, identifiant, motDePasseActuel, motDePasseNouveau
+  /// @param requete    corps JSON avec identifiant, motDePasseActuel, motDePasseNouveau
   /// @param auth       contexte d'authentification
   /// @param httpRequest pour invalider la session après changement
   /// @return 200 si terminé, 400 si invalide
@@ -207,12 +198,8 @@ public class UserController {
       return erreur(403, "Accès refusé.");
     }
 
-    String nom = requete.nom().strip();
     String identifiant = requete.identifiant().strip().toLowerCase();
 
-    if (nom.isEmpty() || nom.length() > 100) {
-      return erreur(400, "Nom invalide (1-100 caractères).");
-    }
     if (identifiant.length() < 3 || identifiant.length() > 30) {
       return erreur(400, "L'identifiant doit contenir entre 3 et 30 caractères.");
     }
@@ -230,7 +217,7 @@ public class UserController {
       return erreur(400, "Cet identifiant est déjà utilisé.");
     }
 
-    utilisateurRepository.majPremierLogin(details.id(), nom, identifiant);
+    utilisateurRepository.majPremierLogin(details.id(), identifiant);
     utilisateurRepository.changerMotDePasse(
         details.id(), passwordEncoder.encode(requete.motDePasseNouveau()));
 

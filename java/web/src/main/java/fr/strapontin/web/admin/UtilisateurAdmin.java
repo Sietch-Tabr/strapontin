@@ -12,7 +12,6 @@ import java.time.Instant;
 /// @author Kwaite
 public record UtilisateurAdmin(
     String id,
-    String name,
     String email,
     String role,
     String username,

@@ -101,7 +101,6 @@ public class AuthController {
         new UtilisateurDto(
             details.id(),
             details.identifiant(),
-            details.nom(),
             details.email(),
             details.role(),
             details.doitChangerCredentials(),
@@ -205,7 +204,6 @@ public class AuthController {
         new UtilisateurDto(
             details.id(),
             details.identifiant(),
-            details.nom(),
             details.email(),
             details.role(),
             details.doitChangerCredentials(),

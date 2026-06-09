@@ -7,7 +7,6 @@
         :nav-secondaire="navSecondaire"
         :nav-footer="navFooter"
         :nb-nouveau="nbNouveau"
-        :nom-utilisateur="nomUtilisateur"
         :est-admin="estAdmin"
       />
       <main id="contenu-principal" class="main-content">
@@ -27,7 +26,6 @@
         :ouvert="drawerOuvert"
         :nav-secondaire="navSecondaire"
         :nav-footer="navFooter"
-        :nom-utilisateur="nomUtilisateur"
         :est-admin="estAdmin"
         @fermer="drawerOuvert = false"
       />
@@ -79,7 +77,6 @@ const navFooter = [
 ]
 
 const nbNouveau = computed(() => session.value?.nbNouveau ?? 0)
-const nomUtilisateur = computed(() => session.value?.nom ?? '')
 const estAdmin = computed(() => session.value?.role === 'admin')
 
 watch(() => route.path, () => {

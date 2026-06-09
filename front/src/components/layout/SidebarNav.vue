@@ -60,12 +60,9 @@
         <span>{{ item.label }}</span>
       </a>
       <hr />
-      <div class="sidebar-user">
-        <span>{{ nomUtilisateur }}</span>
-        <form action="/logout" method="post" @submit.prevent="deconnecter">
-          <button type="submit" class="btn-deconnexion">Déconnexion</button>
-        </form>
-      </div>
+      <form action="/logout" method="post" @submit.prevent="deconnecter">
+        <button type="submit" class="btn-deconnexion">Déconnexion</button>
+      </form>
     </div>
   </nav>
 </template>
@@ -81,7 +78,6 @@ const props = defineProps({
   navSecondaire: { type: Array, default: () => [] },
   navFooter: { type: Array, default: () => [] },
   nbNouveau: { type: Number, default: 0 },
-  nomUtilisateur: { type: String, default: '' },
   estAdmin: { type: Boolean, default: false },
 })
 

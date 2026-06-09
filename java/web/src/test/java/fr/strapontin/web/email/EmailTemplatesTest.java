@@ -77,12 +77,7 @@ class EmailTemplatesTest {
   void signalement_contientToutesLesDonnees() {
     String html =
         EmailTemplates.signalement(
-            "Bug",
-            "Alice Dupont",
-            "alice@exemple.fr",
-            "Le bouton ne fonctionne pas.",
-            "https://app.fr");
-    assertThat(html).contains("Alice Dupont");
+            "Bug", "alice@exemple.fr", "Le bouton ne fonctionne pas.", "https://app.fr");
     assertThat(html).contains("alice@exemple.fr");
     assertThat(html).contains("Le bouton ne fonctionne pas.");
     assertThat(html).contains("Signalement — Bug");
@@ -92,7 +87,7 @@ class EmailTemplatesTest {
   void signalement_messageAvecBalises_estEchappe() {
     String html =
         EmailTemplates.signalement(
-            "Bug", "Bob", "bob@ex.fr", "<b>injection</b> & 'test'", "https://app.fr");
+            "Bug", "bob@ex.fr", "<b>injection</b> & 'test'", "https://app.fr");
     assertThat(html).contains("&lt;b&gt;injection&lt;/b&gt; &amp; &#39;test&#39;");
     assertThat(html).doesNotContain("<b>injection</b>");
   }

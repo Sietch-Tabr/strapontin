@@ -94,7 +94,7 @@ public class AideRestController {
         Set.of("bug", "suggestion", "question").contains(requete.type())
             ? requete.type()
             : "question";
-    emailService.envoyerSignalement(typeValide, msg, utilisateur.email(), utilisateur.nom());
+    emailService.envoyerSignalement(typeValide, msg, utilisateur.email());
     return ResponseEntity.noContent().build();
   }
 
