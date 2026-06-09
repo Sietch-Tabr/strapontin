@@ -87,9 +87,6 @@ public class AuthService {
 
   /// Active un compte invité : définit identifiant et mot de passe en une seule opération.
   ///
-  /// <p>Après activation, {@code must_change_credentials} est {@code false} — aucun passage
-  /// par {@code /first-login} requis.
-  ///
   /// @param token       token brut (non hashé), doit être de type {@code invite:}
   /// @param identifiant identifiant choisi (déjà normalisé en minuscules, format validé)
   /// @param motDePasse  mot de passe en clair (longueur validée)
@@ -140,7 +137,10 @@ public class AuthService {
 
     String email = identifiant.contains(":") ? identifiant.split(":", 2)[1] : identifiant;
     boolean estInvitation = identifiant.startsWith("invite:");
-    log.info("Réinitialisation mot de passe : type={}, emailHash={}", estInvitation ? "invite" : "reset", email.hashCode());
+    log.info(
+        "Réinitialisation mot de passe : type={}, emailHash={}",
+        estInvitation ? "invite" : "reset",
+        email.hashCode());
     verificationRepository.majMotDePasseParEmail(email, passwordEncoder.encode(motDePasse));
     if (!estInvitation) {
       verificationRepository.majMustChangeFalseParEmail(email);

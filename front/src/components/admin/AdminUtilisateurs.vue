@@ -25,7 +25,7 @@
               <div class="user-carte-badges">
                 <span v-if="u.username" class="badge badge-mono">@{{ u.username }}</span>
                 <span v-if="u.role === 'admin'" class="badge badge-info">admin</span>
-                <span v-if="u.mustChangeCredentials" class="badge badge-warn">premier login en attente</span>
+                <span v-if="u.mustChangeCredentials" class="badge badge-warn">activation en attente</span>
               </div>
               <p class="user-carte-email">{{ u.email }}</p>
               <p class="user-carte-activite">

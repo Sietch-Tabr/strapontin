@@ -90,8 +90,6 @@ async function soumettre() {
     const data = await rep.json()
     if (data.totpRequis) {
       router.push('/auth/totp')
-    } else if (data.doitChangerCredentials) {
-      router.push('/first-login')
     } else {
       router.push('/')
     }
