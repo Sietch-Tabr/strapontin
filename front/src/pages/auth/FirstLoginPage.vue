@@ -24,7 +24,7 @@
         />
       </div>
       <div class="form-group">
-        <label for="mot-de-passe-actuel">Mot de passe temporaire</label>
+        <label for="mot-de-passe-actuel">Mot de passe actuel</label>
         <input
           id="mot-de-passe-actuel"
           v-model="motDePasseActuel"
@@ -32,7 +32,7 @@
           type="password"
           required
           autocomplete="current-password"
-          placeholder="Votre mot de passe temporaire"
+          placeholder="Votre mot de passe actuel"
         />
       </div>
       <div class="form-group">
