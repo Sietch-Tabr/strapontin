@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,15 +42,21 @@ public class AdminController {
   private final AdminService adminService;
   private final EmailService emailService;
   private final VapidService vapidService;
+  private final ConfigService configService;
 
-  /// @param adminService service d'administration
-  /// @param emailService service d'envoi d'emails
-  /// @param vapidService service de gestion des clés VAPID
+  /// @param adminService  service d'administration
+  /// @param emailService  service d'envoi d'emails
+  /// @param vapidService  service de gestion des clés VAPID
+  /// @param configService service de configuration pour lire PUBLIC_BASE_URL
   public AdminController(
-      AdminService adminService, EmailService emailService, VapidService vapidService) {
+      AdminService adminService,
+      EmailService emailService,
+      VapidService vapidService,
+      ConfigService configService) {
     this.adminService = adminService;
     this.emailService = emailService;
     this.vapidService = vapidService;
+    this.configService = configService;
   }
 
   /// Retourne la liste des utilisateurs avec leur dernière activité.
@@ -280,13 +287,20 @@ public class AdminController {
     return ResponseEntity.status(status).body(corps);
   }
 
-  private static String baseUrlDepuisRequete(HttpServletRequest request) {
-    String scheme = request.getScheme();
-    String host = request.getServerName();
-    int port = request.getServerPort();
-    if (("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443)) {
-      return scheme + "://" + host + request.getContextPath();
-    }
-    return scheme + "://" + host + ":" + port + request.getContextPath();
+  private String baseUrlDepuisRequete(HttpServletRequest request) {
+    return configService
+        .lireConfig("PUBLIC_BASE_URL")
+        .filter(s -> !s.isBlank())
+        .orElseGet(
+            () -> {
+              String scheme = request.getScheme();
+              String host = request.getServerName();
+              int port = request.getServerPort();
+              if (("http".equals(scheme) && port == 80)
+                  || ("https".equals(scheme) && port == 443)) {
+                return scheme + "://" + host + request.getContextPath();
+              }
+              return scheme + "://" + host + ":" + port + request.getContextPath();
+            });
   }
 }

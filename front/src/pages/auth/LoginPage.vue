@@ -84,7 +84,12 @@ async function soumettre() {
       body: JSON.stringify({ identifiant: identifiant.value, motDePasse: motDePasse.value }),
     })
     if (!rep.ok) {
-      erreurSoumission.value = 'Identifiant ou mot de passe incorrect.'
+      if (rep.status === 429) {
+        const corps = await rep.json().catch(() => ({}))
+        erreurSoumission.value = corps.erreur ?? 'Trop de tentatives. Réessayez plus tard.'
+      } else {
+        erreurSoumission.value = 'Identifiant ou mot de passe incorrect.'
+      }
       return
     }
     const data = await rep.json()
