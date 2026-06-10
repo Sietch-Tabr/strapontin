@@ -40,7 +40,7 @@
 defineOptions({ name: 'App' })
 
 import { ref, computed, watchEffect, watch, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import SidebarNav from './components/layout/SidebarNav.vue'
 import BottomNav from './components/layout/BottomNav.vue'
 import DrawerNav from './components/layout/DrawerNav.vue'
@@ -50,12 +50,15 @@ import { chargerBanniere } from './composables/useBanniere.js'
 import { useTheme } from './composables/useTheme.js'
 import { useSession } from './composables/useSession.js'
 import { useEstMobile } from './composables/useBreakpoint.js'
+import { useToasts } from './composables/useToasts.js'
 
 useTheme()
 const estMobile = useEstMobile()
 
 const { session, chargerSession } = useSession()
 const route = useRoute()
+const router = useRouter()
+const { afficherToast, fermerToast } = useToasts()
 
 const drawerOuvert = ref(false)
 
@@ -107,7 +110,24 @@ onMounted(async () => {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       window.location.reload()
     })
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data?.type === 'nav-ancre') {
+        router.push(event.data.url)
+      }
+    })
   }
+
+  let idToastHorsLigne = null
+  window.addEventListener('offline', () => {
+    idToastHorsLigne = afficherToast('Vous êtes hors ligne.', 'erreur')
+  })
+  window.addEventListener('online', () => {
+    if (idToastHorsLigne !== null) {
+      fermerToast(idToastHorsLigne)
+      idToastHorsLigne = null
+    }
+    afficherToast('Connexion rétablie.', 'succes')
+  })
 })
 
 </script>

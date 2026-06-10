@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,12 +47,16 @@ public class ParametresRestController {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final EmailService emailService;
+  private final ConfigService configService;
 
-  /// @param jdbc         template JDBC paramétré
-  /// @param emailService service d'envoi d'emails
-  public ParametresRestController(NamedParameterJdbcTemplate jdbc, EmailService emailService) {
+  /// @param jdbc          template JDBC paramétré
+  /// @param emailService  service d'envoi d'emails
+  /// @param configService service de configuration pour lire PUBLIC_BASE_URL
+  public ParametresRestController(
+      NamedParameterJdbcTemplate jdbc, EmailService emailService, ConfigService configService) {
     this.jdbc = jdbc;
     this.emailService = emailService;
+    this.configService = configService;
   }
 
   /// Retourne les compteurs d'artistes et de salles pour l'utilisateur courant.
@@ -248,13 +253,23 @@ public class ParametresRestController {
     }
   }
 
-  private static String baseUrl(HttpServletRequest request) {
-    String scheme = request.getScheme();
-    String host = request.getServerName();
-    int port = request.getServerPort();
-    boolean portDefaut =
-        ("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443);
-    return scheme + "://" + host + (portDefaut ? "" : ":" + port) + request.getContextPath();
+  private String baseUrl(HttpServletRequest request) {
+    return configService
+        .lireConfig("PUBLIC_BASE_URL")
+        .filter(s -> !s.isBlank())
+        .orElseGet(
+            () -> {
+              String scheme = request.getScheme();
+              String host = request.getServerName();
+              int port = request.getServerPort();
+              boolean portDefaut =
+                  ("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443);
+              return scheme
+                  + "://"
+                  + host
+                  + (portDefaut ? "" : ":" + port)
+                  + request.getContextPath();
+            });
   }
 
   private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {

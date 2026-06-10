@@ -203,7 +203,7 @@ public class AdminService {
         Map.of("id", accountId, "accountId", userId, "userId", userId, "password", hashMdp));
 
     String token = genererToken(32);
-    Instant expiresAt = Instant.now().plus(24, ChronoUnit.HOURS);
+    Instant expiresAt = Instant.now().plus(7, ChronoUnit.DAYS);
     verificationRepository.inserer(
         UUID.randomUUID().toString(), "invite:" + email, sha256Hex(token), expiresAt);
 

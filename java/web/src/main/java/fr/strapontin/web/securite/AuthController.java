@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.securite;
 
+import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -49,20 +50,24 @@ public class AuthController {
   private final AuthService authService;
   private final TotpService totpService;
   private final NamedParameterJdbcTemplate jdbc;
+  private final ConfigService configService;
 
   /// @param authenticationManager gestionnaire d'authentification Spring Security
   /// @param authService           service de réinitialisation de mot de passe
   /// @param totpService           service de vérification des codes TOTP
   /// @param jdbc                  accès JDBC pour récupérer le secret TOTP de l'utilisateur
+  /// @param configService         service de configuration pour lire PUBLIC_BASE_URL
   public AuthController(
       AuthenticationManager authenticationManager,
       AuthService authService,
       TotpService totpService,
-      NamedParameterJdbcTemplate jdbc) {
+      NamedParameterJdbcTemplate jdbc,
+      ConfigService configService) {
     this.authenticationManager = authenticationManager;
     this.authService = authService;
     this.totpService = totpService;
     this.jdbc = jdbc;
+    this.configService = configService;
   }
 
   /// Authentifie un utilisateur et crée une session persistante.
@@ -305,13 +310,20 @@ public class AuthController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  private static String baseUrlDepuisRequete(HttpServletRequest request) {
-    String scheme = request.getScheme();
-    String host = request.getServerName();
-    int port = request.getServerPort();
-    if (("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443)) {
-      return scheme + "://" + host + request.getContextPath();
-    }
-    return scheme + "://" + host + ":" + port + request.getContextPath();
+  private String baseUrlDepuisRequete(HttpServletRequest request) {
+    return configService
+        .lireConfig("PUBLIC_BASE_URL")
+        .filter(s -> !s.isBlank())
+        .orElseGet(
+            () -> {
+              String scheme = request.getScheme();
+              String host = request.getServerName();
+              int port = request.getServerPort();
+              if (("http".equals(scheme) && port == 80)
+                  || ("https".equals(scheme) && port == 443)) {
+                return scheme + "://" + host + request.getContextPath();
+              }
+              return scheme + "://" + host + ":" + port + request.getContextPath();
+            });
   }
 }

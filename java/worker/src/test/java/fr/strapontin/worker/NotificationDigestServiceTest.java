@@ -98,7 +98,7 @@ class NotificationDigestServiceTest {
     assertTrue(payload.contains("\"title\""), "Le payload push doit avoir un champ title");
     assertTrue(payload.contains("\"body\""), "Le payload push doit avoir un champ body");
     assertTrue(
-        payload.contains("/#artiste-stromae"), "L'URL push doit pointer sur l'ancre accueil");
+        payload.contains("/?ancre=artiste-stromae"), "L'URL push doit pointer sur l'ancre accueil");
   }
 
   @Test

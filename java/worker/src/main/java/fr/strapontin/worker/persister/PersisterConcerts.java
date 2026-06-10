@@ -323,13 +323,13 @@ public class PersisterConcerts {
   ///
   /// @param liste concerts à persister
   /// @return résultat avec nombre d'insertions et de mises à jour
-  @Transactional
   /// Résultat de la persistance d'un lot de concerts.
   ///
   /// @param nbInseres nombre de concerts insérés
   /// @param nbMisAJour nombre de concerts mis à jour
   public record ResultatPersistance(int nbInseres, int nbMisAJour) {}
 
+  @Transactional
   public ResultatPersistance persisterConcerts(List<ConcertBrut> liste) {
     if (liste.isEmpty()) return new ResultatPersistance(0, 0);
 

@@ -355,16 +355,26 @@ public class NotificationDigestService {
       } else {
         url =
             baseUrl
-                + "/#artiste-"
+                + "/?ancre=artiste-"
                 + URLEncoder.encode(premier.artisteNorm(), StandardCharsets.UTF_8);
       }
     } else {
-      url = baseUrl + "/";
+      url = baseUrl + "/?nouveau=true";
     }
     return """
     {"title":"%s","body":"%s","icon":"%s/images/icon-192.png","url":"%s"}\
     """
         .formatted(echapperJson(titre), echapperJson(corps), baseUrl, echapperJson(url));
+  }
+
+  private static String e(String valeur) {
+    if (valeur == null) return "";
+    return valeur
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#x27;");
   }
 
   private static String construireCorpsEmail(
@@ -373,11 +383,12 @@ public class NotificationDigestService {
         concerts.stream()
             .map(
                 c -> {
-                  String lieu = c.ville() != null ? c.salle() + " · " + c.ville() : c.salle();
+                  String lieu =
+                      c.ville() != null ? e(c.salle()) + " · " + e(c.ville()) : e(c.salle());
                   String lien =
                       c.url() != null
                           ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
-                              .formatted(c.url())
+                              .formatted(e(c.url()))
                           : "";
                   return """
                   <tr>
@@ -388,7 +399,7 @@ public class NotificationDigestService {
                     </td>
                   </tr>\
                   """
-                      .formatted(c.artiste(), formaterDate(c.date()), lien, lieu);
+                      .formatted(e(c.artiste()), formaterDate(c.date()), lien, lieu);
                 })
             .collect(Collectors.joining("\n"));
     return """

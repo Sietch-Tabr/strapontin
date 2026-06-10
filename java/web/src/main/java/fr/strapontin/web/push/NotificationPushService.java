@@ -163,10 +163,10 @@ public class NotificationPushService {
     String url =
         concerts.size() == 1
             ? baseUrl
-                + "/#artiste-"
+                + "/?ancre=artiste-"
                 + URLEncoder.encode(
                     Normalisation.normaliserTexte(premier.artiste()), StandardCharsets.UTF_8)
-            : baseUrl + "/";
+            : baseUrl + "/?nouveau=true";
 
     // JSON construit manuellement (pas de dépendance Jackson pour ce payload simple)
     return """

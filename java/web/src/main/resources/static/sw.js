@@ -251,6 +251,9 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  if ("clearAppBadge" in self.registration) {
+    self.registration.clearAppBadge();
+  }
   const url =
     event.action === "voir"
       ? "/spectacles"

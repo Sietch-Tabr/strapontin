@@ -32,7 +32,7 @@ final class EmailTemplates {
 
   /// Invitation d'un nouvel utilisateur.
   ///
-  /// @param lienReset le lien de création de compte (valable 24 heures)
+  /// @param lienReset le lien de création de compte (valable 7 jours)
   /// @param baseUrl   l'URL publique de base de l'application
   /// @return le HTML de l'email d'invitation
   static String invitation(String lienReset, String baseUrl) {
@@ -44,7 +44,7 @@ final class EmailTemplates {
         </p>
         %s
         <p style="color: #aaa; font-size: 13px; margin: 16px 0 0">
-          Ce lien est valable 24 heures.
+          Ce lien est valable 7 jours.
         </p>
         """
             .formatted(bouton(lienReset, "Créer mon compte →"));

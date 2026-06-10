@@ -19,6 +19,7 @@ function afficherToast(message, type = "info") {
   if (delai > 0) {
     setTimeout(() => fermerToast(id), delai);
   }
+  return id;
 }
 
 function fermerToast(id) {

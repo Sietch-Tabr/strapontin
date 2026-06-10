@@ -136,14 +136,16 @@
 <script setup>
 defineOptions({ name: 'AccueilPage' })
 
-import { ref, shallowRef, computed, watch, onMounted } from 'vue'
+import { ref, shallowRef, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formaterAvecHeure } from '../composables/useDates.js'
 import { useToasts } from '../composables/useToasts.js'
+import { useSession } from '../composables/useSession.js'
 
 const route = useRoute()
 const router = useRouter()
 const { afficherToast } = useToasts()
+const { chargerSession } = useSession()
 
 const donnees = shallowRef(null)
 const chargement = ref(false)
@@ -243,10 +245,22 @@ async function demasquerGroupe(groupe) {
   }
 }
 
-watch(() => route.query, charger, { deep: true })
+async function scrollVersAncre() {
+  const ancre = route.query.ancre
+  if (!ancre) return
+  await nextTick()
+  document.getElementById(String(ancre))?.scrollIntoView({ behavior: 'smooth' })
+}
+
+watch(() => route.query, async () => {
+  await charger()
+  await scrollVersAncre()
+}, { deep: true })
 
 onMounted(async () => {
   await fetch('/api/accueil/marquer-vus', { method: 'POST' })
+  chargerSession()
   await charger()
+  await scrollVersAncre()
 })
 </script>
