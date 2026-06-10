@@ -8,7 +8,39 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
-        <h2 class="changelog-version">v 2.2.0 — 6 juin 2026</h2>
+        <h2 class="changelog-version">v 2.2.1 — 11 juin 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Notifications push</p>
+            <ul>
+              <li>Clic sur une notification push : l'application défile directement jusqu'à la carte de l'artiste concerné et efface le badge de l'application sur l'écran d'accueil.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Interface</p>
+            <ul>
+              <li>Les alertes visuelles (toasts) s'affichent correctement dans tous les cas, y compris lors des actions d'administration.</li>
+              <li>Une alerte s'affiche quand vous perdez votre connexion à Internet ; elle disparaît automatiquement quand la connexion est rétablie.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Connexion</p>
+            <ul>
+              <li>En cas de trop nombreuses tentatives de connexion, un message explicite indique qu'il faut patienter avant de réessayer.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Les liens d'invitation sont désormais valables 7 jours (au lieu de 24 heures).</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.2.0 — 6 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Navigation</p>
@@ -38,7 +70,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.1.3 — 3 juin 2026</h2></summary>

@@ -178,7 +178,7 @@ Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein n
 - **Pages à onglets** (`admin`, `parametres`) : orchestrateur léger + sous-composants autonomes (`KeepAlive` + `v-if`). Chaque sous-composant fetch ses données dans `onMounted`. `<select v-model>` sur mobile (`v-if="estMobile"`), `<nav v-else>` sur desktop — rendu conditionnel via `useEstMobile()`. Onglet actif géré par Vue (`:class="{ actif }"`) — pas de sélecteurs CSS `:has()`.
   - Admin : `front/src/components/admin/` (AdminJobs, AdminLogs, AdminConfig, AdminBanniere, AdminUtilisateurs)
   - Paramètres : `front/src/components/parametres/` (ParametresPreferences, ParametresNotifications, ParametresCompte, ParametresDonnees)
-- **Toasts** : Popover API, `afficherToast(message, type)` depuis les composants Vue
+- **Toasts** : Popover API, `afficherToast(message, type)` retourne un `id` pour fermeture ciblée. `App.vue` gère offline/online : toast persistant à la perte de connexion, fermé à la reconnexion.
 
 ## Schéma PostgreSQL
 
