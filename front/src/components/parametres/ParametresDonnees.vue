@@ -189,6 +189,7 @@ async function supprimerCompte() {
   if (confirmationSuppression.value !== 'supprimer') return
   const rep = await fetch('/api/user', { method: 'DELETE' })
   if (rep.ok || rep.status === 204) {
+    afficherToast('Compte supprimé.', 'succes')
     router.push('/login')
   } else {
     afficherToast('Erreur lors de la suppression du compte.', 'erreur')

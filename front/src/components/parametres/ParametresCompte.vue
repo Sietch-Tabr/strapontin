@@ -203,6 +203,7 @@ async function changerMotDePasse() {
     }),
   })
   if (rep.ok) {
+    afficherToast('Mot de passe modifié. Reconnectez-vous.', 'succes')
     router.push('/login?reset=true')
   } else {
     const corps = await rep.json()
