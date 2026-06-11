@@ -46,7 +46,7 @@
               </tr>
             </thead>
             <tbody>
-              <template v-for="entree in logs" :key="entree.ts + entree.source + entree.message">
+              <template v-for="entree in logsAffiches" :key="entree.ts + entree.source + entree.message">
                 <tr
                   v-show="logVisible(entree)"
                   :class="entree.niveau === 'error' ? 'log-error' : entree.niveau === 'warn' ? 'log-warn' : ''"
@@ -56,9 +56,9 @@
                   <td data-label="Source">{{ entree.source }}</td>
                   <td class="log-message" data-label="Message">
                     {{ entree.message }}
-                    <div v-if="parseMeta(entree.meta)" class="log-meta">
+                    <div v-if="entree.metaParsee" class="log-meta">
                       <span
-                        v-for="(val, cle) in parseMeta(entree.meta)"
+                        v-for="(val, cle) in entree.metaParsee"
                         :key="cle"
                         class="log-meta-item"
                       >{{ cle }}: {{ val }}</span>
@@ -87,6 +87,11 @@ const { afficherToast } = useToasts()
 const logs = shallowRef([])
 const filtreSource = ref('')
 const filtresNiveaux = ref(new Set(['warn', 'error']))
+
+// Pré-calcule metaParsee une seule fois par entrée (au lieu de deux parseMeta par rendu).
+const logsAffiches = computed(() =>
+  logs.value.map((entree) => ({ ...entree, metaParsee: parseMeta(entree.meta) })),
+)
 
 const logsVisibles = computed(() => logs.value.filter(logVisible).length)
 

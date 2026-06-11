@@ -1,8 +1,13 @@
 import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router/index.js";
+import { afficherToast } from "./composables/useToasts.js";
 
 createApp(App).use(router).mount("#app");
+
+// Exposition globale après le montage (environnement browser garanti),
+// pour que le service worker (sw.js) puisse remonter ses erreurs.
+window.afficherToast = afficherToast;
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
