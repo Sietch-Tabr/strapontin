@@ -175,7 +175,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--fg-muted);
   transition: color 0.15s;
   background: none;
