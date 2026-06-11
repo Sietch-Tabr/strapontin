@@ -94,8 +94,7 @@ public class AdminController {
                         Map.of(
                             "succes", true,
                             "email", r.email(),
-                            "identifiant", r.identifiant(),
-                            "lienReset", r.lienReset())))
+                            "identifiant", r.identifiant())))
         .orElseGet(() -> erreur(400, "Impossible de créer le compte. Email déjà utilisé ?"));
   }
 
