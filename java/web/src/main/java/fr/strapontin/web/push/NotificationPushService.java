@@ -140,6 +140,46 @@ public class NotificationPushService {
     }
   }
 
+  /// Envoie une notification de test au dernier abonnement de l'utilisateur.
+  ///
+  /// @param userId l'identifiant de l'utilisateur
+  /// @return {@code true} si la notification a été envoyée
+  public boolean envoyerNotificationTest(String userId) {
+    Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
+    Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
+    if (clePublique.isEmpty() || clePrivee.isEmpty()) return false;
+
+    List<Map<String, Object>> abonnements =
+        jdbc.queryForList(
+            """
+            SELECT id, endpoint, p256dh, auth
+            FROM push_abonnements
+            WHERE user_id = :userId
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            Map.of("userId", userId));
+    if (abonnements.isEmpty()) return false;
+
+    String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
+    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
+    String payload =
+        """
+        {"title":"Strapontin","body":"Notification de test","icon":"%s/images/icon-192.png"}\
+        """
+            .formatted(baseUrl);
+
+    PushService pushService;
+    try {
+      pushService = new PushService(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
+    } catch (Exception e) {
+      log.error("Impossible d'initialiser le service VAPID", e);
+      return false;
+    }
+
+    return envoyerAUnAbonnement(abonnements.get(0), pushService, userId, payload) > 0;
+  }
+
   private void supprimerAbonnement(UUID id, String userId, String endpoint) {
     jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", id));
     log.info("Abonnement push révoqué, supprimé : {} — {}", userId, endpoint);
