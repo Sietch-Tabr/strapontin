@@ -8,7 +8,21 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
-        <h2 class="changelog-version">v 2.2.2 — 11 juin 2026</h2>
+        <h2 class="changelog-version">v 2.2.3 — 11 juin 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Interface</p>
+            <ul>
+              <li>Le bandeau d'information système ne réapparaît plus après avoir disparu automatiquement.</li>
+              <li>Les animations de transition entre les pages sont désormais identiques depuis le menu mobile.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.2.2 — 11 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Application installée (PWA)</p>
@@ -36,7 +50,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.2.1 — 11 juin 2026</h2></summary>
