@@ -6,10 +6,10 @@ const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
 export const FICHIER_AUTH_ADMIN = "tests/e2e/.auth-admin.json";
 export const FICHIER_AUTH_USER = "tests/e2e/.auth-user.json";
 
-const E2E_ADMIN_IDENTIFIANT = "e2e-admin";
+const E2E_ADMIN_IDENTIFIANT = "e2eadmin";
 const E2E_ADMIN_MOT_DE_PASSE =
   process.env["E2E_ADMIN_MOT_DE_PASSE"] ?? "e2e-admin-2026";
-const E2E_USER_IDENTIFIANT = "e2e-user";
+const E2E_USER_IDENTIFIANT = "e2euser";
 const E2E_USER_MOT_DE_PASSE =
   process.env["E2E_USER_MOT_DE_PASSE"] ?? "e2e-user-2026";
 

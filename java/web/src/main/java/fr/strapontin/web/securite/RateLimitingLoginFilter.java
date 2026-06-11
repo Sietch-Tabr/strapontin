@@ -66,7 +66,10 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
       chain.doFilter(request, response);
     } else {
       logAdminService.logAdmin(
-          "warn", "auth", "Rate limit connexion atteint : " + ip + " sur " + request.getServletPath(), Map.of("ip", ip));
+          "warn",
+          "auth",
+          "Rate limit connexion atteint : " + ip + " sur " + request.getServletPath(),
+          Map.of("ip", ip));
       response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
       response.setContentType(MediaType.APPLICATION_JSON_VALUE);
       response.setCharacterEncoding("UTF-8");
@@ -84,5 +87,4 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
             .build();
     return Bucket.builder().addLimit(limite).build();
   }
-
 }
