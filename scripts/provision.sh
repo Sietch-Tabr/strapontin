@@ -78,6 +78,9 @@ if [ -z "$APP_CONFIG_SECRET" ]; then
     echo "  --> Conservez cette valeur pour restaurer les app_config chiffrées."
 fi
 
+# Secret partagé protégeant l'endpoint interne /api/interne/backup-statut.
+BACKUP_INTERNAL_SECRET=$(openssl rand -hex 32)
+
 # ---------------------------------------------------------------
 # 1. Template Debian 13
 # ---------------------------------------------------------------
@@ -278,6 +281,7 @@ SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/$DB_NAME
 SPRING_DATASOURCE_USERNAME=$APP_USER
 SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
 APP_CONFIG_SECRET=$APP_CONFIG_SECRET
+BACKUP_INTERNAL_SECRET=$BACKUP_INTERNAL_SECRET
 SPRING_PROFILES_ACTIVE=dev
 ENVFILE
 chown $APP_USER:$APP_USER $APP_DIR/.env
@@ -289,6 +293,7 @@ SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/$DB_NAME
 SPRING_DATASOURCE_USERNAME=$APP_USER
 SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
 APP_CONFIG_SECRET=$APP_CONFIG_SECRET
+BACKUP_INTERNAL_SECRET=$BACKUP_INTERNAL_SECRET
 ENVFILE
 chown $APP_USER:$APP_USER $APP_DIR/.env
 chmod 600 $APP_DIR/.env
