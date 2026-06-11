@@ -5,6 +5,7 @@
 package fr.strapontin.web.push;
 
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.UtilitairesChaine;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.net.URLEncoder;
@@ -212,11 +213,11 @@ public class NotificationPushService {
     return """
     {"title":"%s","body":"%s","icon":"%s/images/icon-192.png","url":"%s"}\
     """
-        .formatted(echapperJson(titre), echapperJson(corps), baseUrl, echapperJson(url));
-  }
-
-  private static String echapperJson(String s) {
-    return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+        .formatted(
+            UtilitairesChaine.echapperJson(titre),
+            UtilitairesChaine.echapperJson(corps),
+            baseUrl,
+            UtilitairesChaine.echapperJson(url));
   }
 
   private static int extraireCodeHttp(Exception e) {

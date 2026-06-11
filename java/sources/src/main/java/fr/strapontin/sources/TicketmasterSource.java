@@ -5,6 +5,7 @@
 package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.QuotaTM;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -36,7 +37,10 @@ public class TicketmasterSource {
   private static final Logger log = LoggerFactory.getLogger(TicketmasterSource.class);
 
   private static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
-  private static final List<String> CLASSIFICATIONS = List.of("music", "opera", "musical");
+
+  /// Classifications Ticketmaster filtrées lors des fetchs (musique, opéra, comédie musicale).
+  /// Valeur canonique partagée — référencée par le worker plutôt que redéfinie.
+  public static final List<String> CLASSIFICATIONS = List.of("music", "opera", "musical");
   private static final int TAILLE_PAGE_REGION = 200;
   // TM refuse offset > 1000 : avec size=200, page 6 → offset 1000 (ok), page 7 → 1200 (HTTP 400)
   private static final int NB_PAGES_MAX = 6;

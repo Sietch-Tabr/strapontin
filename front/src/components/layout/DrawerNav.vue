@@ -56,7 +56,8 @@
 defineOptions({ name: 'DrawerNav' })
 
 import { ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
+import { useNavigation } from '../../composables/useNavigation.js'
 
 const props = defineProps({
   ouvert: { type: Boolean, default: false },
@@ -69,7 +70,7 @@ const emit = defineEmits(['fermer'])
 
 const dialogRef = ref(null)
 const route = useRoute()
-const router = useRouter()
+const { naviguer } = useNavigation()
 
 watch(
   () => props.ouvert,
@@ -91,11 +92,7 @@ function estActif(href) {
 
 function naviguerEtFermer(href) {
   setTimeout(() => dialogRef.value?.close(), 0)
-  if (router.resolve(href).matched.length === 0) {
-    window.location.href = href
-  } else {
-    router.push(href)
-  }
+  naviguer(href)
 }
 
 function clicBackdrop(e) {

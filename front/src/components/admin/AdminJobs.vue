@@ -130,6 +130,8 @@ const workerLastSuccess = ref(null)
 const etatQuota = ref('ok')
 const relancerEnCours = ref(false)
 let pollingInterval = null
+// #571 : annule les fetch en vol à la destruction du composant (pas de maj de refs mortes).
+const controleur = new AbortController()
 
 const pctQuota = computed(() => {
   if (!quotaTM.value || quotaTM.value.total === 0) return 0
@@ -172,7 +174,7 @@ function formaterDuree(ms) {
 
 async function charger() {
   try {
-    const rep = await fetch('/api/admin/jobs')
+    const rep = await fetch('/api/admin/jobs', { signal: controleur.signal })
     if (!rep.ok) return
     const d = await rep.json()
     statsJobs.value = d.statsJobs ?? []
@@ -181,7 +183,8 @@ async function charger() {
     workerLastSuccess.value = d.workerLastSuccess ?? null
     etatQuota.value = d.etatQuota ?? 'ok'
     if (jobsEnCours.value.length > 0) demarrerPolling()
-  } catch (_) {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Erreur lors du chargement des jobs.', 'erreur')
   }
 }
@@ -189,7 +192,7 @@ async function charger() {
 async function relancerFetches() {
   relancerEnCours.value = true
   try {
-    const rep = await fetch('/api/admin/relancer', { method: 'POST' })
+    const rep = await fetch('/api/admin/relancer', { method: 'POST', signal: controleur.signal })
     if (rep.ok) {
       afficherToast('Fetches relancés.', 'succes')
       demarrerPolling()
@@ -197,7 +200,8 @@ async function relancerFetches() {
       relancerEnCours.value = false
       afficherToast('Erreur — worker inaccessible.', 'erreur')
     }
-  } catch (_) {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     relancerEnCours.value = false
     afficherToast('Erreur réseau.', 'erreur')
   }
@@ -207,7 +211,7 @@ function demarrerPolling() {
   arreterPolling()
   pollingInterval = setInterval(async () => {
     try {
-      const rep = await fetch('/api/admin/jobs')
+      const rep = await fetch('/api/admin/jobs', { signal: controleur.signal })
       if (!rep.ok) return
       const d = await rep.json()
       statsJobs.value = d.statsJobs ?? statsJobs.value
@@ -217,7 +221,8 @@ function demarrerPolling() {
         relancerEnCours.value = false
         relancerStatut.value = ''
       }
-    } catch (_) {
+    } catch (e) {
+      if (e.name === 'AbortError') return
       arreterPolling()
     }
   }, 3000)
@@ -231,5 +236,8 @@ function arreterPolling() {
 }
 
 onMounted(charger)
-onUnmounted(arreterPolling)
+onUnmounted(() => {
+  arreterPolling()
+  controleur.abort()
+})
 </script>

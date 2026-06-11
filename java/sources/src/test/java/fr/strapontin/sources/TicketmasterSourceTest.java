@@ -9,6 +9,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.QuotaTM;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

@@ -6,7 +6,7 @@ package fr.strapontin.worker.quota;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import fr.strapontin.sources.QuotaTM;
+import fr.strapontin.core.QuotaTM;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;

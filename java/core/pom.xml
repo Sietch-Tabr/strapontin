@@ -7,19 +7,13 @@
     <parent>
         <groupId>fr.strapontin</groupId>
         <artifactId>strapontin-parent</artifactId>
-        <version>2.2.2</version>
+        <version>2.2.3</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>core</artifactId>
 
     <dependencies>
-        <!-- Levenshtein pour le dédup fuzzy -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-text</artifactId>
-        </dependency>
-
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

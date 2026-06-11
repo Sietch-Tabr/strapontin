@@ -7,6 +7,7 @@ package fr.strapontin.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
 import com.resend.services.emails.model.CreateEmailOptions;
+import fr.strapontin.core.UtilitairesChaine;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
@@ -136,7 +137,7 @@ public class NotificationDigestService {
                     SELECT 1 FROM user_salles us
                     JOIN salles s ON s.id = us.salle_id
                     WHERE us.user_id = um.user_id
-                      AND c.salle_norm = s.nom_norm
+                      AND c.salle_cle = s.id
                   ))
                 )
               ORDER BY um.user_id, c.date
@@ -364,7 +365,11 @@ public class NotificationDigestService {
     return """
     {"title":"%s","body":"%s","icon":"%s/images/icon-192.png","url":"%s"}\
     """
-        .formatted(echapperJson(titre), echapperJson(corps), baseUrl, echapperJson(url));
+        .formatted(
+            UtilitairesChaine.echapperJson(titre),
+            UtilitairesChaine.echapperJson(corps),
+            baseUrl,
+            UtilitairesChaine.echapperJson(url));
   }
 
   private static String e(String valeur) {
@@ -489,9 +494,5 @@ public class NotificationDigestService {
     return DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
         .withLocale(Locale.FRANCE)
         .format(date);
-  }
-
-  private static String echapperJson(String s) {
-    return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
 }

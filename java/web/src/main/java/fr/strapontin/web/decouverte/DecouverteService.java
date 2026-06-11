@@ -4,6 +4,9 @@
  */
 package fr.strapontin.web.decouverte;
 
+import static fr.strapontin.web.concert.FiltreConcertsBuilder.CONCERTS_PAR_PAGE;
+
+import fr.strapontin.web.concert.FiltreConcertsBuilder;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -28,7 +31,6 @@ import org.springframework.stereotype.Service;
 public class DecouverteService {
 
   private static final Logger log = LoggerFactory.getLogger(DecouverteService.class);
-  private static final int CONCERTS_PAR_PAGE = 100;
   private static final String CLE_DEPTS = "depts";
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -68,14 +70,13 @@ public class DecouverteService {
     Map<String, Object> params = new HashMap<>();
     params.put("limit", CONCERTS_PAR_PAGE);
     params.put("offset", pageNum * CONCERTS_PAR_PAGE);
-    String rechercheNorm = q.strip().substring(0, Math.min(q.strip().length(), 100));
-    String genreStr = genre.strip().substring(0, Math.min(genre.strip().length(), 50));
+    String rechercheNorm = FiltreConcertsBuilder.tronquer(q, 100);
+    String genreStr = FiltreConcertsBuilder.tronquer(genre, 50);
     StringBuilder where =
         construireFiltresWhere(
             deptsActifs, rechercheNorm, mois, genreStr, classification, aujourd8, params);
 
-    String orderBy =
-        "nouveaute".equals(tri) ? "c.first_seen DESC, c.date ASC" : "c.date ASC, c.artiste ASC";
+    String orderBy = FiltreConcertsBuilder.clauseTri(tri);
 
     List<ConcertDecouverte> concerts =
         jdbc.query(
@@ -224,20 +225,9 @@ public class DecouverteService {
       where.append(" AND (c.artiste ILIKE :q OR c.salle ILIKE :q)");
       params.put("q", "%" + rechercheNorm + "%");
     }
-    if (!mois.isBlank() && mois.matches("\\d{4}-\\d{2}")) {
-      LocalDate debutMois = LocalDate.parse(mois + "-01");
-      where.append(" AND c.date >= :moisDebut AND c.date < :moisFin");
-      params.put("moisDebut", debutMois);
-      params.put("moisFin", debutMois.plusMonths(1));
-    }
-    if (!genreStr.isEmpty()) {
-      where.append(" AND c.genre ILIKE :genre");
-      params.put("genre", genreStr);
-    }
-    if (!classification.isBlank()) {
-      where.append(" AND c.classification = :classification");
-      params.put("classification", classification);
-    }
+    FiltreConcertsBuilder.appliquerMois(where, params, mois);
+    FiltreConcertsBuilder.appliquerGenre(where, params, genreStr);
+    FiltreConcertsBuilder.appliquerClassification(where, params, classification);
     return where;
   }
 
