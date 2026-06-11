@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
 
 test.describe("Scénario: navigation et chargement des pages", () => {
   test("accueil_charge_sans_erreur_500", async ({ page }) => {
@@ -37,12 +38,6 @@ test.describe("Scénario: navigation et chargement des pages", () => {
     await expect(page.locator("main")).toBeVisible();
   });
 
-  test("admin_charge_sans_erreur_500", async ({ page }) => {
-    const response = await page.goto("/admin");
-    expect(response?.status()).not.toBe(500);
-    await expect(page.locator("main")).toBeVisible();
-  });
-
   test("aide_charge_sans_erreur_500", async ({ page }) => {
     const response = await page.goto("/aide");
     expect(response?.status()).not.toBe(500);
@@ -60,6 +55,16 @@ test.describe("Scénario: navigation et chargement des pages", () => {
     expect(rep.status()).toBe(200);
     const corps = await rep.json();
     expect(corps.status).toBe("UP");
+  });
+});
+
+test.describe("Scénario: navigation admin", () => {
+  test.use({ storageState: FICHIER_AUTH_ADMIN });
+
+  test("admin_charge_sans_erreur_500", async ({ page }) => {
+    const response = await page.goto("/admin");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
   });
 });
 

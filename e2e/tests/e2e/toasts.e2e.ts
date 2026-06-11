@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
 
 async function soumettreDepartements(page: import("@playwright/test").Page) {
   await page.goto("/parametres");
@@ -8,7 +9,6 @@ async function soumettreDepartements(page: import("@playwright/test").Page) {
   await page.click(
     'form:has(input[name="departements"]) button[type="submit"]',
   );
-  // Pas de rechargement en Vue — on attend l'apparition du toast
   await page
     .locator(".alerte-succes")
     .first()
@@ -23,17 +23,6 @@ test.describe("Toasts (Popover API)", () => {
     const toast = page.locator(".alerte-succes");
     await expect(toast.first()).toBeVisible({ timeout: 3000 });
     await expect(toast.first()).toContainText("Départements enregistrés");
-  });
-
-  test("toast succes admin relancer fetches", async ({ page }) => {
-    await page.goto("/admin#jobs");
-    await page
-      .getByRole("button", { name: "Relancer les fetches maintenant" })
-      .click();
-    await expect(page.locator("#relancer-statut")).toContainText(
-      "Fetches en cours",
-      { timeout: 5000 },
-    );
   });
 
   test("toast contient le bouton fermer", async ({ page }) => {
@@ -64,9 +53,23 @@ test.describe("Toasts (Popover API)", () => {
 
   test("toast auto-dismiss après 4 s", async ({ page }) => {
     await soumettreDepartements(page);
-    // Le toast est supprimé du DOM à la fermeture (afficherToast → el.remove() sur beforetoggle closed)
     await expect(page.locator(".alerte-succes").first()).toBeHidden({
       timeout: 8000,
     });
+  });
+});
+
+test.describe("Toasts — actions admin", () => {
+  test.use({ storageState: FICHIER_AUTH_ADMIN });
+
+  test("toast succes admin relancer fetches", async ({ page }) => {
+    await page.goto("/admin#jobs");
+    await page
+      .getByRole("button", { name: "Relancer les fetches maintenant" })
+      .click();
+    await expect(page.locator(".alerte-succes")).toContainText(
+      "Fetches relancés",
+      { timeout: 5000 },
+    );
   });
 });

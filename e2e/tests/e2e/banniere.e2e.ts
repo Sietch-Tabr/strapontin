@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
+
+test.use({ storageState: FICHIER_AUTH_ADMIN });
 
 async function publierBanniere(
   page: import("@playwright/test").Page,

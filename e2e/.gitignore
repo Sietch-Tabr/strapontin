@@ -1,4 +1,6 @@
 node_modules/
 test-results/
 tests/e2e/.auth-state.json
+tests/e2e/.auth-admin.json
+tests/e2e/.auth-user.json
 playwright-report/

@@ -16,7 +16,7 @@ export default defineConfig({
 
   use: {
     baseURL: BASE_URL,
-    storageState: "tests/e2e/.auth-state.json",
+    storageState: "tests/e2e/.auth-user.json",
     trace: "on-first-retry",
   },
 
