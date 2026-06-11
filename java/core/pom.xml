@@ -14,12 +14,6 @@
     <artifactId>core</artifactId>
 
     <dependencies>
-        <!-- Levenshtein pour le dédup fuzzy -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-text</artifactId>
-        </dependency>
-
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

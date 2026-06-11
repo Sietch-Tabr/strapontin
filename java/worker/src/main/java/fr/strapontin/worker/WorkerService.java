@@ -37,7 +37,6 @@ public class WorkerService {
 
   private static final Logger log = LoggerFactory.getLogger(WorkerService.class);
 
-  private static final List<String> CLASSIFICATIONS = List.of("music", "opera", "musical");
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
   private static final int TAILLE_LOT_TM = 20;
 
@@ -224,14 +223,14 @@ public class WorkerService {
       List<String> deptsListe = new ArrayList<>(tousLesDepts);
       List<ConcertBrut> tous = new ArrayList<>();
       try {
-        tous.addAll(tm.fetchRegion(deptsListe, CLASSIFICATIONS));
+        tous.addAll(tm.fetchRegion(deptsListe, TicketmasterSource.CLASSIFICATIONS));
       } catch (Exception e) {
         log.warn("TM fetchRegion échoué : {}", e.getMessage());
       }
       sauvegarderQuota();
 
       try {
-        tous.addAll(eventim.fetchRegion(deptsListe, CLASSIFICATIONS));
+        tous.addAll(eventim.fetchRegion(deptsListe, TicketmasterSource.CLASSIFICATIONS));
       } catch (Exception e) {
         log.warn("Eventim fetchRegion échoué : {}", e.getMessage());
       }
