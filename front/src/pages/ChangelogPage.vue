@@ -8,7 +8,39 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
-        <h2 class="changelog-version">v 2.2.1 — 11 juin 2026</h2>
+        <h2 class="changelog-version">v 2.2.2 — 11 juin 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Application installée (PWA)</p>
+            <ul>
+              <li>Un appui long sur l'icône de l'application propose des raccourcis directs vers Mes spectacles, Découverte et les nouveaux concerts.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Notifications push</p>
+            <ul>
+              <li>Un bouton « Envoyer une notification de test » dans les paramètres permet de vérifier que les notifications push fonctionnent sur votre appareil.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Accessibilité</p>
+            <ul>
+              <li>Un lien « Aller au contenu » apparaît au clavier pour passer directement la navigation.</li>
+              <li>L'interface respecte désormais la taille de police choisie dans votre navigateur.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>L'invitation d'un nouvel utilisateur fonctionne même sans service email configuré : le lien d'invitation est alors affiché à l'administrateur pour transmission manuelle.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.2.1 — 11 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Notifications push</p>
@@ -36,7 +68,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.2.0 — 6 juin 2026</h2></summary>

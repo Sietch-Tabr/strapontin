@@ -33,7 +33,8 @@ Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège autom
 
 ## Stack
 
-- [Spring Boot 4](https://spring.io/projects/spring-boot) + [Thymeleaf](https://www.thymeleaf.org/) — rendu serveur, Java 25
+- [Spring Boot 4](https://spring.io/projects/spring-boot) — API REST, Java 25
+- [Vue 3](https://vuejs.org/) + [Vite](https://vite.dev/) — SPA côté client
 - [Spring Security 7](https://spring.io/projects/spring-security) + Spring Session JDBC — authentification, sessions persistantes
 - [Quartz Scheduler](http://www.quartz-scheduler.org/) — jobs background (fetch concerts)
 - [Flyway 12](https://flywaydb.org/) + PostgreSQL 18 — migrations et persistance
