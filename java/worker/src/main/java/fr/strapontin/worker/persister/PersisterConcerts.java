@@ -295,12 +295,42 @@ public class PersisterConcerts {
   /// @param i indice de la ligne dans le lot (suffixe des paramètres nommés)
   /// @return le tuple {@code (:artiste_i, ...)} pour la clause VALUES
   private static String placeholdersLigne(int i) {
-    return "(:artiste_" + i + ", :artisteNorm_" + i + ", :date_" + i + ", :heure_" + i
-        + ", :salle_" + i + ", :salleNorm_" + i + ", :ville_" + i + ", :dept_" + i
-        + ", :prixMin_" + i + ", :prixMax_" + i + ", :url_" + i
-        + ", CAST(:source_" + i + " AS source_concert)"
-        + ", :classification_" + i + ", :genre_" + i + ", :statut_" + i
-        + ", :presaleDebut_" + i + ", :presaleNom_" + i + ")";
+    return "(:artiste_"
+        + i
+        + ", :artisteNorm_"
+        + i
+        + ", :date_"
+        + i
+        + ", :heure_"
+        + i
+        + ", :salle_"
+        + i
+        + ", :salleNorm_"
+        + i
+        + ", :ville_"
+        + i
+        + ", :dept_"
+        + i
+        + ", :prixMin_"
+        + i
+        + ", :prixMax_"
+        + i
+        + ", :url_"
+        + i
+        + ", CAST(:source_"
+        + i
+        + " AS source_concert)"
+        + ", :classification_"
+        + i
+        + ", :genre_"
+        + i
+        + ", :statut_"
+        + i
+        + ", :presaleDebut_"
+        + i
+        + ", :presaleNom_"
+        + i
+        + ")";
   }
 
   /// Ajoute les paramètres nommés indexés d'une ligne d'upsert.

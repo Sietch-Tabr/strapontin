@@ -204,7 +204,10 @@ public class AdminService {
     String token = GenerateurSecrets.genererToken(32);
     Instant expiresAt = Instant.now().plus(7, ChronoUnit.DAYS);
     verificationRepository.inserer(
-        UUID.randomUUID().toString(), "invite:" + email, GenerateurSecrets.sha256Hex(token), expiresAt);
+        UUID.randomUUID().toString(),
+        "invite:" + email,
+        GenerateurSecrets.sha256Hex(token),
+        expiresAt);
 
     String lienReset = baseUrl + "/reset-password?token=" + token;
     emailService.envoyerInvitation(email, lienReset);

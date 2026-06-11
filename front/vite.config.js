@@ -21,7 +21,10 @@ function nettoyerAssets() {
 }
 
 export default defineConfig({
-  plugins: [vue({ template: { transformAssetUrls: { use: [] } } }), nettoyerAssets()],
+  plugins: [
+    vue({ template: { transformAssetUrls: { use: [] } } }),
+    nettoyerAssets(),
+  ],
   build: {
     outDir: "../java/web/src/main/resources/static",
     assetsDir: "assets",

@@ -92,24 +92,21 @@ class AdminServiceTest {
   void modifierUtilisateur_aucunChamp_leveErreurMetier() {
     RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur("", "");
     assertThrows(
-        ErreurMetier.class,
-        () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
+        ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
 
   @Test
   void modifierUtilisateur_emailInvalide_leveErreurMetier() {
     RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur("pas-un-email", "");
     assertThrows(
-        ErreurMetier.class,
-        () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
+        ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
 
   @Test
   void modifierUtilisateur_roleInvalide_leveErreurMetier() {
     RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur("", "superadmin");
     assertThrows(
-        ErreurMetier.class,
-        () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
+        ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
 
   @Test
@@ -117,8 +114,7 @@ class AdminServiceTest {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of(1));
     RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur("pris@exemple.fr", "");
     assertThrows(
-        ErreurMetier.class,
-        () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
+        ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
 
   @Test
@@ -131,8 +127,7 @@ class AdminServiceTest {
   @Test
   void sauvegarderConfig_valeurVidePourCleObligatoire_leveErreurMetier() {
     assertThrows(
-        ErreurMetier.class,
-        () -> adminService.sauvegarderConfig("CONTACT_EMAIL", "", "admin-1"));
+        ErreurMetier.class, () -> adminService.sauvegarderConfig("CONTACT_EMAIL", "", "admin-1"));
   }
 
   @Test

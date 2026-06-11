@@ -83,8 +83,17 @@ public class SpectacleService {
     params.put("aujourd8", aujourd8);
     StringBuilder whereClause =
         construireWhere(
-            userId, q, mois, classification, genre, quinzaine, conditionMasque,
-            inclureIndisponibles, sources, aujourd8, params);
+            userId,
+            q,
+            mois,
+            classification,
+            genre,
+            quinzaine,
+            conditionMasque,
+            inclureIndisponibles,
+            sources,
+            aujourd8,
+            params);
 
     String selectSql =
         """
@@ -110,8 +119,7 @@ public class SpectacleService {
     var futureNbSuivi = CompletableFuture.supplyAsync(() -> compterSuivi(baseParams));
 
     // Requête principale sur le thread courant pendant que les futures s'exécutent
-    List<SpectacleDto> concerts =
-        jdbc.query(selectSql, paramsPage, (rs, _) -> mapSpectacle(rs));
+    List<SpectacleDto> concerts = jdbc.query(selectSql, paramsPage, (rs, _) -> mapSpectacle(rs));
 
     FiltresDisponibles filtres = chargerFiltresDisponibles(conditionMasque, baseParams);
 
