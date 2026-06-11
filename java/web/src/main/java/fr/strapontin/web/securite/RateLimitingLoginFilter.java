@@ -58,14 +58,15 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
       return;
     }
 
-    String ip = obtenirIp(request);
-    Bucket bucket = buckets.get(ip, _ -> creerBucket());
+    String ip = request.getRemoteAddr();
+    String cleBucket = ip + ":" + request.getServletPath();
+    Bucket bucket = buckets.get(cleBucket, _ -> creerBucket());
 
     if (bucket.tryConsume(1)) {
       chain.doFilter(request, response);
     } else {
       logAdminService.logAdmin(
-          "warn", "auth", "Rate limit connexion atteint : " + ip, Map.of("ip", ip));
+          "warn", "auth", "Rate limit connexion atteint : " + ip + " sur " + request.getServletPath(), Map.of("ip", ip));
       response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
       response.setContentType(MediaType.APPLICATION_JSON_VALUE);
       response.setCharacterEncoding("UTF-8");
@@ -84,9 +85,4 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
     return Bucket.builder().addLimit(limite).build();
   }
 
-  private String obtenirIp(HttpServletRequest request) {
-    String realIp = request.getHeader("X-Real-IP");
-    if (realIp != null && !realIp.isBlank()) return realIp;
-    return request.getRemoteAddr();
-  }
 }
