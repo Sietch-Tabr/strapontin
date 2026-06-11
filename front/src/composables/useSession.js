@@ -2,6 +2,7 @@ import { ref, readonly } from "vue";
 import { useRouter, useRoute } from "vue-router";
 
 export const sessionRef = ref(null);
+export const sessionInitialisee = ref(false);
 const session = sessionRef;
 const chargement = ref(false);
 
@@ -26,6 +27,7 @@ export function useSession() {
       session.value = null;
     } finally {
       chargement.value = false;
+      sessionInitialisee.value = true;
     }
   }
 
