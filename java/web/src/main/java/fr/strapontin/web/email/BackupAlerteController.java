@@ -5,10 +5,11 @@
 package fr.strapontin.web.email;
 
 import fr.strapontin.web.admin.LogAdminService;
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,10 +25,15 @@ public class BackupAlerteController {
 
   private final EmailService emailService;
   private final LogAdminService logAdminService;
+  private final String backupSecret;
 
-  public BackupAlerteController(EmailService emailService, LogAdminService logAdminService) {
+  public BackupAlerteController(
+      EmailService emailService,
+      LogAdminService logAdminService,
+      @Value("${BACKUP_INTERNAL_SECRET:}") String backupSecret) {
     this.emailService = emailService;
     this.logAdminService = logAdminService;
+    this.backupSecret = backupSecret;
   }
 
   /// Notifie l'app du statut du backup nocturne.
@@ -35,21 +41,21 @@ public class BackupAlerteController {
   /// <p>Sur {@code statut=echec} : log warn dans {@code logs_admin} + email admin.
   /// Sur {@code statut=succes} : log info dans {@code logs_admin}.
   ///
-  /// @param statut     {@code succes} ou {@code echec}
-  /// @param horodatage l'horodatage du backup (format YYYYMMDD_HHMMSS)
-  /// @param raison     la commande ayant échoué (optionnel, échec uniquement)
-  /// @param archive    le chemin de l'archive créée (optionnel, succès uniquement)
-  /// @param request    la requête HTTP (vérification IP source)
-  /// @return 200 si traité, 403 si l'appel ne vient pas de localhost
+  /// @param statut        {@code succes} ou {@code echec}
+  /// @param horodatage    l'horodatage du backup (format YYYYMMDD_HHMMSS)
+  /// @param raison        la commande ayant échoué (optionnel, échec uniquement)
+  /// @param archive       le chemin de l'archive créée (optionnel, succès uniquement)
+  /// @param authorization header {@code Authorization: Bearer <BACKUP_INTERNAL_SECRET>}
+  /// @return 200 si traité, 403 si le token est absent ou invalide
   @PostMapping("/api/interne/backup-statut")
   public ResponseEntity<Map<String, Object>> signalerStatut(
       @RequestParam(defaultValue = "") String statut,
       @RequestParam(defaultValue = "") String horodatage,
       @RequestParam(defaultValue = "") String raison,
       @RequestParam(defaultValue = "") String archive,
-      HttpServletRequest request) {
-    String adresse = request.getRemoteAddr();
-    if (!"127.0.0.1".equals(adresse) && !"0:0:0:0:0:0:0:1".equals(adresse)) {
+      @RequestHeader(value = "Authorization", defaultValue = "") String authorization) {
+    if (backupSecret.isBlank()
+        || !("Bearer " + backupSecret).equals(authorization)) {
       return ResponseEntity.status(403).body(Map.of("erreur", "Accès refusé."));
     }
     if ("succes".equals(statut)) {
