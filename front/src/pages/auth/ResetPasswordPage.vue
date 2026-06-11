@@ -60,9 +60,11 @@ defineOptions({ name: 'ResetPasswordPage' })
 import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AuthLayout from '../../components/auth/AuthLayout.vue'
+import { useSession } from '../../composables/useSession.js'
 
 const route = useRoute()
 const router = useRouter()
+const { chargerSession } = useSession()
 
 const token = route.query.token ?? ''
 const identifiant = ref('')
@@ -111,6 +113,7 @@ async function soumettre() {
     })
     if (rep.ok) {
       if (estInvite.value) {
+        await chargerSession()
         router.push('/')
       } else {
         router.push('/login?reset=true')

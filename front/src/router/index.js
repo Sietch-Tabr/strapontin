@@ -54,7 +54,8 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   if (to.meta.authPage && sessionRef.value) return "/";
-  if (!to.meta.authPage && sessionInitialisee.value && !sessionRef.value) return "/login";
+  if (!to.meta.authPage && sessionInitialisee.value && !sessionRef.value)
+    return "/login";
 });
 
 export default router;
