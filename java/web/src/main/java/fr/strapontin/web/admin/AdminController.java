@@ -40,20 +40,28 @@ public class AdminController {
   private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
   private final AdminService adminService;
+  private final BanniereService banniereService;
+  private final WorkerProxyService workerProxyService;
   private final EmailService emailService;
   private final VapidService vapidService;
   private final ConfigService configService;
 
-  /// @param adminService  service d'administration
-  /// @param emailService  service d'envoi d'emails
-  /// @param vapidService  service de gestion des clés VAPID
-  /// @param configService service de configuration pour lire PUBLIC_BASE_URL
+  /// @param adminService       service d'administration
+  /// @param banniereService    service de gestion de la bannière système
+  /// @param workerProxyService proxy HTTP vers le worker (relance des fetches)
+  /// @param emailService       service d'envoi d'emails
+  /// @param vapidService       service de gestion des clés VAPID
+  /// @param configService      service de configuration pour lire PUBLIC_BASE_URL
   public AdminController(
       AdminService adminService,
+      BanniereService banniereService,
+      WorkerProxyService workerProxyService,
       EmailService emailService,
       VapidService vapidService,
       ConfigService configService) {
     this.adminService = adminService;
+    this.banniereService = banniereService;
+    this.workerProxyService = workerProxyService;
     this.emailService = emailService;
     this.vapidService = vapidService;
     this.configService = configService;
@@ -237,7 +245,7 @@ public class AdminController {
       @Valid @RequestBody RequeteBanniere requete) {
     String type =
         Set.of("info", "warning", "error").contains(requete.type()) ? requete.type() : "info";
-    adminService.publierBanniere(requete.message().strip(), type);
+    banniereService.publierBanniere(requete.message().strip(), type);
     return ResponseEntity.ok(Map.of("succes", true, "action", "publierBanniere"));
   }
 
@@ -246,7 +254,7 @@ public class AdminController {
   /// @return 200 si effacée
   @DeleteMapping("/banniere")
   public ResponseEntity<Map<String, Object>> effacerBanniere() {
-    adminService.effacerBanniere();
+    banniereService.effacerBanniere();
     return ResponseEntity.ok(Map.of("succes", true, "action", "effacerBanniere"));
   }
 
@@ -271,7 +279,11 @@ public class AdminController {
   /// @return 200 si déclenché, 503 si le worker est inaccessible
   @PostMapping("/relancer")
   public ResponseEntity<Map<String, Object>> relancerFetches() {
-    return adminService.relancerFetches();
+    ResultatRelance resultat = workerProxyService.relancerFetches();
+    if (resultat.succes()) {
+      return ResponseEntity.ok(Map.of("statut", "déclenché"));
+    }
+    return ResponseEntity.status(503).body(Map.of("erreur", resultat.messageErreur()));
   }
 
   /// Retourne les informations système non liées à la configuration chiffrée.

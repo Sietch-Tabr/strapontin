@@ -9,16 +9,12 @@ import fr.strapontin.core.QuotaTM;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.securite.GenerateurSecrets;
 import fr.strapontin.web.securite.VerificationRepository;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +24,6 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -76,8 +71,8 @@ public class AdminService {
   private final ObjectMapper objectMapper;
   private final VerificationRepository verificationRepository;
   private final RestClient restClient;
+  private final WorkerProxyService workerProxyService;
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
-  private final SecureRandom rng = new SecureRandom();
 
   /// @param jdbc                   accès JDBC
   /// @param configService          lecture/écriture de la configuration applicative
@@ -86,6 +81,7 @@ public class AdminService {
   /// @param objectMapper           désérialiseur JSON (quota TM)
   /// @param verificationRepository accès aux tokens de vérification
   /// @param restClient             client HTTP pour les tests d'API externes
+  /// @param workerProxyService     proxy HTTP vers le worker (jobs en cours, prochaines exécutions)
   public AdminService(
       NamedParameterJdbcTemplate jdbc,
       ConfigService configService,
@@ -93,7 +89,8 @@ public class AdminService {
       LogAdminService logAdminService,
       ObjectMapper objectMapper,
       VerificationRepository verificationRepository,
-      RestClient restClient) {
+      RestClient restClient,
+      WorkerProxyService workerProxyService) {
     this.jdbc = jdbc;
     this.configService = configService;
     this.emailService = emailService;
@@ -101,6 +98,7 @@ public class AdminService {
     this.objectMapper = objectMapper;
     this.verificationRepository = verificationRepository;
     this.restClient = restClient;
+    this.workerProxyService = workerProxyService;
   }
 
   /// Teste la validité de la clé Ticketmaster API en effectuant un appel minimal.
@@ -177,8 +175,8 @@ public class AdminService {
     }
 
     String userId = UUID.randomUUID().toString();
-    String usernameTemp = "u_" + genererHex(4);
-    String motDePasseTemp = genererToken(12);
+    String usernameTemp = "u_" + GenerateurSecrets.genererHex(4);
+    String motDePasseTemp = GenerateurSecrets.genererToken(12);
     String hashMdp = bcrypt.encode(motDePasseTemp);
 
     Map<String, Object> paramsUser = new HashMap<>();
@@ -203,10 +201,10 @@ public class AdminService {
         """,
         Map.of("id", accountId, "accountId", userId, "userId", userId, "password", hashMdp));
 
-    String token = genererToken(32);
+    String token = GenerateurSecrets.genererToken(32);
     Instant expiresAt = Instant.now().plus(7, ChronoUnit.DAYS);
     verificationRepository.inserer(
-        UUID.randomUUID().toString(), "invite:" + email, sha256Hex(token), expiresAt);
+        UUID.randomUUID().toString(), "invite:" + email, GenerateurSecrets.sha256Hex(token), expiresAt);
 
     String lienReset = baseUrl + "/reset-password?token=" + token;
     emailService.envoyerInvitation(email, lienReset);
@@ -301,10 +299,10 @@ public class AdminService {
     String prefixeReset = "reset:" + email;
     verificationRepository.supprimerParIdentifiant(prefixeReset);
 
-    String token = genererToken(32);
+    String token = GenerateurSecrets.genererToken(32);
     Instant expiresAt = Instant.now().plus(1, ChronoUnit.HOURS);
     verificationRepository.inserer(
-        UUID.randomUUID().toString(), prefixeReset, sha256Hex(token), expiresAt);
+        UUID.randomUUID().toString(), prefixeReset, GenerateurSecrets.sha256Hex(token), expiresAt);
 
     emailService.envoyerResetMotDePasse(email, baseUrl + "/reset-password?token=" + token);
     logAdminService.logAdmin(
@@ -404,8 +402,8 @@ public class AdminService {
       log.debug("Impossible de lire le dernier job réussi");
     }
 
-    List<String> jobsEnCours = obtenirJobsEnCours();
-    Map<String, Instant> prochainesExec = obtenirProchainerExec();
+    List<String> jobsEnCours = workerProxyService.obtenirJobsEnCours();
+    Map<String, Instant> prochainesExec = workerProxyService.obtenirProchainesExec();
 
     QuotaTM quotaFinal = quotaTM;
     List<StatJob> statsComplets =
@@ -437,60 +435,6 @@ public class AdminService {
     return reponse;
   }
 
-  private List<String> obtenirJobsEnCours() {
-    try (java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient()) {
-      java.net.http.HttpRequest req =
-          java.net.http.HttpRequest.newBuilder()
-              .uri(java.net.URI.create("http://localhost:8081/trigger/actif"))
-              .GET()
-              .timeout(java.time.Duration.ofSeconds(2))
-              .build();
-      java.net.http.HttpResponse<String> rep =
-          client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
-      if (rep.statusCode() == 200) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> data = objectMapper.readValue(rep.body(), Map.class);
-        Object actifs = data.get("actifs");
-        if (actifs instanceof java.util.List<?> liste) {
-          return liste.stream().map(Object::toString).toList();
-        }
-      }
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    } catch (Exception e) {
-      log.debug("Worker inaccessible pour jobs actifs");
-    }
-    return List.of();
-  }
-
-  @SuppressWarnings("unchecked")
-  private Map<String, Instant> obtenirProchainerExec() {
-    try (java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient()) {
-      java.net.http.HttpRequest req =
-          java.net.http.HttpRequest.newBuilder()
-              .uri(java.net.URI.create("http://localhost:8081/trigger/prochaines-exec"))
-              .GET()
-              .timeout(java.time.Duration.ofSeconds(2))
-              .build();
-      java.net.http.HttpResponse<String> rep =
-          client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
-      if (rep.statusCode() == 200) {
-        Map<String, Object> data = objectMapper.readValue(rep.body(), Map.class);
-        Map<String, Instant> resultat = new HashMap<>();
-        data.forEach(
-            (k, v) -> {
-              if (v instanceof Number n) resultat.put(k, Instant.ofEpochMilli(n.longValue()));
-            });
-        return resultat;
-      }
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    } catch (Exception e) {
-      log.debug("Worker inaccessible pour prochaines exécutions");
-    }
-    return Map.of();
-  }
-
   private String validerFormatConfig(String cle, String valeur) {
     if ("TICKETMASTER_API_KEY".equals(cle) && !FORMAT_TM_KEY.matcher(valeur).matches()) {
       return "Format de clé Ticketmaster invalide (16 à 64 caractères alphanumériques).";
@@ -519,90 +463,10 @@ public class AdminService {
     return null;
   }
 
-  private String genererHex(int nbOctets) {
-    byte[] octets = new byte[nbOctets];
-    rng.nextBytes(octets);
-    StringBuilder sb = new StringBuilder();
-    for (byte b : octets) sb.append(String.format("%02x", b));
-    return sb.toString();
-  }
-
-  private String genererToken(int nbOctets) {
-    byte[] octets = new byte[nbOctets];
-    rng.nextBytes(octets);
-    return Base64.getUrlEncoder().withoutPadding().encodeToString(octets);
-  }
-
-  private static String sha256Hex(String input) {
-    try {
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
-      StringBuilder sb = new StringBuilder();
-      for (byte b : hash) sb.append(String.format("%02x", b));
-      return sb.toString();
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException("SHA-256 non disponible", e);
-    }
-  }
-
   /// Retourne les N derniers logs admin.
   ///
   /// @return liste des entrées de log
   public List<LogAdminService.EntreeLogAdmin> lireLogsAdmin() {
     return logAdminService.lireLogs(200);
   }
-
-  /// Publie une bannière système.
-  ///
-  /// @param message texte de la bannière
-  /// @param type    type ({@code info}, {@code warning} ou {@code error})
-  public void publierBanniere(String message, String type) {
-    configService.sauvegarderConfig("BANNER_MESSAGE", message);
-    configService.sauvegarderConfig("BANNER_TYPE", type);
-    configService.sauvegarderConfig("BANNER_ID", Instant.now().toString());
-    logAdminService.logAdmin("info", "admin", "Bannière publiée : " + type);
-  }
-
-  /// Efface la bannière système.
-  public void effacerBanniere() {
-    configService.sauvegarderConfig("BANNER_MESSAGE", null);
-    configService.sauvegarderConfig("BANNER_TYPE", null);
-    configService.sauvegarderConfig("BANNER_ID", null);
-    logAdminService.logAdmin("info", "admin", "Bannière effacée");
-  }
-
-  /// Déclenche les fetches via le worker (appel HTTP interne).
-  ///
-  /// @return 200 si déclenché, 503 si le worker est inaccessible
-  public ResponseEntity<Map<String, Object>> relancerFetches() {
-    try (java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient()) {
-      java.net.http.HttpRequest req =
-          java.net.http.HttpRequest.newBuilder()
-              .uri(java.net.URI.create("http://localhost:8081/trigger/tout"))
-              .POST(java.net.http.HttpRequest.BodyPublishers.noBody())
-              .build();
-      java.net.http.HttpResponse<String> rep =
-          client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
-      if (rep.statusCode() == 200) {
-        logAdminService.logAdmin("info", "admin", "Fetches relancés manuellement");
-        return ResponseEntity.ok(Map.of("statut", "déclenché"));
-      }
-      Map<String, Object> corps = new HashMap<>();
-      corps.put("erreur", "Worker inaccessible (statut " + rep.statusCode() + ").");
-      return ResponseEntity.status(503).body(corps);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      Map<String, Object> corps = new HashMap<>();
-      corps.put("erreur", "Requête interrompue.");
-      return ResponseEntity.status(503).body(corps);
-    } catch (Exception e) {
-      log.warn("Erreur appel worker trigger", e);
-      Map<String, Object> corps = new HashMap<>();
-      corps.put("erreur", "Worker inaccessible.");
-      return ResponseEntity.status(503).body(corps);
-    }
-  }
-
-  /// Résultat de la création d'un utilisateur.
-  public record ResultatCreation(String email, String identifiant, String lienReset) {}
 }
