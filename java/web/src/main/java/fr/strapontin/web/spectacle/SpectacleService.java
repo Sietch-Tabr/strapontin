@@ -4,7 +4,12 @@
  */
 package fr.strapontin.web.spectacle;
 
+import static fr.strapontin.web.concert.FiltreConcertsBuilder.CONCERTS_PAR_PAGE;
+
+import fr.strapontin.web.concert.FiltreConcertsBuilder;
 import fr.strapontin.web.utilisateur.UserConfigService;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,8 +30,6 @@ import org.springframework.stereotype.Service;
 /// @author Kwaite
 @Service
 public class SpectacleService {
-
-  private static final int CONCERTS_PAR_PAGE = 100;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final UserConfigService userConfigService;
@@ -73,82 +76,15 @@ public class SpectacleService {
     boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
     boolean inclureIndisponibles =
         indisponibles != null ? "1".equals(indisponibles) : !filtreDisponibles;
-    boolean sourceArtistes = sources == null || sources.isEmpty() || sources.contains("artistes");
-    boolean sourceSalles = sources == null || sources.isEmpty() || sources.contains("salles");
-
     String conditionMasque = masques ? "NOT NULL" : "NULL";
-
-    StringBuilder whereClause =
-        new StringBuilder(
-            """
-            um.user_id = :userId
-            AND c.date >= :aujourd8
-            AND um.masque_le IS %s
-            """
-                .formatted(conditionMasque));
 
     Map<String, Object> params = new HashMap<>();
     params.put("userId", userId);
     params.put("aujourd8", aujourd8);
-
-    if (quinzaine) {
-      whereClause.append(" AND c.date <= :dans15Jours");
-      params.put("dans15Jours", aujourd8.plusDays(15));
-    }
-    if (!inclureIndisponibles) {
-      whereClause.append(
-          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'presale', 'rescheduled',"
-              + " 'postponed'))");
-    }
-
-    String recherche = q.strip().substring(0, Math.min(q.strip().length(), 100));
-    if (!recherche.isEmpty()) {
-      whereClause.append(" AND c.artiste ILIKE :recherche");
-      params.put("recherche", "%" + recherche + "%");
-    }
-    if (!mois.isBlank() && mois.matches("\\d{4}-\\d{2}")) {
-      LocalDate debutMois = LocalDate.parse(mois + "-01");
-      whereClause.append(" AND c.date >= :moisDebut AND c.date < :moisFin");
-      params.put("moisDebut", debutMois);
-      params.put("moisFin", debutMois.plusMonths(1));
-    }
-    if (!classification.isBlank()) {
-      whereClause.append(" AND c.classification = :classification");
-      params.put("classification", classification);
-    }
-    String genreStr = genre.strip().substring(0, Math.min(genre.strip().length(), 50));
-    if (!genreStr.isEmpty()) {
-      whereClause.append(" AND c.genre ILIKE :genre");
-      params.put("genre", genreStr);
-    }
-    if (sourceArtistes && !sourceSalles) {
-      List<String> norms =
-          jdbc.queryForList(
-              "SELECT artiste_normalise FROM user_artistes WHERE user_id = :u",
-              Map.of("u", userId),
-              String.class);
-      if (norms.isEmpty()) whereClause.append(" AND false");
-      else {
-        whereClause.append(" AND c.artiste_norm IN (:artisteNorms)");
-        params.put("artisteNorms", norms);
-      }
-    } else if (sourceSalles && !sourceArtistes) {
-      List<String> ids =
-          jdbc.queryForList(
-              "SELECT regexp_replace(lower(salle_id), '[^a-z0-9]', '', 'g') FROM user_salles"
-                  + " WHERE user_id = :u",
-              Map.of("u", userId),
-              String.class);
-      if (ids.isEmpty()) whereClause.append(" AND false");
-      else {
-        whereClause.append(
-            " AND regexp_replace(c.salle_norm, '[^a-z0-9]', '', 'g') IN (:salleIds)");
-        params.put("salleIds", ids);
-      }
-    }
-
-    String orderBy =
-        "nouveaute".equals(tri) ? "c.first_seen DESC, c.date ASC" : "c.date ASC, c.artiste ASC";
+    StringBuilder whereClause =
+        construireWhere(
+            userId, q, mois, classification, genre, quinzaine, conditionMasque,
+            inclureIndisponibles, sources, aujourd8, params);
 
     String selectSql =
         """
@@ -161,69 +97,171 @@ public class SpectacleService {
         ORDER BY %s
         LIMIT :limit OFFSET :offset
         """
-            .formatted(whereClause, orderBy);
+            .formatted(whereClause, FiltreConcertsBuilder.clauseTri(tri));
 
     Map<String, Object> paramsPage = new HashMap<>(params);
     paramsPage.put("limit", CONCERTS_PAR_PAGE);
     paramsPage.put("offset", pageNum * CONCERTS_PAR_PAGE);
 
-    // COUNT et nbSuivi démarrés en parallèle pendant l'exécution de la requête principale
-    Map<String, Object> countParams = new HashMap<>(params);
-    var futureTotal =
-        CompletableFuture.supplyAsync(
-            () ->
-                Objects.requireNonNullElse(
-                    jdbc.queryForObject(
-                        "SELECT COUNT(*) FROM user_matches um INNER JOIN concerts c"
-                            + " ON um.concert_id = c.id WHERE "
-                            + whereClause,
-                        countParams,
-                        Integer.class),
-                    0));
-
     Map<String, Object> baseParams = Map.of("userId", userId, "aujourd8", aujourd8);
-    var futureNbSuivi =
-        CompletableFuture.supplyAsync(
-            () ->
-                Objects.requireNonNullElse(
-                    jdbc.queryForObject(
-                        "SELECT (SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId)"
-                            + " + (SELECT COUNT(*) FROM user_salles WHERE user_id = :userId)",
-                        baseParams,
-                        Integer.class),
-                    0));
+
+    // COUNT et nbSuivi démarrés en parallèle pendant l'exécution de la requête principale
+    var futureTotal = CompletableFuture.supplyAsync(() -> compterTotal(whereClause, params));
+    var futureNbSuivi = CompletableFuture.supplyAsync(() -> compterSuivi(baseParams));
 
     // Requête principale sur le thread courant pendant que les futures s'exécutent
     List<SpectacleDto> concerts =
-        jdbc.query(
-            selectSql,
-            paramsPage,
-            (rs, _) -> {
-              java.time.Instant firstSeen =
-                  rs.getTimestamp("first_seen") != null
-                      ? rs.getTimestamp("first_seen").toInstant()
-                      : null;
-              java.time.Instant presaleDebut =
-                  rs.getTimestamp("presale_debut") != null
-                      ? rs.getTimestamp("presale_debut").toInstant()
-                      : null;
-              return new SpectacleDto(
-                  rs.getString("id"),
-                  rs.getString("artiste"),
-                  rs.getString("date"),
-                  rs.getString("heure"),
-                  rs.getString("salle"),
-                  rs.getString("ville"),
-                  rs.getString("url"),
-                  rs.getString("classification"),
-                  firstSeen,
-                  rs.getString("statut"),
-                  rs.getTimestamp("vu_le") == null,
-                  presaleDebut,
-                  rs.getString("presale_nom"));
-            });
+        jdbc.query(selectSql, paramsPage, (rs, _) -> mapSpectacle(rs));
 
-    // CTE : 3 DISTINCT fusionnés en une seule requête
+    FiltresDisponibles filtres = chargerFiltresDisponibles(conditionMasque, baseParams);
+
+    int total = futureTotal.join();
+    int nbSuivi = futureNbSuivi.join();
+
+    return new ReponseSpectacles(
+        concerts,
+        pageNum,
+        Math.max(1, (int) Math.ceil((double) total / CONCERTS_PAR_PAGE)),
+        total,
+        filtres.genres(),
+        filtres.mois(),
+        filtres.classifications(),
+        inclureIndisponibles,
+        nbSuivi > 0);
+  }
+
+  /// Construit la clause WHERE de la requête principale et remplit les paramètres nommés.
+  ///
+  /// @param userId               identifiant de l'utilisateur
+  /// @param q                    terme de recherche artiste
+  /// @param mois                 filtre mois YYYY-MM
+  /// @param classification       filtre classification
+  /// @param genre                filtre genre
+  /// @param quinzaine            limite aux 15 prochains jours
+  /// @param conditionMasque      {@code "NULL"} ou {@code "NOT NULL"} selon l'affichage des masqués
+  /// @param inclureIndisponibles inclut les concerts non disponibles
+  /// @param sources              sources actives (artistes/salles)
+  /// @param aujourd8             date du jour
+  /// @param params               paramètres nommés à remplir
+  /// @return la clause WHERE construite
+  private StringBuilder construireWhere(
+      String userId,
+      String q,
+      String mois,
+      String classification,
+      String genre,
+      boolean quinzaine,
+      String conditionMasque,
+      boolean inclureIndisponibles,
+      List<String> sources,
+      LocalDate aujourd8,
+      Map<String, Object> params) {
+
+    StringBuilder where =
+        new StringBuilder(
+            """
+            um.user_id = :userId
+            AND c.date >= :aujourd8
+            AND um.masque_le IS %s
+            """
+                .formatted(conditionMasque));
+
+    if (quinzaine) {
+      where.append(" AND c.date <= :dans15Jours");
+      params.put("dans15Jours", aujourd8.plusDays(15));
+    }
+    if (!inclureIndisponibles) {
+      where.append(
+          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'presale', 'rescheduled',"
+              + " 'postponed'))");
+    }
+
+    String recherche = FiltreConcertsBuilder.tronquer(q, 100);
+    if (!recherche.isEmpty()) {
+      where.append(" AND c.artiste ILIKE :recherche");
+      params.put("recherche", "%" + recherche + "%");
+    }
+    FiltreConcertsBuilder.appliquerMois(where, params, mois);
+    FiltreConcertsBuilder.appliquerClassification(where, params, classification);
+    FiltreConcertsBuilder.appliquerGenre(where, params, FiltreConcertsBuilder.tronquer(genre, 50));
+    appliquerFiltreSources(where, params, userId, sources);
+    return where;
+  }
+
+  /// Restreint les résultats aux concerts des artistes ou salles suivis selon les sources actives.
+  ///
+  /// @param where   clause WHERE en construction
+  /// @param params  paramètres nommés
+  /// @param userId  identifiant de l'utilisateur
+  /// @param sources sources actives ({@code "artistes"}, {@code "salles"})
+  private void appliquerFiltreSources(
+      StringBuilder where, Map<String, Object> params, String userId, List<String> sources) {
+    boolean sourceArtistes = sources == null || sources.isEmpty() || sources.contains("artistes");
+    boolean sourceSalles = sources == null || sources.isEmpty() || sources.contains("salles");
+
+    if (sourceArtistes && !sourceSalles) {
+      List<String> norms =
+          jdbc.queryForList(
+              "SELECT artiste_normalise FROM user_artistes WHERE user_id = :u",
+              Map.of("u", userId),
+              String.class);
+      if (norms.isEmpty()) where.append(" AND false");
+      else {
+        where.append(" AND c.artiste_norm IN (:artisteNorms)");
+        params.put("artisteNorms", norms);
+      }
+    } else if (sourceSalles && !sourceArtistes) {
+      List<String> ids =
+          jdbc.queryForList(
+              "SELECT regexp_replace(lower(salle_id), '[^a-z0-9]', '', 'g') FROM user_salles"
+                  + " WHERE user_id = :u",
+              Map.of("u", userId),
+              String.class);
+      if (ids.isEmpty()) where.append(" AND false");
+      else {
+        where.append(" AND regexp_replace(c.salle_norm, '[^a-z0-9]', '', 'g') IN (:salleIds)");
+        params.put("salleIds", ids);
+      }
+    }
+  }
+
+  /// Compte le nombre total de matches correspondant aux filtres (pour la pagination).
+  ///
+  /// @param whereClause clause WHERE de la requête principale
+  /// @param params      paramètres nommés
+  /// @return le nombre total de concerts
+  private int compterTotal(StringBuilder whereClause, Map<String, Object> params) {
+    return Objects.requireNonNullElse(
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_matches um INNER JOIN concerts c"
+                + " ON um.concert_id = c.id WHERE "
+                + whereClause,
+            new HashMap<>(params),
+            Integer.class),
+        0);
+  }
+
+  /// Compte le nombre d'artistes et salles suivis par l'utilisateur.
+  ///
+  /// @param baseParams paramètres de base ({@code userId})
+  /// @return le nombre total de suivis
+  private int compterSuivi(Map<String, Object> baseParams) {
+    return Objects.requireNonNullElse(
+        jdbc.queryForObject(
+            "SELECT (SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId)"
+                + " + (SELECT COUNT(*) FROM user_salles WHERE user_id = :userId)",
+            baseParams,
+            Integer.class),
+        0);
+  }
+
+  /// Charge les valeurs distinctes de genre, mois et classification disponibles (CTE unique).
+  ///
+  /// @param conditionMasque {@code "NULL"} ou {@code "NOT NULL"} selon l'affichage des masqués
+  /// @param baseParams      paramètres de base ({@code userId}, {@code aujourd8})
+  /// @return les filtres disponibles regroupés par type
+  private FiltresDisponibles chargerFiltresDisponibles(
+      String conditionMasque, Map<String, Object> baseParams) {
     String cteFiltresSql =
         """
         WITH filtres_base AS (
@@ -247,33 +285,48 @@ public class SpectacleService {
         """
             .formatted(conditionMasque);
 
-    List<String> genresDisponibles = new ArrayList<>();
-    List<String> moisDisponibles = new ArrayList<>();
-    List<String> classificationsDisponibles = new ArrayList<>();
+    List<String> genres = new ArrayList<>();
+    List<String> mois = new ArrayList<>();
+    List<String> classifications = new ArrayList<>();
     jdbc.query(
         cteFiltresSql,
         baseParams,
         rs -> {
           switch (rs.getString("type")) {
-            case "genre" -> genresDisponibles.add(rs.getString("valeur"));
-            case "mois" -> moisDisponibles.add(rs.getString("valeur"));
-            case "classification" -> classificationsDisponibles.add(rs.getString("valeur"));
+            case "genre" -> genres.add(rs.getString("valeur"));
+            case "mois" -> mois.add(rs.getString("valeur"));
+            case "classification" -> classifications.add(rs.getString("valeur"));
           }
         });
+    return new FiltresDisponibles(genres, mois, classifications);
+  }
 
-    int total = futureTotal.join();
-    int nbSuivi = futureNbSuivi.join();
-
-    return new ReponseSpectacles(
-        concerts,
-        pageNum,
-        Math.max(1, (int) Math.ceil((double) total / CONCERTS_PAR_PAGE)),
-        total,
-        genresDisponibles,
-        moisDisponibles,
-        classificationsDisponibles,
-        inclureIndisponibles,
-        nbSuivi > 0);
+  /// Mappe une ligne de résultat vers un {@link SpectacleDto}.
+  ///
+  /// @param rs ligne de résultat positionnée
+  /// @return le DTO correspondant
+  /// @throws SQLException en cas d'erreur de lecture
+  private SpectacleDto mapSpectacle(ResultSet rs) throws SQLException {
+    java.time.Instant firstSeen =
+        rs.getTimestamp("first_seen") != null ? rs.getTimestamp("first_seen").toInstant() : null;
+    java.time.Instant presaleDebut =
+        rs.getTimestamp("presale_debut") != null
+            ? rs.getTimestamp("presale_debut").toInstant()
+            : null;
+    return new SpectacleDto(
+        rs.getString("id"),
+        rs.getString("artiste"),
+        rs.getString("date"),
+        rs.getString("heure"),
+        rs.getString("salle"),
+        rs.getString("ville"),
+        rs.getString("url"),
+        rs.getString("classification"),
+        firstSeen,
+        rs.getString("statut"),
+        rs.getTimestamp("vu_le") == null,
+        presaleDebut,
+        rs.getString("presale_nom"));
   }
 
   /// Masque ou démasque un concert pour l'utilisateur courant.
@@ -325,4 +378,12 @@ public class SpectacleService {
         """,
         Map.of("userId", userId, "artisteNorm", artisteNorm, "aujourd8", LocalDate.now()));
   }
+
+  /// Valeurs distinctes disponibles pour les filtres de la page spectacles.
+  ///
+  /// @param genres          genres présents dans les matches
+  /// @param mois            mois (YYYY-MM) présents
+  /// @param classifications classifications présentes
+  private record FiltresDisponibles(
+      List<String> genres, List<String> mois, List<String> classifications) {}
 }
