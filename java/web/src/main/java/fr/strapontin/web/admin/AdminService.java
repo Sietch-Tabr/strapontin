@@ -221,6 +221,7 @@ public class AdminService {
   /// @param requete champs à modifier
   /// @param adminId identifiant de l'admin demandeur
   /// @throws ErreurMetier si les données sont invalides ou l'email est déjà utilisé
+  @Transactional
   public void modifierUtilisateur(
       String userId, RequeteModifierUtilisateur requete, String adminId) {
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
