@@ -137,7 +137,7 @@ public class NotificationDigestService {
                     SELECT 1 FROM user_salles us
                     JOIN salles s ON s.id = us.salle_id
                     WHERE us.user_id = um.user_id
-                      AND c.salle_norm = s.nom_norm
+                      AND c.salle_cle = s.id
                   ))
                 )
               ORDER BY um.user_id, c.date

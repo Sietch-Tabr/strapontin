@@ -219,7 +219,7 @@ public class SpectacleService {
               String.class);
       if (ids.isEmpty()) where.append(" AND false");
       else {
-        where.append(" AND regexp_replace(c.salle_norm, '[^a-z0-9]', '', 'g') IN (:salleIds)");
+        where.append(" AND c.salle_cle IN (:salleIds)");
         params.put("salleIds", ids);
       }
     }

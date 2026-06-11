@@ -42,17 +42,17 @@ public class PersisterConcerts {
   private static final double SEUIL_SIMILARITE_SALLE = 0.5;
   private static final int LONGUEUR_MIN_CONTAINMENT = 4;
 
-  private static final String SQL_UPSERT =
+  private static final String SQL_UPSERT_ENTETE =
       """
       INSERT INTO concerts
           (artiste, artiste_norm, date, heure, salle, salle_norm, ville, dept,
            prix_min, prix_max, url, source, classification, genre, statut,
            presale_debut, presale_nom)
       VALUES
-          (:artiste, :artisteNorm, :date, :heure, :salle, :salleNorm, :ville, :dept,
-           :prixMin, :prixMax, :url, CAST(:source AS source_concert),
-           :classification, :genre, :statut,
-           :presaleDebut, :presaleNom)
+      """;
+
+  private static final String SQL_UPSERT_CONFLIT =
+      """
       ON CONFLICT (artiste_norm, date, salle_norm) DO UPDATE SET
           artiste        = CASE WHEN unaccent(EXCLUDED.artiste) != EXCLUDED.artiste
                                 THEN EXCLUDED.artiste ELSE concerts.artiste END,
@@ -71,7 +71,7 @@ public class PersisterConcerts {
           presale_debut  = COALESCE(EXCLUDED.presale_debut, concerts.presale_debut),
           presale_nom    = COALESCE(EXCLUDED.presale_nom, concerts.presale_nom),
           updated_at     = now()
-      RETURNING id, (xmax = 0) AS est_insertion
+      RETURNING (xmax = 0) AS est_insertion
       """;
 
   private static final String SQL_DOUBLONS_URL =
@@ -290,26 +290,73 @@ public class PersisterConcerts {
     return concert;
   }
 
-  private MapSqlParameterSource parametresUpsert(ValeurConcert v) {
+  /// Construit le tuple de valeurs paramétrées (placeholders nommés indexés) d'une ligne d'upsert.
+  ///
+  /// @param i indice de la ligne dans le lot (suffixe des paramètres nommés)
+  /// @return le tuple {@code (:artiste_i, ...)} pour la clause VALUES
+  private static String placeholdersLigne(int i) {
+    return "(:artiste_" + i + ", :artisteNorm_" + i + ", :date_" + i + ", :heure_" + i
+        + ", :salle_" + i + ", :salleNorm_" + i + ", :ville_" + i + ", :dept_" + i
+        + ", :prixMin_" + i + ", :prixMax_" + i + ", :url_" + i
+        + ", CAST(:source_" + i + " AS source_concert)"
+        + ", :classification_" + i + ", :genre_" + i + ", :statut_" + i
+        + ", :presaleDebut_" + i + ", :presaleNom_" + i + ")";
+  }
+
+  /// Ajoute les paramètres nommés indexés d'une ligne d'upsert.
+  ///
+  /// @param params paramètres nommés du batch
+  /// @param v      valeurs du concert
+  /// @param i      indice de la ligne (suffixe des paramètres)
+  private static void ajouterParametresUpsert(
+      MapSqlParameterSource params, ValeurConcert v, int i) {
+    params.addValue("artiste_" + i, v.artiste());
+    params.addValue("artisteNorm_" + i, v.artisteNorm());
+    params.addValue("date_" + i, v.date(), Types.DATE);
+    params.addValue("heure_" + i, v.heure(), Types.TIME);
+    params.addValue("salle_" + i, v.salle());
+    params.addValue("salleNorm_" + i, v.salleNorm());
+    params.addValue("ville_" + i, v.ville());
+    params.addValue("dept_" + i, v.dept());
+    params.addValue("prixMin_" + i, v.prixMin(), Types.NUMERIC);
+    params.addValue("prixMax_" + i, v.prixMax(), Types.NUMERIC);
+    params.addValue("url_" + i, v.url());
+    params.addValue("source_" + i, v.source());
+    params.addValue("classification_" + i, v.classification());
+    params.addValue("genre_" + i, v.genre());
+    params.addValue("statut_" + i, v.statut());
+    params.addValue("presaleDebut_" + i, v.presaleDebut());
+    params.addValue("presaleNom_" + i, v.presaleNom());
+  }
+
+  /// Insère ou met à jour un lot de concerts en une seule requête multi-lignes.
+  ///
+  /// <p>L'unicité de la clé de conflit {@code (artiste_norm, date, salle_norm)} dans le lot est
+  /// garantie en amont par {@link #deduplicerLotReconcilie}, ce qui rend l'{@code ON CONFLICT}
+  /// multi-VALUES sûr (pas de double affectation d'une même ligne).
+  ///
+  /// @param valeurs concerts réconciliés et dédupliqués du lot
+  /// @return décompte des insertions et mises à jour du lot
+  private ResultatPersistance upsertLot(List<ValeurConcert> valeurs) {
+    if (valeurs.isEmpty()) return new ResultatPersistance(0, 0);
+
+    StringBuilder sql = new StringBuilder(SQL_UPSERT_ENTETE);
     MapSqlParameterSource params = new MapSqlParameterSource();
-    params.addValue("artiste", v.artiste());
-    params.addValue("artisteNorm", v.artisteNorm());
-    params.addValue("date", v.date(), Types.DATE);
-    params.addValue("heure", v.heure(), Types.TIME);
-    params.addValue("salle", v.salle());
-    params.addValue("salleNorm", v.salleNorm());
-    params.addValue("ville", v.ville());
-    params.addValue("dept", v.dept());
-    params.addValue("prixMin", v.prixMin(), Types.NUMERIC);
-    params.addValue("prixMax", v.prixMax(), Types.NUMERIC);
-    params.addValue("url", v.url());
-    params.addValue("source", v.source());
-    params.addValue("classification", v.classification());
-    params.addValue("genre", v.genre());
-    params.addValue("statut", v.statut());
-    params.addValue("presaleDebut", v.presaleDebut());
-    params.addValue("presaleNom", v.presaleNom());
-    return params;
+    for (int i = 0; i < valeurs.size(); i++) {
+      if (i > 0) sql.append(",\n");
+      sql.append(placeholdersLigne(i));
+      ajouterParametresUpsert(params, valeurs.get(i), i);
+    }
+    sql.append("\n").append(SQL_UPSERT_CONFLIT);
+
+    List<Map<String, Object>> lignes = jdbc.queryForList(sql.toString(), params);
+    int inserts = 0;
+    int updates = 0;
+    for (Map<String, Object> ligne : lignes) {
+      if (Boolean.TRUE.equals(ligne.get("est_insertion"))) inserts++;
+      else updates++;
+    }
+    return new ResultatPersistance(inserts, updates);
   }
 
   /// Persiste les concerts dédoublonnés en base via upsert.
@@ -383,13 +430,9 @@ public class PersisterConcerts {
 
       List<ValeurConcert> valeurs = deduplicerLotReconcilie(reconcilierSalles(valeursBrutes));
 
-      for (ValeurConcert v : valeurs) {
-        List<Map<String, Object>> lignes = jdbc.queryForList(SQL_UPSERT, parametresUpsert(v));
-        for (Map<String, Object> ligne : lignes) {
-          if (Boolean.TRUE.equals(ligne.get("est_insertion"))) totalInserts++;
-          else totalUpdates++;
-        }
-      }
+      ResultatPersistance resultatLot = upsertLot(valeurs);
+      totalInserts += resultatLot.nbInseres();
+      totalUpdates += resultatLot.nbMisAJour();
     }
 
     supprimerDoublonsParUrl();
