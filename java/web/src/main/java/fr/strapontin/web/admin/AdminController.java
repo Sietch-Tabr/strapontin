@@ -69,10 +69,16 @@ public class AdminController {
 
   /// Crée un nouveau compte utilisateur et envoie un email d'invitation.
   ///
+  /// <p>Le lien d'invitation n'est <strong>pas</strong> renvoyé dans la réponse quand l'email est
+  /// configuré (le token ne doit pas transiter côté client). En revanche, si aucun service email
+  /// n'est disponible ({@code RESEND_API_KEY} absent), le lien est exposé dans la réponse comme
+  /// seul canal de livraison possible : l'admin doit alors le transmettre manuellement.
+  ///
   /// @param requete corps JSON avec l'email
   /// @param auth    contexte d'authentification admin
   /// @param request la requête HTTP (pour construire le lien d'invitation)
-  /// @return 201 avec l'identifiant temporaire, ou 400 si l'email est déjà pris
+  /// @return 201 avec l'identifiant temporaire (et le lien si email indisponible), ou 400 si
+  ///     l'email est déjà pris
   @PostMapping("/utilisateurs")
   public ResponseEntity<Map<String, Object>> creerUtilisateur(
       @Valid @RequestBody RequeteCreerUtilisateur requete,
@@ -85,17 +91,20 @@ public class AdminController {
       return erreur(400, "Format d'email invalide.");
     }
 
+    boolean emailDisponible = emailService.estDisponible();
     return adminService
         .creerUtilisateur(email, adminId, baseUrlDepuisRequete(request))
         .map(
-            r ->
-                ResponseEntity.status(201)
-                    .<Map<String, Object>>body(
-                        Map.of(
-                            "succes", true,
-                            "email", r.email(),
-                            "identifiant", r.identifiant(),
-                            "lienReset", r.lienReset())))
+            r -> {
+              Map<String, Object> corps = new HashMap<>();
+              corps.put("succes", true);
+              corps.put("email", r.email());
+              corps.put("identifiant", r.identifiant());
+              if (!emailDisponible) {
+                corps.put("lienReset", r.lienReset());
+              }
+              return ResponseEntity.status(201).<Map<String, Object>>body(corps);
+            })
         .orElseGet(() -> erreur(400, "Impossible de créer le compte. Email déjà utilisé ?"));
   }
 

@@ -85,14 +85,24 @@
         <p class="param-aide">
           Les notifications push sont activées sur cet appareil.
         </p>
-        <button
-          type="button"
-          class="btn btn-secondary"
-          :disabled="pushEnCours"
-          @click="desabonnerPush"
-        >
-          Désactiver les notifications push
-        </button>
+        <div class="param-actions">
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            :disabled="testEnCours"
+            @click="testerPush"
+          >
+            Envoyer une notification de test
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="pushEnCours"
+            @click="desabonnerPush"
+          >
+            Désactiver les notifications push
+          </button>
+        </div>
       </div>
       <div v-else>
         <p class="param-aide">
@@ -134,6 +144,7 @@ const vapidDisponible = ref(false)
 const pushPermission = ref('default')
 const pushAbonne = ref(false)
 const pushEnCours = ref(false)
+const testEnCours = ref(false)
 let swRegistration = null
 let cleVapidPublique = null
 
@@ -247,6 +258,23 @@ async function abonnerPush() {
     afficherToast("Erreur lors de l'abonnement push.", 'erreur')
   } finally {
     pushEnCours.value = false
+  }
+}
+
+async function testerPush() {
+  testEnCours.value = true
+  try {
+    const rep = await fetch('/api/push/tester', { method: 'POST' })
+    if (rep.ok) {
+      afficherToast('Notification de test envoyée.', 'succes')
+    } else {
+      const corps = await rep.json()
+      afficherToast(corps.erreur || 'Erreur lors du test.', 'erreur')
+    }
+  } catch (_) {
+    afficherToast('Erreur réseau.', 'erreur')
+  } finally {
+    testEnCours.value = false
   }
 }
 

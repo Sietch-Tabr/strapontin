@@ -10,11 +10,17 @@ APP_DIR="/opt/strapontin"
 
 mkdir -p "$BACKUP_DIR"
 
+BACKUP_SECRET=""
+if [ -f "$APP_DIR/.env" ]; then
+    BACKUP_SECRET=$(grep '^BACKUP_INTERNAL_SECRET=' "$APP_DIR/.env" | cut -d'=' -f2- || true)
+fi
+
 HORODATAGE=$(date +%Y%m%d_%H%M%S)
 ARCHIVE="$BACKUP_DIR/strapontin_${HORODATAGE}.tar.gz"
 
 _appel_statut() {
     curl -sf -X POST \
+        -H "Authorization: Bearer $BACKUP_SECRET" \
         --data-urlencode "statut=$1" \
         --data-urlencode "horodatage=$HORODATAGE" \
         --data-urlencode "raison=${2:-}" \

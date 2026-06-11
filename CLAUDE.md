@@ -120,7 +120,10 @@ Pipeline Maven active : **test → build → backup → deploy**, tous restreint
 ```
 DATABASE_URL=jdbc:postgresql://localhost/strapontin
 APP_CONFIG_SECRET=<clé AES-256-GCM de chiffrement de app_config>
+BACKUP_INTERNAL_SECRET=<secret Bearer protégeant POST /api/interne/backup-statut>
 ```
+
+`BACKUP_INTERNAL_SECRET` (v2.2.2) : généré par `provision.sh`. `backup-local.sh` le lit dans `.env` et l'envoie via `Authorization: Bearer`. Absent → l'endpoint répond 403 (notifications de backup perdues, mais le dump continue).
 
 ## Configuration applicative (`app_config`)
 
@@ -191,11 +194,12 @@ Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de
 - Identifiants en français (`nombreUtilisateurs`, `calculerTotal`)
 - Logging : SLF4J, jamais `System.out`
 - **Tests Java** : `mvn -pl core,sources,web test` (unitaires). `mvn -pl worker test -am` requiert Docker (Testcontainers).
-- **Tests E2E** : Playwright (`e2e/`) — ~60 tests (auth, navigation, catalogue, admin, PWA), nécessite LXC dev actif (port 8080)
+- **Tests E2E** : Playwright (`e2e/`), nécessite LXC dev actif (port 8080)
+  - **Deux comptes dédiés** créés par `bash scripts/seed-e2e.sh root@192.168.20.78` : `e2eadmin` (admin) et `e2euser` (user), + compte d'invitation `e2e-invite@test.local` avec token prédéfini. Idempotent, à relancer avant chaque suite complète (le token d'invitation est à usage unique).
+  - global-setup ouvre 2 sessions (`.auth-admin.json`, `.auth-user.json`) via `POST /api/auth/login`. Tests admin : `test.use({ storageState: FICHIER_AUTH_ADMIN })`.
   - Tests "Scénario: API auth" restreints à chromium (grepInvert) pour ne pas épuiser le rate limiter bucket4j
-  - Lancer : `cd e2e && npx playwright test`
-  - Credentials : `E2E_IDENTIFIANT=kwaite E2E_MOT_DE_PASSE=... npx playwright test` (si session expirée)
-  - global-setup login : `POST /api/auth/login` direct (pas de form browser)
+  - `invitation_tokenValide` ne tourne que sur chromium (token à usage unique)
+  - Lancer : `cd e2e && npx playwright test` (mdp surchargeable via `E2E_ADMIN_MOT_DE_PASSE` / `E2E_USER_MOT_DE_PASSE`)
 - Nommage tests : `<methode>_<scenario>_<resultatAttendu>`
 
 ## Skills projet (`.claude/commands/`)

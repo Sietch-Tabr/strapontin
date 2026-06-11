@@ -363,6 +363,7 @@ test.describe("Scénario: Préférences — départements", () => {
 test.describe("Scénario: Préférences — filtre disponibles", () => {
   test("filtre_disponibles_toggle_change_etat", async ({ page }) => {
     await page.goto("/parametres#preferences");
+    await page.waitForLoadState("networkidle");
     const toggle = page.locator(
       "input[type='checkbox'][aria-labelledby='label-filtre-disponibles']",
     );
@@ -380,7 +381,6 @@ test.describe("Scénario: Préférences — filtre disponibles", () => {
     expect(rep.ok()).toBeTruthy();
   });
 });
-
 
 test.describe("Scénario: API compte — identifiant", () => {
   test("api_identifiant_trop_court_retourne_400", async ({ request }) => {
@@ -404,12 +404,17 @@ test.describe("Scénario: API compte — identifiant", () => {
   });
 
   test("api_identifiant_valide_retourne_succes", async ({ request }) => {
+    const identTmp = `e2etmp${Date.now()}`.slice(0, 20);
     const rep = await request.patch("/api/user/identifiant", {
-      data: { identifiant: "kwaite" },
+      data: { identifiant: identTmp },
     });
     expect(rep.ok()).toBeTruthy();
     const corps = await rep.json();
     expect(corps).toHaveProperty("succes");
+    // Restaurer l'identifiant d'origine
+    await request.patch("/api/user/identifiant", {
+      data: { identifiant: "e2euser" },
+    });
   });
 });
 

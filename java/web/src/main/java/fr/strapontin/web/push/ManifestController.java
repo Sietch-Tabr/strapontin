@@ -63,6 +63,21 @@ public class ManifestController {
                 "sizes", "512x512",
                 "type", "image/png",
                 "purpose", "maskable")));
+    manifest.put(
+        "shortcuts",
+        List.of(
+            Map.of(
+                "name", "Mes spectacles",
+                "url", "/spectacles",
+                "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192"))),
+            Map.of(
+                "name", "Découverte",
+                "url", "/decouverte",
+                "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192"))),
+            Map.of(
+                "name", "Nouveaux concerts",
+                "url", "/?nouveau=true",
+                "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192")))));
 
     return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(manifest);
   }

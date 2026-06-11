@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
+
+test.use({ storageState: FICHIER_AUTH_ADMIN });
 
 test.describe("Scénario: admin — sections et contenus", () => {
   test("admin_h1_visible", async ({ page }) => {
@@ -128,13 +131,10 @@ test.describe("Scénario: admin — gestion des utilisateurs", () => {
     await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
     await page.click('.form-creer-utilisateur button[type="submit"]');
 
-    // Vérifier le dialog d'invitation
+    // Vérifier le dialog de confirmation d'invitation
     const dialog = page.locator("dialog#dialog-invitation");
     await expect(dialog).toBeVisible({ timeout: 5000 });
-    const lienInvitation = await page
-      .locator("input#lien-invitation")
-      .inputValue();
-    expect(lienInvitation.length).toBeGreaterThan(0);
+    await expect(dialog).toContainText(emailTest);
     await page.click("button#btn-fermer-invitation");
 
     // Retrouver la carte du compte créé

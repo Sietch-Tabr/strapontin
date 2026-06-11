@@ -67,14 +67,22 @@
   </dialog>
 
   <dialog ref="dialogInvitationRef" id="dialog-invitation">
-    <p class="dialog-titre">Compte créé</p>
-    <p class="dialog-corps">
-      Envoyez ce lien à l'utilisateur pour qu'il finalise l'inscription. Il expire après utilisation.
-    </p>
-    <div class="dialog-lien">
-      <input id="lien-invitation" type="text" readonly :value="lienInvitation" />
-      <button type="button" class="btn btn-secondary" @click="copierLien">Copier</button>
-    </div>
+    <template v-if="lienInvitation">
+      <p class="dialog-titre">Compte créé</p>
+      <p class="dialog-corps">
+        Aucun service email n'est configuré : transmettez ce lien à <strong>{{ inviteEmail }}</strong> pour qu'il finalise son inscription. Il expire après utilisation.
+      </p>
+      <div class="dialog-lien">
+        <input id="lien-invitation" type="text" readonly :value="lienInvitation" aria-label="Lien d'invitation" />
+        <button type="button" class="btn btn-secondary" @click="copierLien">Copier</button>
+      </div>
+    </template>
+    <template v-else>
+      <p class="dialog-titre">Invitation envoyée</p>
+      <p class="dialog-corps">
+        Un email d'invitation a été envoyé à <strong>{{ inviteEmail }}</strong>. Le lien est valable 7 jours.
+      </p>
+    </template>
     <div class="dialog-pied">
       <button type="button" id="btn-fermer-invitation" class="btn btn-primary" @click="fermerDialogInvitation">Fermer</button>
     </div>
@@ -100,6 +108,7 @@ const modifOuverts = ref(new Set())
 const modifData = reactive({})
 const modifErreurs = reactive({})
 const userASupprimer = ref(null)
+const inviteEmail = ref('')
 const lienInvitation = ref('')
 
 async function charger() {
@@ -140,6 +149,7 @@ async function creerUtilisateur() {
   const corps = await rep.json()
   if (rep.ok || rep.status === 201) {
     nouvelEmail.value = ''
+    inviteEmail.value = corps.email ?? ''
     lienInvitation.value = corps.lienReset ?? ''
     ouvrirDialogInvitationModal()
     const repUsers = await fetch('/api/admin/utilisateurs')
@@ -153,7 +163,10 @@ async function creerUtilisateur() {
 }
 
 function copierLien() {
-  if (navigator.clipboard) navigator.clipboard.writeText(lienInvitation.value)
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(lienInvitation.value)
+    afficherToast('Lien copié.', 'succes')
+  }
 }
 
 function fermerDialogInvitation() {

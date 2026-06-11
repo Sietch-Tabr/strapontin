@@ -85,7 +85,6 @@
         >
           Relancer les fetches maintenant
         </button>
-        <span v-if="relancerStatut" id="relancer-statut" class="relancer-statut" aria-live="polite">{{ relancerStatut }}</span>
       </div>
     </div>
 
@@ -130,7 +129,6 @@ const jobsEnCours = shallowRef([])
 const workerLastSuccess = ref(null)
 const etatQuota = ref('ok')
 const relancerEnCours = ref(false)
-const relancerStatut = ref('')
 let pollingInterval = null
 
 const pctQuota = computed(() => {
@@ -190,18 +188,18 @@ async function charger() {
 
 async function relancerFetches() {
   relancerEnCours.value = true
-  relancerStatut.value = 'Fetches en cours…'
   try {
     const rep = await fetch('/api/admin/relancer', { method: 'POST' })
     if (rep.ok) {
+      afficherToast('Fetches relancés.', 'succes')
       demarrerPolling()
     } else {
       relancerEnCours.value = false
-      relancerStatut.value = 'Erreur — worker inaccessible.'
+      afficherToast('Erreur — worker inaccessible.', 'erreur')
     }
   } catch (_) {
     relancerEnCours.value = false
-    relancerStatut.value = 'Erreur réseau.'
+    afficherToast('Erreur réseau.', 'erreur')
   }
 }
 

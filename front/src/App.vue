@@ -1,4 +1,5 @@
 <template>
+  <a href="#contenu-principal" class="lien-evitement">Aller au contenu</a>
   <template v-if="!estPageAuth">
     <div class="app-layout">
       <SidebarNav

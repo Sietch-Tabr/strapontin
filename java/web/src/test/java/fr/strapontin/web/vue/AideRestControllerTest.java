@@ -89,24 +89,20 @@ class AideRestControllerTest {
   }
 
   @Test
-  void signaler_avecHeaderXRealIp_utiliseHeaderPourRateLimit() {
-    // Épuise le bucket pour 10.0.0.200 via X-Real-IP (remoteAddr = 127.0.0.1)
+  void signaler_headerXRealIpIgnore_seulRemoteAddrCompte() {
+    // Épuise le bucket de 10.0.0.20 avec X-Real-IP variés (tous ignorés)
     for (int i = 0; i < 3; i++) {
       var req = new MockHttpServletRequest();
-      req.setRemoteAddr("127.0.0.1");
-      req.addHeader("X-Real-IP", "10.0.0.200");
+      req.setRemoteAddr("10.0.0.20");
+      req.addHeader("X-Real-IP", "1.2.3." + i);
       controller.signaler(new RequeteSignalement("bug", "msg"), auth, req);
     }
-    // Même remoteAddr sans X-Real-IP → bucket de 127.0.0.1 indépendant → passe
-    var repSansHeader =
-        controller.signaler(new RequeteSignalement("bug", "msg"), auth, requete("127.0.0.1"));
-    assertEquals(HttpStatus.NO_CONTENT, repSansHeader.getStatusCode());
-    // Toujours X-Real-IP: 10.0.0.200 → bucket épuisé → 429
+    // Même remoteAddr → bucket épuisé même avec un X-Real-IP différent
     var req429 = new MockHttpServletRequest();
-    req429.setRemoteAddr("127.0.0.1");
-    req429.addHeader("X-Real-IP", "10.0.0.200");
-    var rep429 = controller.signaler(new RequeteSignalement("bug", "msg"), auth, req429);
-    assertEquals(HttpStatus.TOO_MANY_REQUESTS, rep429.getStatusCode());
+    req429.setRemoteAddr("10.0.0.20");
+    req429.addHeader("X-Real-IP", "9.9.9.9");
+    var rep = controller.signaler(new RequeteSignalement("bug", "msg"), auth, req429);
+    assertEquals(HttpStatus.TOO_MANY_REQUESTS, rep.getStatusCode());
   }
 
   private static MockHttpServletRequest requete(String ip) {

@@ -19,11 +19,12 @@
             Aegis, etc.) et scannez le QR code ci-dessous.
           </p>
 
-          <div
+          <img
             v-if="qrCodeSvg"
             class="totp-qr"
-            v-html="qrCodeSvg"
-          ></div>
+            :src="svgDataUri"
+            alt="QR code TOTP"
+          />
 
           <details class="totp-manuel">
             <summary>Saisie manuelle (si QR indisponible)</summary>
@@ -82,7 +83,7 @@
 <script setup>
 defineOptions({ name: 'ParametresTotpPage' })
 
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useToasts } from "../composables/useToasts.js";
 
@@ -94,6 +95,11 @@ const erreurChargement = ref(null);
 const otpUri = ref("");
 const totpSecret = ref("");
 const qrCodeSvg = ref("");
+const svgDataUri = computed(() =>
+  qrCodeSvg.value
+    ? 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(qrCodeSvg.value)))
+    : ''
+);
 const code = ref("");
 const erreurCode = ref(null);
 const enCours = ref(false);

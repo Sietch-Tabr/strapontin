@@ -127,9 +127,22 @@
   padding: 0;
 }
 html {
-  font-size: 16px;
+  font-size: 100%;
   overflow-x: clip;
   scroll-behavior: smooth;
+}
+.lien-evitement {
+  position: absolute;
+  left: -9999px;
+}
+.lien-evitement:focus {
+  left: 1rem;
+  top: 1rem;
+  z-index: 9999;
+  background: var(--bg);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  outline: 2px solid var(--accent);
 }
 body {
   font-family: var(--font);
