@@ -67,6 +67,24 @@
     </div>
   </dialog>
 
+  <dialog ref="dialogReinitMdpRef" id="dialog-reinit-mdp">
+    <p class="dialog-titre">Réinitialiser le mot de passe ?</p>
+    <p class="dialog-corps">Un email de réinitialisation sera envoyé à <strong>{{ userAReinitMdp?.email }}</strong>.</p>
+    <div class="dialog-pied">
+      <button type="button" id="dialog-reinit-mdp-confirmer" class="btn btn-secondary" @click="confirmerReinitMdp">Envoyer</button>
+      <button type="button" id="dialog-reinit-mdp-annuler" class="btn btn-secondary" @click="fermerDialogReinitMdp">Annuler</button>
+    </div>
+  </dialog>
+
+  <dialog ref="dialogReinitTotpRef" id="dialog-reinit-totp">
+    <p class="dialog-titre">Désactiver la 2FA ?</p>
+    <p class="dialog-corps">La double authentification de <strong>{{ userAReinitTotp?.email }}</strong> sera désactivée.</p>
+    <div class="dialog-pied">
+      <button type="button" id="dialog-reinit-totp-confirmer" class="btn btn-secondary" @click="confirmerReinitTotp">Désactiver</button>
+      <button type="button" id="dialog-reinit-totp-annuler" class="btn btn-secondary" @click="fermerDialogReinitTotp">Annuler</button>
+    </div>
+  </dialog>
+
   <dialog ref="dialogInvitationRef" id="dialog-invitation">
     <template v-if="lienInvitation">
       <p class="dialog-titre">Compte créé</p>
@@ -101,6 +119,8 @@ import { formaterInstant } from '../../composables/useDates.js'
 const { afficherToast } = useToasts()
 const { dialogRef: dialogSupprimerUserRef, ouvrir: ouvrirDialogSupprimerModal, fermer: fermerDialogSupprimerModal } = useDialog()
 const { dialogRef: dialogInvitationRef, ouvrir: ouvrirDialogInvitationModal, fermer: fermerDialogInvitationModal } = useDialog()
+const { dialogRef: dialogReinitMdpRef, ouvrir: ouvrirDialogReinitMdpModal, fermer: fermerDialogReinitMdpModal } = useDialog()
+const { dialogRef: dialogReinitTotpRef, ouvrir: ouvrirDialogReinitTotpModal, fermer: fermerDialogReinitTotpModal } = useDialog()
 
 const utilisateurs = shallowRef([])
 const utilisateurCourantId = ref(null)
@@ -109,6 +129,8 @@ const modifOuverts = ref(new Set())
 const modifData = reactive({})
 const modifErreurs = reactive({})
 const userASupprimer = ref(null)
+const userAReinitMdp = ref(null)
+const userAReinitTotp = ref(null)
 const inviteEmail = ref('')
 const lienInvitation = ref('')
 
@@ -203,15 +225,41 @@ async function sauvegarderModif(u) {
   }
 }
 
-async function reinitMdp(u) {
-  const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/reset-mdp', { method: 'POST' })
+function reinitMdp(u) {
+  userAReinitMdp.value = u
+  ouvrirDialogReinitMdpModal()
+}
+
+function fermerDialogReinitMdp() {
+  fermerDialogReinitMdpModal()
+  userAReinitMdp.value = null
+}
+
+async function confirmerReinitMdp() {
+  if (!userAReinitMdp.value) return
+  const userId = userAReinitMdp.value.id
+  fermerDialogReinitMdp()
+  const rep = await fetch('/api/admin/utilisateurs/' + userId + '/reset-mdp', { method: 'POST' })
   const corps = await rep.json()
   if (rep.ok) afficherToast('Email de réinitialisation envoyé.', 'succes')
   else afficherToast(corps.erreur || 'Erreur.', 'erreur')
 }
 
-async function reinitTotp(u) {
-  const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/reset-totp', { method: 'POST' })
+function reinitTotp(u) {
+  userAReinitTotp.value = u
+  ouvrirDialogReinitTotpModal()
+}
+
+function fermerDialogReinitTotp() {
+  fermerDialogReinitTotpModal()
+  userAReinitTotp.value = null
+}
+
+async function confirmerReinitTotp() {
+  if (!userAReinitTotp.value) return
+  const userId = userAReinitTotp.value.id
+  fermerDialogReinitTotp()
+  const rep = await fetch('/api/admin/utilisateurs/' + userId + '/reset-totp', { method: 'POST' })
   const corps = await rep.json()
   if (rep.ok) afficherToast('2FA réinitialisée. L\'utilisateur pourra se reconnecter sans code.', 'succes')
   else afficherToast(corps.erreur || 'Erreur.', 'erreur')

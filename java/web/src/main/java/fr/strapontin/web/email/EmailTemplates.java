@@ -262,6 +262,24 @@ final class EmailTemplates {
     return enveloppErreur("Worker inactif", corps, baseUrl);
   }
 
+  /// Notification de suppression de compte par un administrateur.
+  ///
+  /// @param baseUrl l'URL publique de base de l'application
+  /// @return le HTML de l'email de notification
+  static String suppressionCompte(String baseUrl) {
+    String corps =
+        """
+        <p style="color: #555; margin: 0 0 24px">
+          Votre compte Strapontin a été supprimé par un administrateur.
+          Vos données ont été effacées.
+        </p>
+        <p style="color: #aaa; font-size: 13px; margin: 0">
+          Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.
+        </p>
+        """;
+    return envelopper("Votre compte Strapontin a été supprimé", corps, baseUrl);
+  }
+
   /// Email de test de configuration Resend.
   ///
   /// @param baseUrl l'URL publique de base de l'application
