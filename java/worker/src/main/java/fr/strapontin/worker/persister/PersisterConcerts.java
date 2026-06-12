@@ -331,8 +331,9 @@ public class PersisterConcerts {
         + i
         + ", :statut_"
         + i
-        + ", :presaleDebut_"
+        + ", CAST(:presaleDebut_"
         + i
+        + " AS timestamptz)"
         + ", :presaleNom_"
         + i
         + ")";
