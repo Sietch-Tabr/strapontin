@@ -275,14 +275,20 @@ public class AdminService {
     }
   }
 
-  /// Supprime un compte utilisateur.
+  /// Supprime un compte utilisateur et notifie l'utilisateur par email.
   ///
   /// @param userId  identifiant de l'utilisateur à supprimer
   /// @param adminId identifiant de l'admin demandeur
+  @Transactional
   public void supprimerUtilisateur(String userId, String adminId) {
+    List<Map<String, Object>> cible =
+        jdbc.queryForList("SELECT email FROM users WHERE id = :userId", Map.of("userId", userId));
     jdbc.update("DELETE FROM users WHERE id = :userId", Map.of("userId", userId));
     logAdminService.logAdmin(
         "warn", "admin", "compte supprimé", Map.of("userId", userId, "parAdmin", adminId));
+    if (!cible.isEmpty()) {
+      emailService.envoyerSuppressionCompte((String) cible.get(0).get("email"));
+    }
   }
 
   /// Envoie un email de réinitialisation de mot de passe à un utilisateur.

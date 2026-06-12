@@ -342,6 +342,42 @@ public class EmailService {
     }
   }
 
+  /// Notifie un utilisateur que son compte a été supprimé par un administrateur.
+  ///
+  /// @param email l'adresse de l'utilisateur supprimé
+  public void envoyerSuppressionCompte(String email) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — email suppression compte non envoyé");
+      return;
+    }
+
+    String corps = EmailTemplates.suppressionCompte(ctx.get().baseUrl());
+
+    String texte =
+        """
+        Votre compte Strapontin a été supprimé
+
+        Votre compte Strapontin a été supprimé par un administrateur.
+        Vos données ont été effacées.
+
+        Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.
+        """;
+
+    try {
+      envoyer(
+          ctx.get(),
+          email,
+          ctx.get().expediteur(),
+          "Votre compte Strapontin a été supprimé",
+          corps,
+          texte);
+      log.info("Email suppression compte envoyé : {}", email);
+    } catch (Exception e) {
+      log.error("Échec envoi suppression compte : {}", email, e);
+    }
+  }
+
   /// Envoie une notification à l'admin quand un email Strapontin est rejeté en bounce.
   ///
   /// @param emailBouncee l'adresse email qui a produit le bounce

@@ -8,7 +8,21 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
-        <h2 class="changelog-version">v 2.2.4 — 12 juin 2026</h2>
+        <h2 class="changelog-version">v 2.2.5 — 12 juin 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Une confirmation est désormais demandée avant de réinitialiser le mot de passe ou la double authentification d'un utilisateur.</li>
+              <li>L'utilisateur dont le compte est supprimé reçoit maintenant un email de notification.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.2.4 — 12 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Interface</p>
@@ -26,7 +40,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.2.3 — 11 juin 2026</h2></summary>
