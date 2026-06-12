@@ -67,7 +67,12 @@ public class PersisterConcerts {
           url            = COALESCE(EXCLUDED.url, concerts.url),
           classification = COALESCE(EXCLUDED.classification, concerts.classification),
           genre          = COALESCE(EXCLUDED.genre, concerts.genre),
-          statut         = COALESCE(EXCLUDED.statut, concerts.statut),
+          statut         = CASE
+                             WHEN concerts.statut IN ('cancelled', 'rescheduled', 'postponed')
+                                  THEN concerts.statut
+                             WHEN concerts.source = 'ticketmaster' AND EXCLUDED.source = 'eventim'
+                                  THEN concerts.statut
+                             ELSE EXCLUDED.statut END,
           presale_debut  = COALESCE(EXCLUDED.presale_debut, concerts.presale_debut),
           presale_nom    = COALESCE(EXCLUDED.presale_nom, concerts.presale_nom),
           updated_at     = now()

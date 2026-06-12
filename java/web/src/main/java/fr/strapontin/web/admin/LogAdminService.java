@@ -19,7 +19,8 @@ import org.springframework.stereotype.Service;
 /// Service de journalisation admin (portage de {@code log-admin.ts}).
 ///
 /// <p>Remplace la liste Redis {@code strapontin:admin:logs} par la table PostgreSQL
-/// {@code logs_admin}. Les 200 entrées les plus récentes sont conservées.
+/// {@code logs_admin}. La rétention est temporelle : la purge des entrées de plus de
+/// 30 jours est planifiée côté worker ({@code PurgerLogsAdminJob}).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -27,7 +28,6 @@ import org.springframework.stereotype.Service;
 public class LogAdminService {
 
   private static final Logger log = LoggerFactory.getLogger(LogAdminService.class);
-  private static final int NB_LOGS_MAX = 200;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
@@ -81,14 +81,6 @@ public class LogAdminService {
           VALUES (:ts, :niveau, :source, :message, :meta)
           """,
           params);
-
-      jdbc.update(
-          """
-          DELETE FROM logs_admin WHERE id NOT IN (
-            SELECT id FROM logs_admin ORDER BY ts DESC LIMIT :max
-          )
-          """,
-          Map.of("max", NB_LOGS_MAX));
 
     } catch (JsonProcessingException e) {
       log.warn("Erreur sérialisation meta log admin", e);

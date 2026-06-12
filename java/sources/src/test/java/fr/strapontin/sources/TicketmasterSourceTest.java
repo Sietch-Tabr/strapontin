@@ -541,4 +541,37 @@ class TicketmasterSourceTest {
     assertEquals(1, resultats.size());
     serveur.verify();
   }
+
+  @Test
+  void mapEvenement_offsaleAvecVentePubliqueFuture_retourneStatutPresale() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "dates",
+                    Map.of(
+                        "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
+                        "status", Map.of("code", "offsale")),
+                "sales", Map.of("public", Map.of("startDateTime", "2099-01-01T12:00:00Z"))));
+
+    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+
+    assertEquals("presale", concert.statut());
+    assertEquals("2099-01-01T12:00:00Z", concert.presaleDebut());
+  }
+
+  @Test
+  void mapEvenement_offsaleAvecVentePubliquePassee_resteOffsale() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "dates",
+                    Map.of(
+                        "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
+                        "status", Map.of("code", "offsale")),
+                "sales", Map.of("public", Map.of("startDateTime", "2020-01-01T12:00:00Z"))));
+
+    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+
+    assertEquals("offsale", concert.statut());
+  }
 }

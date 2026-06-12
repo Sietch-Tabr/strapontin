@@ -226,9 +226,13 @@ public class EventimSource {
             : null;
 
     String url = extraireUrlProduit(produit);
+    // Eventim ne distingue pas prévente et complet : seul inStock=false signale qu'il n'y a
+    // rien à acheter (vente pas encore ouverte ou épuisée). On le traite comme une prévente.
+    Boolean inStock = produit.get("inStock") instanceof Boolean b ? b : null;
+    String statut = Boolean.FALSE.equals(inStock) ? "presale" : null;
     return new ConcertBrut(
         artiste, date, heure, salle, ville, dept, prixMin, prixMax, url, "eventim", null, null,
-        null, null, null);
+        statut, null, null);
   }
 
   @SuppressWarnings("unchecked")

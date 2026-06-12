@@ -138,7 +138,7 @@
                 <span v-if="concert.statut === 'cancelled'" class="badge badge-annule">Annulé</span>
                 <span v-if="concert.statut === 'rescheduled' || concert.statut === 'postponed'" class="badge badge-reporte">Reporté</span>
                 <span v-if="concert.statut === 'offsale'" class="badge badge-complet">Complet</span>
-                <span v-if="presaleActive(concert)" class="badge badge-prevente">Prévente le {{ formaterPresale(concert.presaleDebut) }}</span>
+                <span v-if="concert.statut === 'presale'" class="badge badge-prevente">{{ concert.presaleDebut ? 'Prévente le ' + formaterPresale(concert.presaleDebut) : 'Prévente' }}</span>
               </td>
               <td data-label="Date">
                 <time class="concert-date" :datetime="concert.date">{{ formaterAvecHeure(concert.date, concert.heure) }}</time>
@@ -336,10 +336,6 @@ async function demasquerConcert(concert) {
   } catch {
     afficherToast('Impossible de réafficher ce concert.', 'erreur')
   }
-}
-
-function presaleActive(concert) {
-  return concert.presaleDebut && new Date(concert.presaleDebut) > new Date()
 }
 
 function formaterPresale(instantIso) {

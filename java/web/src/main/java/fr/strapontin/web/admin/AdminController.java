@@ -174,6 +174,25 @@ public class AdminController {
         .orElseGet(() -> erreur(404, "Utilisateur introuvable."));
   }
 
+  /// Réinitialise la 2FA (TOTP) d'un utilisateur.
+  ///
+  /// @param userId identifiant de l'utilisateur
+  /// @param auth   contexte d'authentification admin
+  /// @return 200 si réinitialisé, 400 si compte admin courant, 404 si introuvable
+  @PostMapping("/utilisateurs/{userId}/reset-totp")
+  public ResponseEntity<Map<String, Object>> reinitialiserTotp(
+      @PathVariable String userId, Authentication auth) {
+    String adminId = utilisateur(auth).id();
+    if (userId.equals(adminId)) {
+      return erreur(400, "Impossible de réinitialiser ce compte.");
+    }
+    if (adminService.reinitialiserTotp(userId, adminId)) {
+      return ResponseEntity.ok(
+          Map.<String, Object>of("succes", true, "action", "reinitialiserTotp"));
+    }
+    return erreur(404, "Utilisateur introuvable.");
+  }
+
   /// Retourne le statut des clés de configuration.
   ///
   /// @return la liste des statuts de configuration

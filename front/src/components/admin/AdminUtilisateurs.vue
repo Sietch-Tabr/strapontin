@@ -36,6 +36,7 @@
             <div v-if="u.id !== utilisateurCourantId" class="user-carte-actions">
               <button type="button" class="btn btn-sm btn-secondary" @click="toggleModif(u.id)">Modifier</button>
               <button type="button" class="btn btn-sm btn-secondary" @click="reinitMdp(u)">Réinit. MDP</button>
+              <button type="button" class="btn btn-sm btn-secondary" @click="reinitTotp(u)">Réinit. 2FA</button>
               <button type="button" class="btn btn-sm btn-danger" @click="ouvrirDialogSupprimer(u)">Supprimer</button>
             </div>
           </div>
@@ -206,6 +207,13 @@ async function reinitMdp(u) {
   const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/reset-mdp', { method: 'POST' })
   const corps = await rep.json()
   if (rep.ok) afficherToast('Email de réinitialisation envoyé.', 'succes')
+  else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+}
+
+async function reinitTotp(u) {
+  const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/reset-totp', { method: 'POST' })
+  const corps = await rep.json()
+  if (rep.ok) afficherToast('2FA réinitialisée. L\'utilisateur pourra se reconnecter sans code.', 'succes')
   else afficherToast(corps.erreur || 'Erreur.', 'erreur')
 }
 

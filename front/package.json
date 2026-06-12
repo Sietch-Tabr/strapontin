@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/generer-sprite.mjs && vite build",
+    "build": "node scripts/generer-sprite.mjs && node scripts/versionner-sw.mjs && vite build",
     "generer-sprite": "node scripts/generer-sprite.mjs",
     "preview": "vite preview"
   },

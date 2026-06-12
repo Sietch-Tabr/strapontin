@@ -89,7 +89,8 @@ class NotificationDigestServiceTest {
             "https://example.com",
             UUID.randomUUID().toString(),
             "stromae",
-            "ARTISTE");
+            "ARTISTE",
+            null);
 
     String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.exemple.fr");
 
@@ -112,7 +113,8 @@ class NotificationDigestServiceTest {
             null,
             UUID.randomUUID().toString(),
             "stromae",
-            "ARTISTE");
+            "ARTISTE",
+            null);
     var c2 =
         new NotificationDigestService.ConcertNotif(
             "Aya Nakamura",
@@ -122,7 +124,8 @@ class NotificationDigestServiceTest {
             null,
             UUID.randomUUID().toString(),
             "aya nakamura",
-            "ARTISTE");
+            "ARTISTE",
+            null);
 
     String payload = invoquerPayloadPush(List.of(c1, c2), "https://strapontin.exemple.fr");
 
@@ -141,7 +144,8 @@ class NotificationDigestServiceTest {
             null,
             UUID.randomUUID().toString(),
             "divers",
-            "SALLE");
+            "SALLE",
+            null);
 
     String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.exemple.fr");
 
@@ -161,7 +165,8 @@ class NotificationDigestServiceTest {
             "https://example.com",
             UUID.randomUUID().toString(),
             "indochine",
-            "ARTISTE");
+            "ARTISTE",
+            null);
 
     String html =
         invoquerCorpsEmail("1 nouveau concert", List.of(concert), "https://strapontin.exemple.fr");

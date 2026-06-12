@@ -102,7 +102,9 @@ public class TotpService {
   // utilisé
   public boolean verifierCode(String secret, String code) {
     if (secret == null || code == null) return false;
-    String codeNorm = code.strip();
+    // Retire tous les espaces (et non seulement aux extrémités) : les applications TOTP comme
+    // Bitwarden affichent le code par groupes (« 365 493 »), souvent collé tel quel.
+    String codeNorm = code.replaceAll("\\s", "");
     if (!codeNorm.matches("\\d{6}")) return false;
     try {
       byte[] secretOctets = base32Decoder(secret);

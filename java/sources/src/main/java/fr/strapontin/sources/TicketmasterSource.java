@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
@@ -169,6 +170,9 @@ public class TicketmasterSource {
   private final String apiKey;
   private final RestClient restClient;
   private final AtomicReference<QuotaTM> dernierQuota = new AtomicReference<>();
+  // Compteurs cumulés depuis le dernier prélèvement (remontés dans logs_admin par le worker).
+  private final AtomicInteger concertsManquesCumules = new AtomicInteger();
+  private final AtomicInteger erreursHttpCumulees = new AtomicInteger();
   private final AtomicLong dernierAppelMs = new AtomicLong(0);
 
   /// Crée une instance avec la clé API fournie et un RestClient par défaut.
@@ -193,6 +197,31 @@ public class TicketmasterSource {
   /// @return quota courant ou null
   public QuotaTM obtenirQuota() {
     return dernierQuota.get();
+  }
+
+  /// Bilan agrégé des fetchs Ticketmaster depuis le dernier prélèvement.
+  ///
+  /// @param concertsManques concerts non récupérés (pagination plafonnée à {@code NB_PAGES_MAX})
+  /// @param erreursHttp      nombre de réponses HTTP Ticketmaster en erreur
+  public record BilanFetch(int concertsManques, int erreursHttp) {}
+
+  /// Retourne le bilan cumulé des fetchs et remet les compteurs à zéro.
+  ///
+  /// @return le bilan depuis le dernier appel
+  public BilanFetch preleverBilan() {
+    return new BilanFetch(concertsManquesCumules.getAndSet(0), erreursHttpCumulees.getAndSet(0));
+  }
+
+  /// Indique si un horodatage ISO 8601 (avec offset ou {@code Z}) est dans le futur.
+  ///
+  /// @param iso horodatage à analyser
+  /// @return {@code true} si postérieur à maintenant, {@code false} si passé ou illisible
+  private static boolean estDansLeFutur(String iso) {
+    try {
+      return java.time.OffsetDateTime.parse(iso).toInstant().isAfter(java.time.Instant.now());
+    } catch (Exception e) {
+      return false;
+    }
   }
 
   /// Extrait le code département depuis un code postal français.
@@ -384,8 +413,17 @@ public class TicketmasterSource {
     String presaleDebut = presale != null ? (String) presale.get("startDateTime") : null;
     String presaleNom = presale != null ? (String) presale.get("name") : null;
 
-    if ("offsale".equals(statut) && presaleDebut != null) {
-      statut = "presale";
+    if ("offsale".equals(statut)) {
+      var ventePublique = sales != null ? (Map<String, Object>) sales.get("public") : null;
+      String ouverturePublique =
+          ventePublique != null ? (String) ventePublique.get("startDateTime") : null;
+      if (presaleDebut != null) {
+        statut = "presale";
+      } else if (ouverturePublique != null && estDansLeFutur(ouverturePublique)) {
+        // Vente générale pas encore ouverte : c'est une prévente à venir, pas un concert complet.
+        statut = "presale";
+        presaleDebut = ouverturePublique;
+      }
     }
 
     return new ConcertBrut(
@@ -477,6 +515,7 @@ public class TicketmasterSource {
     } catch (Exception e) {
       String uriSafe = uri.replaceAll("apikey=[^&]+", "apikey=***");
       log.warn("erreur HTTP Ticketmaster url={}", uriSafe, e);
+      erreursHttpCumulees.incrementAndGet();
       return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null);
     }
   }
@@ -514,6 +553,7 @@ public class TicketmasterSource {
 
     int nbPagesTotal = (int) Math.ceil((double) totalElements / TAILLE_PAGE_REGION);
     if (nbPagesTotal > NB_PAGES_MAX) {
+      concertsManquesCumules.addAndGet(Math.max(0, totalElements - tousLesEvents.size()));
       log.warn(
           "NB_PAGES_MAX atteint — concerts manqués total={} recuperes={} pagesFetched={}"
               + " pagesTotal={}",

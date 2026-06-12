@@ -8,7 +8,29 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
-        <h2 class="changelog-version">v 2.2.3 — 11 juin 2026</h2>
+        <h2 class="changelog-version">v 2.2.4 — 12 juin 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Interface</p>
+            <ul>
+              <li>Un badge « Prévente » signale les concerts dont la billetterie n'est pas encore ouverte, sur l'accueil et dans Mes spectacles.</li>
+              <li>Les concerts dont la vente n'a pas encore commencé ne sont plus affichés « Complet » à tort.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Compte et sécurité</p>
+            <ul>
+              <li>Un administrateur peut réinitialiser la double authentification (2FA) d'un utilisateur qui a perdu l'accès à son application d'authentification.</li>
+              <li>La connexion avec 2FA pouvait renvoyer à tort vers l'écran de connexion : c'est corrigé.</li>
+              <li>Le message affiché après trop de tentatives de connexion est désormais plus clair.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.2.3 — 11 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Interface</p>
@@ -18,7 +40,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.2.2 — 11 juin 2026</h2></summary>

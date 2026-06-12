@@ -150,14 +150,15 @@ Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SE
 
 Paradigme : **pré-fetch en arrière-plan, jamais d'appel API depuis le browser**.
 
-| Job                     | Déclenchement           | Description                                  |
-| ----------------------- | ----------------------- | -------------------------------------------- |
-| `FetchArtisteJob`       | Ajout artiste + cron 2h | Fetch TM + Eventim par nom artiste           |
-| `FetchArtistesBatchJob` | Cron 2h                 | Fetch TM en lots de 20 attractionIds         |
-| `FetchRegionJob`        | Cron 2h + manuel        | Fetch TM + Eventim par département           |
-| `FetchSalleJob`         | Ajout salle + cron 2h   | Fetch TM par `venueId`                       |
-| `RecalculerMatchesJob`  | Après fetch             | Recalcule `user_matches` pour tous les users |
-| `PurgerConcertsJob`     | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours    |
+| Job                     | Déclenchement           | Description                                   |
+| ----------------------- | ----------------------- | --------------------------------------------- |
+| `FetchArtisteJob`       | Ajout artiste + cron 2h | Fetch TM + Eventim par nom artiste            |
+| `FetchArtistesBatchJob` | Cron 2h                 | Fetch TM en lots de 20 attractionIds          |
+| `FetchRegionJob`        | Cron 2h + manuel        | Fetch TM + Eventim par département            |
+| `FetchSalleJob`         | Ajout salle + cron 2h   | Fetch TM par `venueId`                        |
+| `RecalculerMatchesJob`  | Après fetch             | Recalcule `user_matches` pour tous les users  |
+| `PurgerConcertsJob`     | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours     |
+| `PurgerLogsAdminJob`    | Cron quotidien (0h15)   | Supprime les `logs_admin` de plus de 30 jours |
 
 Rate limiting TM : max 2 jobs simultanés (3 → HTTP 429). Quota TM persisté dans `app_config` (`TM_QUOTA_JSON`).
 
@@ -165,6 +166,7 @@ Rate limiting TM : max 2 jobs simultanés (3 → HTTP 429). Quota TM persisté d
 
 Invite-only. Login par identifiant (insensible à la casse). Rôles : `user` | `admin`.
 2FA TOTP optionnel pour tous les utilisateurs — enrollment via `/parametres/totp`, challenge automatique à la connexion si activé. Cap : 500 artistes / 200 salles par user.
+Algorithme TOTP conforme RFC 6238 (HMAC-SHA1, 30 s, ±1 fenêtre, saisie tolérante aux espaces). Réinitialisation 2FA par un admin depuis `/admin` (bouton « Réinit. 2FA », endpoint `POST /api/admin/utilisateurs/{id}/reset-totp`) pour un compte bloqué. Succès et échecs d'auth (login, rate-limit, TOTP) consignés dans `logs_admin` (source `auth`). Rate-limit login : 15 tentatives / 15 min par IP (bucket4j → 429).
 Spring Security form login → cookie `SESSION` (JDBC-backed, survit aux restarts, `Max-Age=2592000`, `HttpOnly`, `SameSite=Strict` — configuré via `DefaultCookieSerializer`, pas via `application.properties`). Mots de passe hashés en bcrypt.
 Détails : [wiki Authentification](https://codeberg.org/Kwaite/strapontin/wiki/Authentification)
 

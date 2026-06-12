@@ -317,6 +317,29 @@ public class AdminService {
     return Optional.of(email);
   }
 
+  /// Réinitialise la 2FA TOTP d'un utilisateur : efface le secret et désactive la 2FA.
+  ///
+  /// <p>Utilisé quand un utilisateur perd l'accès à son application d'authentification
+  /// (ou que son secret est désynchronisé) : il pourra se reconnecter sans code, puis
+  /// ré-enrôler son TOTP.
+  ///
+  /// @param userId  identifiant de l'utilisateur cible
+  /// @param adminId identifiant de l'admin à l'origine de l'action
+  /// @return {@code true} si l'utilisateur existait, {@code false} sinon
+  public boolean reinitialiserTotp(String userId, String adminId) {
+    List<Map<String, Object>> cible =
+        jdbc.queryForList("SELECT email FROM users WHERE id = :userId", Map.of("userId", userId));
+    if (cible.isEmpty()) return false;
+
+    jdbc.update(
+        "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false WHERE id = :id",
+        Map.of("id", userId));
+    emailService.envoyer2faReinitialisee((String) cible.get(0).get("email"));
+    logAdminService.logAdmin(
+        "warn", "admin", "TOTP réinitialisé", Map.of("userId", userId, "parAdmin", adminId));
+    return true;
+  }
+
   /// Retourne le statut des clés de configuration autorisées.
   ///
   /// @return statuts de configuration

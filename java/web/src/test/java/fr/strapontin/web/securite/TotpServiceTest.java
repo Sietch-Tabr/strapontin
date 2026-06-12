@@ -7,6 +7,7 @@ package fr.strapontin.web.securite;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -102,5 +103,17 @@ class TotpServiceTest {
     calculer.setAccessible(true);
     String code = (String) calculer.invoke(service, secretOctets, compteur);
     assertTrue(service.verifierCode(secret, code), "Le code calculé doit être accepté");
+  }
+
+  @Test
+  void calculerCode_vecteursRFC6238_conformesAuStandard() throws Exception {
+    // RFC 6238 Appendix B (SHA1) : secret ASCII "12345678901234567890", période 30 s.
+    // Garantit la compatibilité avec les applications standard (Google Authenticator, Aegis…).
+    byte[] octets = "12345678901234567890".getBytes(StandardCharsets.US_ASCII);
+    Method calculer = TotpService.class.getDeclaredMethod("calculerCode", byte[].class, long.class);
+    calculer.setAccessible(true);
+    assertEquals("287082", calculer.invoke(service, octets, 1L)); // T=59 s
+    assertEquals("081804", calculer.invoke(service, octets, 37037036L)); // T=1111111109
+    assertEquals("005924", calculer.invoke(service, octets, 41152263L)); // T=1234567890
   }
 }
