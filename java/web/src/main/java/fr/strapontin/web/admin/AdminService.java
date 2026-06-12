@@ -282,8 +282,7 @@ public class AdminService {
   @Transactional
   public void supprimerUtilisateur(String userId, String adminId) {
     List<Map<String, Object>> cible =
-        jdbc.queryForList(
-            "SELECT email FROM users WHERE id = :userId", Map.of("userId", userId));
+        jdbc.queryForList("SELECT email FROM users WHERE id = :userId", Map.of("userId", userId));
     jdbc.update("DELETE FROM users WHERE id = :userId", Map.of("userId", userId));
     logAdminService.logAdmin(
         "warn", "admin", "compte supprimé", Map.of("userId", userId, "parAdmin", adminId));
