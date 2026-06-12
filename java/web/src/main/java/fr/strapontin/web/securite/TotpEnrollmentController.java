@@ -52,8 +52,15 @@ public class TotpEnrollmentController {
   @GetMapping("/setup")
   public ResponseEntity<Map<String, Object>> setup(HttpSession session, Authentication auth) {
     UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
-    String secret = totpService.genererSecret();
-    session.setAttribute(SESSION_TOTP_SETUP, secret);
+    // Réutilise le secret déjà en session tant que l'enrollment n'est pas confirmé : éviter de
+    // générer un nouveau secret à chaque appel (rechargement de page), ce qui laisserait des clés
+    // périmées dans l'application TOTP de l'utilisateur. `confirmer`/`desactiver` purgent la
+    // session.
+    String secret = (String) session.getAttribute(SESSION_TOTP_SETUP);
+    if (secret == null) {
+      secret = totpService.genererSecret();
+      session.setAttribute(SESSION_TOTP_SETUP, secret);
+    }
     String otpUri = totpService.genererUriOtpAuth(secret, details.identifiant());
     String qrCodeSvg = totpService.genererQrCodeSvg(otpUri);
 

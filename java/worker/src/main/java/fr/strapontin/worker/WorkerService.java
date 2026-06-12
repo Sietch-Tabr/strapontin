@@ -330,6 +330,33 @@ public class WorkerService {
     }
   }
 
+  /// Supprime les entrées de `logs_admin` plus anciennes que 30 jours.
+  ///
+  /// Remplace l'ancien plafond de 200 entrées purgé à chaque insertion : la rétention
+  /// est désormais temporelle et la purge planifiée (cf. `PurgerLogsAdminJob`).
+  public void executerPurgerLogsAdmin() {
+    long seuil = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
+    log.info("purger:logs-admin seuil={}", seuil);
+    long debut = System.currentTimeMillis();
+    try {
+      int supprimes =
+          jdbc.update("DELETE FROM logs_admin WHERE ts < :seuil", Map.of("seuil", seuil));
+      log.info("purger:logs-admin terminé supprimes={}", supprimes);
+      enregistrerStatJob(
+          "purger:logs-admin",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, supprimes),
+          null);
+    } catch (Exception e) {
+      log.error("purger:logs-admin échoué", e);
+      enregistrerStatJob(
+          "purger:logs-admin",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, 0),
+          e.getMessage());
+    }
+  }
+
   private static java.util.Set<String> collecterTousLesDepts(List<String[]> allDepts) {
     java.util.Set<String> tousLesDepts = new java.util.LinkedHashSet<>();
     for (String[] depts : allDepts) {
@@ -403,6 +430,49 @@ public class WorkerService {
           params);
     } catch (Exception e) {
       log.warn("Impossible d'enregistrer stat job {} : {}", typeJob, e.getMessage());
+    }
+    if (typeJob.startsWith("fetch:")) {
+      remonterBilanTm(typeJob);
+    }
+  }
+
+  /// Remonte dans `logs_admin` le bilan agrégé des fetchs Ticketmaster (concerts manqués
+  /// par plafonnement de pagination, erreurs HTTP) pour le cycle qui vient de se terminer.
+  ///
+  /// Une seule entrée par cycle de fetch, et uniquement si quelque chose est à signaler.
+  ///
+  /// @param typeJob le type de job de fetch (préfixe `fetch:`)
+  private void remonterBilanTm(String typeJob) {
+    var bilan = tm.preleverBilan();
+    if (bilan == null || (bilan.concertsManques() == 0 && bilan.erreursHttp() == 0)) return;
+    try {
+      Map<String, Object> params = new LinkedHashMap<>();
+      params.put("ts", System.currentTimeMillis());
+      params.put("niveau", "warn");
+      params.put("source", "worker");
+      params.put(
+          "message",
+          typeJob
+              + " — "
+              + bilan.concertsManques()
+              + " concert(s) TM non récupéré(s), "
+              + bilan.erreursHttp()
+              + " erreur(s) HTTP");
+      params.put(
+          "meta",
+          "{\"manques\":"
+              + bilan.concertsManques()
+              + ",\"erreursHttp\":"
+              + bilan.erreursHttp()
+              + "}");
+      jdbc.update(
+          """
+          INSERT INTO logs_admin (ts, niveau, source, message, meta)
+          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
+          """,
+          params);
+    } catch (Exception e) {
+      log.warn("Impossible de remonter le bilan TM : {}", e.getMessage());
     }
   }
 

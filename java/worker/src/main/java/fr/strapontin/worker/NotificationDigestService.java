@@ -77,7 +77,8 @@ public class NotificationDigestService {
       String url,
       String concertId,
       String artisteNorm,
-      String source) {}
+      String source,
+      String statut) {}
 
   private record ResultatDigest(boolean emailOk, boolean pushOk) {}
 
@@ -107,6 +108,7 @@ public class NotificationDigestService {
               """
               SELECT um.user_id, u.email, CAST(c.id AS text) AS concert_id,
                      c.artiste, CAST(c.date AS text) AS date, c.salle, c.ville, c.url, c.artiste_norm,
+                     c.statut,
                      uc.notif_artistes, uc.notif_salles,
                      uc.notif_artistes_push, uc.notif_salles_push,
                      CASE
@@ -173,7 +175,8 @@ public class NotificationDigestService {
                     (String) ligne.get("url"),
                     (String) ligne.get("concert_id"),
                     (String) ligne.get("artiste_norm"),
-                    (String) ligne.get("source")));
+                    (String) ligne.get("source"),
+                    (String) ligne.get("statut")));
       }
 
       Timestamp maintenant = Timestamp.from(Instant.now());
@@ -344,7 +347,8 @@ public class NotificationDigestService {
             : concerts.size() + " nouveaux concerts";
     String corps =
         concerts.size() == 1
-            ? formaterDate(premier.date())
+            ? ("presale".equals(premier.statut()) ? "Prévente · " : "")
+                + formaterDate(premier.date())
                 + (premier.ville() != null ? " · " + premier.ville() : "")
             : concerts.stream()
                 .map(c -> c.artiste() + " · " + formaterDate(c.date()))
@@ -395,16 +399,20 @@ public class NotificationDigestService {
                           ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
                               .formatted(e(c.url()))
                           : "";
+                  String prevente =
+                      "presale".equals(c.statut())
+                          ? " · <span style=\"color:#c026d3;font-weight:600\">Prévente</span>"
+                          : "";
                   return """
                   <tr>
                     <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top">
                       <div style="font-weight:600;color:#111;font-size:14px">%s</div>
-                      <div style="color:#666;font-size:13px;margin-top:2px">%s%s</div>
+                      <div style="color:#666;font-size:13px;margin-top:2px">%s%s%s</div>
                       <div style="color:#999;font-size:12px;margin-top:2px">%s</div>
                     </td>
                   </tr>\
                   """
-                      .formatted(e(c.artiste()), formaterDate(c.date()), lien, lieu);
+                      .formatted(e(c.artiste()), formaterDate(c.date()), prevente, lien, lieu);
                 })
             .collect(Collectors.joining("\n"));
     return """

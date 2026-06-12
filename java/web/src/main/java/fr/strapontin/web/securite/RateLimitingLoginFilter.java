@@ -34,7 +34,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class RateLimitingLoginFilter extends OncePerRequestFilter {
 
-  private static final int MAX_TENTATIVES = 5;
+  private static final int MAX_TENTATIVES = 15;
   private static final Duration FENETRE = Duration.ofMinutes(15);
   private static final Set<String> URLS_LOGIN =
       Set.of("/api/auth/login", "/api/auth/forgot-password");

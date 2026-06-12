@@ -28,7 +28,6 @@ import org.springframework.stereotype.Component;
 public class LogAdminJobListener implements JobListener {
 
   private static final Logger log = LoggerFactory.getLogger(LogAdminJobListener.class);
-  private static final int NB_LOGS_MAX = 200;
 
   private static final Map<String, String> NOM_JOBS =
       Map.of(
@@ -95,13 +94,6 @@ public class LogAdminJobListener implements JobListener {
           VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
           """,
           params);
-      jdbc.update(
-          """
-          DELETE FROM logs_admin WHERE id NOT IN (
-            SELECT id FROM logs_admin ORDER BY ts DESC LIMIT :max
-          )
-          """,
-          Map.of("max", NB_LOGS_MAX));
     } catch (JsonProcessingException e) {
       log.warn("Erreur sérialisation meta log admin : {}", e.getMessage());
     } catch (Exception e) {

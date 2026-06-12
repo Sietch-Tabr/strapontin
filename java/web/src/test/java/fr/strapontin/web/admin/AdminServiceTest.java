@@ -5,6 +5,7 @@
 package fr.strapontin.web.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -169,5 +170,29 @@ class AdminServiceTest {
     assertEquals("carol@exemple.fr", resultat.get());
     verify(emailService).envoyerResetMotDePasse(eq("carol@exemple.fr"), anyString());
     verify(verificationRepository).supprimerParIdentifiant("reset:carol@exemple.fr");
+  }
+
+  @Test
+  void reinitialiserTotp_utilisateurExistant_effaceSecretEtNotifie() {
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(List.of(Map.of("email", "user@exemple.fr")));
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    boolean resultat = adminService.reinitialiserTotp("user-1", "admin-1");
+
+    assertTrue(resultat);
+    verify(emailService).envoyer2faReinitialisee("user@exemple.fr");
+    verify(logAdminService).logAdmin(eq("warn"), eq("admin"), eq("TOTP réinitialisé"), anyMap());
+  }
+
+  @Test
+  void reinitialiserTotp_utilisateurInexistant_retourneFalse() {
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    boolean resultat = adminService.reinitialiserTotp("inconnu", "admin-1");
+
+    assertFalse(resultat);
+    verify(emailService, never()).envoyer2faReinitialisee(anyString());
+    verify(logAdminService, never()).logAdmin(anyString(), anyString(), anyString(), anyMap());
   }
 }

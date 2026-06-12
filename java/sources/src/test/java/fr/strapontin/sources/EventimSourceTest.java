@@ -327,4 +327,22 @@ class EventimSourceTest {
     assertEquals("Julien Clerc", resultats.get(0).artiste());
     serveur.verify();
   }
+
+  @Test
+  void mapProduit_inStockFalse_retourneStatutPresale() {
+    Map<String, Object> produit = produitEventimRaw(Map.of("inStock", false));
+
+    ConcertBrut concert = EventimSource.mapProduit(produit, null);
+
+    assertEquals("presale", concert.statut());
+  }
+
+  @Test
+  void mapProduit_inStockTrue_retourneStatutNull() {
+    Map<String, Object> produit = produitEventimRaw(Map.of("inStock", true));
+
+    ConcertBrut concert = EventimSource.mapProduit(produit, null);
+
+    assertNull(concert.statut());
+  }
 }

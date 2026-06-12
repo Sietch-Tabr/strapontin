@@ -1,6 +1,6 @@
 // Strapontin — service worker
 
-const CACHE_NOM = "strapontin-v25";
+const CACHE_NOM = "strapontin-ff42073f";
 // CSS et JS exclus : fingerprinting Spring → URL avec hash, précachage inutile.
 // Ils sont gérés en network-first dans le handler fetch.
 const RESSOURCES_STATIQUES = [
@@ -98,7 +98,17 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NOM)
-      .then((cache) => cache.addAll(RESSOURCES_STATIQUES))
+      .then((cache) =>
+        // `cache: "reload"` force le réseau et contourne le cache HTTP du navigateur,
+        // sinon le précache pourrait resservir un ancien asset à URL stable.
+        Promise.all(
+          RESSOURCES_STATIQUES.map((url) =>
+            fetch(url, { cache: "reload" }).then((reponse) =>
+              cache.put(url, reponse),
+            ),
+          ),
+        ),
+      )
       .then(() => self.skipWaiting())
       .catch(function (e) {
         self.clients

@@ -70,7 +70,9 @@ public class AccueilService {
                 .formatted(masques ? "NOT NULL" : "NULL"));
 
     if (!inclureIndisponibles) {
-      where.append(" AND (c.statut IS NULL OR c.statut IN ('onsale', 'rescheduled', 'postponed'))");
+      where.append(
+          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'presale', 'rescheduled',"
+              + " 'postponed'))");
     }
     if (nouveau) {
       where.append(" AND c.first_seen >= (CURRENT_TIMESTAMP - INTERVAL '7 days')");

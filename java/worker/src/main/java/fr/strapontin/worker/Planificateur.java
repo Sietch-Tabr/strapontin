@@ -8,6 +8,7 @@ import fr.strapontin.worker.jobs.FetchArtistesBatchJob;
 import fr.strapontin.worker.jobs.FetchRegionJob;
 import fr.strapontin.worker.jobs.NotifierDigestJob;
 import fr.strapontin.worker.jobs.PurgerConcertsJob;
+import fr.strapontin.worker.jobs.PurgerLogsAdminJob;
 import fr.strapontin.worker.jobs.RecalculerMatchesJob;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
@@ -25,6 +26,7 @@ import org.springframework.context.annotation.Configuration;
 /// - `fetch:region` — toutes les 2 heures
 /// - `recalculer:matches` — toutes les 2 heures
 /// - `purger:concerts` — tous les jours à minuit
+/// - `purger:logs-admin` — tous les jours à 0h15
 /// - `notifier:digest` — tous les jours à 8h
 ///
 /// Le job `fetch:salle` est planifié dynamiquement par [WorkerService]
@@ -100,6 +102,23 @@ public class Planificateur {
         .forJob(jobDetailPurgerConcerts)
         .withIdentity("triggerPurgerConcerts")
         .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0 * * ?"))
+        .build();
+  }
+
+  @Bean
+  JobDetail jobDetailPurgerLogsAdmin() {
+    return JobBuilder.newJob(PurgerLogsAdminJob.class)
+        .withIdentity("purgerLogsAdmin")
+        .storeDurably()
+        .build();
+  }
+
+  @Bean
+  Trigger triggerPurgerLogsAdmin(JobDetail jobDetailPurgerLogsAdmin) {
+    return TriggerBuilder.newTrigger()
+        .forJob(jobDetailPurgerLogsAdmin)
+        .withIdentity("triggerPurgerLogsAdmin")
+        .withSchedule(CronScheduleBuilder.cronSchedule("0 15 0 * * ?"))
         .build();
   }
 

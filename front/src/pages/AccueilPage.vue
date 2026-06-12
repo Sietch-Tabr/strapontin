@@ -97,6 +97,7 @@
                   <span v-if="concert.statut === 'cancelled'" class="badge badge-annule">Annulé</span>
                   <span v-if="concert.statut === 'rescheduled' || concert.statut === 'postponed'" class="badge badge-reporte">Reporté</span>
                   <span v-if="concert.statut === 'offsale'" class="badge badge-complet">Complet</span>
+                  <span v-if="concert.statut === 'presale'" class="badge badge-prevente">Prévente</span>
                 </p>
                 <p class="concert-lieu">
                   {{ concert.salle }}{{ concert.ville ? ' · ' + concert.ville : '' }}

@@ -53,14 +53,20 @@ defineOptions({ name: 'LoginPage' })
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AuthLayout from '../../components/auth/AuthLayout.vue'
+import { useSession } from '../../composables/useSession.js'
 
 const route = useRoute()
 const router = useRouter()
+const { chargerSession } = useSession()
 
 const identifiant = ref('')
 const motDePasse = ref('')
 const chargement = ref(false)
-const erreurSoumission = ref('')
+const erreurSoumission = ref(
+  route.query.totp === 'trop_tentatives'
+    ? 'Trop de tentatives de code. Reconnectez-vous, puis saisissez un nouveau code.'
+    : '',
+)
 const champIdentifiant = ref(null)
 
 onMounted(() => {
@@ -86,9 +92,12 @@ async function soumettre() {
     if (!rep.ok) {
       if (rep.status === 429) {
         const corps = await rep.json().catch(() => ({}))
-        erreurSoumission.value = corps.erreur ?? 'Trop de tentatives. Réessayez plus tard.'
-      } else {
+        erreurSoumission.value =
+          corps.erreur ?? 'Trop de tentatives de connexion. Réessayez dans quelques minutes.'
+      } else if (rep.status === 401) {
         erreurSoumission.value = 'Identifiant ou mot de passe incorrect.'
+      } else {
+        erreurSoumission.value = 'Connexion impossible pour le moment. Réessayez plus tard.'
       }
       return
     }
@@ -96,6 +105,7 @@ async function soumettre() {
     if (data.totpRequis) {
       router.push('/auth/totp')
     } else {
+      await chargerSession()
       router.push('/')
     }
   } catch (_) {

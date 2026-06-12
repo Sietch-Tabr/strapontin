@@ -173,6 +173,45 @@ public class EmailService {
     }
   }
 
+  /// Notifie un utilisateur que sa double authentification a été réinitialisée par un admin.
+  ///
+  /// @param email l'adresse de l'utilisateur concerné
+  public void envoyer2faReinitialisee(String email) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — email reset 2FA non envoyé");
+      return;
+    }
+
+    String corps = EmailTemplates.reinitialisation2fa(ctx.get().baseUrl());
+
+    String texte =
+        """
+        Votre double authentification a été réinitialisée
+
+        Un administrateur a réinitialisé la double authentification (2FA) de votre compte.
+        Vous pouvez vous reconnecter sans code, puis la reconfigurer depuis vos paramètres :
+
+        %s/parametres/totp
+
+        Si vous n'êtes pas à l'origine de cette action, contactez l'administrateur.
+        """
+            .formatted(ctx.get().baseUrl());
+
+    try {
+      envoyer(
+          ctx.get(),
+          email,
+          ctx.get().expediteur(),
+          "Votre double authentification Strapontin a été réinitialisée",
+          corps,
+          texte);
+      log.info("Email reset 2FA envoyé : {}", email);
+    } catch (Exception e) {
+      log.error("Échec envoi reset 2FA : {}", email, e);
+    }
+  }
+
   /// Envoie un email de confirmation de changement d'adresse email.
   ///
   /// @param email le nouvel email destinataire

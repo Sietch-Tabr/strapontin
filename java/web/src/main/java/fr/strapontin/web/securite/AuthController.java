@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.securite;
 
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -51,23 +52,27 @@ public class AuthController {
   private final TotpService totpService;
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigService configService;
+  private final LogAdminService logAdminService;
 
   /// @param authenticationManager gestionnaire d'authentification Spring Security
   /// @param authService           service de réinitialisation de mot de passe
   /// @param totpService           service de vérification des codes TOTP
   /// @param jdbc                  accès JDBC pour récupérer le secret TOTP de l'utilisateur
   /// @param configService         service de configuration pour lire PUBLIC_BASE_URL
+  /// @param logAdminService       journalisation des échecs TOTP dans logs_admin
   public AuthController(
       AuthenticationManager authenticationManager,
       AuthService authService,
       TotpService totpService,
       NamedParameterJdbcTemplate jdbc,
-      ConfigService configService) {
+      ConfigService configService,
+      LogAdminService logAdminService) {
     this.authenticationManager = authenticationManager;
     this.authService = authService;
     this.totpService = totpService;
     this.jdbc = jdbc;
     this.configService = configService;
+    this.logAdminService = logAdminService;
   }
 
   /// Authentifie un utilisateur et crée une session persistante.
@@ -170,10 +175,23 @@ public class AuthController {
       session.removeAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE);
       session.removeAttribute(SESSION_ECHECS_TOTP);
       log.debug("Challenge TOTP validé : {}", principal.identifiant());
+      logAdminService.logAdmin(
+          "info",
+          "auth",
+          "TOTP validé : " + principal.identifiant(),
+          Map.of("identifiant", principal.identifiant(), "ip", httpRequest.getRemoteAddr()));
       return ResponseEntity.ok(Map.of("succes", true));
     }
 
     int echecs = (session.getAttribute(SESSION_ECHECS_TOTP) instanceof Integer n) ? n + 1 : 1;
+    logAdminService.logAdmin(
+        "warn",
+        "auth",
+        "Échec TOTP : " + principal.identifiant(),
+        Map.of(
+            "identifiant", principal.identifiant(),
+            "ip", httpRequest.getRemoteAddr(),
+            "essais", echecs));
 
     if (echecs >= MAX_ECHECS_TOTP) {
       session.invalidate();

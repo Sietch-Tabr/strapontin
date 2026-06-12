@@ -17,8 +17,6 @@
           name="code"
           type="text"
           inputmode="numeric"
-          pattern="[0-9]{6}"
-          maxlength="6"
           autocomplete="one-time-code"
           required
         />
@@ -40,8 +38,10 @@ defineOptions({ name: 'TotpChallengePage' })
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '../../components/auth/AuthLayout.vue'
+import { useSession } from '../../composables/useSession.js'
 
 const router = useRouter()
+const { chargerSession } = useSession()
 
 const code = ref('')
 const chargement = ref(false)
@@ -59,14 +59,17 @@ async function soumettre() {
     const rep = await fetch('/api/auth/totp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: code.value }),
+      body: JSON.stringify({ code: code.value.replace(/\D/g, '') }),
     })
     if (rep.ok) {
+      // Recharge la session pour que le garde de route reconnaisse l'utilisateur authentifié,
+      // sinon le push('/') est intercepté et renvoie vers /login.
+      await chargerSession()
       router.push('/')
       return
     }
     if (rep.status === 401) {
-      router.push('/login')
+      router.push('/login?totp=trop_tentatives')
       return
     }
     if (rep.status === 409) {

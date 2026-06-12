@@ -72,6 +72,28 @@ final class EmailTemplates {
     return envelopper("Réinitialisation du mot de passe", corps, baseUrl);
   }
 
+  /// Notification de réinitialisation de la double authentification par un administrateur.
+  ///
+  /// @param baseUrl l'URL publique de base de l'application
+  /// @return le HTML de l'email de notification
+  static String reinitialisation2fa(String baseUrl) {
+    String corps =
+        """
+        <p style="color: #555; margin: 0 0 24px">
+          La double authentification (2FA) de votre compte a été réinitialisée par un
+          administrateur. Vous pouvez vous reconnecter sans code, puis la reconfigurer
+          depuis vos paramètres.
+        </p>
+        %s
+        <p style="color: #aaa; font-size: 13px; margin-top: 24px">
+          Si vous n'êtes pas à l'origine de cette action, contactez immédiatement
+          l'administrateur : votre compte pourrait être compromis.
+        </p>
+        """
+            .formatted(bouton(baseUrl + "/parametres/totp", "Reconfigurer la 2FA →"));
+    return envelopper("Votre double authentification a été réinitialisée", corps, baseUrl);
+  }
+
   /// Confirmation de changement d'adresse email.
   ///
   /// @param lien    le lien de confirmation (valable 24 heures)
