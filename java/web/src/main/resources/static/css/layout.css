@@ -332,6 +332,9 @@
     padding: 1rem;
     padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 1rem);
   }
+  html {
+    scroll-padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 1rem);
+  }
 }
 
 /* ── Page auth (login, forgot, reset, setup) ─────────────── */
