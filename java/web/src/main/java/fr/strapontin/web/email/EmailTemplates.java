@@ -5,7 +5,6 @@
 package fr.strapontin.web.email;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /// Génération des corps HTML de tous les emails transactionnels Strapontin.
@@ -145,28 +144,24 @@ final class EmailTemplates {
         <p style="color: %s; font-size: 14px; white-space: pre-wrap; border-left: 3px solid %s; padding-left: 12px; margin: 0">%s</p>
         """
             .formatted(C_NOIR, e(expediteurEmail), C_TEXTE, C_BORDURE, e(message));
-    return envelopper("Signalement — " + e(typeLabel), corps, baseUrl);
+    return envelopper("Signalement — " + typeLabel, corps, baseUrl);
   }
 
   /// Digest de nouveaux concerts.
-  ///
-  /// <p>Chaque entrée de {@code lignes} doit contenir les clés :
-  /// {@code artiste}, {@code dateFormatee}, {@code lieu} (toutes non nulles),
-  /// et optionnellement {@code url} (null → pas de lien "Billets →").
   ///
   /// @param sujet   le sujet de l'email (aussi utilisé comme titre H2)
   /// @param lignes  la liste des concerts à afficher
   /// @param baseUrl l'URL publique de base de l'application
   /// @return le HTML du digest
-  static String digestConcerts(String sujet, List<Map<String, Object>> lignes, String baseUrl) {
+  static String digestConcerts(String sujet, List<LigneConcert> lignes, String baseUrl) {
     String lignesHtml =
         lignes.stream()
             .map(
                 c -> {
                   String urlBillets =
-                      c.get("url") != null
+                      c.url() != null
                           ? (" — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"
-                              .formatted(e(c.get("url")), C_NOIR))
+                              .formatted(e(c.url()), C_NOIR))
                           : "";
                   return """
                   <tr>
@@ -179,10 +174,10 @@ final class EmailTemplates {
                   """
                       .formatted(
                           C_NOIR,
-                          e(c.get("artiste")),
-                          e(c.get("dateFormatee")),
+                          e(c.artiste()),
+                          e(c.dateFormatee()),
                           urlBillets,
-                          e(c.get("lieu")));
+                          e(c.lieu()));
                 })
             .collect(Collectors.joining());
     String corps =
@@ -192,7 +187,7 @@ final class EmailTemplates {
         <p style="margin-top: 24px">%s</p>
         """
             .formatted(C_TEXTE, lignesHtml, bouton(baseUrl + "/", "Voir mes spectacles →"));
-    return envelopper(e(sujet), corps, baseUrl);
+    return envelopper(sujet, corps, baseUrl);
   }
 
   /// Alerte d'échec du backup nocturne.
@@ -350,14 +345,14 @@ final class EmailTemplates {
     </body>
     </html>
     """
-        .formatted(C_BORDURE, couleur, titre, corps, C_MUTE, baseUrl, C_MUTE);
+        .formatted(C_BORDURE, couleur, e(titre), corps, C_MUTE, e(baseUrl), C_MUTE);
   }
 
   private static String bouton(String href, String texte) {
     return """
     <a href="%s" style="display: inline-block; background: %s; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500">%s</a>
     """
-        .formatted(href, C_NOIR, texte);
+        .formatted(e(href), C_NOIR, e(texte));
   }
 
   /// Échappe les caractères HTML spéciaux d'une valeur variable.
