@@ -15,6 +15,7 @@ import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -22,9 +23,9 @@ import org.springframework.context.annotation.Configuration;
 ///
 /// Déclencheurs configurés :
 ///
-/// - `fetch:artistes:batch` — toutes les 2 heures
-/// - `fetch:region` — toutes les 2 heures
-/// - `recalculer:matches` — toutes les 2 heures
+/// - `fetch:artistes:batch` — toutes les 2 heures (cf. `worker.cron.fetch-artistes`)
+/// - `fetch:region` — toutes les 2 heures (cf. `worker.cron.fetch-region`)
+/// - `recalculer:matches` — toutes les 2 heures (cf. `worker.cron.recalculer-matches`)
 /// - `purger:concerts` — tous les jours à minuit
 /// - `purger:logs-admin` — tous les jours à 0h15
 /// - `notifier:digest` — tous les jours à 8h
@@ -36,6 +37,15 @@ import org.springframework.context.annotation.Configuration;
 /// @author Kwaite
 @Configuration
 public class Planificateur {
+
+  @Value("${worker.cron.fetch-artistes:0 0 0/2 * * ?}")
+  private String cronFetchArtistes;
+
+  @Value("${worker.cron.fetch-region:0 30 0/2 * * ?}")
+  private String cronFetchRegion;
+
+  @Value("${worker.cron.recalculer-matches:0 0 1/2 * * ?}")
+  private String cronRecalculerMatches;
 
   @Bean
   JobDetail jobDetailFetchArtistesBatch() {
@@ -50,7 +60,7 @@ public class Planificateur {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetailFetchArtistesBatch)
         .withIdentity("triggerFetchArtistesBatch")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0/2 * * ?"))
+        .withSchedule(CronScheduleBuilder.cronSchedule(cronFetchArtistes))
         .build();
   }
 
@@ -67,7 +77,7 @@ public class Planificateur {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetailFetchRegion)
         .withIdentity("triggerFetchRegion")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 30 0/2 * * ?"))
+        .withSchedule(CronScheduleBuilder.cronSchedule(cronFetchRegion))
         .build();
   }
 
@@ -84,7 +94,7 @@ public class Planificateur {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetailRecalculerMatches)
         .withIdentity("triggerRecalculerMatches")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 1/2 * * ?"))
+        .withSchedule(CronScheduleBuilder.cronSchedule(cronRecalculerMatches))
         .build();
   }
 

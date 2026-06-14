@@ -11,10 +11,8 @@ import fr.strapontin.web.config.ConfigService;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -318,17 +316,15 @@ public class EmailService {
             ? "1 nouveau concert correspond à vos préférences"
             : "%d nouveaux concerts correspondent à vos préférences".formatted(nb);
 
-    List<Map<String, Object>> lignes =
+    List<LigneConcert> lignes =
         concerts.stream()
             .map(
-                c -> {
-                  Map<String, Object> ligne = new HashMap<>();
-                  ligne.put("artiste", c.artiste());
-                  ligne.put("dateFormatee", formaterDate(c.date()));
-                  ligne.put("lieu", c.ville() != null ? c.salle() + " · " + c.ville() : c.salle());
-                  if (c.url() != null) ligne.put("url", c.url());
-                  return ligne;
-                })
+                c ->
+                    new LigneConcert(
+                        c.artiste(),
+                        formaterDate(c.date()),
+                        c.ville() != null ? c.salle() + " · " + c.ville() : c.salle(),
+                        c.url()))
             .toList();
     String corps = EmailTemplates.digestConcerts(sujet, lignes, ctx.get().baseUrl());
 

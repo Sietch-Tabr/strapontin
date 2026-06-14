@@ -7,7 +7,6 @@ package fr.strapontin.web.email;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class EmailTemplatesTest {
@@ -90,20 +89,8 @@ class EmailTemplatesTest {
   void digestConcerts_afficheTousConcerts() {
     var lignes =
         List.of(
-            Map.<String, Object>of(
-                "artiste",
-                "Daft Punk",
-                "dateFormatee",
-                "samedi 1 mars 2025",
-                "lieu",
-                "AccorHotels Arena"),
-            Map.<String, Object>of(
-                "artiste",
-                "Téléphone",
-                "dateFormatee",
-                "dimanche 2 mars 2025",
-                "lieu",
-                "Zénith Paris"));
+            new LigneConcert("Daft Punk", "samedi 1 mars 2025", "AccorHotels Arena", null),
+            new LigneConcert("Téléphone", "dimanche 2 mars 2025", "Zénith Paris", null));
     String html = EmailTemplates.digestConcerts("2 nouveaux concerts", lignes, "https://app.fr");
     assertThat(html).contains("Daft Punk");
     assertThat(html).contains("Téléphone");
@@ -116,16 +103,7 @@ class EmailTemplatesTest {
   @Test
   void digestConcerts_concertAvecUrl_afficheLienBillets() {
     var lignes =
-        List.of(
-            Map.<String, Object>of(
-                "artiste",
-                "Stromae",
-                "dateFormatee",
-                "lundi 3 mars 2025",
-                "lieu",
-                "Bercy",
-                "url",
-                "https://billets.fr/123"));
+        List.of(new LigneConcert("Stromae", "lundi 3 mars 2025", "Bercy", "https://billets.fr/123"));
     String html = EmailTemplates.digestConcerts("1 nouveau concert", lignes, "https://app.fr");
     assertThat(html).contains("Billets →");
     assertThat(html).contains("href=\"https://billets.fr/123\"");
@@ -134,14 +112,7 @@ class EmailTemplatesTest {
   @Test
   void digestConcerts_concertSansUrl_nAffichePasLienBillets() {
     var lignes =
-        List.of(
-            Map.<String, Object>of(
-                "artiste",
-                "Indochine",
-                "dateFormatee",
-                "mardi 4 mars 2025",
-                "lieu",
-                "Stade de France"));
+        List.of(new LigneConcert("Indochine", "mardi 4 mars 2025", "Stade de France", null));
     String html = EmailTemplates.digestConcerts("1 nouveau concert", lignes, "https://app.fr");
     assertThat(html).doesNotContain("Billets →");
   }
@@ -182,7 +153,7 @@ class EmailTemplatesTest {
   void alerteBounce_contientEmailEtCta() {
     String html = EmailTemplates.alerteBounce("user@exemple.fr", "https://app.fr");
     assertThat(html).contains("user@exemple.fr");
-    assertThat(html).contains("Aller à l'administration");
+    assertThat(html).contains("l&#39;administration");
     assertThat(html).contains("color: #c00");
   }
 
@@ -200,7 +171,7 @@ class EmailTemplatesTest {
         EmailTemplates.alerteWorker(
             "Dernier job complété : 2026-06-05T00:00:00Z.", "https://app.fr");
     assertThat(html).contains("Dernier job complété");
-    assertThat(html).contains("Aller à l'administration");
+    assertThat(html).contains("l&#39;administration");
     assertThat(html).contains("color: #c00");
   }
 

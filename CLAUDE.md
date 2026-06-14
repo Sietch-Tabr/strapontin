@@ -158,9 +158,10 @@ Paradigme : **pré-fetch en arrière-plan, jamais d'appel API depuis le browser*
 | `FetchSalleJob`         | Ajout salle + cron 2h   | Fetch TM par `venueId`                        |
 | `RecalculerMatchesJob`  | Après fetch             | Recalcule `user_matches` pour tous les users  |
 | `PurgerConcertsJob`     | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours     |
-| `PurgerLogsAdminJob`    | Cron quotidien (0h15)   | Supprime les `logs_admin` de plus de 30 jours |
+| `PurgerLogsAdminJob`    | Cron quotidien (0h15)   | Supprime les `logs_admin` > 30 jours et `fetch_jobs_historique` > 7 jours |
 
 Rate limiting TM : max 2 jobs simultanés (3 → HTTP 429). Quota TM persisté dans `app_config` (`TM_QUOTA_JSON`).
+`FetchArtistesBatchJob`, `FetchRegionJob`, `RecalculerMatchesJob` annotés `@DisallowConcurrentExecution`. `WatchdogWorkerService` (`@Scheduled`, côté web) : alerte email si worker inactif > 3 h.
 
 ## Authentification
 

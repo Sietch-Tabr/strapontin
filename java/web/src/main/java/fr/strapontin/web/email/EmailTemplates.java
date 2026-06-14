@@ -5,7 +5,6 @@
 package fr.strapontin.web.email;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /// Génération des corps HTML de tous les emails transactionnels Strapontin.
@@ -17,7 +16,7 @@ import java.util.stream.Collectors;
 /// <p>Structure commune factorisée :
 /// <ul>
 ///   <li>{@link #envelopper} — cadre centré blanc + footer "Gérer mes préférences"</li>
-///   <li>{@link #enveloppErreur} — idem avec titre en rouge (#c00)</li>
+///   <li>{@link #enveloppErreur} — idem avec titre en rouge</li>
 ///   <li>{@link #bouton} — CTA noir réutilisé dans la majorité des emails</li>
 ///   <li>{@link #e} — échappement HTML des valeurs variables</li>
 /// </ul>
@@ -27,6 +26,12 @@ import java.util.stream.Collectors;
 final class EmailTemplates {
 
   private EmailTemplates() {}
+
+  private static final String C_NOIR    = "#111";
+  private static final String C_TEXTE   = "#555";
+  private static final String C_MUTE    = "#aaa";
+  private static final String C_ERREUR  = "#c00";
+  private static final String C_BORDURE = "#e5e5e5";
 
   // ---- Emails transactionnels ----
 
@@ -38,16 +43,16 @@ final class EmailTemplates {
   static String invitation(String lienReset, String baseUrl) {
     String corps =
         """
-        <p style="color: #555; margin: 0 0 24px">
+        <p style="color: %s; margin: 0 0 24px">
           Votre compte a été créé. Cliquez sur le bouton ci-dessous pour choisir
           votre identifiant et votre mot de passe :
         </p>
         %s
-        <p style="color: #aaa; font-size: 13px; margin: 16px 0 0">
+        <p style="color: %s; font-size: 13px; margin: 16px 0 0">
           Ce lien est valable 7 jours.
         </p>
         """
-            .formatted(bouton(lienReset, "Créer mon compte →"));
+            .formatted(C_TEXTE, bouton(lienReset, "Créer mon compte →"), C_MUTE);
     return envelopper("Bienvenue sur Strapontin", corps, baseUrl);
   }
 
@@ -59,16 +64,16 @@ final class EmailTemplates {
   static String resetMotDePasse(String lienReset, String baseUrl) {
     String corps =
         """
-        <p style="color: #555; margin: 0 0 24px">
+        <p style="color: %s; margin: 0 0 24px">
           Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur
           le bouton ci-dessous. Ce lien est valable 1 heure.
         </p>
         %s
-        <p style="color: #aaa; font-size: 13px; margin-top: 24px">
+        <p style="color: %s; font-size: 13px; margin-top: 24px">
           Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
         </p>
         """
-            .formatted(bouton(lienReset, "Réinitialiser mon mot de passe →"));
+            .formatted(C_TEXTE, bouton(lienReset, "Réinitialiser mon mot de passe →"), C_MUTE);
     return envelopper("Réinitialisation du mot de passe", corps, baseUrl);
   }
 
@@ -79,18 +84,21 @@ final class EmailTemplates {
   static String reinitialisation2fa(String baseUrl) {
     String corps =
         """
-        <p style="color: #555; margin: 0 0 24px">
+        <p style="color: %s; margin: 0 0 24px">
           La double authentification (2FA) de votre compte a été réinitialisée par un
           administrateur. Vous pouvez vous reconnecter sans code, puis la reconfigurer
           depuis vos paramètres.
         </p>
         %s
-        <p style="color: #aaa; font-size: 13px; margin-top: 24px">
+        <p style="color: %s; font-size: 13px; margin-top: 24px">
           Si vous n'êtes pas à l'origine de cette action, contactez immédiatement
           l'administrateur : votre compte pourrait être compromis.
         </p>
         """
-            .formatted(bouton(baseUrl + "/parametres/totp", "Reconfigurer la 2FA →"));
+            .formatted(
+                C_TEXTE,
+                bouton(baseUrl + "/parametres/totp", "Reconfigurer la 2FA →"),
+                C_MUTE);
     return envelopper("Votre double authentification a été réinitialisée", corps, baseUrl);
   }
 
@@ -102,17 +110,17 @@ final class EmailTemplates {
   static String confirmationEmail(String lien, String baseUrl) {
     String corps =
         """
-        <p style="color: #555; margin: 0 0 24px">
+        <p style="color: %s; margin: 0 0 24px">
           Cliquez sur le bouton ci-dessous pour valider votre nouvelle adresse.
           Ce lien est valable 24 heures.
         </p>
         %s
-        <p style="color: #aaa; font-size: 13px; margin-top: 24px">
+        <p style="color: %s; font-size: 13px; margin-top: 24px">
           Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
           Votre adresse actuelle reste inchangée.
         </p>
         """
-            .formatted(bouton(lien, "Confirmer ma nouvelle adresse →"));
+            .formatted(C_TEXTE, bouton(lien, "Confirmer ma nouvelle adresse →"), C_MUTE);
     return envelopper("Confirmez votre nouvelle adresse email", corps, baseUrl);
   }
 
@@ -130,59 +138,56 @@ final class EmailTemplates {
         <table style="border-collapse: collapse; width: 100%%; margin-bottom: 24px">
           <tr>
             <td style="padding: 8px 0; color: #888; font-size: 14px; width: 130px">Email</td>
-            <td style="padding: 8px 0; font-size: 14px; color: #111">%s</td>
+            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
           </tr>
         </table>
-        <p style="color: #555; font-size: 14px; white-space: pre-wrap; border-left: 3px solid #e5e5e5; padding-left: 12px; margin: 0">%s</p>
+        <p style="color: %s; font-size: 14px; white-space: pre-wrap; border-left: 3px solid %s; padding-left: 12px; margin: 0">%s</p>
         """
-            .formatted(e(expediteurEmail), e(message));
-    return envelopper("Signalement — " + e(typeLabel), corps, baseUrl);
+            .formatted(C_NOIR, e(expediteurEmail), C_TEXTE, C_BORDURE, e(message));
+    return envelopper("Signalement — " + typeLabel, corps, baseUrl);
   }
 
   /// Digest de nouveaux concerts.
-  ///
-  /// <p>Chaque entrée de {@code lignes} doit contenir les clés :
-  /// {@code artiste}, {@code dateFormatee}, {@code lieu} (toutes non nulles),
-  /// et optionnellement {@code url} (null → pas de lien "Billets →").
   ///
   /// @param sujet   le sujet de l'email (aussi utilisé comme titre H2)
   /// @param lignes  la liste des concerts à afficher
   /// @param baseUrl l'URL publique de base de l'application
   /// @return le HTML du digest
-  static String digestConcerts(String sujet, List<Map<String, Object>> lignes, String baseUrl) {
+  static String digestConcerts(String sujet, List<LigneConcert> lignes, String baseUrl) {
     String lignesHtml =
         lignes.stream()
             .map(
                 c -> {
                   String urlBillets =
-                      c.get("url") != null
-                          ? " — <a href=\"%s\" style=\"color: #111; font-size: 13px\">Billets →</a>"
-                              .formatted(e(c.get("url")))
+                      c.url() != null
+                          ? (" — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"
+                              .formatted(e(c.url()), C_NOIR))
                           : "";
                   return """
                   <tr>
                     <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top">
-                      <div style="font-weight: 600; color: #111; font-size: 14px">%s</div>
+                      <div style="font-weight: 600; color: %s; font-size: 14px">%s</div>
                       <div style="color: #666; font-size: 13px; margin-top: 2px"><span>%s</span>%s</div>
                       <div style="color: #999; font-size: 12px; margin-top: 2px">%s</div>
                     </td>
                   </tr>
                   """
                       .formatted(
-                          e(c.get("artiste")),
-                          e(c.get("dateFormatee")),
+                          C_NOIR,
+                          e(c.artiste()),
+                          e(c.dateFormatee()),
                           urlBillets,
-                          e(c.get("lieu")));
+                          e(c.lieu()));
                 })
             .collect(Collectors.joining());
     String corps =
         """
-        <p style="color: #555; font-size: 14px; margin: 0 0 24px">Voici les nouveaux concerts ajoutés :</p>
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px">Voici les nouveaux concerts ajoutés :</p>
         <table style="border-collapse: collapse; width: 100%%">%s</table>
         <p style="margin-top: 24px">%s</p>
         """
-            .formatted(lignesHtml, bouton(baseUrl + "/", "Voir mes spectacles →"));
-    return envelopper(e(sujet), corps, baseUrl);
+            .formatted(C_TEXTE, lignesHtml, bouton(baseUrl + "/", "Voir mes spectacles →"));
+    return envelopper(sujet, corps, baseUrl);
   }
 
   /// Alerte d'échec du backup nocturne.
@@ -198,25 +203,27 @@ final class EmailTemplates {
             : "Horodatage indisponible.";
     String raisonHtml =
         (raison != null && !raison.isBlank())
-            ? """
+            ? ("""
             <p style="color: #333; font-size: 13px; font-family: monospace; background: #f5f5f5; \
-            border-left: 3px solid #c00; padding: 8px 12px; margin: 0 0 16px; word-break: break-all">%s</p>
+            border-left: 3px solid %s; padding: 8px 12px; margin: 0 0 16px; word-break: break-all">%s</p>
             """
-                .formatted(e(raison))
+                .formatted(C_ERREUR, e(raison)))
             : "";
     String corps =
         """
-        <p style="color: #555; font-size: 14px; margin: 0 0 8px">%s</p>
+        <p style="color: %s; font-size: 14px; margin: 0 0 8px">%s</p>
         %s
-        <p style="color: #555; font-size: 14px; margin: 0 0 24px">
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
           Le backup local nocturne (dump PostgreSQL + .env + logs) n'a pas pu être
           complété. Vérifiez l'espace disque et les logs systemd sur le serveur.
         </p>
         <p style="margin-top: 24px">%s</p>
         """
             .formatted(
+                C_TEXTE,
                 horodatageHtml,
                 raisonHtml,
+                C_TEXTE,
                 bouton(baseUrl + "/admin", "Aller à l'administration →"));
     return enveloppErreur("Échec du backup nocturne", corps, baseUrl);
   }
@@ -229,18 +236,23 @@ final class EmailTemplates {
   static String alerteBounce(String emailBouncee, String baseUrl) {
     String corps =
         """
-        <p style="color: #555; font-size: 14px; margin: 0 0 16px">
+        <p style="color: %s; font-size: 14px; margin: 0 0 16px">
           Un email envoyé par Strapontin a été rejeté définitivement par le serveur destinataire.
         </p>
-        <p style="color: #555; font-size: 14px; margin: 0 0 24px">
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
           Adresse concernée : <strong>%s</strong>
         </p>
-        <p style="color: #555; font-size: 14px; margin: 0 0 24px">
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
           Vérifiez l'adresse email de cet utilisateur depuis la page d'administration.
         </p>
         <p style="margin-top: 24px">%s</p>
         """
-            .formatted(e(emailBouncee), bouton(baseUrl + "/admin", "Aller à l'administration →"));
+            .formatted(
+                C_TEXTE,
+                C_TEXTE,
+                e(emailBouncee),
+                C_TEXTE,
+                bouton(baseUrl + "/admin", "Aller à l'administration →"));
     return enveloppErreur("Bounce email", corps, baseUrl);
   }
 
@@ -252,13 +264,17 @@ final class EmailTemplates {
   static String alerteWorker(String detail, String baseUrl) {
     String corps =
         """
-        <p style="color: #555; font-size: 14px; margin: 0 0 16px">%s</p>
-        <p style="color: #555; font-size: 14px; margin: 0 0 24px">
+        <p style="color: %s; font-size: 14px; margin: 0 0 16px">%s</p>
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
           Les fetches Ticketmaster et les notifications n'ont pas été traités depuis plus de 3 heures.
         </p>
         <p style="margin-top: 24px">%s</p>
         """
-            .formatted(e(detail), bouton(baseUrl + "/admin", "Aller à l'administration →"));
+            .formatted(
+                C_TEXTE,
+                e(detail),
+                C_TEXTE,
+                bouton(baseUrl + "/admin", "Aller à l'administration →"));
     return enveloppErreur("Worker inactif", corps, baseUrl);
   }
 
@@ -269,14 +285,15 @@ final class EmailTemplates {
   static String suppressionCompte(String baseUrl) {
     String corps =
         """
-        <p style="color: #555; margin: 0 0 24px">
+        <p style="color: %s; margin: 0 0 24px">
           Votre compte Strapontin a été supprimé par un administrateur.
           Vos données ont été effacées.
         </p>
-        <p style="color: #aaa; font-size: 13px; margin: 0">
+        <p style="color: %s; font-size: 13px; margin: 0">
           Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.
         </p>
-        """;
+        """
+            .formatted(C_TEXTE, C_MUTE);
     return envelopper("Votre compte Strapontin a été supprimé", corps, baseUrl);
   }
 
@@ -287,24 +304,25 @@ final class EmailTemplates {
   static String emailTest(String baseUrl) {
     String corps =
         """
-        <p style="color: #555; margin: 0 0 16px">
+        <p style="color: %s; margin: 0 0 16px">
           Si vous recevez cet email, la configuration Resend est correcte.
         </p>
-        <p style="color: #aaa; font-size: 13px; margin: 0">
+        <p style="color: %s; font-size: 13px; margin: 0">
           Envoyé depuis l'administration Strapontin.
         </p>
-        """;
+        """
+            .formatted(C_TEXTE, C_MUTE);
     return envelopper("Test de configuration email", corps, baseUrl);
   }
 
   // ---- Helpers privés ----
 
   private static String envelopper(String titre, String corps, String baseUrl) {
-    return enveloppAvecCouleur("#111", titre, corps, baseUrl);
+    return enveloppAvecCouleur(C_NOIR, titre, corps, baseUrl);
   }
 
   private static String enveloppErreur(String titre, String corps, String baseUrl) {
-    return enveloppAvecCouleur("#c00", titre, corps, baseUrl);
+    return enveloppAvecCouleur(C_ERREUR, titre, corps, baseUrl);
   }
 
   private static String enveloppAvecCouleur(
@@ -317,24 +335,24 @@ final class EmailTemplates {
       <meta name="viewport" content="width=device-width, initial-scale=1" />
     </head>
     <body style="font-family: system-ui, sans-serif; background: #f9f9f9; margin: 0; padding: 32px 16px">
-      <div style="max-width: 520px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px; border: 1px solid #e5e5e5">
+      <div style="max-width: 520px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px; border: 1px solid %s">
         <h2 style="font-size: 20px; font-weight: 600; color: %s; margin: 0 0 8px">%s</h2>
         %s
       </div>
-      <p style="text-align: center; color: #aaa; font-size: 12px; margin-top: 24px">
-        Strapontin — <a href="%s/parametres" style="color: #aaa">Gérer mes préférences</a>
+      <p style="text-align: center; color: %s; font-size: 12px; margin-top: 24px">
+        Strapontin — <a href="%s/parametres" style="color: %s">Gérer mes préférences</a>
       </p>
     </body>
     </html>
     """
-        .formatted(couleur, titre, corps, baseUrl);
+        .formatted(C_BORDURE, couleur, e(titre), corps, C_MUTE, e(baseUrl), C_MUTE);
   }
 
   private static String bouton(String href, String texte) {
     return """
-    <a href="%s" style="display: inline-block; background: #111; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500">%s</a>
+    <a href="%s" style="display: inline-block; background: %s; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500">%s</a>
     """
-        .formatted(href, texte);
+        .formatted(e(href), C_NOIR, e(texte));
   }
 
   /// Échappe les caractères HTML spéciaux d'une valeur variable.
