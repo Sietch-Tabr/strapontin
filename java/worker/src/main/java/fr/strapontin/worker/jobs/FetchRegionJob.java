@@ -5,6 +5,7 @@
 package fr.strapontin.worker.jobs;
 
 import fr.strapontin.worker.WorkerService;
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,7 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
 ///
 /// @since 2.0.0
 /// @author Kwaite
+@DisallowConcurrentExecution
 public class FetchRegionJob extends QuartzJobBean {
 
   private static final Logger log = LoggerFactory.getLogger(FetchRegionJob.class);

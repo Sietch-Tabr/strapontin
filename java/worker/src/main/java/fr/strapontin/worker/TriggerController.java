@@ -141,15 +141,20 @@ public class TriggerController {
         .anyMatch(jd -> nomJob.equals(jd.getKey().getName()));
   }
 
-  /// Planifie un {@code FetchSalleJob} immédiat pour le {@code venueId} donné.
+  /// Planifie un {@code FetchSalleJob} immédiat pour le {@code venueId} donné,
+  /// uniquement si aucune instance n'est déjà en cours pour ce {@code venueId}.
   ///
   /// <p>Appelé automatiquement par le web après l'ajout d'une salle avec venueId TM.
   ///
   /// @param venueId identifiant Ticketmaster de la salle
-  /// @return 200 si planifié, 500 en cas d'erreur Quartz
+  /// @return 200 si planifié ou déjà en cours, 500 en cas d'erreur Quartz
   @PostMapping("/salle/{venueId}")
   public ResponseEntity<Map<String, String>> relancerSalle(@PathVariable String venueId) {
     try {
+      if (jobEnCours("fetchSalle-" + venueId)) {
+        log.debug("fetchSalle-{} déjà en cours — ignoré", venueId);
+        return ResponseEntity.ok(Map.of("statut", "déjà en cours"));
+      }
       JobDetail jobDetail =
           JobBuilder.newJob(FetchSalleJob.class)
               .withIdentity("fetchSalle-" + venueId, "on-demand")
