@@ -333,7 +333,9 @@
     padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 1rem);
   }
   html {
-    scroll-padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 1rem);
+    scroll-padding-bottom: calc(
+      var(--nav-h) + env(safe-area-inset-bottom) + 1rem
+    );
   }
 }
 
