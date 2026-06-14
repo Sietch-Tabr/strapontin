@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -121,7 +122,7 @@ class WorkerServiceTest {
 
     assertDoesNotThrow(() -> workerService.executerRecalculerMatches(List.of("user-1")));
 
-    verify(jdbc).update(anyString(), anyMap());
+    verify(jdbc, times(2)).update(anyString(), anyMap()); // fetch_jobs + fetch_jobs_historique
     verify(notificationDigestService, never()).executerDigest(anyString());
   }
 
@@ -132,6 +133,7 @@ class WorkerServiceTest {
     workerService.executerPurgerConcerts();
 
     verify(jdbc).update(contains("DELETE FROM concerts"), anyMap());
-    verify(jdbc).update(contains("INSERT INTO fetch_jobs"), anyMap());
+    verify(jdbc).update(contains("INSERT INTO fetch_jobs (type_job"), anyMap());
+    verify(jdbc).update(contains("INSERT INTO fetch_jobs_historique"), anyMap());
   }
 }

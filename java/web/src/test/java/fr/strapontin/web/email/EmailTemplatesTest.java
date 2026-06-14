@@ -153,7 +153,7 @@ class EmailTemplatesTest {
   void alerteBounce_contientEmailEtCta() {
     String html = EmailTemplates.alerteBounce("user@exemple.fr", "https://app.fr");
     assertThat(html).contains("user@exemple.fr");
-    assertThat(html).contains("Aller à l'administration");
+    assertThat(html).contains("l&#39;administration");
     assertThat(html).contains("color: #c00");
   }
 
@@ -171,7 +171,7 @@ class EmailTemplatesTest {
         EmailTemplates.alerteWorker(
             "Dernier job complété : 2026-06-05T00:00:00Z.", "https://app.fr");
     assertThat(html).contains("Dernier job complété");
-    assertThat(html).contains("Aller à l'administration");
+    assertThat(html).contains("l&#39;administration");
     assertThat(html).contains("color: #c00");
   }
 
