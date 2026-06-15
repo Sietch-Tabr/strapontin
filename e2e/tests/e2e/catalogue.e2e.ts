@@ -109,6 +109,38 @@ test.describe("Scénario: catalogue — salles", () => {
   });
 });
 
+test.describe("Scénario: catalogue — recherche salle caractères spéciaux", () => {
+  test("api_recherche_salle_apostrophe_retourne_200_sans_erreur", async ({
+    request,
+  }) => {
+    const rep = await request.get("/api/salles?q=l%27olympia");
+    expect(rep.status()).toBe(200);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("resultats");
+    expect(Array.isArray(corps.resultats)).toBe(true);
+  });
+
+  test("api_recherche_salle_accent_terme_retourne_200_sans_erreur", async ({
+    request,
+  }) => {
+    const rep = await request.get("/api/salles?q=z%C3%A9nith");
+    expect(rep.status()).toBe(200);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("resultats");
+    expect(Array.isArray(corps.resultats)).toBe(true);
+  });
+
+  test("api_recherche_salle_tiret_retourne_200_sans_erreur", async ({
+    request,
+  }) => {
+    const rep = await request.get("/api/salles?q=accor-arena");
+    expect(rep.status()).toBe(200);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("resultats");
+    expect(Array.isArray(corps.resultats)).toBe(true);
+  });
+});
+
 test.describe("Scénario: catalogue — masquage concerts", () => {
   test("accueil_masquerPuisDemasquerConcert_disparaitPuisReapparait", async ({
     page,

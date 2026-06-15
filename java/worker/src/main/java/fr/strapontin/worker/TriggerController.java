@@ -11,12 +11,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.quartz.JobBuilder;
-import org.quartz.Trigger;
 import org.quartz.JobDetail;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
+import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,12 +96,17 @@ public class TriggerController {
     }
   }
 
-  /// Déclenche immédiatement {@code fetch:artistes:batch} et {@code fetch:region}.
+  /// Déclenche immédiatement {@code fetch:artistes:batch} et {@code fetch:region},
+  /// uniquement si aucun des deux n'est déjà en cours d'exécution.
   ///
-  /// @return 200 si les deux jobs ont été déclenchés, 500 en cas d'erreur Quartz
+  /// @return 200 si déclenchés ou déjà en cours, 500 en cas d'erreur Quartz
   @PostMapping("/tout")
   public ResponseEntity<Map<String, String>> relancerTout() {
     try {
+      if (jobEnCours("fetchArtistesBatch") || jobEnCours("fetchRegion")) {
+        log.debug("fetchArtistesBatch ou fetchRegion déjà en cours — ignoré");
+        return ResponseEntity.ok(Map.of("statut", "déjà en cours"));
+      }
       scheduler.triggerJob(JobKey.jobKey("fetchArtistesBatch"));
       scheduler.triggerJob(JobKey.jobKey("fetchRegion"));
       log.info("Déclenchement manuel : fetchArtistesBatch + fetchRegion");

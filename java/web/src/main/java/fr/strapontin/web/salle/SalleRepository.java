@@ -51,15 +51,18 @@ class SalleRepository {
                 rs.getTimestamp("created_at").toInstant()));
   }
 
-  /// Recherche des salles dans les concerts existants par pattern ILIKE.
+  /// Recherche des salles dans les concerts existants par pattern sur la clé normalisée.
   ///
-  /// @param pattern valeur ILIKE (ex. {@code "%opéra%"})
+  /// <p>Utilise {@code salle_cle LIKE :pattern} (colonne générée sans accents ni ponctuation)
+  /// pour ignorer apostrophes, tirets et accents dans le terme de recherche.
+  ///
+  /// @param pattern valeur LIKE sur {@code salle_cle} (ex. {@code "%lempreinte%"})
   /// @return lignes {@code salle}/{@code ville} distinctes (max 10)
   List<Map<String, Object>> rechercherEnBase(String pattern) {
     return jdbc.queryForList(
         """
         SELECT DISTINCT salle, ville FROM concerts
-        WHERE salle ILIKE :pattern
+        WHERE salle_cle LIKE :pattern
         ORDER BY salle
         LIMIT 10
         """,

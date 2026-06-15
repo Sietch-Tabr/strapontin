@@ -200,6 +200,26 @@ class DedoublonnerTest {
     assertEquals(2, Dedoublonner.dedoublonner(concerts).size());
   }
 
+  // --- Sélection de salle dans fusionner ---
+
+  @Test
+  void dedoublonner_passeExacte_prefereSalleAvecDiacritiques() {
+    var avecAccent = concert("Mika", "2025-10-01", "Zénith Paris", "Paris", "eventim");
+    var sansAccent = concert("Mika", "2025-10-01", "ZENITH PARIS", "Paris", "ticketmaster");
+    var resultat = Dedoublonner.dedoublonner(List.of(sansAccent, avecAccent));
+    assertEquals(1, resultat.size());
+    assertEquals("Zénith Paris", resultat.get(0).salle());
+  }
+
+  @Test
+  void dedoublonner_passeExacte_prefereSalleAvecCasseMixte() {
+    var casseMixte = concert("Stromae", "2025-11-05", "Accor Arena", "Paris", "eventim");
+    var toutMajuscules = concert("Stromae", "2025-11-05", "ACCOR ARENA", "Paris", "ticketmaster");
+    var resultat = Dedoublonner.dedoublonner(List.of(toutMajuscules, casseMixte));
+    assertEquals(1, resultat.size());
+    assertEquals("Accor Arena", resultat.get(0).salle());
+  }
+
   // --- Ville null ---
 
   @Test
