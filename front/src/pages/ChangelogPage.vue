@@ -8,8 +8,14 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
-        <h2 class="changelog-version">v 2.2.5 — 12 juin 2026</h2>
+        <h2 class="changelog-version">v 2.2.5 — 15 juin 2026</h2>
         <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Salles</p>
+            <ul>
+              <li>La recherche de salle fonctionne désormais avec les apostrophes, accents et tirets — taper « l'empreinte » ou « zénith » retrouve les salles correspondantes.</li>
+            </ul>
+          </div>
           <div>
             <p class="changelog-categorie">Administration</p>
             <ul>
