@@ -29,6 +29,16 @@ class SalleControllerTest {
   }
 
   @Test
+  void normaliserSalleCle_apostrophe_retireApostrophe() {
+    assertEquals("lempreinte", SalleService.normaliserSalleCle("l'empreinte"));
+  }
+
+  @Test
+  void normaliserSalleCle_tiret_retireTiret() {
+    assertEquals("zenitharena", SalleService.normaliserSalleCle("zenith-arena"));
+  }
+
+  @Test
   void normaliserSalleCle_casseMixte_resultatIdentique() {
     assertEquals(
         SalleService.normaliserSalleCle("BATACLAN"), SalleService.normaliserSalleCle("bataclan"));

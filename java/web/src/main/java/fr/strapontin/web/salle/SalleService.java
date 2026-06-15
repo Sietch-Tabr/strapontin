@@ -77,7 +77,8 @@ public class SalleService {
       Set<String> sallesDejaAjoutees =
           salles.stream().map(SalleUtilisateur::salleId).collect(Collectors.toSet());
 
-      List<Map<String, Object>> enBase = salleRepository.rechercherEnBase("%" + recherche + "%");
+      List<Map<String, Object>> enBase =
+          salleRepository.rechercherEnBase("%" + normaliserSalleCle(recherche) + "%");
 
       List<ResultatSalle> listeResultats =
           enBase.stream()
