@@ -20,7 +20,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires pour {@link AuthController} — challenge TOTP et réinitialisation de mot de passe.
+/// Tests unitaires pour {@link AuthController} — challenge TOTP et réinitialisation de mot de
+// passe.
 ///
 /// @since 2.2.5
 /// @author Kwaite
@@ -79,8 +80,7 @@ class AuthControllerTest {
     HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(session);
-    when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))
-        .thenReturn(Boolean.TRUE);
+    when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
     var reponse =
         authController.verifierTotp(new TotpChallengeRequest("123456"), httpRequest, null);
@@ -95,8 +95,7 @@ class AuthControllerTest {
     HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(session);
     when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-    when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))
-        .thenReturn(Boolean.TRUE);
+    when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
     UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
@@ -121,8 +120,7 @@ class AuthControllerTest {
     HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(session);
     when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-    when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))
-        .thenReturn(Boolean.TRUE);
+    when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
     when(session.getAttribute("TOTP_ECHECS")).thenReturn(null);
 
     UtilisateurDetails principal =
@@ -149,8 +147,7 @@ class AuthControllerTest {
     HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(session);
     when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-    when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))
-        .thenReturn(Boolean.TRUE);
+    when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
     when(session.getAttribute("TOTP_ECHECS")).thenReturn(4);
 
     UtilisateurDetails principal =
