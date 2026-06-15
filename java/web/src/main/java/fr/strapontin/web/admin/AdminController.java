@@ -174,6 +174,35 @@ public class AdminController {
         .orElseGet(() -> erreur(404, "Utilisateur introuvable."));
   }
 
+  /// Initie la révocation différée du rôle admin (effective dans 7 jours).
+  ///
+  /// @param userId identifiant de l'administrateur à révoquer
+  /// @param auth   contexte d'authentification admin
+  /// @return 200 si initiée, 400 si déjà user, 404 si introuvable, 409 si seul admin
+  @PostMapping("/utilisateurs/{userId}/revoquer-admin")
+  public ResponseEntity<Map<String, Object>> initierRevocationAdmin(
+      @PathVariable String userId, Authentication auth) {
+    String adminId = utilisateur(auth).id();
+    if (userId.equals(adminId)) {
+      return erreur(400, "Impossible de révoquer votre propre compte.");
+    }
+    adminService.initierRevocationAdmin(userId, adminId);
+    return ResponseEntity.ok(Map.of("succes", true, "action", "initierRevocationAdmin"));
+  }
+
+  /// Annule une révocation admin en cours.
+  ///
+  /// @param userId identifiant de l'administrateur concerné
+  /// @param auth   contexte d'authentification admin
+  /// @return 200 si annulée, 400 si aucune révocation en cours
+  @DeleteMapping("/utilisateurs/{userId}/revoquer-admin")
+  public ResponseEntity<Map<String, Object>> annulerRevocationAdmin(
+      @PathVariable String userId, Authentication auth) {
+    String adminId = utilisateur(auth).id();
+    adminService.annulerRevocationAdmin(userId, adminId);
+    return ResponseEntity.ok(Map.of("succes", true, "action", "annulerRevocationAdmin"));
+  }
+
   /// Réinitialise la 2FA (TOTP) d'un utilisateur.
   ///
   /// @param userId identifiant de l'utilisateur

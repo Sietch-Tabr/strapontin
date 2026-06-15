@@ -366,6 +366,50 @@ public class WorkerService {
     }
   }
 
+  /// Révoque les admins dont le délai de préavis est écoulé.
+  ///
+  /// <p>Passe de `admin` à `user` tous les comptes dont `revocation_admin_le` est dans le passé.
+  /// Loggue le bilan dans `logs_admin`.
+  public void executerRevoquerAdmins() {
+    log.info("revoquer:admins démarré");
+    long debut = System.currentTimeMillis();
+    try {
+      int nb =
+          jdbc.update(
+              """
+              UPDATE users SET role = 'user', revocation_admin_le = NULL
+              WHERE revocation_admin_le < now() AND role = 'admin'
+              """,
+              Map.of());
+      log.info("revoquer:admins terminé nb={}", nb);
+      if (nb > 0) {
+        jdbc.update(
+            """
+            INSERT INTO logs_admin (ts, niveau, source, message, meta)
+            VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
+            """,
+            Map.of(
+                "ts", System.currentTimeMillis(),
+                "niveau", "warn",
+                "source", "admin",
+                "message", "révocation admin effective — " + nb + " compte(s) rétrogradé(s)",
+                "meta", "{}"));
+      }
+      enregistrerStatJob(
+          "revoquer:admins",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, nb),
+          null);
+    } catch (Exception e) {
+      log.error("revoquer:admins échoué", e);
+      enregistrerStatJob(
+          "revoquer:admins",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, 0),
+          e.getMessage());
+    }
+  }
+
   private static java.util.Set<String> collecterTousLesDepts(List<String[]> allDepts) {
     java.util.Set<String> tousLesDepts = new java.util.LinkedHashSet<>();
     for (String[] depts : allDepts) {

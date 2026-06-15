@@ -15,6 +15,8 @@ public record UtilisateurAdmin(
     String email,
     String role,
     String username,
+    String displayUsername,
     boolean mustChangeCredentials,
     Instant createdAt,
-    Instant derniereActivite) {}
+    Instant derniereActivite,
+    Instant revocationAdminLe) {}

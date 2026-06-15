@@ -10,6 +10,7 @@ import fr.strapontin.worker.jobs.NotifierDigestJob;
 import fr.strapontin.worker.jobs.PurgerConcertsJob;
 import fr.strapontin.worker.jobs.PurgerLogsAdminJob;
 import fr.strapontin.worker.jobs.RecalculerMatchesJob;
+import fr.strapontin.worker.jobs.RevoquerAdminsJob;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
@@ -29,6 +30,7 @@ import org.springframework.context.annotation.Configuration;
 /// - `purger:concerts` — tous les jours à minuit
 /// - `purger:logs-admin` — tous les jours à 0h15
 /// - `notifier:digest` — tous les jours à 8h
+/// - `revoquer:admins` — toutes les heures
 ///
 /// Le job `fetch:salle` est planifié dynamiquement par [WorkerService]
 /// selon les salles configurées.
@@ -146,6 +148,23 @@ public class Planificateur {
         .forJob(jobDetailNotifierDigest)
         .withIdentity("triggerNotifierDigest")
         .withSchedule(CronScheduleBuilder.cronSchedule("0 0 8 * * ?"))
+        .build();
+  }
+
+  @Bean
+  JobDetail jobDetailRevoquerAdmins() {
+    return JobBuilder.newJob(RevoquerAdminsJob.class)
+        .withIdentity("revoquerAdmins")
+        .storeDurably()
+        .build();
+  }
+
+  @Bean
+  Trigger triggerRevoquerAdmins(JobDetail jobDetailRevoquerAdmins) {
+    return TriggerBuilder.newTrigger()
+        .forJob(jobDetailRevoquerAdmins)
+        .withIdentity("triggerRevoquerAdmins")
+        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 * * * ?"))
         .build();
   }
 }

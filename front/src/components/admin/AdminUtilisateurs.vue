@@ -26,6 +26,7 @@
                 <span v-if="u.username" class="badge badge-mono">@{{ u.username }}</span>
                 <span v-if="u.role === 'admin'" class="badge badge-info">admin</span>
                 <span v-if="u.mustChangeCredentials" class="badge badge-warn">activation en attente</span>
+                <span v-if="u.revocationAdminLe" class="badge badge-warn">révocation {{ joursAvantRevocation(u.revocationAdminLe) }}</span>
               </div>
               <p class="user-carte-email">{{ u.email }}</p>
               <p class="user-carte-activite">
@@ -37,11 +38,18 @@
               <button type="button" class="btn btn-sm btn-secondary" @click="toggleModif(u.id)">Modifier</button>
               <button type="button" class="btn btn-sm btn-secondary" @click="reinitMdp(u)">Réinit. MDP</button>
               <button type="button" class="btn btn-sm btn-secondary" @click="reinitTotp(u)">Réinit. 2FA</button>
+              <button
+                v-if="u.revocationAdminLe"
+                type="button"
+                class="btn btn-sm btn-secondary"
+                @click="annulerRevocation(u)"
+              >Annuler la révocation</button>
               <button type="button" class="btn btn-sm btn-danger" @click="ouvrirDialogSupprimer(u)">Supprimer</button>
             </div>
           </div>
           <div :id="'modif-' + u.id" class="modif-ligne" :class="{ visible: modifOuverts.has(u.id) }">
             <form class="form-modif-utilisateur" @submit.prevent="sauvegarderModif(u)">
+              <input v-model="modifData[u.id].nom" type="text" placeholder="Nom d'affichage" aria-label="Nom d'affichage de l'utilisateur" />
               <input v-model="modifData[u.id].email" type="email" placeholder="Email" aria-label="Adresse email de l'utilisateur" />
               <select v-model="modifData[u.id].role" aria-label="Rôle de l'utilisateur">
                 <option value="user">user</option>
@@ -85,6 +93,15 @@
     </div>
   </dialog>
 
+  <dialog ref="dialogConfirmerRoleRef" id="dialog-confirmer-role">
+    <p class="dialog-titre">Confirmer le changement de rôle ?</p>
+    <p class="dialog-corps" id="dialog-confirmer-role-texte">{{ texteConfirmationRole }}</p>
+    <div class="dialog-pied">
+      <button type="button" id="dialog-confirmer-role-ok" class="btn btn-secondary" @click="confirmerChangementRole">Confirmer</button>
+      <button type="button" id="dialog-confirmer-role-annuler" class="btn btn-secondary" @click="fermerDialogConfirmerRole">Annuler</button>
+    </div>
+  </dialog>
+
   <dialog ref="dialogInvitationRef" id="dialog-invitation">
     <template v-if="lienInvitation">
       <p class="dialog-titre">Compte créé</p>
@@ -111,7 +128,7 @@
 <script setup>
 defineOptions({ name: 'AdminUtilisateurs' })
 
-import { ref, shallowRef, reactive, onMounted } from 'vue'
+import { ref, shallowRef, reactive, onMounted, computed } from 'vue'
 import { useDialog } from '../../composables/useDialog.js'
 import { useToasts } from '../../composables/useToasts.js'
 import { formaterInstant } from '../../composables/useDates.js'
@@ -121,6 +138,7 @@ const { dialogRef: dialogSupprimerUserRef, ouvrir: ouvrirDialogSupprimerModal, f
 const { dialogRef: dialogInvitationRef, ouvrir: ouvrirDialogInvitationModal, fermer: fermerDialogInvitationModal } = useDialog()
 const { dialogRef: dialogReinitMdpRef, ouvrir: ouvrirDialogReinitMdpModal, fermer: fermerDialogReinitMdpModal } = useDialog()
 const { dialogRef: dialogReinitTotpRef, ouvrir: ouvrirDialogReinitTotpModal, fermer: fermerDialogReinitTotpModal } = useDialog()
+const { dialogRef: dialogConfirmerRoleRef, ouvrir: ouvrirDialogConfirmerRoleModal, fermer: fermerDialogConfirmerRoleModal } = useDialog()
 
 const utilisateurs = shallowRef([])
 const utilisateurCourantId = ref(null)
@@ -133,6 +151,23 @@ const userAReinitMdp = ref(null)
 const userAReinitTotp = ref(null)
 const inviteEmail = ref('')
 const lienInvitation = ref('')
+const modifEnAttenteRole = ref(null)
+
+const texteConfirmationRole = computed(() => {
+  if (!modifEnAttenteRole.value) return ''
+  const { user: u, data: d } = modifEnAttenteRole.value
+  if (u.role === 'admin' && d.role === 'user') {
+    return `La révocation de ${u.email} sera effective dans 7 jours. Un email de préavis lui sera envoyé.`
+  }
+  return `${u.email} sera promu administrateur. Un email de confirmation lui sera envoyé.`
+})
+
+function joursAvantRevocation(revocationAdminLe) {
+  const diff = new Date(revocationAdminLe) - new Date()
+  const jours = Math.ceil(diff / (1000 * 60 * 60 * 24))
+  if (jours <= 0) return 'imminente'
+  return `dans ${jours} jour${jours > 1 ? 's' : ''}`
+}
 
 async function charger() {
   try {
@@ -156,7 +191,7 @@ async function charger() {
 function initialiserModifData() {
   for (const u of utilisateurs.value) {
     if (!modifData[u.id]) {
-      modifData[u.id] = { email: u.email ?? '', role: u.role ?? 'user' }
+      modifData[u.id] = { nom: u.displayUsername ?? '', email: u.email ?? '', role: u.role ?? 'user' }
     }
   }
 }
@@ -206,22 +241,86 @@ function toggleModif(userId) {
 async function sauvegarderModif(u) {
   delete modifErreurs[u.id]
   const d = modifData[u.id]
+  const roleChange = d.role !== u.role
+  const retrograder = u.role === 'admin' && d.role === 'user'
+
+  if (roleChange) {
+    modifEnAttenteRole.value = { user: u, data: { ...d } }
+    ouvrirDialogConfirmerRoleModal()
+    return
+  }
+
+  await envoyerPatch(u, d)
+}
+
+async function envoyerPatch(u, d) {
+  const corps = {}
+  if (d.nom !== (u.displayUsername ?? '')) corps.nom = d.nom
+  if (d.email !== u.email) corps.email = d.email
+  if (d.role !== u.role) corps.role = d.role
+
+  if (Object.keys(corps).length === 0) {
+    toggleModif(u.id)
+    return
+  }
+
   const rep = await fetch('/api/admin/utilisateurs/' + u.id, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: d.email, role: d.role }),
+    body: JSON.stringify(corps),
   })
-  const corps = await rep.json()
+  const repCorps = await rep.json()
   if (rep.ok) {
     toggleModif(u.id)
-    const repUsers = await fetch('/api/admin/utilisateurs')
-    if (repUsers.ok) {
-      utilisateurs.value = await repUsers.json()
-      initialiserModifData()
-    }
+    await rechargerUtilisateurs()
     afficherToast('Utilisateur modifié.', 'succes')
   } else {
-    modifErreurs[u.id] = corps.erreur || 'Erreur.'
+    modifErreurs[u.id] = repCorps.erreur || 'Erreur.'
+  }
+}
+
+function fermerDialogConfirmerRole() {
+  fermerDialogConfirmerRoleModal()
+  modifEnAttenteRole.value = null
+}
+
+async function confirmerChangementRole() {
+  if (!modifEnAttenteRole.value) return
+  const { user: u, data: d } = modifEnAttenteRole.value
+  const retrograder = u.role === 'admin' && d.role === 'user'
+  fermerDialogConfirmerRole()
+
+  if (retrograder) {
+    const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'POST' })
+    const corps = await rep.json()
+    if (rep.ok) {
+      toggleModif(u.id)
+      await rechargerUtilisateurs()
+      afficherToast('Révocation initiée. L\'administrateur sera prévenu par email.', 'succes')
+    } else {
+      modifErreurs[u.id] = corps.erreur || 'Erreur.'
+    }
+  } else {
+    await envoyerPatch(u, d)
+  }
+}
+
+async function annulerRevocation(u) {
+  const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'DELETE' })
+  const corps = await rep.json()
+  if (rep.ok) {
+    await rechargerUtilisateurs()
+    afficherToast('Révocation annulée.', 'succes')
+  } else {
+    afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  }
+}
+
+async function rechargerUtilisateurs() {
+  const repUsers = await fetch('/api/admin/utilisateurs')
+  if (repUsers.ok) {
+    utilisateurs.value = await repUsers.json()
+    initialiserModifData()
   }
 }
 

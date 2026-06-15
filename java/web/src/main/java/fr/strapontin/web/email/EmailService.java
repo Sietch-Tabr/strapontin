@@ -459,6 +459,77 @@ public class EmailService {
     }
   }
 
+  /// Notifie un utilisateur qu'il a été promu au rôle administrateur.
+  ///
+  /// @param email l'adresse de l'utilisateur promu
+  public void envoyerPromotionAdmin(String email) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — email promotion admin non envoyé");
+      return;
+    }
+
+    String corps = EmailTemplates.promotionAdmin(ctx.get().baseUrl());
+
+    String texte =
+        """
+        Vous êtes maintenant administrateur Strapontin
+
+        Votre compte a été promu au rôle administrateur.
+        Accédez au panneau d'administration : %s/admin
+        """
+            .formatted(ctx.get().baseUrl());
+
+    try {
+      envoyer(
+          ctx.get(),
+          email,
+          ctx.get().expediteur(),
+          "Vous êtes maintenant administrateur Strapontin",
+          corps,
+          texte);
+      log.info("Email promotion admin envoyé : {}", email);
+    } catch (Exception e) {
+      log.error("Échec envoi email promotion admin : {}", email, e);
+    }
+  }
+
+  /// Envoie un préavis de révocation du rôle administrateur (délai de 7 jours).
+  ///
+  /// @param email         l'adresse de l'administrateur concerné
+  /// @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
+  public void envoyerPreavisRevocationAdmin(String email, String dateEffective) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — email préavis révocation admin non envoyé");
+      return;
+    }
+
+    String corps = EmailTemplates.preavisRevocationAdmin(dateEffective, ctx.get().baseUrl());
+
+    String texte =
+        """
+        Préavis de révocation admin
+
+        Votre accès administrateur Strapontin sera supprimé le %s.
+        Si vous pensez qu'il s'agit d'une erreur, contactez un autre administrateur.
+        """
+            .formatted(dateEffective);
+
+    try {
+      envoyer(
+          ctx.get(),
+          email,
+          ctx.get().expediteur(),
+          "Strapontin — préavis de révocation admin",
+          corps,
+          texte);
+      log.info("Email préavis révocation admin envoyé : {}", email);
+    } catch (Exception e) {
+      log.error("Échec envoi préavis révocation admin : {}", email, e);
+    }
+  }
+
   /// Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3 heures.
   ///
   /// @param email               l'adresse email de l'administrateur

@@ -159,6 +159,178 @@ test.describe("Scénario: admin — gestion des utilisateurs", () => {
   });
 });
 
+test.describe("Scénario: admin — modification utilisateur", () => {
+  test("admin_modifierNom_sauvegarde", async ({ page, isMobile }) => {
+    const emailTest = `e2e-nom-${Date.now()}@example.com`;
+
+    await page.goto("/admin");
+    if (isMobile) {
+      await page.selectOption("select.param-onglets-mobile", "#utilisateurs");
+    } else {
+      await page.locator('a[href="#utilisateurs"]').click();
+    }
+    await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
+    await page.click('.form-creer-utilisateur button[type="submit"]');
+    const dialogInvit = page.locator("dialog#dialog-invitation");
+    await expect(dialogInvit).toBeVisible({ timeout: 5000 });
+    await page.click("button#btn-fermer-invitation");
+
+    const carteUser = page
+      .locator(".user-carte")
+      .filter({ hasText: emailTest });
+    await carteUser.locator("button", { hasText: "Modifier" }).click();
+    await carteUser
+      .locator('input[placeholder="Nom d\'affichage"]')
+      .fill("Alice Test");
+    await carteUser
+      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .click();
+
+    await expect(
+      page.locator(".user-carte").filter({ hasText: "Alice Test" }),
+    ).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Nettoyage
+    const carteNettoyage = page
+      .locator(".user-carte")
+      .filter({ hasText: emailTest });
+    await carteNettoyage.locator("button.btn-danger").click();
+    await page.click("button#dialog-supprimer-user-confirmer");
+  });
+
+  test("admin_changementRole_dialogConfirmation", async ({
+    page,
+    isMobile,
+  }) => {
+    const emailTest = `e2e-role-${Date.now()}@example.com`;
+
+    await page.goto("/admin");
+    if (isMobile) {
+      await page.selectOption("select.param-onglets-mobile", "#utilisateurs");
+    } else {
+      await page.locator('a[href="#utilisateurs"]').click();
+    }
+    await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
+    await page.click('.form-creer-utilisateur button[type="submit"]');
+    const dialogInvit = page.locator("dialog#dialog-invitation");
+    await expect(dialogInvit).toBeVisible({ timeout: 5000 });
+    await page.click("button#btn-fermer-invitation");
+
+    const carteUser = page
+      .locator(".user-carte")
+      .filter({ hasText: emailTest });
+    await carteUser.locator("button", { hasText: "Modifier" }).click();
+    await carteUser
+      .locator('select[aria-label="Rôle de l\'utilisateur"]')
+      .selectOption("admin");
+    await carteUser
+      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .click();
+
+    await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
+      timeout: 3000,
+    });
+    await page.click("button#dialog-confirmer-role-annuler");
+    await expect(
+      page.locator("dialog#dialog-confirmer-role"),
+    ).not.toBeVisible();
+
+    // Nettoyage
+    const carteNettoyage = page
+      .locator(".user-carte")
+      .filter({ hasText: emailTest });
+    await carteNettoyage.locator("button.btn-danger").click();
+    await page.click("button#dialog-supprimer-user-confirmer");
+  });
+
+  test("admin_revocationAdmin_badgeEtAnnulation", async ({
+    page,
+    isMobile,
+  }) => {
+    const emailTest = `e2e-revoc-${Date.now()}@example.com`;
+
+    await page.goto("/admin");
+    if (isMobile) {
+      await page.selectOption("select.param-onglets-mobile", "#utilisateurs");
+    } else {
+      await page.locator('a[href="#utilisateurs"]').click();
+    }
+    // Créer un utilisateur et le promouvoir admin
+    await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
+    await page.click('.form-creer-utilisateur button[type="submit"]');
+    await expect(page.locator("dialog#dialog-invitation")).toBeVisible({
+      timeout: 5000,
+    });
+    await page.click("button#btn-fermer-invitation");
+
+    const carteUser = page
+      .locator(".user-carte")
+      .filter({ hasText: emailTest });
+    await carteUser.locator("button", { hasText: "Modifier" }).click();
+    await carteUser
+      .locator('select[aria-label="Rôle de l\'utilisateur"]')
+      .selectOption("admin");
+    await carteUser
+      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .click();
+    await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
+      timeout: 3000,
+    });
+    await page.click("button#dialog-confirmer-role-ok");
+    await expect(
+      page
+        .locator(".user-carte")
+        .filter({ hasText: emailTest })
+        .locator(".badge-info"),
+    ).toBeVisible({ timeout: 5000 });
+
+    // Initier la révocation
+    const carteAdmin = page
+      .locator(".user-carte")
+      .filter({ hasText: emailTest });
+    await carteAdmin.locator("button", { hasText: "Modifier" }).click();
+    await carteAdmin
+      .locator('select[aria-label="Rôle de l\'utilisateur"]')
+      .selectOption("user");
+    await carteAdmin
+      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .click();
+    await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
+      timeout: 3000,
+    });
+    await page.click("button#dialog-confirmer-role-ok");
+
+    // Vérifier le badge de révocation
+    const carteRevoc = page
+      .locator(".user-carte")
+      .filter({ hasText: emailTest });
+    await expect(
+      carteRevoc.locator(".badge-warn", { hasText: "révocation" }),
+    ).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Annuler la révocation
+    await carteRevoc
+      .locator("button", { hasText: "Annuler la révocation" })
+      .click();
+    await expect(
+      carteRevoc.locator(".badge-warn", { hasText: "révocation" }),
+    ).not.toBeVisible({
+      timeout: 5000,
+    });
+
+    // Nettoyage
+    const carteNettoyage = page
+      .locator(".user-carte")
+      .filter({ hasText: emailTest });
+    await carteNettoyage.locator("button.btn-danger").click();
+    await page.click("button#dialog-supprimer-user-confirmer");
+  });
+});
+
 test.describe("Scénario: admin — API endpoints", () => {
   test("api_admin_jobs_retourne_200", async ({ request }) => {
     const rep = await request.get("/api/admin/jobs");
@@ -175,5 +347,16 @@ test.describe("Scénario: admin — API endpoints", () => {
     const rep = await ctx.request.get("/api/admin/jobs");
     expect([401, 302, 403]).toContain(rep.status());
     await ctx.close();
+  });
+
+  test("api_admin_revoquerAdmin_seulAdmin_retourne409", async ({ request }) => {
+    const repUsers = await request.get("/api/admin/utilisateurs");
+    const users = await repUsers.json();
+    const admins = users.filter((u: { role: string }) => u.role === "admin");
+    if (admins.length !== 1) return;
+    const rep = await request.post(
+      `/api/admin/utilisateurs/${admins[0].id}/revoquer-admin`,
+    );
+    expect(rep.status()).toBe(400);
   });
 });
