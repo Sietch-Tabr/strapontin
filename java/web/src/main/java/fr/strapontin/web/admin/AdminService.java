@@ -270,7 +270,7 @@ public class AdminService {
     StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
     if (!nom.isEmpty()) setClauses.append(", display_username = :nom");
     if (!email.isEmpty()) setClauses.append(", email = :email");
-    if (!role.isEmpty()) setClauses.append(", role = CAST(:role AS user_role)");
+    if (!role.isEmpty()) setClauses.append(", role = CAST(:role AS role_utilisateur)");
     jdbc.update("UPDATE users SET " + setClauses + " WHERE id = :userId", miseAJour);
 
     if (!nom.isEmpty()) {

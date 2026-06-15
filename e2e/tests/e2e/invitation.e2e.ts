@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, request as playwrightRequest } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
 
 test.use({ storageState: FICHIER_AUTH_ADMIN });
@@ -9,12 +9,42 @@ const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
 // SHA-256("e2e-invite-token-2026") = db2b2442...
 const LIEN_INVITE = `${BASE_URL}/reset-password?token=e2e-invite-token-2026`;
 
+const emailsANettoyer: string[] = [];
+
+async function supprimerUtilisateurParEmail(email: string): Promise<void> {
+  const ctx = await playwrightRequest.newContext({
+    baseURL: BASE_URL,
+    storageState: FICHIER_AUTH_ADMIN,
+  });
+  try {
+    const reps = await ctx.get("/api/admin/utilisateurs");
+    if (!reps.ok()) return;
+    const users = await reps.json();
+    const cible = users.find((u: { email: string }) => u.email === email);
+    if (cible) await ctx.delete(`/api/admin/utilisateurs/${cible.id}`);
+  } finally {
+    await ctx.dispose();
+  }
+}
+
+test.afterEach(async () => {
+  const copies = emailsANettoyer.splice(0);
+  for (const email of copies) {
+    try {
+      await supprimerUtilisateurParEmail(email);
+    } catch {
+      /* ignore */
+    }
+  }
+});
+
 test.describe("Scénario: invitation — dialog de confirmation", () => {
   test("invitation_creerUtilisateur_dialogAfficheEmail", async ({
     page,
     isMobile,
   }) => {
     const emailTest = `e2e-dialog-${Date.now()}@test.local`;
+    emailsANettoyer.push(emailTest);
 
     await page.goto("/admin");
     if (isMobile) {
@@ -22,6 +52,8 @@ test.describe("Scénario: invitation — dialog de confirmation", () => {
     } else {
       await page.locator('a[href="#utilisateurs"]').click();
     }
+    await page.waitForLoadState("networkidle");
+
     await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
     await page.click('.form-creer-utilisateur button[type="submit"]');
 
@@ -29,20 +61,7 @@ test.describe("Scénario: invitation — dialog de confirmation", () => {
     await expect(dialog).toBeVisible({ timeout: 5000 });
     await expect(dialog).toContainText(emailTest);
     await page.click("button#btn-fermer-invitation");
-
-    // Nettoyage
-    const carteUser = page
-      .locator(".user-carte")
-      .filter({ hasText: emailTest });
-    await expect(carteUser).toBeVisible({ timeout: 3000 });
-    await carteUser.locator("button.btn-danger").click();
-    await expect(page.locator("dialog#dialog-supprimer-user")).toBeVisible({
-      timeout: 3000,
-    });
-    await page.click("button#dialog-supprimer-user-confirmer");
-    await expect(
-      page.locator(".user-carte").filter({ hasText: emailTest }),
-    ).not.toBeVisible({ timeout: 5000 });
+    await expect(dialog).not.toBeVisible({ timeout: 3000 });
   });
 });
 

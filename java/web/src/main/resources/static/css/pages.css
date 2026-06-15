@@ -1039,6 +1039,7 @@ fieldset.notif-grille {
   .user-carte-actions {
     width: 100%;
     justify-content: flex-end;
+    flex-wrap: wrap;
   }
 }
 .modif-ligne {

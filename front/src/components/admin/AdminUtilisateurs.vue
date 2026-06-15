@@ -28,6 +28,7 @@
                 <span v-if="u.mustChangeCredentials" class="badge badge-warn">activation en attente</span>
                 <span v-if="u.revocationAdminLe" class="badge badge-warn">révocation {{ joursAvantRevocation(u.revocationAdminLe) }}</span>
               </div>
+              <p v-if="u.displayUsername" class="user-carte-nom">{{ u.displayUsername }}</p>
               <p class="user-carte-email">{{ u.email }}</p>
               <p class="user-carte-activite">
                 <span v-if="u.derniereActivite">Dernière activité : {{ formaterInstant(u.derniereActivite) }}</span>

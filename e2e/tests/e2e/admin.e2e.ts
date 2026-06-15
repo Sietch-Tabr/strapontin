@@ -1,7 +1,49 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, request as playwrightRequest } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
 
 test.use({ storageState: FICHIER_AUTH_ADMIN });
+
+const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
+const emailsANettoyer: string[] = [];
+
+async function supprimerUtilisateurParEmail(email: string): Promise<void> {
+  const ctx = await playwrightRequest.newContext({
+    baseURL: BASE_URL,
+    storageState: FICHIER_AUTH_ADMIN,
+  });
+  try {
+    const reps = await ctx.get("/api/admin/utilisateurs");
+    if (!reps.ok()) return;
+    const users = await reps.json();
+    const cible = users.find((u: { email: string }) => u.email === email);
+    if (cible) await ctx.delete(`/api/admin/utilisateurs/${cible.id}`);
+  } finally {
+    await ctx.dispose();
+  }
+}
+
+test.afterEach(async () => {
+  const copies = emailsANettoyer.splice(0);
+  for (const email of copies) {
+    try {
+      await supprimerUtilisateurParEmail(email);
+    } catch {
+      /* ignore */
+    }
+  }
+});
+
+async function naviguerVersUtilisateurs(
+  page: import("@playwright/test").Page,
+  isMobile: boolean,
+) {
+  if (isMobile) {
+    await page.selectOption("select.param-onglets-mobile", "#utilisateurs");
+  } else {
+    await page.locator('a[href="#utilisateurs"]').click();
+  }
+  await page.waitForLoadState("networkidle");
+}
 
 test.describe("Scénario: admin — sections et contenus", () => {
   test("admin_h1_visible", async ({ page }) => {
@@ -120,39 +162,31 @@ test.describe("Scénario: admin — gestion des utilisateurs", () => {
     isMobile,
   }) => {
     const emailTest = `e2e-test-${Date.now()}@example.com`;
+    emailsANettoyer.push(emailTest);
 
-    // Créer l'utilisateur
     await page.goto("/admin");
-    if (isMobile) {
-      await page.selectOption("select.param-onglets-mobile", "#utilisateurs");
-    } else {
-      await page.locator('a[href="#utilisateurs"]').click();
-    }
+    await naviguerVersUtilisateurs(page, isMobile);
+
     await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
     await page.click('.form-creer-utilisateur button[type="submit"]');
 
-    // Vérifier le dialog de confirmation d'invitation
     const dialog = page.locator("dialog#dialog-invitation");
     await expect(dialog).toBeVisible({ timeout: 5000 });
     await expect(dialog).toContainText(emailTest);
     await page.click("button#btn-fermer-invitation");
+    await expect(dialog).not.toBeVisible({ timeout: 3000 });
 
-    // Retrouver la carte du compte créé
     const carteUser = page
       .locator(".user-carte")
       .filter({ hasText: emailTest });
     await expect(carteUser).toBeVisible({ timeout: 3000 });
 
-    // Cliquer sur Supprimer → ouvre le dialog de confirmation
     await carteUser.locator("button.btn-danger").click();
     await expect(page.locator("dialog#dialog-supprimer-user")).toBeVisible({
       timeout: 3000,
     });
-
-    // Confirmer la suppression
     await page.click("button#dialog-supprimer-user-confirmer");
 
-    // Vérifier que l'utilisateur a disparu de la liste
     await expect(
       page.locator(".user-carte").filter({ hasText: emailTest }),
     ).not.toBeVisible({ timeout: 5000 });
@@ -162,18 +196,17 @@ test.describe("Scénario: admin — gestion des utilisateurs", () => {
 test.describe("Scénario: admin — modification utilisateur", () => {
   test("admin_modifierNom_sauvegarde", async ({ page, isMobile }) => {
     const emailTest = `e2e-nom-${Date.now()}@example.com`;
+    emailsANettoyer.push(emailTest);
 
     await page.goto("/admin");
-    if (isMobile) {
-      await page.selectOption("select.param-onglets-mobile", "#utilisateurs");
-    } else {
-      await page.locator('a[href="#utilisateurs"]').click();
-    }
+    await naviguerVersUtilisateurs(page, isMobile);
+
     await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
     await page.click('.form-creer-utilisateur button[type="submit"]');
     const dialogInvit = page.locator("dialog#dialog-invitation");
     await expect(dialogInvit).toBeVisible({ timeout: 5000 });
     await page.click("button#btn-fermer-invitation");
+    await expect(dialogInvit).not.toBeVisible({ timeout: 3000 });
 
     const carteUser = page
       .locator(".user-carte")
@@ -187,17 +220,8 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .click();
 
     await expect(
-      page.locator(".user-carte").filter({ hasText: "Alice Test" }),
-    ).toBeVisible({
-      timeout: 5000,
-    });
-
-    // Nettoyage
-    const carteNettoyage = page
-      .locator(".user-carte")
-      .filter({ hasText: emailTest });
-    await carteNettoyage.locator("button.btn-danger").click();
-    await page.click("button#dialog-supprimer-user-confirmer");
+      page.locator(".user-carte").filter({ hasText: emailTest }),
+    ).toContainText("Alice Test", { timeout: 5000 });
   });
 
   test("admin_changementRole_dialogConfirmation", async ({
@@ -205,18 +229,17 @@ test.describe("Scénario: admin — modification utilisateur", () => {
     isMobile,
   }) => {
     const emailTest = `e2e-role-${Date.now()}@example.com`;
+    emailsANettoyer.push(emailTest);
 
     await page.goto("/admin");
-    if (isMobile) {
-      await page.selectOption("select.param-onglets-mobile", "#utilisateurs");
-    } else {
-      await page.locator('a[href="#utilisateurs"]').click();
-    }
+    await naviguerVersUtilisateurs(page, isMobile);
+
     await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
     await page.click('.form-creer-utilisateur button[type="submit"]');
     const dialogInvit = page.locator("dialog#dialog-invitation");
     await expect(dialogInvit).toBeVisible({ timeout: 5000 });
     await page.click("button#btn-fermer-invitation");
+    await expect(dialogInvit).not.toBeVisible({ timeout: 3000 });
 
     const carteUser = page
       .locator(".user-carte")
@@ -236,13 +259,6 @@ test.describe("Scénario: admin — modification utilisateur", () => {
     await expect(
       page.locator("dialog#dialog-confirmer-role"),
     ).not.toBeVisible();
-
-    // Nettoyage
-    const carteNettoyage = page
-      .locator(".user-carte")
-      .filter({ hasText: emailTest });
-    await carteNettoyage.locator("button.btn-danger").click();
-    await page.click("button#dialog-supprimer-user-confirmer");
   });
 
   test("admin_revocationAdmin_badgeEtAnnulation", async ({
@@ -250,20 +266,17 @@ test.describe("Scénario: admin — modification utilisateur", () => {
     isMobile,
   }) => {
     const emailTest = `e2e-revoc-${Date.now()}@example.com`;
+    emailsANettoyer.push(emailTest);
 
     await page.goto("/admin");
-    if (isMobile) {
-      await page.selectOption("select.param-onglets-mobile", "#utilisateurs");
-    } else {
-      await page.locator('a[href="#utilisateurs"]').click();
-    }
-    // Créer un utilisateur et le promouvoir admin
+    await naviguerVersUtilisateurs(page, isMobile);
+
     await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
     await page.click('.form-creer-utilisateur button[type="submit"]');
-    await expect(page.locator("dialog#dialog-invitation")).toBeVisible({
-      timeout: 5000,
-    });
+    const dialogInvit = page.locator("dialog#dialog-invitation");
+    await expect(dialogInvit).toBeVisible({ timeout: 5000 });
     await page.click("button#btn-fermer-invitation");
+    await expect(dialogInvit).not.toBeVisible({ timeout: 3000 });
 
     const carteUser = page
       .locator(".user-carte")
@@ -286,7 +299,6 @@ test.describe("Scénario: admin — modification utilisateur", () => {
         .locator(".badge-info"),
     ).toBeVisible({ timeout: 5000 });
 
-    // Initier la révocation
     const carteAdmin = page
       .locator(".user-carte")
       .filter({ hasText: emailTest });
@@ -302,32 +314,19 @@ test.describe("Scénario: admin — modification utilisateur", () => {
     });
     await page.click("button#dialog-confirmer-role-ok");
 
-    // Vérifier le badge de révocation
     const carteRevoc = page
       .locator(".user-carte")
       .filter({ hasText: emailTest });
     await expect(
       carteRevoc.locator(".badge-warn", { hasText: "révocation" }),
-    ).toBeVisible({
-      timeout: 5000,
-    });
+    ).toBeVisible({ timeout: 5000 });
 
-    // Annuler la révocation
     await carteRevoc
       .locator("button", { hasText: "Annuler la révocation" })
       .click();
     await expect(
       carteRevoc.locator(".badge-warn", { hasText: "révocation" }),
-    ).not.toBeVisible({
-      timeout: 5000,
-    });
-
-    // Nettoyage
-    const carteNettoyage = page
-      .locator(".user-carte")
-      .filter({ hasText: emailTest });
-    await carteNettoyage.locator("button.btn-danger").click();
-    await page.click("button#dialog-supprimer-user-confirmer");
+    ).not.toBeVisible({ timeout: 5000 });
   });
 });
 
