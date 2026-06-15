@@ -13,10 +13,15 @@ import fr.strapontin.web.securite.GenerateurSecrets;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -123,7 +128,8 @@ public class AdminService {
     List<Map<String, Object>> tousLesUsers =
         jdbc.queryForList(
             """
-            SELECT id, email, role::text, username, must_change_credentials, created_at
+            SELECT id, email, role::text, username, display_username, must_change_credentials,
+                   created_at, revocation_admin_le
             FROM users
             ORDER BY created_at
             """,
@@ -146,14 +152,17 @@ public class AdminService {
             u -> {
               String username = (String) u.get("username");
               Long derniereMs = activiteParUsername.get(username);
+              java.sql.Timestamp revocationTs = (java.sql.Timestamp) u.get("revocation_admin_le");
               return new UtilisateurAdmin(
                   (String) u.get("id"),
                   (String) u.get("email"),
                   (String) u.get("role"),
                   username,
+                  (String) u.get("display_username"),
                   (Boolean) u.get("must_change_credentials"),
                   ((java.sql.Timestamp) u.get("created_at")).toInstant(),
-                  derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null);
+                  derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null,
+                  revocationTs != null ? revocationTs.toInstant() : null);
             })
         .toList();
   }
@@ -219,17 +228,20 @@ public class AdminService {
 
   /// Valide et met à jour les champs d'un utilisateur.
   ///
+  /// <p>Si le nouveau rôle est {@code admin}, envoie un email de promotion à l'utilisateur.
+  ///
   /// @param userId  identifiant de l'utilisateur cible
-  /// @param requete champs à modifier
+  /// @param requete champs à modifier (nom, email, role — tous optionnels)
   /// @param adminId identifiant de l'admin demandeur
   /// @throws ErreurMetier si les données sont invalides ou l'email est déjà utilisé
   @Transactional
   public void modifierUtilisateur(
       String userId, RequeteModifierUtilisateur requete, String adminId) {
+    String nom = requete.nom() == null ? "" : requete.nom().strip();
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
     String role = requete.role() == null ? "" : requete.role().strip().toLowerCase();
 
-    if (email.isEmpty() && role.isEmpty()) {
+    if (nom.isEmpty() && email.isEmpty() && role.isEmpty()) {
       throw new ErreurMetier("Au moins un champ à modifier est requis.");
     }
     if (!email.isEmpty() && !FORMAT_EMAIL.matcher(email).matches()) {
@@ -251,14 +263,20 @@ public class AdminService {
     Map<String, Object> miseAJour = new HashMap<>();
     miseAJour.put("updatedAt", Timestamp.from(Instant.now()));
     miseAJour.put("userId", userId);
+    if (!nom.isEmpty()) miseAJour.put("nom", nom);
     if (!email.isEmpty()) miseAJour.put("email", email);
     if (!role.isEmpty()) miseAJour.put("role", role);
 
     StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
+    if (!nom.isEmpty()) setClauses.append(", display_username = :nom");
     if (!email.isEmpty()) setClauses.append(", email = :email");
-    if (!role.isEmpty()) setClauses.append(", role = CAST(:role AS user_role)");
+    if (!role.isEmpty()) setClauses.append(", role = CAST(:role AS role_utilisateur)");
     jdbc.update("UPDATE users SET " + setClauses + " WHERE id = :userId", miseAJour);
 
+    if (!nom.isEmpty()) {
+      logAdminService.logAdmin(
+          "info", "admin", "nom modifié", Map.of("userId", userId, "parAdmin", adminId));
+    }
     if (!email.isEmpty()) {
       logAdminService.logAdmin(
           "warn",
@@ -272,7 +290,76 @@ public class AdminService {
           "admin",
           "rôle modifié",
           Map.of("userId", userId, "nouveauRole", role, "parAdmin", adminId));
+      if ("admin".equals(role)) {
+        List<Map<String, Object>> cible =
+            jdbc.queryForList("SELECT email FROM users WHERE id = :id", Map.of("id", userId));
+        if (!cible.isEmpty()) {
+          emailService.envoyerPromotionAdmin((String) cible.get(0).get("email"));
+        }
+      }
     }
+  }
+
+  /// Initie une révocation différée du rôle admin (effective dans 7 jours).
+  ///
+  /// <p>Envoie un email de préavis à l'administrateur concerné et loggue l'action.
+  ///
+  /// @param userId  identifiant de l'administrateur à révoquer
+  /// @param adminId identifiant de l'admin demandeur
+  /// @throws ErreurMetier si l'utilisateur est le seul admin restant (409)
+  ///                      ou si l'utilisateur n'est pas admin (400)
+  public void initierRevocationAdmin(String userId, String adminId) {
+    List<Map<String, Object>> cible =
+        jdbc.queryForList(
+            "SELECT email, role::text AS role FROM users WHERE id = :id", Map.of("id", userId));
+    if (cible.isEmpty()) throw new ErreurMetier("Utilisateur introuvable.", 404);
+    if (!"admin".equals(cible.get(0).get("role"))) {
+      throw new ErreurMetier("Cet utilisateur n'est pas administrateur.");
+    }
+
+    int nbAdmins =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM users WHERE role = 'admin' AND revocation_admin_le IS NULL",
+            Map.of(),
+            Integer.class);
+    if (nbAdmins <= 1) {
+      throw new ErreurMetier("Impossible de révoquer le seul administrateur restant.", 409);
+    }
+
+    Instant dateEffective = Instant.now().plus(7, ChronoUnit.DAYS);
+    jdbc.update(
+        "UPDATE users SET revocation_admin_le = :date WHERE id = :id",
+        Map.of("date", Timestamp.from(dateEffective), "id", userId));
+
+    String dateFormatee =
+        DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
+            .withLocale(Locale.FRANCE)
+            .format(LocalDate.ofInstant(dateEffective, ZoneId.of("Europe/Paris")));
+
+    emailService.envoyerPreavisRevocationAdmin((String) cible.get(0).get("email"), dateFormatee);
+    logAdminService.logAdmin(
+        "warn",
+        "admin",
+        "révocation admin initiée",
+        Map.of("userId", userId, "dateEffective", dateFormatee, "parAdmin", adminId));
+  }
+
+  /// Annule une révocation admin en cours (remet revocation_admin_le à NULL).
+  ///
+  /// @param userId  identifiant de l'administrateur concerné
+  /// @param adminId identifiant de l'admin demandeur
+  /// @throws ErreurMetier si l'utilisateur n'existe pas ou n'a pas de révocation en cours
+  public void annulerRevocationAdmin(String userId, String adminId) {
+    int miseAJour =
+        jdbc.update(
+            "UPDATE users SET revocation_admin_le = NULL WHERE id = :id"
+                + " AND revocation_admin_le IS NOT NULL",
+            Map.of("id", userId));
+    if (miseAJour == 0) {
+      throw new ErreurMetier("Aucune révocation en cours pour cet utilisateur.");
+    }
+    logAdminService.logAdmin(
+        "info", "admin", "révocation admin annulée", Map.of("userId", userId, "parAdmin", adminId));
   }
 
   /// Supprime un compte utilisateur et notifie l'utilisateur par email.

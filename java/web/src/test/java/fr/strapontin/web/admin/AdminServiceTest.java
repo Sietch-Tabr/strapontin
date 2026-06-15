@@ -91,21 +91,21 @@ class AdminServiceTest {
 
   @Test
   void modifierUtilisateur_aucunChamp_leveErreurMetier() {
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur("", "");
+    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, "", "");
     assertThrows(
         ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
 
   @Test
   void modifierUtilisateur_emailInvalide_leveErreurMetier() {
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur("pas-un-email", "");
+    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, "pas-un-email", "");
     assertThrows(
         ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
 
   @Test
   void modifierUtilisateur_roleInvalide_leveErreurMetier() {
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur("", "superadmin");
+    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, "", "superadmin");
     assertThrows(
         ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
@@ -113,9 +113,119 @@ class AdminServiceTest {
   @Test
   void modifierUtilisateur_emailDejaPris_leveErreurMetier() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of(1));
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur("pris@exemple.fr", "");
+    RequeteModifierUtilisateur requete =
+        new RequeteModifierUtilisateur(null, "pris@exemple.fr", "");
     assertThrows(
         ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
+  }
+
+  @Test
+  void modifierUtilisateur_nomSeul_miseAJour() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur("Alice", null, null);
+
+    adminService.modifierUtilisateur("user-1", requete, "admin-1");
+
+    verify(jdbc).update(anyString(), anyMap());
+    verify(logAdminService).logAdmin(eq("info"), eq("admin"), eq("nom modifié"), anyMap());
+    verify(emailService, never()).envoyerPromotionAdmin(anyString());
+  }
+
+  @Test
+  void modifierUtilisateur_promotionAdmin_envoieEmail() {
+    when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
+    Map<String, Object> ligne = new HashMap<>();
+    ligne.put("email", "promo@exemple.fr");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "admin");
+    adminService.modifierUtilisateur("user-1", requete, "admin-1");
+
+    verify(emailService).envoyerPromotionAdmin("promo@exemple.fr");
+    verify(logAdminService).logAdmin(eq("warn"), eq("admin"), eq("rôle modifié"), anyMap());
+  }
+
+  @Test
+  void modifierUtilisateur_changeRoleUser_nenvoiePasEmail() {
+    when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
+    adminService.modifierUtilisateur("user-1", requete, "admin-1");
+
+    verify(emailService, never()).envoyerPromotionAdmin(anyString());
+  }
+
+  @Test
+  void initierRevocationAdmin_utilisateurInexistant_leveErreurMetier() {
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    assertThrows(
+        ErreurMetier.class, () -> adminService.initierRevocationAdmin("inconnu", "admin-1"));
+    verify(emailService, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
+  }
+
+  @Test
+  void initierRevocationAdmin_pasAdmin_leveErreurMetier() {
+    Map<String, Object> ligne = new HashMap<>();
+    ligne.put("email", "user@exemple.fr");
+    ligne.put("role", "user");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
+
+    assertThrows(
+        ErreurMetier.class, () -> adminService.initierRevocationAdmin("user-1", "admin-1"));
+    verify(emailService, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
+  }
+
+  @Test
+  void initierRevocationAdmin_seulAdmin_leveErreurMetier409() {
+    Map<String, Object> ligne = new HashMap<>();
+    ligne.put("email", "admin@exemple.fr");
+    ligne.put("role", "admin");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(1);
+
+    ErreurMetier ex =
+        assertThrows(
+            ErreurMetier.class, () -> adminService.initierRevocationAdmin("admin-1", "admin-2"));
+    assertEquals(409, ex.getStatus());
+    verify(emailService, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
+  }
+
+  @Test
+  void initierRevocationAdmin_adminCible_initieRevocationEtEnvoieEmail() {
+    Map<String, Object> ligne = new HashMap<>();
+    ligne.put("email", "admin@exemple.fr");
+    ligne.put("role", "admin");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    adminService.initierRevocationAdmin("admin-1", "admin-2");
+
+    verify(jdbc).update(anyString(), anyMap());
+    verify(emailService).envoyerPreavisRevocationAdmin(eq("admin@exemple.fr"), anyString());
+    verify(logAdminService)
+        .logAdmin(eq("warn"), eq("admin"), eq("révocation admin initiée"), anyMap());
+  }
+
+  @Test
+  void annulerRevocationAdmin_revocationExistante_annule() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    adminService.annulerRevocationAdmin("admin-1", "admin-2");
+
+    verify(logAdminService)
+        .logAdmin(eq("info"), eq("admin"), eq("révocation admin annulée"), anyMap());
+  }
+
+  @Test
+  void annulerRevocationAdmin_aucuneRevocation_leveErreurMetier() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
+
+    assertThrows(
+        ErreurMetier.class, () -> adminService.annulerRevocationAdmin("admin-1", "admin-2"));
   }
 
   @Test

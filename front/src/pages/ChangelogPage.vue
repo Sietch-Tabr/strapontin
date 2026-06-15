@@ -21,6 +21,9 @@
             <ul>
               <li>Une confirmation est désormais demandée avant de réinitialiser le mot de passe ou la double authentification d'un utilisateur.</li>
               <li>L'utilisateur dont le compte est supprimé reçoit maintenant un email de notification.</li>
+              <li>Le nom d'affichage d'un utilisateur peut désormais être modifié depuis le panneau d'administration.</li>
+              <li>Un email est envoyé automatiquement à un utilisateur lorsqu'il est promu administrateur.</li>
+              <li>La rétrogradation d'un administrateur est désormais différée de 7 jours, avec envoi d'un email de préavis. La révocation peut être annulée pendant ce délai.</li>
             </ul>
           </div>
         </div>

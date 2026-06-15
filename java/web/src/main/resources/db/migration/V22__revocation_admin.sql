@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN revocation_admin_le TIMESTAMP WITH TIME ZONE;

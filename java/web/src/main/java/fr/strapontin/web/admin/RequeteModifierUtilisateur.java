@@ -11,4 +11,4 @@ import jakarta.validation.constraints.Email;
 /// @since 2.1.0
 /// @author Kwaite
 public record RequeteModifierUtilisateur(
-    @Email(message = "Format d'email invalide.") String email, String role) {}
+    String nom, @Email(message = "Format d'email invalide.") String email, String role) {}

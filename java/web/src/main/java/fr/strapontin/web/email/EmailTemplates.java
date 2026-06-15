@@ -27,10 +27,10 @@ final class EmailTemplates {
 
   private EmailTemplates() {}
 
-  private static final String C_NOIR    = "#111";
-  private static final String C_TEXTE   = "#555";
-  private static final String C_MUTE    = "#aaa";
-  private static final String C_ERREUR  = "#c00";
+  private static final String C_NOIR = "#111";
+  private static final String C_TEXTE = "#555";
+  private static final String C_MUTE = "#aaa";
+  private static final String C_ERREUR = "#c00";
   private static final String C_BORDURE = "#e5e5e5";
 
   // ---- Emails transactionnels ----
@@ -96,9 +96,7 @@ final class EmailTemplates {
         </p>
         """
             .formatted(
-                C_TEXTE,
-                bouton(baseUrl + "/parametres/totp", "Reconfigurer la 2FA →"),
-                C_MUTE);
+                C_TEXTE, bouton(baseUrl + "/parametres/totp", "Reconfigurer la 2FA →"), C_MUTE);
     return envelopper("Votre double authentification a été réinitialisée", corps, baseUrl);
   }
 
@@ -173,11 +171,7 @@ final class EmailTemplates {
                   </tr>
                   """
                       .formatted(
-                          C_NOIR,
-                          e(c.artiste()),
-                          e(c.dateFormatee()),
-                          urlBillets,
-                          e(c.lieu()));
+                          C_NOIR, e(c.artiste()), e(c.dateFormatee()), urlBillets, e(c.lieu()));
                 })
             .collect(Collectors.joining());
     String corps =
@@ -295,6 +289,43 @@ final class EmailTemplates {
         """
             .formatted(C_TEXTE, C_MUTE);
     return envelopper("Votre compte Strapontin a été supprimé", corps, baseUrl);
+  }
+
+  /// Notification de promotion au rôle administrateur.
+  ///
+  /// @param baseUrl l'URL publique de base de l'application
+  /// @return le HTML de l'email de promotion
+  static String promotionAdmin(String baseUrl) {
+    String corps =
+        """
+        <p style="color: %s; margin: 0 0 24px">
+          Votre compte Strapontin a été promu au rôle administrateur.
+          Vous avez désormais accès au panneau d'administration.
+        </p>
+        %s
+        """
+            .formatted(C_TEXTE, bouton(baseUrl + "/admin", "Accéder à l'administration →"));
+    return envelopper("Vous êtes maintenant administrateur Strapontin", corps, baseUrl);
+  }
+
+  /// Préavis de révocation du rôle administrateur (délai de 7 jours).
+  ///
+  /// @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
+  /// @param baseUrl       l'URL publique de base de l'application
+  /// @return le HTML de l'email de préavis
+  static String preavisRevocationAdmin(String dateEffective, String baseUrl) {
+    String corps =
+        """
+        <p style="color: %s; margin: 0 0 24px">
+          Votre accès administrateur Strapontin sera supprimé le <strong>%s</strong>.
+          Après cette date, vous ne pourrez plus accéder au panneau d'administration.
+        </p>
+        <p style="color: %s; font-size: 13px; margin: 0">
+          Si vous pensez qu'il s'agit d'une erreur, contactez un autre administrateur.
+        </p>
+        """
+            .formatted(C_TEXTE, e(dateEffective), C_MUTE);
+    return enveloppErreur("Préavis de révocation admin", corps, baseUrl);
   }
 
   /// Email de test de configuration Resend.
