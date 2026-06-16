@@ -66,6 +66,41 @@ class EventimSourceTest {
     assertEquals("972", EventimSource.extraireDept("97200"));
   }
 
+  // --- corrigerVilleEventim ---
+
+  @Test
+  void corrigerVilleEventim_deptParis_neCorrigePas() {
+    assertEquals("Paris", EventimSource.corrigerVilleEventim("Paris", "75", "Accor Arena"));
+  }
+
+  @Test
+  void corrigerVilleEventim_villeAutreQueParis_neCorrigePas() {
+    assertEquals(
+        "Boulogne-Billancourt",
+        EventimSource.corrigerVilleEventim("Boulogne-Billancourt", "92", "La Seine Musicale"));
+  }
+
+  @Test
+  void corrigerVilleEventim_petiteCouronneAvecCommuneDansNomSalle_extraitCommune() {
+    // ticket #620 — La Seine Musicale - Boulogne Billancourt, dept=92, Eventim renvoie "Paris"
+    assertEquals(
+        "Boulogne Billancourt",
+        EventimSource.corrigerVilleEventim(
+            "Paris", "92", "La Seine Musicale - Boulogne Billancourt"));
+  }
+
+  @Test
+  void corrigerVilleEventim_petiteCouronneSansCommuneDansNomSalle_conserveParisEtJournalise() {
+    // ticket #620 — Stade de France, dept=93, aucune commune extractible du nom de salle
+    assertEquals("Paris", EventimSource.corrigerVilleEventim("Paris", "93", "Stade De France"));
+  }
+
+  @Test
+  void corrigerVilleEventim_villeOuDeptAbsent_retourneVilleInchangee() {
+    assertNull(EventimSource.corrigerVilleEventim(null, "92", "La Seine Musicale"));
+    assertEquals("Paris", EventimSource.corrigerVilleEventim("Paris", null, "Accor Arena"));
+  }
+
   // --- parseDateEventim ---
 
   @Test
@@ -169,6 +204,28 @@ class EventimSourceTest {
     ConcertBrut resultat = EventimSource.mapProduit(produit, null);
     assertNotNull(resultat);
     assertNull(resultat.url());
+  }
+
+  @Test
+  void mapProduit_salleSeineMusicaleVillePariseIncoherente_corrigeVilleEnBoulogne() {
+    // ticket #620
+    Map<String, Object> produit =
+        produitEventimRaw(
+            Map.of(
+                "typeAttributes",
+                Map.of(
+                    "liveEntertainment",
+                    Map.of(
+                        "startDate", "2025-09-15T20:30:00",
+                        "location",
+                            Map.of(
+                                "name", "La Seine Musicale - Boulogne Billancourt",
+                                "city", "Paris",
+                                "postalCode", "92100")))));
+    ConcertBrut resultat = EventimSource.mapProduit(produit, null);
+    assertNotNull(resultat);
+    assertEquals("Boulogne Billancourt", resultat.ville());
+    assertEquals("92", resultat.dept());
   }
 
   @Test

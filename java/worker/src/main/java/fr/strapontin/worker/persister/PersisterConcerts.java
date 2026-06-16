@@ -31,6 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
 /// et la casse mixte. Supprime les doublons par `(source, url)` introduits
 /// lors d'une résolution de nom canonique entre deux fetches.
 ///
+/// Réconcilie les variations mineures de nommage de salle et d'artiste entre deux fetches
+/// (intra-lot puis contre la base) avant l'upsert, pour éviter qu'un même événement renommé
+/// légèrement par une source ne crée un doublon plutôt qu'une mise à jour.
+///
 /// @since 2.0.0
 /// @author Kwaite
 @Service
@@ -40,7 +44,12 @@ public class PersisterConcerts {
 
   private static final int TAILLE_LOT = 500;
   private static final double SEUIL_SIMILARITE_SALLE = 0.5;
-  private static final int LONGUEUR_MIN_CONTAINMENT = 4;
+  private static final int LONGUEUR_MIN_CONTAINMENT_SALLE = 4;
+
+  // Seuils plus stricts que pour la salle : un containment à 4 caractères fusionnerait
+  // à tort des artistes distincts ("Muse" est contenu dans "Muse Tour Tribute").
+  private static final double SEUIL_SIMILARITE_ARTISTE = 0.85;
+  private static final int LONGUEUR_MIN_CONTAINMENT_ARTISTE = 10;
 
   private static final String SQL_UPSERT_ENTETE =
       """
@@ -99,23 +108,48 @@ public class PersisterConcerts {
     this.jdbc = jdbc;
   }
 
-  /// Vérifie si deux noms de salle normalisés désignent la même salle.
-  ///
-  /// Trois critères (union) :
+  /// Vérifie si deux chaînes normalisées désignent la même entité, selon trois critères (union) :
   ///
   /// 1. égalité exacte
-  /// 2. similarité Levenshtein ≥ 0.5
-  /// 3. containment : la chaîne la plus courte (≥ 4 chars) est contenue dans la plus longue
+  /// 2. similarité Levenshtein ≥ `seuilSimilarite`
+  /// 3. containment : la chaîne la plus courte (≥ `longueurMinContainment`) est contenue dans
+  ///    la plus longue
+  ///
+  /// @param a                      première chaîne normalisée
+  /// @param b                      deuxième chaîne normalisée
+  /// @param seuilSimilarite        seuil de similarité Levenshtein (0 à 1)
+  /// @param longueurMinContainment longueur minimale de la chaîne courte pour appliquer le
+  ///                                critère de containment
+  /// @return `true` si les deux chaînes sont considérées identiques
+  private static boolean estDoublonTexte(
+      String a, String b, double seuilSimilarite, int longueurMinContainment) {
+    if (a.equals(b)) return true;
+    if (Normalisation.similarite(a, b) >= seuilSimilarite) return true;
+    String court = a.length() <= b.length() ? a : b;
+    String plusLong = a.length() <= b.length() ? b : a;
+    return court.length() >= longueurMinContainment && plusLong.contains(court);
+  }
+
+  /// Vérifie si deux noms de salle normalisés désignent la même salle.
   ///
   /// @param a premier nom normalisé
   /// @param b deuxième nom normalisé
   /// @return `true` si les salles sont considérées identiques
   public static boolean estDoublonSalle(String a, String b) {
-    if (a.equals(b)) return true;
-    if (Normalisation.similarite(a, b) >= SEUIL_SIMILARITE_SALLE) return true;
-    String court = a.length() <= b.length() ? a : b;
-    String plusLong = a.length() <= b.length() ? b : a;
-    return court.length() >= LONGUEUR_MIN_CONTAINMENT && plusLong.contains(court);
+    return estDoublonTexte(a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE);
+  }
+
+  /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
+  ///
+  /// Seuils plus stricts que {@link #estDoublonSalle} : couvre les variations mineures de
+  /// nommage entre deux fetches (suffixe numérique, article ajouté/retiré) sans fusionner des
+  /// artistes distincts au nom proche.
+  ///
+  /// @param a premier nom normalisé
+  /// @param b deuxième nom normalisé
+  /// @return `true` si les artistes sont considérés identiques
+  public static boolean estDoublonArtiste(String a, String b) {
+    return estDoublonTexte(a, b, SEUIL_SIMILARITE_ARTISTE, LONGUEUR_MIN_CONTAINMENT_ARTISTE);
   }
 
   private static int scoreArtisteSalle(String artiste, String salle) {
@@ -295,6 +329,140 @@ public class PersisterConcerts {
     return concert;
   }
 
+  /// Réconcilie les variations de nommage d'artiste entre deux fetches (ex. ajout d'un
+  /// suffixe numérique ou d'un article), symétrique à {@link #reconcilierSalles}.
+  ///
+  /// Le regroupement se fait par `(date, salleNorm)` — déjà canonique à ce stade puisque
+  /// cette méthode s'exécute après {@link #reconcilierSalles} — plutôt que par `artisteNorm`,
+  /// qui est précisément la valeur à corriger.
+  ///
+  /// @param lot valeurs de concerts après réconciliation des salles
+  /// @return lot avec `artisteNorm` réconcilié
+  private List<ValeurConcert> reconcilierArtistes(List<ValeurConcert> lot) {
+    Map<String, String> remplacementsIntraLot = construireRemplacementsArtisteIntraLot(lot);
+    List<ValeurConcert> lotApresIntraLot =
+        remplacementsIntraLot.isEmpty()
+            ? lot
+            : lot.stream()
+                .map(c -> appliquerRemplacementArtiste(c, remplacementsIntraLot))
+                .toList();
+
+    Set<String> sallesNorms =
+        new java.util.HashSet<>(lotApresIntraLot.stream().map(ValeurConcert::salleNorm).toList());
+    if (sallesNorms.isEmpty()) return lotApresIntraLot;
+
+    List<Map<String, Object>> existants =
+        jdbc.queryForList(
+            "SELECT artiste_norm, date::text AS date, salle_norm FROM concerts"
+                + " WHERE salle_norm IN (:sallesNorms)",
+            Map.of("sallesNorms", sallesNorms));
+
+    Map<String, List<String>> indexExistants = new HashMap<>();
+    for (Map<String, Object> e : existants) {
+      String cle = e.get("date") + "|" + e.get("salle_norm");
+      indexExistants
+          .computeIfAbsent(cle, _ -> new ArrayList<>())
+          .add((String) e.get("artiste_norm"));
+    }
+
+    return lotApresIntraLot.stream()
+        .map(concert -> reconcilierUnArtiste(concert, indexExistants))
+        .toList();
+  }
+
+  private Map<String, String> construireRemplacementsArtisteIntraLot(List<ValeurConcert> lot) {
+    Map<String, String> remplacements = new HashMap<>();
+    Map<String, List<String>> parGroupe = new LinkedHashMap<>();
+    for (ValeurConcert concert : lot) {
+      String cle = concert.date() + "|" + concert.salleNorm();
+      parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>());
+      List<String> groupe = parGroupe.get(cle);
+      if (!groupe.contains(concert.artisteNorm())) groupe.add(concert.artisteNorm());
+    }
+    for (List<String> artistesNorm : parGroupe.values()) {
+      if (artistesNorm.size() > 1) ajouterDoublonsArtiste(artistesNorm, remplacements);
+    }
+    return remplacements;
+  }
+
+  private void ajouterDoublonsArtiste(
+      List<String> artistesNorm, Map<String, String> remplacements) {
+    for (int i = 0; i < artistesNorm.size(); i++) {
+      for (int j = i + 1; j < artistesNorm.size(); j++) {
+        String a = artistesNorm.get(i);
+        String b = artistesNorm.get(j);
+        if (estDoublonArtiste(a, b)) {
+          String canonique = a.length() >= b.length() ? a : b;
+          remplacements.put(a, canonique);
+          remplacements.put(b, canonique);
+        }
+      }
+    }
+  }
+
+  private ValeurConcert appliquerRemplacementArtiste(
+      ValeurConcert c, Map<String, String> remplacements) {
+    String canonique = remplacements.get(c.artisteNorm());
+    if (canonique == null || canonique.equals(c.artisteNorm())) return c;
+    log.debug(
+        "doublon artiste intra-lot réconcilié entrant={} canonique={}",
+        c.artisteNorm(),
+        canonique);
+    return new ValeurConcert(
+        c.artiste(),
+        canonique,
+        c.date(),
+        c.heure(),
+        c.salle(),
+        c.salleNorm(),
+        c.ville(),
+        c.dept(),
+        c.prixMin(),
+        c.prixMax(),
+        c.url(),
+        c.source(),
+        c.classification(),
+        c.genre(),
+        c.statut(),
+        c.presaleDebut(),
+        c.presaleNom());
+  }
+
+  private ValeurConcert reconcilierUnArtiste(
+      ValeurConcert concert, Map<String, List<String>> indexExistants) {
+    String cle = concert.date() + "|" + concert.salleNorm();
+    List<String> artistesExistants = indexExistants.get(cle);
+    if (artistesExistants == null) return concert;
+    for (String artisteNormExistant : artistesExistants) {
+      if (artisteNormExistant.equals(concert.artisteNorm())) return concert;
+      if (estDoublonArtiste(concert.artisteNorm(), artisteNormExistant)) {
+        log.debug(
+            "doublon artiste inter-jobs réconcilié entrant={} existant={}",
+            concert.artisteNorm(),
+            artisteNormExistant);
+        return new ValeurConcert(
+            concert.artiste(),
+            artisteNormExistant,
+            concert.date(),
+            concert.heure(),
+            concert.salle(),
+            concert.salleNorm(),
+            concert.ville(),
+            concert.dept(),
+            concert.prixMin(),
+            concert.prixMax(),
+            concert.url(),
+            concert.source(),
+            concert.classification(),
+            concert.genre(),
+            concert.statut(),
+            concert.presaleDebut(),
+            concert.presaleNom());
+      }
+    }
+    return concert;
+  }
+
   /// Construit le tuple de valeurs paramétrées (placeholders nommés indexés) d'une ligne d'upsert.
   ///
   /// @param i indice de la ligne dans le lot (suffixe des paramètres nommés)
@@ -400,9 +568,11 @@ public class PersisterConcerts {
   /// Traitement par lots de 500. Pour chaque lot :
   ///
   /// 1. Réconciliation des noms de salle (intra-lot puis contre la base)
-  /// 2. Déduplication sur la clé de conflit finale
-  /// 3. Upsert ON CONFLICT avec préférence pour les diacritiques et la casse mixte
-  /// 4. Suppression des doublons par `(source, url)`
+  /// 2. Réconciliation des noms d'artiste (intra-lot puis contre la base), groupée par
+  ///    `(date, salleNorm)` désormais canonique
+  /// 3. Déduplication sur la clé de conflit finale
+  /// 4. Upsert ON CONFLICT avec préférence pour les diacritiques et la casse mixte
+  /// 5. Suppression des doublons par `(source, url)`
   ///
   /// @param liste concerts à persister
   /// @return résultat avec nombre d'insertions et de mises à jour
@@ -464,7 +634,8 @@ public class PersisterConcerts {
                           c.presaleNom()))
               .toList();
 
-      List<ValeurConcert> valeurs = deduplicerLotReconcilie(reconcilierSalles(valeursBrutes));
+      List<ValeurConcert> valeurs =
+          deduplicerLotReconcilie(reconcilierArtistes(reconcilierSalles(valeursBrutes)));
 
       ResultatPersistance resultatLot = upsertLot(valeurs);
       totalInserts += resultatLot.nbInseres();
