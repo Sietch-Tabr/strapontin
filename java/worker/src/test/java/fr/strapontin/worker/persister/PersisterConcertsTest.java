@@ -107,8 +107,7 @@ class PersisterConcertsTest {
   @Test
   void estDoublonArtiste_articleAjoute_retourneTrue() {
     // ticket #619 — "Comédies Musicales" -> "Les Comédies Musicales" entre deux fetches TM
-    assertTrue(
-        PersisterConcerts.estDoublonArtiste("comedies musicales", "les comedies musicales"));
+    assertTrue(PersisterConcerts.estDoublonArtiste("comedies musicales", "les comedies musicales"));
   }
 
   @Test

@@ -216,12 +216,13 @@ class EventimSourceTest {
                 Map.of(
                     "liveEntertainment",
                     Map.of(
-                        "startDate", "2025-09-15T20:30:00",
+                        "startDate",
+                        "2025-09-15T20:30:00",
                         "location",
-                            Map.of(
-                                "name", "La Seine Musicale - Boulogne Billancourt",
-                                "city", "Paris",
-                                "postalCode", "92100")))));
+                        Map.of(
+                            "name", "La Seine Musicale - Boulogne Billancourt",
+                            "city", "Paris",
+                            "postalCode", "92100")))));
     ConcertBrut resultat = EventimSource.mapProduit(produit, null);
     assertNotNull(resultat);
     assertEquals("Boulogne Billancourt", resultat.ville());

@@ -405,9 +405,7 @@ public class PersisterConcerts {
     String canonique = remplacements.get(c.artisteNorm());
     if (canonique == null || canonique.equals(c.artisteNorm())) return c;
     log.debug(
-        "doublon artiste intra-lot réconcilié entrant={} canonique={}",
-        c.artisteNorm(),
-        canonique);
+        "doublon artiste intra-lot réconcilié entrant={} canonique={}", c.artisteNorm(), canonique);
     return new ValeurConcert(
         c.artiste(),
         canonique,
