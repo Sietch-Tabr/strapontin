@@ -36,6 +36,9 @@ public class EventimSource {
   private static final String CLE_TOTAL_RESULTS = "totalResults";
   private static final int TAILLE_PAGE = 50;
   private static final int MAX_PAGES = 10;
+  private static final String DEPT_PARIS = "75";
+  private static final String VILLE_PARIS = "Paris";
+  private static final String SEPARATEUR_NOM_SALLE = " - ";
 
   private final RestClient restClient;
 
@@ -79,6 +82,33 @@ public class EventimSource {
     if (cp.startsWith("97")) return cp.substring(0, 3);
     String dept = cp.substring(0, Math.min(2, cp.length()));
     return dept.isEmpty() ? null : dept;
+  }
+
+  /// Corrige la ville Eventim pour les salles de la région parisienne hors Paris intra-muros.
+  ///
+  /// Eventim utilise parfois "Paris" comme libellé régional/marketing au lieu de la commune
+  /// réelle pour les salles de la petite couronne (ex. La Seine Musicale à Boulogne-Billancourt,
+  /// Stade de France à Saint-Denis), alors que `dept` (dérivé du code postal) reste fiable.
+  /// Si une incohérence est détectée, tente d'extraire la commune depuis le nom de la salle
+  /// (forme "Salle - Commune") ; sinon journalise et conserve la ville telle que reçue.
+  ///
+  /// @param ville ville brute renvoyée par Eventim, peut être `null`
+  /// @param dept  département dérivé du code postal, peut être `null`
+  /// @param salle nom de la salle, utilisé comme source alternative de la commune
+  /// @return ville corrigée, ou la ville d'origine si aucune incohérence ou correction possible
+  public static String corrigerVilleEventim(String ville, String dept, String salle) {
+    if (ville == null || dept == null) return ville;
+    if (DEPT_PARIS.equals(dept) || !VILLE_PARIS.equalsIgnoreCase(ville.trim())) return ville;
+
+    int idx = salle.lastIndexOf(SEPARATEUR_NOM_SALLE);
+    if (idx > 0) {
+      String commune = salle.substring(idx + SEPARATEUR_NOM_SALLE.length()).strip();
+      if (!commune.isBlank()) return commune;
+    }
+
+    log.warn(
+        "Eventim ville incohérente non corrigée salle={} dept={} ville={}", salle, dept, ville);
+    return ville;
   }
 
   /// Parse une date ISO 8601 Eventim et extrait la date et l'heure locales.
@@ -214,6 +244,7 @@ public class EventimSource {
             : "Salle inconnue";
     String ville = location != null ? (String) location.get("city") : null;
     String dept = extraireDept(location != null ? (String) location.get("postalCode") : null);
+    ville = corrigerVilleEventim(ville, dept, salle);
 
     var priceRange = (Map<String, Object>) liveEnt.get("priceRange");
     Double prixMin =

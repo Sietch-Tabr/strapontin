@@ -162,6 +162,48 @@ class PersisterConcertsIntegrationTest {
   }
 
   @Test
+  void persisterConcerts_artisteRenommeAvecSuffixeNumerique_metsAJourPasInsertion() {
+    // ticket #619 — "Star Academy" -> "Star Academy 1" entre deux fetches TM, même salle/date
+    persisterConcerts.persisterConcerts(
+        List.of(concert("Star Academy", "2026-06-28", "Accor Arena", "ticketmaster")));
+    persisterConcerts.persisterConcerts(
+        List.of(concert("Star Academy 1", "2026-06-28", "Accor Arena", "ticketmaster")));
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(1L, count);
+  }
+
+  @Test
+  void persisterConcerts_artisteRenommeAvecArticleAjoute_metsAJourPasInsertion() {
+    // ticket #619 — "Comédies Musicales" -> "Les Comédies Musicales" entre deux fetches TM
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concert(
+                "Comédies Musicales", "2026-06-19", "Cirque D'Hiver Bouglione", "ticketmaster")));
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concert(
+                "Les Comédies Musicales",
+                "2026-06-19",
+                "Cirque D'Hiver Bouglione",
+                "ticketmaster")));
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(1L, count);
+  }
+
+  @Test
+  void persisterConcerts_artistesDistinctsMemeSalleEtDate_conserveLesDeuxConcerts() {
+    persisterConcerts.persisterConcerts(
+        List.of(concert("Pink", "2026-06-28", "Accor Arena", "ticketmaster")));
+    persisterConcerts.persisterConcerts(
+        List.of(concert("Pink Floyd", "2026-06-28", "Accor Arena", "ticketmaster")));
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(2L, count);
+  }
+
+  @Test
   void persisterConcerts_artisteNormVide_rejetteLeConcert() {
     ConcertBrut concert =
         new ConcertBrut(

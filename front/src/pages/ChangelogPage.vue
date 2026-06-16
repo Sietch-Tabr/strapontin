@@ -11,6 +11,13 @@
         <h2 class="changelog-version">v 2.2.5 — 15 juin 2026</h2>
         <div class="changelog-entrees">
           <div>
+            <p class="changelog-categorie">Concerts</p>
+            <ul>
+              <li>Un concert dont le nom de l'artiste varie légèrement entre deux récupérations (ex. ajout d'un numéro ou d'un article) n'apparaît plus en double.</li>
+              <li>La ville de certaines salles de la petite couronne (ex. La Seine Musicale) n'est plus affichée à tort comme « Paris ».</li>
+            </ul>
+          </div>
+          <div>
             <p class="changelog-categorie">Salles</p>
             <ul>
               <li>La recherche de salle fonctionne désormais avec les apostrophes, accents et tirets — taper « l'empreinte » ou « zénith » retrouve les salles correspondantes.</li>

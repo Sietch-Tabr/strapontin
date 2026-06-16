@@ -91,6 +91,47 @@ class PersisterConcertsTest {
     assertFalse(PersisterConcerts.estDoublonSalle("accor arena", "ACCOR ARENA"));
   }
 
+  // --- estDoublonArtiste ---
+
+  @Test
+  void estDoublonArtiste_chainesIdentiques_retourneTrue() {
+    assertTrue(PersisterConcerts.estDoublonArtiste("star academy", "star academy"));
+  }
+
+  @Test
+  void estDoublonArtiste_suffixeNumerique_retourneTrue() {
+    // ticket #619 — "Star Academy" -> "Star Academy 1" entre deux fetches TM
+    assertTrue(PersisterConcerts.estDoublonArtiste("star academy", "star academy 1"));
+  }
+
+  @Test
+  void estDoublonArtiste_articleAjoute_retourneTrue() {
+    // ticket #619 — "Comédies Musicales" -> "Les Comédies Musicales" entre deux fetches TM
+    assertTrue(PersisterConcerts.estDoublonArtiste("comedies musicales", "les comedies musicales"));
+  }
+
+  @Test
+  void estDoublonArtiste_containmentChaineInferieure10Chars_retourneFalse() {
+    // garde contre les faux positifs : éviter de fusionner "Muse" avec un nom proche plus long
+    assertFalse(PersisterConcerts.estDoublonArtiste("muse", "muse tour tribute"));
+  }
+
+  @Test
+  void estDoublonArtiste_artistesCourtsDistincts_retourneFalse() {
+    assertFalse(PersisterConcerts.estDoublonArtiste("pink", "pink floyd"));
+  }
+
+  @Test
+  void estDoublonArtiste_artistesCompletementDifferents_retourneFalse() {
+    assertFalse(PersisterConcerts.estDoublonArtiste("mika", "coldplay"));
+  }
+
+  @Test
+  void estDoublonArtiste_similariteEntreSeuilSalleEtSeuilArtiste_retourneFalse() {
+    // similarité ≈ 0.83 : passerait le seuil salle (0.5) mais pas le seuil artiste (0.85)
+    assertFalse(PersisterConcerts.estDoublonArtiste("julien dore", "julien morel"));
+  }
+
   // --- deduplicerParCleConflit ---
 
   @Test
