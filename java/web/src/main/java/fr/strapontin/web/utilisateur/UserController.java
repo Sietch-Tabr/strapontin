@@ -179,13 +179,18 @@ public class UserController {
 
   /// Supprime le compte de l'utilisateur courant (cascade sur toutes ses données).
   ///
-  /// @param auth       contexte d'authentification
+  /// <p>Interdit si l'utilisateur est le seul administrateur de l'instance (retourne 409).
+  ///
+  /// @param auth        contexte d'authentification
   /// @param httpRequest pour invalider la session
-  /// @return 204 si supprimé
+  /// @return 204 si supprimé, 409 si dernier admin
   @DeleteMapping
-  public ResponseEntity<Void> supprimerCompte(Authentication auth, HttpServletRequest httpRequest) {
-    String userId = utilisateur(auth).id();
-    utilisateurRepository.supprimer(userId);
+  public ResponseEntity<?> supprimerCompte(Authentication auth, HttpServletRequest httpRequest) {
+    UtilisateurDetails details = utilisateur(auth);
+    if ("admin".equals(details.role()) && utilisateurRepository.compterAdmins() == 1) {
+      return erreur(409, "Impossible de supprimer le seul compte administrateur de l'instance.");
+    }
+    utilisateurRepository.supprimer(details.id());
     HttpSession session = httpRequest.getSession(false);
     if (session != null) session.invalidate();
     SecurityContextHolder.clearContext();

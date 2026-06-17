@@ -1,4 +1,8 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, request as playwrightRequest } from "@playwright/test";
+import { FICHIER_AUTH_USER } from "./global-setup.js";
+
+const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
+const E2E_USER_IDENTIFIANT = "e2euser";
 
 test.describe("Scénario: paramètres — sections", () => {
   test("parametres_h1_visible", async ({ page }) => {
@@ -383,6 +387,20 @@ test.describe("Scénario: Préférences — filtre disponibles", () => {
 });
 
 test.describe("Scénario: API compte — identifiant", () => {
+  test.afterEach(async () => {
+    const ctx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_USER,
+    });
+    try {
+      await ctx.patch("/api/user/identifiant", {
+        data: { identifiant: E2E_USER_IDENTIFIANT },
+      });
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
   test("api_identifiant_trop_court_retourne_400", async ({ request }) => {
     const rep = await request.patch("/api/user/identifiant", {
       data: { identifiant: "ab" },

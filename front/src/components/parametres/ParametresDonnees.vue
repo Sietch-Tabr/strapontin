@@ -189,10 +189,17 @@ async function supprimerCompte() {
   if (confirmationSuppression.value !== 'supprimer') return
   const rep = await fetch('/api/user', { method: 'DELETE' })
   if (rep.ok || rep.status === 204) {
+    fermerDialogSuppression()
     afficherToast('Compte supprimé.', 'succes')
     router.push('/login')
   } else {
-    afficherToast('Erreur lors de la suppression du compte.', 'erreur')
+    fermerDialogSuppression()
+    let message = 'Erreur lors de la suppression du compte.'
+    try {
+      const corps = await rep.json()
+      if (corps.erreur) message = corps.erreur
+    } catch (_) { /* réponse non-JSON */ }
+    afficherToast(message, 'erreur')
   }
 }
 
