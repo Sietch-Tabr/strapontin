@@ -141,6 +141,53 @@ test.describe("Scénario: catalogue — recherche salle caractères spéciaux", 
   });
 });
 
+test.describe("Scénario: catalogue — signalement salle manquante", () => {
+  test("api_signaler_salleManquante_nomValide_retourne204", async ({
+    request,
+  }) => {
+    const rep = await request.post("/api/salles/signaler", {
+      data: {
+        nom: "Salle E2E Test",
+        ville: "Paris",
+        urlSite: "",
+        commentaire: "",
+      },
+    });
+    expect([204, 503]).toContain(rep.status());
+  });
+
+  test("api_signaler_salleManquante_nomVide_retourne400", async ({
+    request,
+  }) => {
+    const rep = await request.post("/api/salles/signaler", {
+      data: { nom: "", ville: "", urlSite: "", commentaire: "" },
+    });
+    expect(rep.status()).toBe(400);
+    const corps = await rep.json();
+    expect(corps).toHaveProperty("erreur");
+  });
+
+  test("api_signaler_salleManquante_nomTropLong_retourne400", async ({
+    request,
+  }) => {
+    const rep = await request.post("/api/salles/signaler", {
+      data: { nom: "x".repeat(201), ville: "", urlSite: "", commentaire: "" },
+    });
+    expect(rep.status()).toBe(400);
+  });
+
+  test("salles_rechercheAucunResultat_boutonSignalerVisible", async ({
+    page,
+  }) => {
+    await page.goto("/salles");
+    await page.fill("input#q-salle", "SalleInexistanteXYZ987");
+    await page.getByRole("button", { name: "Rechercher" }).click();
+    await expect(
+      page.getByRole("button", { name: "Signaler cette salle" }),
+    ).toBeVisible({ timeout: 15000 });
+  });
+});
+
 test.describe("Scénario: catalogue — masquage concerts", () => {
   test("accueil_masquerPuisDemasquerConcert_disparaitPuisReapparait", async ({
     page,

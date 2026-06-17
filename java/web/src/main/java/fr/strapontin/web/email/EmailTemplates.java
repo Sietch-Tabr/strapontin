@@ -291,6 +291,84 @@ final class EmailTemplates {
     return envelopper("Votre compte Strapontin a été supprimé", corps, baseUrl);
   }
 
+  /// Signalement d'une salle manquante transmis à l'administrateur.
+  ///
+  /// @param nom             le nom de la salle signalée
+  /// @param ville           la ville/code postal (peut être vide)
+  /// @param urlSite         l'URL du site ou de la billetterie (peut être vide)
+  /// @param commentaire     le commentaire libre (peut être vide)
+  /// @param emailUtilisateur l'adresse email de l'utilisateur
+  /// @param baseUrl         l'URL publique de base de l'application
+  /// @return le HTML de l'email de signalement admin
+  static String signalementSalleManquante(
+      String nom,
+      String ville,
+      String urlSite,
+      String commentaire,
+      String emailUtilisateur,
+      String baseUrl) {
+    String blocCommentaire =
+        (commentaire != null && !commentaire.isBlank())
+            ? """
+            <p style="color: %s; font-size: 14px; white-space: pre-wrap;\
+             border-left: 3px solid %s; padding-left: 12px; margin: 16px 0 0">%s</p>
+            """
+                .formatted(C_TEXTE, C_BORDURE, e(commentaire))
+            : "";
+    String corps =
+        """
+        <table style="border-collapse: collapse; width: 100%%; margin-bottom: 8px">
+          <tr>
+            <td style="padding: 8px 0; color: #888; font-size: 14px; width: 140px">Utilisateur</td>
+            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #888; font-size: 14px">Nom de la salle</td>
+            <td style="padding: 8px 0; font-size: 14px; color: %s"><strong>%s</strong></td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #888; font-size: 14px">Ville / CP</td>
+            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #888; font-size: 14px">Site / billetterie</td>
+            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
+          </tr>
+        </table>
+        %s
+        """
+            .formatted(
+                C_NOIR,
+                e(emailUtilisateur),
+                C_NOIR,
+                e(nom),
+                C_TEXTE,
+                ville != null && !ville.isBlank() ? e(ville) : "—",
+                C_TEXTE,
+                urlSite != null && !urlSite.isBlank() ? e(urlSite) : "—",
+                blocCommentaire);
+    return envelopper("Salle manquante signalée", corps, baseUrl);
+  }
+
+  /// Confirmation de signalement de salle manquante envoyée à l'utilisateur.
+  ///
+  /// @param nom     le nom de la salle signalée
+  /// @param baseUrl l'URL publique de base de l'application
+  /// @return le HTML de l'email de confirmation
+  static String confirmationSignalementSalle(String nom, String baseUrl) {
+    String corps =
+        """
+        <p style="color: %s; margin: 0 0 16px">
+          Votre signalement pour <strong>%s</strong> a été transmis à l'administrateur.
+        </p>
+        <p style="color: %s; font-size: 13px; margin: 0">
+          L'administrateur pourra vous répondre directement par email si besoin.
+        </p>
+        """
+            .formatted(C_TEXTE, e(nom), C_MUTE);
+    return envelopper("Votre signalement a été transmis", corps, baseUrl);
+  }
+
   /// Notification de promotion au rôle administrateur.
   ///
   /// @param baseUrl l'URL publique de base de l'application
