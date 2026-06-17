@@ -8,4 +8,5 @@ package fr.strapontin.web.salle;
 ///
 /// @since 2.2.5
 /// @author Kwaite
-public record RequeteSignalementSalle(String nom, String ville, String urlSite, String commentaire) {}
+public record RequeteSignalementSalle(
+    String nom, String ville, String urlSite, String commentaire) {}

@@ -264,11 +264,7 @@ public class EmailService {
   /// @param commentaire     le commentaire libre (peut être vide)
   /// @param emailUtilisateur l'adresse email de l'utilisateur connecté
   public void envoyerSignalementSalleManquante(
-      String nom,
-      String ville,
-      String urlSite,
-      String commentaire,
-      String emailUtilisateur) {
+      String nom, String ville, String urlSite, String commentaire, String emailUtilisateur) {
     Optional<ContexteEmail> ctx = obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — signalement salle manquante non envoyé");

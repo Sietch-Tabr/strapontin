@@ -310,9 +310,9 @@ final class EmailTemplates {
     String blocCommentaire =
         (commentaire != null && !commentaire.isBlank())
             ? """
-              <p style="color: %s; font-size: 14px; white-space: pre-wrap;\
-               border-left: 3px solid %s; padding-left: 12px; margin: 16px 0 0">%s</p>
-              """
+            <p style="color: %s; font-size: 14px; white-space: pre-wrap;\
+             border-left: 3px solid %s; padding-left: 12px; margin: 16px 0 0">%s</p>
+            """
                 .formatted(C_TEXTE, C_BORDURE, e(commentaire))
             : "";
     String corps =

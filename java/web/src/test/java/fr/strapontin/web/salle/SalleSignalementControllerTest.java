@@ -61,9 +61,7 @@ class SalleSignalementControllerTest {
           controller.signalerManquante(
               new RequeteSignalementSalle("Salle " + i, "", "", ""), auth, request);
       assertEquals(
-          HttpStatus.NO_CONTENT,
-          rep.getStatusCode(),
-          "Le signalement " + (i + 1) + " doit passer");
+          HttpStatus.NO_CONTENT, rep.getStatusCode(), "Le signalement " + (i + 1) + " doit passer");
     }
   }
 
@@ -71,8 +69,7 @@ class SalleSignalementControllerTest {
   void signalerManquante_quatriemeSignalement_retourneRateLimit() {
     var request = requete("10.1.0.3");
     for (int i = 0; i < 3; i++) {
-      controller.signalerManquante(
-          new RequeteSignalementSalle("Salle", "", "", ""), auth, request);
+      controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth, request);
     }
     var rep =
         controller.signalerManquante(
@@ -85,12 +82,10 @@ class SalleSignalementControllerTest {
     var ip1 = requete("10.1.0.4");
     var ip2 = requete("10.1.0.5");
     for (int i = 0; i < 3; i++) {
-      controller.signalerManquante(
-          new RequeteSignalementSalle("Salle", "", "", ""), auth, ip1);
+      controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth, ip1);
     }
     var rep =
-        controller.signalerManquante(
-            new RequeteSignalementSalle("Salle", "", "", ""), auth, ip2);
+        controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth, ip2);
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
   }
 
@@ -116,9 +111,7 @@ class SalleSignalementControllerTest {
   void signalerManquante_nomTropLong_retourneErreur400() {
     var rep =
         controller.signalerManquante(
-            new RequeteSignalementSalle("x".repeat(201), "", "", ""),
-            auth,
-            requete("10.1.0.8"));
+            new RequeteSignalementSalle("x".repeat(201), "", "", ""), auth, requete("10.1.0.8"));
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
     verifyNoInteractions(emailService);
   }
@@ -138,9 +131,7 @@ class SalleSignalementControllerTest {
   void signalerManquante_champsFacultatifsBlancs_passeEtStrip() {
     var rep =
         controller.signalerManquante(
-            new RequeteSignalementSalle("Salle", "  ", "  ", "  "),
-            auth,
-            requete("10.1.0.10"));
+            new RequeteSignalementSalle("Salle", "  ", "  ", "  "), auth, requete("10.1.0.10"));
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(emailService).envoyerSignalementSalleManquante("Salle", "", "", "", "k@test.fr");
   }

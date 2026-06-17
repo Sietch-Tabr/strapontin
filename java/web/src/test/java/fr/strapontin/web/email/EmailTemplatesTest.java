@@ -218,8 +218,7 @@ class EmailTemplatesTest {
 
   @Test
   void confirmationSignalementSalle_contientNomEtMessage() {
-    String html =
-        EmailTemplates.confirmationSignalementSalle("La Cigale", "https://app.fr");
+    String html = EmailTemplates.confirmationSignalementSalle("La Cigale", "https://app.fr");
     assertThat(html).contains("La Cigale");
     assertThat(html).contains("transmis");
     assertThat(html).contains("Votre signalement a été transmis");
@@ -227,8 +226,7 @@ class EmailTemplatesTest {
 
   @Test
   void confirmationSignalementSalle_nomAvecBalises_estEchappe() {
-    String html =
-        EmailTemplates.confirmationSignalementSalle("<b>Salle</b>", "https://app.fr");
+    String html = EmailTemplates.confirmationSignalementSalle("<b>Salle</b>", "https://app.fr");
     assertThat(html).contains("&lt;b&gt;Salle&lt;/b&gt;");
     assertThat(html).doesNotContain("<b>Salle</b>");
   }
