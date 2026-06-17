@@ -21,6 +21,7 @@
             <p class="changelog-categorie">Salles</p>
             <ul>
               <li>La recherche de salle fonctionne désormais avec les apostrophes, accents et tirets — taper « l'empreinte » ou « zénith » retrouve les salles correspondantes.</li>
+              <li>Si une salle n'est pas référencée, un bouton « Signaler cette salle » apparaît sous le message d'absence de résultat. Un formulaire permet d'envoyer le nom, la ville, le site et un commentaire à l'administrateur — une confirmation est envoyée par email.</li>
             </ul>
           </div>
           <div>
