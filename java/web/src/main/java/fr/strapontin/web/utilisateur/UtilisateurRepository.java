@@ -140,9 +140,7 @@ class UtilisateurRepository {
   int compterAdmins() {
     Integer n =
         jdbc.queryForObject(
-            "SELECT COUNT(*) FROM users WHERE role = 'admin'",
-            Map.of(),
-            Integer.class);
+            "SELECT COUNT(*) FROM users WHERE role = 'admin'", Map.of(), Integer.class);
     return n == null ? 0 : n;
   }
 

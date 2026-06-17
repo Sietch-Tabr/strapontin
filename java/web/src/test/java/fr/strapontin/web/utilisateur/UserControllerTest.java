@@ -52,8 +52,7 @@ class UserControllerTest {
   void supprimerCompte_adminSeulSurInstance_retourne409() {
     when(utilisateurRepository.compterAdmins()).thenReturn(1);
 
-    ResponseEntity<?> rep =
-        controller.supprimerCompte(authPour("admin-1", "admin"), httpRequest);
+    ResponseEntity<?> rep = controller.supprimerCompte(authPour("admin-1", "admin"), httpRequest);
 
     assertEquals(HttpStatus.CONFLICT, rep.getStatusCode());
     assertNotNull(rep.getBody());
@@ -65,8 +64,7 @@ class UserControllerTest {
   void supprimerCompte_adminAvecAutreAdmin_retourne204() {
     when(utilisateurRepository.compterAdmins()).thenReturn(2);
 
-    ResponseEntity<?> rep =
-        controller.supprimerCompte(authPour("admin-1", "admin"), httpRequest);
+    ResponseEntity<?> rep = controller.supprimerCompte(authPour("admin-1", "admin"), httpRequest);
 
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(utilisateurRepository).supprimer("admin-1");
@@ -74,8 +72,7 @@ class UserControllerTest {
 
   @Test
   void supprimerCompte_utilisateurSimple_retourne204() {
-    ResponseEntity<?> rep =
-        controller.supprimerCompte(authPour("user-1", "user"), httpRequest);
+    ResponseEntity<?> rep = controller.supprimerCompte(authPour("user-1", "user"), httpRequest);
 
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(utilisateurRepository).supprimer("user-1");
