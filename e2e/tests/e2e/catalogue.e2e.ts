@@ -185,7 +185,11 @@ test.describe("Scénario: catalogue — recherche salle caractères spéciaux", 
 test.describe("Scénario: catalogue — signalement salle manquante", () => {
   test("api_signaler_salleManquante_nomValide_retourne204", async ({
     request,
-  }) => {
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "chromium",
+      "Consomme le quota rate-limit (3/h par IP) — testé sur chromium uniquement",
+    );
     const rep = await request.post("/api/salles/signaler", {
       data: {
         nom: "Salle E2E Test",

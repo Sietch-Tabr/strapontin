@@ -13,6 +13,7 @@ import io.github.bucket4j.Bucket;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.Map;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -119,12 +120,7 @@ public class SalleController {
       HttpServletRequest request) {
     UtilisateurDetails utilisateur = utilisateur(auth);
 
-    String ip = request.getRemoteAddr();
-    Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
-    if (!bucket.tryConsume(1)) {
-      return erreur(429, "Trop de signalements. Réessayez dans une heure.");
-    }
-
+    // Validation avant rate-limiting : une requête invalide ne consomme pas de quota
     String nom = requete.nom() == null ? "" : requete.nom().strip();
     if (nom.isEmpty()) {
       return erreur(400, "Le nom de la salle est requis.");
@@ -148,8 +144,26 @@ public class SalleController {
       return erreur(400, "Le commentaire ne peut pas dépasser " + MAX_COMMENTAIRE + " caractères.");
     }
 
+    String ip = request.getRemoteAddr();
+    Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
+    if (!bucket.tryConsume(1)) {
+      return erreur(429, "Trop de signalements. Réessayez dans une heure.");
+    }
+
     emailService.envoyerSignalementSalleManquante(
         nom, ville, urlSite, commentaire, utilisateur.email());
+    return ResponseEntity.noContent().build();
+  }
+
+  /// Réinitialise tous les buckets de signalement (actif uniquement sur le profil {@code dev}).
+  ///
+  /// <p>Appelé par le global-setup E2E avant chaque suite de tests pour repartir d'un quota plein.
+  ///
+  /// @return 204
+  @Profile("dev")
+  @DeleteMapping("/rate-limits/signalement")
+  public ResponseEntity<Void> reinitialiserBucketsSignalement() {
+    bucketsSignalement.invalidateAll();
     return ResponseEntity.noContent().build();
   }
 

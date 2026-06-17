@@ -48,14 +48,26 @@ async function loginEtSauvegarder(
   console.log(`[e2e setup] session '${identifiant}' sauvegardée → ${fichier}`);
 }
 
+async function reinitialiserRateLimits(): Promise<void> {
+  const contexte = await request.newContext({
+    baseURL: BASE_URL,
+    storageState: FICHIER_AUTH_ADMIN,
+  });
+  try {
+    const rep = await contexte.delete("/api/salles/rate-limits/signalement");
+    if (rep.status() === 204) {
+      console.log("[e2e setup] buckets rate-limit signalement réinitialisés");
+    } else if (rep.status() === 404) {
+      console.log("[e2e setup] endpoint reset rate-limit absent (profil prod ?)");
+    }
+  } finally {
+    await contexte.dispose();
+  }
+}
+
 export default async function setup(): Promise<() => Promise<void>> {
   const adminValide = sessionValide(FICHIER_AUTH_ADMIN);
   const userValide = sessionValide(FICHIER_AUTH_USER);
-
-  if (adminValide && userValide) {
-    console.log("[e2e setup] sessions admin + user existantes réutilisées");
-    return async () => {};
-  }
 
   if (!adminValide) {
     await loginEtSauvegarder(
@@ -74,6 +86,12 @@ export default async function setup(): Promise<() => Promise<void>> {
       FICHIER_AUTH_USER,
     );
   }
+
+  if (adminValide && userValide) {
+    console.log("[e2e setup] sessions admin + user existantes réutilisées");
+  }
+
+  await reinitialiserRateLimits();
 
   return async () => {};
 }
