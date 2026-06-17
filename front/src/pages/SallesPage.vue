@@ -57,7 +57,12 @@
           Vous suivez déjà « {{ qSoumis }} ».
         </div>
         <div v-else class="alerte alerte-info" role="status">
-          Aucun résultat pour « {{ qSoumis }} ».
+          <p style="margin: 0 0 10px">Aucun résultat pour « {{ qSoumis }} ».</p>
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            @click="ouvrirSignalement"
+          >Signaler cette salle</button>
         </div>
       </div>
 
@@ -97,6 +102,39 @@
         <button type="button" class="btn btn-texte" @click="dialogRef.close()">Annuler</button>
       </div>
     </dialog>
+
+    <dialog
+      ref="dialogSignalementRef"
+      id="dialog-signaler-salle"
+      aria-labelledby="titre-signaler-salle"
+      aria-modal="true"
+    >
+      <div class="dialog-entete">
+        <h2 id="titre-signaler-salle" class="dialog-titre">Signaler une salle manquante</h2>
+      </div>
+      <form id="form-signaler-salle" @submit.prevent="envoyerSignalement">
+        <div class="champ">
+          <label for="sig-nom" class="champ-label">Nom de la salle <span aria-hidden="true">*</span></label>
+          <input id="sig-nom" v-model="signalement.nom" type="text" required maxlength="200" autocomplete="off" />
+        </div>
+        <div class="champ">
+          <label for="sig-ville" class="champ-label">Ville / code postal</label>
+          <input id="sig-ville" v-model="signalement.ville" type="text" maxlength="100" autocomplete="off" />
+        </div>
+        <div class="champ">
+          <label for="sig-url" class="champ-label">Site ou billetterie</label>
+          <input id="sig-url" v-model="signalement.urlSite" type="url" maxlength="500" autocomplete="off" />
+        </div>
+        <div class="champ">
+          <label for="sig-commentaire" class="champ-label">Commentaire</label>
+          <textarea id="sig-commentaire" v-model="signalement.commentaire" rows="3" maxlength="1000"></textarea>
+        </div>
+        <div class="dialog-pied">
+          <button type="submit" class="btn btn-secondary" :disabled="signalementEnCours">Envoyer</button>
+          <button type="button" class="btn btn-texte" @click="dialogSignalementRef.close()">Annuler</button>
+        </div>
+      </form>
+    </dialog>
   </div>
 </template>
 
@@ -114,7 +152,10 @@ const q = ref('')
 const qSoumis = ref('')
 const erreur = ref('')
 const salleASupprimer = ref(null)
+const signalement = ref({ nom: '', ville: '', urlSite: '', commentaire: '' })
+const signalementEnCours = ref(false)
 const { dialogRef, ouvrir: ouvrirDialog, fermer: fermerDialog } = useDialog()
+const { dialogRef: dialogSignalementRef, ouvrir: ouvrirDialogSignalement } = useDialog()
 
 async function charger(recherche = '') {
   const params = recherche.trim().length >= 2 ? '?q=' + encodeURIComponent(recherche) : ''
@@ -178,6 +219,37 @@ async function confirmerSuppression() {
     afficherToast('Impossible de supprimer cette salle.', 'erreur')
   } finally {
     salleASupprimer.value = null
+  }
+}
+
+function ouvrirSignalement() {
+  signalement.value = { nom: qSoumis.value.trim(), ville: '', urlSite: '', commentaire: '' }
+  ouvrirDialogSignalement()
+}
+
+async function envoyerSignalement() {
+  signalementEnCours.value = true
+  try {
+    const rep = await fetch('/api/salles/signaler', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(signalement.value),
+    })
+    if (rep.status === 429) {
+      afficherToast('Trop de signalements. Réessayez dans une heure.', 'erreur')
+      return
+    }
+    if (!rep.ok) {
+      const data = await rep.json().catch(() => ({}))
+      afficherToast(data.erreur || 'Erreur lors du signalement.', 'erreur')
+      return
+    }
+    dialogSignalementRef.value.close()
+    afficherToast('Votre signalement a été transmis.', 'succes')
+  } catch {
+    afficherToast('Impossible d\'envoyer le signalement.', 'erreur')
+  } finally {
+    signalementEnCours.value = false
   }
 }
 

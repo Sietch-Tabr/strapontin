@@ -175,6 +175,64 @@ class EmailTemplatesTest {
     assertThat(html).contains("color: #c00");
   }
 
+  // ---- signalementSalleManquante() ----
+
+  @Test
+  void signalementSalleManquante_contientToutesLesDonnees() {
+    String html =
+        EmailTemplates.signalementSalleManquante(
+            "La Cigale",
+            "Paris 75018",
+            "https://lacigale.fr",
+            "Grande salle de concert",
+            "user@exemple.fr",
+            "https://app.fr");
+    assertThat(html).contains("La Cigale");
+    assertThat(html).contains("Paris 75018");
+    assertThat(html).contains("https://lacigale.fr");
+    assertThat(html).contains("Grande salle de concert");
+    assertThat(html).contains("user@exemple.fr");
+    assertThat(html).contains("Salle manquante signalée");
+  }
+
+  @Test
+  void signalementSalleManquante_champsPtifsVides_afficheTiret() {
+    String html =
+        EmailTemplates.signalementSalleManquante(
+            "Ma Salle", "", "", "", "user@ex.fr", "https://app.fr");
+    assertThat(html).doesNotContain("pre-wrap");
+    long nbTirets = html.chars().filter(c -> c == '—').count();
+    assertThat(nbTirets).isGreaterThanOrEqualTo(2);
+  }
+
+  @Test
+  void signalementSalleManquante_nomAvecBalises_estEchappe() {
+    String html =
+        EmailTemplates.signalementSalleManquante(
+            "<script>alert(1)</script>", "", "", "", "u@ex.fr", "https://app.fr");
+    assertThat(html).contains("&lt;script&gt;");
+    assertThat(html).doesNotContain("<script>");
+  }
+
+  // ---- confirmationSignalementSalle() ----
+
+  @Test
+  void confirmationSignalementSalle_contientNomEtMessage() {
+    String html =
+        EmailTemplates.confirmationSignalementSalle("La Cigale", "https://app.fr");
+    assertThat(html).contains("La Cigale");
+    assertThat(html).contains("transmis");
+    assertThat(html).contains("Votre signalement a été transmis");
+  }
+
+  @Test
+  void confirmationSignalementSalle_nomAvecBalises_estEchappe() {
+    String html =
+        EmailTemplates.confirmationSignalementSalle("<b>Salle</b>", "https://app.fr");
+    assertThat(html).contains("&lt;b&gt;Salle&lt;/b&gt;");
+    assertThat(html).doesNotContain("<b>Salle</b>");
+  }
+
   // ---- Structure commune ----
 
   @Test

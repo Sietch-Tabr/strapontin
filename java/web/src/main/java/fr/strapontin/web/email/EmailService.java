@@ -256,6 +256,64 @@ public class EmailService {
     return configService.lireConfig("RESEND_API_KEY").isPresent();
   }
 
+  /// Envoie un signalement de salle manquante à l'admin, puis une confirmation à l'utilisateur.
+  ///
+  /// @param nom             le nom de la salle signalée
+  /// @param ville           la ville/code postal (peut être vide)
+  /// @param urlSite         l'URL du site ou de la billetterie (peut être vide)
+  /// @param commentaire     le commentaire libre (peut être vide)
+  /// @param emailUtilisateur l'adresse email de l'utilisateur connecté
+  public void envoyerSignalementSalleManquante(
+      String nom,
+      String ville,
+      String urlSite,
+      String commentaire,
+      String emailUtilisateur) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — signalement salle manquante non envoyé");
+      return;
+    }
+
+    String corpsAdmin =
+        EmailTemplates.signalementSalleManquante(
+            nom, ville, urlSite, commentaire, emailUtilisateur, ctx.get().baseUrl());
+    String texteAdmin =
+        "Salle manquante signalée par %s%nNom : %s%nVille : %s%nSite : %s%n%n%s"
+            .formatted(emailUtilisateur, nom, ville, urlSite, commentaire);
+
+    try {
+      envoyer(
+          ctx.get(),
+          ctx.get().expediteur(),
+          emailUtilisateur,
+          "[Strapontin] Salle manquante — " + nom,
+          corpsAdmin,
+          texteAdmin);
+      log.info("Signalement salle manquante envoyé par : {}", emailUtilisateur);
+    } catch (Exception e) {
+      log.error("Échec envoi signalement salle manquante", e);
+      return;
+    }
+
+    String corpsUser = EmailTemplates.confirmationSignalementSalle(nom, ctx.get().baseUrl());
+    String texteUser =
+        "Votre signalement pour « %s » a été transmis à l'administrateur.".formatted(nom);
+
+    try {
+      envoyer(
+          ctx.get(),
+          emailUtilisateur,
+          ctx.get().expediteur(),
+          "Votre signalement Strapontin a été transmis",
+          corpsUser,
+          texteUser);
+      log.info("Confirmation signalement salle envoyée : {}", emailUtilisateur);
+    } catch (Exception e) {
+      log.error("Échec envoi confirmation signalement salle : {}", emailUtilisateur, e);
+    }
+  }
+
   /// Envoie un signalement d'utilisateur à l'adresse de contact.
   ///
   /// @param type            le type (`bug`, `suggestion`, `question`)
