@@ -202,10 +202,10 @@ Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de
 - Logging : SLF4J, jamais `System.out`
 - **Tests Java** : `mvn -pl core,sources,web test` (unitaires). `mvn -pl worker test -am` requiert Docker (Testcontainers).
 - **Tests E2E** : Playwright (`e2e/`), nécessite LXC dev actif (port 8080)
-  - **Deux comptes dédiés** créés par `bash scripts/seed-e2e.sh root@192.168.20.78` : `e2eadmin` (admin) et `e2euser` (user), + compte d'invitation `e2e-invite@test.local` avec token prédéfini. Idempotent, à relancer avant chaque suite complète (le token d'invitation est à usage unique).
-  - global-setup ouvre 2 sessions (`.auth-admin.json`, `.auth-user.json`) via `POST /api/auth/login`. Tests admin : `test.use({ storageState: FICHIER_AUTH_ADMIN })`.
-  - Tests "Scénario: API auth" restreints à chromium (grepInvert) pour ne pas épuiser le rate limiter bucket4j
-  - `invitation_tokenValide` ne tourne que sur chromium (token à usage unique)
+  - **Deux comptes dédiés** créés par `bash scripts/seed-e2e.sh root@192.168.20.78` : `e2eadmin` (admin) et `e2euser` (user). Idempotent, à lancer une fois par environnement vierge.
+  - global-setup ouvre 2 sessions (`.auth-admin.json`, `.auth-user.json`) via `POST /api/auth/login`, puis réinitialise les buckets rate-limit (`DELETE /api/salles/rate-limits/signalement`, profil `dev` uniquement).
+  - Tests "Scénario: API auth" et test signalement valide restreints à chromium pour ne pas épuiser le rate limiter bucket4j
+  - `invitation_tokenValide` ne tourne que sur chromium — le test crée sa propre invitation via l'API admin (indépendant du seed)
   - Lancer : `cd e2e && npx playwright test` (mdp surchargeable via `E2E_ADMIN_MOT_DE_PASSE` / `E2E_USER_MOT_DE_PASSE`)
 - Nommage tests : `<methode>_<scenario>_<resultatAttendu>`
 
