@@ -58,7 +58,9 @@ async function reinitialiserRateLimits(): Promise<void> {
     if (rep.status() === 204) {
       console.log("[e2e setup] buckets rate-limit signalement réinitialisés");
     } else if (rep.status() === 404) {
-      console.log("[e2e setup] endpoint reset rate-limit absent (profil prod ?)");
+      console.log(
+        "[e2e setup] endpoint reset rate-limit absent (profil prod ?)",
+      );
     }
   } finally {
     await contexte.dispose();
