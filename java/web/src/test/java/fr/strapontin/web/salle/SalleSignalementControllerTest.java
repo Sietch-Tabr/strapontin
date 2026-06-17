@@ -128,6 +128,22 @@ class SalleSignalementControllerTest {
   }
 
   @Test
+  void signalerManquante_nomVideApresRateLimitEpuise_retourne400PasRateLimit() {
+    // La validation est vérifiée AVANT le rate-limit : une requête invalide ne consomme pas de
+    // quota
+    var request = requete("10.1.0.11");
+    for (int i = 0; i < 3; i++) {
+      controller.signalerManquante(
+          new RequeteSignalementSalle("Salle " + i, "", "", ""), auth, request);
+    }
+    clearInvocations(emailService);
+    var rep =
+        controller.signalerManquante(new RequeteSignalementSalle("   ", "", "", ""), auth, request);
+    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
+    verifyNoMoreInteractions(emailService);
+  }
+
+  @Test
   void signalerManquante_champsFacultatifsBlancs_passeEtStrip() {
     var rep =
         controller.signalerManquante(

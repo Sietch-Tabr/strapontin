@@ -1,36 +1,71 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, request as playwrightRequest } from "@playwright/test";
+import { FICHIER_AUTH_USER } from "./global-setup.js";
 
-async function supprimerArtisteDeListe(
-  page: import("@playwright/test").Page,
-  nomRegex: RegExp,
-): Promise<void> {
-  const carte = page.locator(".carte-item").filter({
-    has: page.locator(".carte-nom", { hasText: nomRegex }),
+const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
+const artistesANettoyer: string[] = [];
+const sallesANettoyer: string[] = [];
+
+async function supprimerArtisteParNom(nom: string): Promise<void> {
+  const ctx = await playwrightRequest.newContext({
+    baseURL: BASE_URL,
+    storageState: FICHIER_AUTH_USER,
   });
-  if ((await carte.count()) === 0) return;
-  await carte.locator("button.btn-danger-texte").first().click();
-  await page.locator("dialog#dialog-confirmer-suppr-artiste").waitFor();
-  await page.click("dialog#dialog-confirmer-suppr-artiste button.btn-danger");
-  await expect(page.locator(".alerte-succes").first()).toBeVisible({
-    timeout: 5000,
-  });
+  try {
+    const rep = await ctx.get("/api/artistes");
+    if (!rep.ok()) return;
+    const corps = await rep.json();
+    const artistes: { artisteNormalise: string; artisteAffiche: string }[] =
+      corps.artistes ?? [];
+    const cible = artistes.find((a) =>
+      a.artisteAffiche.toLowerCase().includes(nom.toLowerCase()),
+    );
+    if (cible)
+      await ctx.delete(
+        `/api/artistes/${encodeURIComponent(cible.artisteNormalise)}`,
+      );
+  } finally {
+    await ctx.dispose();
+  }
 }
 
-async function supprimerSalleDeListe(
-  page: import("@playwright/test").Page,
-  nomRegex: RegExp,
-): Promise<void> {
-  const carte = page.locator(".carte-item").filter({
-    has: page.locator(".carte-nom", { hasText: nomRegex }),
+async function supprimerSalleParNom(nom: string): Promise<void> {
+  const ctx = await playwrightRequest.newContext({
+    baseURL: BASE_URL,
+    storageState: FICHIER_AUTH_USER,
   });
-  if ((await carte.count()) === 0) return;
-  await carte.locator("button.btn-danger-texte").first().click();
-  await page.locator("dialog#dialog-confirmer-suppr-salle").waitFor();
-  await page.click("dialog#dialog-confirmer-suppr-salle button.btn-danger");
-  await expect(page.locator(".alerte-succes").first()).toBeVisible({
-    timeout: 5000,
-  });
+  try {
+    const rep = await ctx.get("/api/salles");
+    if (!rep.ok()) return;
+    const corps = await rep.json();
+    const salles: { salleId: string; nom: string }[] = corps.salles ?? [];
+    const cible = salles.find((s) =>
+      s.nom.toLowerCase().includes(nom.toLowerCase()),
+    );
+    if (cible)
+      await ctx.delete(`/api/salles/${encodeURIComponent(cible.salleId)}`);
+  } finally {
+    await ctx.dispose();
+  }
 }
+
+test.afterEach(async () => {
+  const artistes = artistesANettoyer.splice(0);
+  const salles = sallesANettoyer.splice(0);
+  for (const nom of artistes) {
+    try {
+      await supprimerArtisteParNom(nom);
+    } catch {
+      /* ignore */
+    }
+  }
+  for (const nom of salles) {
+    try {
+      await supprimerSalleParNom(nom);
+    } catch {
+      /* ignore */
+    }
+  }
+});
 
 test.describe("Scénario: catalogue — artistes", () => {
   test("artistes_ajouterEtSupprimer_fluxComplet_toastSuccesAuDeux", async ({
@@ -38,8 +73,8 @@ test.describe("Scénario: catalogue — artistes", () => {
   }) => {
     await page.goto("/artistes");
 
-    // Nettoyage préalable depuis la liste (avant toute recherche)
-    await supprimerArtisteDeListe(page, /nina simone/i);
+    // Nettoyage préalable idempotent (cas d'un run précédent raté)
+    await supprimerArtisteParNom("nina simone");
 
     // Rechercher et suivre
     await page.fill("input#q-artiste", "Nina Simone");
@@ -51,13 +86,14 @@ test.describe("Scénario: catalogue — artistes", () => {
     const ariaLabel = (await btnSuivre.getAttribute("aria-label")) ?? "";
     const nomArtiste = ariaLabel.replace(/^Suivre\s+/i, "").trim();
 
+    artistesANettoyer.push(nomArtiste);
     await btnSuivre.click();
     // L'ajout produit un flash fetchEnCours (.alerte-info), pas .alerte-succes
     await expect(page.locator(".alerte-info").first()).toBeVisible({
       timeout: 5000,
     });
 
-    // Suppression post-test — laisse toujours l'état propre
+    // Suppression inline post-test
     const btnSupprimer = page.locator(
       `button[aria-label="Supprimer ${nomArtiste}"]`,
     );
@@ -68,6 +104,8 @@ test.describe("Scénario: catalogue — artistes", () => {
     await expect(page.locator(".alerte-succes").first()).toBeVisible({
       timeout: 5000,
     });
+    // Artiste supprimé inline — retirer de la liste de nettoyage afterEach
+    artistesANettoyer.splice(0);
   });
 });
 
@@ -77,8 +115,8 @@ test.describe("Scénario: catalogue — salles", () => {
   }) => {
     await page.goto("/salles");
 
-    // Nettoyage préalable depuis la liste (avant toute recherche)
-    await supprimerSalleDeListe(page, /olympia/i);
+    // Nettoyage préalable idempotent (cas d'un run précédent raté)
+    await supprimerSalleParNom("olympia");
 
     // Rechercher et suivre
     await page.fill("input#q-salle", "Olympia");
@@ -90,12 +128,13 @@ test.describe("Scénario: catalogue — salles", () => {
     const ariaLabel = (await btnSuivre.getAttribute("aria-label")) ?? "";
     const nomSalle = ariaLabel.replace(/^Suivre\s+/i, "").trim();
 
+    sallesANettoyer.push(nomSalle);
     await btnSuivre.click();
     await expect(page.locator(".alerte-succes").first()).toBeVisible({
       timeout: 5000,
     });
 
-    // Suppression post-test — laisse toujours l'état propre
+    // Suppression inline post-test
     const btnSupprimer = page.locator(
       `button[aria-label="Supprimer ${nomSalle}"]`,
     );
@@ -106,6 +145,8 @@ test.describe("Scénario: catalogue — salles", () => {
     await expect(page.locator(".alerte-succes").first()).toBeVisible({
       timeout: 5000,
     });
+    // Salle supprimée inline — retirer de la liste de nettoyage afterEach
+    sallesANettoyer.splice(0);
   });
 });
 
@@ -144,7 +185,11 @@ test.describe("Scénario: catalogue — recherche salle caractères spéciaux", 
 test.describe("Scénario: catalogue — signalement salle manquante", () => {
   test("api_signaler_salleManquante_nomValide_retourne204", async ({
     request,
-  }) => {
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "chromium",
+      "Consomme le quota rate-limit (3/h par IP) — testé sur chromium uniquement",
+    );
     const rep = await request.post("/api/salles/signaler", {
       data: {
         nom: "Salle E2E Test",

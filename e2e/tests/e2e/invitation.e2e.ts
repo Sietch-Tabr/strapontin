@@ -5,10 +5,6 @@ test.use({ storageState: FICHIER_AUTH_ADMIN });
 
 const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
 
-// Token prédéfini injecté par seed-e2e.sh pour e2e-invite@test.local
-// SHA-256("e2e-invite-token-2026") = db2b2442...
-const LIEN_INVITE = `${BASE_URL}/reset-password?token=e2e-invite-token-2026`;
-
 const emailsANettoyer: string[] = [];
 
 async function supprimerUtilisateurParEmail(email: string): Promise<void> {
@@ -66,8 +62,8 @@ test.describe("Scénario: invitation — dialog de confirmation", () => {
 });
 
 test.describe("Scénario: invitation — flux activation", () => {
-  // Token et utilisateur créés par seed-e2e.sh (e2e-invite@test.local + token prédéfini)
-  // Le token est à usage unique : ne tester que sur un seul navigateur
+  // Le test crée sa propre invitation via l'API admin pour être indépendant du seed.
+  // Restreint à chromium : le token est à usage unique.
   test("invitation_tokenValide_activerCompte_redirigeVersAccueil", async ({
     browser,
   }, testInfo) => {
@@ -75,11 +71,37 @@ test.describe("Scénario: invitation — flux activation", () => {
       testInfo.project.name !== "chromium",
       "Token à usage unique — testé sur chromium uniquement",
     );
-    const identifiantTest = `e2einv${Date.now()}`.slice(0, 30);
 
-    const ctx = await browser.newContext({ storageState: undefined });
-    const pageInvite = await ctx.newPage();
-    await pageInvite.goto(LIEN_INVITE);
+    const emailTest = `e2e-inv-${Date.now()}@test.local`;
+    emailsANettoyer.push(emailTest);
+
+    // Créer l'invitation via l'API admin
+    const apiCtx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    let lienInvitation: string;
+    try {
+      const rep = await apiCtx.post("/api/admin/utilisateurs", {
+        data: { email: emailTest },
+      });
+      const corps = await rep.json();
+      if (!corps.lienReset) {
+        test.skip(
+          true,
+          "Service email configuré : lien non retourné par l'API",
+        );
+        return;
+      }
+      lienInvitation = corps.lienReset as string;
+    } finally {
+      await apiCtx.dispose();
+    }
+
+    const identifiantTest = `e2einv${Date.now()}`.slice(0, 30);
+    const ctxNavigateur = await browser.newContext({ storageState: undefined });
+    const pageInvite = await ctxNavigateur.newPage();
+    await pageInvite.goto(lienInvitation);
 
     await expect(pageInvite.locator('input[name="identifiant"]')).toBeVisible({
       timeout: 5000,
@@ -93,7 +115,7 @@ test.describe("Scénario: invitation — flux activation", () => {
       timeout: 5000,
     });
     expect(pageInvite.url()).not.toContain("/login");
-    await ctx.close();
+    await ctxNavigateur.close();
   });
 
   test("invitation_tokenInvalide_formulaireVisibleSansCrash", async ({

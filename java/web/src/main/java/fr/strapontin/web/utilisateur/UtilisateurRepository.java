@@ -134,6 +134,16 @@ class UtilisateurRepository {
         Map.of("id", userId));
   }
 
+  /// Retourne le nombre total d'administrateurs sur l'instance.
+  ///
+  /// @return nombre d'utilisateurs ayant le rôle {@code admin}
+  int compterAdmins() {
+    Integer n =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM users WHERE role = 'admin'", Map.of(), Integer.class);
+    return n == null ? 0 : n;
+  }
+
   /// Supprime un utilisateur (cascade sur toutes ses données).
   ///
   /// @param userId identifiant de l'utilisateur à supprimer

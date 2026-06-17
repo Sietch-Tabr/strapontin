@@ -8,8 +8,20 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
-        <h2 class="changelog-version">v 2.2.5 — 15 juin 2026</h2>
+        <h2 class="changelog-version">v 2.2.5 — 18 juin 2026</h2>
         <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Interface</p>
+            <ul>
+              <li>Les fenêtres de confirmation (suppression, réinitialisation…) s'affichent désormais centrées à l'écran.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Compte et sécurité</p>
+            <ul>
+              <li>Il n'est plus possible de supprimer son compte lorsqu'on est le seul administrateur de l'instance — un message d'erreur l'indique clairement.</li>
+            </ul>
+          </div>
           <div>
             <p class="changelog-categorie">Concerts</p>
             <ul>
