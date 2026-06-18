@@ -40,9 +40,7 @@ public class WatchdogWorkerService {
   private volatile Instant derniereAlerte;
 
   public WatchdogWorkerService(
-      NamedParameterJdbcTemplate jdbc,
-      ConfigService configService,
-      EmailService emailService) {
+      NamedParameterJdbcTemplate jdbc, ConfigService configService, EmailService emailService) {
     this.jdbc = jdbc;
     this.configService = configService;
     this.emailService = emailService;
@@ -58,8 +56,7 @@ public class WatchdogWorkerService {
 
     if (!inactif) return;
 
-    if (derniereAlerte != null
-        && Instant.now().isBefore(derniereAlerte.plus(SEUIL_INACTIVITE))) {
+    if (derniereAlerte != null && Instant.now().isBefore(derniereAlerte.plus(SEUIL_INACTIVITE))) {
       log.debug("watchdog: worker inactif, alerte déjà envoyée récemment — ignorée");
       return;
     }

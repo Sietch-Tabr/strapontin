@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -56,7 +57,7 @@ public class PersisterConcerts {
       INSERT INTO concerts
           (artiste, artiste_norm, date, heure, salle, salle_norm, ville, dept,
            prix_min, prix_max, url, source, classification, genre, statut,
-           presale_debut, presale_nom)
+           presale_debut, presale_nom, salle_uuid, artiste_id)
       VALUES
       """;
 
@@ -84,6 +85,8 @@ public class PersisterConcerts {
                              ELSE EXCLUDED.statut END,
           presale_debut  = COALESCE(EXCLUDED.presale_debut, concerts.presale_debut),
           presale_nom    = COALESCE(EXCLUDED.presale_nom, concerts.presale_nom),
+          salle_uuid     = COALESCE(EXCLUDED.salle_uuid, concerts.salle_uuid),
+          artiste_id     = COALESCE(EXCLUDED.artiste_id, concerts.artiste_id),
           updated_at     = now()
       RETURNING (xmax = 0) AS est_insertion
       """;
@@ -286,7 +289,11 @@ public class PersisterConcerts {
         c.genre(),
         c.statut(),
         c.presaleDebut(),
-        c.presaleNom());
+        c.presaleNom(),
+        c.salleSourceId(),
+        c.artisteSourceId(),
+        null,
+        null);
   }
 
   private List<ValeurConcert> reconcilierContreBase(
@@ -323,7 +330,11 @@ public class PersisterConcerts {
             concert.genre(),
             concert.statut(),
             concert.presaleDebut(),
-            concert.presaleNom());
+            concert.presaleNom(),
+            concert.salleSourceId(),
+            concert.artisteSourceId(),
+            null,
+            null);
       }
     }
     return concert;
@@ -423,7 +434,11 @@ public class PersisterConcerts {
         c.genre(),
         c.statut(),
         c.presaleDebut(),
-        c.presaleNom());
+        c.presaleNom(),
+        c.salleSourceId(),
+        c.artisteSourceId(),
+        null,
+        null);
   }
 
   private ValeurConcert reconcilierUnArtiste(
@@ -455,7 +470,11 @@ public class PersisterConcerts {
             concert.genre(),
             concert.statut(),
             concert.presaleDebut(),
-            concert.presaleNom());
+            concert.presaleNom(),
+            concert.salleSourceId(),
+            concert.artisteSourceId(),
+            null,
+            null);
       }
     }
     return concert;
@@ -502,7 +521,12 @@ public class PersisterConcerts {
         + " AS timestamptz)"
         + ", :presaleNom_"
         + i
-        + ")";
+        + ", CAST(:salleUuid_"
+        + i
+        + " AS uuid)"
+        + ", CAST(:artisteId_"
+        + i
+        + " AS uuid))";
   }
 
   /// Ajoute les paramètres nommés indexés d'une ligne d'upsert.
@@ -529,6 +553,111 @@ public class PersisterConcerts {
     params.addValue("statut_" + i, v.statut());
     params.addValue("presaleDebut_" + i, v.presaleDebut());
     params.addValue("presaleNom_" + i, v.presaleNom());
+    params.addValue("salleUuid_" + i, v.salleUuid() != null ? v.salleUuid().toString() : null);
+    params.addValue("artisteId_" + i, v.artisteId() != null ? v.artisteId().toString() : null);
+  }
+
+  /// Résout les UUIDs internes depuis les identifiants sources préfixés.
+  ///
+  /// <p>Pour chaque concert portant un {@code salleSourceId} ou {@code artisteSourceId}, consulte
+  /// {@code salle_sources} et {@code artiste_sources} pour trouver l'UUID stable correspondant.
+  /// En cas de renommage (même ID source, nom différent), met à jour {@code salles.nom}.
+  ///
+  /// <p>Les concerts sans correspondance conservent {@code salleUuid=null}/{@code artisteId=null} ;
+  /// la réconciliation textuelle prend ensuite le relais.
+  ///
+  /// @param concerts valeurs normalisées avant upsert
+  /// @return liste enrichie avec les UUIDs résolus
+  private List<ValeurConcert> resoudreIdentitesSources(List<ValeurConcert> concerts) {
+    Map<String, UUID> cachesSalles = resoudreUuidsParSource(concerts, "salle");
+    Map<String, UUID> cachesArtistes = resoudreUuidsParSource(concerts, "artiste");
+    absorberRenommagesSalles(concerts, cachesSalles);
+
+    return concerts.stream()
+        .map(
+            c -> {
+              UUID salleUuid =
+                  c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
+              UUID artisteId =
+                  c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
+              if (salleUuid == null && artisteId == null) return c;
+              return new ValeurConcert(
+                  c.artiste(),
+                  c.artisteNorm(),
+                  c.date(),
+                  c.heure(),
+                  c.salle(),
+                  c.salleNorm(),
+                  c.ville(),
+                  c.dept(),
+                  c.prixMin(),
+                  c.prixMax(),
+                  c.url(),
+                  c.source(),
+                  c.classification(),
+                  c.genre(),
+                  c.statut(),
+                  c.presaleDebut(),
+                  c.presaleNom(),
+                  c.salleSourceId(),
+                  c.artisteSourceId(),
+                  salleUuid,
+                  artisteId);
+            })
+        .toList();
+  }
+
+  private Map<String, UUID> resoudreUuidsParSource(List<ValeurConcert> concerts, String type) {
+    Map<String, List<String>> parSource = new HashMap<>();
+    for (ValeurConcert c : concerts) {
+      String sourceId = "salle".equals(type) ? c.salleSourceId() : c.artisteSourceId();
+      if (sourceId != null) {
+        int sep = sourceId.indexOf(':');
+        if (sep > 0) {
+          String source = sourceId.substring(0, sep);
+          String identifiant = sourceId.substring(sep + 1);
+          parSource.computeIfAbsent(source, _ -> new ArrayList<>()).add(identifiant);
+        }
+      }
+    }
+
+    Map<String, UUID> cache = new HashMap<>();
+    String table = "salle".equals(type) ? "salle_sources" : "artiste_sources";
+    String colUuid = "salle".equals(type) ? "salle_id" : "artiste_id";
+
+    for (var entry : parSource.entrySet()) {
+      String source = entry.getKey();
+      List<String> ids = entry.getValue().stream().distinct().toList();
+      List<Map<String, Object>> lignes =
+          jdbc.queryForList(
+              "SELECT "
+                  + colUuid
+                  + ", identifiant_externe FROM "
+                  + table
+                  + " WHERE source = :source AND identifiant_externe IN (:ids)",
+              Map.of("source", source, "ids", ids));
+      for (var ligne : lignes) {
+        String cle = source + ":" + ligne.get("identifiant_externe");
+        cache.put(cle, (UUID) ligne.get(colUuid));
+      }
+    }
+    return cache;
+  }
+
+  private void absorberRenommagesSalles(
+      List<ValeurConcert> concerts, Map<String, UUID> cachesSalles) {
+    for (ValeurConcert c : concerts) {
+      if (c.salleSourceId() == null) continue;
+      UUID salleUuid = cachesSalles.get(c.salleSourceId());
+      if (salleUuid == null) continue;
+      int modifies =
+          jdbc.update(
+              "UPDATE salles SET nom = :nom WHERE salle_uuid = CAST(:uuid AS uuid) AND nom <> :nom",
+              Map.of("nom", c.salle(), "uuid", salleUuid.toString()));
+      if (modifies > 0) {
+        log.info("renommage salle absorbé salleUuid={} nouveauNom={}", salleUuid, c.salle());
+      }
+    }
   }
 
   /// Insère ou met à jour un lot de concerts en une seule requête multi-lignes.
@@ -629,11 +758,16 @@ public class PersisterConcerts {
                           c.genre(),
                           c.statut(),
                           c.presaleDebut(),
-                          c.presaleNom()))
+                          c.presaleNom(),
+                          c.salleSourceId(),
+                          c.artisteSourceId(),
+                          null,
+                          null))
               .toList();
 
       List<ValeurConcert> valeurs =
-          deduplicerLotReconcilie(reconcilierArtistes(reconcilierSalles(valeursBrutes)));
+          deduplicerLotReconcilie(
+              reconcilierArtistes(reconcilierSalles(resoudreIdentitesSources(valeursBrutes))));
 
       ResultatPersistance resultatLot = upsertLot(valeurs);
       totalInserts += resultatLot.nbInseres();

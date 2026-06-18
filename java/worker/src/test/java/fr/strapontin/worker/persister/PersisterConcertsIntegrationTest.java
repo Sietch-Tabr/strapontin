@@ -65,7 +65,31 @@ class PersisterConcertsIntegrationTest {
         "Pop",
         "onsale",
         null,
+        null,
+        null,
         null);
+  }
+
+  private static ConcertBrut concertAvecSourceId(
+      String artiste, String date, String salle, String salleSourceId, String artisteSourceId) {
+    return new ConcertBrut(
+        artiste,
+        date,
+        "20:30",
+        salle,
+        "Paris",
+        "75",
+        39.9,
+        99.9,
+        "https://example.com/" + artiste.toLowerCase().replace(" ", "-"),
+        "ticketmaster",
+        "music",
+        "Pop",
+        "onsale",
+        null,
+        null,
+        salleSourceId,
+        artisteSourceId);
   }
 
   @Test
@@ -99,6 +123,8 @@ class PersisterConcertsIntegrationTest {
             "Pop",
             null,
             null,
+            null,
+            null,
             null);
 
     persisterConcerts.persisterConcerts(List.of(v1));
@@ -127,6 +153,8 @@ class PersisterConcertsIntegrationTest {
                 "Pop",
                 null,
                 null,
+                null,
+                null,
                 null),
             new ConcertBrut(
                 "Julien Doré",
@@ -141,6 +169,8 @@ class PersisterConcertsIntegrationTest {
                 "eventim",
                 "music",
                 "Pop",
+                null,
+                null,
                 null,
                 null,
                 null));
@@ -204,6 +234,75 @@ class PersisterConcertsIntegrationTest {
   }
 
   @Test
+  void persisterConcerts_salleSourceIdConnu_reutiliseSalleUuid() {
+    // Pré-condition : salle déjà en base avec son UUID source TM
+    jdbc.update(
+        "INSERT INTO salles (id, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor"
+            + " arena')",
+        Map.of());
+    java.util.UUID salleUuid =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM salles WHERE id = 'accor arena'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe) VALUES"
+            + " (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpaZGFe')",
+        Map.of("uuid", salleUuid.toString()));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Stromae", "2026-10-01", "Accor Arena", "ticketmaster:KovZpaZGFe", null)));
+
+    java.util.UUID uuidEnBase =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'stromae'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+    assertEquals(salleUuid, uuidEnBase);
+  }
+
+  @Test
+  void persisterConcerts_salleRenommee_metAJourNomConserveSalleUuid() {
+    // Scénario Plenitude Arena : même venueId TM, nom différent entre deux fetches
+    jdbc.update(
+        "INSERT INTO salles (id, nom, nom_norm)"
+            + " VALUES ('paris la defense arena', 'Paris La Défense Arena',"
+            + " 'paris la defense arena')",
+        Map.of());
+    java.util.UUID salleUuid =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM salles WHERE id = 'paris la defense arena'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe) VALUES"
+            + " (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpbFGFe')",
+        Map.of("uuid", salleUuid.toString()));
+
+    // Fetch avec le nouveau nom
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Dua Lipa", "2026-11-15", "Plenitude Arena", "ticketmaster:KovZpbFGFe", null)));
+
+    java.util.UUID uuidEnBase =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'dua lipa'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+    assertEquals(salleUuid, uuidEnBase, "le salle_uuid doit être stable après renommage");
+
+    String nomMisAJour =
+        jdbc.queryForObject(
+            "SELECT nom FROM salles WHERE salle_uuid = CAST(:uuid AS uuid)",
+            Map.of("uuid", salleUuid.toString()),
+            String.class);
+    assertEquals("Plenitude Arena", nomMisAJour, "le nom de la salle doit être mis à jour");
+  }
+
+  @Test
   void persisterConcerts_artisteNormVide_rejetteLeConcert() {
     ConcertBrut concert =
         new ConcertBrut(
@@ -217,6 +316,8 @@ class PersisterConcertsIntegrationTest {
             null,
             null,
             "ticketmaster",
+            null,
+            null,
             null,
             null,
             null,

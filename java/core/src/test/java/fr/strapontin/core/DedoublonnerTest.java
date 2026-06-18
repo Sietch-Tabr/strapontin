@@ -23,6 +23,8 @@ class DedoublonnerTest {
         null,
         null,
         null,
+        null,
+        null,
         null);
   }
 
@@ -42,6 +44,8 @@ class DedoublonnerTest {
         null,
         null,
         null,
+        null,
+        null,
         null);
   }
 
@@ -49,7 +53,7 @@ class DedoublonnerTest {
       String artiste, String date, String salle, String ville, String source) {
     return new ConcertBrut(
         artiste, date, null, salle, ville, null, null, null, null, source, null, null, null, null,
-        null);
+        null, null, null);
   }
 
   // --- Cas limites ---
@@ -81,6 +85,8 @@ class DedoublonnerTest {
             "ticketmaster",
             "music",
             "Rock",
+            null,
+            null,
             null,
             null,
             null);
@@ -127,6 +133,8 @@ class DedoublonnerTest {
             null,
             "https://example.com",
             "eventim",
+            null,
+            null,
             null,
             null,
             null,

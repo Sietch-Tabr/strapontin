@@ -103,7 +103,8 @@ class EmailTemplatesTest {
   @Test
   void digestConcerts_concertAvecUrl_afficheLienBillets() {
     var lignes =
-        List.of(new LigneConcert("Stromae", "lundi 3 mars 2025", "Bercy", "https://billets.fr/123"));
+        List.of(
+            new LigneConcert("Stromae", "lundi 3 mars 2025", "Bercy", "https://billets.fr/123"));
     String html = EmailTemplates.digestConcerts("1 nouveau concert", lignes, "https://app.fr");
     assertThat(html).contains("Billets →");
     assertThat(html).contains("href=\"https://billets.fr/123\"");

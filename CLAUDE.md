@@ -175,6 +175,7 @@ Détails : [wiki Authentification](https://codeberg.org/Kwaite/strapontin/wiki/A
 ## Dédoublonnage inter-sources
 
 Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein normalisé ≥ 0.85.
+Résolution UUID-first (v2.3.0, ticket #621) : `PersisterConcerts.resoudreIdentitesSources` consulte `salle_sources`/`artiste_sources` avant la réconciliation floue. Absorbe les renommages de salle.
 → Détails : [wiki Architecture](https://codeberg.org/Kwaite/strapontin/wiki/Architecture)
 
 ## UI / Design system (v2.2.0 — Vue SPA)
@@ -194,6 +195,7 @@ Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein n
 
 Migrations Flyway dans `java/web/src/main/resources/db/migration/` — ne jamais modifier à la main.
 `users.id` : type `text` (UUID généré par Java).
+**v2.3.0 (V23)** : `salles.salle_uuid uuid`, tables `artistes`, `salle_sources`, `artiste_sources`, colonnes `salle_uuid`/`artiste_id` sur `concerts`, `user_salles`, `user_artistes`. Migration additive ; colonnes texte transitoires supprimées après backfill (#628).
 Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de-base-de-données)
 
 ## Conventions Java

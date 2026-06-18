@@ -137,8 +137,11 @@ public class SalleService {
       throw new ErreurMetier("Limite de 200 salles atteinte.");
     }
 
-    salleRepository.upsertSalle(salleId, nom);
-    salleRepository.ajouterPourUtilisateur(userId, salleId, tmVenueId);
+    java.util.UUID salleUuid = salleRepository.upsertSalle(salleId, nom);
+    if (tmVenueId != null) {
+      salleRepository.enregistrerSalleSource(salleUuid, "ticketmaster", tmVenueId);
+    }
+    salleRepository.ajouterPourUtilisateur(userId, salleId, tmVenueId, salleUuid);
 
     if (tmVenueId != null) {
       declencherWorkerSalle(tmVenueId);

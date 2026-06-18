@@ -15,4 +15,6 @@ public record ConcertBrut(
     String genre,
     String statut,
     String presaleDebut,
-    String presaleNom) {}
+    String presaleNom,
+    String salleSourceId,
+    String artisteSourceId) {}
