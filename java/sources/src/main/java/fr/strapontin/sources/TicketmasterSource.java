@@ -349,6 +349,15 @@ public class TicketmasterSource {
   }
 
   @SuppressWarnings("unchecked")
+  private static String extraireAttractionIdTM(Map<String, Object> embedded) {
+    List<Map<String, Object>> attractions =
+        embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
+    if (attractions == null || attractions.isEmpty()) return null;
+    Object id = attractions.get(0).get("id");
+    return id != null ? "ticketmaster:" + id : null;
+  }
+
+  @SuppressWarnings("unchecked")
   private static Double[] extrairePrixTM(Map<String, Object> evt) {
     var priceRanges = (List<Map<String, Object>>) evt.get("priceRanges");
     if (priceRanges == null || priceRanges.isEmpty()) return new Double[] {null, null};
@@ -398,6 +407,10 @@ public class TicketmasterSource {
     String ville = cityMap != null ? cityMap.get("name") : null;
     String dept = extraireDept(venue != null ? (String) venue.get("postalCode") : null);
 
+    Object venueIdObj = venue != null ? venue.get("id") : null;
+    String salleSourceId = venueIdObj != null ? "ticketmaster:" + venueIdObj : null;
+    String artisteSourceId = extraireAttractionIdTM(embedded);
+
     Double[] prix = extrairePrixTM(evt);
     String url = (String) evt.get("url");
     Map<String, String> statusMap = (Map<String, String>) dates.get("status");
@@ -441,7 +454,9 @@ public class TicketmasterSource {
         segmentGenre[1],
         statut,
         presaleDebut,
-        presaleNom);
+        presaleNom,
+        salleSourceId,
+        artisteSourceId);
   }
 
   private record ResultatPage(

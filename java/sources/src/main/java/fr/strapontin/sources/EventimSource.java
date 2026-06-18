@@ -143,11 +143,23 @@ public class EventimSource {
 
   /// Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
   ///
-  /// @param produit        produit Eventim sous forme de Map imbriquée
+  /// @param produit         produit Eventim sous forme de Map imbriquée
   /// @param artisteFallback nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
   /// @return concert extrait, ou null si le produit est invalide
-  @SuppressWarnings("unchecked")
   public static ConcertBrut mapProduit(Map<String, Object> produit, String artisteFallback) {
+    return mapProduit(produit, artisteFallback, null);
+  }
+
+  /// Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
+  ///
+  /// @param produit          produit Eventim sous forme de Map imbriquée
+  /// @param artisteFallback  nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
+  /// @param artisteSourceId  identifiant source préfixé de l'artiste (ex. {@code "eventim:12345"}),
+  ///                         null si inconnu (fetch région ou salle)
+  /// @return concert extrait, ou null si le produit est invalide
+  @SuppressWarnings("unchecked")
+  public static ConcertBrut mapProduit(
+      Map<String, Object> produit, String artisteFallback, String artisteSourceId) {
     try {
       var liveEnt = extraireLiveEntertainment(produit);
       String dateStr = liveEnt != null ? (String) liveEnt.get("startDate") : null;
@@ -161,7 +173,7 @@ public class EventimSource {
       @SuppressWarnings("unchecked")
       var location = (Map<String, Object>) liveEnt.get("location");
       return construireConcertEventim(
-          produit, liveEnt, location, artiste, datHeure[0], datHeure[1]);
+          produit, liveEnt, location, artiste, datHeure[0], datHeure[1], artisteSourceId);
     } catch (Exception e) {
       log.warn("erreur parsing produit Eventim", e);
       return null;
@@ -189,6 +201,12 @@ public class EventimSource {
   @SuppressWarnings("unchecked")
   private ResultatPageEventim chargerPageProduits(
       String uri, String artisteFallback, String deptFiltre) {
+    return chargerPageProduits(uri, artisteFallback, deptFiltre, null);
+  }
+
+  @SuppressWarnings("unchecked")
+  private ResultatPageEventim chargerPageProduits(
+      String uri, String artisteFallback, String deptFiltre, String artisteSourceId) {
     try {
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return ResultatPageEventim.VIDE;
@@ -197,7 +215,7 @@ public class EventimSource {
 
       List<ConcertBrut> concerts = new ArrayList<>();
       for (var p : produits) {
-        ConcertBrut c = mapProduit(p, artisteFallback);
+        ConcertBrut c = mapProduit(p, artisteFallback, artisteSourceId);
         if (c != null && (deptFiltre == null || deptFiltre.equals(c.dept()))) concerts.add(c);
       }
       int total =
@@ -237,7 +255,8 @@ public class EventimSource {
       Map<String, Object> location,
       String artiste,
       String date,
-      String heure) {
+      String heure,
+      String artisteSourceId) {
     String salle =
         location != null && location.get("name") != null
             ? (String) location.get("name")
@@ -263,7 +282,7 @@ public class EventimSource {
     String statut = Boolean.FALSE.equals(inStock) ? "presale" : null;
     return new ConcertBrut(
         artiste, date, heure, salle, ville, dept, prixMin, prixMax, url, "eventim", null, null,
-        statut, null, null);
+        statut, null, null, null, artisteSourceId);
   }
 
   @SuppressWarnings("unchecked")
@@ -309,6 +328,7 @@ public class EventimSource {
     DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     List<ConcertBrut> concerts = new ArrayList<>();
     boolean continuer = true;
+    String artisteSourceId = "eventim:" + attractionId;
 
     for (int page = 1; page <= MAX_PAGES && continuer; page++) {
       if (page > 1) continuer = attendreEntrePagesEventim();
@@ -325,7 +345,8 @@ public class EventimSource {
                 .queryParam("page", page)
                 .build()
                 .toUriString();
-        ResultatPageEventim resultat = chargerPageProduits(uri, artisteFallback, null);
+        ResultatPageEventim resultat =
+            chargerPageProduits(uri, artisteFallback, null, artisteSourceId);
         concerts.addAll(resultat.concerts());
         continuer = !resultat.estVide() && concerts.size() < resultat.total();
       }

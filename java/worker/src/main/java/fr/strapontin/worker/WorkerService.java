@@ -454,7 +454,9 @@ public class WorkerService {
                   c.genre(),
                   c.statut(),
                   c.presaleDebut(),
-                  c.presaleNom());
+                  c.presaleNom(),
+                  c.salleSourceId(),
+                  c.artisteSourceId());
             })
         .toList();
   }
