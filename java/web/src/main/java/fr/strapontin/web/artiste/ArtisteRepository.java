@@ -7,6 +7,7 @@ package fr.strapontin.web.artiste;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -93,18 +94,41 @@ class ArtisteRepository {
         0);
   }
 
+  /// Insère ou récupère un artiste dans le référentiel global et retourne son UUID stable.
+  ///
+  /// @param nom      nom affiché
+  /// @param nomNorm  nom normalisé (clé unique)
+  /// @return UUID stable de l'artiste (existant ou nouvellement créé)
+  UUID upsertArtiste(String nom, String nomNorm) {
+    return jdbc.queryForObject(
+        """
+        INSERT INTO artistes (nom, nom_norm)
+        VALUES (:nom, :nomNorm)
+        ON CONFLICT (nom_norm) DO UPDATE SET nom = EXCLUDED.nom
+        RETURNING id
+        """,
+        Map.of("nom", nom, "nomNorm", nomNorm),
+        (rs, _) -> rs.getObject("id", UUID.class));
+  }
+
   /// Insère un artiste dans la liste de suivi.
   ///
   /// @param userId    identifiant de l'utilisateur
   /// @param normalise nom normalisé
   /// @param nom       nom affiché
-  void ajouter(String userId, String normalise, String nom) {
+  /// @param artisteId UUID stable de l'artiste dans le référentiel global
+  void ajouter(String userId, String normalise, String nom, UUID artisteId) {
+    Map<String, Object> params = new java.util.HashMap<>();
+    params.put(CLE_USER_ID, userId);
+    params.put("normalise", normalise);
+    params.put("nom", nom);
+    params.put("artisteId", artisteId != null ? artisteId.toString() : null);
     jdbc.update(
         """
-        INSERT INTO user_artistes (user_id, artiste_normalise, artiste_affiche)
-        VALUES (:userId, :normalise, :nom)
+        INSERT INTO user_artistes (user_id, artiste_normalise, artiste_affiche, artiste_id)
+        VALUES (:userId, :normalise, :nom, CAST(:artisteId AS uuid))
         """,
-        Map.of(CLE_USER_ID, userId, "normalise", normalise, "nom", nom));
+        params);
   }
 
   /// Supprime un artiste de la liste de suivi.

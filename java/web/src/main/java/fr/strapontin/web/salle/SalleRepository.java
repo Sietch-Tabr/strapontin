@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -98,22 +99,43 @@ class SalleRepository {
         0);
   }
 
-  /// Insère ou met à jour une salle dans le référentiel.
+  /// Insère ou met à jour une salle dans le référentiel et retourne son UUID stable.
   ///
   /// @param salleId identifiant normalisé (clé naturelle)
   /// @param nom     nom affiché
-  void upsertSalle(String salleId, String nom) {
+  /// @return UUID stable de la salle (existant ou nouvellement créé)
+  UUID upsertSalle(String salleId, String nom) {
     Map<String, Object> params = new HashMap<>();
     params.put("id", salleId);
     params.put("nom", nom);
     params.put("nomNorm", salleId);
-    jdbc.update(
+    return jdbc.queryForObject(
         """
         INSERT INTO salles (id, nom, nom_norm)
         VALUES (:id, :nom, :nomNorm)
         ON CONFLICT (id) DO UPDATE SET nom = EXCLUDED.nom
+        RETURNING salle_uuid
         """,
-        params);
+        params,
+        (rs, _) -> rs.getObject("salle_uuid", UUID.class));
+  }
+
+  /// Enregistre une correspondance source externe → salle interne.
+  ///
+  /// @param salleUuid           UUID stable de la salle
+  /// @param source              nom de la source (ex. {@code "ticketmaster"})
+  /// @param identifiantExterne  identifiant dans la source externe
+  void enregistrerSalleSource(UUID salleUuid, String source, String identifiantExterne) {
+    jdbc.update(
+        """
+        INSERT INTO salle_sources (salle_id, source, identifiant_externe)
+        VALUES (CAST(:salleUuid AS uuid), :source, :identifiantExterne)
+        ON CONFLICT DO NOTHING
+        """,
+        Map.of(
+            "salleUuid", salleUuid.toString(),
+            "source", source,
+            "identifiantExterne", identifiantExterne));
   }
 
   /// Lie une salle à un utilisateur.
@@ -121,15 +143,17 @@ class SalleRepository {
   /// @param userId     identifiant de l'utilisateur
   /// @param salleId    identifiant normalisé de la salle
   /// @param tmVenueId  identifiant Ticketmaster (nullable)
-  void ajouterPourUtilisateur(String userId, String salleId, String tmVenueId) {
+  /// @param salleUuid  UUID stable de la salle
+  void ajouterPourUtilisateur(String userId, String salleId, String tmVenueId, UUID salleUuid) {
     Map<String, Object> params = new HashMap<>();
     params.put(CLE_USER_ID, userId);
     params.put("salleId", salleId);
     params.put("tmVenueId", tmVenueId);
+    params.put("salleUuid", salleUuid != null ? salleUuid.toString() : null);
     jdbc.update(
         """
-        INSERT INTO user_salles (user_id, salle_id, tm_venue_id)
-        VALUES (:userId, :salleId, :tmVenueId)
+        INSERT INTO user_salles (user_id, salle_id, tm_venue_id, salle_uuid)
+        VALUES (:userId, :salleId, :tmVenueId, CAST(:salleUuid AS uuid))
         """,
         params);
   }

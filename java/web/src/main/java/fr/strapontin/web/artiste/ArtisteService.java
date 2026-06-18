@@ -129,7 +129,8 @@ public class ArtisteService {
       throw new ErreurMetier("Limite de 500 artistes atteinte.");
     }
 
-    artisteRepository.ajouter(userId, normalise, nom);
+    java.util.UUID artisteId = artisteRepository.upsertArtiste(nom, normalise);
+    artisteRepository.ajouter(userId, normalise, nom, artisteId);
     declencherWorkerArtiste();
   }
 
