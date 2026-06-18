@@ -153,7 +153,8 @@ public class EventimSource {
   /// Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
   ///
   /// @param produit          produit Eventim sous forme de Map imbriquée
-  /// @param artisteFallback  nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
+  /// @param artisteFallback  nom de l'artiste cherché (pour fetchArtiste uniquement), peut être
+  // null
   /// @param artisteSourceId  identifiant source préfixé de l'artiste (ex. {@code "eventim:12345"}),
   ///                         null si inconnu (fetch région ou salle)
   /// @return concert extrait, ou null si le produit est invalide
@@ -281,8 +282,23 @@ public class EventimSource {
     Boolean inStock = produit.get("inStock") instanceof Boolean b ? b : null;
     String statut = Boolean.FALSE.equals(inStock) ? "presale" : null;
     return new ConcertBrut(
-        artiste, date, heure, salle, ville, dept, prixMin, prixMax, url, "eventim", null, null,
-        statut, null, null, null, artisteSourceId);
+        artiste,
+        date,
+        heure,
+        salle,
+        ville,
+        dept,
+        prixMin,
+        prixMax,
+        url,
+        "eventim",
+        null,
+        null,
+        statut,
+        null,
+        null,
+        null,
+        artisteSourceId);
   }
 
   @SuppressWarnings("unchecked")

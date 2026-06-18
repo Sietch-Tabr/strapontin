@@ -115,16 +115,14 @@ public class RecalculerMatchesService {
             Map.of(CLE_USER_ID, userId),
             (rs, _) ->
                 new ArtisteRef(
-                    rs.getString("artiste_normalise"),
-                    rs.getObject("artiste_id", UUID.class)));
+                    rs.getString("artiste_normalise"), rs.getObject("artiste_id", UUID.class)));
 
     List<SalleRef> salleRefs =
         jdbc.query(
             "SELECT regexp_replace(lower(salle_id), '[^a-z0-9]', '', 'g') AS cle, salle_uuid"
                 + " FROM user_salles WHERE user_id = :userId",
             Map.of(CLE_USER_ID, userId),
-            (rs, _) ->
-                new SalleRef(rs.getString("cle"), rs.getObject("salle_uuid", UUID.class)));
+            (rs, _) -> new SalleRef(rs.getString("cle"), rs.getObject("salle_uuid", UUID.class)));
 
     if (artisteRefs.isEmpty() && salleRefs.isEmpty()) return;
 
@@ -132,8 +130,7 @@ public class RecalculerMatchesService {
     List<UUID> artisteIds =
         artisteRefs.stream().map(ArtisteRef::id).filter(id -> id != null).toList();
     List<String> salleIds = salleRefs.stream().map(SalleRef::cle).toList();
-    List<UUID> salleUuids =
-        salleRefs.stream().map(SalleRef::uuid).filter(u -> u != null).toList();
+    List<UUID> salleUuids = salleRefs.stream().map(SalleRef::uuid).filter(u -> u != null).toList();
 
     List<String> departements = obtenirDepartementsUser(userId);
     Set<String> concertIds = new LinkedHashSet<>();

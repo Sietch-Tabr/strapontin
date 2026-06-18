@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -583,13 +582,27 @@ public class PersisterConcerts {
                   c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
               if (salleUuid == null && artisteId == null) return c;
               return new ValeurConcert(
-                  c.artiste(), c.artisteNorm(), c.date(), c.heure(),
-                  c.salle(), c.salleNorm(), c.ville(), c.dept(),
-                  c.prixMin(), c.prixMax(), c.url(), c.source(),
-                  c.classification(), c.genre(), c.statut(),
-                  c.presaleDebut(), c.presaleNom(),
-                  c.salleSourceId(), c.artisteSourceId(),
-                  salleUuid, artisteId);
+                  c.artiste(),
+                  c.artisteNorm(),
+                  c.date(),
+                  c.heure(),
+                  c.salle(),
+                  c.salleNorm(),
+                  c.ville(),
+                  c.dept(),
+                  c.prixMin(),
+                  c.prixMax(),
+                  c.url(),
+                  c.source(),
+                  c.classification(),
+                  c.genre(),
+                  c.statut(),
+                  c.presaleDebut(),
+                  c.presaleNom(),
+                  c.salleSourceId(),
+                  c.artisteSourceId(),
+                  salleUuid,
+                  artisteId);
             })
         .toList();
   }
@@ -754,8 +767,7 @@ public class PersisterConcerts {
 
       List<ValeurConcert> valeurs =
           deduplicerLotReconcilie(
-              reconcilierArtistes(
-                  reconcilierSalles(resoudreIdentitesSources(valeursBrutes))));
+              reconcilierArtistes(reconcilierSalles(resoudreIdentitesSources(valeursBrutes))));
 
       ResultatPersistance resultatLot = upsertLot(valeurs);
       totalInserts += resultatLot.nbInseres();

@@ -240,7 +240,8 @@ class RecalculerMatchesServiceIntegrationTest {
 
     service.recalculerMatches(List.of("u20"));
 
-    assertEquals(1, compterMatches("u20"), "match attendu via salle_uuid même si salle_cle différent");
+    assertEquals(
+        1, compterMatches("u20"), "match attendu via salle_uuid même si salle_cle différent");
   }
 
   @Test
@@ -251,8 +252,7 @@ class RecalculerMatchesServiceIntegrationTest {
     UUID salleUuid = obtenirSalleUuid("paris la defense arena");
     insererUserSalleAvecUuid("u21", "paris la defense arena", salleUuid);
     // Concert créé après renommage : salle_norm différente de celle inscrite par l'user
-    insererConcertAvecSalleUuid(
-        "Dua Lipa", "dua lipa", DATE_FUTURE, "plenitude arena", salleUuid);
+    insererConcertAvecSalleUuid("Dua Lipa", "dua lipa", DATE_FUTURE, "plenitude arena", salleUuid);
 
     service.recalculerMatches(List.of("u21"));
 

@@ -237,7 +237,8 @@ class PersisterConcertsIntegrationTest {
   void persisterConcerts_salleSourceIdConnu_reutiliseSalleUuid() {
     // Pré-condition : salle déjà en base avec son UUID source TM
     jdbc.update(
-        "INSERT INTO salles (id, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor arena')",
+        "INSERT INTO salles (id, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor"
+            + " arena')",
         Map.of());
     java.util.UUID salleUuid =
         jdbc.queryForObject(
