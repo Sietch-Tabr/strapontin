@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.util.UUID;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
@@ -43,7 +45,7 @@ class ArtisteServiceTest {
     when(artisteRepository.existePourUtilisateur("u1", "radiohead")).thenReturn(true);
 
     assertThrows(RessourceDejaExistante.class, () -> service.ajouter("u1", "Radiohead"));
-    verify(artisteRepository, never()).ajouter(anyString(), anyString(), anyString());
+    verify(artisteRepository, never()).ajouter(anyString(), anyString(), anyString(), any());
   }
 
   @Test
@@ -52,17 +54,19 @@ class ArtisteServiceTest {
     when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(500);
 
     assertThrows(ErreurMetier.class, () -> service.ajouter("u1", "Radiohead"));
-    verify(artisteRepository, never()).ajouter(anyString(), anyString(), anyString());
+    verify(artisteRepository, never()).ajouter(anyString(), anyString(), anyString(), any());
   }
 
   @Test
   void ajouter_nomValide_insereDansLaBase() {
+    UUID artisteId = UUID.randomUUID();
     when(artisteRepository.existePourUtilisateur("u1", "radiohead")).thenReturn(false);
     when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(42);
+    when(artisteRepository.upsertArtiste("Radiohead", "radiohead")).thenReturn(artisteId);
 
     service.ajouter("u1", "Radiohead");
 
-    verify(artisteRepository).ajouter("u1", "radiohead", "Radiohead");
+    verify(artisteRepository).ajouter("u1", "radiohead", "Radiohead", artisteId);
   }
 
   @Test

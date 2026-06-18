@@ -22,7 +22,7 @@ class PersisterConcertsTest {
   private static ConcertBrut concert(String artiste, String date, String salle, String source) {
     return new ConcertBrut(
         artiste, date, "20:00", salle, "Paris", "75", null, null, null, source, "music", "Pop",
-        null, null, null);
+        null, null, null, null, null);
   }
 
   private static ValeurConcert valeur(
@@ -40,6 +40,10 @@ class PersisterConcertsTest {
         null,
         null,
         "ticketmaster",
+        null,
+        null,
+        null,
+        null,
         null,
         null,
         null,

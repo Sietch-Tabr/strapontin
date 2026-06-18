@@ -10,6 +10,7 @@ import fr.strapontin.sources.TicketmasterSource;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,6 +76,30 @@ class RecalculerMatchesServiceIntegrationTest {
     jdbc.update(
         "INSERT INTO user_salles (user_id, salle_id) VALUES (:userId, :salleId)",
         Map.of("userId", userId, "salleId", salleId));
+  }
+
+  private void insererUserSalleAvecUuid(String userId, String salleId, UUID salleUuid) {
+    jdbc.update(
+        "INSERT INTO user_salles (user_id, salle_id, salle_uuid)"
+            + " VALUES (:userId, :salleId, CAST(:salleUuid AS uuid))",
+        Map.of("userId", userId, "salleId", salleId, "salleUuid", salleUuid.toString()));
+  }
+
+  private void insererConcertAvecSalleUuid(
+      String artiste, String artisteNorm, String date, String salleNorm, UUID salleUuid) {
+    jdbc.update(
+        """
+        INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source, salle_uuid)
+        VALUES (:artiste, :norm, :date::date, :salle, :salleNorm,
+                CAST('ticketmaster' AS source_concert), CAST(:salleUuid AS uuid))
+        """,
+        Map.of(
+            "artiste", artiste,
+            "norm", artisteNorm,
+            "date", date,
+            "salle", salleNorm,
+            "salleNorm", salleNorm,
+            "salleUuid", salleUuid.toString()));
   }
 
   private void insererConcert(String artiste, String artisteNorm, String date, String salleNorm) {
@@ -194,6 +219,44 @@ class RecalculerMatchesServiceIntegrationTest {
     assertEquals(1, compterMatches("u10"), "u10 doit avoir son match");
     assertEquals(1, compterMatches("u11"), "u11 doit avoir son match");
     assertEquals(1, compterMatches("u12"), "u12 doit avoir son match");
+  }
+
+  private UUID obtenirSalleUuid(String salleId) {
+    return jdbc.queryForObject(
+        "SELECT salle_uuid FROM salles WHERE id = :id",
+        Map.of("id", salleId),
+        (rs, _) -> rs.getObject("salle_uuid", UUID.class));
+  }
+
+  @Test
+  void recalculerMatches_salleAvecUuid_matcheViaSalleUuid() {
+    // ticket #621 — correspondance via salle_uuid même sans salle_cle dans concerts
+    insererUser("u20");
+    insererSalle("plenitude arena");
+    UUID salleUuid = obtenirSalleUuid("plenitude arena");
+    insererUserSalleAvecUuid("u20", "plenitude arena", salleUuid);
+    insererConcertAvecSalleUuid(
+        "Coldplay", "coldplay", DATE_FUTURE, "plenitude arena renomme", salleUuid);
+
+    service.recalculerMatches(List.of("u20"));
+
+    assertEquals(1, compterMatches("u20"), "match attendu via salle_uuid même si salle_cle différent");
+  }
+
+  @Test
+  void recalculerMatches_salleRenommee_matcheViaUuidApresRenommage() {
+    // Scénario Plenitude Arena : avant = "paris la defense arena", après = "plenitude arena"
+    insererUser("u21");
+    insererSalle("paris la defense arena");
+    UUID salleUuid = obtenirSalleUuid("paris la defense arena");
+    insererUserSalleAvecUuid("u21", "paris la defense arena", salleUuid);
+    // Concert créé après renommage : salle_norm différente de celle inscrite par l'user
+    insererConcertAvecSalleUuid(
+        "Dua Lipa", "dua lipa", DATE_FUTURE, "plenitude arena", salleUuid);
+
+    service.recalculerMatches(List.of("u21"));
+
+    assertEquals(1, compterMatches("u21"), "match attendu via salle_uuid après renommage de salle");
   }
 
   @Test
