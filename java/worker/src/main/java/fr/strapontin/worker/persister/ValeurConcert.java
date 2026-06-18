@@ -7,11 +7,19 @@ package fr.strapontin.worker.persister;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 /// Valeurs normalisées d'un concert prêtes pour l'upsert en base.
 ///
 /// La colonne `disponible` est exclue : elle est `GENERATED ALWAYS AS`
 /// dans le schéma PostgreSQL et ne doit jamais être insérée ni mise à jour.
+///
+/// `salleSourceId` et `artisteSourceId` portent les identifiants externes préfixés
+/// (ex. {@code "tm:rZFSnyZdFvA"}) utilisés par {@code PersisterConcerts} pour la
+/// résolution UUID-first via {@code salle_sources} / {@code artiste_sources}.
+///
+/// `salleUuid` et `artisteId` sont remplis par {@code resoudreIdentitesSources}
+/// après la résolution ; null si aucune correspondance trouvée.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -32,4 +40,8 @@ public record ValeurConcert(
     String genre,
     String statut,
     String presaleDebut,
-    String presaleNom) {}
+    String presaleNom,
+    String salleSourceId,
+    String artisteSourceId,
+    UUID salleUuid,
+    UUID artisteId) {}
