@@ -47,6 +47,10 @@ class PersisterConcertsIntegrationTest {
   void nettoyerBase() {
     jdbc.update("DELETE FROM user_matches", Map.of());
     jdbc.update("DELETE FROM concerts", Map.of());
+    jdbc.update("DELETE FROM salle_sources", Map.of());
+    jdbc.update("DELETE FROM artiste_sources", Map.of());
+    jdbc.update("DELETE FROM salles", Map.of());
+    jdbc.update("DELETE FROM artistes", Map.of());
   }
 
   private static ConcertBrut concert(String artiste, String date, String salle, String source) {
@@ -300,6 +304,76 @@ class PersisterConcertsIntegrationTest {
             Map.of("uuid", salleUuid.toString()),
             String.class);
     assertEquals("Plenitude Arena", nomMisAJour, "le nom de la salle doit être mis à jour");
+  }
+
+  @Test
+  void persisterConcerts_reconciliationSalle_conserveSalleUuid() {
+    // ticket #632 — le salleUuid ne doit pas être effacé lors de la réconciliation salle
+    jdbc.update(
+        "INSERT INTO salles (id, nom, nom_norm) VALUES ('zenith paris', 'Zénith Paris', 'zenith"
+            + " paris')",
+        Map.of());
+    java.util.UUID salleUuid =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM salles WHERE id = 'zenith paris'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpZenith')",
+        Map.of("uuid", salleUuid.toString()));
+
+    // Premier fetch — UUID résolu via salle_sources
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Mika", "2026-10-10", "Zénith Paris", "ticketmaster:KovZpZenith", null)));
+
+    // Deuxième fetch — variante mineure de nom → réconciliation salle déclenchée
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Mika", "2026-10-10", "Zenith de Paris", "ticketmaster:KovZpZenith", null)));
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(1L, count, "la réconciliation ne doit pas créer un doublon");
+
+    java.util.UUID uuidEnBase =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'mika'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+    assertEquals(
+        salleUuid, uuidEnBase, "le salle_uuid ne doit pas être perdu lors de la réconciliation");
+  }
+
+  @Test
+  void persisterConcerts_salleSourceIdInconnuDeSalleSources_upsertEtAttribueUuid() {
+    // ticket #633 — une salle absente de salle_sources doit être upsertée automatiquement
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Stromae", "2026-11-20", "L'Empreinte", "ticketmaster:KovZpEmpreinte", null)));
+
+    Long nbSalles =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM salles WHERE id = 'l empreinte'", Map.of(), Long.class);
+    assertEquals(1L, nbSalles, "la salle doit être créée dans salles");
+
+    Long nbSources =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM salle_sources"
+                + " WHERE source = 'ticketmaster' AND identifiant_externe = 'KovZpEmpreinte'",
+            Map.of(),
+            Long.class);
+    assertEquals(1L, nbSources, "le mapping source doit être créé dans salle_sources");
+
+    java.util.UUID uuidEnBase =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'stromae'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+    assertNotNull(uuidEnBase, "concerts.salle_uuid doit être rempli après upsert");
   }
 
   @Test

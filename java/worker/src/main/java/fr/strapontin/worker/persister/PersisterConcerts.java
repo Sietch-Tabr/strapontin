@@ -292,8 +292,8 @@ public class PersisterConcerts {
         c.presaleNom(),
         c.salleSourceId(),
         c.artisteSourceId(),
-        null,
-        null);
+        c.salleUuid(),
+        c.artisteId());
   }
 
   private List<ValeurConcert> reconcilierContreBase(
@@ -333,8 +333,8 @@ public class PersisterConcerts {
             concert.presaleNom(),
             concert.salleSourceId(),
             concert.artisteSourceId(),
-            null,
-            null);
+            concert.salleUuid(),
+            concert.artisteId());
       }
     }
     return concert;
@@ -437,8 +437,8 @@ public class PersisterConcerts {
         c.presaleNom(),
         c.salleSourceId(),
         c.artisteSourceId(),
-        null,
-        null);
+        c.salleUuid(),
+        c.artisteId());
   }
 
   private ValeurConcert reconcilierUnArtiste(
@@ -473,8 +473,8 @@ public class PersisterConcerts {
             concert.presaleNom(),
             concert.salleSourceId(),
             concert.artisteSourceId(),
-            null,
-            null);
+            concert.salleUuid(),
+            concert.artisteId());
       }
     }
     return concert;
@@ -563,7 +563,11 @@ public class PersisterConcerts {
   /// {@code salle_sources} et {@code artiste_sources} pour trouver l'UUID stable correspondant.
   /// En cas de renommage (même ID source, nom différent), met à jour {@code salles.nom}.
   ///
-  /// <p>Les concerts sans correspondance conservent {@code salleUuid=null}/{@code artisteId=null} ;
+  /// <p>Pour les salles TM dont le {@code salleSourceId} est absent de {@code salle_sources},
+  /// effectue un upsert dans {@code salles} et {@code salle_sources} afin d'attribuer un UUID
+  /// stable dès le premier fetch, indépendamment du suivi utilisateur.
+  ///
+  /// <p>Les concerts sans {@code salleSourceId} conservent {@code salleUuid=null} ;
   /// la réconciliation textuelle prend ensuite le relais.
   ///
   /// @param concerts valeurs normalisées avant upsert
@@ -572,6 +576,13 @@ public class PersisterConcerts {
     Map<String, UUID> cachesSalles = resoudreUuidsParSource(concerts, "salle");
     Map<String, UUID> cachesArtistes = resoudreUuidsParSource(concerts, "artiste");
     absorberRenommagesSalles(concerts, cachesSalles);
+
+    for (ValeurConcert c : concerts) {
+      if (c.salleSourceId() != null && cachesSalles.get(c.salleSourceId()) == null) {
+        UUID uuid = upsertSalleSource(c);
+        if (uuid != null) cachesSalles.put(c.salleSourceId(), uuid);
+      }
+    }
 
     return concerts.stream()
         .map(
@@ -642,6 +653,47 @@ public class PersisterConcerts {
       }
     }
     return cache;
+  }
+
+  /// Upsert une salle et son mapping source dans {@code salles} et {@code salle_sources}.
+  ///
+  /// <p>Appelée quand un {@code salleSourceId} n'est pas trouvé dans {@code salle_sources}.
+  /// Crée la salle dans {@code salles} si elle n'existe pas encore (ON CONFLICT DO NOTHING),
+  /// puis insère le mapping source (ON CONFLICT DO NOTHING).
+  ///
+  /// @param c le concert portant le {@code salleSourceId} à résoudre
+  /// @return l'UUID de la salle créée ou existante, ou {@code null} si le {@code salleSourceId}
+  ///     est mal formé
+  private UUID upsertSalleSource(ValeurConcert c) {
+    int sep = c.salleSourceId().indexOf(':');
+    if (sep <= 0) return null;
+    String source = c.salleSourceId().substring(0, sep);
+    String identifiant = c.salleSourceId().substring(sep + 1);
+
+    String id = Normalisation.normaliserTexte(c.salle());
+    jdbc.update(
+        "INSERT INTO salles (id, nom, nom_norm) VALUES (:id, :nom, :nomNorm)"
+            + " ON CONFLICT (id) DO NOTHING",
+        Map.of("id", id, "nom", c.salle(), "nomNorm", id));
+
+    UUID salleUuid =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM salles WHERE id = :id", Map.of("id", id), UUID.class);
+    if (salleUuid == null) return null;
+
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:uuid AS uuid), :source, :identifiant)"
+            + " ON CONFLICT DO NOTHING",
+        Map.of("uuid", salleUuid.toString(), "source", source, "identifiant", identifiant));
+
+    log.info(
+        "salle upsert source salle={} source={} identifiant={} uuid={}",
+        c.salle(),
+        source,
+        identifiant,
+        salleUuid);
+    return salleUuid;
   }
 
   private void absorberRenommagesSalles(

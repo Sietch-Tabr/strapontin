@@ -175,7 +175,7 @@ Détails : [wiki Authentification](https://codeberg.org/Kwaite/strapontin/wiki/A
 ## Dédoublonnage inter-sources
 
 Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein normalisé ≥ 0.85.
-Résolution UUID-first (v2.3.0, ticket #621) : `PersisterConcerts.resoudreIdentitesSources` consulte `salle_sources`/`artiste_sources` avant la réconciliation floue. Absorbe les renommages de salle.
+Résolution UUID-first (v2.3.0, ticket #621) : `PersisterConcerts.resoudreIdentitesSources` consulte `salle_sources`/`artiste_sources` avant la réconciliation floue. Absorbe les renommages de salle. Pour les salles TM absentes de `salle_sources`, upsert automatique dans `salles` + `salle_sources` (ticket #633). Les passes de réconciliation propagent `salleUuid`/`artisteId` (ticket #632).
 → Détails : [wiki Architecture](https://codeberg.org/Kwaite/strapontin/wiki/Architecture)
 
 ## UI / Design system (v2.2.0 — Vue SPA)
