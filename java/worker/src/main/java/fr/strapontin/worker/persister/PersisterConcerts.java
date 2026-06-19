@@ -162,7 +162,11 @@ public class PersisterConcerts {
   /// @return `true` si les artistes sont considérés identiques
   public static boolean estDoublonArtiste(String a, String b) {
     return estDoublonTexte(
-        a, b, SEUIL_SIMILARITE_ARTISTE, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE);
+        a,
+        b,
+        SEUIL_SIMILARITE_ARTISTE,
+        LONGUEUR_MIN_CONTAINMENT_ARTISTE,
+        RATIO_MIN_CONTAINMENT_ARTISTE);
   }
 
   private static int scoreArtisteSalle(String artiste, String salle) {
