@@ -1272,14 +1272,51 @@ fieldset.notif-grille {
 }
 .source-carte-entete {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: baseline;
   gap: 0.5rem;
   flex-wrap: wrap;
+  margin-bottom: 0.25rem;
 }
 .source-nom {
   font-weight: 600;
   font-size: 0.9rem;
+}
+.source-vue-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+.source-vue-entete .param-label {
+  margin: 0;
+}
+.source-vue-toggle {
+  display: flex;
+  gap: 0.375rem;
+}
+.badge-compteur {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 0.75rem;
+  font-size: 0.7rem;
+  padding: 0.05rem 0.4rem;
+  margin-left: 0.25rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.source-recherche {
+  width: 100%;
+  max-width: 22rem;
+  margin-bottom: 0.75rem;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
 }
 .badge-source {
   font-size: 0.7rem;

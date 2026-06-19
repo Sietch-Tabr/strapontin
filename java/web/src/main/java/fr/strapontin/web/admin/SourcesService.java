@@ -45,11 +45,14 @@ public class SourcesService {
     this.restClient = restClient;
   }
 
-  /// Retourne les statuts agrégés de toutes les sources et la liste des salles.
+  /// Retourne les statuts agrégés de toutes les sources et les deux listes de salles.
   ///
-  /// @return map {@code {sources: List<StatutSource>, salles: List<SalleSourceAdmin>}}
+  /// @return map {@code {sources, salles (sans TM), sallesDigitick (avec slug configuré)}}
   public Map<String, Object> lireSources() {
-    return Map.of("sources", construireSources(), "salles", listerSallesAvecSources());
+    return Map.of(
+        "sources", construireSources(),
+        "salles", listerSallesAvecSources(),
+        "sallesDigitick", listerSallesAvecDigitick());
   }
 
   /// Retourne le quota TM et l'état du quota pour réutilisation dans d'autres endpoints.
@@ -131,15 +134,9 @@ public class SourcesService {
     List<StatutSource> sources = new ArrayList<>();
     sources.add(
         new StatutSource(
-            "ticketmaster",
-            "Ticketmaster Discovery v2",
-            "concerts",
-            quotaTM,
-            etatQuota,
-            dernierFetch,
-            null));
+            "ticketmaster", "Ticketmaster", "concerts", quotaTM, etatQuota, dernierFetch, null));
     sources.add(
-        new StatutSource("eventim", "Eventim France", "concerts", null, null, dernierFetch, null));
+        new StatutSource("eventim", "Eventim", "concerts", null, null, dernierFetch, null));
     sources.add(new StatutSource("deezer", "Deezer", "metadonnees", null, null, null, null));
     sources.add(new StatutSource("digitick", "Digitick", "concerts", null, null, null, nbDigitick));
     return sources;
@@ -194,16 +191,12 @@ public class SourcesService {
     }
   }
 
-  private List<SalleSourceAdmin> listerSallesAvecSources() {
+  private List<SalleSourceAdmin> listerSallesAvecDigitick() {
     return jdbc.query(
         """
-        SELECT s.salle_uuid,
-               s.nom,
-               MAX(CASE WHEN ss.source = 'ticketmaster' THEN ss.identifiant_externe END) AS tm_venue_id,
-               MAX(CASE WHEN ss.source = 'digitick'     THEN ss.identifiant_externe END) AS digitick_slug
+        SELECT s.salle_uuid, s.nom, ss.identifiant_externe AS digitick_slug
         FROM salles s
-        LEFT JOIN salle_sources ss ON ss.salle_id = s.salle_uuid
-        GROUP BY s.salle_uuid, s.nom
+        JOIN salle_sources ss ON ss.salle_id = s.salle_uuid AND ss.source = 'digitick'
         ORDER BY lower(s.nom)
         """,
         Map.of(),
@@ -211,7 +204,26 @@ public class SourcesService {
             new SalleSourceAdmin(
                 rs.getObject("salle_uuid", UUID.class),
                 rs.getString("nom"),
-                rs.getString("tm_venue_id"),
+                rs.getString("digitick_slug")));
+  }
+
+  private List<SalleSourceAdmin> listerSallesAvecSources() {
+    return jdbc.query(
+        """
+        SELECT s.salle_uuid,
+               s.nom,
+               MAX(CASE WHEN ss.source = 'digitick' THEN ss.identifiant_externe END) AS digitick_slug
+        FROM salles s
+        LEFT JOIN salle_sources ss ON ss.salle_id = s.salle_uuid
+        GROUP BY s.salle_uuid, s.nom
+        HAVING MAX(CASE WHEN ss.source = 'ticketmaster' THEN ss.identifiant_externe END) IS NULL
+        ORDER BY lower(s.nom)
+        """,
+        Map.of(),
+        (rs, _) ->
+            new SalleSourceAdmin(
+                rs.getObject("salle_uuid", UUID.class),
+                rs.getString("nom"),
                 rs.getString("digitick_slug")));
   }
 }

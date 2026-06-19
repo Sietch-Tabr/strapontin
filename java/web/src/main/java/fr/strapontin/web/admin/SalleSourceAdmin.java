@@ -6,12 +6,11 @@ package fr.strapontin.web.admin;
 
 import java.util.UUID;
 
-/// Salle avec ses identifiants sources pour l'onglet admin Sources.
+/// Salle sans correspondance Ticketmaster, pour configuration du slug Digitick.
 ///
-/// @param salleUuid   UUID stable de la salle
-/// @param nom         nom affiché
-/// @param tmVenueId   identifiant Ticketmaster (null si aucun)
+/// @param salleUuid    UUID stable de la salle
+/// @param nom          nom affiché
 /// @param digitickSlug slug Digitick (null si non configuré)
 /// @since 2.3.0
 /// @author Kwaite
-public record SalleSourceAdmin(UUID salleUuid, String nom, String tmVenueId, String digitickSlug) {}
+public record SalleSourceAdmin(UUID salleUuid, String nom, String digitickSlug) {}

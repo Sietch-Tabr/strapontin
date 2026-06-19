@@ -8,7 +8,9 @@
         <div v-for="source in sources" :key="source.id" class="source-carte">
           <div class="source-carte-entete">
             <span class="source-nom">{{ source.nom }}</span>
-            <span class="badge-source" :class="'badge-source-' + source.type">{{ source.type === 'concerts' ? 'Concerts' : 'Métadonnées' }}</span>
+            <span class="badge-source" :class="'badge-source-' + source.type">
+              {{ source.type === 'concerts' ? 'Concerts' : 'Métadonnées' }}
+            </span>
           </div>
 
           <template v-if="source.id === 'ticketmaster'">
@@ -73,75 +75,96 @@
     </div>
 
     <div class="param-bloc">
-      <h3 class="param-label">Configuration par salle</h3>
-      <p class="param-aide">
-        Le slug Digitick est dérivé automatiquement du nom de la salle (minuscules, sans accents). Corrigez-le manuellement si nécessaire.
-      </p>
-      <div v-if="salles.length" class="table-wrapper">
-        <table id="table-sources-salles" aria-label="Sources par salle">
-          <thead>
-            <tr>
-              <th>Salle</th>
-              <th>VenueId TM</th>
-              <th>Slug Digitick</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="salle in salles" :key="salle.salleUuid">
-              <td class="source-salle-nom">{{ salle.nom }}</td>
-              <td class="source-id-lecture">
-                <code v-if="salle.tmVenueId">{{ salle.tmVenueId }}</code>
-                <span v-else class="etat-vide-texte">—</span>
-              </td>
-              <td>
-                <div class="source-slug-inline">
-                  <input
-                    v-model="slugsEdites[salle.salleUuid]"
-                    type="text"
-                    class="source-slug-input"
-                    :placeholder="slugDeduit(salle.nom)"
-                    :aria-label="'Slug Digitick pour ' + salle.nom"
-                    @keydown.enter="sauvegarderSlug(salle)"
-                  />
-                  <span
-                    v-if="statutTester[salle.salleUuid]"
-                    class="source-test-statut"
-                    :class="statutTester[salle.salleUuid] === 'ok' ? 'source-test-ok' : 'source-test-ko'"
-                    aria-live="polite"
-                  >
-                    {{ statutTester[salle.salleUuid] === 'ok' ? '200 ✓' : '404 ✗' }}
-                  </span>
-                </div>
-              </td>
-              <td class="source-actions">
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  :disabled="enCours[salle.salleUuid + ':slug']"
-                  @click="sauvegarderSlug(salle)"
-                  :aria-label="'Enregistrer le slug pour ' + salle.nom"
-                >Enregistrer</button>
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  :disabled="enCours[salle.salleUuid + ':test'] || !slugCourant(salle)"
-                  @click="testerSlug(salle)"
-                  :aria-label="'Tester le slug Digitick de ' + salle.nom"
-                >Tester</button>
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  :disabled="enCours[salle.salleUuid + ':fetch'] || !salle.tmVenueId"
-                  @click="fetchSalle(salle)"
-                  :aria-label="'Déclencher un fetch pour ' + salle.nom"
-                >Fetch</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="source-vue-entete">
+        <h3 class="param-label">Salles</h3>
+        <div class="source-vue-toggle" role="group" aria-label="Vue des salles">
+          <button
+            type="button"
+            class="btn btn-sm"
+            :class="vueDigitick ? 'btn-secondary' : 'btn-primary'"
+            @click="vueDigitick = false"
+          >Sans Ticketmaster</button>
+          <button
+            type="button"
+            class="btn btn-sm"
+            :class="vueDigitick ? 'btn-primary' : 'btn-secondary'"
+            @click="vueDigitick = true"
+          >Avec Digitick <span v-if="sallesDigitick.length" class="badge-compteur">{{ sallesDigitick.length }}</span></button>
+        </div>
       </div>
-      <p v-else class="etat-vide-texte">Aucune salle enregistrée dans le référentiel.</p>
+      <p class="param-aide">
+        <template v-if="!vueDigitick">Salles absentes de Ticketmaster — configurez leur slug Digitick et vérifiez l'URL.</template>
+        <template v-else>Salles avec un slug Digitick configuré. Collez une URL Digitick pour extraire le slug automatiquement.</template>
+      </p>
+      <div v-if="listeCourante.length">
+        <input
+          v-model="recherche"
+          type="search"
+          class="source-recherche"
+          placeholder="Rechercher une salle…"
+          aria-label="Rechercher une salle"
+        />
+        <div class="table-wrapper">
+          <table id="table-sources-salles" :aria-label="vueDigitick ? 'Salles avec Digitick' : 'Salles sans Ticketmaster'">
+            <thead>
+              <tr>
+                <th>Salle</th>
+                <th>Slug Digitick</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="salle in sallesFiltrees" :key="salle.salleUuid">
+                <td class="source-salle-nom">{{ salle.nom }}</td>
+                <td>
+                  <div class="source-slug-inline">
+                    <input
+                      :value="slugsEdites[salle.salleUuid]"
+                      type="text"
+                      class="source-slug-input"
+                      :placeholder="slugDeduit(salle.nom)"
+                      :aria-label="'Slug Digitick pour ' + salle.nom"
+                      @input="mettreAJourSlug(salle, $event.target.value)"
+                      @keydown.enter="sauvegarderSlug(salle)"
+                    />
+                    <span
+                      v-if="statutTester[salle.salleUuid]"
+                      class="source-test-statut"
+                      :class="statutTester[salle.salleUuid] === 'ok' ? 'source-test-ok' : 'source-test-ko'"
+                      aria-live="polite"
+                    >
+                      {{ statutTester[salle.salleUuid] === 'ok' ? '200 ✓' : '404 ✗' }}
+                    </span>
+                  </div>
+                </td>
+                <td class="source-actions">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    :disabled="enCours[salle.salleUuid + ':slug']"
+                    @click="sauvegarderSlug(salle)"
+                    :aria-label="'Enregistrer le slug pour ' + salle.nom"
+                  >Enregistrer</button>
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    :disabled="enCours[salle.salleUuid + ':test'] || !slugCourant(salle)"
+                    @click="testerSlug(salle)"
+                    :aria-label="'Tester le slug Digitick de ' + salle.nom"
+                  >Tester</button>
+                </td>
+              </tr>
+              <tr v-if="sallesFiltrees.length === 0">
+                <td colspan="3" class="etat-vide-texte">Aucune salle ne correspond à la recherche.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p v-else class="etat-vide-texte">
+        <template v-if="!vueDigitick">Toutes les salles ont un identifiant Ticketmaster.</template>
+        <template v-else>Aucune salle n'a de slug Digitick configuré.</template>
+      </p>
     </div>
 
   </section>
@@ -150,17 +173,28 @@
 <script setup>
 defineOptions({ name: 'AdminSources' })
 
-import { ref, shallowRef, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, shallowRef, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useToasts } from '../../composables/useToasts.js'
 import { formaterInstant, formaterTs } from '../../composables/useDates.js'
 
 const { afficherToast } = useToasts()
 
-const sources = shallowRef([])
-const salles  = shallowRef([])
+const sources       = shallowRef([])
+const salles        = shallowRef([])
+const sallesDigitick = shallowRef([])
+const vueDigitick   = ref(false)
+const recherche     = ref('')
 const slugsEdites   = reactive({})
 const statutTester  = reactive({})
 const enCours       = reactive({})
+
+const listeCourante = computed(() => vueDigitick.value ? sallesDigitick.value : salles.value)
+
+const sallesFiltrees = computed(() => {
+  const q = recherche.value.trim().toLowerCase()
+  if (!q) return listeCourante.value
+  return listeCourante.value.filter((s) => s.nom.toLowerCase().includes(q))
+})
 
 const controleur = new AbortController()
 
@@ -193,9 +227,10 @@ async function charger() {
     const rep = await fetch('/api/admin/sources', { signal: controleur.signal })
     if (!rep.ok) return
     const d = await rep.json()
-    sources.value = d.sources ?? []
-    salles.value  = d.salles  ?? []
-    for (const s of salles.value) {
+    sources.value        = d.sources        ?? []
+    salles.value         = d.salles         ?? []
+    sallesDigitick.value = d.sallesDigitick ?? []
+    for (const s of [...salles.value, ...sallesDigitick.value]) {
       if (slugsEdites[s.salleUuid] === undefined) {
         slugsEdites[s.salleUuid] = s.digitickSlug ?? ''
       }
@@ -204,6 +239,19 @@ async function charger() {
     if (e.name === 'AbortError') return
     afficherToast('Erreur lors du chargement des sources.', 'erreur')
   }
+}
+
+function extraireSlugDepuisUrl(valeur) {
+  try {
+    const url = new URL(valeur)
+    const site = url.searchParams.get('site')
+    if (site) return site.trim()
+  } catch (_) {}
+  return valeur.trim()
+}
+
+function mettreAJourSlug(salle, valeur) {
+  slugsEdites[salle.salleUuid] = extraireSlugDepuisUrl(valeur)
 }
 
 async function sauvegarderSlug(salle) {
@@ -248,27 +296,6 @@ async function testerSlug(salle) {
     if (e.name !== 'AbortError') {
       statutTester[salle.salleUuid] = 'ko'
     }
-  } finally {
-    enCours[cle] = false
-  }
-}
-
-async function fetchSalle(salle) {
-  const cle = salle.salleUuid + ':fetch'
-  enCours[cle] = true
-  try {
-    const rep = await fetch(`/api/admin/salles/${salle.salleUuid}/fetch`, {
-      method: 'POST',
-      signal: controleur.signal,
-    })
-    if (rep.ok) {
-      afficherToast('Fetch déclenché pour ' + salle.nom + '.', 'succes')
-    } else {
-      const d = await rep.json().catch(() => ({}))
-      afficherToast(d.erreur ?? 'Erreur lors du déclenchement.', 'erreur')
-    }
-  } catch (e) {
-    if (e.name !== 'AbortError') afficherToast('Erreur réseau.', 'erreur')
   } finally {
     enCours[cle] = false
   }

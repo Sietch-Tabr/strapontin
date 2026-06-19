@@ -160,14 +160,13 @@ class SourcesServiceTest {
             anyMap(),
             org.mockito.ArgumentMatchers
                 .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
-        .thenReturn(List.of(new SalleSourceAdmin(uuid, "L'Olympia", "KovZpZA77A1A", null)));
+        .thenReturn(List.of(new SalleSourceAdmin(uuid, "L'Olympia", null)));
 
     Map<String, Object> resultat = sourcesService.lireSources();
     List<SalleSourceAdmin> salles = (List<SalleSourceAdmin>) resultat.get("salles");
 
     assertEquals(1, salles.size());
     assertEquals("L'Olympia", salles.get(0).nom());
-    assertEquals("KovZpZA77A1A", salles.get(0).tmVenueId());
     assertNull(salles.get(0).digitickSlug());
 
     List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
