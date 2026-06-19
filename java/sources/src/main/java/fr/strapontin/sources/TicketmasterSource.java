@@ -33,7 +33,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 ///
 /// @since 2.0.0
 /// @author Kwaite
-public class TicketmasterSource {
+public class TicketmasterSource implements SourceAvecFetchLot {
 
   private static final Logger log = LoggerFactory.getLogger(TicketmasterSource.class);
 
@@ -581,10 +581,21 @@ public class TicketmasterSource {
     return tousLesEvents;
   }
 
+  @Override
+  public String nom() {
+    return "ticketmaster";
+  }
+
+  @Override
+  public boolean accepteIdentifiantSalle(String identifiant) {
+    return identifiant != null && identifiant.startsWith("tm:");
+  }
+
   /// Récupère les concerts d'un artiste par mot-clé (une seule page TM).
   ///
   /// @param nom nom de l'artiste recherché
   /// @return liste des concerts trouvés
+  @Override
   public List<ConcertBrut> fetchArtiste(String nom) {
     FenetreTemps fenetre = obtenirFenetreTemps();
     var uriBase =
@@ -601,11 +612,16 @@ public class TicketmasterSource {
     return resultat.concerts();
   }
 
-  /// Récupère les concerts d'une salle TM par identifiant venueId.
+  /// Récupère les concerts d'une salle TM par identifiant préfixé ou brut.
   ///
-  /// @param venueId identifiant TM de la salle
+  /// <p>Accepte un identifiant préfixé ({@code "tm:rZFSnyZdFvA"}) ou un venueId brut
+  /// ({@code "rZFSnyZdFvA"}).
+  ///
+  /// @param identifiant identifiant de la salle (préfixé {@code "tm:"} ou brut)
   /// @return liste des concerts à venir dans cette salle
-  public List<ConcertBrut> fetchSalle(String venueId) {
+  @Override
+  public List<ConcertBrut> fetchSalle(String identifiant) {
+    String venueId = identifiant.startsWith("tm:") ? identifiant.substring(3) : identifiant;
     FenetreTemps fenetre = obtenirFenetreTemps();
     var uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
@@ -652,7 +668,8 @@ public class TicketmasterSource {
   ///
   /// @param attractionIds liste d'identifiants TM d'attractions
   /// @return liste des concerts trouvés pour tous les artistes du lot
-  public List<ConcertBrut> fetchArtistesBatch(List<String> attractionIds) {
+  @Override
+  public List<ConcertBrut> fetchArtistesLot(List<String> attractionIds) {
     if (attractionIds.isEmpty()) return List.of();
     FenetreTemps fenetre = obtenirFenetreTemps();
     var uriBase =
@@ -664,7 +681,7 @@ public class TicketmasterSource {
 
     List<ConcertBrut> concerts = fetchToutesPages(uriBase, null);
     if (dernierQuota.get() != null) {
-      log.info("TM fetchArtistesBatch ids={} total={}", attractionIds.size(), concerts.size());
+      log.info("TM fetchArtistesLot ids={} total={}", attractionIds.size(), concerts.size());
     }
     return concerts;
   }
@@ -674,6 +691,7 @@ public class TicketmasterSource {
   /// @param depts   liste de codes département (ex: ["75", "92"])
   /// @param classifs classifications TM à inclure ; par défaut music, opera, musical
   /// @return liste des concerts trouvés pour tous les départements
+  @Override
   public List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
     if (classifs == null) classifs = CLASSIFICATIONS;
     List<ConcertBrut> tous = new ArrayList<>();

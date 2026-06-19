@@ -23,7 +23,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 ///
 /// @since 2.0.0
 /// @author Kwaite
-public class EventimSource {
+public class EventimSource implements SourceConcerts {
 
   private static final Logger log = LoggerFactory.getLogger(EventimSource.class);
 
@@ -70,6 +70,11 @@ public class EventimSource {
   /// @param restClient client HTTP Spring à utiliser
   public EventimSource(RestClient restClient) {
     this.restClient = restClient;
+  }
+
+  @Override
+  public String nom() {
+    return "eventim";
   }
 
   /// Extrait le code département depuis un code postal français.
@@ -407,6 +412,7 @@ public class EventimSource {
   ///
   /// @param nom nom de l'artiste
   /// @return liste des concerts trouvés, vide si l'artiste n'est pas référencé sur Eventim
+  @Override
   public List<ConcertBrut> fetchArtiste(String nom) {
     String attractionId = rechercherAttractionId(nom);
     if (attractionId == null) {
@@ -423,6 +429,7 @@ public class EventimSource {
   /// @param depts   liste de codes département (ex: ["75", "92"])
   /// @param classifs classifications Eventim à inclure ; par défaut ["music"]
   /// @return liste des concerts trouvés pour tous les départements
+  @Override
   public List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
     if (classifs == null) classifs = List.of("music");
     List<ConcertBrut> tous = new ArrayList<>();
