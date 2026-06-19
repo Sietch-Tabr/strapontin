@@ -655,14 +655,16 @@ public class PersisterConcerts {
     return cache;
   }
 
-  /// Upsert une salle et son mapping source dans {@code salles} et {@code salle_sources}.
+  /// Résout ou crée une salle et insère son mapping source dans {@code salle_sources}.
   ///
   /// <p>Appelée quand un {@code salleSourceId} n'est pas trouvé dans {@code salle_sources}.
-  /// Crée la salle dans {@code salles} si elle n'existe pas encore (ON CONFLICT DO NOTHING),
-  /// puis insère le mapping source (ON CONFLICT DO NOTHING).
+  /// Cherche d'abord une salle existante par {@code unaccent(lower(nom))} pour absorber les
+  /// variantes d'identifiant historiques ({@code id} généré différemment selon l'origine de la
+  /// salle). Si aucune salle n'est trouvée, en crée une nouvelle. Dans les deux cas, insère le
+  /// mapping {@code salle_sources} (ON CONFLICT DO NOTHING).
   ///
   /// @param c le concert portant le {@code salleSourceId} à résoudre
-  /// @return l'UUID de la salle créée ou existante, ou {@code null} si le {@code salleSourceId}
+  /// @return l'UUID de la salle résolue ou créée, ou {@code null} si le {@code salleSourceId}
   ///     est mal formé
   private UUID upsertSalleSource(ValeurConcert c) {
     int sep = c.salleSourceId().indexOf(':');
@@ -670,15 +672,25 @@ public class PersisterConcerts {
     String source = c.salleSourceId().substring(0, sep);
     String identifiant = c.salleSourceId().substring(sep + 1);
 
-    String id = Normalisation.normaliserTexte(c.salle());
-    jdbc.update(
-        "INSERT INTO salles (id, nom, nom_norm) VALUES (:id, :nom, :nomNorm)"
-            + " ON CONFLICT (id) DO NOTHING",
-        Map.of("id", id, "nom", c.salle(), "nomNorm", id));
+    List<UUID> existants =
+        jdbc.query(
+            "SELECT salle_uuid FROM salles"
+                + " WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
+            Map.of("nom", c.salle()),
+            (rs, _) -> rs.getObject("salle_uuid", UUID.class));
+    UUID salleUuid = existants.isEmpty() ? null : existants.get(0);
 
-    UUID salleUuid =
-        jdbc.queryForObject(
-            "SELECT salle_uuid FROM salles WHERE id = :id", Map.of("id", id), UUID.class);
+    if (salleUuid == null) {
+      String id = Normalisation.normaliserTexte(c.salle());
+      jdbc.update(
+          "INSERT INTO salles (id, nom, nom_norm) VALUES (:id, :nom, :nomNorm)"
+              + " ON CONFLICT (id) DO NOTHING",
+          Map.of("id", id, "nom", c.salle(), "nomNorm", id));
+      salleUuid =
+          jdbc.queryForObject(
+              "SELECT salle_uuid FROM salles WHERE id = :id", Map.of("id", id), UUID.class);
+    }
+
     if (salleUuid == null) return null;
 
     jdbc.update(

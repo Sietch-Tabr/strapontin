@@ -377,6 +377,51 @@ class PersisterConcertsIntegrationTest {
   }
 
   @Test
+  void persisterConcerts_salleAvecIdLegacy_reutiliseSalleExistanteSansDoublon() {
+    // Scénario : salle créée avec un id legacy non normalisé (ex. "La Seine Musicale" avec
+    // majuscule et espaces). Un fetch TM trouve un venue du même nom → upsertSalleSource
+    // doit retrouver la salle par unaccent(lower(nom)) et ne pas créer de doublon.
+    jdbc.update(
+        "INSERT INTO salles (id, nom, nom_norm)"
+            + " VALUES ('La Seine Musicale', 'La Seine Musicale', 'La Seine Musicale')",
+        Map.of());
+    java.util.UUID uuidOriginal =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM salles WHERE id = 'La Seine Musicale'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Billie Eilish", "2026-11-01", "LA SEINE MUSICALE", "ticketmaster:rZ7SnyZaA4L",
+                null)));
+
+    Long nbSalles =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM salles WHERE unaccent(lower(nom)) = 'la seine musicale'",
+            Map.of(),
+            Long.class);
+    assertEquals(1L, nbSalles, "aucun doublon ne doit être créé");
+
+    java.util.UUID uuidConcert =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'billie eilish'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+    assertEquals(uuidOriginal, uuidConcert, "le concert doit pointer vers la salle originale");
+
+    Long nbSources =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM salle_sources WHERE source = 'ticketmaster'"
+                + " AND identifiant_externe = 'rZ7SnyZaA4L'"
+                + " AND salle_id = CAST(:uuid AS uuid)",
+            Map.of("uuid", uuidOriginal.toString()),
+            Long.class);
+    assertEquals(1L, nbSources, "la salle_source TM doit pointer vers la salle originale");
+  }
+
+  @Test
   void persisterConcerts_artisteNormVide_rejetteLeConcert() {
     ConcertBrut concert =
         new ConcertBrut(
