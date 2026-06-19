@@ -394,7 +394,10 @@ class PersisterConcertsIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(
             concertAvecSourceId(
-                "Billie Eilish", "2026-11-01", "LA SEINE MUSICALE", "ticketmaster:rZ7SnyZaA4L",
+                "Billie Eilish",
+                "2026-11-01",
+                "LA SEINE MUSICALE",
+                "ticketmaster:rZ7SnyZaA4L",
                 null)));
 
     Long nbSalles =
