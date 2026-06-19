@@ -115,13 +115,26 @@ class PersisterConcertsTest {
   }
 
   @Test
-  void estDoublonArtiste_containmentChaineInferieure10Chars_retourneFalse() {
-    // garde contre les faux positifs : éviter de fusionner "Muse" avec un nom proche plus long
+  void estDoublonArtiste_troncatureTm_aliz_retourneTrue() {
+    // TM a renommé "ALIZÉE" en "ALIZ" entre deux fetches
+    assertTrue(PersisterConcerts.estDoublonArtiste("aliz", "alizee"));
+  }
+
+  @Test
+  void estDoublonArtiste_troncatureTm_fawn_retourneTrue() {
+    // TM a renommé "FAWNN" en "FAWN" entre deux fetches
+    assertTrue(PersisterConcerts.estDoublonArtiste("fawn", "fawnn"));
+  }
+
+  @Test
+  void estDoublonArtiste_ratioTropFaible_retourneFalse() {
+    // ratio court/long = 4/17 ≈ 0.24 < 0.6 → pas de containment
     assertFalse(PersisterConcerts.estDoublonArtiste("muse", "muse tour tribute"));
   }
 
   @Test
   void estDoublonArtiste_artistesCourtsDistincts_retourneFalse() {
+    // ratio = 4/10 = 0.4 < 0.6 → pas de containment malgré le préfixe commun
     assertFalse(PersisterConcerts.estDoublonArtiste("pink", "pink floyd"));
   }
 

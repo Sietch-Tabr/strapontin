@@ -47,10 +47,12 @@ public class PersisterConcerts {
   private static final double SEUIL_SIMILARITE_SALLE = 0.5;
   private static final int LONGUEUR_MIN_CONTAINMENT_SALLE = 4;
 
-  // Seuils plus stricts que pour la salle : un containment à 4 caractères fusionnerait
-  // à tort des artistes distincts ("Muse" est contenu dans "Muse Tour Tribute").
+  // Seuils artiste : seuil Levenshtein strict + containment avec ratio court/long ≥ 0.6.
+  // Le ratio évite les faux positifs ("pink"/"pink floyd" = 0.4 → false) tout en couvrant
+  // les troncatures TM ("aliz"/"alizee" = 0.67 → true, "fawn"/"fawnn" = 0.8 → true).
   private static final double SEUIL_SIMILARITE_ARTISTE = 0.85;
-  private static final int LONGUEUR_MIN_CONTAINMENT_ARTISTE = 10;
+  private static final int LONGUEUR_MIN_CONTAINMENT_ARTISTE = 4;
+  private static final double RATIO_MIN_CONTAINMENT_ARTISTE = 0.6;
 
   private static final String SQL_UPSERT_ENTETE =
       """
@@ -121,16 +123,23 @@ public class PersisterConcerts {
   /// @param a                      première chaîne normalisée
   /// @param b                      deuxième chaîne normalisée
   /// @param seuilSimilarite        seuil de similarité Levenshtein (0 à 1)
-  /// @param longueurMinContainment longueur minimale de la chaîne courte pour appliquer le
-  ///                                critère de containment
+  /// @param longueurMinContainment longueur minimale de la chaîne courte pour containment
+  /// @param ratioMinContainment    ratio minimal court/long pour containment (0.0 = désactivé)
   /// @return `true` si les deux chaînes sont considérées identiques
   private static boolean estDoublonTexte(
-      String a, String b, double seuilSimilarite, int longueurMinContainment) {
+      String a,
+      String b,
+      double seuilSimilarite,
+      int longueurMinContainment,
+      double ratioMinContainment) {
     if (a.equals(b)) return true;
     if (Normalisation.similarite(a, b) >= seuilSimilarite) return true;
     String court = a.length() <= b.length() ? a : b;
     String plusLong = a.length() <= b.length() ? b : a;
-    return court.length() >= longueurMinContainment && plusLong.contains(court);
+    double ratio = (double) court.length() / plusLong.length();
+    return court.length() >= longueurMinContainment
+        && ratio >= ratioMinContainment
+        && plusLong.contains(court);
   }
 
   /// Vérifie si deux noms de salle normalisés désignent la même salle.
@@ -139,20 +148,21 @@ public class PersisterConcerts {
   /// @param b deuxième nom normalisé
   /// @return `true` si les salles sont considérées identiques
   public static boolean estDoublonSalle(String a, String b) {
-    return estDoublonTexte(a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE);
+    return estDoublonTexte(a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE, 0.0);
   }
 
   /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
   ///
-  /// Seuils plus stricts que {@link #estDoublonSalle} : couvre les variations mineures de
-  /// nommage entre deux fetches (suffixe numérique, article ajouté/retiré) sans fusionner des
-  /// artistes distincts au nom proche.
+  /// Seuil Levenshtein strict (0.85) complété par un containment avec ratio court/long ≥ 0.6 :
+  /// couvre les troncatures TM ("aliz"/"alizee", "fawn"/"fawnn") et les variations mineures
+  /// (suffixe numérique, article) sans fusionner des artistes distincts ("pink"/"pink floyd").
   ///
   /// @param a premier nom normalisé
   /// @param b deuxième nom normalisé
   /// @return `true` si les artistes sont considérés identiques
   public static boolean estDoublonArtiste(String a, String b) {
-    return estDoublonTexte(a, b, SEUIL_SIMILARITE_ARTISTE, LONGUEUR_MIN_CONTAINMENT_ARTISTE);
+    return estDoublonTexte(
+        a, b, SEUIL_SIMILARITE_ARTISTE, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE);
   }
 
   private static int scoreArtisteSalle(String artiste, String salle) {
