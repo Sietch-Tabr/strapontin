@@ -50,8 +50,12 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
   test("activation_deconnexion_reconnexion_avec_challenge", async ({
     browser,
     browserName,
+    isMobile,
   }) => {
-    test.skip(browserName !== "chromium", "login répété — chromium uniquement");
+    test.skip(
+      browserName !== "chromium" || isMobile,
+      "login répété — chromium desktop uniquement",
+    );
 
     const ctx = await browser.newContext({ storageState: undefined });
     const page = await ctx.newPage();

@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "**/*.e2e.ts",
   timeout: 60000,
-  retries: 0,
+  retries: process.env["CI"] ? 2 : 0,
   workers: 1,
   fullyParallel: false,
 

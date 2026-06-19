@@ -73,9 +73,6 @@ test.describe("Scénario: catalogue — artistes", () => {
   }) => {
     await page.goto("/artistes");
 
-    // Nettoyage préalable idempotent (cas d'un run précédent raté)
-    await supprimerArtisteParNom("nina simone");
-
     // Rechercher et suivre
     await page.fill("input#q-artiste", "Nina Simone");
     await page.getByRole("button", { name: "Rechercher" }).click();
@@ -114,9 +111,6 @@ test.describe("Scénario: catalogue — salles", () => {
     page,
   }) => {
     await page.goto("/salles");
-
-    // Nettoyage préalable idempotent (cas d'un run précédent raté)
-    await supprimerSalleParNom("olympia");
 
     // Rechercher et suivre
     await page.fill("input#q-salle", "Olympia");

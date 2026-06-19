@@ -42,7 +42,7 @@ async function naviguerVersUtilisateurs(
   } else {
     await page.locator('a[href="#utilisateurs"]').click();
   }
-  await page.waitForLoadState("networkidle");
+  await expect(page.locator("section#utilisateurs")).toBeVisible();
 }
 
 test.describe("Scénario: admin — sections et contenus", () => {
