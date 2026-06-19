@@ -407,13 +407,13 @@ class TicketmasterSourceTest {
   }
 
   @Test
-  void fetchArtistesBatch_listeVide_retourneListeVide() {
+  void fetchArtistesLot_listeVide_retourneListeVide() {
     TicketmasterSource source = new TicketmasterSource("fake-key");
-    assertTrue(source.fetchArtistesBatch(List.of()).isEmpty());
+    assertTrue(source.fetchArtistesLot(List.of()).isEmpty());
   }
 
   @Test
-  void fetchArtistesBatch_avecIds_retourneConcerts() {
+  void fetchArtistesLot_avecIds_retourneConcerts() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
@@ -427,14 +427,44 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit-Reset", "1726420000000"));
 
     TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<ConcertBrut> resultats = source.fetchArtistesBatch(List.of("tm-123", "tm-456"));
+    List<ConcertBrut> resultats = source.fetchArtistesLot(List.of("tm-123", "tm-456"));
 
     assertEquals(1, resultats.size());
     serveur.verify();
   }
 
   @Test
-  void fetchSalle_venueIdValide_retourneConcerts() {
+  void accepteIdentifiantSalle_prefixeTm_retourneVrai() {
+    TicketmasterSource source = new TicketmasterSource("fake-key");
+    assertTrue(source.accepteIdentifiantSalle("tm:rZFSnyZdFvA"));
+    assertFalse(source.accepteIdentifiantSalle("digitick:lempreinte"));
+    assertFalse(source.accepteIdentifiantSalle("rZFSnyZdFvA"));
+    assertFalse(source.accepteIdentifiantSalle(null));
+  }
+
+  @Test
+  void fetchSalle_identifiantPrefixe_stripPrefixeEtRetourneConcerts() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "1726420000000"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchSalle("tm:venue-123");
+
+    assertEquals(1, resultats.size());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchSalle_identifiantBrut_retourneConcerts() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
@@ -469,7 +499,7 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit-Reset", "1726420000000"));
 
     TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<ConcertBrut> resultats = source.fetchSalle("venue-vide");
+    List<ConcertBrut> resultats = source.fetchSalle("tm:venue-vide");
 
     assertTrue(resultats.isEmpty());
     serveur.verify();

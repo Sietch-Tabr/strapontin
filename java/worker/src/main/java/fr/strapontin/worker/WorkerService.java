@@ -6,8 +6,9 @@ package fr.strapontin.worker;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Dedoublonner;
-import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
+import fr.strapontin.sources.SourceAvecFetchLot;
+import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
@@ -40,8 +41,8 @@ public class WorkerService {
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
   private static final int TAILLE_LOT_TM = 20;
 
+  private final List<SourceConcerts> sources;
   private final TicketmasterSource tm;
-  private final EventimSource eventim;
   private final ResolveurNomCanonique resolveur;
   private final PersisterConcerts persisterConcerts;
   private final RecalculerMatchesService recalculerMatchesService;
@@ -50,16 +51,16 @@ public class WorkerService {
   private final NamedParameterJdbcTemplate jdbc;
 
   public WorkerService(
+      List<SourceConcerts> sources,
       TicketmasterSource tm,
-      EventimSource eventim,
       ResolveurNomCanonique resolveur,
       PersisterConcerts persisterConcerts,
       RecalculerMatchesService recalculerMatchesService,
       GestionQuotaTM gestionQuotaTM,
       NotificationDigestService notificationDigestService,
       NamedParameterJdbcTemplate jdbc) {
+    this.sources = sources;
     this.tm = tm;
-    this.eventim = eventim;
     this.resolveur = resolveur;
     this.persisterConcerts = persisterConcerts;
     this.recalculerMatchesService = recalculerMatchesService;
@@ -97,19 +98,23 @@ public class WorkerService {
       List<ConcertBrut> concertsTM = fetchTMParArtistes(rows);
       sauvegarderQuota();
 
-      List<ConcertBrut> concertsEventim = new ArrayList<>();
-      for (Map<String, Object> row : rows) {
-        String nom = (String) row.get("artiste_affiche");
-        try {
-          concertsEventim.addAll(eventim.fetchArtiste(nom));
-        } catch (Exception e) {
-          log.warn("Eventim échoué pour artiste={} : {}", nom, e.getMessage());
+      List<SourceConcerts> sourcesSimples =
+          sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
+      List<ConcertBrut> concertsAutresSources = new ArrayList<>();
+      for (SourceConcerts source : sourcesSimples) {
+        for (Map<String, Object> row : rows) {
+          String nom = (String) row.get("artiste_affiche");
+          try {
+            concertsAutresSources.addAll(source.fetchArtiste(nom));
+          } catch (Exception e) {
+            log.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
+          }
+          attendreRateLimit();
         }
-        attendreRateLimit();
       }
 
       List<ConcertBrut> tous = new ArrayList<>(concertsTM);
-      tous.addAll(concertsEventim);
+      tous.addAll(concertsAutresSources);
 
       List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
       log.info("fetch:artistes:batch bruts={} dédoublonnés={}", tous.size(), dedoublonnes.size());
@@ -174,9 +179,9 @@ public class WorkerService {
       List<String> lot =
           attractionIds.subList(i, Math.min(i + TAILLE_LOT_TM, attractionIds.size()));
       try {
-        resultats.addAll(tm.fetchArtistesBatch(lot));
+        resultats.addAll(tm.fetchArtistesLot(lot));
       } catch (Exception e) {
-        log.warn("TM fetchArtistesBatch lot={} échoué : {}", lot.size(), e.getMessage());
+        log.warn("TM fetchArtistesLot lot={} échoué : {}", lot.size(), e.getMessage());
       }
     }
 
@@ -222,18 +227,14 @@ public class WorkerService {
 
       List<String> deptsListe = new ArrayList<>(tousLesDepts);
       List<ConcertBrut> tous = new ArrayList<>();
-      try {
-        tous.addAll(tm.fetchRegion(deptsListe, TicketmasterSource.CLASSIFICATIONS));
-      } catch (Exception e) {
-        log.warn("TM fetchRegion échoué : {}", e.getMessage());
+      for (SourceConcerts source : sources) {
+        try {
+          tous.addAll(source.fetchRegion(deptsListe, TicketmasterSource.CLASSIFICATIONS));
+        } catch (Exception e) {
+          log.warn("{} fetchRegion échoué : {}", source.nom(), e.getMessage());
+        }
       }
       sauvegarderQuota();
-
-      try {
-        tous.addAll(eventim.fetchRegion(deptsListe, TicketmasterSource.CLASSIFICATIONS));
-      } catch (Exception e) {
-        log.warn("Eventim fetchRegion échoué : {}", e.getMessage());
-      }
 
       List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
       log.info(
@@ -254,30 +255,40 @@ public class WorkerService {
     }
   }
 
-  /// Fetch les concerts d'une salle identifiée par son {@code venueId} Ticketmaster.
+  /// Fetch les concerts d'une ou plusieurs salles identifiées par leurs identifiants préfixés.
   ///
-  /// @param venueId identifiant TM de la salle
-  public void executerFetchSalle(String venueId) {
-    log.info("fetch:salle démarré venueId={}", venueId);
+  /// <p>Le paramètre est une liste d'identifiants séparés par une virgule, chacun préfixé
+  /// par la source : {@code "tm:rZFSnyZdFvA"} ou {@code "tm:id1,digitick:slug"}.
+  ///
+  /// @param identifiantsStr identifiants préfixés séparés par des virgules
+  public void executerFetchSalle(String identifiantsStr) {
+    log.info("fetch:salle démarré identifiants={}", identifiantsStr);
     if (!gestionQuotaTM.verifier("fetch:salle")) return;
 
-    List<ConcertBrut> concerts;
-    try {
-      concerts = tm.fetchSalle(venueId);
-    } catch (Exception e) {
-      log.error("TM fetchSalle échoué venueId={} : {}", venueId, e.getMessage());
-      return;
+    String[] identifiants = identifiantsStr.split(",");
+    List<ConcertBrut> concerts = new ArrayList<>();
+    for (String identifiant : identifiants) {
+      String id = identifiant.trim();
+      for (SourceConcerts source : sources) {
+        if (source.accepteIdentifiantSalle(id)) {
+          try {
+            concerts.addAll(source.fetchSalle(id));
+          } catch (Exception e) {
+            log.error("{} fetchSalle échoué identifiant={} : {}", source.nom(), id, e.getMessage());
+          }
+        }
+      }
     }
     sauvegarderQuota();
 
     List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(concerts);
     log.info(
-        "fetch:salle venueId={} bruts={} dédoublonnés={}",
-        venueId,
+        "fetch:salle identifiants={} bruts={} dédoublonnés={}",
+        identifiantsStr,
         concerts.size(),
         dedoublonnes.size());
     persisterConcerts.persisterConcerts(dedoublonnes);
-    log.info("fetch:salle terminé venueId={}", venueId);
+    log.info("fetch:salle terminé identifiants={}", identifiantsStr);
   }
 
   /// Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.

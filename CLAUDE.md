@@ -36,6 +36,7 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - `VapidService` : génération clés VAPID EC P-256 (extrait d'`AdminService` en v2.2.0)
 - `BanniereService` / `WorkerProxyService` : extraits d'`AdminService` en v2.2.3 (bannière système ; proxy HTTP worker via le `RestClient` partagé). `GenerateurSecrets` (package `securite`) : tokens/hash extraits d'`AdminService`
 - `FiltreConcertsBuilder` (package `concert`) : fragments WHERE/ORDER BY/pagination communs à `DecouverteService` et `SpectacleService`
+- `SourceConcerts` / `SourceAvecFetchLot` (module `sources`, v2.3.1) : `WorkerService` source-agnostique — ajouter une source = créer une classe + bean Spring. Identifiants salle préfixés par source (`"tm:venueId"`). Voir wiki Architecture.
 - `core` : `QuotaTM` (type partagé) et `UtilitairesChaine.echapperJson` mutualisés en v2.2.3
 - `SpectacleService` : COUNT et filtres disponibles calculés en parallèle via `CompletableFuture` (threads virtuels)
 - `RecalculerMatchesService` : recalcul parallèle par utilisateur via `Executors.newVirtualThreadPerTaskExecutor()`, 1 transaction par user (`TransactionTemplate`)
@@ -155,7 +156,7 @@ Paradigme : **pré-fetch en arrière-plan, jamais d'appel API depuis le browser*
 | `FetchArtisteJob`       | Ajout artiste + cron 2h | Fetch TM + Eventim par nom artiste                                        |
 | `FetchArtistesBatchJob` | Cron 2h                 | Fetch TM en lots de 20 attractionIds                                      |
 | `FetchRegionJob`        | Cron 2h + manuel        | Fetch TM + Eventim par département                                        |
-| `FetchSalleJob`         | Ajout salle + cron 2h   | Fetch TM par `venueId`                                                    |
+| `FetchSalleJob`         | Ajout salle + cron 2h   | Fetch par identifiants préfixés (`CLE_IDENTIFIANTS`, ex. `"tm:venueId"`)  |
 | `RecalculerMatchesJob`  | Après fetch             | Recalcule `user_matches` pour tous les users                              |
 | `PurgerConcertsJob`     | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours                                 |
 | `PurgerLogsAdminJob`    | Cron quotidien (0h15)   | Supprime les `logs_admin` > 30 jours et `fetch_jobs_historique` > 7 jours |

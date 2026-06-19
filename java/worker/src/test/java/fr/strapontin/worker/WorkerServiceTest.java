@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
+import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
@@ -35,6 +36,7 @@ class WorkerServiceTest {
 
   private TicketmasterSource tm;
   private EventimSource eventim;
+  private List<SourceConcerts> sources;
   private PersisterConcerts persisterConcerts;
   private RecalculerMatchesService recalculerMatchesService;
   private GestionQuotaTM gestionQuotaTM;
@@ -46,6 +48,7 @@ class WorkerServiceTest {
   void setUp() {
     tm = mock(TicketmasterSource.class);
     eventim = mock(EventimSource.class);
+    sources = List.of(tm, eventim);
     ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
     persisterConcerts = mock(PersisterConcerts.class);
     recalculerMatchesService = mock(RecalculerMatchesService.class);
@@ -54,8 +57,8 @@ class WorkerServiceTest {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     workerService =
         new WorkerService(
+            sources,
             tm,
-            eventim,
             resolveur,
             persisterConcerts,
             recalculerMatchesService,
@@ -71,7 +74,7 @@ class WorkerServiceTest {
     workerService.executerFetchArtistesBatch();
 
     verify(persisterConcerts, never()).persisterConcerts(any());
-    verify(tm, never()).fetchArtistesBatch(any());
+    verify(tm, never()).fetchArtistesLot(any());
   }
 
   @Test
@@ -88,7 +91,7 @@ class WorkerServiceTest {
   void executerFetchSalle_quotaIndisponible_neFetchPas() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(false);
 
-    workerService.executerFetchSalle("venue-42");
+    workerService.executerFetchSalle("tm:venue-42");
 
     verify(tm, never()).fetchSalle(anyString());
     verify(persisterConcerts, never()).persisterConcerts(any());
@@ -97,13 +100,29 @@ class WorkerServiceTest {
   @Test
   void executerFetchSalle_quotaDisponible_fetchEtPersiste() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
-    when(tm.fetchSalle("venue-42")).thenReturn(List.of());
+    when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
+    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
-    workerService.executerFetchSalle("venue-42");
+    workerService.executerFetchSalle("tm:venue-42");
 
-    verify(tm).fetchSalle("venue-42");
+    verify(tm).fetchSalle("tm:venue-42");
     verify(persisterConcerts).persisterConcerts(any());
+  }
+
+  @Test
+  void executerFetchSalle_identifiantsMultiples_dispatcheParSource() {
+    when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
+    when(tm.accepteIdentifiantSalle("tm:venue-1")).thenReturn(true);
+    when(tm.accepteIdentifiantSalle("tm:venue-2")).thenReturn(true);
+    when(tm.fetchSalle("tm:venue-1")).thenReturn(List.of());
+    when(tm.fetchSalle("tm:venue-2")).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    workerService.executerFetchSalle("tm:venue-1,tm:venue-2");
+
+    verify(tm).fetchSalle("tm:venue-1");
+    verify(tm).fetchSalle("tm:venue-2");
   }
 
   @Test

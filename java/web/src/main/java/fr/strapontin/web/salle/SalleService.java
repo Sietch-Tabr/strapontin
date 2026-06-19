@@ -241,20 +241,21 @@ public class SalleService {
   }
 
   private void declencherWorkerSalle(String venueId) {
+    String identifiants = "tm:" + venueId;
     httpClient
         .sendAsync(
             HttpRequest.newBuilder()
                 .uri(
                     URI.create(
-                        "http://localhost:8081/trigger/salle/"
-                            + URLEncoder.encode(venueId, StandardCharsets.UTF_8)))
+                        "http://localhost:8081/trigger/salle?identifiants="
+                            + URLEncoder.encode(identifiants, StandardCharsets.UTF_8)))
                 .POST(HttpRequest.BodyPublishers.noBody())
                 .timeout(Duration.ofSeconds(5))
                 .build(),
             HttpResponse.BodyHandlers.discarding())
         .exceptionally(
             e -> {
-              log.warn("Déclenchement worker salle impossible venueId={}", venueId, e);
+              log.warn("Déclenchement worker salle impossible identifiants={}", identifiants, e);
               return null;
             });
   }

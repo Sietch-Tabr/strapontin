@@ -22,9 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /// API interne de déclenchement manuel des jobs Quartz.
@@ -146,30 +146,31 @@ public class TriggerController {
         .anyMatch(jd -> nomJob.equals(jd.getKey().getName()));
   }
 
-  /// Planifie un {@code FetchSalleJob} immédiat pour le {@code venueId} donné,
-  /// uniquement si aucune instance n'est déjà en cours pour ce {@code venueId}.
+  /// Planifie un {@code FetchSalleJob} immédiat pour les identifiants donnés,
+  /// uniquement si aucune instance n'est déjà en cours pour ce jeu d'identifiants.
   ///
-  /// <p>Appelé automatiquement par le web après l'ajout d'une salle avec venueId TM.
+  /// <p>Appelé automatiquement par le web après l'ajout d'une salle.
   ///
-  /// @param venueId identifiant Ticketmaster de la salle
+  /// @param identifiants identifiants préfixés des sources (ex. {@code "tm:rZFSnyZdFvA"})
   /// @return 200 si planifié ou déjà en cours, 500 en cas d'erreur Quartz
-  @PostMapping("/salle/{venueId}")
-  public ResponseEntity<Map<String, String>> relancerSalle(@PathVariable String venueId) {
+  @PostMapping("/salle")
+  public ResponseEntity<Map<String, String>> relancerSalle(@RequestParam String identifiants) {
     try {
-      if (jobEnCours("fetchSalle-" + venueId)) {
-        log.debug("fetchSalle-{} déjà en cours — ignoré", venueId);
+      String cleJob = "fetchSalle-" + identifiants;
+      if (jobEnCours(cleJob)) {
+        log.debug("fetchSalle {} déjà en cours — ignoré", identifiants);
         return ResponseEntity.ok(Map.of("statut", "déjà en cours"));
       }
       JobDetail jobDetail =
           JobBuilder.newJob(FetchSalleJob.class)
-              .withIdentity("fetchSalle-" + venueId, "on-demand")
-              .usingJobData(FetchSalleJob.CLE_VENUE_ID, venueId)
+              .withIdentity(cleJob, "on-demand")
+              .usingJobData(FetchSalleJob.CLE_IDENTIFIANTS, identifiants)
               .build();
       scheduler.scheduleJob(jobDetail, TriggerBuilder.newTrigger().startNow().build());
-      log.info("Déclenchement salle : venueId={}", venueId);
+      log.info("Déclenchement salle : identifiants={}", identifiants);
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     } catch (SchedulerException e) {
-      log.warn("Erreur déclenchement salle venueId={}", venueId, e);
+      log.warn("Erreur déclenchement salle identifiants={}", identifiants, e);
       return ResponseEntity.internalServerError()
           .body(Map.of("erreur", "Erreur Quartz : " + e.getMessage()));
     }
