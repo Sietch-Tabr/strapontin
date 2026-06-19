@@ -135,8 +135,7 @@ public class SourcesService {
     sources.add(
         new StatutSource(
             "ticketmaster", "Ticketmaster", "concerts", quotaTM, etatQuota, dernierFetch, null));
-    sources.add(
-        new StatutSource("eventim", "Eventim", "concerts", null, null, dernierFetch, null));
+    sources.add(new StatutSource("eventim", "Eventim", "concerts", null, null, dernierFetch, null));
     sources.add(new StatutSource("deezer", "Deezer", "metadonnees", null, null, null, null));
     sources.add(new StatutSource("digitick", "Digitick", "concerts", null, null, null, nbDigitick));
     return sources;
