@@ -429,10 +429,6 @@ test.describe("Scénario: API compte — identifiant", () => {
     expect(rep.ok()).toBeTruthy();
     const corps = await rep.json();
     expect(corps).toHaveProperty("succes");
-    // Restaurer l'identifiant d'origine
-    await request.patch("/api/user/identifiant", {
-      data: { identifiant: "e2euser" },
-    });
   });
 });
 

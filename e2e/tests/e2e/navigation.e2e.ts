@@ -130,7 +130,7 @@ test.describe("Scénario: spectacles — robustesse des filtres", () => {
 });
 
 test.describe("Scénario: navigation Vue Router sans rechargement complet", () => {
-  test("bottomnav_decouverte_htmx_sans_navigation_document", async ({
+  test("bottomnav_decouverte_vuerouter_sans_rechargement_document", async ({
     page,
     isMobile,
   }) => {
@@ -161,7 +161,7 @@ test.describe("Scénario: navigation Vue Router sans rechargement complet", () =
     expect(marqueur).toBe(1);
   });
 
-  test("drawer_artistes_htmx_sans_navigation_document", async ({
+  test("drawer_artistes_vuerouter_sans_rechargement_document", async ({
     page,
     isMobile,
   }) => {

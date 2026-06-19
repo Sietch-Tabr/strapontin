@@ -48,7 +48,7 @@ test.describe("Scénario: invitation — dialog de confirmation", () => {
     } else {
       await page.locator('a[href="#utilisateurs"]').click();
     }
-    await page.waitForLoadState("networkidle");
+    await expect(page.locator("section#utilisateurs")).toBeVisible();
 
     await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
     await page.click('.form-creer-utilisateur button[type="submit"]');
@@ -121,9 +121,12 @@ test.describe("Scénario: invitation — flux activation", () => {
   test("invitation_tokenInvalide_formulaireVisibleSansCrash", async ({
     browser,
   }) => {
-    const ctx = await browser.newContext({ storageState: undefined });
+    const ctx = await browser.newContext({
+      storageState: undefined,
+      baseURL: BASE_URL,
+    });
     const pageTest = await ctx.newPage();
-    await pageTest.goto(`${BASE_URL}/reset-password?token=token-invalide-e2e`);
+    await pageTest.goto(`/reset-password?token=token-invalide-e2e`);
 
     // La page charge sans crash et affiche le formulaire (token invalide → mode reset)
     await expect(pageTest.locator("form, .alerte")).toBeVisible({
