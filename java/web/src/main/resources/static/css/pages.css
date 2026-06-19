@@ -1258,9 +1258,12 @@ fieldset.notif-grille {
 /* ── Admin : onglet Sources ──────────────────────────────── */
 .sources-grille {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   margin-top: 0.5rem;
+}
+.source-carte-large {
+  grid-column: 1 / -1;
 }
 .source-carte {
   border: 1px solid var(--border);

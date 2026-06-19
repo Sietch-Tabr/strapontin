@@ -5,7 +5,7 @@
       <h3 class="param-label">Sources de données</h3>
       <div class="sources-grille">
 
-        <div v-for="source in sources" :key="source.id" class="source-carte">
+        <div v-for="source in sources" :key="source.id" :class="['source-carte', { 'source-carte-large': source.id === 'ticketmaster' }]">
           <p class="source-nom">{{ source.nom }}</p>
           <span class="badge-source" :class="'badge-source-' + source.type">
             {{ source.type === 'concerts' ? 'Concerts' : 'Métadonnées' }}
