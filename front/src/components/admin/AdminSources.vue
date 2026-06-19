@@ -6,12 +6,10 @@
       <div class="sources-grille">
 
         <div v-for="source in sources" :key="source.id" class="source-carte">
-          <div class="source-carte-entete">
-            <span class="source-nom">{{ source.nom }}</span>
-            <span class="badge-source" :class="'badge-source-' + source.type">
-              {{ source.type === 'concerts' ? 'Concerts' : 'Métadonnées' }}
-            </span>
-          </div>
+          <p class="source-nom">{{ source.nom }}</p>
+          <span class="badge-source" :class="'badge-source-' + source.type">
+            {{ source.type === 'concerts' ? 'Concerts' : 'Métadonnées' }}
+          </span>
 
           <template v-if="source.id === 'ticketmaster'">
             <div v-if="source.quotaTM" class="quota-tm-carte">
