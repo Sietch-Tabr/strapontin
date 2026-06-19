@@ -1254,3 +1254,98 @@ fieldset.notif-grille {
 .form-details .form-group {
   margin-top: 0.75rem;
 }
+
+/* ── Admin : onglet Sources ──────────────────────────────── */
+.sources-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+.source-carte {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.source-carte-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.source-nom {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.badge-source {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.badge-source-concerts {
+  background: var(--accent-bg, #eff6ff);
+  color: var(--accent, #1d4ed8);
+}
+.badge-source-metadonnees {
+  background: #f3f4f6;
+  color: #374151;
+}
+.dark .badge-source-concerts {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+.dark .badge-source-metadonnees {
+  background: #374151;
+  color: #d1d5db;
+}
+.source-carte-detail {
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+  margin: 0;
+}
+.source-salle-nom {
+  font-weight: 500;
+}
+.source-id-lecture {
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+}
+.source-id-lecture code {
+  font-size: 0.78rem;
+}
+.source-slug-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.source-slug-input {
+  font-size: 0.82rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  width: 9rem;
+}
+.source-test-statut {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.source-test-ok {
+  color: #166534;
+}
+.source-test-ko {
+  color: #991b1b;
+}
+.source-actions {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}

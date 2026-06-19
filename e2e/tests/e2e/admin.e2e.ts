@@ -330,6 +330,49 @@ test.describe("Scénario: admin — modification utilisateur", () => {
   });
 });
 
+test.describe("Scénario: admin — onglet Sources", () => {
+  test("admin_desktop_section_sources_visible", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await page.locator('a[href="#sources"]').click();
+    await expect(page.locator("section#sources")).toBeVisible();
+    await expect(page.locator("section#jobs")).not.toBeVisible();
+  });
+
+  test("admin_mobile_select_navigation_sources", async ({ page, isMobile }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/admin");
+    await page.selectOption("select.param-onglets-mobile", "#sources");
+    await expect(page.locator("section#sources")).toBeVisible();
+    await expect(page.locator("section#jobs")).not.toBeVisible();
+  });
+
+  test("admin_sources_cartes_visibles", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await page.locator('a[href="#sources"]').click();
+    await expect(page.locator("section#sources")).toBeVisible();
+    await expect(page.locator(".source-carte")).toHaveCount(4);
+    await expect(page.locator(".source-carte").first()).toContainText("Ticketmaster");
+  });
+
+  test("admin_sources_table_salles_visible", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await page.locator('a[href="#sources"]').click();
+    await expect(page.locator("section#sources")).toBeVisible();
+    await expect(
+      page.locator("table#table-sources-salles, p.etat-vide-texte"),
+    ).toBeVisible();
+  });
+
+  test("admin_jobs_quota_tm_absent_depuis_jobs", async ({ page, isMobile }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await expect(page.locator("section#jobs .quota-tm-carte")).not.toBeAttached();
+  });
+});
+
 test.describe("Scénario: admin — API endpoints", () => {
   test("api_admin_jobs_retourne_200", async ({ request }) => {
     const rep = await request.get("/api/admin/jobs");
@@ -346,6 +389,20 @@ test.describe("Scénario: admin — API endpoints", () => {
     const rep = await ctx.request.get("/api/admin/jobs");
     expect([401, 302, 403]).toContain(rep.status());
     await ctx.close();
+  });
+
+  test("api_admin_sources_retourne_200", async ({ request }) => {
+    const rep = await request.get("/api/admin/sources");
+    expect(rep.status()).toBe(200);
+    const corps = await rep.json();
+    expect(Array.isArray(corps.sources)).toBe(true);
+    expect(Array.isArray(corps.salles)).toBe(true);
+    expect(corps.sources.length).toBe(4);
+    const ids = corps.sources.map((s: { id: string }) => s.id);
+    expect(ids).toContain("ticketmaster");
+    expect(ids).toContain("eventim");
+    expect(ids).toContain("deezer");
+    expect(ids).toContain("digitick");
   });
 
   test("api_admin_revoquerAdmin_seulAdmin_retourne409", async ({ request }) => {
