@@ -15,7 +15,8 @@ import java.time.Instant;
 /// @param quotaTM               quota Ticketmaster (non null pour id={@code "ticketmaster"})
 /// @param etatQuota             {@code "ok"}, {@code "attention"} ou {@code "critique"}
 /// @param dernierFetch          date du dernier fetch réussi (null si jamais exécuté)
-/// @param nbSallesConfigurees   nb de salles avec un slug pour cette source (null si non applicable)
+/// @param nbSallesConfigurees   nb de salles avec un slug pour cette source (null si non
+// applicable)
 /// @since 2.3.0
 /// @author Kwaite
 public record StatutSource(

@@ -130,17 +130,18 @@ public class SourcesService {
 
     List<StatutSource> sources = new ArrayList<>();
     sources.add(
-        new StatutSource("ticketmaster", "Ticketmaster Discovery v2", "concerts",
-            quotaTM, etatQuota, dernierFetch, null));
+        new StatutSource(
+            "ticketmaster",
+            "Ticketmaster Discovery v2",
+            "concerts",
+            quotaTM,
+            etatQuota,
+            dernierFetch,
+            null));
     sources.add(
-        new StatutSource("eventim", "Eventim France", "concerts",
-            null, null, dernierFetch, null));
-    sources.add(
-        new StatutSource("deezer", "Deezer", "metadonnees",
-            null, null, null, null));
-    sources.add(
-        new StatutSource("digitick", "Digitick", "concerts",
-            null, null, null, nbDigitick));
+        new StatutSource("eventim", "Eventim France", "concerts", null, null, dernierFetch, null));
+    sources.add(new StatutSource("deezer", "Deezer", "metadonnees", null, null, null, null));
+    sources.add(new StatutSource("digitick", "Digitick", "concerts", null, null, null, nbDigitick));
     return sources;
   }
 

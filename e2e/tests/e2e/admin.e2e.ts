@@ -353,7 +353,9 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
     await expect(page.locator(".source-carte")).toHaveCount(4);
-    await expect(page.locator(".source-carte").first()).toContainText("Ticketmaster");
+    await expect(page.locator(".source-carte").first()).toContainText(
+      "Ticketmaster",
+    );
   });
 
   test("admin_sources_table_salles_visible", async ({ page, isMobile }) => {
@@ -369,7 +371,9 @@ test.describe("Scénario: admin — onglet Sources", () => {
   test("admin_jobs_quota_tm_absent_depuis_jobs", async ({ page, isMobile }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await expect(page.locator("section#jobs .quota-tm-carte")).not.toBeAttached();
+    await expect(
+      page.locator("section#jobs .quota-tm-carte"),
+    ).not.toBeAttached();
   });
 });
 

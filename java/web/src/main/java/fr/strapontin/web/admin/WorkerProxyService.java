@@ -98,8 +98,8 @@ public class WorkerProxyService {
           .uri(WORKER_BASE_URL + "/trigger/salle?identifiants={ids}", identifiants)
           .retrieve()
           .toBodilessEntity();
-      logAdminService.logAdmin("info", "admin", "Fetch salle déclenché",
-          Map.of("identifiants", identifiants));
+      logAdminService.logAdmin(
+          "info", "admin", "Fetch salle déclenché", Map.of("identifiants", identifiants));
       return true;
     } catch (Exception e) {
       log.warn("Erreur déclenchement salle identifiants={}", identifiants, e);
