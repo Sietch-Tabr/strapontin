@@ -18,10 +18,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
   @Override
   public void addResourceHandlers(ResourceHandlerRegistry registry) {
-    // sw.js ne doit pas être mis en cache longue durée : le navigateur doit toujours vérifier les
-    // mises à jour
+    // sw.js et index.html : jamais mis en cache longue durée — le navigateur doit toujours
+    // vérifier les mises à jour pour récupérer les nouveaux hashes de bundles Vite.
     registry
-        .addResourceHandler("/sw.js")
+        .addResourceHandler("/sw.js", "/index.html")
         .addResourceLocations("classpath:/static/")
         .setCacheControl(CacheControl.noCache().mustRevalidate());
   }

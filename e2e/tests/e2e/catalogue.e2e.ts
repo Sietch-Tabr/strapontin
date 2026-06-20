@@ -228,23 +228,66 @@ test.describe("Scénario: catalogue — signalement salle manquante", () => {
 });
 
 test.describe("Scénario: catalogue — masquage concerts", () => {
+  test.beforeEach(async ({ request }, testInfo) => {
+    if (testInfo.project.name !== "firefox") return;
+    const rep = await request.get("/api/accueil?masques=true");
+    if (!rep.ok()) return;
+    const corps = (await rep.json()) as {
+      artistesGroupes: { concerts: { id: string }[] }[];
+    };
+    for (const groupe of corps.artistesGroupes ?? []) {
+      for (const concert of groupe.concerts ?? []) {
+        await request.patch(`/api/spectacles/matches/${concert.id}`, {
+          data: { masquer: false },
+        });
+      }
+    }
+  });
+
   test("accueil_masquerPuisDemasquerConcert_disparaitPuisReapparait", async ({
     page,
-  }) => {
-    await page.goto("/");
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "firefox",
+      "Modifie user_matches partagé — concurrence avec les autres navigateurs en parallèle",
+    );
+    const [,] = await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes("/api/accueil") && r.status() === 200,
+      ),
+      page.goto("/"),
+    ]);
+    await expect(page.locator(".etat-chargement")).not.toBeVisible({
+      timeout: 3000,
+    });
 
-    if ((await page.locator(".concert-ligne").count()) === 0) {
-      test.skip();
-      return;
-    }
+    const nbConcerts = await page.locator(".concert-ligne").count();
+    expect(
+      nbConcerts,
+      "Précondition : aucun concert visible sur la page d'accueil — vérifier que e2euser suit des artistes/salles et que les jobs de fetch ont tourné",
+    ).toBeGreaterThan(0);
 
     const btnMasquer = page
       .locator('button[aria-label="Masquer ce concert"]')
       .first();
     await expect(btnMasquer).toBeVisible({ timeout: 3000 });
-    await btnMasquer.click();
+    await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("/api/spectacles/matches/") && r.status() === 200,
+      ),
+      btnMasquer.click(),
+    ]);
 
-    await page.goto("/?masques=true");
+    const [,] = await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("/api/accueil") &&
+          r.url().includes("masques=true") &&
+          r.status() === 200,
+      ),
+      page.goto("/?masques=true"),
+    ]);
     await expect(page.locator(".concert-ligne").first()).toBeVisible({
       timeout: 5000,
     });
@@ -255,7 +298,25 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
       )
       .first();
     await expect(btnDemasquer).toBeVisible({ timeout: 3000 });
-    await btnDemasquer.click();
-    await page.waitForURL(/\//, { waitUntil: "domcontentloaded" });
+    await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("/api/spectacles/matches/") && r.status() === 200,
+      ),
+      btnDemasquer.click(),
+    ]);
+
+    const [,] = await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("/api/accueil") &&
+          !r.url().includes("masques=true") &&
+          r.status() === 200,
+      ),
+      page.goto("/"),
+    ]);
+    await expect(page.locator(".concert-ligne").first()).toBeVisible({
+      timeout: 5000,
+    });
   });
 });

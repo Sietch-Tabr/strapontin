@@ -8,7 +8,7 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
-        <h2 class="changelog-version">v 2.3.0 — 20 juin 2026</h2>
+        <h2 class="changelog-version">v 2.3.0 — 21 juin 2026</h2>
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Administration</p>
@@ -22,6 +22,13 @@
             <ul>
               <li>Des doublons de salles créés lors de récupérations précédentes (notamment pour les grandes salles parisiennes) ont été fusionnés — les concerts et préférences associés sont conservés.</li>
               <li>Le nom de plusieurs salles a été corrigé pour inclure les accents manquants (ex. Elysée Montmartre, Opéra Bastille, Théâtre Mogador).</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Compatibilité</p>
+            <ul>
+              <li>Sur Safari (macOS et iOS), naviguer vers le site depuis un lien (email, autre application) ne provoquait plus de redirection vers la page de connexion — la session est désormais correctement conservée.</li>
+              <li>Après une mise à jour, les feuilles de style pouvaient rester en version ancienne pendant plusieurs heures. Le rechargement est maintenant forcé dès la mise à jour disponible.</li>
             </ul>
           </div>
         </div>

@@ -158,7 +158,7 @@ public class SecurityConfiguration {
                     .authenticated()
                     .anyRequest()
                     .authenticated())
-        // CSRF désactivé : sessions SameSite=Strict (identique v1)
+        // CSRF désactivé : sessions SameSite=Lax + HttpOnly (identique v1)
         .csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(
             session ->
@@ -265,11 +265,16 @@ public class SecurityConfiguration {
     return new HttpSessionEventPublisher();
   }
 
-  /// Sérialiseur de cookies Spring Session — force {@code Secure}, {@code SameSite=Strict}
+  /// Sérialiseur de cookies Spring Session — force {@code Secure}, {@code SameSite=Lax}
   /// et {@code max-age} 30 jours.
   ///
   /// <p>Les propriétés {@code server.servlet.session.cookie.*} sont ignorées par Spring Session
   /// JDBC ; ce bean prend le relais.
+  ///
+  /// <p>{@code SameSite=Lax} (et non Strict) : Safari applique Strict plus strictement que Chrome
+  /// et bloque le cookie sur toute navigation entrante (lien mail, barre d'adresse depuis un autre
+  /// site, retour d'une autre app iOS). Lax autorise le cookie sur les navigations GET entrantes
+  /// tout en le bloquant sur les requêtes cross-site non-GET — protection CSRF équivalente.
   ///
   /// @param cookieSecure {@code true} si le flag Secure doit être positionné (désactivé en dev)
   /// @return le sérialiseur de cookies configuré
@@ -277,7 +282,7 @@ public class SecurityConfiguration {
   CookieSerializer cookieSerializer(@Value("${app.cookie.secure:true}") boolean cookieSecure) {
     DefaultCookieSerializer serialiseur = new DefaultCookieSerializer();
     serialiseur.setUseSecureCookie(cookieSecure);
-    serialiseur.setSameSite("Strict");
+    serialiseur.setSameSite("Lax");
     serialiseur.setUseHttpOnlyCookie(true);
     serialiseur.setCookieMaxAge(2592000);
     return serialiseur;
