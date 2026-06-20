@@ -45,6 +45,26 @@ VALUES (
   NOW() + INTERVAL '7 days'
 );
 
+-- e2euser suit le premier artiste avec des concerts au moins 2 jours dans le futur
+-- (évite qu'un concert "aujourd'hui" expire pendant une suite de tests longue)
+INSERT INTO user_artistes (user_id, artiste_normalise, artiste_affiche, artiste_id)
+SELECT '${user_id}', a.nom_norm, a.nom, a.id
+FROM artistes a
+WHERE EXISTS (
+  SELECT 1 FROM concerts c
+  WHERE c.artiste_id = a.id AND c.date > CURRENT_DATE + INTERVAL '2 days'
+)
+LIMIT 1
+ON CONFLICT DO NOTHING;
+
+-- Peuple user_matches pour les concerts futurs de l'artiste suivi par e2euser
+INSERT INTO user_matches (user_id, concert_id)
+SELECT '${user_id}', c.id
+FROM concerts c
+JOIN user_artistes ua ON ua.artiste_id = c.artiste_id AND ua.user_id = '${user_id}'
+WHERE c.date > CURRENT_DATE + INTERVAL '2 days'
+ON CONFLICT DO NOTHING;
+
 SELECT username, role FROM users WHERE username IN ('e2eadmin', 'e2euser', 'tmp_e2einv') ORDER BY username;
 SQL
 }
