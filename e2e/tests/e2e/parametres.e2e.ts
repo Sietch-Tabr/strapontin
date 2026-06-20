@@ -343,7 +343,17 @@ test.describe("Scénario: Préférences — départements", () => {
   test("departements_code_inconnu_affiche_toast_avertissement", async ({
     page,
   }) => {
-    await page.goto("/parametres#preferences");
+    // Attendre la fin du GET /api/user/config avant fill — sinon charger() peut
+    // écraser departements.value après fill mais avant submit (race webkit).
+    const [, ] = await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("/api/user/config") &&
+          !r.url().includes("/departements") &&
+          r.status() === 200,
+      ),
+      page.goto("/parametres#preferences"),
+    ]);
     await expect(page.locator("section#preferences")).toBeVisible();
     await page.locator("input[placeholder='75, 92, 93…']").fill("ZZZZZ");
     await page.locator("section#preferences button[type='submit']").click();
