@@ -244,14 +244,14 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
     }
   });
 
-  test(
-    "accueil_masquerPuisDemasquerConcert_disparaitPuisReapparait",
-    async ({ page }, testInfo) => {
-      test.skip(
-        testInfo.project.name !== "firefox",
-        "Modifie user_matches partagé — concurrence avec les autres navigateurs en parallèle",
-      );
-    const [, ] = await Promise.all([
+  test("accueil_masquerPuisDemasquerConcert_disparaitPuisReapparait", async ({
+    page,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "firefox",
+      "Modifie user_matches partagé — concurrence avec les autres navigateurs en parallèle",
+    );
+    const [,] = await Promise.all([
       page.waitForResponse(
         (r) => r.url().includes("/api/accueil") && r.status() === 200,
       ),
@@ -279,7 +279,7 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
       btnMasquer.click(),
     ]);
 
-    const [, ] = await Promise.all([
+    const [,] = await Promise.all([
       page.waitForResponse(
         (r) =>
           r.url().includes("/api/accueil") &&
@@ -306,7 +306,7 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
       btnDemasquer.click(),
     ]);
 
-    const [, ] = await Promise.all([
+    const [,] = await Promise.all([
       page.waitForResponse(
         (r) =>
           r.url().includes("/api/accueil") &&
@@ -318,6 +318,5 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
     await expect(page.locator(".concert-ligne").first()).toBeVisible({
       timeout: 5000,
     });
-  },
-  );
+  });
 });
