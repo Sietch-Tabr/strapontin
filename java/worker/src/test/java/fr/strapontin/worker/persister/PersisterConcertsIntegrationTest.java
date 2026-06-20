@@ -53,25 +53,11 @@ class PersisterConcertsIntegrationTest {
     jdbc.update("DELETE FROM artistes", Map.of());
   }
 
-  private static ConcertBrut concertSansUrl(String artiste, String date, String salle, String source) {
+  private static ConcertBrut concertSansUrl(
+      String artiste, String date, String salle, String source) {
     return new ConcertBrut(
-        artiste,
-        date,
-        "20:30",
-        salle,
-        "Paris",
-        "75",
-        39.9,
-        99.9,
-        null,
-        source,
-        "music",
-        "Pop",
-        "onsale",
-        null,
-        null,
-        null,
-        null);
+        artiste, date, "20:30", salle, "Paris", "75", 39.9, 99.9, null, source, "music", "Pop",
+        "onsale", null, null, null, null);
   }
 
   private static ConcertBrut concert(String artiste, String date, String salle, String source) {
@@ -460,7 +446,8 @@ class PersisterConcertsIntegrationTest {
     persisterConcerts.persisterConcerts(liste);
 
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
-    assertEquals(1L, count, "les trois variantes transitives de salle doivent fusionner en un seul concert");
+    assertEquals(
+        1L, count, "les trois variantes transitives de salle doivent fusionner en un seul concert");
   }
 
   @Test
@@ -469,7 +456,8 @@ class PersisterConcertsIntegrationTest {
     // avec des noms différents, le nom avec le meilleur score (diacritiques > tout caps) gagne.
     // Sans le fix, le dernier dans la liste gagnait (ordre non-déterministe).
     jdbc.update(
-        "INSERT INTO salles (id, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor arena')",
+        "INSERT INTO salles (id, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor"
+            + " arena')",
         Map.of());
     java.util.UUID salleUuid =
         jdbc.queryForObject(

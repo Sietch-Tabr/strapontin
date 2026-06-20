@@ -770,7 +770,9 @@ public class PersisterConcerts {
               Map.of("nom", entree.getValue(), "uuid", entree.getKey().toString()));
       if (modifies > 0) {
         log.info(
-            "renommage salle absorbé salleUuid={} nouveauNom={}", entree.getKey(), entree.getValue());
+            "renommage salle absorbé salleUuid={} nouveauNom={}",
+            entree.getKey(),
+            entree.getValue());
       }
     }
   }
