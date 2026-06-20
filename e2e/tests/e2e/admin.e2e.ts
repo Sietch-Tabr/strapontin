@@ -404,7 +404,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    const toggle = page.locator("label.toggle-label", {
+    const toggle = page.locator(".source-vue-toggle button", {
       hasText: /[Dd]igitick/,
     });
     await expect(toggle).toBeVisible();
