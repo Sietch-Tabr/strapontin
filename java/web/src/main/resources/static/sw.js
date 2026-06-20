@@ -157,10 +157,7 @@ self.addEventListener("fetch", (event) => {
   // /assets/ couvre les bundles Vite (noms hashés), /css/ et /js/ les assets legacy.
   // { cache: "reload" } sur /css/ et /js/ : contourne le cache HTTP natif du navigateur
   // (max-age=1 an) pour les fichiers sans fingerprinting dans l'URL.
-  if (
-    url.pathname.startsWith("/css/") ||
-    url.pathname.startsWith("/js/")
-  ) {
+  if (url.pathname.startsWith("/css/") || url.pathname.startsWith("/js/")) {
     event.respondWith(
       fetch(request, { cache: "reload" })
         .then(function (response) {
