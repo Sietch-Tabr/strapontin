@@ -344,6 +344,7 @@ test.describe("Scénario: Préférences — départements", () => {
     page,
   }) => {
     await page.goto("/parametres#preferences");
+    await expect(page.locator("section#preferences")).toBeVisible();
     await page.locator("input[placeholder='75, 92, 93…']").fill("ZZZZZ");
     await page.locator("section#preferences button[type='submit']").click();
     await expect(
@@ -463,6 +464,7 @@ test.describe("Scénario: Données — suppression de compte", () => {
     page,
   }) => {
     await page.goto("/parametres#donnees");
+    await expect(page.locator("section#donnees")).toBeVisible();
     await page.locator("section#donnees button.btn-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
     await expect(dialog).toBeVisible();
@@ -473,6 +475,7 @@ test.describe("Scénario: Données — suppression de compte", () => {
     page,
   }) => {
     await page.goto("/parametres#donnees");
+    await expect(page.locator("section#donnees")).toBeVisible({ timeout: 5000 });
     await page.locator("section#donnees button.btn-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
     await dialog.locator("input#confirmation-suppression").fill("supprimer");
@@ -483,6 +486,7 @@ test.describe("Scénario: Données — suppression de compte", () => {
 
   test("suppression_compte_annuler_ferme_dialog", async ({ page }) => {
     await page.goto("/parametres#donnees");
+    await expect(page.locator("section#donnees")).toBeVisible({ timeout: 5000 });
     await page.locator("section#donnees button.btn-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
     await expect(dialog).toBeVisible();

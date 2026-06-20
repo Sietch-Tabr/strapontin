@@ -1,0 +1,16 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.web.admin;
+
+import java.util.UUID;
+
+/// Salle sans correspondance Ticketmaster, pour configuration du slug Digitick.
+///
+/// @param salleUuid    UUID stable de la salle
+/// @param nom          nom affiché
+/// @param digitickSlug slug Digitick (null si non configuré)
+/// @since 2.3.0
+/// @author Kwaite
+public record SalleSourceAdmin(UUID salleUuid, String nom, String digitickSlug) {}

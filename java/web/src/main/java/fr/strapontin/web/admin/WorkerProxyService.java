@@ -87,6 +87,26 @@ public class WorkerProxyService {
     return Map.of();
   }
 
+  /// Déclenche un {@code FetchSalleJob} immédiat pour les identifiants donnés.
+  ///
+  /// @param identifiants identifiants préfixés par source (ex. {@code "tm:rZFSnyZdFvA"})
+  /// @return {@code true} si planifié, {@code false} si le worker est inaccessible
+  public boolean relancerSalle(String identifiants) {
+    try {
+      restClient
+          .post()
+          .uri(WORKER_BASE_URL + "/trigger/salle?identifiants={ids}", identifiants)
+          .retrieve()
+          .toBodilessEntity();
+      logAdminService.logAdmin(
+          "info", "admin", "Fetch salle déclenché", Map.of("identifiants", identifiants));
+      return true;
+    } catch (Exception e) {
+      log.warn("Erreur déclenchement salle identifiants={}", identifiants, e);
+      return false;
+    }
+  }
+
   /// Déclenche immédiatement tous les fetches via le worker.
   ///
   /// @return le résultat métier (succès, ou échec avec message si le worker est inaccessible)

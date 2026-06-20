@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
 
 async function soumettreDepartements(page: import("@playwright/test").Page) {
-  await page.goto("/parametres");
+  await page.goto("/parametres#preferences");
   const input = page.locator('input[name="departements"]');
   await input.waitFor({ state: "visible" });
   await input.fill((await input.inputValue()) || "75");

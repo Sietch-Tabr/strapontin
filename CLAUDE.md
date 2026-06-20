@@ -33,6 +33,7 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - **Records** : top-level dans le package domaine (plus d'inner classes dans les contrôleurs)
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) : `NoResourceFoundException` → 404, `HttpRequestMethodNotSupportedException` → 405, `AuthenticationException` → 401, `DuplicateKeyException` → 409, `DataAccessException` → 500
 - `ClientController` (`/api/client/erreur`) : remontée des erreurs JS des navigateurs vers `logs_admin`, source `client-js`
+- `SourcesController` / `SourcesService` (`/api/admin/sources`, `/api/admin/salles/{uuid}/digitick-slug|tester-digitick|fetch`) : onglet Sources admin — statuts des sources + config slugs Digitick
 - `VapidService` : génération clés VAPID EC P-256 (extrait d'`AdminService` en v2.2.0)
 - `BanniereService` / `WorkerProxyService` : extraits d'`AdminService` en v2.2.3 (bannière système ; proxy HTTP worker via le `RestClient` partagé). `GenerateurSecrets` (package `securite`) : tokens/hash extraits d'`AdminService`
 - `FiltreConcertsBuilder` (package `concert`) : fragments WHERE/ORDER BY/pagination communs à `DecouverteService` et `SpectacleService`
@@ -188,7 +189,7 @@ Résolution UUID-first (v2.3.0, ticket #621) : `PersisterConcerts.resoudreIdenti
 - **Thème** : cookie `theme` (1 an) + `user_config.theme` → pas de FOUC
 - **Navigation** : Vue Router (`front/src/router/`) — sidebar desktop, bottom nav + drawer mobile. `useEstMobile()` (`front/src/composables/useBreakpoint.js`, seuil 1024 px) contrôle le rendu conditionnel via `v-if` — pas de duplication DOM ni de `display: none`.
 - **Pages à onglets** (`admin`, `parametres`) : orchestrateur léger + sous-composants autonomes (`KeepAlive` + `v-if`). Chaque sous-composant fetch ses données dans `onMounted`. `<select v-model>` sur mobile (`v-if="estMobile"`), `<nav v-else>` sur desktop — rendu conditionnel via `useEstMobile()`. Onglet actif géré par Vue (`:class="{ actif }"`) — pas de sélecteurs CSS `:has()`.
-  - Admin : `front/src/components/admin/` (AdminJobs, AdminLogs, AdminConfig, AdminBanniere, AdminUtilisateurs)
+  - Admin : `front/src/components/admin/` (AdminJobs, AdminSources, AdminLogs, AdminConfig, AdminBanniere, AdminUtilisateurs)
   - Paramètres : `front/src/components/parametres/` (ParametresPreferences, ParametresNotifications, ParametresCompte, ParametresDonnees)
 - **Toasts** : Popover API, `afficherToast(message, type)` retourne un `id` pour fermeture ciblée. `App.vue` gère offline/online : toast persistant à la perte de connexion, fermé à la reconnexion.
 

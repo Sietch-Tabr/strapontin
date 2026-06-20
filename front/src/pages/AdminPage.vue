@@ -26,11 +26,12 @@
     </nav>
 
     <div class="admin-sections">
-      <KeepAlive><AdminJobs        v-if="ongletActif === '#jobs'"          /></KeepAlive>
-      <KeepAlive><AdminLogs        v-if="ongletActif === '#logs'"          /></KeepAlive>
-      <KeepAlive><AdminConfig      v-if="ongletActif === '#configuration'" /></KeepAlive>
-      <KeepAlive><AdminBanniere    v-if="ongletActif === '#banniere'"      /></KeepAlive>
-      <KeepAlive><AdminUtilisateurs v-if="ongletActif === '#utilisateurs'" /></KeepAlive>
+      <KeepAlive><AdminJobs         v-if="ongletActif === '#jobs'"          /></KeepAlive>
+      <KeepAlive><AdminSources      v-if="ongletActif === '#sources'"       /></KeepAlive>
+      <KeepAlive><AdminLogs         v-if="ongletActif === '#logs'"          /></KeepAlive>
+      <KeepAlive><AdminConfig       v-if="ongletActif === '#configuration'" /></KeepAlive>
+      <KeepAlive><AdminBanniere     v-if="ongletActif === '#banniere'"      /></KeepAlive>
+      <KeepAlive><AdminUtilisateurs v-if="ongletActif === '#utilisateurs'"  /></KeepAlive>
     </div>
   </div>
 </template>
@@ -41,11 +42,12 @@ defineOptions({ name: 'AdminPage' })
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useEstMobile } from '../composables/useBreakpoint.js'
-import AdminJobs         from '../components/admin/AdminJobs.vue'
-import AdminLogs         from '../components/admin/AdminLogs.vue'
-import AdminConfig       from '../components/admin/AdminConfig.vue'
-import AdminBanniere     from '../components/admin/AdminBanniere.vue'
-import AdminUtilisateurs from '../components/admin/AdminUtilisateurs.vue'
+import AdminJobs          from '../components/admin/AdminJobs.vue'
+import AdminSources       from '../components/admin/AdminSources.vue'
+import AdminLogs          from '../components/admin/AdminLogs.vue'
+import AdminConfig        from '../components/admin/AdminConfig.vue'
+import AdminBanniere      from '../components/admin/AdminBanniere.vue'
+import AdminUtilisateurs  from '../components/admin/AdminUtilisateurs.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -53,6 +55,7 @@ const estMobile = useEstMobile()
 
 const onglets = [
   { ancre: '#jobs',          label: 'Tableau de bord' },
+  { ancre: '#sources',       label: 'Sources' },
   { ancre: '#logs',          label: 'Logs' },
   { ancre: '#configuration', label: 'Configuration' },
   { ancre: '#banniere',      label: 'Bannière' },

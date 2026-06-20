@@ -68,9 +68,11 @@ test.describe("Bannière système overlay", () => {
     await page.goto("/");
     const overlay = page.locator(".banniere-overlay");
     await expect(overlay).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(500);
-    await page.goto("/spectacles");
-    await expect(overlay).toBeVisible({ timeout: 3000 });
+    // Navigation SPA via lien (Vue Router afterEach) plutôt que rechargement complet —
+    // évite la dépendance au timing d'initialisation Vue sur webkit.
+    await page.locator('a[href="/spectacles"]').first().click();
+    await expect(page).toHaveURL(/\/spectacles/);
+    await expect(overlay).toBeVisible({ timeout: 5000 });
   });
 
   test("banniere_desktop_positionnee_apres_sidebar", async ({

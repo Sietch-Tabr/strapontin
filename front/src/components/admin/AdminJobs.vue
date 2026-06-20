@@ -2,48 +2,6 @@
   <section class="admin-section" id="jobs">
 
     <div class="param-bloc">
-      <h3 class="param-label">Quota Ticketmaster API</h3>
-      <div v-if="quotaTM" class="quota-tm-carte">
-        <div class="quota-tm-chiffres">
-          <span>
-            <strong>{{ quotaTM.dispo }}</strong>
-            <span class="quota-tm-sep">{{ ' / ' + quotaTM.total }}</span>
-            <span class="quota-tm-unite">appels restants</span>
-          </span>
-          <span class="quota-tm-pct">{{ pctQuota }}%</span>
-        </div>
-        <div
-          class="quota-tm-barre-fond"
-          role="progressbar"
-          aria-valuemin="0"
-          :aria-valuenow="quotaTM.dispo"
-          :aria-valuemax="quotaTM.total"
-          aria-label="Quota Ticketmaster"
-        >
-          <div
-            class="quota-tm-barre-remplissage"
-            :class="classeBarre"
-            :style="{ width: pctQuota + '%' }"
-          ></div>
-        </div>
-        <p
-          v-if="etatQuota !== 'ok'"
-          class="badge-quota"
-          :class="etatQuota === 'critique' ? 'badge-quota-critique' : 'badge-quota-attention'"
-        >
-          {{ etatQuota === 'critique' ? 'Quota critique (moins de 10 %)' : 'Quota faible (moins de 20 %)' }}
-        </p>
-        <p v-if="quotaTM.reset > 0" class="param-aide">
-          Remise à zéro le {{ formaterTs(quotaTM.reset) }}
-        </p>
-        <p v-if="quotaTM.misAJour" class="param-aide">
-          Actualisé le {{ formaterInstant(quotaTM.misAJour) }}
-        </p>
-      </div>
-      <p v-else class="etat-vide-texte">Disponible après le prochain fetch Ticketmaster.</p>
-    </div>
-
-    <div class="param-bloc">
       <h3 class="param-label">Actualisations</h3>
       <div v-if="statsJobs.length" class="jobs-liste">
         <div v-for="stat in statsJobs" :key="stat.typeJob" class="job-carte">
@@ -110,7 +68,7 @@ defineOptions({ name: 'AdminJobs' })
 
 import { ref, shallowRef, computed, onMounted, onUnmounted } from 'vue'
 import { useToasts } from '../../composables/useToasts.js'
-import { formaterInstant, formaterTs } from '../../composables/useDates.js'
+import { formaterInstant } from '../../composables/useDates.js'
 
 const { afficherToast } = useToasts()
 
@@ -124,26 +82,12 @@ const LABELS_JOBS = {
 }
 
 const statsJobs = shallowRef([])
-const quotaTM = shallowRef(null)
 const jobsEnCours = shallowRef([])
 const workerLastSuccess = ref(null)
-const etatQuota = ref('ok')
 const relancerEnCours = ref(false)
 let pollingInterval = null
 // #571 : annule les fetch en vol à la destruction du composant (pas de maj de refs mortes).
 const controleur = new AbortController()
-
-const pctQuota = computed(() => {
-  if (!quotaTM.value || quotaTM.value.total === 0) return 0
-  return Math.round((quotaTM.value.dispo * 100) / quotaTM.value.total)
-})
-
-const classeBarre = computed(() => {
-  const p = pctQuota.value
-  if (p > 30) return 'barre-ok'
-  if (p > 10) return 'barre-warn'
-  return 'barre-danger'
-})
 
 const workerEnAlerte = computed(() => {
   if (!workerLastSuccess.value) return false
@@ -178,10 +122,8 @@ async function charger() {
     if (!rep.ok) return
     const d = await rep.json()
     statsJobs.value = d.statsJobs ?? []
-    quotaTM.value = d.quotaTM ?? null
     jobsEnCours.value = d.jobsEnCours ?? []
     workerLastSuccess.value = d.workerLastSuccess ?? null
-    etatQuota.value = d.etatQuota ?? 'ok'
     if (jobsEnCours.value.length > 0) demarrerPolling()
   } catch (e) {
     if (e.name === 'AbortError') return

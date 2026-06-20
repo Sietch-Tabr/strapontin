@@ -8,6 +8,26 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.3.0 — 20 juin 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Un nouvel onglet « Sources » dans l'administration affiche l'état de chaque source de données : quota API Ticketmaster avec jauge de consommation, dernier fetch Eventim, statut Deezer et nombre de salles configurées pour Digitick.</li>
+              <li>Les salles sans identifiant Ticketmaster sont listées ; il est possible de leur associer une URL Digitick directement depuis cet onglet et de la tester immédiatement.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Salles</p>
+            <ul>
+              <li>Des doublons de salles créés lors de récupérations précédentes (notamment pour les grandes salles parisiennes) ont été fusionnés — les concerts et préférences associés sont conservés.</li>
+              <li>Le nom de plusieurs salles a été corrigé pour inclure les accents manquants (ex. Elysée Montmartre, Opéra Bastille, Théâtre Mogador).</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.2.5 — 18 juin 2026</h2>
         <div class="changelog-entrees">
           <div>

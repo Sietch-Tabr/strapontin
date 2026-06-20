@@ -44,13 +44,23 @@ public class PersisterConcerts {
   private static final Logger log = LoggerFactory.getLogger(PersisterConcerts.class);
 
   private static final int TAILLE_LOT = 500;
-  private static final double SEUIL_SIMILARITE_SALLE = 0.5;
-  private static final int LONGUEUR_MIN_CONTAINMENT_SALLE = 4;
 
-  // Seuils plus stricts que pour la salle : un containment à 4 caractères fusionnerait
-  // à tort des artistes distincts ("Muse" est contenu dans "Muse Tour Tribute").
+  // Seuils salle : Levenshtein ≥ 0.75 + containment avec ratio court/long ≥ 0.5.
+  // Seuil 0.75 évite les faux positifs entre villes distinctes ("zenith de bordeaux"/"zenith de
+  // caen" sim=0.61 → false) tout en couvrant les variantes légitimes ("l olympia"/"olympia"
+  // sim=0.78 → true). Ratio 0.5 bloque "zenith"/"zenith bordeaux" (ratio=0.40 → false) mais garde
+  // "zenith paris"/"zenith paris la villette" (containment, ratio=0.5 → true).
+  private static final double SEUIL_SIMILARITE_SALLE = 0.75;
+  private static final int LONGUEUR_MIN_CONTAINMENT_SALLE = 4;
+  private static final double RATIO_MIN_CONTAINMENT_SALLE = 0.5;
+
+  // Seuils artiste : seuil Levenshtein strict + containment avec ratio court/long ≥ 0.65.
+  // Ratio 0.65 évite les faux positifs ("lomepal"/"lomepal & sch" ratio=0.636 → false,
+  // "pink"/"pink floyd" ratio=0.4 → false) tout en couvrant les troncatures TM
+  // ("aliz"/"alizee" ratio=0.67 → true, "fawn"/"fawnn" ratio=0.8 → true).
   private static final double SEUIL_SIMILARITE_ARTISTE = 0.85;
-  private static final int LONGUEUR_MIN_CONTAINMENT_ARTISTE = 10;
+  private static final int LONGUEUR_MIN_CONTAINMENT_ARTISTE = 4;
+  private static final double RATIO_MIN_CONTAINMENT_ARTISTE = 0.65;
 
   private static final String SQL_UPSERT_ENTETE =
       """
@@ -121,16 +131,23 @@ public class PersisterConcerts {
   /// @param a                      première chaîne normalisée
   /// @param b                      deuxième chaîne normalisée
   /// @param seuilSimilarite        seuil de similarité Levenshtein (0 à 1)
-  /// @param longueurMinContainment longueur minimale de la chaîne courte pour appliquer le
-  ///                                critère de containment
+  /// @param longueurMinContainment longueur minimale de la chaîne courte pour containment
+  /// @param ratioMinContainment    ratio minimal court/long pour containment (0.0 = désactivé)
   /// @return `true` si les deux chaînes sont considérées identiques
   private static boolean estDoublonTexte(
-      String a, String b, double seuilSimilarite, int longueurMinContainment) {
+      String a,
+      String b,
+      double seuilSimilarite,
+      int longueurMinContainment,
+      double ratioMinContainment) {
     if (a.equals(b)) return true;
     if (Normalisation.similarite(a, b) >= seuilSimilarite) return true;
     String court = a.length() <= b.length() ? a : b;
     String plusLong = a.length() <= b.length() ? b : a;
-    return court.length() >= longueurMinContainment && plusLong.contains(court);
+    double ratio = (double) court.length() / plusLong.length();
+    return court.length() >= longueurMinContainment
+        && ratio >= ratioMinContainment
+        && plusLong.contains(court);
   }
 
   /// Vérifie si deux noms de salle normalisés désignent la même salle.
@@ -139,20 +156,26 @@ public class PersisterConcerts {
   /// @param b deuxième nom normalisé
   /// @return `true` si les salles sont considérées identiques
   public static boolean estDoublonSalle(String a, String b) {
-    return estDoublonTexte(a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE);
+    return estDoublonTexte(
+        a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE, RATIO_MIN_CONTAINMENT_SALLE);
   }
 
   /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
   ///
-  /// Seuils plus stricts que {@link #estDoublonSalle} : couvre les variations mineures de
-  /// nommage entre deux fetches (suffixe numérique, article ajouté/retiré) sans fusionner des
-  /// artistes distincts au nom proche.
+  /// Seuil Levenshtein strict (0.85) complété par un containment avec ratio court/long ≥ 0.6 :
+  /// couvre les troncatures TM ("aliz"/"alizee", "fawn"/"fawnn") et les variations mineures
+  /// (suffixe numérique, article) sans fusionner des artistes distincts ("pink"/"pink floyd").
   ///
   /// @param a premier nom normalisé
   /// @param b deuxième nom normalisé
   /// @return `true` si les artistes sont considérés identiques
   public static boolean estDoublonArtiste(String a, String b) {
-    return estDoublonTexte(a, b, SEUIL_SIMILARITE_ARTISTE, LONGUEUR_MIN_CONTAINMENT_ARTISTE);
+    return estDoublonTexte(
+        a,
+        b,
+        SEUIL_SIMILARITE_ARTISTE,
+        LONGUEUR_MIN_CONTAINMENT_ARTISTE,
+        RATIO_MIN_CONTAINMENT_ARTISTE);
   }
 
   private static int scoreArtisteSalle(String artiste, String salle) {
@@ -249,6 +272,7 @@ public class PersisterConcerts {
     for (List<String> sallesNorm : parGroupe.values()) {
       if (sallesNorm.size() > 1) ajouterDoublonsSalle(sallesNorm, remplacements);
     }
+    resoudreChaines(remplacements);
     return remplacements;
   }
 
@@ -393,7 +417,24 @@ public class PersisterConcerts {
     for (List<String> artistesNorm : parGroupe.values()) {
       if (artistesNorm.size() > 1) ajouterDoublonsArtiste(artistesNorm, remplacements);
     }
+    resoudreChaines(remplacements);
     return remplacements;
+  }
+
+  /// Résout les chaînes de remplacement transitives : si A→B et B→C, met à jour A→C.
+  ///
+  /// Garantit qu'un concert passant par plusieurs variantes successives converge
+  /// vers le même canonique en une seule passe d'application.
+  ///
+  /// @param remplacements table de remplacement à résoudre sur place
+  private static void resoudreChaines(Map<String, String> remplacements) {
+    for (String cle : new ArrayList<>(remplacements.keySet())) {
+      String valeur = cle;
+      while (remplacements.containsKey(valeur) && !remplacements.get(valeur).equals(valeur)) {
+        valeur = remplacements.get(valeur);
+      }
+      remplacements.put(cle, valeur);
+    }
   }
 
   private void ajouterDoublonsArtiste(
@@ -655,14 +696,16 @@ public class PersisterConcerts {
     return cache;
   }
 
-  /// Upsert une salle et son mapping source dans {@code salles} et {@code salle_sources}.
+  /// Résout ou crée une salle et insère son mapping source dans {@code salle_sources}.
   ///
   /// <p>Appelée quand un {@code salleSourceId} n'est pas trouvé dans {@code salle_sources}.
-  /// Crée la salle dans {@code salles} si elle n'existe pas encore (ON CONFLICT DO NOTHING),
-  /// puis insère le mapping source (ON CONFLICT DO NOTHING).
+  /// Cherche d'abord une salle existante par {@code unaccent(lower(nom))} pour absorber les
+  /// variantes d'identifiant historiques ({@code id} généré différemment selon l'origine de la
+  /// salle). Si aucune salle n'est trouvée, en crée une nouvelle. Dans les deux cas, insère le
+  /// mapping {@code salle_sources} (ON CONFLICT DO NOTHING).
   ///
   /// @param c le concert portant le {@code salleSourceId} à résoudre
-  /// @return l'UUID de la salle créée ou existante, ou {@code null} si le {@code salleSourceId}
+  /// @return l'UUID de la salle résolue ou créée, ou {@code null} si le {@code salleSourceId}
   ///     est mal formé
   private UUID upsertSalleSource(ValeurConcert c) {
     int sep = c.salleSourceId().indexOf(':');
@@ -670,15 +713,25 @@ public class PersisterConcerts {
     String source = c.salleSourceId().substring(0, sep);
     String identifiant = c.salleSourceId().substring(sep + 1);
 
-    String id = Normalisation.normaliserTexte(c.salle());
-    jdbc.update(
-        "INSERT INTO salles (id, nom, nom_norm) VALUES (:id, :nom, :nomNorm)"
-            + " ON CONFLICT (id) DO NOTHING",
-        Map.of("id", id, "nom", c.salle(), "nomNorm", id));
+    List<UUID> existants =
+        jdbc.query(
+            "SELECT salle_uuid FROM salles"
+                + " WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
+            Map.of("nom", c.salle()),
+            (rs, _) -> rs.getObject("salle_uuid", UUID.class));
+    UUID salleUuid = existants.isEmpty() ? null : existants.get(0);
 
-    UUID salleUuid =
-        jdbc.queryForObject(
-            "SELECT salle_uuid FROM salles WHERE id = :id", Map.of("id", id), UUID.class);
+    if (salleUuid == null) {
+      String id = Normalisation.normaliserTexte(c.salle());
+      jdbc.update(
+          "INSERT INTO salles (id, nom, nom_norm) VALUES (:id, :nom, :nomNorm)"
+              + " ON CONFLICT (id) DO NOTHING",
+          Map.of("id", id, "nom", c.salle(), "nomNorm", id));
+      salleUuid =
+          jdbc.queryForObject(
+              "SELECT salle_uuid FROM salles WHERE id = :id", Map.of("id", id), UUID.class);
+    }
+
     if (salleUuid == null) return null;
 
     jdbc.update(
@@ -698,16 +751,28 @@ public class PersisterConcerts {
 
   private void absorberRenommagesSalles(
       List<ValeurConcert> concerts, Map<String, UUID> cachesSalles) {
+    Map<UUID, String> meilleurNom = new HashMap<>();
+    Map<UUID, Integer> meilleurScore = new HashMap<>();
     for (ValeurConcert c : concerts) {
       if (c.salleSourceId() == null) continue;
       UUID salleUuid = cachesSalles.get(c.salleSourceId());
       if (salleUuid == null) continue;
+      int score = scoreArtisteSalle("", c.salle());
+      if (!meilleurNom.containsKey(salleUuid) || score > meilleurScore.get(salleUuid)) {
+        meilleurNom.put(salleUuid, c.salle());
+        meilleurScore.put(salleUuid, score);
+      }
+    }
+    for (var entree : meilleurNom.entrySet()) {
       int modifies =
           jdbc.update(
               "UPDATE salles SET nom = :nom WHERE salle_uuid = CAST(:uuid AS uuid) AND nom <> :nom",
-              Map.of("nom", c.salle(), "uuid", salleUuid.toString()));
+              Map.of("nom", entree.getValue(), "uuid", entree.getKey().toString()));
       if (modifies > 0) {
-        log.info("renommage salle absorbé salleUuid={} nouveauNom={}", salleUuid, c.salle());
+        log.info(
+            "renommage salle absorbé salleUuid={} nouveauNom={}",
+            entree.getKey(),
+            entree.getValue());
       }
     }
   }
@@ -746,12 +811,15 @@ public class PersisterConcerts {
   ///
   /// Traitement par lots de 500. Pour chaque lot :
   ///
-  /// 1. Réconciliation des noms de salle (intra-lot puis contre la base)
-  /// 2. Réconciliation des noms d'artiste (intra-lot puis contre la base), groupée par
+  /// 1. Résolution des UUIDs par identifiants sources (`salle_sources`, `artiste_sources`)
+  /// 2. Première réconciliation des noms de salle (intra-lot puis contre la base)
+  /// 3. Réconciliation des noms d'artiste (intra-lot puis contre la base), groupée par
   ///    `(date, salleNorm)` désormais canonique
-  /// 3. Déduplication sur la clé de conflit finale
-  /// 4. Upsert ON CONFLICT avec préférence pour les diacritiques et la casse mixte
-  /// 5. Suppression des doublons par `(source, url)`
+  /// 4. Deuxième réconciliation des noms de salle : couvre le cas où artiste_norm et salle_norm
+  ///    varient simultanément (après l'étape 3, les artisteNorms sont corrigés)
+  /// 5. Déduplication sur la clé de conflit finale
+  /// 6. Upsert ON CONFLICT avec préférence pour les diacritiques et la casse mixte
+  /// 7. Suppression des doublons par `(source, url)`
   ///
   /// @param liste concerts à persister
   /// @return résultat avec nombre d'insertions et de mises à jour
@@ -817,9 +885,14 @@ public class PersisterConcerts {
                           null))
               .toList();
 
-      List<ValeurConcert> valeurs =
-          deduplicerLotReconcilie(
-              reconcilierArtistes(reconcilierSalles(resoudreIdentitesSources(valeursBrutes))));
+      List<ValeurConcert> valeurs = resoudreIdentitesSources(valeursBrutes);
+      valeurs = reconcilierSalles(valeurs);
+      valeurs = reconcilierArtistes(valeurs);
+      // Deuxième passe salle : couvre le cas où artiste_norm et salle_norm varient simultanément.
+      // Après reconcilierArtistes, les artisteNorms sont corrigés ; la requête DB trouve les
+      // concerts existants que la première passe n'avait pas chargés.
+      valeurs = reconcilierSalles(valeurs);
+      valeurs = deduplicerLotReconcilie(valeurs);
 
       ResultatPersistance resultatLot = upsertLot(valeurs);
       totalInserts += resultatLot.nbInseres();
