@@ -64,14 +64,40 @@ class PersisterConcertsTest {
 
   @Test
   void estDoublonSalle_similariteSuperieure_retourneTrue() {
-    // "zenith paris" vs "zenith de paris" — similarité ≈ 0.92
+    // "zenith paris" vs "zenith de paris" — similarité ≈ 0.92 ≥ 0.75
     assertTrue(PersisterConcerts.estDoublonSalle("zenith paris", "zenith de paris"));
   }
 
   @Test
-  void estDoublonSalle_containmentCourteChaine4CharsMin_retourneTrue() {
-    assertTrue(PersisterConcerts.estDoublonSalle("olymp", "olympia"));
-    assertTrue(PersisterConcerts.estDoublonSalle("olympia", "grand olympia de paris"));
+  void estDoublonSalle_variationsLegitimes_retourneTrue() {
+    // article — sim 0.78 ≥ 0.75
+    assertTrue(PersisterConcerts.estDoublonSalle("l olympia", "olympia"));
+    // suffixe ville — containment, ratio 0.65 ≥ 0.5
+    assertTrue(PersisterConcerts.estDoublonSalle("accor arena", "accor arena paris"));
+    // préfixe "de" — sim 0.83 ≥ 0.75
+    assertTrue(PersisterConcerts.estDoublonSalle("zenith de bordeaux", "zenith bordeaux"));
+    // containment préfixe — ratio 0.5 exactement
+    assertTrue(PersisterConcerts.estDoublonSalle("zenith paris", "zenith paris la villette"));
+  }
+
+  @Test
+  void estDoublonSalle_villesDistinctes_retourneFalse() {
+    // sim 0.61 < 0.75, pas de containment commun — deux zéniths différents
+    assertFalse(PersisterConcerts.estDoublonSalle("zenith de bordeaux", "zenith de caen"));
+  }
+
+  @Test
+  void estDoublonSalle_seuil050_retourneFalse() {
+    // sim exactement 0.50 < 0.75 — salles non appariées sous le nouveau seuil
+    assertFalse(PersisterConcerts.estDoublonSalle("le trianon", "le tigre"));
+    assertFalse(PersisterConcerts.estDoublonSalle("bataclan", "batofar"));
+    assertFalse(PersisterConcerts.estDoublonSalle("salle pleyel", "salle gaveau"));
+  }
+
+  @Test
+  void estDoublonSalle_containmentRatioTropFaible_retourneFalse() {
+    // "zenith" (6) dans "zenith bordeaux" (15) — ratio 0.40 < 0.50
+    assertFalse(PersisterConcerts.estDoublonSalle("zenith", "zenith bordeaux"));
   }
 
   @Test
@@ -128,14 +154,20 @@ class PersisterConcertsTest {
 
   @Test
   void estDoublonArtiste_ratioTropFaible_retourneFalse() {
-    // ratio court/long = 4/17 ≈ 0.24 < 0.6 → pas de containment
+    // ratio court/long = 4/17 ≈ 0.24 < 0.65 → pas de containment
     assertFalse(PersisterConcerts.estDoublonArtiste("muse", "muse tour tribute"));
   }
 
   @Test
   void estDoublonArtiste_artistesCourtsDistincts_retourneFalse() {
-    // ratio = 4/10 = 0.4 < 0.6 → pas de containment malgré le préfixe commun
+    // ratio = 4/10 = 0.4 < 0.65 → pas de containment malgré le préfixe commun
     assertFalse(PersisterConcerts.estDoublonArtiste("pink", "pink floyd"));
+  }
+
+  @Test
+  void estDoublonArtiste_collaborationPrefixe_retourneFalse() {
+    // ratio = 7/11 = 0.636 < 0.65 → collaboration ≠ artiste solo
+    assertFalse(PersisterConcerts.estDoublonArtiste("lomepal", "lomepal sch"));
   }
 
   @Test
@@ -204,6 +236,11 @@ class PersisterConcertsTest {
   void deduplicerParCleConflit_listeVide_retourneVide() {
     assertEquals(0, PersisterConcerts.deduplicerParCleConflit(List.of()).size());
   }
+
+  // --- resoudreChaines (via construireRemplacementsIntraLot) ---
+
+  // La résolution de chaînes est privée ; on la teste indirectement via deduplicerParCleConflit
+  // sur trois variantes de salle en cascade : A ≈ B ≈ C → toutes doivent avoir la même clé.
 
   // --- deduplicerLotReconcilie ---
 

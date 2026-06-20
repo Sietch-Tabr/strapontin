@@ -53,6 +53,27 @@ class PersisterConcertsIntegrationTest {
     jdbc.update("DELETE FROM artistes", Map.of());
   }
 
+  private static ConcertBrut concertSansUrl(String artiste, String date, String salle, String source) {
+    return new ConcertBrut(
+        artiste,
+        date,
+        "20:30",
+        salle,
+        "Paris",
+        "75",
+        39.9,
+        99.9,
+        null,
+        source,
+        "music",
+        "Pop",
+        "onsale",
+        null,
+        null,
+        null,
+        null);
+  }
+
   private static ConcertBrut concert(String artiste, String date, String salle, String source) {
     return new ConcertBrut(
         artiste,
@@ -422,6 +443,60 @@ class PersisterConcertsIntegrationTest {
             Map.of("uuid", uuidOriginal.toString()),
             Long.class);
     assertEquals(1L, nbSources, "la salle_source TM doit pointer vers la salle originale");
+  }
+
+  @Test
+  void persisterConcerts_sallesEnChaineTransitive_retourneUnSeulConcert() {
+    // "olympia" ≈ "l olympia" ≈ "l olympia paris" — A≈B et B≈C mais A≢C directement.
+    // Sans résolution de chaîne : "olympia" → "l olympia" (1 hop) au lieu de "l olympia paris"
+    // → doublon. Avec résolution : toutes convergent vers "l olympia paris" → 1 seul concert.
+    // URL null pour que supprimerDoublonsParUrl n'interfère pas dans le comptage.
+    List<ConcertBrut> liste =
+        List.of(
+            concertSansUrl("Mika", "2026-10-01", "Olympia", "ticketmaster"),
+            concertSansUrl("Mika", "2026-10-01", "L'Olympia", "ticketmaster"),
+            concertSansUrl("Mika", "2026-10-01", "L'Olympia Paris", "ticketmaster"));
+
+    persisterConcerts.persisterConcerts(liste);
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(1L, count, "les trois variantes transitives de salle doivent fusionner en un seul concert");
+  }
+
+  @Test
+  void persisterConcerts_memeVenueIdNomsDifferents_conserveNomAvecDiacritiques() {
+    // absorberRenommagesSalles : si plusieurs concerts du même lot ont le même salleSourceId
+    // avec des noms différents, le nom avec le meilleur score (diacritiques > tout caps) gagne.
+    // Sans le fix, le dernier dans la liste gagnait (ordre non-déterministe).
+    jdbc.update(
+        "INSERT INTO salles (id, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor arena')",
+        Map.of());
+    java.util.UUID salleUuid =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM salles WHERE id = 'accor arena'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpAccor')",
+        Map.of("uuid", salleUuid.toString()));
+
+    // Bon nom en premier, mauvais nom en dernier → sans fix, "ACCOR ARENA" aurait gagné.
+    List<ConcertBrut> liste =
+        List.of(
+            concertAvecSourceId(
+                "Mika", "2026-10-01", "Accor Aréna", "ticketmaster:KovZpAccor", null),
+            concertAvecSourceId(
+                "Coldplay", "2026-10-02", "ACCOR ARENA", "ticketmaster:KovZpAccor", null));
+
+    persisterConcerts.persisterConcerts(liste);
+
+    String nomEnBase =
+        jdbc.queryForObject(
+            "SELECT nom FROM salles WHERE salle_uuid = CAST(:uuid AS uuid)",
+            Map.of("uuid", salleUuid.toString()),
+            String.class);
+    assertEquals("Accor Aréna", nomEnBase, "le nom avec diacritiques doit être préféré");
   }
 
   @Test
