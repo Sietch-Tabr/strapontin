@@ -155,11 +155,30 @@ self.addEventListener("fetch", (event) => {
 
   // JS et CSS : network-first (toujours la version fraîche, cache en fallback offline)
   // /assets/ couvre les bundles Vite (noms hashés), /css/ et /js/ les assets legacy.
+  // { cache: "reload" } sur /css/ et /js/ : contourne le cache HTTP natif du navigateur
+  // (max-age=1 an) pour les fichiers sans fingerprinting dans l'URL.
   if (
     url.pathname.startsWith("/css/") ||
-    url.pathname.startsWith("/js/") ||
-    url.pathname.startsWith("/assets/")
+    url.pathname.startsWith("/js/")
   ) {
+    event.respondWith(
+      fetch(request, { cache: "reload" })
+        .then(function (response) {
+          if (response.ok) {
+            caches.open(CACHE_NOM).then(function (cache) {
+              cache.put(request, response.clone());
+            });
+          }
+          return response;
+        })
+        .catch(function () {
+          return caches.match(request);
+        }),
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith("/assets/")) {
     event.respondWith(
       fetch(request)
         .then(function (response) {

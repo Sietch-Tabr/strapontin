@@ -45,9 +45,9 @@ class SecurityConfigurationTest {
   }
 
   @Test
-  void cookieSerializer_sameSite_estStrict() {
+  void cookieSerializer_sameSite_estLax() {
     DefaultCookieSerializer serialiseur = (DefaultCookieSerializer) config.cookieSerializer(false);
-    assertEquals("Strict", lireSameSite(serialiseur));
+    assertEquals("Lax", lireSameSite(serialiseur));
   }
 
   // --- passwordEncoder ---
