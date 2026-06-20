@@ -37,7 +37,7 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - `VapidService` : génération clés VAPID EC P-256 (extrait d'`AdminService` en v2.2.0)
 - `BanniereService` / `WorkerProxyService` : extraits d'`AdminService` en v2.2.3 (bannière système ; proxy HTTP worker via le `RestClient` partagé). `GenerateurSecrets` (package `securite`) : tokens/hash extraits d'`AdminService`
 - `FiltreConcertsBuilder` (package `concert`) : fragments WHERE/ORDER BY/pagination communs à `DecouverteService` et `SpectacleService`
-- `SourceConcerts` / `SourceAvecFetchLot` (module `sources`, v2.3.1) : `WorkerService` source-agnostique — ajouter une source = créer une classe + bean Spring. Identifiants salle préfixés par source (`"tm:venueId"`). Voir wiki Architecture.
+- `SourceConcerts` / `SourceAvecFetchLot` (module `sources`, v2.3.0) : `WorkerService` source-agnostique — ajouter une source = créer une classe + bean Spring. Identifiants salle préfixés par source (`"tm:venueId"`). Voir wiki Architecture.
 - `core` : `QuotaTM` (type partagé) et `UtilitairesChaine.echapperJson` mutualisés en v2.2.3
 - `SpectacleService` : COUNT et filtres disponibles calculés en parallèle via `CompletableFuture` (threads virtuels)
 - `RecalculerMatchesService` : recalcul parallèle par utilisateur via `Executors.newVirtualThreadPerTaskExecutor()`, 1 transaction par user (`TransactionTemplate`)
