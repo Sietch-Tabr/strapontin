@@ -345,7 +345,7 @@ test.describe("Scénario: Préférences — départements", () => {
   }) => {
     // Attendre la fin du GET /api/user/config avant fill — sinon charger() peut
     // écraser departements.value après fill mais avant submit (race webkit).
-    const [, ] = await Promise.all([
+    const [,] = await Promise.all([
       page.waitForResponse(
         (r) =>
           r.url().includes("/api/user/config") &&
@@ -485,7 +485,9 @@ test.describe("Scénario: Données — suppression de compte", () => {
     page,
   }) => {
     await page.goto("/parametres#donnees");
-    await expect(page.locator("section#donnees")).toBeVisible({ timeout: 5000 });
+    await expect(page.locator("section#donnees")).toBeVisible({
+      timeout: 5000,
+    });
     await page.locator("section#donnees button.btn-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
     await dialog.locator("input#confirmation-suppression").fill("supprimer");
@@ -496,7 +498,9 @@ test.describe("Scénario: Données — suppression de compte", () => {
 
   test("suppression_compte_annuler_ferme_dialog", async ({ page }) => {
     await page.goto("/parametres#donnees");
-    await expect(page.locator("section#donnees")).toBeVisible({ timeout: 5000 });
+    await expect(page.locator("section#donnees")).toBeVisible({
+      timeout: 5000,
+    });
     await page.locator("section#donnees button.btn-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
     await expect(dialog).toBeVisible();
