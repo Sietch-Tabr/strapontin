@@ -36,7 +36,7 @@ class ArtisteRepository {
   List<ArtisteUtilisateur> listerPourUtilisateur(String userId) {
     return jdbc.query(
         """
-        SELECT artiste_normalise, artiste_affiche, created_at
+        SELECT artiste_id AS id, artiste_affiche, created_at
         FROM user_artistes
         WHERE user_id = :userId
         ORDER BY lower(artiste_affiche)
@@ -44,7 +44,7 @@ class ArtisteRepository {
         Map.of(CLE_USER_ID, userId),
         (rs, _) ->
             new ArtisteUtilisateur(
-                rs.getString("artiste_normalise"),
+                rs.getObject("id", UUID.class),
                 rs.getString("artiste_affiche"),
                 rs.getTimestamp("created_at").toInstant()));
   }
@@ -65,18 +65,18 @@ class ArtisteRepository {
         String.class);
   }
 
-  /// Vérifie si un artiste normalisé est déjà suivi par l'utilisateur.
+  /// Vérifie si un artiste est déjà suivi par l'utilisateur.
   ///
   /// @param userId    identifiant de l'utilisateur
-  /// @param normalise nom normalisé de l'artiste
+  /// @param artisteId UUID stable de l'artiste
   /// @return {@code true} si déjà présent
-  boolean existePourUtilisateur(String userId, String normalise) {
+  boolean existePourUtilisateur(String userId, UUID artisteId) {
     return !jdbc.queryForList(
             """
             SELECT 1 FROM user_artistes
-            WHERE user_id = :userId AND artiste_normalise = :normalise
+            WHERE user_id = :userId AND artiste_id = CAST(:artisteId AS uuid)
             """,
-            Map.of(CLE_USER_ID, userId, "normalise", normalise),
+            Map.of(CLE_USER_ID, userId, "artisteId", artisteId.toString()),
             Integer.class)
         .isEmpty();
   }
@@ -114,33 +114,27 @@ class ArtisteRepository {
   /// Insère un artiste dans la liste de suivi.
   ///
   /// @param userId    identifiant de l'utilisateur
-  /// @param normalise nom normalisé
   /// @param nom       nom affiché
   /// @param artisteId UUID stable de l'artiste dans le référentiel global
-  void ajouter(String userId, String normalise, String nom, UUID artisteId) {
-    Map<String, Object> params = new java.util.HashMap<>();
-    params.put(CLE_USER_ID, userId);
-    params.put("normalise", normalise);
-    params.put("nom", nom);
-    params.put("artisteId", artisteId != null ? artisteId.toString() : null);
+  void ajouter(String userId, String nom, UUID artisteId) {
     jdbc.update(
         """
-        INSERT INTO user_artistes (user_id, artiste_normalise, artiste_affiche, artiste_id)
-        VALUES (:userId, :normalise, :nom, CAST(:artisteId AS uuid))
+        INSERT INTO user_artistes (user_id, artiste_affiche, artiste_id)
+        VALUES (:userId, :nom, CAST(:artisteId AS uuid))
         """,
-        params);
+        Map.of(CLE_USER_ID, userId, "nom", nom, "artisteId", artisteId.toString()));
   }
 
   /// Supprime un artiste de la liste de suivi.
   ///
-  /// @param userId            identifiant de l'utilisateur
-  /// @param artisteNormalise  nom normalisé de l'artiste à supprimer
-  void supprimer(String userId, String artisteNormalise) {
+  /// @param userId    identifiant de l'utilisateur
+  /// @param artisteId UUID stable de l'artiste à supprimer
+  void supprimer(String userId, UUID artisteId) {
     jdbc.update(
         """
         DELETE FROM user_artistes
-        WHERE user_id = :userId AND artiste_normalise = :artisteNormalise
+        WHERE user_id = :userId AND artiste_id = CAST(:artisteId AS uuid)
         """,
-        Map.of(CLE_USER_ID, userId, "artisteNormalise", artisteNormalise));
+        Map.of(CLE_USER_ID, userId, "artisteId", artisteId.toString()));
   }
 }

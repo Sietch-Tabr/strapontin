@@ -715,21 +715,23 @@ public class PersisterConcerts {
 
     List<UUID> existants =
         jdbc.query(
-            "SELECT salle_uuid FROM salles"
+            "SELECT id FROM salles"
                 + " WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
             Map.of("nom", c.salle()),
-            (rs, _) -> rs.getObject("salle_uuid", UUID.class));
+            (rs, _) -> rs.getObject("id", UUID.class));
     UUID salleUuid = existants.isEmpty() ? null : existants.get(0);
 
     if (salleUuid == null) {
-      String id = Normalisation.normaliserTexte(c.salle());
+      String salleCle = Normalisation.normaliserTexte(c.salle());
       jdbc.update(
-          "INSERT INTO salles (id, nom, nom_norm) VALUES (:id, :nom, :nomNorm)"
-              + " ON CONFLICT (id) DO NOTHING",
-          Map.of("id", id, "nom", c.salle(), "nomNorm", id));
+          "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES (:salleCle, :nom, :nomNorm)"
+              + " ON CONFLICT (salle_cle) DO NOTHING",
+          Map.of("salleCle", salleCle, "nom", c.salle(), "nomNorm", salleCle));
       salleUuid =
           jdbc.queryForObject(
-              "SELECT salle_uuid FROM salles WHERE id = :id", Map.of("id", id), UUID.class);
+              "SELECT id FROM salles WHERE salle_cle = :salleCle",
+              Map.of("salleCle", salleCle),
+              UUID.class);
     }
 
     if (salleUuid == null) return null;
@@ -766,7 +768,7 @@ public class PersisterConcerts {
     for (var entree : meilleurNom.entrySet()) {
       int modifies =
           jdbc.update(
-              "UPDATE salles SET nom = :nom WHERE salle_uuid = CAST(:uuid AS uuid) AND nom <> :nom",
+              "UPDATE salles SET nom = :nom WHERE id = CAST(:uuid AS uuid) AND nom <> :nom",
               Map.of("nom", entree.getValue(), "uuid", entree.getKey().toString()));
       if (modifies > 0) {
         log.info(

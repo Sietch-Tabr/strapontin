@@ -208,26 +208,25 @@ public class SpectacleService {
     boolean sourceSalles = sources == null || sources.isEmpty() || sources.contains("salles");
 
     if (sourceArtistes && !sourceSalles) {
-      List<String> norms =
-          jdbc.queryForList(
-              "SELECT artiste_normalise FROM user_artistes WHERE user_id = :u",
-              Map.of("u", userId),
-              String.class);
-      if (norms.isEmpty()) where.append(" AND false");
-      else {
-        where.append(" AND c.artiste_norm IN (:artisteNorms)");
-        params.put("artisteNorms", norms);
-      }
-    } else if (sourceSalles && !sourceArtistes) {
       List<String> ids =
           jdbc.queryForList(
-              "SELECT regexp_replace(lower(salle_id), '[^a-z0-9]', '', 'g') FROM user_salles"
-                  + " WHERE user_id = :u",
+              "SELECT artiste_id::text FROM user_artistes WHERE user_id = :u",
               Map.of("u", userId),
               String.class);
       if (ids.isEmpty()) where.append(" AND false");
       else {
-        where.append(" AND c.salle_cle IN (:salleIds)");
+        where.append(" AND c.artiste_id::text IN (:artisteIds)");
+        params.put("artisteIds", ids);
+      }
+    } else if (sourceSalles && !sourceArtistes) {
+      List<String> ids =
+          jdbc.queryForList(
+              "SELECT salle_uuid::text FROM user_salles WHERE user_id = :u",
+              Map.of("u", userId),
+              String.class);
+      if (ids.isEmpty()) where.append(" AND false");
+      else {
+        where.append(" AND c.salle_uuid::text IN (:salleIds)");
         params.put("salleIds", ids);
       }
     }

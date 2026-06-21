@@ -5,9 +5,10 @@
 package fr.strapontin.web.salle;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /// Salle suivie par un utilisateur.
 ///
 /// @since 2.1.0
 /// @author Kwaite
-public record SalleUtilisateur(String salleId, String nom, String tmVenueId, Instant createdAt) {}
+public record SalleUtilisateur(UUID id, String nom, Instant createdAt) {}

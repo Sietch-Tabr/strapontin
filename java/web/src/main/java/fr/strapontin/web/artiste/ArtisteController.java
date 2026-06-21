@@ -7,6 +7,7 @@ package fr.strapontin.web.artiste;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -62,14 +63,14 @@ public class ArtisteController {
 
   /// Supprime un artiste de la liste de suivi.
   ///
-  /// @param artisteNormalise l'artiste normalisé à supprimer
-  /// @param auth             contexte d'authentification
+  /// @param artisteId UUID stable de l'artiste à supprimer
+  /// @param auth      contexte d'authentification
   /// @return 204 si supprimé
-  @DeleteMapping("/{artisteNormalise}")
+  @DeleteMapping("/{artisteId}")
   public ResponseEntity<Void> supprimerArtiste(
-      @PathVariable String artisteNormalise, Authentication auth) {
+      @PathVariable UUID artisteId, Authentication auth) {
     String userId = utilisateur(auth).id();
-    artisteService.supprimer(userId, artisteNormalise);
+    artisteService.supprimer(userId, artisteId);
     return ResponseEntity.noContent().build();
   }
 

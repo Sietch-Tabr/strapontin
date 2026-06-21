@@ -112,23 +112,23 @@ class SourcesServiceTest {
   @Test
   void mettreAJourDigitickSlug_slugVide_supprime() {
     UUID uuid = UUID.randomUUID();
-    when(jdbc.update(anyString(), any(Map.class))).thenReturn(0);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
 
     sourcesService.mettreAJourDigitickSlug(uuid, "");
 
     verify(jdbc)
-        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), any(Map.class));
+        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), anyMap());
   }
 
   @Test
   void mettreAJourDigitickSlug_slugNull_supprime() {
     UUID uuid = UUID.randomUUID();
-    when(jdbc.update(anyString(), any(Map.class))).thenReturn(0);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
 
     sourcesService.mettreAJourDigitickSlug(uuid, null);
 
     verify(jdbc)
-        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), any(Map.class));
+        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), anyMap());
   }
 
   @Test

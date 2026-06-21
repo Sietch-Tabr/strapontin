@@ -14,15 +14,12 @@ async function supprimerArtisteParNom(nom: string): Promise<void> {
     const rep = await ctx.get("/api/artistes");
     if (!rep.ok()) return;
     const corps = await rep.json();
-    const artistes: { artisteNormalise: string; artisteAffiche: string }[] =
+    const artistes: { id: string; artisteAffiche: string }[] =
       corps.artistes ?? [];
     const cible = artistes.find((a) =>
       a.artisteAffiche.toLowerCase().includes(nom.toLowerCase()),
     );
-    if (cible)
-      await ctx.delete(
-        `/api/artistes/${encodeURIComponent(cible.artisteNormalise)}`,
-      );
+    if (cible) await ctx.delete(`/api/artistes/${cible.id}`);
   } finally {
     await ctx.dispose();
   }
@@ -37,12 +34,11 @@ async function supprimerSalleParNom(nom: string): Promise<void> {
     const rep = await ctx.get("/api/salles");
     if (!rep.ok()) return;
     const corps = await rep.json();
-    const salles: { salleId: string; nom: string }[] = corps.salles ?? [];
+    const salles: { id: string; nom: string }[] = corps.salles ?? [];
     const cible = salles.find((s) =>
       s.nom.toLowerCase().includes(nom.toLowerCase()),
     );
-    if (cible)
-      await ctx.delete(`/api/salles/${encodeURIComponent(cible.salleId)}`);
+    if (cible) await ctx.delete(`/api/salles/${cible.id}`);
   } finally {
     await ctx.dispose();
   }

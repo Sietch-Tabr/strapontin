@@ -115,8 +115,7 @@ public class NotificationDigestService {
                        WHEN EXISTS (
                          SELECT 1 FROM user_artistes ua
                          WHERE ua.user_id = um.user_id
-                           AND (c.artiste_norm = ua.artiste_normalise
-                                OR c.artiste_norm LIKE (ua.artiste_normalise || ' %'))
+                           AND c.artiste_id = ua.artiste_id
                        ) THEN 'ARTISTE'
                        ELSE 'SALLE'
                      END AS source
@@ -131,15 +130,13 @@ public class NotificationDigestService {
                   ((uc.notif_artistes = true OR uc.notif_artistes_push = true) AND EXISTS (
                     SELECT 1 FROM user_artistes ua
                     WHERE ua.user_id = um.user_id
-                      AND (c.artiste_norm = ua.artiste_normalise
-                           OR c.artiste_norm LIKE (ua.artiste_normalise || ' %'))
+                      AND c.artiste_id = ua.artiste_id
                   ))
                   OR
                   ((uc.notif_salles = true OR uc.notif_salles_push = true) AND EXISTS (
                     SELECT 1 FROM user_salles us
-                    JOIN salles s ON s.id = us.salle_id
                     WHERE us.user_id = um.user_id
-                      AND c.salle_cle = s.id
+                      AND c.salle_uuid = us.salle_uuid
                   ))
                 )
               ORDER BY um.user_id, c.date

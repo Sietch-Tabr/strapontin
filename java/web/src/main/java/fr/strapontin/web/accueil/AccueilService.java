@@ -82,8 +82,7 @@ public class AccueilService {
          AND EXISTS (
            SELECT 1 FROM user_artistes ua
            WHERE ua.user_id = :userId
-             AND (c.artiste_norm = ua.artiste_normalise
-                  OR c.artiste_norm LIKE ua.artiste_normalise || ' %')
+             AND c.artiste_id = ua.artiste_id
          )
         """);
 

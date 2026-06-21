@@ -13,6 +13,7 @@ import io.github.bucket4j.Bucket;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -94,13 +95,13 @@ public class SalleController {
 
   /// Supprime une salle de la liste de suivi.
   ///
-  /// @param salleId identifiant normalisé de la salle
-  /// @param auth    contexte d'authentification
+  /// @param salleUuid UUID stable de la salle
+  /// @param auth      contexte d'authentification
   /// @return 204 si supprimée
-  @DeleteMapping("/{salleId}")
-  public ResponseEntity<Void> supprimerSalle(@PathVariable String salleId, Authentication auth) {
+  @DeleteMapping("/{salleUuid}")
+  public ResponseEntity<Void> supprimerSalle(@PathVariable UUID salleUuid, Authentication auth) {
     String userId = utilisateur(auth).id();
-    salleService.supprimer(userId, salleId);
+    salleService.supprimer(userId, salleUuid);
     return ResponseEntity.noContent().build();
   }
 

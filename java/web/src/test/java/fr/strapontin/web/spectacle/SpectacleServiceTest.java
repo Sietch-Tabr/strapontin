@@ -89,7 +89,7 @@ class SpectacleServiceTest {
 
     verify(jdbc, atLeastOnce())
         .queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(String.class));
-    verify(jdbc).query(contains("artisteNorms"), anyMap(), any(RowMapper.class));
+    verify(jdbc).query(contains("artisteIds"), anyMap(), any(RowMapper.class));
   }
 
   @Test

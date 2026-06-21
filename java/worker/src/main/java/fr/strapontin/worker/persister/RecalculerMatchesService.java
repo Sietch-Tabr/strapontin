@@ -104,44 +104,30 @@ public class RecalculerMatchesService {
     return usersARecalculer.size();
   }
 
-  private record SalleRef(String cle, UUID uuid) {}
-
-  private record ArtisteRef(String norm, UUID id) {}
-
   private void recalculerPourUser(String userId, String aujourdhui) {
-    List<ArtisteRef> artisteRefs =
-        jdbc.query(
-            "SELECT artiste_normalise, artiste_id FROM user_artistes WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId),
-            (rs, _) ->
-                new ArtisteRef(
-                    rs.getString("artiste_normalise"), rs.getObject("artiste_id", UUID.class)));
-
-    List<SalleRef> salleRefs =
-        jdbc.query(
-            "SELECT regexp_replace(lower(salle_id), '[^a-z0-9]', '', 'g') AS cle, salle_uuid"
-                + " FROM user_salles WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId),
-            (rs, _) -> new SalleRef(rs.getString("cle"), rs.getObject("salle_uuid", UUID.class)));
-
-    if (artisteRefs.isEmpty() && salleRefs.isEmpty()) return;
-
-    List<String> artistesNorms = artisteRefs.stream().map(ArtisteRef::norm).toList();
     List<UUID> artisteIds =
-        artisteRefs.stream().map(ArtisteRef::id).filter(id -> id != null).toList();
-    List<String> salleIds = salleRefs.stream().map(SalleRef::cle).toList();
-    List<UUID> salleUuids = salleRefs.stream().map(SalleRef::uuid).filter(u -> u != null).toList();
+        jdbc.queryForList(
+            "SELECT artiste_id FROM user_artistes WHERE user_id = :userId",
+            Map.of(CLE_USER_ID, userId),
+            UUID.class);
+
+    List<UUID> salleUuids =
+        jdbc.queryForList(
+            "SELECT salle_uuid FROM user_salles WHERE user_id = :userId",
+            Map.of(CLE_USER_ID, userId),
+            UUID.class);
+
+    if (artisteIds.isEmpty() && salleUuids.isEmpty()) return;
 
     List<String> departements = obtenirDepartementsUser(userId);
     Set<String> concertIds = new LinkedHashSet<>();
 
-    if (!artistesNorms.isEmpty()) {
-      concertIds.addAll(
-          rechercherConcertsParArtistes(artistesNorms, artisteIds, departements, aujourdhui));
+    if (!artisteIds.isEmpty()) {
+      concertIds.addAll(rechercherConcertsParArtistes(artisteIds, departements, aujourdhui));
     }
 
-    if (!salleRefs.isEmpty()) {
-      concertIds.addAll(rechercherConcertsParSalles(salleIds, salleUuids, aujourdhui));
+    if (!salleUuids.isEmpty()) {
+      concertIds.addAll(rechercherConcertsParSalles(salleUuids, aujourdhui));
     }
 
     if (concertIds.isEmpty()) {
@@ -172,64 +158,33 @@ public class RecalculerMatchesService {
   }
 
   private List<String> rechercherConcertsParArtistes(
-      List<String> artistesNorms,
-      List<UUID> artisteIds,
-      List<String> departements,
-      String aujourdhui) {
+      List<UUID> artisteIds, List<String> departements, String aujourdhui) {
+    List<String> artisteIdsStr = artisteIds.stream().map(UUID::toString).toList();
     Map<String, Object> params = new HashMap<>();
-    params.put("artistesNorms", artistesNorms);
+    params.put("artisteIds", artisteIdsStr);
     params.put("aujourdhui", LocalDate.parse(aujourdhui));
-
-    // Correspondance exacte OU préfixe espace : "slimane" matche "slimane symphonique"
-    // (TM peut renommer l'attraction avec un sous-titre de tournée entre deux fetches).
-    StringBuilder matchCond = new StringBuilder("(artiste_norm IN (:artistesNorms)");
-    for (int i = 0; i < artistesNorms.size(); i++) {
-      String paramPref = "pref" + i;
-      params.put(paramPref, artistesNorms.get(i) + " %");
-      matchCond.append(" OR artiste_norm LIKE :").append(paramPref);
-    }
-    if (!artisteIds.isEmpty()) {
-      List<String> artisteIdsStr = artisteIds.stream().map(UUID::toString).toList();
-      params.put("artisteIds", artisteIdsStr);
-      matchCond.append(" OR artiste_id::text IN (:artisteIds)");
-    }
-    matchCond.append(")");
 
     String sql;
     if (departements.isEmpty()) {
       sql =
-          "SELECT DISTINCT id::text FROM concerts WHERE " + matchCond + " AND date >= :aujourdhui";
+          "SELECT DISTINCT id::text FROM concerts"
+              + " WHERE artiste_id::text IN (:artisteIds) AND date >= :aujourdhui";
     } else {
       params.put("departements", departements);
       sql =
-          "SELECT DISTINCT id::text FROM concerts WHERE "
-              + matchCond
-              + " AND date >= :aujourdhui AND dept = ANY(ARRAY[:departements])";
+          "SELECT DISTINCT id::text FROM concerts"
+              + " WHERE artiste_id::text IN (:artisteIds) AND date >= :aujourdhui"
+              + " AND dept = ANY(ARRAY[:departements])";
     }
     return jdbc.queryForList(sql, params, String.class);
   }
 
-  private List<String> rechercherConcertsParSalles(
-      List<String> salleIds, List<UUID> salleUuids, String aujourdhui) {
-    Map<String, Object> params = new HashMap<>();
-    params.put("aujourdhui", LocalDate.parse(aujourdhui));
-
-    StringBuilder cond = new StringBuilder();
-    if (!salleUuids.isEmpty()) {
-      List<String> uuidsStr = salleUuids.stream().map(UUID::toString).toList();
-      params.put("salleUuids", uuidsStr);
-      cond.append("salle_uuid::text IN (:salleUuids)");
-    }
-    if (!salleIds.isEmpty()) {
-      params.put("salleNorms", salleIds);
-      if (!cond.isEmpty()) cond.append(" OR ");
-      cond.append("salle_cle IN (:salleNorms)");
-    }
-    if (cond.isEmpty()) return List.of();
-
+  private List<String> rechercherConcertsParSalles(List<UUID> salleUuids, String aujourdhui) {
+    List<String> uuidsStr = salleUuids.stream().map(UUID::toString).toList();
     return jdbc.queryForList(
-        "SELECT DISTINCT id::text FROM concerts WHERE (" + cond + ") AND date >= :aujourdhui",
-        params,
+        "SELECT DISTINCT id::text FROM concerts"
+            + " WHERE salle_uuid::text IN (:salleUuids) AND date >= :aujourdhui",
+        Map.of("salleUuids", uuidsStr, "aujourdhui", LocalDate.parse(aujourdhui)),
         String.class);
   }
 

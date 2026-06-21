@@ -15,9 +15,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -143,26 +143,25 @@ public class PreferencesService {
     List<ArtisteExport> artistes =
         jdbc.query(
             """
-            SELECT artiste_affiche, artiste_normalise FROM user_artistes
-            WHERE user_id = :userId ORDER BY artiste_normalise
+            SELECT artiste_affiche FROM user_artistes
+            WHERE user_id = :userId ORDER BY artiste_affiche
             """,
             Map.of(CLE_USER_ID, userId),
-            (rs, _) ->
-                new ArtisteExport(
-                    rs.getString("artiste_affiche"), rs.getString("artiste_normalise")));
+            (rs, _) -> {
+              String affiche = rs.getString("artiste_affiche");
+              return new ArtisteExport(affiche, Normalisation.normaliserTexte(affiche));
+            });
 
     List<SalleExport> salles =
         jdbc.query(
             """
-            SELECT us.salle_id, us.tm_venue_id, s.nom
+            SELECT s.salle_cle AS salle_id, s.nom
             FROM user_salles us
-            JOIN salles s ON s.id = us.salle_id
-            WHERE us.user_id = :userId ORDER BY us.salle_id
+            JOIN salles s ON s.id = us.salle_uuid
+            WHERE us.user_id = :userId ORDER BY s.salle_cle
             """,
             Map.of(CLE_USER_ID, userId),
-            (rs, _) ->
-                new SalleExport(
-                    rs.getString("salle_id"), rs.getString("tm_venue_id"), rs.getString("nom")));
+            (rs, _) -> new SalleExport(rs.getString("salle_id"), null, rs.getString("nom")));
 
     List<ConfigExport> configRows =
         jdbc.query(
@@ -213,14 +212,25 @@ public class PreferencesService {
         rejetes++;
         continue;
       }
-      String normalise = Normalisation.normaliserTexte(a.nom());
+      String nomSaisi = a.nom().strip();
+      String normalise = Normalisation.normaliserTexte(nomSaisi);
+      UUID artisteId =
+          jdbc.queryForObject(
+              """
+              INSERT INTO artistes (nom, nom_norm)
+              VALUES (:nom, :nomNorm)
+              ON CONFLICT (nom_norm) DO UPDATE SET nom = EXCLUDED.nom
+              RETURNING id
+              """,
+              Map.of("nom", nomSaisi, "nomNorm", normalise),
+              (rs, _) -> rs.getObject("id", UUID.class));
       jdbc.update(
           """
-          INSERT INTO user_artistes (user_id, artiste_normalise, artiste_affiche)
-          VALUES (:userId, :normalise, :nom)
-          ON CONFLICT (user_id, artiste_normalise) DO NOTHING
+          INSERT INTO user_artistes (user_id, artiste_affiche, artiste_id)
+          VALUES (:userId, :nom, CAST(:artisteId AS uuid))
+          ON CONFLICT (user_id, artiste_id) DO NOTHING
           """,
-          Map.of(CLE_USER_ID, userId, "normalise", normalise, "nom", a.nom().strip()));
+          Map.of(CLE_USER_ID, userId, "nom", nomSaisi, "artisteId", artisteId.toString()));
       traites++;
     }
     return new int[] {traites, rejetes};
@@ -240,8 +250,8 @@ public class PreferencesService {
         rejetes++;
         continue;
       }
-      String salleId = Normalisation.normaliserSalleCle(nomSalle);
-      if (salleId.isEmpty()) {
+      String salleCle = Normalisation.normaliserSalleCle(nomSalle);
+      if (salleCle.isEmpty()) {
         rejetes++;
         continue;
       }
@@ -249,26 +259,24 @@ public class PreferencesService {
         rejetes++;
         continue;
       }
-      String tmVenueId = s.tmVenueId() != null && !s.tmVenueId().isBlank() ? s.tmVenueId() : null;
       String nomNorm = Normalisation.normaliserTexte(nomSalle);
+      UUID salleUuid =
+          jdbc.queryForObject(
+              """
+              INSERT INTO salles (salle_cle, nom, nom_norm)
+              VALUES (:salleCle, :nom, :nomNorm)
+              ON CONFLICT (salle_cle) DO UPDATE SET nom = EXCLUDED.nom, nom_norm = EXCLUDED.nom_norm
+              RETURNING id
+              """,
+              Map.of("salleCle", salleCle, "nom", nomSalle, "nomNorm", nomNorm),
+              (rs, _) -> rs.getObject("id", UUID.class));
       jdbc.update(
           """
-          INSERT INTO salles (id, nom, nom_norm)
-          VALUES (:salleId, :nom, :nomNorm)
-          ON CONFLICT (id) DO UPDATE SET nom = EXCLUDED.nom, nom_norm = EXCLUDED.nom_norm
+          INSERT INTO user_salles (user_id, salle_uuid)
+          VALUES (:userId, CAST(:salleUuid AS uuid))
+          ON CONFLICT (user_id, salle_uuid) DO NOTHING
           """,
-          Map.of("salleId", salleId, "nom", nomSalle, "nomNorm", nomNorm));
-      Map<String, Object> paramsUs = new HashMap<>();
-      paramsUs.put(CLE_USER_ID, userId);
-      paramsUs.put("salleId", salleId);
-      paramsUs.put("tmVenueId", tmVenueId);
-      jdbc.update(
-          """
-          INSERT INTO user_salles (user_id, salle_id, tm_venue_id)
-          VALUES (:userId, :salleId, :tmVenueId)
-          ON CONFLICT (user_id, salle_id) DO NOTHING
-          """,
-          paramsUs);
+          Map.of(CLE_USER_ID, userId, "salleUuid", salleUuid.toString()));
       traites++;
     }
     return new int[] {traites, rejetes};

@@ -74,7 +74,7 @@
       <section v-else>
         <h2 class="section-label">Salles suivies</h2>
         <ul class="liste-cartes">
-          <li v-for="salle in donnees.salles" :key="salle.salleId" class="carte-item">
+          <li v-for="salle in donnees.salles" :key="salle.id" class="carte-item">
             <span class="carte-nom">{{ salle.nom }}</span>
             <button
               type="button"
@@ -209,7 +209,7 @@ async function confirmerSuppression() {
   fermerDialog()
   if (!salleASupprimer.value) return
   try {
-    const rep = await fetch('/api/salles/' + encodeURIComponent(salleASupprimer.value.salleId), {
+    const rep = await fetch('/api/salles/' + salleASupprimer.value.id, {
       method: 'DELETE',
     })
     if (!rep.ok) throw new Error()

@@ -248,14 +248,14 @@ class PersisterConcertsIntegrationTest {
   void persisterConcerts_salleSourceIdConnu_reutiliseSalleUuid() {
     // Pré-condition : salle déjà en base avec son UUID source TM
     jdbc.update(
-        "INSERT INTO salles (id, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor"
+        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor"
             + " arena')",
         Map.of());
     java.util.UUID salleUuid =
         jdbc.queryForObject(
-            "SELECT salle_uuid FROM salles WHERE id = 'accor arena'",
+            "SELECT id FROM salles WHERE salle_cle = 'accor arena'",
             Map.of(),
-            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+            (rs, _) -> rs.getObject("id", java.util.UUID.class));
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe) VALUES"
             + " (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpaZGFe')",
@@ -278,15 +278,15 @@ class PersisterConcertsIntegrationTest {
   void persisterConcerts_salleRenommee_metAJourNomConserveSalleUuid() {
     // Scénario Plenitude Arena : même venueId TM, nom différent entre deux fetches
     jdbc.update(
-        "INSERT INTO salles (id, nom, nom_norm)"
+        "INSERT INTO salles (salle_cle, nom, nom_norm)"
             + " VALUES ('paris la defense arena', 'Paris La Défense Arena',"
             + " 'paris la defense arena')",
         Map.of());
     java.util.UUID salleUuid =
         jdbc.queryForObject(
-            "SELECT salle_uuid FROM salles WHERE id = 'paris la defense arena'",
+            "SELECT id FROM salles WHERE salle_cle = 'paris la defense arena'",
             Map.of(),
-            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+            (rs, _) -> rs.getObject("id", java.util.UUID.class));
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe) VALUES"
             + " (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpbFGFe')",
@@ -307,7 +307,7 @@ class PersisterConcertsIntegrationTest {
 
     String nomMisAJour =
         jdbc.queryForObject(
-            "SELECT nom FROM salles WHERE salle_uuid = CAST(:uuid AS uuid)",
+            "SELECT nom FROM salles WHERE id = CAST(:uuid AS uuid)",
             Map.of("uuid", salleUuid.toString()),
             String.class);
     assertEquals("Plenitude Arena", nomMisAJour, "le nom de la salle doit être mis à jour");
@@ -317,14 +317,14 @@ class PersisterConcertsIntegrationTest {
   void persisterConcerts_reconciliationSalle_conserveSalleUuid() {
     // ticket #632 — le salleUuid ne doit pas être effacé lors de la réconciliation salle
     jdbc.update(
-        "INSERT INTO salles (id, nom, nom_norm) VALUES ('zenith paris', 'Zénith Paris', 'zenith"
+        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('zenith paris', 'Zénith Paris', 'zenith"
             + " paris')",
         Map.of());
     java.util.UUID salleUuid =
         jdbc.queryForObject(
-            "SELECT salle_uuid FROM salles WHERE id = 'zenith paris'",
+            "SELECT id FROM salles WHERE salle_cle = 'zenith paris'",
             Map.of(),
-            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+            (rs, _) -> rs.getObject("id", java.util.UUID.class));
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
             + " VALUES (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpZenith')",
@@ -364,7 +364,7 @@ class PersisterConcertsIntegrationTest {
 
     Long nbSalles =
         jdbc.queryForObject(
-            "SELECT COUNT(*) FROM salles WHERE id = 'l empreinte'", Map.of(), Long.class);
+            "SELECT COUNT(*) FROM salles WHERE salle_cle = 'l empreinte'", Map.of(), Long.class);
     assertEquals(1L, nbSalles, "la salle doit être créée dans salles");
 
     Long nbSources =
@@ -389,14 +389,14 @@ class PersisterConcertsIntegrationTest {
     // majuscule et espaces). Un fetch TM trouve un venue du même nom → upsertSalleSource
     // doit retrouver la salle par unaccent(lower(nom)) et ne pas créer de doublon.
     jdbc.update(
-        "INSERT INTO salles (id, nom, nom_norm)"
+        "INSERT INTO salles (salle_cle, nom, nom_norm)"
             + " VALUES ('La Seine Musicale', 'La Seine Musicale', 'La Seine Musicale')",
         Map.of());
     java.util.UUID uuidOriginal =
         jdbc.queryForObject(
-            "SELECT salle_uuid FROM salles WHERE id = 'La Seine Musicale'",
+            "SELECT id FROM salles WHERE salle_cle = 'La Seine Musicale'",
             Map.of(),
-            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+            (rs, _) -> rs.getObject("id", java.util.UUID.class));
 
     persisterConcerts.persisterConcerts(
         List.of(
@@ -456,14 +456,14 @@ class PersisterConcertsIntegrationTest {
     // avec des noms différents, le nom avec le meilleur score (diacritiques > tout caps) gagne.
     // Sans le fix, le dernier dans la liste gagnait (ordre non-déterministe).
     jdbc.update(
-        "INSERT INTO salles (id, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor"
+        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor"
             + " arena')",
         Map.of());
     java.util.UUID salleUuid =
         jdbc.queryForObject(
-            "SELECT salle_uuid FROM salles WHERE id = 'accor arena'",
+            "SELECT id FROM salles WHERE salle_cle = 'accor arena'",
             Map.of(),
-            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+            (rs, _) -> rs.getObject("id", java.util.UUID.class));
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
             + " VALUES (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpAccor')",
@@ -481,7 +481,7 @@ class PersisterConcertsIntegrationTest {
 
     String nomEnBase =
         jdbc.queryForObject(
-            "SELECT nom FROM salles WHERE salle_uuid = CAST(:uuid AS uuid)",
+            "SELECT nom FROM salles WHERE id = CAST(:uuid AS uuid)",
             Map.of("uuid", salleUuid.toString()),
             String.class);
     assertEquals("Accor Aréna", nomEnBase, "le nom avec diacritiques doit être préféré");

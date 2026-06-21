@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import fr.strapontin.sources.TicketmasterSource;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -49,6 +50,7 @@ class RecalculerMatchesServiceIntegrationTest {
   @BeforeEach
   void nettoyerBase() {
     jdbc.update("DELETE FROM users", Map.of());
+    jdbc.update("DELETE FROM artistes", Map.of());
     jdbc.update("DELETE FROM concerts", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
   }
@@ -59,62 +61,52 @@ class RecalculerMatchesServiceIntegrationTest {
         Map.of("id", id, "name", "User " + id, "email", id + "@test.fr"));
   }
 
-  private void insererArtiste(String userId, String norm, String affiche) {
+  private UUID insererArtiste(String userId, String norm, String affiche) {
+    UUID artisteId =
+        jdbc.queryForObject(
+            "INSERT INTO artistes (nom, nom_norm) VALUES (:nom, :norm)"
+                + " ON CONFLICT (nom_norm) DO UPDATE SET nom = EXCLUDED.nom RETURNING id",
+            Map.of("nom", affiche, "norm", norm),
+            (rs, _) -> rs.getObject("id", UUID.class));
     jdbc.update(
-        "INSERT INTO user_artistes (user_id, artiste_normalise, artiste_affiche)"
-            + " VALUES (:userId, :norm, :affiche)",
-        Map.of("userId", userId, "norm", norm, "affiche", affiche));
+        "INSERT INTO user_artistes (user_id, artiste_affiche, artiste_id)"
+            + " VALUES (:userId, :affiche, CAST(:artisteId AS uuid))",
+        Map.of("userId", userId, "affiche", affiche, "artisteId", artisteId.toString()));
+    return artisteId;
   }
 
-  private void insererSalle(String salleId) {
-    jdbc.update(
-        "INSERT INTO salles (id, nom, nom_norm) VALUES (:id, :nom, :norm)",
-        Map.of("id", salleId, "nom", salleId, "norm", salleId));
+  private UUID insererSalle(String salleCle) {
+    return jdbc.queryForObject(
+        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES (:id, :nom, :norm)"
+            + " ON CONFLICT (salle_cle) DO UPDATE SET nom = EXCLUDED.nom RETURNING id",
+        Map.of("id", salleCle, "nom", salleCle, "norm", salleCle),
+        (rs, _) -> rs.getObject("id", UUID.class));
   }
 
-  private void insererUserSalle(String userId, String salleId) {
+  private void insererUserSalle(String userId, UUID salleUuid) {
     jdbc.update(
-        "INSERT INTO user_salles (user_id, salle_id) VALUES (:userId, :salleId)",
-        Map.of("userId", userId, "salleId", salleId));
+        "INSERT INTO user_salles (user_id, salle_uuid)"
+            + " VALUES (:userId, CAST(:salleUuid AS uuid))",
+        Map.of("userId", userId, "salleUuid", salleUuid.toString()));
   }
 
-  private void insererUserSalleAvecUuid(String userId, String salleId, UUID salleUuid) {
-    jdbc.update(
-        "INSERT INTO user_salles (user_id, salle_id, salle_uuid)"
-            + " VALUES (:userId, :salleId, CAST(:salleUuid AS uuid))",
-        Map.of("userId", userId, "salleId", salleId, "salleUuid", salleUuid.toString()));
-  }
-
-  private void insererConcertAvecSalleUuid(
-      String artiste, String artisteNorm, String date, String salleNorm, UUID salleUuid) {
+  private void insererConcert(
+      String artiste, String norm, String date, String salleNorm, UUID artisteId, UUID salleUuid) {
+    Map<String, Object> params = new HashMap<>();
+    params.put("artiste", artiste);
+    params.put("norm", norm);
+    params.put("date", date);
+    params.put("salle", salleNorm);
+    params.put("salleNorm", salleNorm);
+    params.put("artisteId", artisteId != null ? artisteId.toString() : null);
+    params.put("salleUuid", salleUuid != null ? salleUuid.toString() : null);
     jdbc.update(
         """
-        INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source, salle_uuid)
+        INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source, artiste_id, salle_uuid)
         VALUES (:artiste, :norm, :date::date, :salle, :salleNorm,
-                CAST('ticketmaster' AS source_concert), CAST(:salleUuid AS uuid))
+                CAST('ticketmaster' AS source_concert), CAST(:artisteId AS uuid), CAST(:salleUuid AS uuid))
         """,
-        Map.of(
-            "artiste", artiste,
-            "norm", artisteNorm,
-            "date", date,
-            "salle", salleNorm,
-            "salleNorm", salleNorm,
-            "salleUuid", salleUuid.toString()));
-  }
-
-  private void insererConcert(String artiste, String artisteNorm, String date, String salleNorm) {
-    jdbc.update(
-        """
-        INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source)
-        VALUES (:artiste, :norm, :date::date, :salle, :salleNorm,
-                CAST('ticketmaster' AS source_concert))
-        """,
-        Map.of(
-            "artiste", artiste,
-            "norm", artisteNorm,
-            "date", date,
-            "salle", salleNorm,
-            "salleNorm", salleNorm));
+        params);
   }
 
   private long compterMatches(String userId) {
@@ -129,8 +121,8 @@ class RecalculerMatchesServiceIntegrationTest {
   @Test
   void recalculerMatches_avecArtiste_insereMatch() {
     insererUser("u1");
-    insererArtiste("u1", "julien clerc", "Julien Clerc");
-    insererConcert("Julien Clerc", "julien clerc", DATE_FUTURE, "olympia");
+    UUID aId = insererArtiste("u1", "julien clerc", "Julien Clerc");
+    insererConcert("Julien Clerc", "julien clerc", DATE_FUTURE, "olympia", aId, null);
 
     service.recalculerMatches(null);
 
@@ -140,9 +132,9 @@ class RecalculerMatchesServiceIntegrationTest {
   @Test
   void recalculerMatches_avecSalle_insereMatch() {
     insererUser("u2");
-    insererSalle("olympia");
-    insererUserSalle("u2", "olympia");
-    insererConcert("Artiste Quelconque", "artiste quelconque", DATE_FUTURE, "olympia");
+    UUID sId = insererSalle("olympia");
+    insererUserSalle("u2", sId);
+    insererConcert("Artiste Quelconque", "artiste quelconque", DATE_FUTURE, "olympia", null, sId);
 
     service.recalculerMatches(null);
 
@@ -153,7 +145,7 @@ class RecalculerMatchesServiceIntegrationTest {
   void recalculerMatches_sansCorrespondance_pasDeMatch() {
     insererUser("u3");
     insererArtiste("u3", "julien clerc", "Julien Clerc");
-    insererConcert("Autre Artiste", "autre artiste", DATE_FUTURE, "zenith");
+    insererConcert("Autre Artiste", "autre artiste", DATE_FUTURE, "zenith", null, null);
 
     service.recalculerMatches(null);
 
@@ -163,8 +155,8 @@ class RecalculerMatchesServiceIntegrationTest {
   @Test
   void recalculerMatches_concertPasse_pasDeMatch() {
     insererUser("u4");
-    insererArtiste("u4", "stromae", "Stromae");
-    insererConcert("Stromae", "stromae", DATE_PASSEE, "stade");
+    UUID aId = insererArtiste("u4", "stromae", "Stromae");
+    insererConcert("Stromae", "stromae", DATE_PASSEE, "stade", aId, null);
 
     service.recalculerMatches(null);
 
@@ -175,9 +167,9 @@ class RecalculerMatchesServiceIntegrationTest {
   void recalculerMatches_filtreParUserIds_recalculeUniquementUsersSpecifies() {
     insererUser("u5");
     insererUser("u6");
-    insererArtiste("u5", "aya nakamura", "Aya Nakamura");
+    UUID aId5 = insererArtiste("u5", "aya nakamura", "Aya Nakamura");
     insererArtiste("u6", "aya nakamura", "Aya Nakamura");
-    insererConcert("Aya Nakamura", "aya nakamura", DATE_FUTURE, "accor");
+    insererConcert("Aya Nakamura", "aya nakamura", DATE_FUTURE, "accor", aId5, null);
 
     service.recalculerMatches(List.of("u5"));
 
@@ -188,8 +180,8 @@ class RecalculerMatchesServiceIntegrationTest {
   @Test
   void recalculerMatches_matchDevenuInvalide_supprime() {
     insererUser("u7");
-    insererArtiste("u7", "indochine", "Indochine");
-    insererConcert("Indochine", "indochine", DATE_FUTURE, "arena");
+    UUID aId = insererArtiste("u7", "indochine", "Indochine");
+    insererConcert("Indochine", "indochine", DATE_FUTURE, "arena", aId, null);
 
     service.recalculerMatches(null);
     assertEquals(1, compterMatches("u7"));
@@ -206,12 +198,12 @@ class RecalculerMatchesServiceIntegrationTest {
     insererUser("u10");
     insererUser("u11");
     insererUser("u12");
-    insererArtiste("u10", "daft punk", "Daft Punk");
-    insererArtiste("u11", "justice", "Justice");
-    insererArtiste("u12", "moderat", "Moderat");
-    insererConcert("Daft Punk", "daft punk", DATE_FUTURE, "bercy");
-    insererConcert("Justice", "justice", DATE_FUTURE, "rex");
-    insererConcert("Moderat", "moderat", DATE_FUTURE, "trabendo");
+    UUID aId10 = insererArtiste("u10", "daft punk", "Daft Punk");
+    UUID aId11 = insererArtiste("u11", "justice", "Justice");
+    UUID aId12 = insererArtiste("u12", "moderat", "Moderat");
+    insererConcert("Daft Punk", "daft punk", DATE_FUTURE, "bercy", aId10, null);
+    insererConcert("Justice", "justice", DATE_FUTURE, "rex", aId11, null);
+    insererConcert("Moderat", "moderat", DATE_FUTURE, "trabendo", aId12, null);
 
     int traites = service.recalculerMatches(null);
 
@@ -221,22 +213,12 @@ class RecalculerMatchesServiceIntegrationTest {
     assertEquals(1, compterMatches("u12"), "u12 doit avoir son match");
   }
 
-  private UUID obtenirSalleUuid(String salleId) {
-    return jdbc.queryForObject(
-        "SELECT salle_uuid FROM salles WHERE id = :id",
-        Map.of("id", salleId),
-        (rs, _) -> rs.getObject("salle_uuid", UUID.class));
-  }
-
   @Test
   void recalculerMatches_salleAvecUuid_matcheViaSalleUuid() {
-    // ticket #621 — correspondance via salle_uuid même sans salle_cle dans concerts
     insererUser("u20");
-    insererSalle("plenitude arena");
-    UUID salleUuid = obtenirSalleUuid("plenitude arena");
-    insererUserSalleAvecUuid("u20", "plenitude arena", salleUuid);
-    insererConcertAvecSalleUuid(
-        "Coldplay", "coldplay", DATE_FUTURE, "plenitude arena renomme", salleUuid);
+    UUID salleUuid = insererSalle("plenitude arena");
+    insererUserSalle("u20", salleUuid);
+    insererConcert("Coldplay", "coldplay", DATE_FUTURE, "plenitude arena renomme", null, salleUuid);
 
     service.recalculerMatches(List.of("u20"));
 
@@ -246,13 +228,10 @@ class RecalculerMatchesServiceIntegrationTest {
 
   @Test
   void recalculerMatches_salleRenommee_matcheViaUuidApresRenommage() {
-    // Scénario Plenitude Arena : avant = "paris la defense arena", après = "plenitude arena"
     insererUser("u21");
-    insererSalle("paris la defense arena");
-    UUID salleUuid = obtenirSalleUuid("paris la defense arena");
-    insererUserSalleAvecUuid("u21", "paris la defense arena", salleUuid);
-    // Concert créé après renommage : salle_norm différente de celle inscrite par l'user
-    insererConcertAvecSalleUuid("Dua Lipa", "dua lipa", DATE_FUTURE, "plenitude arena", salleUuid);
+    UUID salleUuid = insererSalle("paris la defense arena");
+    insererUserSalle("u21", salleUuid);
+    insererConcert("Dua Lipa", "dua lipa", DATE_FUTURE, "plenitude arena", null, salleUuid);
 
     service.recalculerMatches(List.of("u21"));
 
@@ -262,7 +241,7 @@ class RecalculerMatchesServiceIntegrationTest {
   @Test
   void recalculerMatches_userSansAbonnement_matchesOrphelinsPurges() {
     insererUser("u8");
-    insererConcert("Test", "test", DATE_FUTURE, "test");
+    insererConcert("Test", "test", DATE_FUTURE, "test", null, null);
 
     String concertId =
         jdbc.queryForObject("SELECT id::text FROM concerts LIMIT 1", Map.of(), String.class);
