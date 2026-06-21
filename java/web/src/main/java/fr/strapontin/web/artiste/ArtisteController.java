@@ -67,8 +67,7 @@ public class ArtisteController {
   /// @param auth      contexte d'authentification
   /// @return 204 si supprimé
   @DeleteMapping("/{artisteId}")
-  public ResponseEntity<Void> supprimerArtiste(
-      @PathVariable UUID artisteId, Authentication auth) {
+  public ResponseEntity<Void> supprimerArtiste(@PathVariable UUID artisteId, Authentication auth) {
     String userId = utilisateur(auth).id();
     artisteService.supprimer(userId, artisteId);
     return ResponseEntity.noContent().build();

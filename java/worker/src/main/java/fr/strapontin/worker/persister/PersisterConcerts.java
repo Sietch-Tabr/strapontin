@@ -715,8 +715,7 @@ public class PersisterConcerts {
 
     List<UUID> existants =
         jdbc.query(
-            "SELECT id FROM salles"
-                + " WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
+            "SELECT id FROM salles" + " WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
             Map.of("nom", c.salle()),
             (rs, _) -> rs.getObject("id", UUID.class));
     UUID salleUuid = existants.isEmpty() ? null : existants.get(0);

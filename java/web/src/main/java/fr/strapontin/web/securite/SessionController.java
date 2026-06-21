@@ -48,7 +48,8 @@ public class SessionController {
                   AND c.artiste_id = ua.artiste_id
               )
             """,
-            Map.of("userId", ud.id()), Integer.class);
+            Map.of("userId", ud.id()),
+            Integer.class);
     return new SessionDto(ud.role(), count != null ? count : 0);
   }
 

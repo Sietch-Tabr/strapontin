@@ -145,7 +145,10 @@ public class ArtisteService {
     artisteRepository.supprimer(userId, artisteId);
     log.info("artiste supprimé userId={} artisteId={}", userId, artisteId);
     logAdminService.logAdmin(
-        "warn", "web", "artiste supprimé", Map.of("userId", userId, "artisteId", artisteId.toString()));
+        "warn",
+        "web",
+        "artiste supprimé",
+        Map.of("userId", userId, "artisteId", artisteId.toString()));
   }
 
   private List<SuggestionArtiste> rechercherDeezer(String terme) {

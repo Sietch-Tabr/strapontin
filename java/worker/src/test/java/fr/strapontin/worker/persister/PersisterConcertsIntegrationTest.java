@@ -317,8 +317,8 @@ class PersisterConcertsIntegrationTest {
   void persisterConcerts_reconciliationSalle_conserveSalleUuid() {
     // ticket #632 — le salleUuid ne doit pas être effacé lors de la réconciliation salle
     jdbc.update(
-        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('zenith paris', 'Zénith Paris', 'zenith"
-            + " paris')",
+        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('zenith paris', 'Zénith Paris',"
+            + " 'zenith paris')",
         Map.of());
     java.util.UUID salleUuid =
         jdbc.queryForObject(
