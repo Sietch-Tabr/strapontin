@@ -245,6 +245,30 @@ class EventimSourceTest {
   // --- Tests HTTP ---
 
   @Test
+  void fetchArtiste_nomSansCorrespondanceExacte_retourneListeVide() {
+    // ticket #626 — rechercherAttractionId ne doit pas prendre attractions.get(0) si pas d'exact
+    // match normalisé (ex: Shy'm → API retourne "Shy", normalisé différent)
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-808","name":"Shy"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    EventimSource source = new EventimSource(restClient);
+    List<ConcertBrut> resultats = source.fetchArtiste("Shy'm");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
   void fetchArtiste_artisteNonTrouveEventim_retourneListeVide() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
@@ -314,6 +338,34 @@ class EventimSourceTest {
     List<ConcertBrut> resultats = source.fetchRegion(List.of(), List.of("music"));
 
     assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchRegion_utiliseCategoriesEventimIndependammentDesClassifsPassees() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(
+            requestTo(
+                org.hamcrest.Matchers.allOf(
+                    org.hamcrest.Matchers.containsString("/products"),
+                    org.hamcrest.Matchers.containsString("Concerts%20%26%20Festivals"),
+                    org.hamcrest.Matchers.containsString("Classique%20%26%20Danse"))))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[],"totalResults":0}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    EventimSource source = new EventimSource(restClient);
+    // Qu'on passe null, "music" ou les classifs TM, Eventim doit toujours utiliser ses propres
+    // catégories
+    source.fetchRegion(List.of("75"), null);
+
     serveur.verify();
   }
 

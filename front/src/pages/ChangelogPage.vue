@@ -11,6 +11,13 @@
         <h2 class="changelog-version">v 2.3.0 — 21 juin 2026</h2>
         <div class="changelog-entrees">
           <div>
+            <p class="changelog-categorie">Concerts</p>
+            <ul>
+              <li>Les concerts découverts via la recherche régionale Eventim n'apparaissaient plus — une incompatibilité entre les catégories Ticketmaster et Eventim empêchait tout résultat. La recherche régionale Eventim est à nouveau fonctionnelle.</li>
+              <li>Un concert peut désormais être correctement attribué à un artiste dont le nom contient une apostrophe (ex. Shy'm) même si Eventim référence un homonyme sous un nom différent.</li>
+            </ul>
+          </div>
+          <div>
             <p class="changelog-categorie">Administration</p>
             <ul>
               <li>Un nouvel onglet « Sources » dans l'administration affiche l'état de chaque source de données : quota API Ticketmaster avec jauge de consommation, dernier fetch Eventim, statut Deezer et nombre de salles configurées pour Digitick.</li>

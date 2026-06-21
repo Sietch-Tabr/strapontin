@@ -229,7 +229,7 @@ public class WorkerService {
       List<ConcertBrut> tous = new ArrayList<>();
       for (SourceConcerts source : sources) {
         try {
-          tous.addAll(source.fetchRegion(deptsListe, TicketmasterSource.CLASSIFICATIONS));
+          tous.addAll(source.fetchRegion(deptsListe, null));
         } catch (Exception e) {
           log.warn("{} fetchRegion échoué : {}", source.nom(), e.getMessage());
         }
