@@ -11,6 +11,12 @@
         <h2 class="changelog-version">v 2.3.0 — 21 juin 2026</h2>
         <div class="changelog-entrees">
           <div>
+            <p class="changelog-categorie">Interface</p>
+            <ul>
+              <li>Un indicateur de chargement (animation) s'affiche désormais pendant la récupération des données sur toutes les pages — plus d'écran vide ou de message "aucun résultat" trompeur pendant le chargement.</li>
+            </ul>
+          </div>
+          <div>
             <p class="changelog-categorie">Concerts</p>
             <ul>
               <li>Les concerts découverts via la recherche régionale Eventim n'apparaissaient plus — une incompatibilité entre les catégories Ticketmaster et Eventim empêchait tout résultat. La recherche régionale Eventim est à nouveau fonctionnelle.</li>

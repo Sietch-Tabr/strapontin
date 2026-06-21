@@ -33,7 +33,7 @@
           </p>
         </div>
       </div>
-      <p v-else-if="!chargement" class="etat-vide-texte">Aucun job exécuté pour l'instant.</p>
+      <p v-else class="etat-vide-texte">Aucun job exécuté pour l'instant.</p>
       <div class="relancer-actions">
         <button
           type="button"

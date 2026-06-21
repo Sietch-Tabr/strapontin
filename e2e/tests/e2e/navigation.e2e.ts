@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
+import { FICHIER_AUTH_ADMIN, FICHIER_AUTH_USER } from "./global-setup.js";
 
 test.describe("Scénario: navigation et chargement des pages", () => {
   test("accueil_charge_sans_erreur_500", async ({ page }) => {
@@ -190,5 +190,44 @@ test.describe("Scénario: navigation Vue Router sans rechargement complet", () =
     expect(navigationDocument).toBe(false);
     const marqueur = await page.evaluate(() => (window as any).__testMarqueur);
     expect(marqueur).toBe(1);
+  });
+});
+
+test.describe("Scénario: indicateur de chargement (#644)", () => {
+  test.use({ storageState: FICHIER_AUTH_USER });
+
+  for (const { nom, url, api } of [
+    { nom: "artistes", url: "/artistes", api: "/api/artistes" },
+    { nom: "salles",   url: "/salles",   api: "/api/salles"   },
+    { nom: "spectacles", url: "/spectacles", api: "/api/spectacles" },
+    { nom: "decouverte", url: "/decouverte", api: "/api/decouverte" },
+  ]) {
+    test(`${nom}_etat_chargement_visible_pendant_fetch_puis_absent`, async ({ page }) => {
+      await page.route(`**${api}**`, async (route) => {
+        await new Promise<void>((r) => setTimeout(r, 400));
+        await route.continue();
+      });
+
+      const gotoPromise = page.goto(url);
+      await expect(page.locator(".etat-chargement")).toBeVisible({ timeout: 2000 });
+      await gotoPromise;
+      await expect(page.locator(".etat-chargement")).not.toBeVisible({ timeout: 3000 });
+    });
+  }
+});
+
+test.describe("Scénario: indicateur de chargement admin (#644)", () => {
+  test.use({ storageState: FICHIER_AUTH_ADMIN });
+
+  test("admin_jobs_etat_chargement_visible_pendant_fetch_puis_absent", async ({ page }) => {
+    await page.route("**/api/admin/jobs**", async (route) => {
+      await new Promise<void>((r) => setTimeout(r, 400));
+      await route.continue();
+    });
+
+    const gotoPromise = page.goto("/admin");
+    await expect(page.locator(".etat-chargement")).toBeVisible({ timeout: 2000 });
+    await gotoPromise;
+    await expect(page.locator(".etat-chargement")).not.toBeVisible({ timeout: 3000 });
   });
 });

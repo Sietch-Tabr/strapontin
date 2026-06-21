@@ -71,7 +71,7 @@
           </table>
         </div>
       </div>
-      <p v-else-if="!chargement" class="etat-vide-texte">Aucun log pour l'instant.</p>
+      <p v-else class="etat-vide-texte">Aucun log pour l'instant.</p>
     </div>
   </section>
 </template>
