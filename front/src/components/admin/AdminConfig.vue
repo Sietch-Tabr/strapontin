@@ -1,6 +1,9 @@
 <template>
   <section class="admin-section" id="configuration">
 
+    <EtatChargement v-if="chargement" />
+    <template v-else>
+
     <!-- Général -->
     <div class="param-bloc">
       <h3 class="param-label">Général</h3>
@@ -131,6 +134,7 @@
       <p class="param-aide">Variable d'environnement de chiffrement de la configuration. Changer cette clé rend toutes les valeurs chiffrées illisibles.</p>
     </div>
 
+    </template>
   </section>
 
   <dialog ref="dialogVapidRef" id="dialog-vapid">
@@ -149,6 +153,7 @@
 defineOptions({ name: 'AdminConfig' })
 
 import { shallowRef, ref, computed, onMounted } from 'vue'
+import EtatChargement from '../EtatChargement.vue'
 import { useDialog } from '../../composables/useDialog.js'
 import { useToasts } from '../../composables/useToasts.js'
 
@@ -160,6 +165,7 @@ const DESCRIPTIONS_CONFIG = {
   PUBLIC_BASE_URL: 'URL publique de l\'application (ex. https://strapontin.kwaite.fr).',
 }
 
+const chargement = ref(true)
 const configs = shallowRef([])
 const appConfigSecretPresente = ref(false)
 const etatTm = ref(null)
@@ -196,6 +202,8 @@ async function charger() {
     }
   } catch (_) {
     afficherToast('Erreur lors du chargement de la configuration.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 }
 

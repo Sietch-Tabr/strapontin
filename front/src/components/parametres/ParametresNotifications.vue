@@ -2,6 +2,9 @@
   <section class="parametres-section" id="notifications">
     <h2 class="sr-only">Notifications</h2>
 
+    <EtatChargement v-if="chargement" />
+    <template v-else>
+
     <div class="param-bloc">
       <h3 class="param-label">Notifications email</h3>
       <form class="form-vertical" @submit.prevent="sauvegarderNotifications">
@@ -121,6 +124,8 @@
         </button>
       </div>
     </div>
+
+    </template>
   </section>
 </template>
 
@@ -129,9 +134,11 @@ defineOptions({ name: 'ParametresNotifications' })
 
 import { ref, onMounted } from 'vue'
 import { useToasts } from '../../composables/useToasts.js'
+import EtatChargement from '../EtatChargement.vue'
 
 const { afficherToast } = useToasts()
 
+const chargement = ref(true)
 const resendDisponible = ref(false)
 const frequenceNotifications = ref('jamais')
 const notifArtistes = ref(false)
@@ -171,6 +178,8 @@ async function charger() {
     await initialiserPush()
   } catch (_) {
     afficherToast('Erreur lors du chargement des notifications.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 }
 

@@ -4,9 +4,7 @@
       <h1>Mes prochains concerts</h1>
     </div>
 
-    <div v-if="chargement" class="etat-chargement" aria-live="polite">
-      Chargement…
-    </div>
+    <EtatChargement v-if="chargement" />
 
     <template v-else-if="donnees">
       <div class="chips">
@@ -138,6 +136,7 @@
 defineOptions({ name: 'AccueilPage' })
 
 import { ref, shallowRef, computed, watch, onMounted, nextTick } from 'vue'
+import EtatChargement from '../components/EtatChargement.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formaterAvecHeure } from '../composables/useDates.js'
 import { useToasts } from '../composables/useToasts.js'

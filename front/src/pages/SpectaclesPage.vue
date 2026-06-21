@@ -107,6 +107,8 @@
       </div>
     </form>
 
+    <EtatChargement v-if="chargement && !donnees" />
+
     <div v-if="donnees && donnees.concerts.length === 0" class="etat-vide">
       <p v-if="!donnees.aSuivi" class="etat-vide-titre">Aucun artiste ni salle suivi.</p>
       <p v-else class="etat-vide-titre">Aucun concert avec ces filtres.</p>
@@ -199,11 +201,13 @@ import { ref, shallowRef, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formaterAvecHeure } from '../composables/useDates.js'
 import { useToasts } from '../composables/useToasts.js'
+import EtatChargement from '../components/EtatChargement.vue'
 
 const route = useRoute()
 const router = useRouter()
 const { afficherToast } = useToasts()
 
+const chargement = ref(false)
 const donnees = shallowRef(null)
 const filtresVisibles = ref(false)
 
@@ -243,6 +247,7 @@ function syncFiltresLocaux() {
 }
 
 async function charger() {
+  chargement.value = true
   try {
     const params = new URLSearchParams()
     if (route.query.q) params.set('q', route.query.q)
@@ -260,6 +265,8 @@ async function charger() {
     donnees.value = await rep.json()
   } catch {
     afficherToast('Impossible de charger les spectacles.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 }
 

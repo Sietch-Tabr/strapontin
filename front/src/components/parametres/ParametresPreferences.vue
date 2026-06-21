@@ -2,6 +2,9 @@
   <section class="parametres-section" id="preferences">
     <h2 class="sr-only">Préférences</h2>
 
+    <EtatChargement v-if="chargement" />
+    <template v-else>
+
     <div class="param-bloc">
       <h3 class="param-label">Départements de découverte</h3>
       <p class="param-aide">
@@ -56,6 +59,8 @@
       </div>
       <p class="param-aide">Le mode Automatique suit la préférence de votre appareil.</p>
     </div>
+
+    </template>
   </section>
 </template>
 
@@ -65,10 +70,12 @@ defineOptions({ name: 'ParametresPreferences' })
 import { ref, onMounted } from 'vue'
 import { useToasts } from '../../composables/useToasts.js'
 import { useTheme } from '../../composables/useTheme.js'
+import EtatChargement from '../EtatChargement.vue'
 
 const { afficherToast } = useToasts()
 const { enregistrerTheme, lireThemeCookie } = useTheme()
 
+const chargement = ref(true)
 const departements = ref('')
 const filtreDisponibles = ref(false)
 const theme = ref('auto')
@@ -89,6 +96,8 @@ async function charger() {
     theme.value = lireThemeCookie() || 'auto'
   } catch (_) {
     afficherToast('Erreur lors du chargement des préférences.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 }
 

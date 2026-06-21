@@ -23,7 +23,9 @@
 
     <div v-if="erreur" class="alerte alerte-erreur" role="alert" aria-live="assertive">{{ erreur }}</div>
 
-    <template v-if="donnees">
+    <EtatChargement v-if="chargement" />
+
+    <template v-else-if="donnees">
       <section
         v-if="donnees.resultats && donnees.resultats.length > 0"
         class="section-resultats"
@@ -144,9 +146,11 @@ defineOptions({ name: 'SallesPage' })
 import { ref, shallowRef, onMounted } from 'vue'
 import { useDialog } from '../composables/useDialog.js'
 import { useToasts } from '../composables/useToasts.js'
+import EtatChargement from '../components/EtatChargement.vue'
 
 const { afficherToast } = useToasts()
 
+const chargement = ref(true)
 const donnees = shallowRef(null)
 const q = ref('')
 const qSoumis = ref('')
@@ -258,6 +262,8 @@ onMounted(async () => {
     donnees.value = await charger()
   } catch {
     afficherToast('Impossible de charger les salles.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 })
 </script>

@@ -16,7 +16,8 @@
       </form>
     </div>
 
-    <div v-if="utilisateurs.length" class="param-bloc">
+    <EtatChargement v-if="chargement" />
+    <div v-else-if="utilisateurs.length" class="param-bloc">
       <h3 class="param-label">Utilisateurs ({{ utilisateurs.length }})</h3>
       <ul class="user-liste">
         <li v-for="u in utilisateurs" :key="u.id" class="user-carte">
@@ -130,6 +131,7 @@
 defineOptions({ name: 'AdminUtilisateurs' })
 
 import { ref, shallowRef, reactive, onMounted, computed } from 'vue'
+import EtatChargement from '../EtatChargement.vue'
 import { useDialog } from '../../composables/useDialog.js'
 import { useToasts } from '../../composables/useToasts.js'
 import { formaterInstant } from '../../composables/useDates.js'
@@ -142,6 +144,7 @@ const { dialogRef: dialogReinitTotpRef, ouvrir: ouvrirDialogReinitTotpModal, fer
 const { dialogRef: dialogConfirmerRoleRef, ouvrir: ouvrirDialogConfirmerRoleModal, fermer: fermerDialogConfirmerRoleModal } = useDialog()
 
 const utilisateurs = shallowRef([])
+const chargement = ref(true)
 const utilisateurCourantId = ref(null)
 const nouvelEmail = ref('')
 const modifOuverts = ref(new Set())
@@ -186,6 +189,8 @@ async function charger() {
     }
   } catch (_) {
     afficherToast('Erreur lors du chargement des utilisateurs.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 }
 

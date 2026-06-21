@@ -34,7 +34,8 @@
       <p v-if="!filtresNiveaux.has('info')" class="logs-note-info">
         Les logs de niveau info sont masqués par défaut. Activez-les via le filtre ci-dessus.
       </p>
-      <div v-if="logs.length" class="logs-conteneur">
+      <EtatChargement v-if="chargement" />
+      <div v-else-if="logs.length" class="logs-conteneur">
         <div class="table-wrapper">
           <table id="table-logs">
             <thead>
@@ -70,7 +71,7 @@
           </table>
         </div>
       </div>
-      <p v-else class="etat-vide-texte">Aucun log pour l'instant.</p>
+      <p v-else-if="!chargement" class="etat-vide-texte">Aucun log pour l'instant.</p>
     </div>
   </section>
 </template>
@@ -81,9 +82,11 @@ defineOptions({ name: 'AdminLogs' })
 import { ref, shallowRef, computed, onMounted } from 'vue'
 import { useToasts } from '../../composables/useToasts.js'
 import { formaterTs } from '../../composables/useDates.js'
+import EtatChargement from '../EtatChargement.vue'
 
 const { afficherToast } = useToasts()
 
+const chargement = ref(true)
 const logs = shallowRef([])
 const filtreSource = ref('')
 const filtresNiveaux = ref(new Set(['warn', 'error']))
@@ -130,6 +133,8 @@ async function charger() {
     if (rep.ok) logs.value = await rep.json()
   } catch (_) {
     afficherToast('Erreur lors du chargement des logs.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 }
 

@@ -2,6 +2,9 @@
   <section class="parametres-section" id="compte">
     <h2 class="sr-only">Compte</h2>
 
+    <EtatChargement v-if="chargement" />
+    <template v-else>
+
     <div class="param-bloc">
       <h3 class="param-label">Profil</h3>
       <form class="form-vertical form-compact" @submit.prevent="sauvegarderProfil">
@@ -104,6 +107,8 @@
         <button type="submit" class="btn btn-secondary">Changer</button>
       </form>
     </div>
+
+    </template>
   </section>
 </template>
 
@@ -113,10 +118,12 @@ defineOptions({ name: 'ParametresCompte' })
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToasts } from '../../composables/useToasts.js'
+import EtatChargement from '../EtatChargement.vue'
 
 const router = useRouter()
 const { afficherToast } = useToasts()
 
+const chargement = ref(true)
 const profil = ref(null)
 const email = ref('')
 const identifiant = ref('')
@@ -136,6 +143,8 @@ async function charger() {
     }
   } catch (_) {
     afficherToast('Erreur lors du chargement du profil.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 }
 
