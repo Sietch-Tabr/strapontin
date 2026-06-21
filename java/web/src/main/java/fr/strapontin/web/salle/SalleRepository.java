@@ -37,33 +37,32 @@ class SalleRepository {
   List<SalleUtilisateur> listerPourUtilisateur(String userId) {
     return jdbc.query(
         """
-        SELECT us.salle_id, s.nom, us.tm_venue_id, us.created_at
+        SELECT us.salle_uuid AS id, s.nom, us.created_at
         FROM user_salles us
-        JOIN salles s ON s.id = us.salle_id
+        JOIN salles s ON s.id = us.salle_uuid
         WHERE us.user_id = :userId
         ORDER BY lower(s.nom)
         """,
         Map.of(CLE_USER_ID, userId),
         (rs, _) ->
             new SalleUtilisateur(
-                rs.getString("salle_id"),
+                rs.getObject("id", UUID.class),
                 rs.getString("nom"),
-                rs.getString("tm_venue_id"),
                 rs.getTimestamp("created_at").toInstant()));
   }
 
   /// Recherche des salles dans les concerts existants par pattern sur la clé normalisée.
   ///
-  /// <p>Utilise {@code salle_cle LIKE :pattern} (colonne générée sans accents ni ponctuation)
+  /// <p>Utilise {@code regexp_replace(salle_norm, '[^a-z0-9]', '', 'g') LIKE :pattern}
   /// pour ignorer apostrophes, tirets et accents dans le terme de recherche.
   ///
-  /// @param pattern valeur LIKE sur {@code salle_cle} (ex. {@code "%lempreinte%"})
+  /// @param pattern valeur LIKE sur la clé normalisée (ex. {@code "%lempreinte%"})
   /// @return lignes {@code salle}/{@code ville} distinctes (max 10)
   List<Map<String, Object>> rechercherEnBase(String pattern) {
     return jdbc.queryForList(
         """
         SELECT DISTINCT salle, ville FROM concerts
-        WHERE salle_cle LIKE :pattern
+        WHERE regexp_replace(salle_norm, '[^a-z0-9]', '', 'g') LIKE :pattern
         ORDER BY salle
         LIMIT 10
         """,
@@ -72,16 +71,16 @@ class SalleRepository {
 
   /// Vérifie si une salle est déjà suivie par l'utilisateur.
   ///
-  /// @param userId  identifiant de l'utilisateur
-  /// @param salleId identifiant normalisé de la salle
+  /// @param userId    identifiant de l'utilisateur
+  /// @param salleUuid UUID stable de la salle
   /// @return {@code true} si déjà présente
-  boolean existePourUtilisateur(String userId, String salleId) {
+  boolean existePourUtilisateur(String userId, UUID salleUuid) {
     return !jdbc.queryForList(
             """
             SELECT 1 FROM user_salles
-            WHERE user_id = :userId AND salle_id = :salleId
+            WHERE user_id = :userId AND salle_uuid = CAST(:salleUuid AS uuid)
             """,
-            Map.of(CLE_USER_ID, userId, "salleId", salleId),
+            Map.of(CLE_USER_ID, userId, "salleUuid", salleUuid.toString()),
             Integer.class)
         .isEmpty();
   }
@@ -101,23 +100,23 @@ class SalleRepository {
 
   /// Insère ou met à jour une salle dans le référentiel et retourne son UUID stable.
   ///
-  /// @param salleId identifiant normalisé (clé naturelle)
-  /// @param nom     nom affiché
+  /// @param salleCle clé naturelle normalisée (ex. {@code "olympia"})
+  /// @param nom      nom affiché
   /// @return UUID stable de la salle (existant ou nouvellement créé)
-  UUID upsertSalle(String salleId, String nom) {
+  UUID upsertSalle(String salleCle, String nom) {
     Map<String, Object> params = new HashMap<>();
-    params.put("id", salleId);
+    params.put("salleCle", salleCle);
     params.put("nom", nom);
-    params.put("nomNorm", salleId);
+    params.put("nomNorm", salleCle);
     return jdbc.queryForObject(
         """
-        INSERT INTO salles (id, nom, nom_norm)
-        VALUES (:id, :nom, :nomNorm)
-        ON CONFLICT (id) DO UPDATE SET nom = EXCLUDED.nom
-        RETURNING salle_uuid
+        INSERT INTO salles (salle_cle, nom, nom_norm)
+        VALUES (:salleCle, :nom, :nomNorm)
+        ON CONFLICT (salle_cle) DO UPDATE SET nom = EXCLUDED.nom
+        RETURNING id
         """,
         params,
-        (rs, _) -> rs.getObject("salle_uuid", UUID.class));
+        (rs, _) -> rs.getObject("id", UUID.class));
   }
 
   /// Enregistre une correspondance source externe → salle interne.
@@ -140,34 +139,27 @@ class SalleRepository {
 
   /// Lie une salle à un utilisateur.
   ///
-  /// @param userId     identifiant de l'utilisateur
-  /// @param salleId    identifiant normalisé de la salle
-  /// @param tmVenueId  identifiant Ticketmaster (nullable)
-  /// @param salleUuid  UUID stable de la salle
-  void ajouterPourUtilisateur(String userId, String salleId, String tmVenueId, UUID salleUuid) {
-    Map<String, Object> params = new HashMap<>();
-    params.put(CLE_USER_ID, userId);
-    params.put("salleId", salleId);
-    params.put("tmVenueId", tmVenueId);
-    params.put("salleUuid", salleUuid != null ? salleUuid.toString() : null);
+  /// @param userId    identifiant de l'utilisateur
+  /// @param salleUuid UUID stable de la salle
+  void ajouterPourUtilisateur(String userId, UUID salleUuid) {
     jdbc.update(
         """
-        INSERT INTO user_salles (user_id, salle_id, tm_venue_id, salle_uuid)
-        VALUES (:userId, :salleId, :tmVenueId, CAST(:salleUuid AS uuid))
+        INSERT INTO user_salles (user_id, salle_uuid)
+        VALUES (:userId, CAST(:salleUuid AS uuid))
         """,
-        params);
+        Map.of(CLE_USER_ID, userId, "salleUuid", salleUuid.toString()));
   }
 
   /// Supprime la relation utilisateur–salle.
   ///
-  /// @param userId  identifiant de l'utilisateur
-  /// @param salleId identifiant normalisé de la salle
-  void supprimerPourUtilisateur(String userId, String salleId) {
+  /// @param userId    identifiant de l'utilisateur
+  /// @param salleUuid UUID stable de la salle
+  void supprimerPourUtilisateur(String userId, UUID salleUuid) {
     jdbc.update(
         """
         DELETE FROM user_salles
-        WHERE user_id = :userId AND salle_id = :salleId
+        WHERE user_id = :userId AND salle_uuid = CAST(:salleUuid AS uuid)
         """,
-        Map.of(CLE_USER_ID, userId, "salleId", salleId));
+        Map.of(CLE_USER_ID, userId, "salleUuid", salleUuid.toString()));
   }
 }

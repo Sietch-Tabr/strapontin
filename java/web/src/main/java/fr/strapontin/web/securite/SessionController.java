@@ -45,11 +45,11 @@ public class SessionController {
               AND EXISTS (
                 SELECT 1 FROM user_artistes ua
                 WHERE ua.user_id = :userId
-                  AND (c.artiste_norm = ua.artiste_normalise
-                       OR c.artiste_norm LIKE ua.artiste_normalise || ' %')
+                  AND c.artiste_id = ua.artiste_id
               )
             """,
-            Map.of("userId", ud.id()), Integer.class);
+            Map.of("userId", ud.id()),
+            Integer.class);
     return new SessionDto(ud.role(), count != null ? count : 0);
   }
 

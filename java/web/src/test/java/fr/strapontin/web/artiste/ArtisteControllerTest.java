@@ -11,6 +11,7 @@ import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -77,9 +78,10 @@ class ArtisteControllerTest {
 
   @Test
   void supprimerArtiste_delegueAuService_retourne204() {
-    ResponseEntity<Void> rep = controller.supprimerArtiste("daft punk", auth);
+    UUID artisteId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    ResponseEntity<Void> rep = controller.supprimerArtiste(artisteId, auth);
 
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
-    verify(artisteService).supprimer("user-1", "daft punk");
+    verify(artisteService).supprimer("user-1", artisteId);
   }
 }

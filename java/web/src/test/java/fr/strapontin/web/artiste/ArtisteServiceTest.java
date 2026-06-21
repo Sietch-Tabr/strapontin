@@ -41,36 +41,41 @@ class ArtisteServiceTest {
 
   @Test
   void ajouter_artisteDejaPresent_leveRessourceDejaExistante() {
-    when(artisteRepository.existePourUtilisateur("u1", "radiohead")).thenReturn(true);
+    UUID artisteId = UUID.randomUUID();
+    when(artisteRepository.upsertArtiste("Radiohead", "radiohead")).thenReturn(artisteId);
+    when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(true);
 
     assertThrows(RessourceDejaExistante.class, () -> service.ajouter("u1", "Radiohead"));
-    verify(artisteRepository, never()).ajouter(anyString(), anyString(), anyString(), any());
+    verify(artisteRepository, never()).ajouter(anyString(), anyString(), any());
   }
 
   @Test
   void ajouter_capAtteint_leveErreurMetier() {
-    when(artisteRepository.existePourUtilisateur("u1", "radiohead")).thenReturn(false);
+    UUID artisteId = UUID.randomUUID();
+    when(artisteRepository.upsertArtiste("Radiohead", "radiohead")).thenReturn(artisteId);
+    when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(false);
     when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(500);
 
     assertThrows(ErreurMetier.class, () -> service.ajouter("u1", "Radiohead"));
-    verify(artisteRepository, never()).ajouter(anyString(), anyString(), anyString(), any());
+    verify(artisteRepository, never()).ajouter(anyString(), anyString(), any());
   }
 
   @Test
   void ajouter_nomValide_insereDansLaBase() {
     UUID artisteId = UUID.randomUUID();
-    when(artisteRepository.existePourUtilisateur("u1", "radiohead")).thenReturn(false);
-    when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(42);
     when(artisteRepository.upsertArtiste("Radiohead", "radiohead")).thenReturn(artisteId);
+    when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(false);
+    when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(42);
 
     service.ajouter("u1", "Radiohead");
 
-    verify(artisteRepository).ajouter("u1", "radiohead", "Radiohead", artisteId);
+    verify(artisteRepository).ajouter("u1", "Radiohead", artisteId);
   }
 
   @Test
   void supprimer_delegueAuRepository_sansException() {
-    assertDoesNotThrow(() -> service.supprimer("u1", "radiohead"));
-    verify(artisteRepository).supprimer("u1", "radiohead");
+    UUID artisteId = UUID.randomUUID();
+    assertDoesNotThrow(() -> service.supprimer("u1", artisteId));
+    verify(artisteRepository).supprimer("u1", artisteId);
   }
 }

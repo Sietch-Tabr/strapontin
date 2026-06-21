@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +76,7 @@ public class SalleService {
 
     if (recherche.length() >= 2) {
       Set<String> sallesDejaAjoutees =
-          salles.stream().map(SalleUtilisateur::salleId).collect(Collectors.toSet());
+          salles.stream().map(s -> normaliserSalleCle(s.nom())).collect(Collectors.toSet());
 
       List<Map<String, Object>> enBase =
           salleRepository.rechercherEnBase("%" + normaliserSalleCle(recherche) + "%");
@@ -125,23 +126,23 @@ public class SalleService {
   /// @throws RessourceDejaExistante si la salle est déjà suivie
   @Transactional
   public void ajouter(String userId, String nom, String tmVenueId) {
-    String salleId = normaliserSalleCle(nom);
-    if (salleId.isEmpty()) {
+    String salleCle = normaliserSalleCle(nom);
+    if (salleCle.isEmpty()) {
       throw new ErreurMetier("Nom de salle invalide.");
     }
 
-    if (salleRepository.existePourUtilisateur(userId, salleId)) {
+    UUID salleUuid = salleRepository.upsertSalle(salleCle, nom);
+    if (salleRepository.existePourUtilisateur(userId, salleUuid)) {
       throw new RessourceDejaExistante("Cette salle est déjà dans votre liste.");
     }
     if (salleRepository.compterPourUtilisateur(userId) >= CAP_SALLES) {
       throw new ErreurMetier("Limite de 200 salles atteinte.");
     }
 
-    java.util.UUID salleUuid = salleRepository.upsertSalle(salleId, nom);
     if (tmVenueId != null) {
       salleRepository.enregistrerSalleSource(salleUuid, "ticketmaster", tmVenueId);
     }
-    salleRepository.ajouterPourUtilisateur(userId, salleId, tmVenueId, salleUuid);
+    salleRepository.ajouterPourUtilisateur(userId, salleUuid);
 
     if (tmVenueId != null) {
       declencherWorkerSalle(tmVenueId);
@@ -150,10 +151,10 @@ public class SalleService {
 
   /// Supprime une salle de la liste de suivi.
   ///
-  /// @param userId  identifiant de l'utilisateur
-  /// @param salleId identifiant normalisé de la salle
-  public void supprimer(String userId, String salleId) {
-    salleRepository.supprimerPourUtilisateur(userId, salleId);
+  /// @param userId    identifiant de l'utilisateur
+  /// @param salleUuid UUID stable de la salle
+  public void supprimer(String userId, UUID salleUuid) {
+    salleRepository.supprimerPourUtilisateur(userId, salleUuid);
   }
 
   /// Normalise un nom de salle en retirant accents, ponctuation et espaces (clé stable).

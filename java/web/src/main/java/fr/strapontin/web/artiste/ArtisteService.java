@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +77,9 @@ public class ArtisteService {
     if (recherche.length() >= 2) {
       String rechercheNorm = Normalisation.normaliserTexte(recherche);
       Set<String> nomsSuivisNorm =
-          artistes.stream().map(ArtisteUtilisateur::artisteNormalise).collect(Collectors.toSet());
+          artistes.stream()
+              .map(a -> Normalisation.normaliserTexte(a.artisteAffiche()))
+              .collect(Collectors.toSet());
 
       List<String> enBase = artisteRepository.rechercherEnBase("%" + rechercheNorm + "%");
 
@@ -122,27 +125,30 @@ public class ArtisteService {
   public void ajouter(String userId, String nom) {
     String normalise = Normalisation.normaliserTexte(nom);
 
-    if (artisteRepository.existePourUtilisateur(userId, normalise)) {
+    UUID artisteId = artisteRepository.upsertArtiste(nom, normalise);
+    if (artisteRepository.existePourUtilisateur(userId, artisteId)) {
       throw new RessourceDejaExistante("Cet artiste est déjà dans votre liste.");
     }
     if (artisteRepository.compterPourUtilisateur(userId) >= CAP_ARTISTES) {
       throw new ErreurMetier("Limite de 500 artistes atteinte.");
     }
 
-    java.util.UUID artisteId = artisteRepository.upsertArtiste(nom, normalise);
-    artisteRepository.ajouter(userId, normalise, nom, artisteId);
+    artisteRepository.ajouter(userId, nom, artisteId);
     declencherWorkerArtiste();
   }
 
   /// Supprime un artiste de la liste de suivi.
   ///
-  /// @param userId           identifiant de l'utilisateur
-  /// @param artisteNormalise nom normalisé de l'artiste
-  public void supprimer(String userId, String artisteNormalise) {
-    artisteRepository.supprimer(userId, artisteNormalise);
-    log.info("artiste supprimé userId={} artiste={}", userId, artisteNormalise);
+  /// @param userId    identifiant de l'utilisateur
+  /// @param artisteId UUID stable de l'artiste
+  public void supprimer(String userId, UUID artisteId) {
+    artisteRepository.supprimer(userId, artisteId);
+    log.info("artiste supprimé userId={} artisteId={}", userId, artisteId);
     logAdminService.logAdmin(
-        "warn", "web", "artiste supprimé", Map.of("userId", userId, "artiste", artisteNormalise));
+        "warn",
+        "web",
+        "artiste supprimé",
+        Map.of("userId", userId, "artisteId", artisteId.toString()));
   }
 
   private List<SuggestionArtiste> rechercherDeezer(String terme) {

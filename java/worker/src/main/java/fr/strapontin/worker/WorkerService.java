@@ -86,8 +86,13 @@ public class WorkerService {
 
       List<Map<String, Object>> rows =
           jdbc.queryForList(
-              "SELECT DISTINCT artiste_affiche, artiste_normalise, attraction_id FROM"
-                  + " user_artistes",
+              "SELECT ua.artiste_id::text AS artiste_id_str,"
+                  + " MAX(ua.artiste_affiche) AS artiste_affiche,"
+                  + " MAX(asm.identifiant_externe) AS attraction_id"
+                  + " FROM user_artistes ua"
+                  + " LEFT JOIN artiste_sources asm"
+                  + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
+                  + " GROUP BY ua.artiste_id",
               Map.of());
 
       if (rows.isEmpty()) {
@@ -144,8 +149,8 @@ public class WorkerService {
   ///   <li>Fallback keyword ({@code fetchArtiste}) pour les artistes sans {@code attractionId} TM.
   /// </ol>
   ///
-  /// @param rows lignes de {@code user_artistes} avec {@code artiste_affiche}, {@code
-  ///     artiste_normalise}, {@code attraction_id}
+  /// @param rows lignes agrégées par {@code artiste_id} avec {@code artiste_affiche},
+  ///     {@code artiste_id_str}, {@code attraction_id}
   /// @return concerts bruts collectés depuis TM
   private List<ConcertBrut> fetchTMParArtistes(List<Map<String, Object>> rows) {
     List<ConcertBrut> resultats = new ArrayList<>();
@@ -154,15 +159,17 @@ public class WorkerService {
 
     for (Map<String, Object> row : rows) {
       String nom = (String) row.get("artiste_affiche");
-      String norm = (String) row.get("artiste_normalise");
+      String artisteIdStr = (String) row.get("artiste_id_str");
       String attractionId = (String) row.get("attraction_id");
       if (attractionId == null) {
         try {
           attractionId = tm.rechercherAttractionId(nom);
           if (attractionId != null) {
             jdbc.update(
-                "UPDATE user_artistes SET attraction_id = :id WHERE artiste_normalise = :norm",
-                Map.of("id", attractionId, "norm", norm));
+                "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
+                    + " VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :attractionId)"
+                    + " ON CONFLICT DO NOTHING",
+                Map.of("artisteId", artisteIdStr, "attractionId", attractionId));
           }
         } catch (Exception e) {
           log.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());

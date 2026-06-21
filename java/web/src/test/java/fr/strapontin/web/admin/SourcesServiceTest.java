@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -112,23 +111,23 @@ class SourcesServiceTest {
   @Test
   void mettreAJourDigitickSlug_slugVide_supprime() {
     UUID uuid = UUID.randomUUID();
-    when(jdbc.update(anyString(), any(Map.class))).thenReturn(0);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
 
     sourcesService.mettreAJourDigitickSlug(uuid, "");
 
     verify(jdbc)
-        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), any(Map.class));
+        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), anyMap());
   }
 
   @Test
   void mettreAJourDigitickSlug_slugNull_supprime() {
     UUID uuid = UUID.randomUUID();
-    when(jdbc.update(anyString(), any(Map.class))).thenReturn(0);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
 
     sourcesService.mettreAJourDigitickSlug(uuid, null);
 
     verify(jdbc)
-        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), any(Map.class));
+        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), anyMap());
   }
 
   @Test

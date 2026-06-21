@@ -197,7 +197,8 @@ Résolution UUID-first (v2.3.0, ticket #621) : `PersisterConcerts.resoudreIdenti
 
 Migrations Flyway dans `java/web/src/main/resources/db/migration/` — ne jamais modifier à la main.
 `users.id` : type `text` (UUID généré par Java).
-**v2.3.0 (V23)** : `salles.salle_uuid uuid`, tables `artistes`, `salle_sources`, `artiste_sources`, colonnes `salle_uuid`/`artiste_id` sur `concerts`, `user_salles`, `user_artistes`. Migration additive ; colonnes texte transitoires supprimées après backfill (#628).
+**v2.3.0 (V23)** : `salles.salle_uuid uuid`, tables `artistes`, `salle_sources`, `artiste_sources`, colonnes `salle_uuid`/`artiste_id` sur `concerts`, `user_salles`, `user_artistes`. Migration additive.
+**v2.3.0 (V24)** : nettoyage post-backfill #628 — `salles.salle_uuid` → `salles.id` (PK uuid), ancienne PK text → `salles.salle_cle` (UNIQUE) ; PK `user_salles` = `(user_id, salle_uuid)` ; PK `user_artistes` = `(user_id, artiste_id)` ; suppression `salle_id`/`tm_venue_id`/`artiste_normalise`/`attraction_id`/`concerts.salle_cle`.
 Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de-base-de-données)
 
 ## Conventions Java
