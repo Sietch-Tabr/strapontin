@@ -40,6 +40,10 @@ public class EventimSource implements SourceConcerts {
   private static final String VILLE_PARIS = "Paris";
   private static final String SEPARATEUR_NOM_SALLE = " - ";
 
+  /// Catégories Eventim correspondant aux spectacles musicaux (concerts et musique classique).
+  public static final List<String> CATEGORIES_REGION =
+      List.of("Concerts & Festivals", "Classique & Danse");
+
   private final RestClient restClient;
 
   /// Crée une instance avec un RestClient par défaut incluant les headers Eventim.
@@ -215,24 +219,40 @@ public class EventimSource implements SourceConcerts {
       String uri, String artisteFallback, String deptFiltre, String artisteSourceId) {
     try {
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) return ResultatPageEventim.VIDE;
-      var produits = (List<Map<String, Object>>) data.get(CLE_PRODUCTS);
-      if (produits == null || produits.isEmpty()) return ResultatPageEventim.VIDE;
-
-      List<ConcertBrut> concerts = new ArrayList<>();
-      for (var p : produits) {
-        ConcertBrut c = mapProduit(p, artisteFallback, artisteSourceId);
-        if (c != null && (deptFiltre == null || deptFiltre.equals(c.dept()))) concerts.add(c);
-      }
-      int total =
-          data.get(CLE_TOTAL_RESULTS) != null
-              ? ((Number) data.get(CLE_TOTAL_RESULTS)).intValue()
-              : 0;
-      return new ResultatPageEventim(concerts, total);
+      return parserReponseProduits(data, artisteFallback, deptFiltre, artisteSourceId);
     } catch (Exception e) {
       log.warn("Eventim erreur HTTP", e);
       return ResultatPageEventim.VIDE;
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private ResultatPageEventim chargerPageProduits(
+      java.net.URI uri, String artisteFallback, String deptFiltre) {
+    try {
+      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      return parserReponseProduits(data, artisteFallback, deptFiltre, null);
+    } catch (Exception e) {
+      log.warn("Eventim erreur HTTP", e);
+      return ResultatPageEventim.VIDE;
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private ResultatPageEventim parserReponseProduits(
+      Map<String, Object> data, String artisteFallback, String deptFiltre, String artisteSourceId) {
+    if (data == null) return ResultatPageEventim.VIDE;
+    var produits = (List<Map<String, Object>>) data.get(CLE_PRODUCTS);
+    if (produits == null || produits.isEmpty()) return ResultatPageEventim.VIDE;
+
+    List<ConcertBrut> concerts = new ArrayList<>();
+    for (var p : produits) {
+      ConcertBrut c = mapProduit(p, artisteFallback, artisteSourceId);
+      if (c != null && (deptFiltre == null || deptFiltre.equals(c.dept()))) concerts.add(c);
+    }
+    int total =
+        data.get(CLE_TOTAL_RESULTS) != null ? ((Number) data.get(CLE_TOTAL_RESULTS)).intValue() : 0;
+    return new ResultatPageEventim(concerts, total);
   }
 
   @SuppressWarnings("unchecked")
@@ -332,9 +352,16 @@ public class EventimSource implements SourceConcerts {
           break;
         }
       }
-      Map<String, Object> choisi = exact != null ? exact : attractions.get(0);
-      Object id = choisi.get("attractionId");
-      if (id == null) id = choisi.get("id");
+      if (exact == null) {
+        String nomRetourne = (String) attractions.get(0).getOrDefault("name", "");
+        log.warn(
+            "Eventim: aucune correspondance exacte pour terme={} — premier résultat={} ignoré",
+            terme,
+            nomRetourne);
+        return null;
+      }
+      Object id = exact.get("attractionId");
+      if (id == null) id = exact.get("id");
       return id != null ? String.valueOf(id) : null;
     } catch (Exception e) {
       log.warn("Eventim attractions erreur terme={}", terme, e);
@@ -385,7 +412,7 @@ public class EventimSource implements SourceConcerts {
     for (int page = 1; page <= MAX_PAGES && continuer; page++) {
       if (page > 1) continuer = attendreEntrePagesEventim();
       if (continuer) {
-        var builder =
+        var uriBuilder =
             UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
                 .queryParam(PARAM_WEB_ID, WEB_ID)
                 .queryParam(PARAM_LANGUE, "fr")
@@ -395,9 +422,9 @@ public class EventimSource implements SourceConcerts {
                 .queryParam("sort", "DateAsc")
                 .queryParam("top", TAILLE_PAGE)
                 .queryParam("page", page);
-        for (String c : classifications) builder = builder.queryParam("categories", c);
-        ResultatPageEventim resultat =
-            chargerPageProduits(builder.build().toUriString(), null, dept);
+        for (String c : classifications) uriBuilder = uriBuilder.queryParam("categories", c);
+        java.net.URI uri = uriBuilder.build().encode().toUri();
+        ResultatPageEventim resultat = chargerPageProduits(uri, null, dept);
         concerts.addAll(resultat.concerts());
         continuer = !resultat.estVide() && concerts.size() < resultat.total();
       }
@@ -426,16 +453,19 @@ public class EventimSource implements SourceConcerts {
 
   /// Récupère les concerts par région pour une liste de départements.
   ///
+  /// <p>Le paramètre {@code classifs} est ignoré : Eventim utilise ses propres catégories
+  /// ({@link #CATEGORIES_REGION}) qui ne correspondent pas aux classifications Ticketmaster.
+  ///
   /// @param depts   liste de codes département (ex: ["75", "92"])
-  /// @param classifs classifications Eventim à inclure ; par défaut ["music"]
+  /// @param classifs ignoré — toujours {@link #CATEGORIES_REGION}
   /// @return liste des concerts trouvés pour tous les départements
   @Override
   public List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
-    if (classifs == null) classifs = List.of("music");
+    List<String> categories = CATEGORIES_REGION;
     List<ConcertBrut> tous = new ArrayList<>();
 
     for (String dept : depts) {
-      List<ConcertBrut> concerts = fetchProduitsParRegion(dept, classifs);
+      List<ConcertBrut> concerts = fetchProduitsParRegion(dept, categories);
       tous.addAll(concerts);
       if (!attendreEntrePagesEventim()) break;
     }
