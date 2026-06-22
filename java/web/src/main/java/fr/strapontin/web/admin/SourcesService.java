@@ -193,15 +193,15 @@ public class SourcesService {
   private List<SalleSourceAdmin> listerSallesAvecDigitick() {
     return jdbc.query(
         """
-        SELECT s.salle_uuid, s.nom, ss.identifiant_externe AS digitick_slug
+        SELECT s.id, s.nom, ss.identifiant_externe AS digitick_slug
         FROM salles s
-        JOIN salle_sources ss ON ss.salle_id = s.salle_uuid AND ss.source = 'digitick'
+        JOIN salle_sources ss ON ss.salle_id = s.id AND ss.source = 'digitick'
         ORDER BY lower(s.nom)
         """,
         Map.of(),
         (rs, _) ->
             new SalleSourceAdmin(
-                rs.getObject("salle_uuid", UUID.class),
+                rs.getObject("id", UUID.class),
                 rs.getString("nom"),
                 rs.getString("digitick_slug")));
   }
@@ -209,19 +209,19 @@ public class SourcesService {
   private List<SalleSourceAdmin> listerSallesAvecSources() {
     return jdbc.query(
         """
-        SELECT s.salle_uuid,
+        SELECT s.id,
                s.nom,
                MAX(CASE WHEN ss.source = 'digitick' THEN ss.identifiant_externe END) AS digitick_slug
         FROM salles s
-        LEFT JOIN salle_sources ss ON ss.salle_id = s.salle_uuid
-        GROUP BY s.salle_uuid, s.nom
+        LEFT JOIN salle_sources ss ON ss.salle_id = s.id
+        GROUP BY s.id, s.nom
         HAVING MAX(CASE WHEN ss.source = 'ticketmaster' THEN ss.identifiant_externe END) IS NULL
         ORDER BY lower(s.nom)
         """,
         Map.of(),
         (rs, _) ->
             new SalleSourceAdmin(
-                rs.getObject("salle_uuid", UUID.class),
+                rs.getObject("id", UUID.class),
                 rs.getString("nom"),
                 rs.getString("digitick_slug")));
   }

@@ -7,7 +7,8 @@
       <p class="param-aide">
         Télécharge un fichier JSON avec vos artistes, salles et configuration.
       </p>
-      <p v-if="stats" class="param-aide">
+      <EtatChargement v-if="chargement" />
+      <p v-else-if="stats" class="param-aide">
         {{ stats.nbArtistes }}/500 artistes — {{ stats.nbSalles }}/200 salles
       </p>
       <a href="/api/preferences" class="btn btn-secondary">Télécharger (JSON)</a>
@@ -117,11 +118,13 @@ import { ref, shallowRef, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDialog } from '../../composables/useDialog.js'
 import { useToasts } from '../../composables/useToasts.js'
+import EtatChargement from '../EtatChargement.vue'
 
 const router = useRouter()
 const { afficherToast } = useToasts()
 const { dialogRef: dialogSuppressionRef, ouvrir: ouvrirDialogSuppressionModal, fermer: fermerDialogSuppressionModal } = useDialog()
 
+const chargement = ref(true)
 const stats = shallowRef(null)
 const importFichierRef = ref(null)
 const importMode = ref('fusionner')
@@ -140,6 +143,8 @@ async function charger() {
     if (rep.ok) stats.value = await rep.json()
   } catch (_) {
     afficherToast('Erreur lors du chargement des statistiques.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 }
 

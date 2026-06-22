@@ -3,7 +3,8 @@
 
     <div class="param-bloc">
       <h3 class="param-label">Actualisations</h3>
-      <div v-if="statsJobs.length" class="jobs-liste">
+      <EtatChargement v-if="chargement" />
+      <div v-else-if="statsJobs.length" class="jobs-liste">
         <div v-for="stat in statsJobs" :key="stat.typeJob" class="job-carte">
           <div class="job-carte-entete">
             <span class="job-pastille" :class="classePastille(stat)" aria-hidden="true"></span>
@@ -69,6 +70,7 @@ defineOptions({ name: 'AdminJobs' })
 import { ref, shallowRef, computed, onMounted, onUnmounted } from 'vue'
 import { useToasts } from '../../composables/useToasts.js'
 import { formaterInstant } from '../../composables/useDates.js'
+import EtatChargement from '../EtatChargement.vue'
 
 const { afficherToast } = useToasts()
 
@@ -81,6 +83,7 @@ const LABELS_JOBS = {
   'fetch:salle':          'Salle',
 }
 
+const chargement = ref(true)
 const statsJobs = shallowRef([])
 const jobsEnCours = shallowRef([])
 const workerLastSuccess = ref(null)
@@ -128,6 +131,8 @@ async function charger() {
   } catch (e) {
     if (e.name === 'AbortError') return
     afficherToast('Erreur lors du chargement des jobs.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 }
 

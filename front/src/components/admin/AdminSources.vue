@@ -1,6 +1,9 @@
 <template>
   <section class="admin-section" id="sources">
 
+    <EtatChargement v-if="chargement" />
+    <template v-else>
+
     <div class="param-bloc">
       <h3 class="param-label">Sources de données</h3>
       <div class="sources-grille">
@@ -165,6 +168,7 @@
       </p>
     </div>
 
+    </template>
   </section>
 </template>
 
@@ -172,11 +176,13 @@
 defineOptions({ name: 'AdminSources' })
 
 import { ref, shallowRef, reactive, computed, onMounted, onUnmounted } from 'vue'
+import EtatChargement from '../EtatChargement.vue'
 import { useToasts } from '../../composables/useToasts.js'
 import { formaterInstant, formaterTs } from '../../composables/useDates.js'
 
 const { afficherToast } = useToasts()
 
+const chargement    = ref(true)
 const sources       = shallowRef([])
 const salles        = shallowRef([])
 const sallesDigitick = shallowRef([])
@@ -236,6 +242,8 @@ async function charger() {
   } catch (e) {
     if (e.name === 'AbortError') return
     afficherToast('Erreur lors du chargement des sources.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 }
 

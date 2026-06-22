@@ -4,7 +4,7 @@
       <h1>Configurer l'authentification à deux facteurs</h1>
     </div>
 
-    <div v-if="chargement" class="etat-chargement" aria-live="polite">Chargement…</div>
+    <EtatChargement v-if="chargement" />
 
     <div v-else-if="erreurChargement" class="alerte alerte-erreur" role="alert">
       {{ erreurChargement }}
@@ -84,6 +84,7 @@
 defineOptions({ name: 'ParametresTotpPage' })
 
 import { ref, computed, onMounted } from "vue";
+import EtatChargement from "../components/EtatChargement.vue";
 import { useRouter } from "vue-router";
 import { useToasts } from "../composables/useToasts.js";
 

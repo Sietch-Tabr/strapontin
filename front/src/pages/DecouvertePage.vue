@@ -100,7 +100,9 @@
       {{ donnees.totalConcerts }} concert{{ donnees.totalConcerts !== 1 ? 's' : '' }} trouvé{{ donnees.totalConcerts !== 1 ? 's' : '' }}
     </p>
 
-    <div v-if="!donnees || donnees.concerts.length === 0" class="etat-vide">
+    <EtatChargement v-if="chargement && !donnees" />
+
+    <div v-if="!chargement && (!donnees || donnees.concerts.length === 0)" class="etat-vide">
       <p class="etat-vide-titre">Aucun concert avec ces filtres.</p>
       <p v-if="deptsActifs.length === 0" class="etat-vide-texte">
         Sélectionnez un département ci-dessus ou configurez vos départements dans
@@ -185,11 +187,13 @@ import { ref, shallowRef, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formaterAvecHeure, formaterInstant } from '../composables/useDates.js'
 import { useToasts } from '../composables/useToasts.js'
+import EtatChargement from '../components/EtatChargement.vue'
 
 const route = useRoute()
 const router = useRouter()
 const { afficherToast } = useToasts()
 
+const chargement = ref(false)
 const donnees = shallowRef(null)
 const filtresVisibles = ref(false)
 
@@ -232,6 +236,7 @@ function syncFiltresLocaux() {
 }
 
 async function charger() {
+  chargement.value = true
   try {
     const params = new URLSearchParams()
     deptsActifs.value.forEach(d => params.append('dept', d))
@@ -246,6 +251,8 @@ async function charger() {
     donnees.value = await rep.json()
   } catch {
     afficherToast('Impossible de charger les concerts.', 'erreur')
+  } finally {
+    chargement.value = false
   }
 }
 
