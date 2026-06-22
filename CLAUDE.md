@@ -199,6 +199,7 @@ Migrations Flyway dans `java/web/src/main/resources/db/migration/` — ne jamais
 `users.id` : type `text` (UUID généré par Java).
 **v2.3.0 (V23)** : `salles.salle_uuid uuid`, tables `artistes`, `salle_sources`, `artiste_sources`, colonnes `salle_uuid`/`artiste_id` sur `concerts`, `user_salles`, `user_artistes`. Migration additive.
 **v2.3.0 (V24)** : nettoyage post-backfill #628 — `salles.salle_uuid` → `salles.id` (PK uuid), ancienne PK text → `salles.salle_cle` (UNIQUE) ; PK `user_salles` = `(user_id, salle_uuid)` ; PK `user_artistes` = `(user_id, artiste_id)` ; suppression `salle_id`/`tm_venue_id`/`artiste_normalise`/`attraction_id`/`concerts.salle_cle`.
+**v2.3.1 (V25)** : #640 — contrainte UNIQUE concerts : `(artiste_norm, date, salle_norm)` → `UNIQUE NULLS NOT DISTINCT (artiste_norm, date, heure, salle_norm)`. Deux séances distinctes (matinée/soirée) coexistent ; deux concerts sans heure fusionnent.
 Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de-base-de-données)
 
 ## Conventions Java
