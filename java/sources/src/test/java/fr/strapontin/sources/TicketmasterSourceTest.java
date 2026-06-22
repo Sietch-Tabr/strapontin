@@ -528,6 +528,29 @@ class TicketmasterSourceTest {
   }
 
   @Test
+  void rechercherAttractionId_premierResultatNomDifferent_retourneNull() {
+    // non-régression #649 : TM retourne "Anuv Jain" pour la recherche "Jain" → faux positif
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
+        .andRespond(
+            withSuccess(
+                """
+                {"_embedded":{"attractions":[{"id":"K8vZ917jjsV","name":"Anuv Jain"}]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    String id = source.rechercherAttractionId("Jain");
+
+    assertNull(id);
+    serveur.verify();
+  }
+
+  @Test
   void rechercherAttractionId_nomNonTrouve_retourneNull() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
