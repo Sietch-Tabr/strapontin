@@ -232,7 +232,13 @@ public class PersisterConcerts {
     Map<String, ValeurConcert> parCle = new LinkedHashMap<>();
     for (ValeurConcert v : lot) {
       String cle =
-          v.artisteNorm() + "|" + v.date() + "|" + (v.heure() != null ? v.heure() : "") + "|" + v.salleNorm();
+          v.artisteNorm()
+              + "|"
+              + v.date()
+              + "|"
+              + (v.heure() != null ? v.heure() : "")
+              + "|"
+              + v.salleNorm();
       ValeurConcert existant = parCle.get(cle);
       if (existant == null
           || scoreArtisteSalle(v.artiste(), v.salle())
