@@ -240,13 +240,17 @@ public class TicketmasterSource implements SourceAvecFetchLot {
 
   /// Extrait la date et l'heure d'un événement TM depuis les champs localDate / localTime.
   ///
+  /// L'heure "00:00" est considérée comme absente — TM utilise minuit par défaut pour les
+  /// événements sans heure précise, symétrique au comportement d'Eventim.
+  ///
   /// @param dateStr  valeur de localDate (format ISO 8601, au moins 10 chars)
-  /// @param heureStr valeur de localTime (peut être null)
+  /// @param heureStr valeur de localTime (peut être null ou "00:00:00" si non définie)
   /// @return tableau à deux éléments : [date, heure] où heure peut être null
   public static String[] parseDateTM(String dateStr, String heureStr) {
     String date = dateStr.substring(0, 10);
     if (heureStr == null) return new String[] {date, null};
-    return new String[] {date, heureStr.substring(0, 5)};
+    String heure = heureStr.substring(0, 5);
+    return new String[] {date, "00:00".equals(heure) ? null : heure};
   }
 
   /// Convertit un nom tout-majuscule en title case français.

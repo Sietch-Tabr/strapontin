@@ -60,6 +60,13 @@ class PersisterConcertsIntegrationTest {
         "onsale", null, null, null, null);
   }
 
+  private static ConcertBrut concertAvecHeure(
+      String artiste, String date, String heure, String salle, String source) {
+    return new ConcertBrut(
+        artiste, date, heure, salle, "Paris", "75", 39.9, 99.9, null, source, "music", "Pop",
+        "onsale", null, null, null, null);
+  }
+
   private static ConcertBrut concert(String artiste, String date, String salle, String source) {
     return new ConcertBrut(
         artiste,
@@ -116,13 +123,14 @@ class PersisterConcertsIntegrationTest {
   }
 
   @Test
-  void persisterConcerts_upsertConflitMemeArtisteDateSalle_metsAJourPasInsertion() {
+  void persisterConcerts_upsertConflitMemeArtisteDateSalleHeure_metsAJourPasInsertion() {
+    // Même artiste, date, heure et salle → conflit → mise à jour (pas doublon)
     ConcertBrut v1 = concert("Mika", "2026-07-10", "Olympia", "ticketmaster");
     ConcertBrut v2 =
         new ConcertBrut(
             "Mika",
             "2026-07-10",
-            "21:00",
+            "20:30",
             "Olympia",
             "Paris",
             "75",
@@ -515,5 +523,36 @@ class PersisterConcertsIntegrationTest {
     assertEquals(0, res.nbInseres() + res.nbMisAJour());
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(0L, count);
+  }
+
+  @Test
+  void persisterConcerts_deuxSeancesHeuresDifferentes_insereDeuxConcerts() {
+    // #640 — matinée + soirée du même artiste dans la même salle le même jour doivent coexister
+    List<ConcertBrut> liste =
+        List.of(
+            concertAvecHeure(
+                "Tartuffe", "2026-10-10", "14:30", "Comédie-Française", "ticketmaster"),
+            concertAvecHeure(
+                "Tartuffe", "2026-10-10", "20:00", "Comédie-Française", "ticketmaster"));
+
+    persisterConcerts.persisterConcerts(liste);
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(2L, count, "matinée et soirée doivent être deux concerts distincts");
+  }
+
+  @Test
+  void persisterConcerts_deuxConcertsSansHeure_fusionne() {
+    // #640 — deux enregistrements sans heure pour le même (artiste, date, salle) → 1 seul concert
+    List<ConcertBrut> liste =
+        List.of(
+            concertAvecHeure("Muse", "2026-11-15", null, "Accor Arena", "ticketmaster"),
+            concertAvecHeure("Muse", "2026-11-15", null, "Accor Arena", "eventim"));
+
+    persisterConcerts.persisterConcerts(liste);
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(
+        1L, count, "deux concerts sans heure du même artiste/date/salle doivent fusionner");
   }
 }

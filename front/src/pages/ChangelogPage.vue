@@ -8,6 +8,19 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.3.1 — 22 juin 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Concerts</p>
+            <ul>
+              <li>Les résultats de la découverte régionale excluent désormais les concerts affichant "épuisé" sur Eventim — moins de concerts inaccessibles dans la liste.</li>
+              <li>Les spectacles à séances multiples (matinée et soirée le même jour dans la même salle) sont maintenant affichés comme deux événements distincts plutôt que fusionnés.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.3.0 — 21 juin 2026</h2>
         <div class="changelog-entrees">
           <div>

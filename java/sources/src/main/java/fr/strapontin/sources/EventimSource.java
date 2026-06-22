@@ -420,6 +420,7 @@ public class EventimSource implements SourceConcerts {
                 .queryParam("query", dept)
                 .queryParam("date_from", fmt.format(dateDebut))
                 .queryParam("sort", "DateAsc")
+                .queryParam("in_stock", "true")
                 .queryParam("top", TAILLE_PAGE)
                 .queryParam("page", page);
         for (String c : classifications) uriBuilder = uriBuilder.queryParam("categories", c);
