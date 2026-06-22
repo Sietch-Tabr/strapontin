@@ -439,6 +439,32 @@ class EventimSourceTest {
   }
 
   @Test
+  void fetchRegion_requete_inclutParamInStock() {
+    // #645 — le fetch région doit inclure in_stock=true pour exclure les sold out
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(
+            requestTo(
+                org.hamcrest.Matchers.allOf(
+                    org.hamcrest.Matchers.containsString("/products"),
+                    org.hamcrest.Matchers.containsString("in_stock=true"))))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[],"totalResults":0}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    EventimSource source = new EventimSource(restClient);
+    source.fetchRegion(List.of("75"), List.of("music"));
+
+    serveur.verify();
+  }
+
+  @Test
   void mapProduit_inStockFalse_retourneStatutPresale() {
     Map<String, Object> produit = produitEventimRaw(Map.of("inStock", false));
 

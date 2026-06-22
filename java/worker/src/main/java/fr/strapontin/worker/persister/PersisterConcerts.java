@@ -28,8 +28,10 @@ import org.springframework.transaction.annotation.Transactional;
 /// Service de persistance des concerts dédoublonnés.
 ///
 /// Effectue l'upsert par lot en base avec la stratégie ON CONFLICT sur
-/// `(artiste_norm, date, salle_norm)`. Préfère les noms avec diacritiques
-/// et la casse mixte. Supprime les doublons par `(source, url)` introduits
+/// `(artiste_norm, date, heure, salle_norm)` (NULLS NOT DISTINCT). Deux séances
+/// du même artiste dans la même salle le même jour avec des heures différentes
+/// coexistent ; deux concerts sans heure (NULL) fusionnent. Préfère les noms avec
+/// diacritiques et la casse mixte. Supprime les doublons par `(source, url)` introduits
 /// lors d'une résolution de nom canonique entre deux fetches.
 ///
 /// Réconcilie les variations mineures de nommage de salle et d'artiste entre deux fetches
@@ -73,7 +75,7 @@ public class PersisterConcerts {
 
   private static final String SQL_UPSERT_CONFLIT =
       """
-      ON CONFLICT (artiste_norm, date, salle_norm) DO UPDATE SET
+      ON CONFLICT ON CONSTRAINT uq_concerts_artiste_date_heure_salle DO UPDATE SET
           artiste        = CASE WHEN unaccent(EXCLUDED.artiste) != EXCLUDED.artiste
                                 THEN EXCLUDED.artiste ELSE concerts.artiste END,
           salle          = CASE WHEN upper(EXCLUDED.salle) != EXCLUDED.salle
@@ -187,7 +189,11 @@ public class PersisterConcerts {
     return artisteDiacr * 10 + artisteCasseMixte + salleDiacr + salleCasseMixte;
   }
 
-  /// Dédoublonne par clé de conflit `(artiste_norm, date, salle_norm)`.
+  /// Dédoublonne par clé de conflit `(artiste_norm, date, heure, salle_norm)`.
+  ///
+  /// Deux concerts du même artiste dans la même salle le même jour avec des heures
+  /// différentes (matinée + soirée) sont considérés distincts. Deux concerts sans
+  /// heure (null) sont considérés identiques et fusionnés.
   ///
   /// En cas de doublon, conserve la version avec le meilleur score
   /// (diacritiques et casse mixte préférés).
@@ -202,6 +208,8 @@ public class PersisterConcerts {
               + "|"
               + c.date()
               + "|"
+              + (c.heure() != null ? c.heure() : "")
+              + "|"
               + Normalisation.normaliserTexte(c.salle());
       ConcertBrut existant = parCle.get(cle);
       if (existant == null
@@ -213,7 +221,7 @@ public class PersisterConcerts {
     return new ArrayList<>(parCle.values());
   }
 
-  /// Dédoublonne un lot réconcilié par `(artisteNorm, date, salleNorm)`.
+  /// Dédoublonne un lot réconcilié par `(artisteNorm, date, heure, salleNorm)`.
   ///
   /// Les réécritures de `salleNorm` par `reconcilierSalles` peuvent créer
   /// de nouveaux doublons intra-lot. Cette passe les élimine.
@@ -223,7 +231,8 @@ public class PersisterConcerts {
   public static List<ValeurConcert> deduplicerLotReconcilie(List<ValeurConcert> lot) {
     Map<String, ValeurConcert> parCle = new LinkedHashMap<>();
     for (ValeurConcert v : lot) {
-      String cle = v.artisteNorm() + "|" + v.date() + "|" + v.salleNorm();
+      String cle =
+          v.artisteNorm() + "|" + v.date() + "|" + (v.heure() != null ? v.heure() : "") + "|" + v.salleNorm();
       ValeurConcert existant = parCle.get(cle);
       if (existant == null
           || scoreArtisteSalle(v.artiste(), v.salle())
@@ -780,8 +789,8 @@ public class PersisterConcerts {
 
   /// Insère ou met à jour un lot de concerts en une seule requête multi-lignes.
   ///
-  /// <p>L'unicité de la clé de conflit {@code (artiste_norm, date, salle_norm)} dans le lot est
-  /// garantie en amont par {@link #deduplicerLotReconcilie}, ce qui rend l'{@code ON CONFLICT}
+  /// <p>L'unicité de la clé de conflit {@code (artiste_norm, date, heure, salle_norm)} dans le lot
+  /// est garantie en amont par {@link #deduplicerLotReconcilie}, ce qui rend l'{@code ON CONFLICT}
   /// multi-VALUES sûr (pas de double affectation d'une même ligne).
   ///
   /// @param valeurs concerts réconciliés et dédupliqués du lot

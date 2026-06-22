@@ -121,9 +121,9 @@ class TicketmasterSourceTest {
   }
 
   @Test
-  void parseDateTM_heure0000_retourne0000() {
+  void parseDateTM_heure0000_retourneHeureNull() {
     String[] resultat = TicketmasterSource.parseDateTM("2025-09-15", "00:00:00");
-    assertEquals("00:00", resultat[1]);
+    assertNull(resultat[1]);
   }
 
   @Test
