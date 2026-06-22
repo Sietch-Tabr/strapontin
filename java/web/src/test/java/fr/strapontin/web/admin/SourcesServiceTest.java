@@ -16,6 +16,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.mockito.ArgumentCaptor;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
 import java.util.List;
@@ -134,6 +136,32 @@ class SourcesServiceTest {
   void testerDigitickSlug_slugVide_retourneFalse() {
     assertFalse(sourcesService.testerDigitickSlug(""));
     assertFalse(sourcesService.testerDigitickSlug(null));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void lireSources_requetesSalles_utilisentColonneId_pasSlleUuid() {
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
+
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    when(jdbc.query(
+            sqlCaptor.capture(),
+            anyMap(),
+            org.mockito.ArgumentMatchers
+                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
+        .thenReturn(List.of());
+
+    sourcesService.lireSources();
+
+    sqlCaptor
+        .getAllValues()
+        .forEach(
+            sql ->
+                assertFalse(
+                    sql.contains("salle_uuid"),
+                    "Requête SQL référence encore salle_uuid (colonne supprimée en V24) : " + sql));
   }
 
   @Test
