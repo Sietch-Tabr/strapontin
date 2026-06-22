@@ -15,6 +15,13 @@
             <ul>
               <li>Les résultats de la découverte régionale excluent désormais les concerts affichant "épuisé" sur Eventim — moins de concerts inaccessibles dans la liste.</li>
               <li>Les spectacles à séances multiples (matinée et soirée le même jour dans la même salle) sont maintenant affichés comme deux événements distincts plutôt que fusionnés.</li>
+              <li>Des concerts de l'artiste "Shy" (Ticketmaster) pouvaient apparaître à tort pour l'artiste Shy'm suivi — la correspondance exacte est désormais vérifiée parmi plusieurs résultats.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Compatibilité</p>
+            <ul>
+              <li>Sur les appareils ayant installé l'application (PWA), l'onglet « Sources » de l'administration pouvait ne pas apparaître suite à un cache non mis à jour — résolu.</li>
             </ul>
           </div>
         </div>
