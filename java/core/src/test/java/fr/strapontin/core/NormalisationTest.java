@@ -74,6 +74,15 @@ class NormalisationTest {
   }
 
   @Test
+  void normaliserTexte_elyseeAvecEtSansAccents_memeResultat() {
+    // non-régression #639 : TM supprime les accents ("Elysee Montmartre") mais la salle existe
+    // en base avec accents ("Elysée Montmartre") — la normalisation doit produire la même clé
+    assertEquals(
+        Normalisation.normaliserTexte("Elysée Montmartre"),
+        Normalisation.normaliserTexte("Elysee Montmartre"));
+  }
+
+  @Test
   void similarite_chainesIdentiques_retourne1() {
     assertEquals(1.0, Normalisation.similarite("radiohead", "radiohead"));
   }

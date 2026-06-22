@@ -215,6 +215,19 @@ class PersisterConcertsTest {
   }
 
   @Test
+  void deduplicerParCleConflit_elyseeAvecEtSansAccents_reconcilie() {
+    // non-régression #639 : TM retourne "Elysee Montmartre" (sans accent) alors que la salle
+    // existe en base sous "Elysée Montmartre" — les deux doivent produire la même clé
+    List<ConcertBrut> liste =
+        List.of(
+            concert("Artiste", "2026-09-10", "Elysée Montmartre", "eventim"),
+            concert("Artiste", "2026-09-10", "Elysee Montmartre", "ticketmaster"));
+    List<ConcertBrut> resultat = PersisterConcerts.deduplicerParCleConflit(liste);
+    assertEquals(1, resultat.size());
+    assertEquals("Elysée Montmartre", resultat.get(0).salle());
+  }
+
+  @Test
   void deduplicerParCleConflit_datesDifferentes_conserveLesDeuxConcerts() {
     List<ConcertBrut> liste =
         List.of(

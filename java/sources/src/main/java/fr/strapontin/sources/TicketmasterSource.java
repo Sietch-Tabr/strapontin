@@ -5,6 +5,7 @@
 package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.QuotaTM;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -658,6 +659,15 @@ public class TicketmasterSource implements SourceAvecFetchLot {
       var attractions =
           embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
       if (attractions == null || attractions.isEmpty()) return null;
+      String nomNorm = Normalisation.normaliserTexte(nom);
+      String premierNom = (String) attractions.get(0).getOrDefault("name", "");
+      if (!Normalisation.normaliserTexte(premierNom).equals(nomNorm)) {
+        log.warn(
+            "rechercherAttractionId TM — pas de correspondance exacte nom={} premier={}",
+            nom,
+            premierNom);
+        return null;
+      }
       return (String) attractions.get(0).get("id");
     } catch (Exception _) {
       return null;
