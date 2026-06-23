@@ -978,7 +978,11 @@ public class PersisterConcerts {
     for (var candidat : candidats) {
       if (estDoublonSalle(nomNorm, (String) candidat.get("nom_norm"))) {
         UUID uuid = (UUID) candidat.get("id");
-        log.info("salle doublon détecté par Jaccard : '{}' ≈ '{}' uuid={}", nom, candidat.get("nom_norm"), uuid);
+        log.info(
+            "salle doublon détecté par Jaccard : '{}' ≈ '{}' uuid={}",
+            nom,
+            candidat.get("nom_norm"),
+            uuid);
         return uuid;
       }
     }
