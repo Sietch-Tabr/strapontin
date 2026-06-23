@@ -10,30 +10,27 @@ import fr.strapontin.core.Normalisation;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
-/// Résolution des noms canoniques d'artistes et de salles via MusicBrainz et Deezer.
+/// Résolution des noms canoniques d'artistes via Deezer.
 ///
-/// Stratégie : MusicBrainz (score ≥ 90 + similarité ≥ 0.6) → Deezer (similarité ≥ 0.7) →
-/// nom inchangé. Les résultats sont mis en cache Caffeine TTL 7 jours pour limiter les appels.
-///
-/// MusicBrainz impose 1 req/s : le délai de {@value #DELAI_MB_MS} ms est toujours respecté,
-/// même en cas d'erreur, pour éviter le bannissement d'IP.
+/// Stratégie : Deezer (similarité ≥ 0.7) → nom inchangé. Les résultats sont mis en cache
+/// Caffeine TTL 7 jours pour limiter les appels. La résolution de salle retourne toujours le
+/// nom inchangé (Deezer ne référence pas les salles).
 ///
 /// @since 2.0.0
 /// @author Kwaite
 public class ResolveurNomCanonique {
 
-  private static final String MUSICBRAINZ_BASE = "https://musicbrainz.org/ws/2";
+  private static final Logger log = LoggerFactory.getLogger(ResolveurNomCanonique.class);
+
   private static final String DEEZER_BASE = "https://api.deezer.com";
-  private static final long DELAI_MB_MS = 1100;
-  private static final double SEUIL_CONFIANCE_MB = 0.6;
   private static final double SEUIL_CONFIANCE_DEEZER = 0.7;
-  private static final String CLE_SCORE = "score";
 
   /// Source de résolution utilisée pour un nom canonique.
   public enum SourceResolution {
-    MUSICBRAINZ,
     DEEZER,
     INCHANGE
   }
@@ -48,13 +45,9 @@ public class ResolveurNomCanonique {
   private final Cache<String, ResultatResolution> cache;
 
   /// Crée une instance avec les URLs distantes et un cache TTL 7 jours.
-  ///
-  /// @param contactEmail email de contact pour le User-Agent MusicBrainz
-  public ResolveurNomCanonique(String contactEmail) {
+  public ResolveurNomCanonique() {
     this(
-        RestClient.builder()
-            .defaultHeader("User-Agent", "Strapontin/2.0 (" + contactEmail + ")")
-            .build(),
+        RestClient.create(),
         Caffeine.newBuilder().expireAfterWrite(7, TimeUnit.DAYS).maximumSize(10_000).build());
   }
 
@@ -65,58 +58,6 @@ public class ResolveurNomCanonique {
   public ResolveurNomCanonique(RestClient restClient, Cache<String, ResultatResolution> cache) {
     this.restClient = restClient;
     this.cache = cache;
-  }
-
-  private void attendreMB() {
-    try {
-      Thread.sleep(DELAI_MB_MS);
-    } catch (InterruptedException _) {
-      Thread.currentThread().interrupt();
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private String rechercherMBArtiste(String nom) {
-    String uri = MUSICBRAINZ_BASE + "/artist/?query=" + encode(nom) + "&fmt=json&limit=1";
-    try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      attendreMB();
-      if (data == null) return null;
-      var artists = (List<Map<String, Object>>) data.get("artists");
-      if (artists == null || artists.isEmpty()) return null;
-      var artiste = artists.get(0);
-      int score = artiste.get(CLE_SCORE) != null ? ((Number) artiste.get(CLE_SCORE)).intValue() : 0;
-      if (score < 90) return null;
-      String nomMB = (String) artiste.get("name");
-      if (Normalisation.similarite(
-              Normalisation.normaliserTexte(nom), Normalisation.normaliserTexte(nomMB))
-          < SEUIL_CONFIANCE_MB) {
-        return null;
-      }
-      return nomMB;
-    } catch (Exception _) {
-      attendreMB();
-      return null;
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private String rechercherMBSalle(String nom) {
-    String uri = MUSICBRAINZ_BASE + "/place/?query=" + encode(nom) + "&fmt=json&limit=1";
-    try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      attendreMB();
-      if (data == null) return null;
-      var places = (List<Map<String, Object>>) data.get("places");
-      if (places == null || places.isEmpty()) return null;
-      var lieu = places.get(0);
-      int score = lieu.get(CLE_SCORE) != null ? ((Number) lieu.get(CLE_SCORE)).intValue() : 0;
-      if (score < 90) return null;
-      return (String) lieu.get("name");
-    } catch (Exception _) {
-      attendreMB();
-      return null;
-    }
   }
 
   @SuppressWarnings("unchecked")
@@ -134,8 +75,12 @@ public class ResolveurNomCanonique {
           < SEUIL_CONFIANCE_DEEZER) {
         return null;
       }
+      if (!resultat.equals(nom)) {
+        log.info("Deezer résolution artiste='{}' → '{}'", nom, resultat);
+      }
       return resultat;
-    } catch (Exception _) {
+    } catch (Exception e) {
+      log.warn("Deezer erreur artiste='{}' : {}", nom, e.getMessage());
       return null;
     }
   }
@@ -147,6 +92,7 @@ public class ResolveurNomCanonique {
   /// Résout le nom canonique d'un artiste ou d'une salle.
   ///
   /// Les résultats sont mis en cache par clé `"type:nom"`.
+  /// La résolution de salle retourne toujours `INCHANGE` (Deezer ne référence pas les salles).
   ///
   /// @param type {@code "artiste"} ou {@code "salle"}
   /// @param nom  nom brut à résoudre
@@ -158,22 +104,13 @@ public class ResolveurNomCanonique {
 
     ResultatResolution resultat;
     if ("artiste".equals(type)) {
-      String nomMB = rechercherMBArtiste(nom);
-      if (nomMB != null) {
-        resultat = new ResultatResolution(nomMB, SourceResolution.MUSICBRAINZ);
-      } else {
-        String nomDeezer = rechercherDeezerArtiste(nom);
-        resultat =
-            nomDeezer != null
-                ? new ResultatResolution(nomDeezer, SourceResolution.DEEZER)
-                : new ResultatResolution(nom, SourceResolution.INCHANGE);
-      }
-    } else {
-      String nomMB = rechercherMBSalle(nom);
+      String nomDeezer = rechercherDeezerArtiste(nom);
       resultat =
-          nomMB != null
-              ? new ResultatResolution(nomMB, SourceResolution.MUSICBRAINZ)
+          nomDeezer != null
+              ? new ResultatResolution(nomDeezer, SourceResolution.DEEZER)
               : new ResultatResolution(nom, SourceResolution.INCHANGE);
+    } else {
+      resultat = new ResultatResolution(nom, SourceResolution.INCHANGE);
     }
 
     cache.put(cleCache, resultat);
