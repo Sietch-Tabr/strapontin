@@ -1,6 +1,7 @@
 package fr.strapontin.core;
 
 import java.text.Normalizer;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public final class Normalisation {
@@ -11,10 +12,19 @@ public final class Normalisation {
   private static final Pattern NON_ALPHANUM = Pattern.compile("[^a-z0-9\\s]");
   private static final Pattern ESPACES_MULTIPLES = Pattern.compile("\\s+");
 
+  /// Caractères non décomposables par NFD : NFD retourne le même codepoint, le pattern
+  /// NON_ALPHANUM les supprime entièrement. Ces substitutions les remplacent avant NFD.
+  private static final Map<Character, String> SUBSTITUTIONS_NFD =
+      Map.of('ø', "o", 'Ø', "o", 'ł', "l", 'Ł', "l", 'đ', "d", 'Đ', "d", 'ŋ', "n", 'Ŋ', "n");
+
   private Normalisation() {}
 
   public static String normaliserTexte(String texte) {
-    String s = Normalizer.normalize(texte.toLowerCase(), Normalizer.Form.NFD);
+    String s = texte.toLowerCase();
+    for (Map.Entry<Character, String> e : SUBSTITUTIONS_NFD.entrySet()) {
+      s = s.replace(String.valueOf(e.getKey()), e.getValue());
+    }
+    s = Normalizer.normalize(s, Normalizer.Form.NFD);
     s = ACCENTS.matcher(s).replaceAll("");
     s = APOSTROPHES.matcher(s).replaceAll(" ");
     s = TIRETS.matcher(s).replaceAll(" ");

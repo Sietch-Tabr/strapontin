@@ -37,6 +37,32 @@ class NormalisationTest {
   }
 
   @Test
+  void normaliserTexte_avecOSlash_substitueO() {
+    // non-régression #656 : Ø non décomposable par NFD → supprimé sans substitution préalable
+    assertEquals("moonspell", Normalisation.normaliserTexte("MØØNSPELL"));
+    assertEquals("moonspell", Normalisation.normaliserTexte("møønspell"));
+  }
+
+  @Test
+  void normaliserTexte_avecLBarree_substitueL() {
+    // #656 : Ł (polonais) non décomposable par NFD
+    assertEquals("l artiste", Normalisation.normaliserTexte("Ł artiste"));
+    assertEquals("lodz", Normalisation.normaliserTexte("ŁÓDŹ"));
+  }
+
+  @Test
+  void normaliserTexte_avecDBarree_substitueD() {
+    // #656 : Đ (serbe/croate) non décomposable par NFD — Đ/đ → d (translittération simple)
+    assertEquals("dordevic", Normalisation.normaliserTexte("Đorđević"));
+  }
+
+  @Test
+  void normaliserTexte_avecNEng_substitueN() {
+    // #656 : Ŋ non décomposable par NFD
+    assertEquals("nanga", Normalisation.normaliserTexte("Ŋanga"));
+  }
+
+  @Test
   void normaliserTexte_avecEspacesMultiples_normalises() {
     assertEquals("foo bar", Normalisation.normaliserTexte("  foo   bar  "));
   }
