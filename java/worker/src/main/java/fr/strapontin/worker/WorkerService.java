@@ -348,7 +348,8 @@ public class WorkerService {
     }
   }
 
-  /// Supprime les salles orphelines (sans concerts futurs, sans utilisateurs et sans slug Digitick).
+  /// Supprime les salles orphelines (sans concerts futurs, sans utilisateurs et sans slug
+  // Digitick).
   ///
   /// Une salle est conservée si :
   /// - elle possède au moins un concert futur (`date >= CURRENT_DATE`), ou
