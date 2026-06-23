@@ -97,11 +97,12 @@ public class SpectacleService {
 
     String selectSql =
         """
-        SELECT c.id, c.artiste, c.date::text, c.heure::text, c.salle, c.ville,
-               c.url, c.classification, c.first_seen, c.statut, um.vu_le,
+        SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
+               c.salle, c.ville, c.url, c.classification, c.first_seen, c.statut, um.vu_le,
                c.presale_debut, c.presale_nom
         FROM user_matches um
         INNER JOIN concerts c ON um.concert_id = c.id
+        LEFT JOIN artistes a ON a.id = c.artiste_id
         WHERE %s
         ORDER BY %s
         LIMIT :limit OFFSET :offset
