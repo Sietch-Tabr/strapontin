@@ -57,11 +57,7 @@ class PersisterConcertsTest {
   }
 
   private static ValeurConcert valeurAvecArtisteId(
-      String artisteNorm,
-      String date,
-      String salleNorm,
-      String artisteSourceId,
-      UUID artisteId) {
+      String artisteNorm, String date, String salleNorm, String artisteSourceId, UUID artisteId) {
     return new ValeurConcert(
         artisteNorm,
         artisteNorm,
