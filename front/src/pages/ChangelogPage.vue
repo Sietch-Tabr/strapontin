@@ -28,7 +28,7 @@
       </section>
 
       <section>
-        <h2 class="changelog-version">v 2.3.0 — 21 juin 2026</h2>
+        <h2 class="changelog-version">v 2.3.0 — 23 juin 2026</h2>
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Interface</p>
@@ -39,6 +39,7 @@
           <div>
             <p class="changelog-categorie">Concerts</p>
             <ul>
+              <li>Les artistes dont le nom contient des caractères nordiques ou slaves non convertibles (Ø, Ł, Đ, Ŋ) ne recevaient aucun concert — ces lettres sont désormais correctement transcrites lors de la recherche (ex. MØØNSPELL → Moonspell).</li>
               <li>Les concerts découverts via la recherche régionale Eventim n'apparaissaient plus — une incompatibilité entre les catégories Ticketmaster et Eventim empêchait tout résultat. La recherche régionale Eventim est à nouveau fonctionnelle.</li>
               <li>Un concert peut désormais être correctement attribué à un artiste dont le nom contient une apostrophe (ex. Shy'm) même si Eventim référence un homonyme sous un nom différent.</li>
             </ul>
