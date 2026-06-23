@@ -152,16 +152,18 @@ Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SE
 
 Paradigme : **pré-fetch en arrière-plan, jamais d'appel API depuis le browser**.
 
-| Job                     | Déclenchement           | Description                                                               |
-| ----------------------- | ----------------------- | ------------------------------------------------------------------------- |
-| `FetchArtisteJob`       | Ajout artiste + cron 2h | Fetch TM + Eventim par nom artiste                                        |
-| `FetchArtistesBatchJob` | Cron 2h                 | Fetch TM en lots de 20 attractionIds                                      |
-| `FetchRegionJob`        | Cron 2h + manuel        | Fetch TM + Eventim par département                                        |
-| `FetchSalleJob`         | Ajout salle + cron 2h   | Fetch par identifiants préfixés (`CLE_IDENTIFIANTS`, ex. `"tm:venueId"`)  |
-| `RecalculerMatchesJob`  | Après fetch             | Recalcule `user_matches` pour tous les users                              |
-| `PurgerConcertsJob`     | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours                                 |
-| `PurgerLogsAdminJob`    | Cron quotidien (0h15)   | Supprime les `logs_admin` > 30 jours et `fetch_jobs_historique` > 7 jours |
-| `RevoquerAdminsJob`     | Cron horaire (H:00)     | Applique les révocations admin dont la date est dépassée                  |
+| Job                     | Déclenchement           | Description                                                                       |
+| ----------------------- | ----------------------- | --------------------------------------------------------------------------------- |
+| `FetchArtisteJob`       | Ajout artiste + cron 2h | Fetch TM + Eventim par nom artiste                                                |
+| `FetchArtistesBatchJob` | Cron 2h                 | Fetch TM en lots de 20 attractionIds                                              |
+| `FetchRegionJob`        | Cron 2h + manuel        | Fetch TM + Eventim par département                                                |
+| `FetchSalleJob`         | Ajout salle + cron 2h   | Fetch par identifiants préfixés (`CLE_IDENTIFIANTS`, ex. `"tm:venueId"`)          |
+| `RecalculerMatchesJob`  | Après fetch             | Recalcule `user_matches` pour tous les users                                      |
+| `PurgerConcertsJob`     | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours                                         |
+| `PurgerSallesJob`       | Cron quotidien (0h05)   | Supprime salles orphelines (sans concerts futurs, sans users, sans slug Digitick) |
+| `PurgerArtistesJob`     | Cron quotidien (0h06)   | Supprime artistes orphelins (sans concerts futurs ni users)                       |
+| `PurgerLogsAdminJob`    | Cron quotidien (0h15)   | Supprime les `logs_admin` > 30 jours et `fetch_jobs_historique` > 7 jours         |
+| `RevoquerAdminsJob`     | Cron horaire (H:00)     | Applique les révocations admin dont la date est dépassée                          |
 
 Rate limiting TM : max 2 jobs simultanés (3 → HTTP 429). Quota TM persisté dans `app_config` (`TM_QUOTA_JSON`).
 `FetchArtistesBatchJob`, `FetchRegionJob`, `RecalculerMatchesJob` annotés `@DisallowConcurrentExecution`. `WatchdogWorkerService` (`@Scheduled`, côté web) : alerte email si worker inactif > 3 h.

@@ -7,8 +7,10 @@ package fr.strapontin.worker;
 import fr.strapontin.worker.jobs.FetchArtistesBatchJob;
 import fr.strapontin.worker.jobs.FetchRegionJob;
 import fr.strapontin.worker.jobs.NotifierDigestJob;
+import fr.strapontin.worker.jobs.PurgerArtistesJob;
 import fr.strapontin.worker.jobs.PurgerConcertsJob;
 import fr.strapontin.worker.jobs.PurgerLogsAdminJob;
+import fr.strapontin.worker.jobs.PurgerSallesJob;
 import fr.strapontin.worker.jobs.RecalculerMatchesJob;
 import fr.strapontin.worker.jobs.RevoquerAdminsJob;
 import org.quartz.CronScheduleBuilder;
@@ -28,6 +30,8 @@ import org.springframework.context.annotation.Configuration;
 /// - `fetch:region` — toutes les 2 heures (cf. `worker.cron.fetch-region`)
 /// - `recalculer:matches` — toutes les 2 heures (cf. `worker.cron.recalculer-matches`)
 /// - `purger:concerts` — tous les jours à minuit
+/// - `purger:salles` — tous les jours à 0h05 (après purge concerts)
+/// - `purger:artistes` — tous les jours à 0h06 (après purge salles)
 /// - `purger:logs-admin` — tous les jours à 0h15
 /// - `notifier:digest` — tous les jours à 8h
 /// - `revoquer:admins` — toutes les heures
@@ -114,6 +118,40 @@ public class Planificateur {
         .forJob(jobDetailPurgerConcerts)
         .withIdentity("triggerPurgerConcerts")
         .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0 * * ?"))
+        .build();
+  }
+
+  @Bean
+  JobDetail jobDetailPurgerSalles() {
+    return JobBuilder.newJob(PurgerSallesJob.class)
+        .withIdentity("purgerSalles")
+        .storeDurably()
+        .build();
+  }
+
+  @Bean
+  Trigger triggerPurgerSalles(JobDetail jobDetailPurgerSalles) {
+    return TriggerBuilder.newTrigger()
+        .forJob(jobDetailPurgerSalles)
+        .withIdentity("triggerPurgerSalles")
+        .withSchedule(CronScheduleBuilder.cronSchedule("0 5 0 * * ?"))
+        .build();
+  }
+
+  @Bean
+  JobDetail jobDetailPurgerArtistes() {
+    return JobBuilder.newJob(PurgerArtistesJob.class)
+        .withIdentity("purgerArtistes")
+        .storeDurably()
+        .build();
+  }
+
+  @Bean
+  Trigger triggerPurgerArtistes(JobDetail jobDetailPurgerArtistes) {
+    return TriggerBuilder.newTrigger()
+        .forJob(jobDetailPurgerArtistes)
+        .withIdentity("triggerPurgerArtistes")
+        .withSchedule(CronScheduleBuilder.cronSchedule("0 6 0 * * ?"))
         .build();
   }
 
