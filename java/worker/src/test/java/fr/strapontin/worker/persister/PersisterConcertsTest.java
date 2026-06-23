@@ -148,6 +148,63 @@ class PersisterConcertsTest {
     assertFalse(PersisterConcerts.estDoublonSalle("accor arena", "ACCOR ARENA"));
   }
 
+  // --- estDoublonSalle — Jaccard tokens (#669) ---
+
+  @Test
+  void estDoublonSalle_reordonancementMots_retourneTrue() {
+    // Jaccard = 1.0 — même tokens, ordre différent
+    assertTrue(
+        PersisterConcerts.estDoublonSalle(
+            "zenith europe strasbourg", "zenith de strasbourg europe"));
+    // Jaccard = 1.0 — "de" filtré (longueur < 3)
+    assertTrue(PersisterConcerts.estDoublonSalle("zenith de nancy", "le zenith nancy"));
+  }
+
+  @Test
+  void estDoublonSalle_tokensCommunsSuperieursSeuil_retourneTrue() {
+    // Jaccard = 3/5 = 0.6 > 0.5 — "arena", "pays", "aix" communs
+    assertTrue(
+        PersisterConcerts.estDoublonSalle(
+            "arena du pays d aix", "arena du pays daix aix en provence"));
+  }
+
+  @Test
+  void estDoublonSalle_tokensCommunsEgauxSeuil_retourneFalse() {
+    // Jaccard = 0.5 exactement — seuil strict > 0.5
+    assertFalse(PersisterConcerts.estDoublonSalle("zenith", "zenith bordeaux"));
+    assertFalse(PersisterConcerts.estDoublonSalle("galaxie", "le galaxie amneville"));
+  }
+
+  @Test
+  void estDoublonSalle_villesDistinctesJaccard_retourneFalse() {
+    // Jaccard = 1/3 ≈ 0.33 — "zenith" commun mais villes différentes
+    assertFalse(PersisterConcerts.estDoublonSalle("zenith de bordeaux", "zenith de caen"));
+  }
+
+  // --- jaccardTokens ---
+
+  @Test
+  void jaccardTokens_chainesIdentiques_retourneUn() {
+    assertEquals(1.0, PersisterConcerts.jaccardTokens("zenith paris", "zenith paris"), 0.001);
+  }
+
+  @Test
+  void jaccardTokens_tokensCourtsFiltres() {
+    // "de" (2 chars) filtré : {zenith, nancy} ∩ {zenith, nancy} = 1.0
+    assertEquals(1.0, PersisterConcerts.jaccardTokens("zenith de nancy", "le zenith nancy"), 0.001);
+  }
+
+  @Test
+  void jaccardTokens_deuxVides_retourneUn() {
+    // Deux chaînes sans token long — définies comme identiques
+    assertEquals(1.0, PersisterConcerts.jaccardTokens("de la le", "du en au"), 0.001);
+  }
+
+  @Test
+  void jaccardTokens_sansIntersection_retourneZero() {
+    assertEquals(0.0, PersisterConcerts.jaccardTokens("zenith paris", "stade france"), 0.001);
+  }
+
   // --- estDoublonArtiste ---
 
   @Test
