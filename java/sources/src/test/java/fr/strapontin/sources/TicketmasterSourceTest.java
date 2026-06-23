@@ -528,8 +528,8 @@ class TicketmasterSourceTest {
   }
 
   @Test
-  void rechercherAttractionId_premierResultatNomDifferent_retourneNull() {
-    // non-régression #649 : TM retourne "Anuv Jain" pour la recherche "Jain" → faux positif
+  void rechercherAttractionId_aucuneCorrespondanceExacteParmis10_retourneNull() {
+    // non-régression #649 : TM retourne "Anuv Jain" sans "Jain" parmi 10 résultats → null
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
@@ -539,7 +539,10 @@ class TicketmasterSourceTest {
         .andRespond(
             withSuccess(
                 """
-                {"_embedded":{"attractions":[{"id":"K8vZ917jjsV","name":"Anuv Jain"}]}}
+                {"_embedded":{"attractions":[
+                  {"id":"K8vZ917jjsV","name":"Anuv Jain"},
+                  {"id":"K8vZ917abc","name":"Jain Malhotra"}
+                ]}}
                 """,
                 MediaType.APPLICATION_JSON));
 
@@ -547,6 +550,32 @@ class TicketmasterSourceTest {
     String id = source.rechercherAttractionId("Jain");
 
     assertNull(id);
+    serveur.verify();
+  }
+
+  @Test
+  void rechercherAttractionId_correspondanceExacteApresDecalage_retourneId() {
+    // non-régression #654 : TM retourne "Shy" avant "Shy'm" (tri popularité) → doit trouver Shy'm
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
+        .andRespond(
+            withSuccess(
+                """
+                {"_embedded":{"attractions":[
+                  {"id":"K8vZ917paOf","name":"Shy"},
+                  {"id":"K8vZ917shym","name":"Shy'm"}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    String id = source.rechercherAttractionId("Shy'm");
+
+    assertEquals("K8vZ917shym", id);
     serveur.verify();
   }
 

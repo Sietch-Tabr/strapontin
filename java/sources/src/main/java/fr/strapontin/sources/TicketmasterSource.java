@@ -643,15 +643,19 @@ public class TicketmasterSource implements SourceAvecFetchLot {
 
   /// Recherche l'identifiant TM (attractionId) pour un artiste par son nom.
   ///
+  /// <p>Parcourt jusqu'à 10 résultats pour trouver la première correspondance exacte normalisée.
+  /// TM peut trier par popularité et retourner un artiste similaire avant l'artiste recherché
+  /// (ex: "Shy" avant "Shy'm" — #654).
+  ///
   /// @param nom nom de l'artiste
-  /// @return attractionId TM, ou null si non trouvé
+  /// @return attractionId TM, ou null si aucun résultat exact dans les 10 premiers
   @SuppressWarnings("unchecked")
   public String rechercherAttractionId(String nom) {
     String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/attractions.json")
             .queryParam("keyword", nom)
             .queryParam("locale", "*")
-            .queryParam("size", 1)
+            .queryParam("size", 10)
             .queryParam("apikey", apiKey)
             .build()
             .toUriString();
@@ -664,15 +668,14 @@ public class TicketmasterSource implements SourceAvecFetchLot {
           embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
       if (attractions == null || attractions.isEmpty()) return null;
       String nomNorm = Normalisation.normaliserTexte(nom);
-      String premierNom = (String) attractions.get(0).getOrDefault("name", "");
-      if (!Normalisation.normaliserTexte(premierNom).equals(nomNorm)) {
-        log.warn(
-            "rechercherAttractionId TM — pas de correspondance exacte nom={} premier={}",
-            nom,
-            premierNom);
-        return null;
+      for (var attraction : attractions) {
+        String nomAttraction = (String) attraction.getOrDefault("name", "");
+        if (Normalisation.normaliserTexte(nomAttraction).equals(nomNorm)) {
+          return (String) attraction.get("id");
+        }
       }
-      return (String) attractions.get(0).get("id");
+      log.warn("rechercherAttractionId TM — pas de correspondance exacte nom={}", nom);
+      return null;
     } catch (Exception _) {
       return null;
     }

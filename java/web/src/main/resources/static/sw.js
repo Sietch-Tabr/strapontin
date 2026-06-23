@@ -215,15 +215,15 @@ self.addEventListener("fetch", (event) => {
   // Images : stale-while-revalidate (changent rarement)
   if (url.pathname.startsWith("/images/")) {
     event.respondWith(
-      caches.open(CACHE_NOM).then(function (cache) {
-        return cache.match(request).then(function (cached) {
-          var networkFetch = fetch(request).then(function (response) {
-            if (response.ok) cache.put(request, response.clone());
-            return response;
-          });
-          return cached || networkFetch;
+      (async () => {
+        const cache = await caches.open(CACHE_NOM);
+        const cached = await cache.match(request);
+        const networkFetch = fetch(request).then(function (response) {
+          if (response.ok) cache.put(request, response.clone());
+          return response;
         });
-      }),
+        return cached || networkFetch;
+      })(),
     );
     return;
   }
