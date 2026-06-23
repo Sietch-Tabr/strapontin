@@ -155,4 +155,26 @@ class WorkerServiceTest {
     verify(jdbc).update(contains("INSERT INTO fetch_jobs (type_job"), anyMap());
     verify(jdbc).update(contains("INSERT INTO fetch_jobs_historique"), anyMap());
   }
+
+  @Test
+  void executerPurgerSalles_supprimeSallesOrphelinesEtEnregistreStat() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(3);
+
+    workerService.executerPurgerSalles();
+
+    verify(jdbc).update(contains("DELETE FROM salles"), anyMap());
+    verify(jdbc).update(contains("INSERT INTO fetch_jobs (type_job"), anyMap());
+    verify(jdbc).update(contains("INSERT INTO fetch_jobs_historique"), anyMap());
+  }
+
+  @Test
+  void executerPurgerArtistes_supprimeArtistesOrphelinsEtEnregistreStat() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(2);
+
+    workerService.executerPurgerArtistes();
+
+    verify(jdbc).update(contains("DELETE FROM artistes"), anyMap());
+    verify(jdbc).update(contains("INSERT INTO fetch_jobs (type_job"), anyMap());
+    verify(jdbc).update(contains("INSERT INTO fetch_jobs_historique"), anyMap());
+  }
 }

@@ -160,6 +160,8 @@ Paradigme : **pré-fetch en arrière-plan, jamais d'appel API depuis le browser*
 | `FetchSalleJob`         | Ajout salle + cron 2h   | Fetch par identifiants préfixés (`CLE_IDENTIFIANTS`, ex. `"tm:venueId"`)  |
 | `RecalculerMatchesJob`  | Après fetch             | Recalcule `user_matches` pour tous les users                              |
 | `PurgerConcertsJob`     | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours                                 |
+| `PurgerSallesJob`       | Cron quotidien (0h05)   | Supprime salles orphelines (sans concerts futurs, sans users, sans slug Digitick) |
+| `PurgerArtistesJob`     | Cron quotidien (0h06)   | Supprime artistes orphelins (sans concerts futurs ni users)               |
 | `PurgerLogsAdminJob`    | Cron quotidien (0h15)   | Supprime les `logs_admin` > 30 jours et `fetch_jobs_historique` > 7 jours |
 | `RevoquerAdminsJob`     | Cron horaire (H:00)     | Applique les révocations admin dont la date est dépassée                  |
 

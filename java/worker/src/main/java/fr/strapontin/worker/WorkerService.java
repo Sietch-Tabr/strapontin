@@ -348,6 +348,84 @@ public class WorkerService {
     }
   }
 
+  /// Supprime les salles orphelines (sans concerts futurs, sans utilisateurs et sans slug Digitick).
+  ///
+  /// Une salle est conservée si :
+  /// - elle possède au moins un concert futur (`date >= CURRENT_DATE`), ou
+  /// - au moins un utilisateur la suit, ou
+  /// - elle a un slug Digitick configuré (salle source Digitick dans `salle_sources`).
+  ///
+  /// Doit s'exécuter après {@link #executerPurgerConcerts()} pour travailler
+  /// sur un jeu de données cohérent (cf. `PurgerSallesJob`).
+  public void executerPurgerSalles() {
+    log.info("purger:salles démarré");
+    long debut = System.currentTimeMillis();
+    try {
+      int supprimes =
+          jdbc.update(
+              """
+              DELETE FROM salles
+              WHERE NOT EXISTS (
+                  SELECT 1 FROM concerts WHERE salle_uuid = salles.id AND date >= CURRENT_DATE)
+                AND NOT EXISTS (
+                  SELECT 1 FROM user_salles WHERE salle_uuid = salles.id)
+                AND NOT EXISTS (
+                  SELECT 1 FROM salle_sources WHERE salle_id = salles.id AND source = 'digitick')
+              """,
+              Map.of());
+      log.info("purger:salles terminé supprimes={}", supprimes);
+      enregistrerStatJob(
+          "purger:salles",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, supprimes),
+          null);
+    } catch (Exception e) {
+      log.error("purger:salles échoué", e);
+      enregistrerStatJob(
+          "purger:salles",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, 0),
+          e.getMessage());
+    }
+  }
+
+  /// Supprime les artistes orphelins (sans concerts futurs ni utilisateurs).
+  ///
+  /// Un artiste est conservé si :
+  /// - il possède au moins un concert futur (`date >= CURRENT_DATE`), ou
+  /// - au moins un utilisateur le suit.
+  ///
+  /// Doit s'exécuter après {@link #executerPurgerSalles()} (cf. `PurgerArtistesJob`).
+  public void executerPurgerArtistes() {
+    log.info("purger:artistes démarré");
+    long debut = System.currentTimeMillis();
+    try {
+      int supprimes =
+          jdbc.update(
+              """
+              DELETE FROM artistes
+              WHERE NOT EXISTS (
+                  SELECT 1 FROM concerts WHERE artiste_id = artistes.id AND date >= CURRENT_DATE)
+                AND NOT EXISTS (
+                  SELECT 1 FROM user_artistes WHERE artiste_id = artistes.id)
+              """,
+              Map.of());
+      log.info("purger:artistes terminé supprimes={}", supprimes);
+      enregistrerStatJob(
+          "purger:artistes",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, supprimes),
+          null);
+    } catch (Exception e) {
+      log.error("purger:artistes échoué", e);
+      enregistrerStatJob(
+          "purger:artistes",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, 0),
+          e.getMessage());
+    }
+  }
+
   /// Supprime les entrées de `logs_admin` plus anciennes que 30 jours
   /// et les entrées de `fetch_jobs_historique` plus anciennes que 7 jours.
   ///
