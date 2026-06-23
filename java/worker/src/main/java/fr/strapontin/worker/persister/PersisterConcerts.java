@@ -103,6 +103,8 @@ public class PersisterConcerts {
       RETURNING (xmax = 0) AS est_insertion
       """;
 
+  /// Clé de dédoublonnage : (source, url, date, heure) — TM peut partager une même URL entre
+  /// plusieurs représentations d'une même production (#674). La date est obligatoire.
   private static final String SQL_DOUBLONS_URL =
       """
       SELECT DISTINCT c1.id::text
