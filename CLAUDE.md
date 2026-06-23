@@ -178,6 +178,7 @@ Détails : [wiki Authentification](https://codeberg.org/Kwaite/strapontin/wiki/A
 
 Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein normalisé ≥ 0.85.
 Résolution UUID-first (v2.3.0, ticket #621) : `PersisterConcerts.resoudreIdentitesSources` consulte `salle_sources`/`artiste_sources` avant la réconciliation floue. Absorbe les renommages de salle. Pour les salles TM absentes de `salle_sources`, upsert automatique dans `salles` + `salle_sources` (ticket #633). Les passes de réconciliation propagent `salleUuid`/`artisteId` (ticket #632).
+`estDoublonSalle` : Levenshtein ≥ 0.75 **ou** containment **ou** Jaccard tokens > 0.5 (insensible à l'ordre — couvre les réordonnancements inter-sources, #669). Tokens < 3 chars filtrés. `upsertSalleSource` cherche un doublon Jaccard avant de créer une salle (#659).
 → Détails : [wiki Architecture](https://codeberg.org/Kwaite/strapontin/wiki/Architecture)
 
 ## UI / Design system (v2.2.0 — Vue SPA)

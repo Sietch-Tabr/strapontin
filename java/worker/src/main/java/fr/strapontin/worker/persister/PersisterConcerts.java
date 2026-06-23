@@ -12,7 +12,9 @@ import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,14 +49,21 @@ public class PersisterConcerts {
 
   private static final int TAILLE_LOT = 500;
 
-  // Seuils salle : Levenshtein ≥ 0.75 + containment avec ratio court/long ≥ 0.5.
+  // Seuils salle : Levenshtein ≥ 0.75 + containment avec ratio court/long ≥ 0.5
+  //   + Jaccard tokens > 0.5 (insensible à l'ordre des mots).
   // Seuil 0.75 évite les faux positifs entre villes distinctes ("zenith de bordeaux"/"zenith de
   // caen" sim=0.61 → false) tout en couvrant les variantes légitimes ("l olympia"/"olympia"
   // sim=0.78 → true). Ratio 0.5 bloque "zenith"/"zenith bordeaux" (ratio=0.40 → false) mais garde
   // "zenith paris"/"zenith paris la villette" (containment, ratio=0.5 → true).
+  // Jaccard strict > 0.5 : évite le faux positif "zenith"/"zenith bordeaux" (Jaccard=0.5) et
+  // "galaxie"/"le galaxie amneville" (Jaccard=0.5 après filtrage articles). Couvre les cas de
+  // réordonnancement : "zenith europe strasbourg"/"zenith de strasbourg europe" (Jaccard=1.0).
   private static final double SEUIL_SIMILARITE_SALLE = 0.75;
   private static final int LONGUEUR_MIN_CONTAINMENT_SALLE = 4;
   private static final double RATIO_MIN_CONTAINMENT_SALLE = 0.5;
+  // Longueur minimale pour inclure un token dans le calcul Jaccard (filtre "le", "de", "la"…).
+  private static final int LONGUEUR_MIN_TOKEN_JACCARD = 3;
+  private static final double SEUIL_JACCARD_SALLE = 0.5;
 
   // Seuil artiste : Jaro ≥ 0.95 + containment avec ratio court/long ≥ 0.65.
   // Jaro évite les faux positifs par préfixe commun ("julien dore"/"julien morel" Jaro=0.914 →
@@ -156,14 +165,47 @@ public class PersisterConcerts {
         && plusLong.contains(court);
   }
 
+  /// Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
+  ///
+  /// <p>Seuls les tokens d'au moins {@value #LONGUEUR_MIN_TOKEN_JACCARD} caractères sont pris en
+  /// compte (filtre les articles "le", "de", "la"…). Retourne 0.0 si l'union est vide.
+  ///
+  /// @param a première chaîne normalisée
+  /// @param b deuxième chaîne normalisée
+  /// @return coefficient de Jaccard entre 0.0 et 1.0
+  static double jaccardTokens(String a, String b) {
+    Set<String> tokensA = new HashSet<>(Arrays.asList(a.split("\\s+")));
+    Set<String> tokensB = new HashSet<>(Arrays.asList(b.split("\\s+")));
+    tokensA.removeIf(t -> t.length() < LONGUEUR_MIN_TOKEN_JACCARD);
+    tokensB.removeIf(t -> t.length() < LONGUEUR_MIN_TOKEN_JACCARD);
+    if (tokensA.isEmpty() && tokensB.isEmpty()) return 1.0;
+    Set<String> union = new HashSet<>(tokensA);
+    union.addAll(tokensB);
+    if (union.isEmpty()) return 0.0;
+    Set<String> intersection = new HashSet<>(tokensA);
+    intersection.retainAll(tokensB);
+    return (double) intersection.size() / union.size();
+  }
+
   /// Vérifie si deux noms de salle normalisés désignent la même salle.
+  ///
+  /// <p>Trois critères en union :
+  /// <ol>
+  ///   <li>Levenshtein ≥ 0.75 ou containment (via {@link #estDoublonTexte})</li>
+  ///   <li>Jaccard tokens strict {@code > 0.5} — insensible à l'ordre des mots, couvre les cas
+  ///       de réordonnancement inter-sources ("zenith europe strasbourg" / "zenith de strasbourg
+  ///       europe"). Seuil strict évite le faux positif "zenith"/"zenith bordeaux" (Jaccard=0.5).
+  ///   </li>
+  /// </ol>
   ///
   /// @param a premier nom normalisé
   /// @param b deuxième nom normalisé
   /// @return `true` si les salles sont considérées identiques
   public static boolean estDoublonSalle(String a, String b) {
-    return estDoublonTexte(
-        a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE, RATIO_MIN_CONTAINMENT_SALLE);
+    if (estDoublonTexte(
+        a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE, RATIO_MIN_CONTAINMENT_SALLE))
+      return true;
+    return jaccardTokens(a, b) > SEUIL_JACCARD_SALLE;
   }
 
   /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
@@ -857,9 +899,11 @@ public class PersisterConcerts {
   /// Résout ou crée une salle et insère son mapping source dans {@code salle_sources}.
   ///
   /// <p>Appelée quand un {@code salleSourceId} n'est pas trouvé dans {@code salle_sources}.
-  /// Cherche d'abord une salle existante par {@code unaccent(lower(nom))} pour absorber les
-  /// variantes d'identifiant historiques ({@code id} généré différemment selon l'origine de la
-  /// salle). Si aucune salle n'est trouvée, en crée une nouvelle. Dans les deux cas, insère le
+  /// Cherche d'abord une salle existante par {@code unaccent(lower(nom))} (égalité exacte) pour
+  /// absorber les variantes d'identifiant historiques. Si aucune correspondance exacte, cherche
+  /// des candidats par le premier token significatif et applique {@link #estDoublonSalle} pour
+  /// détecter les doublons inter-sources avec réordonnancement de mots (ex. Eventim vs TM).
+  /// Si aucune salle n'est trouvée, en crée une nouvelle. Dans tous les cas, insère le
   /// mapping {@code salle_sources} (ON CONFLICT DO NOTHING).
   ///
   /// @param c le concert portant le {@code salleSourceId} à résoudre
@@ -873,10 +917,14 @@ public class PersisterConcerts {
 
     List<UUID> existants =
         jdbc.query(
-            "SELECT id FROM salles" + " WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
+            "SELECT id FROM salles WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
             Map.of("nom", c.salle()),
             (rs, _) -> rs.getObject("id", UUID.class));
     UUID salleUuid = existants.isEmpty() ? null : existants.get(0);
+
+    if (salleUuid == null) {
+      salleUuid = chercherSalleParTokens(c.salle());
+    }
 
     if (salleUuid == null) {
       String salleCle = Normalisation.normaliserTexte(c.salle());
@@ -906,6 +954,39 @@ public class PersisterConcerts {
         identifiant,
         salleUuid);
     return salleUuid;
+  }
+
+  /// Cherche une salle existante dont le {@code nom_norm} est un doublon du nom fourni selon
+  /// {@link #estDoublonSalle}. Utilise le premier token significatif comme filtre SQL pour limiter
+  /// le volume de candidats comparés en mémoire.
+  ///
+  /// @param nom nom brut de la salle à créer
+  /// @return UUID de la salle existante correspondante, ou {@code null} si aucune trouvée
+  private UUID chercherSalleParTokens(String nom) {
+    String nomNorm = Normalisation.normaliserTexte(nom);
+    String premierToken =
+        Arrays.stream(nomNorm.split("\\s+"))
+            .filter(t -> t.length() >= LONGUEUR_MIN_TOKEN_JACCARD)
+            .findFirst()
+            .orElse(null);
+    if (premierToken == null) return null;
+
+    List<Map<String, Object>> candidats =
+        jdbc.queryForList(
+            "SELECT id, nom_norm FROM salles WHERE nom_norm LIKE :pattern LIMIT 50",
+            Map.of("pattern", "%" + premierToken + "%"));
+    for (var candidat : candidats) {
+      if (estDoublonSalle(nomNorm, (String) candidat.get("nom_norm"))) {
+        UUID uuid = (UUID) candidat.get("id");
+        log.info(
+            "salle doublon détecté par Jaccard : '{}' ≈ '{}' uuid={}",
+            nom,
+            candidat.get("nom_norm"),
+            uuid);
+        return uuid;
+      }
+    }
+    return null;
   }
 
   private void absorberRenommagesSalles(

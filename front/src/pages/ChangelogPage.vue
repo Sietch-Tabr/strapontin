@@ -13,6 +13,7 @@
           <div>
             <p class="changelog-categorie">Concerts</p>
             <ul>
+              <li>Sept salles existaient en double (une version Ticketmaster, une version Eventim avec un nom légèrement différent) — les concerts dupliqués dans la découverte disparaissent, et les préférences sont conservées.</li>
               <li>Les résultats de la découverte régionale excluent désormais les concerts affichant "épuisé" sur Eventim — moins de concerts inaccessibles dans la liste.</li>
               <li>Des concerts sold-out Eventim s'affichaient à tort avec le badge « Prévente » — corrigé. L'API Eventim ne distinguant pas prévente et complet, aucun badge n'est désormais affiché pour ces concerts.</li>
               <li>Les spectacles à séances multiples (matinée et soirée le même jour dans la même salle) sont maintenant affichés comme deux événements distincts plutôt que fusionnés.</li>
