@@ -465,12 +465,12 @@ class EventimSourceTest {
   }
 
   @Test
-  void mapProduit_inStockFalse_retourneStatutPresale() {
+  void mapProduit_inStockFalse_retourneStatutNull() {
     Map<String, Object> produit = produitEventimRaw(Map.of("inStock", false));
 
     ConcertBrut concert = EventimSource.mapProduit(produit, null);
 
-    assertEquals("presale", concert.statut());
+    assertNull(concert.statut());
   }
 
   @Test
