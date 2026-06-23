@@ -56,11 +56,11 @@ public class PersisterConcerts {
   private static final int LONGUEUR_MIN_CONTAINMENT_SALLE = 4;
   private static final double RATIO_MIN_CONTAINMENT_SALLE = 0.5;
 
-  // Seuils artiste : seuil Levenshtein strict + containment avec ratio court/long ≥ 0.65.
-  // Ratio 0.65 évite les faux positifs ("lomepal"/"lomepal & sch" ratio=0.636 → false,
-  // "pink"/"pink floyd" ratio=0.4 → false) tout en couvrant les troncatures TM
-  // ("aliz"/"alizee" ratio=0.67 → true, "fawn"/"fawnn" ratio=0.8 → true).
-  private static final double SEUIL_SIMILARITE_ARTISTE = 0.85;
+  // Seuil artiste : Jaro ≥ 0.95 + containment avec ratio court/long ≥ 0.65.
+  // Jaro évite les faux positifs par préfixe commun ("julien dore"/"julien morel" Jaro=0.914 →
+  // false) tout en couvrant les variantes sans espace ("krash karma"/"krashkarma" Jaro=0.97 →
+  // true). Les cas de troncature TM ("aliz"/"alizee", "fawn"/"fawnn") passent par containment.
+  private static final double SEUIL_JARO_ARTISTE = 0.95;
   private static final int LONGUEUR_MIN_CONTAINMENT_ARTISTE = 4;
   private static final double RATIO_MIN_CONTAINMENT_ARTISTE = 0.65;
 
@@ -105,6 +105,8 @@ public class PersisterConcerts {
 
   /// Clé de dédoublonnage : (source, url, date, heure) — TM peut partager une même URL entre
   /// plusieurs représentations d'une même production (#674). La date est obligatoire.
+  private record ArtisteExistant(String artisteNorm, UUID artisteId) {}
+
   private static final String SQL_DOUBLONS_URL =
       """
       SELECT DISTINCT c1.id::text
@@ -166,20 +168,22 @@ public class PersisterConcerts {
 
   /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
   ///
-  /// Seuil Levenshtein strict (0.85) complété par un containment avec ratio court/long ≥ 0.6 :
-  /// couvre les troncatures TM ("aliz"/"alizee", "fawn"/"fawnn") et les variations mineures
-  /// (suffixe numérique, article) sans fusionner des artistes distincts ("pink"/"pink floyd").
+  /// Jaro ≥ 0.95 (meilleur que Levenshtein pour les noms propres courts) complété par un
+  /// containment avec ratio court/long ≥ 0.65 pour les troncatures TM ("aliz"/"alizee",
+  /// "fawn"/"fawnn") et les variations longues ("star academy"/"star academy 1").
   ///
   /// @param a premier nom normalisé
   /// @param b deuxième nom normalisé
   /// @return `true` si les artistes sont considérés identiques
   public static boolean estDoublonArtiste(String a, String b) {
-    return estDoublonTexte(
-        a,
-        b,
-        SEUIL_SIMILARITE_ARTISTE,
-        LONGUEUR_MIN_CONTAINMENT_ARTISTE,
-        RATIO_MIN_CONTAINMENT_ARTISTE);
+    if (a.equals(b)) return true;
+    if (Normalisation.jaro(a, b) >= SEUIL_JARO_ARTISTE) return true;
+    String court = a.length() <= b.length() ? a : b;
+    String plusLong = a.length() <= b.length() ? b : a;
+    double ratio = (double) court.length() / plusLong.length();
+    return court.length() >= LONGUEUR_MIN_CONTAINMENT_ARTISTE
+        && ratio >= RATIO_MIN_CONTAINMENT_ARTISTE
+        && plusLong.contains(court);
   }
 
   private static int scoreArtisteSalle(String artiste, String salle) {
@@ -405,16 +409,16 @@ public class PersisterConcerts {
 
     List<Map<String, Object>> existants =
         jdbc.queryForList(
-            "SELECT artiste_norm, date::text AS date, salle_norm FROM concerts"
+            "SELECT artiste_norm, artiste_id, date::text AS date, salle_norm FROM concerts"
                 + " WHERE salle_norm IN (:sallesNorms)",
             Map.of("sallesNorms", sallesNorms));
 
-    Map<String, List<String>> indexExistants = new HashMap<>();
+    Map<String, List<ArtisteExistant>> indexExistants = new HashMap<>();
     for (Map<String, Object> e : existants) {
       String cle = e.get("date") + "|" + e.get("salle_norm");
       indexExistants
           .computeIfAbsent(cle, _ -> new ArrayList<>())
-          .add((String) e.get("artiste_norm"));
+          .add(new ArtisteExistant((String) e.get("artiste_norm"), (UUID) e.get("artiste_id")));
     }
 
     return lotApresIntraLot.stream()
@@ -500,20 +504,49 @@ public class PersisterConcerts {
   }
 
   private ValeurConcert reconcilierUnArtiste(
-      ValeurConcert concert, Map<String, List<String>> indexExistants) {
+      ValeurConcert concert, Map<String, List<ArtisteExistant>> indexExistants) {
     String cle = concert.date() + "|" + concert.salleNorm();
-    List<String> artistesExistants = indexExistants.get(cle);
+    List<ArtisteExistant> artistesExistants = indexExistants.get(cle);
     if (artistesExistants == null) return concert;
-    for (String artisteNormExistant : artistesExistants) {
-      if (artisteNormExistant.equals(concert.artisteNorm())) return concert;
-      if (estDoublonArtiste(concert.artisteNorm(), artisteNormExistant)) {
+    for (ArtisteExistant existant : artistesExistants) {
+      if (existant.artisteNorm().equals(concert.artisteNorm())) {
+        if (concert.artisteId() == null && existant.artisteId() != null) {
+          return new ValeurConcert(
+              concert.artiste(),
+              concert.artisteNorm(),
+              concert.date(),
+              concert.heure(),
+              concert.salle(),
+              concert.salleNorm(),
+              concert.ville(),
+              concert.dept(),
+              concert.prixMin(),
+              concert.prixMax(),
+              concert.url(),
+              concert.source(),
+              concert.classification(),
+              concert.genre(),
+              concert.statut(),
+              concert.presaleDebut(),
+              concert.presaleNom(),
+              concert.salleSourceId(),
+              concert.artisteSourceId(),
+              concert.salleUuid(),
+              existant.artisteId());
+        }
+        return concert;
+      }
+      if (estDoublonArtiste(concert.artisteNorm(), existant.artisteNorm())) {
+        UUID artisteIdPropague =
+            concert.artisteId() == null ? existant.artisteId() : concert.artisteId();
         log.debug(
-            "doublon artiste inter-jobs réconcilié entrant={} existant={}",
+            "doublon artiste inter-jobs réconcilié entrant={} existant={} artisteId={}",
             concert.artisteNorm(),
-            artisteNormExistant);
+            existant.artisteNorm(),
+            artisteIdPropague);
         return new ValeurConcert(
             concert.artiste(),
-            artisteNormExistant,
+            existant.artisteNorm(),
             concert.date(),
             concert.heure(),
             concert.salle(),
@@ -532,7 +565,7 @@ public class PersisterConcerts {
             concert.salleSourceId(),
             concert.artisteSourceId(),
             concert.salleUuid(),
-            concert.artisteId());
+            artisteIdPropague);
       }
     }
     return concert;
@@ -625,6 +658,12 @@ public class PersisterConcerts {
   /// effectue un upsert dans {@code salles} et {@code salle_sources} afin d'attribuer un UUID
   /// stable dès le premier fetch, indépendamment du suivi utilisateur.
   ///
+  /// <p>Pour les concerts sans {@code artisteId} après résolution par source (ex. Eventim dont
+  /// les IDs ne sont pas encore dans {@code artiste_sources}), effectue un lookup batch par
+  /// {@code nom_norm} dans la table {@code artistes} et propage l'{@code artiste_id} trouvé.
+  /// Les mappings nouvellement résolus sont persistés dans {@code artiste_sources} pour que les
+  /// fetches suivants puissent les résoudre directement via UUID-first.
+  ///
   /// <p>Les concerts sans {@code salleSourceId} conservent {@code salleUuid=null} ;
   /// la réconciliation textuelle prend ensuite le relais.
   ///
@@ -642,38 +681,140 @@ public class PersisterConcerts {
       }
     }
 
-    return concerts.stream()
-        .map(
-            c -> {
-              UUID salleUuid =
-                  c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
-              UUID artisteId =
-                  c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
-              if (salleUuid == null && artisteId == null) return c;
-              return new ValeurConcert(
-                  c.artiste(),
-                  c.artisteNorm(),
-                  c.date(),
-                  c.heure(),
-                  c.salle(),
-                  c.salleNorm(),
-                  c.ville(),
-                  c.dept(),
-                  c.prixMin(),
-                  c.prixMax(),
-                  c.url(),
-                  c.source(),
-                  c.classification(),
-                  c.genre(),
-                  c.statut(),
-                  c.presaleDebut(),
-                  c.presaleNom(),
-                  c.salleSourceId(),
-                  c.artisteSourceId(),
-                  salleUuid,
-                  artisteId);
-            })
-        .toList();
+    List<ValeurConcert> resolus =
+        concerts.stream()
+            .map(
+                c -> {
+                  UUID salleUuid =
+                      c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
+                  UUID artisteId =
+                      c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
+                  if (salleUuid == null && artisteId == null) return c;
+                  return new ValeurConcert(
+                      c.artiste(),
+                      c.artisteNorm(),
+                      c.date(),
+                      c.heure(),
+                      c.salle(),
+                      c.salleNorm(),
+                      c.ville(),
+                      c.dept(),
+                      c.prixMin(),
+                      c.prixMax(),
+                      c.url(),
+                      c.source(),
+                      c.classification(),
+                      c.genre(),
+                      c.statut(),
+                      c.presaleDebut(),
+                      c.presaleNom(),
+                      c.salleSourceId(),
+                      c.artisteSourceId(),
+                      salleUuid,
+                      artisteId);
+                })
+            .toList();
+
+    resolus = resoudreArtisteParNomNorm(resolus);
+    return resolus;
+  }
+
+  /// Résout les {@code artiste_id} manquants par lookup sur {@code artistes.nom_norm}.
+  ///
+  /// <p>Complète la résolution UUID-first pour les sources (ex. Eventim) dont les identifiants
+  /// externes ne sont pas encore dans {@code artiste_sources}. Les mappings trouvés sont persistés
+  /// dans {@code artiste_sources} (ON CONFLICT DO NOTHING) pour accélérer les fetches suivants.
+  ///
+  /// @param concerts concerts après résolution par source
+  /// @return liste enrichie avec les {@code artiste_id} résolus par nom
+  private List<ValeurConcert> resoudreArtisteParNomNorm(List<ValeurConcert> concerts) {
+    List<String> nomsNormSansId =
+        concerts.stream()
+            .filter(c -> c.artisteId() == null && c.artisteSourceId() != null)
+            .map(ValeurConcert::artisteNorm)
+            .distinct()
+            .toList();
+    if (nomsNormSansId.isEmpty()) return concerts;
+
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT id, nom_norm FROM artistes WHERE nom_norm IN (:nomsNorm)",
+            Map.of("nomsNorm", nomsNormSansId));
+
+    Map<String, UUID> parNomNorm = new HashMap<>();
+    for (Map<String, Object> ligne : lignes) {
+      parNomNorm.put((String) ligne.get("nom_norm"), (UUID) ligne.get("id"));
+    }
+    if (parNomNorm.isEmpty()) return concerts;
+
+    List<ValeurConcert> enrichis =
+        concerts.stream()
+            .map(
+                c -> {
+                  if (c.artisteId() != null || c.artisteSourceId() == null) return c;
+                  UUID artisteId = parNomNorm.get(c.artisteNorm());
+                  if (artisteId == null) return c;
+                  return new ValeurConcert(
+                      c.artiste(),
+                      c.artisteNorm(),
+                      c.date(),
+                      c.heure(),
+                      c.salle(),
+                      c.salleNorm(),
+                      c.ville(),
+                      c.dept(),
+                      c.prixMin(),
+                      c.prixMax(),
+                      c.url(),
+                      c.source(),
+                      c.classification(),
+                      c.genre(),
+                      c.statut(),
+                      c.presaleDebut(),
+                      c.presaleNom(),
+                      c.salleSourceId(),
+                      c.artisteSourceId(),
+                      c.salleUuid(),
+                      artisteId);
+                })
+            .toList();
+
+    persistersArtistesSources(enrichis, parNomNorm.keySet());
+    return enrichis;
+  }
+
+  /// Persiste dans {@code artiste_sources} les mappings nouvellement résolus par nom.
+  ///
+  /// <p>N'insère que les concerts dont {@code artisteId} vient d'être résolu (nom_norm présent
+  /// dans {@code nomNormsResolus}) et dont la source externe est distincte de {@code ticketmaster}
+  /// (TM est géré dans {@code WorkerService}).
+  ///
+  /// @param concerts  concerts après résolution par nom
+  /// @param nomNormsResolus noms normalisés effectivement résolus par le lookup
+  private void persistersArtistesSources(
+      List<ValeurConcert> concerts, java.util.Set<String> nomNormsResolus) {
+    for (ValeurConcert c : concerts) {
+      if (c.artisteId() == null
+          || c.artisteSourceId() == null
+          || !nomNormsResolus.contains(c.artisteNorm())) continue;
+      int sep = c.artisteSourceId().indexOf(':');
+      if (sep <= 0) continue;
+      String source = c.artisteSourceId().substring(0, sep);
+      String identifiant = c.artisteSourceId().substring(sep + 1);
+      jdbc.update(
+          "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
+              + " VALUES (CAST(:artisteId AS uuid), :source, :identifiant)"
+              + " ON CONFLICT DO NOTHING",
+          Map.of(
+              "artisteId", c.artisteId().toString(),
+              "source", source,
+              "identifiant", identifiant));
+      log.info(
+          "artiste source persisté artisteId={} source={} identifiant={}",
+          c.artisteId(),
+          source,
+          identifiant);
+    }
   }
 
   private Map<String, UUID> resoudreUuidsParSource(List<ValeurConcert> concerts, String type) {
