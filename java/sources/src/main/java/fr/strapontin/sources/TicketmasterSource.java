@@ -648,7 +648,7 @@ public class TicketmasterSource implements SourceAvecFetchLot {
   /// (ex: "Shy" avant "Shy'm" — #654).
   ///
   /// @param nom nom de l'artiste
-  /// @return attractionId TM, ou null si aucune correspondance exacte dans les 10 premiers résultats
+  /// @return attractionId TM, ou null si aucun résultat exact dans les 10 premiers
   @SuppressWarnings("unchecked")
   public String rechercherAttractionId(String nom) {
     String uri =
