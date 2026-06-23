@@ -81,9 +81,10 @@ public class DecouverteService {
     List<ConcertDecouverte> concerts =
         jdbc.query(
             """
-            SELECT c.id, c.artiste, c.date::text, c.heure::text, c.salle, c.ville,
-                   c.dept, c.url, c.classification, c.genre, c.statut, c.first_seen
+            SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
+                   c.salle, c.ville, c.dept, c.url, c.classification, c.genre, c.statut, c.first_seen
             FROM concerts c
+            LEFT JOIN artistes a ON a.id = c.artiste_id
             WHERE %s
             ORDER BY %s
             LIMIT :limit OFFSET :offset

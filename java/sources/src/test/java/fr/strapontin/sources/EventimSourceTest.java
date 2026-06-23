@@ -269,6 +269,62 @@ class EventimSourceTest {
   }
 
   @Test
+  void fetchArtiste_termeContenuDansNomPlusVerbeux_retourneResultatsParContainment() {
+    // ticket #661 — "-M-" contenu dans "-M- Matthieu Chedid" → accepté par containment
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-m","name":"-M- Matthieu Chedid"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-m")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[],"totalResults":0}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    EventimSource source = new EventimSource(restClient);
+    List<ConcertBrut> resultats = source.fetchArtiste("-M-");
+
+    // Liste vide car products vide, mais l'ID a bien été utilisé (verify passe)
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchArtiste_termeUnCaractereBrut_pasDeContainment() {
+    // ticket #661 — terme d'un seul caractère brut (ex. "M") ne déclenche pas le containment
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-x","name":"X Factor"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    EventimSource source = new EventimSource(restClient);
+    List<ConcertBrut> resultats = source.fetchArtiste("X");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
   void fetchArtiste_artisteNonTrouveEventim_retourneListeVide() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();

@@ -93,11 +93,12 @@ public class AccueilService {
     List<ConcertAccueil> lignes =
         jdbc.query(
             """
-            SELECT c.id, c.artiste, c.artiste_norm, c.date::text, c.heure::text,
-                   c.salle, c.ville, c.url, c.statut,
+            SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.artiste_norm, c.date::text,
+                   c.heure::text, c.salle, c.ville, c.url, c.statut,
                    c.first_seen >= (CURRENT_TIMESTAMP - INTERVAL '7 days') AS est_nouveau
             FROM user_matches um
             INNER JOIN concerts c ON um.concert_id = c.id
+            LEFT JOIN artistes a ON a.id = c.artiste_id
             WHERE %s
             ORDER BY c.date ASC, c.artiste ASC
             """

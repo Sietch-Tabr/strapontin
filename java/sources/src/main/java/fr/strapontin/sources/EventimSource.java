@@ -344,12 +344,29 @@ public class EventimSource implements SourceConcerts {
 
       String termeNorm = Normalisation.normaliserTexte(terme);
       Map<String, Object> exact = null;
+      Map<String, Object> parContainment = null;
       for (var a : attractions) {
         String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
         if (nomNorm.equals(termeNorm)) {
           exact = a;
           break;
         }
+        // Accepte "terme" contenu dans le nom Eventim (ex. "-M-" dans "-M- Matthieu Chedid").
+        // Seuil sur la longueur brute pour éviter les faux positifs sur un seul caractère.
+        if (parContainment == null
+            && terme.length() >= 2
+            && !termeNorm.isEmpty()
+            && nomNorm.contains(termeNorm)) {
+          parContainment = a;
+        }
+      }
+      if (exact == null && parContainment != null) {
+        String nomRetourne = (String) parContainment.getOrDefault("name", "");
+        log.info(
+            "Eventim: correspondance par containment pour terme={} — résultat={} accepté",
+            terme,
+            nomRetourne);
+        exact = parContainment;
       }
       if (exact == null) {
         String nomRetourne = (String) attractions.get(0).getOrDefault("name", "");

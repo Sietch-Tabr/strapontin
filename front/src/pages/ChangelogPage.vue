@@ -8,11 +8,14 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
-        <h2 class="changelog-version">v 2.3.1 — 22 juin 2026</h2>
+        <h2 class="changelog-version">v 2.3.1 — 23 juin 2026</h2>
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Concerts</p>
             <ul>
+              <li>Le nom d'artiste s'affiche désormais tel que vous le suivez — si vous suivez "MØØNSPELL", les concerts ne s'affichent plus sous le nom retourné par Ticketmaster ("Moonspell"). Cela s'applique à l'accueil, à la liste des spectacles, à la découverte et aux notifications.</li>
+              <li>Les artistes "Krash Karma" et "Krashkarma" étaient enregistrés en double — ils sont désormais unifiés sous "Krash Karma". Concerts et préférences des deux noms sont conservés.</li>
+              <li>Eventim ne trouvait pas les artistes dont le nom est plus court que celui qu'il utilise (ex. "-M-" non reconnu car Eventim liste "-M- Matthieu Chedid") — ces artistes récupèrent désormais leurs concerts Eventim.</li>
               <li>Sept salles existaient en double (une version Ticketmaster, une version Eventim avec un nom légèrement différent) — les concerts dupliqués dans la découverte disparaissent, et les préférences sont conservées.</li>
               <li>Les résultats de la découverte régionale excluent désormais les concerts affichant "épuisé" sur Eventim — moins de concerts inaccessibles dans la liste.</li>
               <li>Des concerts sold-out Eventim s'affichaient à tort avec le badge « Prévente » — corrigé. L'API Eventim ne distinguant pas prévente et complet, aucun badge n'est désormais affiché pour ces concerts.</li>

@@ -107,7 +107,8 @@ public class NotificationDigestService {
           jdbc.queryForList(
               """
               SELECT um.user_id, u.email, CAST(c.id AS text) AS concert_id,
-                     c.artiste, CAST(c.date AS text) AS date, c.salle, c.ville, c.url, c.artiste_norm,
+                     COALESCE(a.nom, c.artiste) AS artiste,
+                     CAST(c.date AS text) AS date, c.salle, c.ville, c.url, c.artiste_norm,
                      c.statut,
                      uc.notif_artistes, uc.notif_salles,
                      uc.notif_artistes_push, uc.notif_salles_push,
@@ -121,6 +122,7 @@ public class NotificationDigestService {
                      END AS source
               FROM user_matches um
               JOIN concerts    c  ON c.id      = um.concert_id
+              LEFT JOIN artistes a ON a.id = c.artiste_id
               JOIN users       u  ON u.id      = um.user_id
               JOIN user_config uc ON uc.user_id = um.user_id
               WHERE um.notification_envoyee_le IS NULL
