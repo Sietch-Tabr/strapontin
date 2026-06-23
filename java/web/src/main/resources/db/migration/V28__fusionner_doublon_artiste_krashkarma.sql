@@ -18,8 +18,19 @@ BEGIN
         RETURN;
     END IF;
 
-    UPDATE concerts      SET artiste_id = v_id_canonique WHERE artiste_id = v_id_doublon;
+    UPDATE concerts SET artiste_id = v_id_canonique WHERE artiste_id = v_id_doublon;
+
+    -- Supprimer les entrées dont l'utilisateur suit déjà l'artiste canonique
+    -- (sinon UPDATE violerait la PK (user_id, artiste_id))
+    DELETE FROM user_artistes
+    WHERE artiste_id = v_id_doublon
+      AND EXISTS (
+        SELECT 1 FROM user_artistes ua2
+        WHERE ua2.user_id = user_artistes.user_id
+          AND ua2.artiste_id = v_id_canonique
+      );
     UPDATE user_artistes SET artiste_id = v_id_canonique WHERE artiste_id = v_id_doublon;
+
     UPDATE artiste_sources SET artiste_id = v_id_canonique WHERE artiste_id = v_id_doublon;
     DELETE FROM artistes WHERE id = v_id_doublon;
 END;
