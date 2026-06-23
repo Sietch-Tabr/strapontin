@@ -130,4 +130,35 @@ class NormalisationTest {
     assertTrue(Normalisation.similarite("radiohead", "coldplay") < 0.85);
     assertTrue(Normalisation.similarite("beyonce", "adele") < 0.85);
   }
+
+  // --- jaro ---
+
+  @Test
+  void jaro_chainesIdentiques_retourne1() {
+    assertEquals(1.0, Normalisation.jaro("radiohead", "radiohead"));
+  }
+
+  @Test
+  void jaro_uneChainVide_retourne0() {
+    assertEquals(0.0, Normalisation.jaro("", "radiohead"));
+    assertEquals(0.0, Normalisation.jaro("radiohead", ""));
+  }
+
+  @Test
+  void jaro_krashKarmaVarianteEspaceOmise_superieurOuEgalA095() {
+    // #668 : "krash karma"/"krashkarma" — une seule différence (espace), doit passer 0.95
+    assertTrue(Normalisation.jaro("krash karma", "krashkarma") >= 0.95);
+  }
+
+  @Test
+  void jaro_julienDoreVsJulienMorel_inferieurA095() {
+    // Deux artistes distincts avec le même préfixe "julien " — ne doivent pas être fusionnés
+    assertTrue(Normalisation.jaro("julien dore", "julien morel") < 0.95);
+  }
+
+  @Test
+  void jaro_artistesDistincts_inferieurA095() {
+    assertTrue(Normalisation.jaro("radiohead", "coldplay") < 0.95);
+    assertTrue(Normalisation.jaro("mika", "coldplay") < 0.95);
+  }
 }

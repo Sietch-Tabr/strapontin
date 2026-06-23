@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import fr.strapontin.core.ConcertBrut;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class PersisterConcertsTest {
@@ -53,6 +54,36 @@ class PersisterConcertsTest {
 
   private static ValeurConcert valeur(String artisteNorm, String date, String salleNorm) {
     return valeur(artisteNorm, date, salleNorm, artisteNorm, salleNorm);
+  }
+
+  private static ValeurConcert valeurAvecArtisteId(
+      String artisteNorm,
+      String date,
+      String salleNorm,
+      String artisteSourceId,
+      UUID artisteId) {
+    return new ValeurConcert(
+        artisteNorm,
+        artisteNorm,
+        LocalDate.parse(date),
+        null,
+        salleNorm,
+        salleNorm,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "eventim",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        artisteSourceId,
+        null,
+        artisteId);
   }
 
   // --- estDoublonSalle ---
@@ -177,8 +208,15 @@ class PersisterConcertsTest {
 
   @Test
   void estDoublonArtiste_similariteEntreSeuilSalleEtSeuilArtiste_retourneFalse() {
-    // similarité ≈ 0.83 : passerait le seuil salle (0.5) mais pas le seuil artiste (0.85)
+    // Jaro("julien dore", "julien morel") ≈ 0.914 < 0.95 — deux artistes distincts malgré le
+    // préfixe commun
     assertFalse(PersisterConcerts.estDoublonArtiste("julien dore", "julien morel"));
+  }
+
+  @Test
+  void estDoublonArtiste_krashKarmaEspaceOmise_retourneTrue() {
+    // #668 : Jaro("krash karma", "krashkarma") ≈ 0.97 ≥ 0.95 — même artiste, espace omis
+    assertTrue(PersisterConcerts.estDoublonArtiste("krash karma", "krashkarma"));
   }
 
   // --- deduplicerParCleConflit ---

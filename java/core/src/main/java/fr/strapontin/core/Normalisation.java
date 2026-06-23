@@ -45,6 +45,51 @@ public final class Normalisation {
     return normaliserTexte(ville).replaceAll("\\bsaint\\b", "st").replaceAll("\\bsainte\\b", "ste");
   }
 
+  /// Calcule la similarité Jaro entre deux chaînes.
+  ///
+  /// Jaro est empiriquement meilleur que Levenshtein normalisé pour les noms propres courts :
+  /// il pondère les correspondances positionnelles sans over-pénaliser les transpositions.
+  /// Utilisé à la place de {@link #similarite} dans la réconciliation des artistes.
+  ///
+  /// @param a première chaîne
+  /// @param b deuxième chaîne
+  /// @return score Jaro entre 0.0 (aucune ressemblance) et 1.0 (identique)
+  public static double jaro(String a, String b) {
+    if (a.equals(b)) return 1.0;
+    int m = a.length();
+    int n = b.length();
+    if (m == 0 || n == 0) return 0.0;
+    int fenetre = Math.max(m, n) / 2 - 1;
+    if (fenetre < 0) fenetre = 0;
+    boolean[] matchA = new boolean[m];
+    boolean[] matchB = new boolean[n];
+    int matchs = 0;
+    for (int i = 0; i < m; i++) {
+      int debut = Math.max(0, i - fenetre);
+      int fin = Math.min(n - 1, i + fenetre);
+      for (int j = debut; j <= fin; j++) {
+        if (!matchB[j] && a.charAt(i) == b.charAt(j)) {
+          matchA[i] = true;
+          matchB[j] = true;
+          matchs++;
+          break;
+        }
+      }
+    }
+    if (matchs == 0) return 0.0;
+    int transpositions = 0;
+    int k = 0;
+    for (int i = 0; i < m; i++) {
+      if (matchA[i]) {
+        while (!matchB[k]) k++;
+        if (a.charAt(i) != b.charAt(k)) transpositions++;
+        k++;
+      }
+    }
+    return ((double) matchs / m + (double) matchs / n + (matchs - transpositions / 2.0) / matchs)
+        / 3.0;
+  }
+
   public static double similarite(String a, String b) {
     if (a.equals(b)) return 1.0;
     if (a.isEmpty() || b.isEmpty()) return 0.0;
