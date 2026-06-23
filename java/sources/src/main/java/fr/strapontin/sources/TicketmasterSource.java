@@ -676,7 +676,8 @@ public class TicketmasterSource implements SourceAvecFetchLot {
       }
       log.warn("rechercherAttractionId TM — pas de correspondance exacte nom={}", nom);
       return null;
-    } catch (Exception _) {
+    } catch (Exception e) {
+      log.warn("rechercherAttractionId TM échoué nom='{}' : {}", nom, e.getMessage());
       return null;
     }
   }

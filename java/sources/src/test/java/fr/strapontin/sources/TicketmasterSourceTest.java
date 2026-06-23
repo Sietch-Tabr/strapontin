@@ -642,6 +642,23 @@ class TicketmasterSourceTest {
   }
 
   @Test
+  void rechercherAttractionId_erreurHttp_retourneNull() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
+        .andRespond(withServerError());
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    String id = source.rechercherAttractionId("Artiste");
+
+    assertNull(id);
+    serveur.verify();
+  }
+
+  @Test
   void mapEvenement_offsaleAvecVentePubliquePassee_resteOffsale() {
     Map<String, Object> evt =
         evenementTMRaw(

@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.TicketmasterSource;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.quartz.autoconfigure.SchedulerFactoryBeanCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,9 +18,6 @@ import org.springframework.context.annotation.Configuration;
 /// @author Kwaite
 @Configuration
 public class WorkerConfiguration {
-
-  @Value("${contact.email}")
-  private String contactEmail;
 
   /// Sérialiseur JSON (quota TM dans `app_config`).
   ///
@@ -67,11 +63,11 @@ public class WorkerConfiguration {
     return new EventimSource();
   }
 
-  /// Résolveur de noms canoniques (MusicBrainz + Deezer) avec cache Caffeine 7 jours.
+  /// Résolveur de noms canoniques (Deezer) avec cache Caffeine 7 jours.
   ///
-  /// @return instance configurée avec l'email de contact pour le User-Agent MusicBrainz
+  /// @return instance configurée
   @Bean
   ResolveurNomCanonique resolveurNomCanonique() {
-    return new ResolveurNomCanonique(contactEmail);
+    return new ResolveurNomCanonique();
   }
 }
