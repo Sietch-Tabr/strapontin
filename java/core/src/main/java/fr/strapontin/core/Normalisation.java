@@ -15,11 +15,7 @@ public final class Normalisation {
   /// Caractères non décomposables par NFD : NFD retourne le même codepoint, le pattern
   /// NON_ALPHANUM les supprime entièrement. Ces substitutions les remplacent avant NFD.
   private static final Map<Character, String> SUBSTITUTIONS_NFD =
-      Map.of(
-          'ø', "o", 'Ø', "o",
-          'ł', "l", 'Ł', "l",
-          'đ', "d", 'Đ', "d",
-          'ŋ', "n", 'Ŋ', "n");
+      Map.of('ø', "o", 'Ø', "o", 'ł', "l", 'Ł', "l", 'đ', "d", 'Đ', "d", 'ŋ', "n", 'Ŋ', "n");
 
   private Normalisation() {}
 
