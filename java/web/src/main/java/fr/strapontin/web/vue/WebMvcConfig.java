@@ -38,6 +38,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     registry
         .addResourceHandler("/assets/**")
         .addResourceLocations("classpath:/static/assets/")
-        .setCacheControl(CacheControl.maxAge(java.time.Duration.ofDays(365)).cachePublic().immutable());
+        .setCacheControl(
+            CacheControl.maxAge(java.time.Duration.ofDays(365)).cachePublic().immutable());
   }
 }

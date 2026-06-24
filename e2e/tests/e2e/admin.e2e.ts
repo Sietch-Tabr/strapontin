@@ -478,9 +478,7 @@ test.describe("Scénario: admin — onglet Jobs (sections Fetches/Maintenance)",
       hasText: "Fetches",
     });
     await expect(sectionFetches).toBeVisible();
-    await expect(
-      sectionFetches.locator("button#btn-relancer"),
-    ).toBeVisible();
+    await expect(sectionFetches.locator("button#btn-relancer")).toBeVisible();
   });
 
   test("admin_jobs_desktop_bouton_relancer_absent_maintenance", async ({

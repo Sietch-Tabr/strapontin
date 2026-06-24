@@ -47,7 +47,8 @@ public class SourcesService {
 
   /// Retourne les statuts agrégés de toutes les sources et les deux listes de salles.
   ///
-  /// @return map {@code {sources, salles (sans TM ni Eventim), sallesDigitick (avec slug configuré)}}
+  /// @return map {@code {sources, salles (sans TM ni Eventim), sallesDigitick (avec slug
+  // configuré)}}
   public Map<String, Object> lireSources() {
     return Map.of(
         "sources", construireSources(),
