@@ -1,8 +1,7 @@
 // Strapontin — service worker
 
-const CACHE_NOM = "strapontin-ff42073f";
-// CSS et JS exclus : fingerprinting Spring → URL avec hash, précachage inutile.
-// Ils sont gérés en network-first dans le handler fetch.
+const CACHE_NOM = "strapontin-823dc7f7";
+// CSS et bundles Vite exclus du précache : ils sont gérés en network-first dans le handler fetch.
 const RESSOURCES_STATIQUES = [
   "/fonts/geist-variable.woff2",
   "/images/favicon.png",
@@ -153,10 +152,9 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   if (url.pathname.startsWith("/api/")) return;
 
-  // JS et CSS : network-first (toujours la version fraîche, cache en fallback offline)
-  // /assets/ couvre les bundles Vite (noms hashés), /css/ et /js/ les assets legacy.
-  // { cache: "reload" } sur /css/ et /js/ : contourne le cache HTTP natif du navigateur
-  // (max-age=1 an) pour les fichiers sans fingerprinting dans l'URL.
+  // CSS et JS : network-first (toujours la version fraîche, cache en fallback offline).
+  // /assets/ : bundles Vite à noms hashés. /css/ : fichiers à URL stable, servis no-cache
+  // par Spring — { cache: "reload" } est défensif pour contourner tout cache intermédiaire.
   if (url.pathname.startsWith("/css/") || url.pathname.startsWith("/js/")) {
     event.respondWith(
       fetch(request, { cache: "reload" })

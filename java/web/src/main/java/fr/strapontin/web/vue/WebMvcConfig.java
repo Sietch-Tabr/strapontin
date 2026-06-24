@@ -18,11 +18,18 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
   @Override
   public void addResourceHandlers(ResourceHandlerRegistry registry) {
-    // sw.js et index.html : jamais mis en cache longue durée — le navigateur doit toujours
-    // vérifier les mises à jour pour récupérer les nouveaux hashes de bundles Vite.
+    // sw.js et index.html : no-cache (le navigateur doit toujours vérifier les mises à jour).
     registry
         .addResourceHandler("/sw.js", "/index.html")
         .addResourceLocations("classpath:/static/")
+        .setCacheControl(CacheControl.noCache().mustRevalidate());
+
+    // CSS : no-cache car les noms de fichiers sont fixes (pas de fingerprinting dans l'URL).
+    // Spring extrait la partie après /css/ du chemin et la concatène à l'emplacement,
+    // donc l'emplacement doit pointer sur classpath:/static/css/ (pas classpath:/static/).
+    registry
+        .addResourceHandler("/css/**")
+        .addResourceLocations("classpath:/static/css/")
         .setCacheControl(CacheControl.noCache().mustRevalidate());
   }
 }
