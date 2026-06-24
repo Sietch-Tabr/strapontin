@@ -8,31 +8,6 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
-        <h2 class="changelog-version">v 2.3.1 — 23 juin 2026</h2>
-        <div class="changelog-entrees">
-          <div>
-            <p class="changelog-categorie">Concerts</p>
-            <ul>
-              <li>Le nom d'artiste s'affiche désormais tel que vous le suivez — si vous suivez "MØØNSPELL", les concerts ne s'affichent plus sous le nom retourné par Ticketmaster ("Moonspell"). Cela s'applique à l'accueil, à la liste des spectacles, à la découverte et aux notifications.</li>
-              <li>Les artistes "Krash Karma" et "Krashkarma" étaient enregistrés en double — ils sont désormais unifiés sous "Krash Karma". Concerts et préférences des deux noms sont conservés.</li>
-              <li>Eventim ne trouvait pas les artistes dont le nom est plus court que celui qu'il utilise (ex. "-M-" non reconnu car Eventim liste "-M- Matthieu Chedid") — ces artistes récupèrent désormais leurs concerts Eventim.</li>
-              <li>Sept salles existaient en double (une version Ticketmaster, une version Eventim avec un nom légèrement différent) — les concerts dupliqués dans la découverte disparaissent, et les préférences sont conservées.</li>
-              <li>Les résultats de la découverte régionale excluent désormais les concerts affichant "épuisé" sur Eventim — moins de concerts inaccessibles dans la liste.</li>
-              <li>Des concerts sold-out Eventim s'affichaient à tort avec le badge « Prévente » — corrigé. L'API Eventim ne distinguant pas prévente et complet, aucun badge n'est désormais affiché pour ces concerts.</li>
-              <li>Les spectacles à séances multiples (matinée et soirée le même jour dans la même salle) sont maintenant affichés comme deux événements distincts plutôt que fusionnés.</li>
-              <li>Des concerts de l'artiste "Shy" (Ticketmaster) pouvaient apparaître à tort pour l'artiste Shy'm suivi — la correspondance exacte est désormais vérifiée parmi plusieurs résultats.</li>
-            </ul>
-          </div>
-          <div>
-            <p class="changelog-categorie">Compatibilité</p>
-            <ul>
-              <li>Sur les appareils ayant installé l'application (PWA), l'onglet « Sources » de l'administration pouvait ne pas apparaître suite à un cache non mis à jour — résolu.</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section>
         <h2 class="changelog-version">v 2.3.0 — 23 juin 2026</h2>
         <div class="changelog-entrees">
           <div>
@@ -47,6 +22,12 @@
               <li>Les artistes dont le nom contient des caractères nordiques ou slaves non convertibles (Ø, Ł, Đ, Ŋ) ne recevaient aucun concert — ces lettres sont désormais correctement transcrites lors de la recherche (ex. MØØNSPELL → Moonspell).</li>
               <li>Les concerts découverts via la recherche régionale Eventim n'apparaissaient plus — une incompatibilité entre les catégories Ticketmaster et Eventim empêchait tout résultat. La recherche régionale Eventim est à nouveau fonctionnelle.</li>
               <li>Un concert peut désormais être correctement attribué à un artiste dont le nom contient une apostrophe (ex. Shy'm) même si Eventim référence un homonyme sous un nom différent.</li>
+              <li>Le nom d'artiste s'affiche désormais tel que vous le suivez — si vous suivez "MØØNSPELL", les concerts ne s'affichent plus sous le nom retourné par Ticketmaster ("Moonspell"). Cela s'applique à l'accueil, à la liste des spectacles, à la découverte et aux notifications.</li>
+              <li>Les artistes "Krash Karma" et "Krashkarma" étaient enregistrés en double — ils sont désormais unifiés sous "Krash Karma". Concerts et préférences des deux noms sont conservés.</li>
+              <li>Eventim ne trouvait pas les artistes dont le nom est plus court que celui qu'il utilise (ex. "-M-" non reconnu car Eventim liste "-M- Matthieu Chedid") — ces artistes récupèrent désormais leurs concerts Eventim.</li>
+              <li>Des concerts sold-out Eventim s'affichaient à tort avec le badge « Prévente » — corrigé. L'API Eventim ne distinguant pas prévente et complet, aucun badge n'est désormais affiché pour ces concerts.</li>
+              <li>Les spectacles à séances multiples (matinée et soirée le même jour dans la même salle) sont maintenant affichés comme deux événements distincts plutôt que fusionnés.</li>
+              <li>Des concerts de l'artiste "Shy" (Ticketmaster) pouvaient apparaître à tort pour l'artiste Shy'm suivi — la correspondance exacte est désormais vérifiée parmi plusieurs résultats.</li>
             </ul>
           </div>
           <div>
@@ -59,6 +40,7 @@
           <div>
             <p class="changelog-categorie">Salles</p>
             <ul>
+              <li>Sept salles existaient en double (une version Ticketmaster, une version Eventim avec un nom légèrement différent) — les concerts dupliqués dans la découverte disparaissent, et les préférences sont conservées.</li>
               <li>Des doublons de salles créés lors de récupérations précédentes (notamment pour les grandes salles parisiennes) ont été fusionnés — les concerts et préférences associés sont conservés.</li>
               <li>Le nom de plusieurs salles a été corrigé pour inclure les accents manquants (ex. Elysée Montmartre, Opéra Bastille, Théâtre Mogador).</li>
             </ul>
@@ -68,6 +50,7 @@
             <ul>
               <li>Sur Safari (macOS et iOS), naviguer vers le site depuis un lien (email, autre application) ne provoquait plus de redirection vers la page de connexion — la session est désormais correctement conservée.</li>
               <li>Après une mise à jour, les feuilles de style pouvaient rester en version ancienne pendant plusieurs heures. Le rechargement est maintenant forcé dès la mise à jour disponible.</li>
+              <li>Sur les appareils ayant installé l'application (PWA), l'onglet « Sources » de l'administration pouvait ne pas apparaître suite à un cache non mis à jour — résolu.</li>
             </ul>
           </div>
         </div>
