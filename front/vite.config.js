@@ -3,7 +3,6 @@ import vue from "@vitejs/plugin-vue";
 import { rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-// Dossier des bundles hashés générés par Vite (sous static/).
 const dossierAssets = fileURLToPath(
   new URL("../java/web/src/main/resources/static/assets", import.meta.url),
 );

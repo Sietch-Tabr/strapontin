@@ -8,6 +8,32 @@ test.describe("Scénario: service worker — présence et accessibilité", () =>
     expect(contentType).toContain("javascript");
   });
 
+  test("sw_servi_avec_no_cache", async ({ request }) => {
+    const rep = await request.get("/sw.js");
+    const cacheControl = rep.headers()["cache-control"] ?? "";
+    expect(cacheControl).toContain("no-cache");
+  });
+
+  test("index_html_servi_avec_no_cache", async ({ request }) => {
+    const rep = await request.get("/");
+    const cacheControl = rep.headers()["cache-control"] ?? "";
+    expect(cacheControl).toContain("no-cache");
+  });
+
+  test("css_base_servi_avec_no_cache", async ({ request }) => {
+    const rep = await request.get("/css/base.css");
+    expect(rep.status()).toBe(200);
+    const cacheControl = rep.headers()["cache-control"] ?? "";
+    expect(cacheControl).toContain("no-cache");
+  });
+
+  test("css_layout_servi_avec_no_cache", async ({ request }) => {
+    const rep = await request.get("/css/layout.css");
+    expect(rep.status()).toBe(200);
+    const cacheControl = rep.headers()["cache-control"] ?? "";
+    expect(cacheControl).toContain("no-cache");
+  });
+
   test("sw_enregistre_et_actif_apres_chargement", async ({
     page,
     browserName,

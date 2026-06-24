@@ -1,17 +1,20 @@
 /**
  * Versionne le service worker.
  *
- * Calcule une empreinte du contenu des assets précachés (le tableau
- * RESSOURCES_STATIQUES de sw.js) et réécrit la constante CACHE_NOM avec cette
- * empreinte. Ainsi sw.js change dès qu'un asset à URL stable (sprite, fontes,
- * images) change : le navigateur détecte la mise à jour, réinstalle le service
- * worker et reconstruit le cache automatiquement, sans bump manuel.
+ * Calcule une empreinte couvrant :
+ *   1. Le contenu des assets précachés (tableau RESSOURCES_STATIQUES de sw.js) :
+ *      fontes, images, sprite SVG — assets à URL stable.
+ *   2. Le contenu de index.html généré par Vite, qui contient les URLs hashées
+ *      des bundles JS/CSS. Ainsi le CACHE_NOM change à chaque déploiement qui
+ *      modifie le code Vue, même si les assets statiques n'ont pas bougé.
+ *
+ * Le navigateur détecte la mise à jour via sw.js modifié, réinstalle le service
+ * worker et purge le vieux cache automatiquement.
  *
  * Usage :
  *   node scripts/versionner-sw.mjs
  *
- * Appelé par `npm run build`, après la génération du sprite (le sprite doit
- * exister pour entrer dans l'empreinte).
+ * Appelé par `npm run build` APRÈS vite build (index.html doit exister).
  */
 
 import { createHash } from 'node:crypto';
@@ -26,8 +29,7 @@ const SW = resolve(STATIC, 'sw.js');
 
 const contenuSw = readFileSync(SW, 'utf8');
 
-// Extrait les chemins déclarés dans le tableau RESSOURCES_STATIQUES de sw.js,
-// pour ne hasher que les assets réellement précachés (source unique de vérité).
+// Extrait les chemins déclarés dans RESSOURCES_STATIQUES (source unique de vérité).
 const blocRessources = contenuSw.match(/RESSOURCES_STATIQUES\s*=\s*\[([\s\S]*?)\]/);
 if (!blocRessources) {
   console.error('RESSOURCES_STATIQUES introuvable dans sw.js');
@@ -35,11 +37,11 @@ if (!blocRessources) {
 }
 const chemins = [...blocRessources[1].matchAll(/["']([^"']+)["']/g)].map((m) => m[1]);
 
-// Empreinte stable du contenu concaténé des assets (hash de contenu, pas de date :
-// le cache n'est invalidé que si un asset change réellement).
 const empreinte = createHash('sha256');
+
+// 1. Assets précachés à URL stable (fontes, images, sprite).
 for (const chemin of chemins) {
-  const fichier = resolve(STATIC, '.' + chemin); // '/icons/x.svg' -> STATIC/icons/x.svg
+  const fichier = resolve(STATIC, '.' + chemin);
   try {
     empreinte.update(readFileSync(fichier));
   } catch {
@@ -47,13 +49,23 @@ for (const chemin of chemins) {
     process.exit(1);
   }
 }
+
+// 2. index.html généré par Vite (contient les URLs hashées des bundles JS).
+//    Couvre les déploiements qui ne modifient que le code Vue.
+try {
+  empreinte.update(readFileSync(resolve(STATIC, 'index.html')));
+} catch {
+  console.error('index.html introuvable — vite build doit être exécuté avant versionner-sw.mjs');
+  process.exit(1);
+}
+
 const cacheNom = `strapontin-${empreinte.digest('hex').slice(0, 8)}`;
 
-// Réécrit la constante CACHE_NOM (le contenu peut rester identique si aucun asset n'a changé).
+// Réécrit CACHE_NOM dans sw.js (peut rester identique si rien n'a changé).
 const motif = /const CACHE_NOM = "[^"]*";/;
 if (!motif.test(contenuSw)) {
   console.error('Ligne `const CACHE_NOM = "...";` introuvable dans sw.js');
   process.exit(1);
 }
 writeFileSync(SW, contenuSw.replace(motif, `const CACHE_NOM = "${cacheNom}";`), 'utf8');
-console.log(`sw.js versionné : CACHE_NOM = ${cacheNom} (${chemins.length} assets précachés)`);
+console.log(`sw.js versionné : CACHE_NOM = ${cacheNom} (${chemins.length} assets précachés + index.html)`);
