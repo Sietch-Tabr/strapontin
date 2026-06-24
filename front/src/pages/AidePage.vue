@@ -103,7 +103,6 @@
               Licence
             </h2>
             <p>Strapontin est distribué sous licence <strong>MIT</strong> — logiciel libre, utilisation, modification et redistribution autorisées sous réserve de conserver la mention de copyright.</p>
-            <p class="param-aide" style="margin-top:0.5rem">Police <strong>Luciole</strong> © Laurent Bourcellier &amp; Jonathan Perez, conçue pour les malvoyants (CFPSAA) — <a href="https://www.luciole-vision.com" target="_blank" rel="noopener noreferrer">luciole-vision.com</a>, licence CC BY 4.0.</p>
           </div>
 
           <div class="carte">

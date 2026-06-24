@@ -1,10 +1,8 @@
 // Strapontin — service worker
 
-const CACHE_NOM = "strapontin-e76eb81c";
+const CACHE_NOM = "strapontin-704542f9";
 // CSS et bundles Vite exclus du précache : ils sont gérés en network-first dans le handler fetch.
 const RESSOURCES_STATIQUES = [
-  "/fonts/Luciole-Regular.woff2",
-  "/fonts/Luciole-Bold.woff2",
   "/images/favicon.png",
   "/images/icon-192.png",
   "/images/icon-512.png",

@@ -14,7 +14,6 @@
             <p class="changelog-categorie">Interface</p>
             <ul>
               <li>Un indicateur de chargement (animation) s'affiche désormais pendant la récupération des données sur toutes les pages — plus d'écran vide ou de message "aucun résultat" trompeur pendant le chargement.</li>
-              <li>La police de l'application a été remplacée par <strong>Luciole</strong>, une police libre conçue pour les malvoyants (CFPSAA). L'attribution est disponible dans Aide → Licence.</li>
             </ul>
           </div>
           <div>

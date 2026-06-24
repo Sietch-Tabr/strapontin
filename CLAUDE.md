@@ -187,14 +187,15 @@ Résolution UUID-first (v2.3.0, ticket #621) : `PersisterConcerts.resoudreIdenti
 
 - **Vue 3 + Vite** — SPA intégralement côté client. `front/src/pages/` (pages), `front/src/components/` (composants), `front/src/composables/` (logique réutilisable)
 - **CSS vanilla** — variables CSS pour thème clair/sombre, dans `static/css/`
-- **PWA** : service worker JS vanilla + push. Cap 10 abonnements/user. Mise à jour automatique : `controllerchange` → `window.location.reload()` dans `App.vue`. `/icons/` en network-first, `/images/` en stale-while-revalidate. `CACHE_NOM` dans `sw.js` est généré automatiquement par `front/scripts/versionner-sw.mjs` après chaque build Vite (empreinte assets précachés + `index.html`) — aucun bump manuel.
+- **PWA** : service worker JS vanilla + push. Cap 10 abonnements/user. Mise à jour automatique : `controllerchange` → `window.location.reload()` dans `App.vue`. `/icons/` en network-first, `/images/` en stale-while-revalidate. `/assets/**` : `Cache-Control: immutable` (WebMvcConfig) pour éviter qu'iOS serve un ancien bundle depuis le cache HTTP. `CACHE_NOM` dans `sw.js` est généré automatiquement par `front/scripts/versionner-sw.mjs` après chaque build Vite (empreinte assets précachés + `index.html`) — aucun bump manuel.
+- **Police** : police système (`system-ui, -apple-system, sans-serif`) — aucune police web embarquée.
 - **Badge "Nouveau"** : basé sur `user_matches.vu_le IS NULL` — remis à `NULL` à la visite de `/`. Affiché sur la sidebar desktop et la bottom nav mobile. `notification_envoyee_le` est une colonne distincte pour le suivi des envois email/push.
 - **Thème** : cookie `theme` (1 an) + `user_config.theme` → pas de FOUC
 - **Navigation** : Vue Router (`front/src/router/`) — sidebar desktop, bottom nav + drawer mobile. `useEstMobile()` (`front/src/composables/useBreakpoint.js`, seuil 1024 px) contrôle le rendu conditionnel via `v-if` — pas de duplication DOM ni de `display: none`.
 - **Pages à onglets** (`admin`, `parametres`) : orchestrateur léger + sous-composants autonomes (`KeepAlive` + `v-if`). Chaque sous-composant fetch ses données dans `onMounted`. `<select v-model>` sur mobile (`v-if="estMobile"`), `<nav v-else>` sur desktop — rendu conditionnel via `useEstMobile()`. Onglet actif géré par Vue (`:class="{ actif }"`) — pas de sélecteurs CSS `:has()`.
   - Admin : `front/src/components/admin/` (AdminJobs, AdminSources, AdminLogs, AdminConfig, AdminBanniere, AdminUtilisateurs)
   - Paramètres : `front/src/components/parametres/` (ParametresPreferences, ParametresNotifications, ParametresCompte, ParametresDonnees)
-- **Toasts** : Popover API, `afficherToast(message, type)` retourne un `id` pour fermeture ciblée. `App.vue` gère offline/online : toast persistant à la perte de connexion, fermé à la reconnexion.
+- **Toasts** : Popover API, `afficherToast(message, type)` retourne un `id` pour fermeture ciblée. `App.vue` gère offline/online : toast persistant à la perte de connexion, fermé à la reconnexion + `chargerSession()` au retour online (session et `estAdmin` rafraîchis).
 
 ## Schéma PostgreSQL
 

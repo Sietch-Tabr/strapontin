@@ -422,6 +422,86 @@ test.describe("Scénario: admin — onglet Sources", () => {
       page.locator("section#jobs .quota-tm-carte"),
     ).not.toBeAttached();
   });
+
+  test("admin_sources_bouton_sans_source_libelle", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await page.locator('a[href="#sources"]').click();
+    await expect(page.locator("section#sources")).toBeVisible();
+    await expect(
+      page.locator(".source-vue-toggle button", { hasText: "Sans source" }),
+    ).toBeVisible();
+  });
+
+  test("admin_sources_mobile_bouton_sans_source_libelle", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/admin");
+    await page.selectOption("select.param-onglets-mobile", "#sources");
+    await expect(page.locator("section#sources")).toBeVisible();
+    await expect(
+      page.locator(".source-vue-toggle button", { hasText: "Sans source" }),
+    ).toBeVisible();
+  });
+});
+
+test.describe("Scénario: admin — onglet Jobs (sections Fetches/Maintenance)", () => {
+  test("admin_jobs_desktop_section_fetches_visible", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await expect(
+      page.locator("section#jobs .param-bloc", { hasText: "Fetches" }),
+    ).toBeVisible();
+  });
+
+  test("admin_jobs_desktop_section_maintenance_visible", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await expect(
+      page.locator("section#jobs .param-bloc", { hasText: "Maintenance" }),
+    ).toBeVisible();
+  });
+
+  test("admin_jobs_desktop_bouton_relancer_dans_fetches", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    const sectionFetches = page.locator("section#jobs .param-bloc", {
+      hasText: "Fetches",
+    });
+    await expect(sectionFetches).toBeVisible();
+    await expect(
+      sectionFetches.locator("button#btn-relancer"),
+    ).toBeVisible();
+  });
+
+  test("admin_jobs_desktop_bouton_relancer_absent_maintenance", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    const sectionMaintenance = page.locator("section#jobs .param-bloc", {
+      hasText: "Maintenance",
+    });
+    await expect(sectionMaintenance).toBeVisible();
+    await expect(
+      sectionMaintenance.locator("button#btn-relancer"),
+    ).not.toBeAttached();
+  });
 });
 
 test.describe("Scénario: admin — API endpoints", () => {
