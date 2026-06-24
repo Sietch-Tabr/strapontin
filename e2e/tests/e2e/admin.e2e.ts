@@ -384,15 +384,10 @@ test.describe("Scénario: admin — onglet Sources", () => {
     );
     await expect(tableOuVide).toBeVisible();
     if (await table.isVisible()) {
-      const lignesAvant = await table.locator("tbody tr").count();
       await page.locator("input[type='search']").fill("zzzzinexistant");
       await expect(
-        page.locator("table#table-sources-salles, p.etat-vide-texte"),
-      ).toBeVisible();
-      const lignesApres = await page
-        .locator("table#table-sources-salles tbody tr")
-        .count();
-      expect(lignesApres).toBeLessThan(lignesAvant);
+        page.locator("table#table-sources-salles tbody tr"),
+      ).toContainText("Aucune salle ne correspond", { timeout: 3000 });
       await page.locator("input[type='search']").clear();
     } else {
       await expect(videTexte).toBeVisible();
