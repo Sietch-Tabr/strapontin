@@ -537,4 +537,32 @@ class EventimSourceTest {
 
     assertNull(concert.statut());
   }
+
+  // --- salleSourceId interne (#689) ---
+
+  @Test
+  void mapProduit_salleConnue_salleSourceIdGenere() {
+    ConcertBrut resultat = EventimSource.mapProduit(produitEventimRaw(), null);
+
+    assertNotNull(resultat.salleSourceId());
+    assertTrue(
+        resultat.salleSourceId().startsWith("eventim:internal:"),
+        "salleSourceId doit commencer par 'eventim:internal:' mais était : "
+            + resultat.salleSourceId());
+    assertEquals("eventim:internal:accor arena", resultat.salleSourceId());
+  }
+
+  @Test
+  void mapProduit_locationAbsente_salleSourceIdNull() {
+    Map<String, Object> produit =
+        produitEventimRaw(
+            Map.of(
+                "typeAttributes",
+                Map.of("liveEntertainment", Map.of("startDate", "2025-09-15T20:30:00"))));
+
+    ConcertBrut resultat = EventimSource.mapProduit(produit, null);
+
+    assertNull(
+        resultat.salleSourceId(), "salleSourceId doit être null quand la salle est inconnue");
+  }
 }

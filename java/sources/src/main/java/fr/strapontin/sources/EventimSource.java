@@ -305,6 +305,13 @@ public class EventimSource implements SourceConcerts {
     // inStock=false couvre à la fois les concerts complets et les préventes : impossible à
     // distinguer via l'API Eventim. On ne stocke pas de statut pour éviter les faux positifs.
     String statut = null;
+    // Eventim n'expose pas de venueId stable : on génère un identifiant interne basé sur
+    // le nom normalisé pour alimenter salle_sources et vider la liste admin "Sans source".
+    // Écrasable par un vrai venueId si Eventim en expose un à l'avenir (ON CONFLICT DO NOTHING).
+    String salleNorm = Normalisation.normaliserTexte(salle);
+    boolean salleInconnue = "Salle inconnue".equals(salle);
+    String salleSourceId =
+        (salleNorm.isBlank() || salleInconnue) ? null : "eventim:internal:" + salleNorm;
     return new ConcertBrut(
         artiste,
         date,
@@ -321,7 +328,7 @@ public class EventimSource implements SourceConcerts {
         statut,
         null,
         null,
-        null,
+        salleSourceId,
         artisteSourceId);
   }
 
