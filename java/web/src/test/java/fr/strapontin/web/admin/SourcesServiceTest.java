@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -129,6 +130,36 @@ class SourcesServiceTest {
 
     verify(jdbc)
         .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), anyMap());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void lireSources_requetesSalles_excluenTMEtEventim() {
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
+
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    when(jdbc.query(
+            sqlCaptor.capture(),
+            anyMap(),
+            org.mockito.ArgumentMatchers
+                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
+        .thenReturn(List.of());
+
+    sourcesService.lireSources();
+
+    String sqlSalles =
+        sqlCaptor.getAllValues().stream()
+            .filter(sql -> sql.contains("HAVING"))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Aucune requête avec HAVING trouvée"));
+    assertTrue(
+        sqlSalles.contains("'ticketmaster'"),
+        "La requête doit filtrer les salles sans source ticketmaster");
+    assertTrue(
+        sqlSalles.contains("'eventim'"),
+        "La requête doit filtrer les salles sans source eventim (#685)");
   }
 
   @Test

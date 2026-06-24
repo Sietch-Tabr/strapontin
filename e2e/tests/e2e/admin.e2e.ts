@@ -384,15 +384,10 @@ test.describe("Scénario: admin — onglet Sources", () => {
     );
     await expect(tableOuVide).toBeVisible();
     if (await table.isVisible()) {
-      const lignesAvant = await table.locator("tbody tr").count();
       await page.locator("input[type='search']").fill("zzzzinexistant");
       await expect(
-        page.locator("table#table-sources-salles, p.etat-vide-texte"),
-      ).toBeVisible();
-      const lignesApres = await page
-        .locator("table#table-sources-salles tbody tr")
-        .count();
-      expect(lignesApres).toBeLessThan(lignesAvant);
+        page.locator("table#table-sources-salles tbody tr"),
+      ).toContainText("Aucune salle ne correspond", { timeout: 3000 });
       await page.locator("input[type='search']").clear();
     } else {
       await expect(videTexte).toBeVisible();
@@ -420,6 +415,84 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await expect(
       page.locator("section#jobs .quota-tm-carte"),
+    ).not.toBeAttached();
+  });
+
+  test("admin_sources_bouton_sans_source_libelle", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await page.locator('a[href="#sources"]').click();
+    await expect(page.locator("section#sources")).toBeVisible();
+    await expect(
+      page.locator(".source-vue-toggle button", { hasText: "Sans source" }),
+    ).toBeVisible();
+  });
+
+  test("admin_sources_mobile_bouton_sans_source_libelle", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+    await page.goto("/admin");
+    await page.selectOption("select.param-onglets-mobile", "#sources");
+    await expect(page.locator("section#sources")).toBeVisible();
+    await expect(
+      page.locator(".source-vue-toggle button", { hasText: "Sans source" }),
+    ).toBeVisible();
+  });
+});
+
+test.describe("Scénario: admin — onglet Jobs (sections Fetches/Maintenance)", () => {
+  test("admin_jobs_desktop_section_fetches_visible", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await expect(
+      page.locator("section#jobs .param-bloc", { hasText: "Fetches" }),
+    ).toBeVisible();
+  });
+
+  test("admin_jobs_desktop_section_maintenance_visible", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await expect(
+      page.locator("section#jobs .param-bloc", { hasText: "Maintenance" }),
+    ).toBeVisible();
+  });
+
+  test("admin_jobs_desktop_bouton_relancer_dans_fetches", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    const sectionFetches = page.locator("section#jobs .param-bloc", {
+      hasText: "Fetches",
+    });
+    await expect(sectionFetches).toBeVisible();
+    await expect(sectionFetches.locator("button#btn-relancer")).toBeVisible();
+  });
+
+  test("admin_jobs_desktop_bouton_relancer_absent_maintenance", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    const sectionMaintenance = page.locator("section#jobs .param-bloc", {
+      hasText: "Maintenance",
+    });
+    await expect(sectionMaintenance).toBeVisible();
+    await expect(
+      sectionMaintenance.locator("button#btn-relancer"),
     ).not.toBeAttached();
   });
 });

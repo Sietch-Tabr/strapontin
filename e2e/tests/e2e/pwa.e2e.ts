@@ -112,3 +112,20 @@ test.describe("Scénario: PWA — manifest et installabilité", () => {
     expect(html).toMatch(/href="\/manifest[^"]*\.json"/);
   });
 });
+
+test.describe("Scénario: PWA — cache HTTP assets Vite", () => {
+  test("assets_vite_servis_avec_cache_immutable", async ({ request }) => {
+    const indexRep = await request.get("/");
+    const html = await indexRep.text();
+    const m = html.match(/\/assets\/index-[^"]+\.js/);
+    if (!m) {
+      test.skip(true, "aucun bundle Vite trouvé dans index.html");
+      return;
+    }
+    const rep = await request.get(m[0]);
+    expect(rep.status()).toBe(200);
+    const cacheControl = rep.headers()["cache-control"] ?? "";
+    expect(cacheControl).toContain("immutable");
+    expect(cacheControl).toContain("max-age");
+  });
+});

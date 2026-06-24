@@ -64,7 +64,7 @@ test.describe("Toasts — actions admin", () => {
 
   test("toast succes admin relancer fetches", async ({ page }) => {
     await page.goto("/admin#jobs");
-    await expect(page.locator(".etat-chargement")).not.toBeVisible({
+    await expect(page.locator(".etat-chargement").first()).not.toBeVisible({
       timeout: 5000,
     });
     const btn = page.getByRole("button", {

@@ -1,13 +1,4 @@
-/* Strapontin — base : police, variables, reset, transitions */
-
-/* ── Police Geist Variable ──────────────────────────────── */
-@font-face {
-  font-family: "Geist Variable";
-  src: url("/fonts/geist-variable.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
+/* Strapontin — base : variables, reset, transitions */
 
 /* ── Transitions entre pages (View Transitions API) ────── */
 @view-transition {
@@ -89,7 +80,7 @@
   --radius: 0.5rem;
   --sidebar-w: 240px;
   --nav-h: 56px;
-  --font: "Geist Variable", system-ui, -apple-system, sans-serif;
+  --font: system-ui, -apple-system, sans-serif;
 }
 
 .dark {

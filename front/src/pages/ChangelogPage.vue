@@ -34,7 +34,8 @@
             <p class="changelog-categorie">Administration</p>
             <ul>
               <li>Un nouvel onglet « Sources » dans l'administration affiche l'état de chaque source de données : quota API Ticketmaster avec jauge de consommation, dernier fetch Eventim, statut Deezer et nombre de salles configurées pour Digitick.</li>
-              <li>Les salles sans identifiant Ticketmaster sont listées ; il est possible de leur associer une URL Digitick directement depuis cet onglet et de la tester immédiatement.</li>
+              <li>La liste des salles sans source inclut désormais les salles sans identifiant Eventim, pas uniquement celles sans identifiant Ticketmaster — le bouton est renommé « Sans source » en conséquence.</li>
+              <li>L'onglet Jobs affiche maintenant deux sections distinctes : « Fetches » (mises à jour concerts, avec bouton de relance) et « Maintenance » (purge concerts/salles/artistes, recalcul matchs) — la purge des salles et artistes orphelins est maintenant visible dans cette section.</li>
             </ul>
           </div>
           <div>
@@ -51,6 +52,8 @@
               <li>Sur Safari (macOS et iOS), naviguer vers le site depuis un lien (email, autre application) ne provoquait plus de redirection vers la page de connexion — la session est désormais correctement conservée.</li>
               <li>Après une mise à jour, les feuilles de style pouvaient rester en version ancienne pendant plusieurs heures. Le rechargement est maintenant forcé dès la mise à jour disponible.</li>
               <li>Sur les appareils ayant installé l'application (PWA), l'onglet « Sources » de l'administration pouvait ne pas apparaître suite à un cache non mis à jour — résolu.</li>
+              <li>Lorsque l'application était relancée sans réseau (PWA sur iOS), une page blanche s'affichait au lieu de la page hors ligne — corrigé.</li>
+              <li>Après un retour de connexion, le lien « Administration » pouvait rester masqué jusqu'au prochain rechargement complet — la session est désormais rechargée automatiquement à la reconnexion.</li>
             </ul>
           </div>
         </div>

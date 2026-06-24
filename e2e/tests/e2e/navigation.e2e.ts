@@ -234,11 +234,11 @@ test.describe("Scénario: indicateur de chargement admin (#644)", () => {
     });
 
     const gotoPromise = page.goto("/admin");
-    await expect(page.locator(".etat-chargement")).toBeVisible({
+    await expect(page.locator(".etat-chargement").first()).toBeVisible({
       timeout: 2000,
     });
     await gotoPromise;
-    await expect(page.locator(".etat-chargement")).not.toBeVisible({
+    await expect(page.locator(".etat-chargement").first()).not.toBeVisible({
       timeout: 3000,
     });
   });
