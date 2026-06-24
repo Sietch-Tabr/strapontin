@@ -1133,6 +1133,7 @@ public class PersisterConcerts {
       // concerts existants que la première passe n'avait pas chargés.
       valeurs = reconcilierSalles(valeurs);
       valeurs = deduplicerLotReconcilie(valeurs);
+      valeurs = raccrocherSallesParNomNorm(valeurs);
 
       ResultatPersistance resultatLot = upsertLot(valeurs);
       totalInserts += resultatLot.nbInseres();
@@ -1140,6 +1141,7 @@ public class PersisterConcerts {
     }
 
     supprimerDoublonsParUrl();
+    supprimerDoublonsParSalleUuid();
 
     log.info(
         "concerts persistés total={} inserts={} updates={}",
@@ -1155,5 +1157,90 @@ public class PersisterConcerts {
       jdbc.update("DELETE FROM concerts WHERE id::text IN (:ids)", Map.of("ids", idsDoublons));
       log.info("doublons url supprimés count={}", idsDoublons.size());
     }
+  }
+
+  /// Supprime les doublons TM+Eventim non fusionnés par {@link #reconcilierSalles}.
+  ///
+  /// <p>Quand TM et Eventim nomment la même salle différemment (ex. {@code "zenith d auvergne"}
+  /// vs {@code "zenith dauvergne clermont ferrand"}), {@code estDoublonSalle} peut ne pas les
+  /// rapprocher (containment échoue sur l'absence d'espace) et deux lignes coexistent dans
+  /// {@code concerts} malgré un {@code salle_uuid} identique. Cette méthode supprime la ligne
+  /// Eventim en conservant la ligne TM comme référence.
+  private void supprimerDoublonsParSalleUuid() {
+    int nbSupprimees =
+        jdbc.update(
+            "DELETE FROM concerts WHERE id IN ("
+                + "  SELECT c2.id"
+                + "  FROM concerts c1"
+                + "  JOIN concerts c2"
+                + "    ON c1.artiste_id = c2.artiste_id"
+                + "    AND c1.date = c2.date"
+                + "    AND c1.heure IS NOT DISTINCT FROM c2.heure"
+                + "    AND c1.salle_uuid = c2.salle_uuid"
+                + "  WHERE c1.source = 'ticketmaster'"
+                + "    AND c2.source = 'eventim'"
+                + "    AND c1.artiste_id IS NOT NULL"
+                + "    AND c1.salle_uuid IS NOT NULL"
+                + ")",
+            Map.of());
+    if (nbSupprimees > 0)
+      log.info("doublons TM+Eventim (salle_uuid) supprimés count={}", nbSupprimees);
+  }
+
+  /// Rattache les concerts sans {@code salleUuid} à leur salle via correspondance exacte
+  /// sur {@code salle_norm} / {@code nom_norm}.
+  ///
+  /// <p>Appelée après les deux passes de {@link #reconcilierSalles} et
+  /// {@link #deduplicerLotReconcilie}, quand {@code salle_norm} est dans son état canonique final.
+  /// Couvre le cas des salles sans {@code salleSourceId} (concerts sans venueId) dont
+  /// {@code salle_norm} correspond exactement à une salle existante dans {@code salles}.
+  ///
+  /// @param concerts concerts après déduplication
+  /// @return liste enrichie avec les {@code salleUuid} résolus par nom_norm
+  private List<ValeurConcert> raccrocherSallesParNomNorm(List<ValeurConcert> concerts) {
+    List<String> sallesNormsSansUuid =
+        concerts.stream()
+            .filter(c -> c.salleUuid() == null)
+            .map(ValeurConcert::salleNorm)
+            .distinct()
+            .toList();
+    if (sallesNormsSansUuid.isEmpty()) return concerts;
+
+    Map<String, UUID> cache = new java.util.HashMap<>();
+    jdbc.queryForList(
+            "SELECT nom_norm, id FROM salles WHERE nom_norm IN (:normsNoms)",
+            Map.of("normsNoms", sallesNormsSansUuid))
+        .forEach(r -> cache.put((String) r.get("nom_norm"), (UUID) r.get("id")));
+
+    return concerts.stream()
+        .map(
+            c -> {
+              if (c.salleUuid() != null) return c;
+              UUID uuid = cache.get(c.salleNorm());
+              if (uuid == null) return c;
+              return new ValeurConcert(
+                  c.artiste(),
+                  c.artisteNorm(),
+                  c.date(),
+                  c.heure(),
+                  c.salle(),
+                  c.salleNorm(),
+                  c.ville(),
+                  c.dept(),
+                  c.prixMin(),
+                  c.prixMax(),
+                  c.url(),
+                  c.source(),
+                  c.classification(),
+                  c.genre(),
+                  c.statut(),
+                  c.presaleDebut(),
+                  c.presaleNom(),
+                  c.salleSourceId(),
+                  c.artisteSourceId(),
+                  uuid,
+                  c.artisteId());
+            })
+        .toList();
   }
 }

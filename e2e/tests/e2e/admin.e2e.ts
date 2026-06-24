@@ -443,6 +443,23 @@ test.describe("Scénario: admin — onglet Sources", () => {
       page.locator(".source-vue-toggle button", { hasText: "Sans source" }),
     ).toBeVisible();
   });
+
+  test("admin_sources_bouton_sans_source_navigue_vers_liste", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await page.locator('a[href="#sources"]').click();
+    await expect(page.locator("section#sources")).toBeVisible();
+    const btnSansSource = page.locator(".source-vue-toggle button", {
+      hasText: "Sans source",
+    });
+    await btnSansSource.click();
+    await expect(
+      page.locator("table#table-sources-salles, p.etat-vide-texte"),
+    ).toBeVisible({ timeout: 5000 });
+  });
 });
 
 test.describe("Scénario: admin — onglet Jobs (sections Fetches/Maintenance)", () => {

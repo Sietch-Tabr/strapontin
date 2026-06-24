@@ -34,7 +34,7 @@
             <p class="changelog-categorie">Administration</p>
             <ul>
               <li>Un nouvel onglet « Sources » dans l'administration affiche l'état de chaque source de données : quota API Ticketmaster avec jauge de consommation, dernier fetch Eventim, statut Deezer et nombre de salles configurées pour Digitick.</li>
-              <li>La liste des salles sans source inclut désormais les salles sans identifiant Eventim, pas uniquement celles sans identifiant Ticketmaster — le bouton est renommé « Sans source » en conséquence.</li>
+              <li>La liste des salles sans source inclut désormais les salles sans identifiant Eventim, pas uniquement celles sans identifiant Ticketmaster — le bouton est renommé « Sans source » en conséquence. Les salles Eventim disposent désormais d'un identifiant interne : la liste « Sans source » est vide par défaut et réservée à la future intégration Digitick.</li>
               <li>L'onglet Jobs affiche maintenant deux sections distinctes : « Fetches » (mises à jour concerts, avec bouton de relance) et « Maintenance » (purge concerts/salles/artistes, recalcul matchs) — la purge des salles et artistes orphelins est maintenant visible dans cette section.</li>
             </ul>
           </div>
