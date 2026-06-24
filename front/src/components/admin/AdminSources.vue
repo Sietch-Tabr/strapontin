@@ -84,7 +84,7 @@
             class="btn btn-sm"
             :class="vueDigitick ? 'btn-secondary' : 'btn-primary'"
             @click="vueDigitick = false"
-          >Sans Ticketmaster</button>
+          >Sans source</button>
           <button
             type="button"
             class="btn btn-sm"
@@ -94,7 +94,7 @@
         </div>
       </div>
       <p class="param-aide">
-        <template v-if="!vueDigitick">Salles absentes de Ticketmaster — configurez leur slug Digitick et vérifiez l'URL.</template>
+        <template v-if="!vueDigitick">Salles sans identifiant Ticketmaster ni Eventim — configurez leur slug Digitick et vérifiez l'URL.</template>
         <template v-else>Salles avec un slug Digitick configuré. Collez une URL Digitick pour extraire le slug automatiquement.</template>
       </p>
       <div v-if="listeCourante.length">
@@ -163,7 +163,7 @@
         </div>
       </div>
       <p v-else class="etat-vide-texte">
-        <template v-if="!vueDigitick">Toutes les salles ont un identifiant Ticketmaster.</template>
+        <template v-if="!vueDigitick">Toutes les salles ont un identifiant source (Ticketmaster ou Eventim).</template>
         <template v-else>Aucune salle n'a de slug Digitick configuré.</template>
       </p>
     </div>

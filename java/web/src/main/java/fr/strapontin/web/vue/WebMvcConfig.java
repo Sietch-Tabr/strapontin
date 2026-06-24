@@ -31,5 +31,13 @@ public class WebMvcConfig implements WebMvcConfigurer {
         .addResourceHandler("/css/**")
         .addResourceLocations("classpath:/static/css/")
         .setCacheControl(CacheControl.noCache().mustRevalidate());
+
+    // Bundles Vite (URLs hashées) et fonts : immutable — l'URL change à chaque build,
+    // donc le contenu est garanti stable pour une URL donnée.
+    // Évite qu'iOS serve un vieux bundle hors-ligne depuis le cache HTTP.
+    registry
+        .addResourceHandler("/assets/**", "/fonts/**")
+        .addResourceLocations("classpath:/static/assets/", "classpath:/static/fonts/")
+        .setCacheControl(CacheControl.maxAge(java.time.Duration.ofDays(365)).cachePublic().immutable());
   }
 }

@@ -128,6 +128,7 @@ onMounted(async () => {
       idToastHorsLigne = null
     }
     afficherToast('Connexion rétablie.', 'succes')
+    chargerSession()
   })
 })
 

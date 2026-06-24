@@ -47,7 +47,7 @@ public class SourcesService {
 
   /// Retourne les statuts agrégés de toutes les sources et les deux listes de salles.
   ///
-  /// @return map {@code {sources, salles (sans TM), sallesDigitick (avec slug configuré)}}
+  /// @return map {@code {sources, salles (sans TM ni Eventim), sallesDigitick (avec slug configuré)}}
   public Map<String, Object> lireSources() {
     return Map.of(
         "sources", construireSources(),
@@ -216,6 +216,7 @@ public class SourcesService {
         LEFT JOIN salle_sources ss ON ss.salle_id = s.id
         GROUP BY s.id, s.nom
         HAVING MAX(CASE WHEN ss.source = 'ticketmaster' THEN ss.identifiant_externe END) IS NULL
+           AND MAX(CASE WHEN ss.source = 'eventim'      THEN ss.identifiant_externe END) IS NULL
         ORDER BY lower(s.nom)
         """,
         Map.of(),

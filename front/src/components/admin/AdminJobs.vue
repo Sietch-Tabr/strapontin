@@ -2,10 +2,10 @@
   <section class="admin-section" id="jobs">
 
     <div class="param-bloc">
-      <h3 class="param-label">Actualisations</h3>
+      <h3 class="param-label">Fetches</h3>
       <EtatChargement v-if="chargement" />
-      <div v-else-if="statsJobs.length" class="jobs-liste">
-        <div v-for="stat in statsJobs" :key="stat.typeJob" class="job-carte">
+      <div v-else-if="statsFetches.length" class="jobs-liste">
+        <div v-for="stat in statsFetches" :key="stat.typeJob" class="job-carte">
           <div class="job-carte-entete">
             <span class="job-pastille" :class="classePastille(stat)" aria-hidden="true"></span>
             <p class="job-carte-label">{{ LABELS_JOBS[stat.typeJob] ?? stat.typeJob }}</p>
@@ -33,7 +33,7 @@
           </p>
         </div>
       </div>
-      <p v-else class="etat-vide-texte">Aucun job exécuté pour l'instant.</p>
+      <p v-else class="etat-vide-texte">Aucun fetch exécuté pour l'instant.</p>
       <div class="relancer-actions">
         <button
           type="button"
@@ -45,6 +45,39 @@
           Relancer les fetches maintenant
         </button>
       </div>
+    </div>
+
+    <div class="param-bloc">
+      <h3 class="param-label">Maintenance</h3>
+      <EtatChargement v-if="chargement" />
+      <div v-else-if="statsMaintenance.length" class="jobs-liste">
+        <div v-for="stat in statsMaintenance" :key="stat.typeJob" class="job-carte">
+          <div class="job-carte-entete">
+            <span class="job-pastille" :class="classePastille(stat)" aria-hidden="true"></span>
+            <p class="job-carte-label">{{ LABELS_JOBS[stat.typeJob] ?? stat.typeJob }}</p>
+            <span
+              v-if="jobsEnCours.includes(stat.typeJob)"
+              class="job-en-cours"
+              aria-busy="true"
+              aria-label="En cours"
+            >
+              <svg class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+            </span>
+          </div>
+          <p class="job-carte-detail">
+            <span v-if="stat.derniereExec">{{ formaterInstant(stat.derniereExec) }}</span>
+            <span v-if="stat.derniereExec && stat.dureeMs != null">{{ ' · ' + formaterDuree(stat.dureeMs) }}</span>
+            <span v-if="!stat.derniereExec">Pas encore exécuté</span>
+            <span v-if="stat.erreur" class="badge badge-erreur">{{ stat.erreur.length > 80 ? stat.erreur.substring(0, 80) + '…' : stat.erreur }}</span>
+          </p>
+          <p v-if="stat.prochaineExec" class="job-carte-detail">
+            Prochaine exécution : {{ formaterInstant(stat.prochaineExec) }}
+          </p>
+        </div>
+      </div>
+      <p v-else class="etat-vide-texte">Aucun job de maintenance exécuté pour l'instant.</p>
     </div>
 
     <div class="param-bloc">
@@ -79,9 +112,13 @@ const LABELS_JOBS = {
   'fetch:region':         'Concerts par région',
   'notifier:digest':      'Notifications digest',
   'purger:concerts':      'Purge concerts',
+  'purger:salles':        'Purge salles orphelines',
+  'purger:artistes':      'Purge artistes orphelins',
   'recalculer:matches':   'Recalcul matchs',
   'fetch:salle':          'Salle',
 }
+
+const TYPES_FETCHES = new Set(['fetch:artistes:batch', 'fetch:region'])
 
 const chargement = ref(true)
 const statsJobs = shallowRef([])
@@ -91,6 +128,9 @@ const relancerEnCours = ref(false)
 let pollingInterval = null
 // #571 : annule les fetch en vol à la destruction du composant (pas de maj de refs mortes).
 const controleur = new AbortController()
+
+const statsFetches = computed(() => statsJobs.value.filter((s) => TYPES_FETCHES.has(s.typeJob)))
+const statsMaintenance = computed(() => statsJobs.value.filter((s) => !TYPES_FETCHES.has(s.typeJob)))
 
 const workerEnAlerte = computed(() => {
   if (!workerLastSuccess.value) return false
@@ -166,7 +206,6 @@ function demarrerPolling() {
       if (jobsEnCours.value.length === 0) {
         arreterPolling()
         relancerEnCours.value = false
-        relancerStatut.value = ''
       }
     } catch (e) {
       if (e.name === 'AbortError') return

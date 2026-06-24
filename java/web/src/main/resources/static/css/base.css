@@ -1,10 +1,18 @@
 /* Strapontin — base : police, variables, reset, transitions */
 
-/* ── Police Geist Variable ──────────────────────────────── */
+/* ── Police Luciole (CC BY 4.0 — Laurent Bourcellier & Jonathan Perez) ── */
 @font-face {
-  font-family: "Geist Variable";
-  src: url("/fonts/geist-variable.woff2") format("woff2");
-  font-weight: 100 900;
+  font-family: "Luciole";
+  src: url("/fonts/Luciole-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Luciole";
+  src: url("/fonts/Luciole-Bold.woff2") format("woff2");
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -89,7 +97,7 @@
   --radius: 0.5rem;
   --sidebar-w: 240px;
   --nav-h: 56px;
-  --font: "Geist Variable", system-ui, -apple-system, sans-serif;
+  --font: "Luciole", system-ui, -apple-system, sans-serif;
 }
 
 .dark {

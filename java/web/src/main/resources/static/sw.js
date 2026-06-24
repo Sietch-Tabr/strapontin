@@ -1,9 +1,10 @@
 // Strapontin — service worker
 
-const CACHE_NOM = "strapontin-823dc7f7";
+const CACHE_NOM = "strapontin-e76eb81c";
 // CSS et bundles Vite exclus du précache : ils sont gérés en network-first dans le handler fetch.
 const RESSOURCES_STATIQUES = [
-  "/fonts/geist-variable.woff2",
+  "/fonts/Luciole-Regular.woff2",
+  "/fonts/Luciole-Bold.woff2",
   "/images/favicon.png",
   "/images/icon-192.png",
   "/images/icon-512.png",
@@ -232,7 +233,7 @@ self.addEventListener("fetch", (event) => {
       (async () => {
         try {
           const preload = await event.preloadResponse;
-          if (preload) return preload;
+          if (preload && preload.ok) return preload;
         } catch (_) {
           // preload indisponible, on continue avec fetch normal
         }

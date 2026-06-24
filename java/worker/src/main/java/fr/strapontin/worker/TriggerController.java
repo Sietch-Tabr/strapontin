@@ -45,6 +45,8 @@ public class TriggerController {
           "fetchArtistesBatch", "fetch:artistes:batch",
           "fetchRegion", "fetch:region",
           "purgerConcerts", "purger:concerts",
+          "purgerSalles", "purger:salles",
+          "purgerArtistes", "purger:artistes",
           "recalculerMatches", "recalculer:matches",
           "notifierDigest", "notifier:digest");
 
