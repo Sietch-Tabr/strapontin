@@ -54,6 +54,7 @@
               <li>Sur les appareils ayant installé l'application (PWA), l'onglet « Sources » de l'administration pouvait ne pas apparaître suite à un cache non mis à jour — résolu.</li>
               <li>Lorsque l'application était relancée sans réseau (PWA sur iOS), une page blanche s'affichait au lieu de la page hors ligne — corrigé.</li>
               <li>Après un retour de connexion, le lien « Administration » pouvait rester masqué jusqu'au prochain rechargement complet — la session est désormais rechargée automatiquement à la reconnexion.</li>
+              <li>L'architecture du cache PWA a été entièrement revue : les feuilles de style sont désormais empaquetées avec les bundles JS (fingerprinting Vite) et précachées par Workbox. Les pages, images et icônes bénéficient d'une stratégie cohérente entre le cache HTTP et le service worker — les onglets qui disparaissaient après une perte de réseau sont définitivement corrigés.</li>
             </ul>
           </div>
         </div>

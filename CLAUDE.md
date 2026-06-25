@@ -183,8 +183,8 @@ Résolution UUID-first (v2.3.0, ticket #621) : `PersisterConcerts.resoudreIdenti
 ## UI / Design system (v2.2.0 — Vue SPA)
 
 - **Vue 3 + Vite** — SPA intégralement côté client. `front/src/pages/` (pages), `front/src/components/` (composants), `front/src/composables/` (logique réutilisable)
-- **CSS vanilla** — variables CSS pour thème clair/sombre, dans `static/css/`
-- **PWA** : service worker JS vanilla + push. Cap 10 abonnements/user. Mise à jour automatique : `controllerchange` → `window.location.reload()` dans `App.vue`. `/icons/` en network-first, `/images/` en stale-while-revalidate. Bumper `CACHE_NOM` dans `sw.js` pour forcer une nouvelle installation.
+- **CSS vanilla** — variables CSS pour thème clair/sombre, dans `front/src/styles/` (importés dans `main.js` → fingerprinting Vite vers `/assets/index-*.css`)
+- **PWA** : `vite-plugin-pwa` (mode `injectManifest`) compile `front/src/sw.js` → `static/sw.js` (artifact gitignored). Workbox précache 22 assets (bundles JS/CSS, images, icônes). Mise à jour automatique : `controllerchange` → `window.location.reload()` dans `App.vue`.
 - **Badge "Nouveau"** : basé sur `user_matches.vu_le IS NULL` — remis à `NULL` à la visite de `/`. Affiché sur la sidebar desktop et la bottom nav mobile. `notification_envoyee_le` est une colonne distincte pour le suivi des envois email/push.
 - **Thème** : cookie `theme` (1 an) + `user_config.theme` → pas de FOUC
 - **Navigation** : Vue Router (`front/src/router/`) — sidebar desktop, bottom nav + drawer mobile. `useEstMobile()` (`front/src/composables/useBreakpoint.js`, seuil 1024 px) contrôle le rendu conditionnel via `v-if` — pas de duplication DOM ni de `display: none`.
