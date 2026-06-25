@@ -141,8 +141,6 @@ public final class Dedoublonner {
             meilleureSalle,
             cb.ville(),
             cb.dept(),
-            cb.prixMin(),
-            cb.prixMax(),
             cb.url(),
             cb.source(),
             cb.classification(),
@@ -164,7 +162,6 @@ public final class Dedoublonner {
     return (c.heure() != null ? 1 : 0)
         + (c.ville() != null ? 1 : 0)
         + (c.dept() != null ? 1 : 0)
-        + (c.prixMin() != null ? 1 : 0)
         + (c.url() != null ? 1 : 0);
   }
 }

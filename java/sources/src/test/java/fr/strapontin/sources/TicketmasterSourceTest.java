@@ -167,8 +167,6 @@ class TicketmasterSourceTest {
     assertEquals("Accor Arena", resultat.salle());
     assertEquals("Paris", resultat.ville());
     assertEquals("75", resultat.dept());
-    assertEquals(39.9, resultat.prixMin());
-    assertEquals(99.9, resultat.prixMax());
     assertEquals("https://example.com", resultat.url());
     assertEquals("ticketmaster", resultat.source());
     assertEquals("music", resultat.classification());
@@ -303,14 +301,11 @@ class TicketmasterSourceTest {
   }
 
   @Test
-  void mapEvenement_prixEtUrlAbsents_retourneNull() {
+  void mapEvenement_urlAbsente_retourneNullPourUrl() {
     Map<String, Object> evt = new HashMap<>(evenementTMRaw());
-    evt.remove("priceRanges");
     evt.remove("url");
     ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
     assertNotNull(resultat);
-    assertNull(resultat.prixMin());
-    assertNull(resultat.prixMax());
     assertNull(resultat.url());
   }
 

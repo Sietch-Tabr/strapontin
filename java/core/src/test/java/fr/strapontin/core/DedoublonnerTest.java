@@ -9,51 +9,21 @@ class DedoublonnerTest {
 
   private static ConcertBrut concert(String artiste, String date, String salle) {
     return new ConcertBrut(
-        artiste,
-        date,
-        null,
-        salle,
-        null,
-        null,
-        null,
-        null,
-        null,
-        "ticketmaster",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+        artiste, date, null, salle, null, null, null, "ticketmaster", null, null, null, null, null,
+        null, null);
   }
 
   private static ConcertBrut concert(String artiste, String date, String salle, String ville) {
     return new ConcertBrut(
-        artiste,
-        date,
-        null,
-        salle,
-        ville,
-        null,
-        null,
-        null,
-        null,
-        "ticketmaster",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+        artiste, date, null, salle, ville, null, null, "ticketmaster", null, null, null, null, null,
+        null, null);
   }
 
   private static ConcertBrut concert(
       String artiste, String date, String salle, String ville, String source) {
     return new ConcertBrut(
-        artiste, date, null, salle, ville, null, null, null, null, source, null, null, null, null,
-        null, null, null);
+        artiste, date, null, salle, ville, null, null, source, null, null, null, null, null, null,
+        null);
   }
 
   // --- Cas limites ---
@@ -79,8 +49,6 @@ class DedoublonnerTest {
             "Zénith Paris",
             "Paris",
             "75",
-            35.0,
-            65.0,
             "https://example.com",
             "ticketmaster",
             "music",
@@ -95,7 +63,6 @@ class DedoublonnerTest {
     var r = resultat.get(0);
     assertEquals("Radiohead", r.artiste());
     assertEquals("Paris", r.ville());
-    assertEquals(35.0, r.prixMin());
     assertEquals("https://example.com", r.url());
   }
 
@@ -129,8 +96,6 @@ class DedoublonnerTest {
             "Zénith Paris",
             "Paris",
             null,
-            45.0,
-            null,
             "https://example.com",
             "eventim",
             null,
@@ -144,7 +109,6 @@ class DedoublonnerTest {
     var resultat = Dedoublonner.dedoublonner(List.of(incomplet, complet));
     assertEquals(1, resultat.size());
     assertEquals("https://example.com", resultat.get(0).url());
-    assertEquals(45.0, resultat.get(0).prixMin());
   }
 
   @Test

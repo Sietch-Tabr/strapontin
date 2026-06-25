@@ -77,7 +77,7 @@ public class PersisterConcerts {
       """
       INSERT INTO concerts
           (artiste, artiste_norm, date, heure, salle, salle_norm, ville, dept,
-           prix_min, prix_max, url, source, classification, genre, statut,
+           url, source, classification, genre, statut,
            presale_debut, presale_nom, salle_uuid, artiste_id)
       VALUES
       """;
@@ -92,8 +92,6 @@ public class PersisterConcerts {
           heure          = EXCLUDED.heure,
           ville          = EXCLUDED.ville,
           dept           = EXCLUDED.dept,
-          prix_min       = EXCLUDED.prix_min,
-          prix_max       = EXCLUDED.prix_max,
           source         = EXCLUDED.source,
           url            = COALESCE(EXCLUDED.url, concerts.url),
           classification = COALESCE(EXCLUDED.classification, concerts.classification),
@@ -368,8 +366,6 @@ public class PersisterConcerts {
         canonique,
         c.ville(),
         c.dept(),
-        c.prixMin(),
-        c.prixMax(),
         c.url(),
         c.source(),
         c.classification(),
@@ -409,8 +405,6 @@ public class PersisterConcerts {
             salleNormExistante,
             concert.ville(),
             concert.dept(),
-            concert.prixMin(),
-            concert.prixMax(),
             concert.url(),
             concert.source(),
             concert.classification(),
@@ -530,8 +524,6 @@ public class PersisterConcerts {
         c.salleNorm(),
         c.ville(),
         c.dept(),
-        c.prixMin(),
-        c.prixMax(),
         c.url(),
         c.source(),
         c.classification(),
@@ -562,8 +554,6 @@ public class PersisterConcerts {
               concert.salleNorm(),
               concert.ville(),
               concert.dept(),
-              concert.prixMin(),
-              concert.prixMax(),
               concert.url(),
               concert.source(),
               concert.classification(),
@@ -595,8 +585,6 @@ public class PersisterConcerts {
             concert.salleNorm(),
             concert.ville(),
             concert.dept(),
-            concert.prixMin(),
-            concert.prixMax(),
             concert.url(),
             concert.source(),
             concert.classification(),
@@ -633,10 +621,6 @@ public class PersisterConcerts {
         + ", :ville_"
         + i
         + ", :dept_"
-        + i
-        + ", :prixMin_"
-        + i
-        + ", :prixMax_"
         + i
         + ", :url_"
         + i
@@ -677,8 +661,6 @@ public class PersisterConcerts {
     params.addValue("salleNorm_" + i, v.salleNorm());
     params.addValue("ville_" + i, v.ville());
     params.addValue("dept_" + i, v.dept());
-    params.addValue("prixMin_" + i, v.prixMin(), Types.NUMERIC);
-    params.addValue("prixMax_" + i, v.prixMax(), Types.NUMERIC);
     params.addValue("url_" + i, v.url());
     params.addValue("source_" + i, v.source());
     params.addValue("classification_" + i, v.classification());
@@ -741,8 +723,6 @@ public class PersisterConcerts {
                       c.salleNorm(),
                       c.ville(),
                       c.dept(),
-                      c.prixMin(),
-                      c.prixMax(),
                       c.url(),
                       c.source(),
                       c.classification(),
@@ -805,8 +785,6 @@ public class PersisterConcerts {
                       c.salleNorm(),
                       c.ville(),
                       c.dept(),
-                      c.prixMin(),
-                      c.prixMax(),
                       c.url(),
                       c.source(),
                       c.classification(),
@@ -1110,8 +1088,6 @@ public class PersisterConcerts {
                           Normalisation.normaliserTexte(c.salle()),
                           c.ville(),
                           c.dept(),
-                          c.prixMin() != null ? BigDecimal.valueOf(c.prixMin()) : null,
-                          c.prixMax() != null ? BigDecimal.valueOf(c.prixMax()) : null,
                           c.url(),
                           c.source(),
                           c.classification(),
@@ -1227,8 +1203,6 @@ public class PersisterConcerts {
                   c.salleNorm(),
                   c.ville(),
                   c.dept(),
-                  c.prixMin(),
-                  c.prixMax(),
                   c.url(),
                   c.source(),
                   c.classification(),

@@ -159,8 +159,6 @@ class EventimSourceTest {
     assertEquals("Accor Arena", resultat.salle());
     assertEquals("Paris", resultat.ville());
     assertEquals("75", resultat.dept());
-    assertEquals(39.9, resultat.prixMin());
-    assertEquals(99.9, resultat.prixMax());
     assertEquals("https://www.eventim.fr/event/julien-clerc-1234", resultat.url());
     assertEquals("eventim", resultat.source());
     assertNull(resultat.classification());

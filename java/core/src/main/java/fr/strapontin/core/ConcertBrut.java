@@ -7,8 +7,6 @@ public record ConcertBrut(
     String salle,
     String ville,
     String dept,
-    Double prixMin,
-    Double prixMax,
     String url,
     String source,
     String classification,

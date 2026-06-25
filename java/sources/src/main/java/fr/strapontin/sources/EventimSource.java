@@ -291,16 +291,6 @@ public class EventimSource implements SourceConcerts {
     String dept = extraireDept(location != null ? (String) location.get("postalCode") : null);
     ville = corrigerVilleEventim(ville, dept, salle);
 
-    var priceRange = (Map<String, Object>) liveEnt.get("priceRange");
-    Double prixMin =
-        priceRange != null && priceRange.get("min") != null
-            ? ((Number) priceRange.get("min")).doubleValue()
-            : null;
-    Double prixMax =
-        priceRange != null && priceRange.get("max") != null
-            ? ((Number) priceRange.get("max")).doubleValue()
-            : null;
-
     String url = extraireUrlProduit(produit);
     // inStock=false couvre à la fois les concerts complets et les préventes : impossible à
     // distinguer via l'API Eventim. On ne stocke pas de statut pour éviter les faux positifs.
@@ -319,8 +309,6 @@ public class EventimSource implements SourceConcerts {
         salle,
         ville,
         dept,
-        prixMin,
-        prixMax,
         url,
         "eventim",
         null,
