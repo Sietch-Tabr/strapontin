@@ -19,7 +19,7 @@ steps:
     volumes:
       - /var/cache/woodpecker/npm:/root/.npm
     commands:
-      - rm -rf java/web/src/main/resources/static/assets java/web/src/main/resources/static/index.html
+      - rm -rf java/web/src/main/resources/static/assets java/web/src/main/resources/static/index.html java/web/src/main/resources/static/sw.js
       - cd front && npm ci && npm run build
     when:
       - event: push
