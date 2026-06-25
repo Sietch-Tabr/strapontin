@@ -37,7 +37,7 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
   // /setup et ressources statiques exemptés pour permettre la configuration initiale par IP
   private static final Set<String> CHEMINS_EXEMPTS =
       Set.of("/setup", "/api/setup", "/sw.js", "/offline.html");
-  private static final String[] PREFIXES_STATIQUES = {"/css/", "/js/", "/icons/", "/images/"};
+  private static final String[] PREFIXES_STATIQUES = {"/assets/", "/icons/", "/images/"};
 
   private final boolean actif;
 

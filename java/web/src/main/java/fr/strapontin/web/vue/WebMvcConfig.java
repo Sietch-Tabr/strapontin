@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.vue;
 
+import java.time.Duration;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -24,21 +25,21 @@ public class WebMvcConfig implements WebMvcConfigurer {
         .addResourceLocations("classpath:/static/")
         .setCacheControl(CacheControl.noCache().mustRevalidate());
 
-    // CSS : no-cache car les noms de fichiers sont fixes (pas de fingerprinting dans l'URL).
-    // Spring extrait la partie après /css/ du chemin et la concatène à l'emplacement,
-    // donc l'emplacement doit pointer sur classpath:/static/css/ (pas classpath:/static/).
-    registry
-        .addResourceHandler("/css/**")
-        .addResourceLocations("classpath:/static/css/")
-        .setCacheControl(CacheControl.noCache().mustRevalidate());
-
     // Bundles Vite (URLs hashées) : immutable — l'URL change à chaque build,
     // donc le contenu est garanti stable pour une URL donnée.
-    // Évite qu'iOS serve un vieux bundle hors-ligne depuis le cache HTTP.
     registry
         .addResourceHandler("/assets/**")
         .addResourceLocations("classpath:/static/assets/")
-        .setCacheControl(
-            CacheControl.maxAge(java.time.Duration.ofDays(365)).cachePublic().immutable());
+        .setCacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable());
+
+    // Images et icônes : 1 semaine — URLs stables mais contenu pouvant changer à chaque release.
+    registry
+        .addResourceHandler("/images/**")
+        .addResourceLocations("classpath:/static/images/")
+        .setCacheControl(CacheControl.maxAge(Duration.ofDays(7)).cachePublic());
+    registry
+        .addResourceHandler("/icons/**")
+        .addResourceLocations("classpath:/static/icons/")
+        .setCacheControl(CacheControl.maxAge(Duration.ofDays(7)).cachePublic());
   }
 }

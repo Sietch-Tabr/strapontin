@@ -114,10 +114,7 @@ public class SecurityConfiguration {
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers(
-                        "/css/**",
-                        "/js/**",
                         "/assets/**",
-                        "/fonts/**",
                         "/images/**",
                         "/icons/**",
                         "/favicon.ico",

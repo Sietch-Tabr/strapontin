@@ -1,17 +1,15 @@
-// Strapontin — service worker
+import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
 
-const CACHE_NOM = "strapontin-1732504f";
-// CSS et bundles Vite exclus du précache : ils sont gérés en network-first dans le handler fetch.
-const RESSOURCES_STATIQUES = [
-  "/images/favicon.png",
-  "/images/icon-192.png",
-  "/images/icon-512.png",
-  "/images/logo.webp",
-  "/icons/lucide-sprite.svg",
-];
+// Nettoie les entrées de précache de l'ancienne version à l'activation.
+cleanupOutdatedCaches();
+
+// Précache tous les assets listés dans le manifeste injecté par vite-plugin-pwa :
+// bundles JS/CSS Vite (fingerprinted), images, icônes.
+// eslint-disable-next-line no-undef
+precacheAndRoute(self.__WB_MANIFEST);
 
 // Page offline inlinée pour éviter les problèmes iOS PWA :
-// - pas de CSP serveur (headers mis en cache), pas de CSS externe, pas de race condition.
+// pas de CSP serveur (headers mis en cache), pas de CSS externe, pas de race condition.
 // Le thème est lu depuis le cookie de la requête de navigation.
 function reponseOffline(request) {
   const cookie = (request && request.headers.get("cookie")) || "";
@@ -92,158 +90,40 @@ self.addEventListener("error", function (e) {
   });
 });
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NOM)
-      .then((cache) =>
-        // `cache: "reload"` force le réseau et contourne le cache HTTP du navigateur,
-        // sinon le précache pourrait resservir un ancien asset à URL stable.
-        Promise.all(
-          RESSOURCES_STATIQUES.map((url) =>
-            fetch(url, { cache: "reload" }).then((reponse) =>
-              cache.put(url, reponse),
-            ),
-          ),
-        ),
-      )
-      .then(() => self.skipWaiting())
-      .catch(function (e) {
-        self.clients
-          .matchAll({ includeUncontrolled: true })
-          .then(function (clients) {
-            clients.forEach(function (c) {
-              c.postMessage({
-                type: "sw-error",
-                message:
-                  "install: " +
-                  (e && e.message ? e.message : "échec précachage"),
-              });
-            });
-          });
-        throw e;
-      }),
-  );
-});
+self.addEventListener("install", () => self.skipWaiting());
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((noms) =>
-        Promise.all(
-          noms.filter((n) => n !== CACHE_NOM).map((n) => caches.delete(n)),
-        ),
-      )
-      .then(() => {
-        if (self.registration.navigationPreload) {
-          return self.registration.navigationPreload.enable();
-        }
-      })
-      .then(() => self.clients.claim()),
+    (async () => {
+      await self.clients.claim();
+      if (self.registration.navigationPreload) {
+        await self.registration.navigationPreload.enable();
+      }
+    })(),
   );
 });
 
+// Navigation browser : NavigationPreload + timeout 6 s, page offline inlinée sinon.
+// Les assets précachés (bundles JS/CSS, images, icônes) sont gérés par precacheAndRoute.
 self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+  if (event.request.method !== "GET") return;
+  if (new URL(event.request.url).pathname.startsWith("/api/")) return;
+  if (event.request.mode !== "navigate") return;
 
-  if (request.method !== "GET") return;
-  if (url.pathname.startsWith("/api/")) return;
-
-  // CSS et JS : network-first (toujours la version fraîche, cache en fallback offline).
-  // /assets/ : bundles Vite à noms hashés. /css/ : fichiers à URL stable, servis no-cache
-  // par Spring — { cache: "reload" } est défensif pour contourner tout cache intermédiaire.
-  if (url.pathname.startsWith("/css/") || url.pathname.startsWith("/js/")) {
-    event.respondWith(
-      fetch(request, { cache: "reload" })
-        .then(function (response) {
-          if (response.ok) {
-            caches.open(CACHE_NOM).then(function (cache) {
-              cache.put(request, response.clone());
-            });
-          }
-          return response;
-        })
-        .catch(function () {
-          return caches.match(request);
-        }),
-    );
-    return;
-  }
-
-  if (url.pathname.startsWith("/assets/")) {
-    event.respondWith(
-      fetch(request)
-        .then(function (response) {
-          if (response.ok) {
-            caches.open(CACHE_NOM).then(function (cache) {
-              cache.put(request, response.clone());
-            });
-          }
-          return response;
-        })
-        .catch(function () {
-          return caches.match(request);
-        }),
-    );
-    return;
-  }
-
-  // Icônes (sprites SVG) : network-first — mise à jour immédiate, offline via cache
-  if (url.pathname.startsWith("/icons/")) {
-    event.respondWith(
-      fetch(request)
-        .then(function (response) {
-          if (response.ok) {
-            caches.open(CACHE_NOM).then(function (cache) {
-              cache.put(request, response.clone());
-            });
-          }
-          return response;
-        })
-        .catch(function () {
-          return caches.match(request);
-        }),
-    );
-    return;
-  }
-
-  // Images : stale-while-revalidate (changent rarement)
-  if (url.pathname.startsWith("/images/")) {
-    event.respondWith(
-      (async () => {
-        const cache = await caches.open(CACHE_NOM);
-        const cached = await cache.match(request);
-        const networkFetch = fetch(request).then(function (response) {
-          if (response.ok) cache.put(request, response.clone());
-          return response;
-        });
-        return cached || networkFetch;
-      })(),
-    );
-    return;
-  }
-
-  // Navigation browser : NavigationPreload + timeout 6 s, page offline inlinée sinon
-  if (request.mode === "navigate") {
-    event.respondWith(
-      (async () => {
-        try {
-          const preload = await event.preloadResponse;
-          if (preload && preload.ok) return preload;
-        } catch (_) {
-          // preload indisponible, on continue avec fetch normal
-        }
-        const minuterie = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("timeout")), 6000),
-        );
-        return Promise.race([fetch(request), minuterie]).catch(() =>
-          reponseOffline(request),
-        );
-      })(),
-    );
-  }
+  event.respondWith(
+    (async () => {
+      try {
+        const preload = await event.preloadResponse;
+        if (preload && preload.ok) return preload;
+      } catch (_) {}
+      const minuterie = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), 6000),
+      );
+      return Promise.race([fetch(event.request), minuterie]).catch(() =>
+        reponseOffline(event.request),
+      );
+    })(),
+  );
 });
 
 self.addEventListener("push", (event) => {

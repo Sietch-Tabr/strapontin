@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import { VitePWA } from "vite-plugin-pwa";
 import { rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
@@ -8,7 +9,7 @@ const dossierAssets = fileURLToPath(
 );
 
 // Vide uniquement static/assets/ avant chaque build, sans toucher aux autres ressources
-// statiques (css/, fonts/, images/, icons/, sw.js). Remplace emptyOutDir qui viderait tout.
+// statiques (images/, icons/). Remplace emptyOutDir qui viderait tout.
 function nettoyerAssets() {
   return {
     name: "nettoyer-assets",
@@ -23,6 +24,21 @@ export default defineConfig({
   plugins: [
     vue({ template: { transformAssetUrls: { use: [] } } }),
     nettoyerAssets(),
+    VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.js",
+      manifest: false,
+      // Registration gérée manuellement dans main.js — ne pas générer registerSW.js.
+      injectRegister: false,
+      injectManifest: {
+        globPatterns: [
+          "assets/**/*.{js,css}",
+          "images/**/*.{png,webp}",
+          "icons/**/*.svg",
+        ],
+      },
+    }),
   ],
   build: {
     outDir: "../java/web/src/main/resources/static",
