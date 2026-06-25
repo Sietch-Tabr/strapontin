@@ -6,7 +6,6 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
-import java.math.BigDecimal;
 import java.sql.Types;
 import java.text.Normalizer;
 import java.time.LocalDate;
