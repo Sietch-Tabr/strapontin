@@ -8,6 +8,24 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.4.0 — 25 juin 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Concerts</p>
+            <ul>
+              <li>Digitick est désormais intégré comme source de concerts : les salles configurées avec un identifiant Digitick récupèrent automatiquement leur programme depuis web.digitick.com — couverture des salles non disponibles via Ticketmaster ou Eventim (ex. L'Empreinte, Savigny-le-Temple).</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>L'onglet Sources permet désormais de tester et de configurer un identifiant Digitick pour chaque salle — le bouton « Tester » vérifie l'accessibilité du programme en temps réel.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.3.0 — 23 juin 2026</h2>
         <div class="changelog-entrees">
           <div>

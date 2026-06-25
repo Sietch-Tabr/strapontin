@@ -431,6 +431,77 @@ test.describe("Scénario: admin — onglet Sources", () => {
     ).toBeVisible();
   });
 
+  test("admin_sources_api_tester_slug_valide", async () => {
+    const ctx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    try {
+      const uuid = "00000000-0000-0000-0000-000000000001";
+      const rep = await ctx.post(
+        `/api/admin/salles/${uuid}/tester-digitick`,
+        { data: { slug: "lempreinte" } },
+      );
+      expect(rep.status()).toBe(200);
+      const corps = await rep.json();
+      expect(corps.accessible).toBe(true);
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
+  test("admin_sources_api_tester_slug_invalide", async () => {
+    const ctx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    try {
+      const uuid = "00000000-0000-0000-0000-000000000001";
+      const rep = await ctx.post(
+        `/api/admin/salles/${uuid}/tester-digitick`,
+        { data: { slug: "slug-inexistant-xyz-strapontin" } },
+      );
+      expect(rep.status()).toBe(404);
+      const corps = await rep.json();
+      expect(corps.accessible).toBe(false);
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
+  test("admin_sources_api_modifier_slug_uuid_invalide_retourne_400", async () => {
+    const ctx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    try {
+      const rep = await ctx.put(
+        "/api/admin/salles/pas-un-uuid/digitick-slug",
+        { data: { slug: "lempreinte" } },
+      );
+      expect(rep.status()).toBe(400);
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
+  test("admin_sources_section_salles_digitick_visible", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await page.locator('a[href="#sources"]').click();
+    await expect(page.locator("section#sources")).toBeVisible();
+    const toggle = page.locator(".source-vue-toggle button", {
+      hasText: /[Dd]igitick/,
+    });
+    await toggle.click();
+    await expect(
+      page.locator("table#table-sources-salles, p.etat-vide-texte"),
+    ).toBeVisible({ timeout: 5000 });
+  });
+
   test("admin_sources_mobile_bouton_sans_source_libelle", async ({
     page,
     isMobile,

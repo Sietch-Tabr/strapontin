@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.sources.DigitickSource;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.TicketmasterSource;
@@ -61,6 +62,14 @@ public class WorkerConfiguration {
   @Bean
   EventimSource eventimSource() {
     return new EventimSource();
+  }
+
+  /// Client de scraping Digitick.
+  ///
+  /// @return instance avec User-Agent par défaut
+  @Bean
+  DigitickSource digitickSource() {
+    return new DigitickSource();
   }
 
   /// Résolveur de noms canoniques (Deezer) avec cache Caffeine 7 jours.
