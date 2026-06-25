@@ -56,15 +56,15 @@ class PersisterConcertsIntegrationTest {
   private static ConcertBrut concertSansUrl(
       String artiste, String date, String salle, String source) {
     return new ConcertBrut(
-        artiste, date, "20:30", salle, "Paris", "75", 39.9, 99.9, null, source, "music", "Pop",
-        "onsale", null, null, null, null);
+        artiste, date, "20:30", salle, "Paris", "75", null, source, "music", "Pop", "onsale", null,
+        null, null, null);
   }
 
   private static ConcertBrut concertAvecHeure(
       String artiste, String date, String heure, String salle, String source) {
     return new ConcertBrut(
-        artiste, date, heure, salle, "Paris", "75", 39.9, 99.9, null, source, "music", "Pop",
-        "onsale", null, null, null, null);
+        artiste, date, heure, salle, "Paris", "75", null, source, "music", "Pop", "onsale", null,
+        null, null, null);
   }
 
   private static ConcertBrut concert(String artiste, String date, String salle, String source) {
@@ -75,8 +75,6 @@ class PersisterConcertsIntegrationTest {
         salle,
         "Paris",
         "75",
-        39.9,
-        99.9,
         "https://example.com/" + artiste.toLowerCase().replace(" ", "-"),
         source,
         "music",
@@ -97,8 +95,6 @@ class PersisterConcertsIntegrationTest {
         salle,
         "Paris",
         "75",
-        39.9,
-        99.9,
         "https://example.com/" + artiste.toLowerCase().replace(" ", "-"),
         "ticketmaster",
         "music",
@@ -134,8 +130,6 @@ class PersisterConcertsIntegrationTest {
             "Olympia",
             "Paris",
             "75",
-            45.0,
-            110.0,
             "https://example.com/mika-v2",
             "eventim",
             "music",
@@ -165,8 +159,6 @@ class PersisterConcertsIntegrationTest {
                 "Paris",
                 "75",
                 null,
-                null,
-                null,
                 "ticketmaster",
                 "music",
                 "Pop",
@@ -182,8 +174,6 @@ class PersisterConcertsIntegrationTest {
                 "Zénith Paris",
                 "Paris",
                 "75",
-                null,
-                null,
                 null,
                 "eventim",
                 "music",
@@ -503,8 +493,6 @@ class PersisterConcertsIntegrationTest {
             "2026-09-01",
             null,
             "Salle",
-            null,
-            null,
             null,
             null,
             null,
