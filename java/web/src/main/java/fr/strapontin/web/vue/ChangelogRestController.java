@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/changelog")
 public class ChangelogRestController {
 
-  private static final String VERSION_COURANTE = "2.1.3";
+  private static final String VERSION_COURANTE = "2.4.0";
 
   private final NamedParameterJdbcTemplate jdbc;
 

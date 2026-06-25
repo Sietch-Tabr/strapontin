@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test;
 
 /// Tests unitaires pour les interfaces {@link SourceConcerts} et {@link SourceAvecFetchLot}.
 ///
-/// Vérifie les comportements par défaut et les implémentations de {@link TicketmasterSource}
-/// et {@link EventimSource}.
+/// Vérifie les comportements par défaut et les implémentations de {@link TicketmasterSource},
+/// {@link EventimSource} et {@link DigitickSource}.
 ///
 /// @since 2.3.1
 /// @author Kwaite
@@ -69,6 +69,24 @@ class SourceConcertsTest {
     EventimSource eventim = new EventimSource();
     assertTrue(eventim instanceof SourceConcerts);
     assertFalse(eventim instanceof SourceAvecFetchLot);
+  }
+
+  @Test
+  void digitickSource_nomEtPrefixe_corrects() {
+    DigitickSource digitick = new DigitickSource();
+
+    assertEquals("digitick", digitick.nom());
+    assertTrue(digitick.accepteIdentifiantSalle("digitick:lempreinte"));
+    assertFalse(digitick.accepteIdentifiantSalle("tm:rZFSnyZdFvA"));
+    assertFalse(digitick.accepteIdentifiantSalle("eventim:123"));
+    assertFalse(digitick.accepteIdentifiantSalle(null));
+  }
+
+  @Test
+  void digitickSource_implemente_sourceConcerts() {
+    DigitickSource digitick = new DigitickSource();
+    assertTrue(digitick instanceof SourceConcerts);
+    assertFalse(digitick instanceof SourceAvecFetchLot);
   }
 
   @Test

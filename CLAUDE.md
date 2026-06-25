@@ -144,6 +144,7 @@ Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SE
 | ------------------------- | ----------------------------------------------------------------------------- |
 | Ticketmaster Discovery v2 | Core                                                                          |
 | Eventim France            | Core                                                                          |
+| Digitick (`web.digitick.com`) | Core (v2.4.0, #610) — scraping HTML par salle, slug dans `salle_sources` |
 | Deezer Search API         | Autocomplete artiste (`/artistes`) — sans clé. Remplace MusicBrainz (bloqué). |
 | Bandsintown               | Abandonné — HTTP 401 depuis 2026-04-10 (#65)                                  |
 | MusicBrainz               | Bloqué — IP SFR blacklistée par Cloudflare (#293)                             |

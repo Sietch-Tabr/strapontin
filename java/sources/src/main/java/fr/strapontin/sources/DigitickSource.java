@@ -1,0 +1,217 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.sources;
+
+import fr.strapontin.core.ConcertBrut;
+import java.nio.charset.Charset;
+import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.client.RestClient;
+
+/// Client de scraping pour la billetterie Digitick (web.digitick.com).
+///
+/// <p>Scrape la page de billetterie d'une salle identifiée par son slug Digitick.
+/// L'identifiant préfixé attendu est {@code "digitick:{slug}"}, ex. {@code "digitick:lempreinte"}.
+///
+/// <p>Filtre appliqué : genre {@code "Concert"} et code postal présent (exclut les adhésions
+/// et packs multi-dates sans salle fixe).
+///
+/// @since 2.4.0
+/// @author Kwaite
+public class DigitickSource implements SourceConcerts {
+
+  private static final Logger log = LoggerFactory.getLogger(DigitickSource.class);
+
+  static final String PREFIXE = "digitick:";
+  private static final String URL_BILLETTERIE =
+      "https://web.digitick.com/ext/billetterie5/index.php?site={slug}&action=ajax&op=1";
+  private static final Charset CHARSET_DIGITICK = Charset.forName("ISO-8859-1");
+  private static final String GENRE_CONCERT = "Concert";
+  private static final String SEL_EVENEMENTS = "dl[class~=evenement\\d+]";
+  private static final String SEL_NOM = "a.evenementNom";
+  private static final String SEL_DATETIME = "time[datetime]";
+  private static final String SEL_HEURE = "span.evenementHeure";
+  private static final String SEL_GENRE = "div[itemprop=eventType]";
+  private static final String SEL_SALLE_NOM = "span.evenementSalleNom";
+  private static final String SEL_VILLE = "span.evenementSalleVille";
+  private static final String SEL_CODE_POSTAL = "span.evenementSalleCodePostal";
+  private static final String SEL_URL = "a.evenementReserver";
+
+  private final RestClient restClient;
+
+  /// Crée une instance avec User-Agent navigateur standard.
+  public DigitickSource() {
+    this(
+        RestClient.builder()
+            .defaultHeader(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    + " (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+            .defaultHeader("Accept", "text/html,application/xhtml+xml,*/*")
+            .defaultHeader("Accept-Language", "fr-FR,fr;q=0.9")
+            .build());
+  }
+
+  /// Crée une instance avec un RestClient personnalisé (injection de test).
+  ///
+  /// @param restClient client HTTP à utiliser
+  public DigitickSource(RestClient restClient) {
+    this.restClient = restClient;
+  }
+
+  @Override
+  public String nom() {
+    return "digitick";
+  }
+
+  @Override
+  public boolean accepteIdentifiantSalle(String identifiant) {
+    return identifiant != null && identifiant.startsWith(PREFIXE);
+  }
+
+  /// Récupère les concerts d'une salle Digitick par son identifiant préfixé.
+  ///
+  /// @param identifiant identifiant de la forme {@code "digitick:{slug}"}
+  /// @return liste des concerts trouvés, vide si la salle est inaccessible ou sans concert
+  @Override
+  public List<ConcertBrut> fetchSalle(String identifiant) {
+    String slug = identifiant.substring(PREFIXE.length());
+    if (slug.isBlank()) {
+      log.warn("Digitick fetchSalle — slug vide pour identifiant={}", identifiant);
+      return List.of();
+    }
+    try {
+      byte[] octets =
+          restClient.get().uri(URL_BILLETTERIE, slug).retrieve().body(byte[].class);
+      if (octets == null || octets.length == 0) {
+        log.warn("Digitick fetchSalle — réponse vide slug={}", slug);
+        return List.of();
+      }
+      String html = new String(octets, CHARSET_DIGITICK);
+      List<ConcertBrut> concerts = parserConcerts(html, slug);
+      log.info("Digitick fetchSalle slug={} total={}", slug, concerts.size());
+      return concerts;
+    } catch (Exception e) {
+      log.warn("Digitick fetchSalle erreur slug={} : {}", slug, e.getMessage());
+      return List.of();
+    }
+  }
+
+  /// Parse le HTML Digitick et extrait les concerts.
+  ///
+  /// @param html  HTML brut (ISO-8859-1 déjà décodé en String)
+  /// @param slug  slug de la salle, utilisé pour construire le {@code salleSourceId}
+  /// @return liste de concerts filtrés
+  static List<ConcertBrut> parserConcerts(String html, String slug) {
+    Document doc = Jsoup.parse(html);
+    Elements evenements = doc.select(SEL_EVENEMENTS);
+    List<ConcertBrut> concerts = new ArrayList<>();
+
+    for (Element ev : evenements) {
+      ConcertBrut concert = parserEvenement(ev, slug);
+      if (concert != null) concerts.add(concert);
+    }
+    return concerts;
+  }
+
+  private static ConcertBrut parserEvenement(Element ev, String slug) {
+    // Filtre genre : uniquement les concerts
+    Element genreEl = ev.selectFirst(SEL_GENRE);
+    if (genreEl == null || !GENRE_CONCERT.equalsIgnoreCase(genreEl.ownText().trim())) return null;
+
+    // Filtre CP : exclut packs multi-dates sans salle fixe
+    Element cpEl = ev.selectFirst(SEL_CODE_POSTAL);
+    if (cpEl == null || cpEl.text().isBlank()) return null;
+
+    // Date et heure depuis l'attribut datetime ISO 8601
+    Element timeEl = ev.selectFirst(SEL_DATETIME);
+    if (timeEl == null) return null;
+    String[] datHeure = parserDatetime(timeEl.attr("datetime"));
+    if (datHeure == null) return null;
+
+    // Nom de l'artiste : premier lien .evenementNom, entités HTML déjà décodées par Jsoup
+    Element nomEl = ev.selectFirst(SEL_NOM);
+    if (nomEl == null || nomEl.text().isBlank()) return null;
+    String artiste = normaliserCasse(nomEl.text().trim());
+
+    // Salle
+    Element salleNomEl = ev.selectFirst(SEL_SALLE_NOM);
+    String salle = salleNomEl != null ? salleNomEl.text().trim() : "Salle inconnue";
+
+    // Ville : le premier span.evenementSalleVille commence par "- Ville", le second est la ville
+    Elements villeEls = ev.select(SEL_VILLE);
+    String ville = villeEls.size() >= 2 ? villeEls.get(1).text().trim() : null;
+
+    // Département depuis code postal
+    String cp = cpEl.text().trim();
+    String dept = EventimSource.extraireDept(cp);
+
+    // URL d'achat
+    Element urlEl = ev.selectFirst(SEL_URL);
+    String url = urlEl != null ? urlEl.attr("href") : null;
+
+    return new ConcertBrut(
+        artiste,
+        datHeure[0],
+        datHeure[1],
+        salle,
+        ville,
+        dept,
+        url,
+        "digitick",
+        null,
+        GENRE_CONCERT,
+        null,
+        null,
+        null,
+        PREFIXE + slug,
+        null);
+  }
+
+  /// Convertit un nom Digitick en ALL CAPS vers une casse lisible.
+  ///
+  /// <p>Capitalise la première lettre de chaque mot ; un mot commence après tout caractère
+  /// non-alphabétique (espace, tiret, {@code +}, {@code :}, etc.).
+  ///
+  /// @param nom nom brut en ALL CAPS (ex. {@code "RONNIE ROMERO + GUS G"})
+  /// @return nom en casse normale (ex. {@code "Ronnie Romero + Gus G"})
+  static String normaliserCasse(String nom) {
+    if (nom == null || nom.isBlank()) return nom;
+    String lower = nom.toLowerCase(Locale.FRENCH);
+    StringBuilder sb = new StringBuilder(lower.length());
+    boolean capitaliser = true;
+    for (char c : lower.toCharArray()) {
+      if (Character.isLetter(c)) {
+        sb.append(capitaliser ? Character.toUpperCase(c) : c);
+        capitaliser = false;
+      } else {
+        sb.append(c);
+        capitaliser = true;
+      }
+    }
+    return sb.toString();
+  }
+
+  /// Parse un datetime ISO 8601 Digitick et retourne {@code [date, heure]}.
+  ///
+  /// <p>L'heure {@code "00:00"} est considérée absente (Digitick utilise minuit par défaut).
+  ///
+  /// @param datetime valeur de l'attribut {@code datetime}, ex. {@code "2026-10-07T20:00:00"}
+  /// @return tableau {@code [date, heure]} ou {@code null} si le format est invalide
+  static String[] parserDatetime(String datetime) {
+    if (datetime == null || datetime.length() < 10) return null;
+    String date = datetime.substring(0, 10);
+    if (datetime.length() < 16) return new String[] {date, null};
+    String heure = datetime.substring(11, 16);
+    return new String[] {date, "00:00".equals(heure) ? null : heure};
+  }
+}
