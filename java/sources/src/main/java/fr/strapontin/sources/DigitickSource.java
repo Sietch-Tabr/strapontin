@@ -6,9 +6,9 @@ package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
 import java.nio.charset.Charset;
-import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -90,8 +90,7 @@ public class DigitickSource implements SourceConcerts {
       return List.of();
     }
     try {
-      byte[] octets =
-          restClient.get().uri(URL_BILLETTERIE, slug).retrieve().body(byte[].class);
+      byte[] octets = restClient.get().uri(URL_BILLETTERIE, slug).retrieve().body(byte[].class);
       if (octets == null || octets.length == 0) {
         log.warn("Digitick fetchSalle — réponse vide slug={}", slug);
         return List.of();

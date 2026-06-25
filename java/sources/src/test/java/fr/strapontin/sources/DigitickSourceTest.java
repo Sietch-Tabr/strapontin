@@ -154,7 +154,8 @@ class DigitickSourceTest {
 
   @Test
   void parserConcerts_htmlVide_retourneListeVide() {
-    List<ConcertBrut> concerts = DigitickSource.parserConcerts("<html><body></body></html>", "slug");
+    List<ConcertBrut> concerts =
+        DigitickSource.parserConcerts("<html><body></body></html>", "slug");
     assertTrue(concerts.isEmpty());
   }
 

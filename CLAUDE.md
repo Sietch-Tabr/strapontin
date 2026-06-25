@@ -46,7 +46,7 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 
 ## Stack technique (v2.2.0)
 
-- **Spring Boot 4.0.6** + **Vue 3 + Vite** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
+- **Spring Boot 4.1.0** + **Vue 3 + Vite** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
 - **Spring Security 7** — auth session, TOTP 2FA optionnel (bucket4j rate-limiting) ; `anyRequest().authenticated()` — non-API sans session → redirect `/login`, API → 401 JSON
 - **Spring Data JDBC** + PostgreSQL 18 — données persistantes
 - **Quartz** — jobs background (fetch concerts)
@@ -140,14 +140,14 @@ Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SE
 
 ## Sources de données
 
-| Source                    | Statut                                                                        |
-| ------------------------- | ----------------------------------------------------------------------------- |
-| Ticketmaster Discovery v2 | Core                                                                          |
-| Eventim France            | Core                                                                          |
-| Digitick (`web.digitick.com`) | Core (v2.4.0, #610) — scraping HTML par salle, slug dans `salle_sources` |
-| Deezer Search API         | Autocomplete artiste (`/artistes`) — sans clé. Remplace MusicBrainz (bloqué). |
-| Bandsintown               | Abandonné — HTTP 401 depuis 2026-04-10 (#65)                                  |
-| MusicBrainz               | Bloqué — IP SFR blacklistée par Cloudflare (#293)                             |
+| Source                        | Statut                                                                        |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| Ticketmaster Discovery v2     | Core                                                                          |
+| Eventim France                | Core                                                                          |
+| Digitick (`web.digitick.com`) | Core (v2.4.0, #610) — scraping HTML par salle, slug dans `salle_sources`      |
+| Deezer Search API             | Autocomplete artiste (`/artistes`) — sans clé. Remplace MusicBrainz (bloqué). |
+| Bandsintown                   | Abandonné — HTTP 401 depuis 2026-04-10 (#65)                                  |
+| MusicBrainz                   | Bloqué — IP SFR blacklistée par Cloudflare (#293)                             |
 
 ## Jobs background (Quartz)
 
