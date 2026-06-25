@@ -20,18 +20,20 @@ test.describe("Scénario: service worker — présence et accessibilité", () =>
     expect(cacheControl).toContain("no-cache");
   });
 
-  test("css_base_servi_avec_no_cache", async ({ request }) => {
-    const rep = await request.get("/css/base.css");
+  test("images_servies_avec_cache_7_jours", async ({ request }) => {
+    const rep = await request.get("/images/favicon.png");
     expect(rep.status()).toBe(200);
     const cacheControl = rep.headers()["cache-control"] ?? "";
-    expect(cacheControl).toContain("no-cache");
+    expect(cacheControl).toContain("max-age=604800");
+    expect(cacheControl).toContain("public");
   });
 
-  test("css_layout_servi_avec_no_cache", async ({ request }) => {
-    const rep = await request.get("/css/layout.css");
+  test("icones_servies_avec_cache_7_jours", async ({ request }) => {
+    const rep = await request.get("/icons/lucide-sprite.svg");
     expect(rep.status()).toBe(200);
     const cacheControl = rep.headers()["cache-control"] ?? "";
-    expect(cacheControl).toContain("no-cache");
+    expect(cacheControl).toContain("max-age=604800");
+    expect(cacheControl).toContain("public");
   });
 
   test("sw_enregistre_et_actif_apres_chargement", async ({
