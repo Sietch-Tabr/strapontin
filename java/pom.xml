@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.6</version>
+        <version>4.1.0</version>
         <relativePath/>
     </parent>
 
@@ -26,7 +26,7 @@
     <properties>
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Override BOM : Spring Boot 4.0.6 tire Flyway 11.x ; on requiert 12.x -->
+        <!-- Override BOM : Spring Boot 4.1.0 tire Flyway 12.4.0 ; on requiert 12.9.0+ -->
         <flyway.version>12.9.0</flyway.version>
         <caffeine.version>3.2.4</caffeine.version>
         <postgresql.version>42.7.11</postgresql.version>
