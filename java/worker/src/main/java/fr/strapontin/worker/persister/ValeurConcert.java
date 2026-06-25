@@ -4,7 +4,6 @@
  */
 package fr.strapontin.worker.persister;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
@@ -32,8 +31,6 @@ public record ValeurConcert(
     String salleNorm,
     String ville,
     String dept,
-    BigDecimal prixMin,
-    BigDecimal prixMax,
     String url,
     String source,
     String classification,

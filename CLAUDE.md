@@ -152,18 +152,16 @@ Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SE
 
 Paradigme : **pré-fetch en arrière-plan, jamais d'appel API depuis le browser**.
 
-| Job                     | Déclenchement           | Description                                                                       |
-| ----------------------- | ----------------------- | --------------------------------------------------------------------------------- |
-| `FetchArtisteJob`       | Ajout artiste + cron 2h | Fetch TM + Eventim par nom artiste                                                |
-| `FetchArtistesBatchJob` | Cron 2h                 | Fetch TM en lots de 20 attractionIds                                              |
-| `FetchRegionJob`        | Cron 2h + manuel        | Fetch TM + Eventim par département                                                |
-| `FetchSalleJob`         | Ajout salle + cron 2h   | Fetch par identifiants préfixés (`CLE_IDENTIFIANTS`, ex. `"tm:venueId"`)          |
-| `RecalculerMatchesJob`  | Après fetch             | Recalcule `user_matches` pour tous les users                                      |
-| `PurgerConcertsJob`     | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours                                         |
-| `PurgerSallesJob`       | Cron quotidien (0h05)   | Supprime salles orphelines (sans concerts futurs, sans users, sans slug Digitick) |
-| `PurgerArtistesJob`     | Cron quotidien (0h06)   | Supprime artistes orphelins (sans concerts futurs ni users)                       |
-| `PurgerLogsAdminJob`    | Cron quotidien (0h15)   | Supprime les `logs_admin` > 30 jours et `fetch_jobs_historique` > 7 jours         |
-| `RevoquerAdminsJob`     | Cron horaire (H:00)     | Applique les révocations admin dont la date est dépassée                          |
+| Job                     | Déclenchement           | Description                                                               |
+| ----------------------- | ----------------------- | ------------------------------------------------------------------------- |
+| `FetchArtisteJob`       | Ajout artiste + cron 2h | Fetch TM + Eventim par nom artiste                                        |
+| `FetchArtistesBatchJob` | Cron 2h                 | Fetch TM en lots de 20 attractionIds                                      |
+| `FetchRegionJob`        | Cron 2h + manuel        | Fetch TM + Eventim par département                                        |
+| `FetchSalleJob`         | Ajout salle + cron 2h   | Fetch par identifiants préfixés (`CLE_IDENTIFIANTS`, ex. `"tm:venueId"`)  |
+| `RecalculerMatchesJob`  | Après fetch             | Recalcule `user_matches` pour tous les users                              |
+| `PurgerConcertsJob`     | Cron quotidien (minuit) | Supprime concerts passés depuis > 7 jours                                 |
+| `PurgerLogsAdminJob`    | Cron quotidien (0h15)   | Supprime les `logs_admin` > 30 jours et `fetch_jobs_historique` > 7 jours |
+| `RevoquerAdminsJob`     | Cron horaire (H:00)     | Applique les révocations admin dont la date est dépassée                  |
 
 Rate limiting TM : max 2 jobs simultanés (3 → HTTP 429). Quota TM persisté dans `app_config` (`TM_QUOTA_JSON`).
 `FetchArtistesBatchJob`, `FetchRegionJob`, `RecalculerMatchesJob` annotés `@DisallowConcurrentExecution`. `WatchdogWorkerService` (`@Scheduled`, côté web) : alerte email si worker inactif > 3 h.
@@ -180,22 +178,20 @@ Détails : [wiki Authentification](https://codeberg.org/Kwaite/strapontin/wiki/A
 
 Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein normalisé ≥ 0.85.
 Résolution UUID-first (v2.3.0, ticket #621) : `PersisterConcerts.resoudreIdentitesSources` consulte `salle_sources`/`artiste_sources` avant la réconciliation floue. Absorbe les renommages de salle. Pour les salles TM absentes de `salle_sources`, upsert automatique dans `salles` + `salle_sources` (ticket #633). Les passes de réconciliation propagent `salleUuid`/`artisteId` (ticket #632).
-`estDoublonSalle` : Levenshtein ≥ 0.75 **ou** containment **ou** Jaccard tokens > 0.5 (insensible à l'ordre — couvre les réordonnancements inter-sources, #669). Tokens < 3 chars filtrés. `upsertSalleSource` cherche un doublon Jaccard avant de créer une salle (#659).
 → Détails : [wiki Architecture](https://codeberg.org/Kwaite/strapontin/wiki/Architecture)
 
 ## UI / Design system (v2.2.0 — Vue SPA)
 
 - **Vue 3 + Vite** — SPA intégralement côté client. `front/src/pages/` (pages), `front/src/components/` (composants), `front/src/composables/` (logique réutilisable)
 - **CSS vanilla** — variables CSS pour thème clair/sombre, dans `static/css/`
-- **PWA** : service worker JS vanilla + push. Cap 10 abonnements/user. Mise à jour automatique : `controllerchange` → `window.location.reload()` dans `App.vue`. `/icons/` en network-first, `/images/` en stale-while-revalidate. `/assets/**` : `Cache-Control: immutable` (WebMvcConfig) pour éviter qu'iOS serve un ancien bundle depuis le cache HTTP. `CACHE_NOM` dans `sw.js` est généré automatiquement par `front/scripts/versionner-sw.mjs` après chaque build Vite (empreinte assets précachés + `index.html`) — aucun bump manuel.
-- **Police** : police système (`system-ui, -apple-system, sans-serif`) — aucune police web embarquée.
+- **PWA** : service worker JS vanilla + push. Cap 10 abonnements/user. Mise à jour automatique : `controllerchange` → `window.location.reload()` dans `App.vue`. `/icons/` en network-first, `/images/` en stale-while-revalidate. Bumper `CACHE_NOM` dans `sw.js` pour forcer une nouvelle installation.
 - **Badge "Nouveau"** : basé sur `user_matches.vu_le IS NULL` — remis à `NULL` à la visite de `/`. Affiché sur la sidebar desktop et la bottom nav mobile. `notification_envoyee_le` est une colonne distincte pour le suivi des envois email/push.
 - **Thème** : cookie `theme` (1 an) + `user_config.theme` → pas de FOUC
 - **Navigation** : Vue Router (`front/src/router/`) — sidebar desktop, bottom nav + drawer mobile. `useEstMobile()` (`front/src/composables/useBreakpoint.js`, seuil 1024 px) contrôle le rendu conditionnel via `v-if` — pas de duplication DOM ni de `display: none`.
 - **Pages à onglets** (`admin`, `parametres`) : orchestrateur léger + sous-composants autonomes (`KeepAlive` + `v-if`). Chaque sous-composant fetch ses données dans `onMounted`. `<select v-model>` sur mobile (`v-if="estMobile"`), `<nav v-else>` sur desktop — rendu conditionnel via `useEstMobile()`. Onglet actif géré par Vue (`:class="{ actif }"`) — pas de sélecteurs CSS `:has()`.
   - Admin : `front/src/components/admin/` (AdminJobs, AdminSources, AdminLogs, AdminConfig, AdminBanniere, AdminUtilisateurs)
   - Paramètres : `front/src/components/parametres/` (ParametresPreferences, ParametresNotifications, ParametresCompte, ParametresDonnees)
-- **Toasts** : Popover API, `afficherToast(message, type)` retourne un `id` pour fermeture ciblée. `App.vue` gère offline/online : toast persistant à la perte de connexion, fermé à la reconnexion + `chargerSession()` au retour online (session et `estAdmin` rafraîchis).
+- **Toasts** : Popover API, `afficherToast(message, type)` retourne un `id` pour fermeture ciblée. `App.vue` gère offline/online : toast persistant à la perte de connexion, fermé à la reconnexion.
 
 ## Schéma PostgreSQL
 
@@ -203,7 +199,6 @@ Migrations Flyway dans `java/web/src/main/resources/db/migration/` — ne jamais
 `users.id` : type `text` (UUID généré par Java).
 **v2.3.0 (V23)** : `salles.salle_uuid uuid`, tables `artistes`, `salle_sources`, `artiste_sources`, colonnes `salle_uuid`/`artiste_id` sur `concerts`, `user_salles`, `user_artistes`. Migration additive.
 **v2.3.0 (V24)** : nettoyage post-backfill #628 — `salles.salle_uuid` → `salles.id` (PK uuid), ancienne PK text → `salles.salle_cle` (UNIQUE) ; PK `user_salles` = `(user_id, salle_uuid)` ; PK `user_artistes` = `(user_id, artiste_id)` ; suppression `salle_id`/`tm_venue_id`/`artiste_normalise`/`attraction_id`/`concerts.salle_cle`.
-**v2.3.1 (V25)** : #640 — contrainte UNIQUE concerts : `(artiste_norm, date, salle_norm)` → `UNIQUE NULLS NOT DISTINCT (artiste_norm, date, heure, salle_norm)`. Deux séances distinctes (matinée/soirée) coexistent ; deux concerts sans heure fusionnent.
 Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de-base-de-données)
 
 ## Conventions Java

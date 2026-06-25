@@ -543,8 +543,6 @@ public class WorkerService {
                   c.salle(),
                   c.ville(),
                   c.dept(),
-                  c.prixMin(),
-                  c.prixMax(),
                   c.url(),
                   c.source(),
                   c.classification(),

@@ -363,18 +363,6 @@ public class TicketmasterSource implements SourceAvecFetchLot {
   }
 
   @SuppressWarnings("unchecked")
-  private static Double[] extrairePrixTM(Map<String, Object> evt) {
-    var priceRanges = (List<Map<String, Object>>) evt.get("priceRanges");
-    if (priceRanges == null || priceRanges.isEmpty()) return new Double[] {null, null};
-    Object min = priceRanges.get(0).get("min");
-    Object max = priceRanges.get(0).get("max");
-    return new Double[] {
-      min != null ? ((Number) min).doubleValue() : null,
-      max != null ? ((Number) max).doubleValue() : null
-    };
-  }
-
-  @SuppressWarnings("unchecked")
   private static String[] extraireClassificationTM(List<Map<String, Object>> classificationsData) {
     if (classificationsData == null || classificationsData.isEmpty()) {
       return new String[] {null, null};
@@ -416,7 +404,6 @@ public class TicketmasterSource implements SourceAvecFetchLot {
     String salleSourceId = venueIdObj != null ? "ticketmaster:" + venueIdObj : null;
     String artisteSourceId = extraireAttractionIdTM(embedded);
 
-    Double[] prix = extrairePrixTM(evt);
     String url = (String) evt.get("url");
     Map<String, String> statusMap = (Map<String, String>) dates.get("status");
     String statut = statusMap != null ? statusMap.get("code") : null;
@@ -451,8 +438,6 @@ public class TicketmasterSource implements SourceAvecFetchLot {
         salle,
         ville,
         dept,
-        prix[0],
-        prix[1],
         url,
         "ticketmaster",
         normaliserClassification(segmentGenre[0]),

@@ -206,17 +206,18 @@ test.describe("Scénario: indicateur de chargement (#644)", () => {
       page,
     }) => {
       await page.route(`**${api}**`, async (route) => {
-        await new Promise<void>((r) => setTimeout(r, 400));
+        await new Promise<void>((r) => setTimeout(r, 1500));
         await route.continue();
       });
 
       const gotoPromise = page.goto(url);
+      await page.waitForLoadState("domcontentloaded");
       await expect(page.locator(".etat-chargement")).toBeVisible({
-        timeout: 2000,
+        timeout: 3000,
       });
       await gotoPromise;
       await expect(page.locator(".etat-chargement")).not.toBeVisible({
-        timeout: 3000,
+        timeout: 4000,
       });
     });
   }
@@ -228,18 +229,19 @@ test.describe("Scénario: indicateur de chargement admin (#644)", () => {
   test("admin_jobs_etat_chargement_visible_pendant_fetch_puis_absent", async ({
     page,
   }) => {
-    await page.route("**/api/admin/jobs**", async (route) => {
-      await new Promise<void>((r) => setTimeout(r, 400));
+    await page.route("**/api/admin/**", async (route) => {
+      await new Promise<void>((r) => setTimeout(r, 1500));
       await route.continue();
     });
 
     const gotoPromise = page.goto("/admin");
+    await page.waitForLoadState("domcontentloaded");
     await expect(page.locator(".etat-chargement").first()).toBeVisible({
-      timeout: 2000,
+      timeout: 3000,
     });
     await gotoPromise;
     await expect(page.locator(".etat-chargement").first()).not.toBeVisible({
-      timeout: 3000,
+      timeout: 5000,
     });
   });
 });
