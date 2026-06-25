@@ -438,10 +438,9 @@ test.describe("Scénario: admin — onglet Sources", () => {
     });
     try {
       const uuid = "00000000-0000-0000-0000-000000000001";
-      const rep = await ctx.post(
-        `/api/admin/salles/${uuid}/tester-digitick`,
-        { data: { slug: "lempreinte" } },
-      );
+      const rep = await ctx.post(`/api/admin/salles/${uuid}/tester-digitick`, {
+        data: { slug: "lempreinte" },
+      });
       expect(rep.status()).toBe(200);
       const corps = await rep.json();
       expect(corps.accessible).toBe(true);
@@ -457,10 +456,9 @@ test.describe("Scénario: admin — onglet Sources", () => {
     });
     try {
       const uuid = "00000000-0000-0000-0000-000000000001";
-      const rep = await ctx.post(
-        `/api/admin/salles/${uuid}/tester-digitick`,
-        { data: { slug: "slug-inexistant-xyz-strapontin" } },
-      );
+      const rep = await ctx.post(`/api/admin/salles/${uuid}/tester-digitick`, {
+        data: { slug: "slug-inexistant-xyz-strapontin" },
+      });
       expect(rep.status()).toBe(404);
       const corps = await rep.json();
       expect(corps.accessible).toBe(false);
@@ -475,10 +473,9 @@ test.describe("Scénario: admin — onglet Sources", () => {
       storageState: FICHIER_AUTH_ADMIN,
     });
     try {
-      const rep = await ctx.put(
-        "/api/admin/salles/pas-un-uuid/digitick-slug",
-        { data: { slug: "lempreinte" } },
-      );
+      const rep = await ctx.put("/api/admin/salles/pas-un-uuid/digitick-slug", {
+        data: { slug: "lempreinte" },
+      });
       expect(rep.status()).toBe(400);
     } finally {
       await ctx.dispose();
