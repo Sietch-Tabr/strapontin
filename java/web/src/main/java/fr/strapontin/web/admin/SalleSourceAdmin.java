@@ -12,8 +12,8 @@ import java.util.UUID;
 /// @param nom          nom affiché
 /// @param digitickSlug slug Digitick (null si non configuré)
 /// @param ville        ville (null si non renseignée)
-/// @param cp           code postal (null si non renseigné)
+/// @param dept         numéro de département (null si non renseigné)
 /// @since 2.3.0
 /// @author Kwaite
 public record SalleSourceAdmin(
-    UUID salleUuid, String nom, String digitickSlug, String ville, String cp) {}
+    UUID salleUuid, String nom, String digitickSlug, String ville, String dept) {}

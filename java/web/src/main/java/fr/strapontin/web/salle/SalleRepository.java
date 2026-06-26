@@ -78,6 +78,7 @@ class SalleRepository {
             SELECT DISTINCT salle, ville, null::text AS digitick_slug
             FROM concerts
             WHERE regexp_replace(salle_norm, '[^a-z0-9]', '', 'g') LIKE :pattern
+              AND salle_uuid IS NULL
             UNION
             SELECT DISTINCT s.nom AS salle, s.ville AS ville, ss.identifiant_externe AS digitick_slug
             FROM salles s
@@ -147,23 +148,23 @@ class SalleRepository {
   /// @param salleCle clé naturelle normalisée
   /// @param nom      nom affiché
   /// @param ville    ville (null si inconnue)
-  /// @param cp       code postal (null si inconnu)
+  /// @param dept     numéro de département (null si inconnu)
   /// @return UUID stable de la salle
-  UUID upsertSalleAvecLoc(String salleCle, String nom, String ville, String cp) {
+  UUID upsertSalleAvecLoc(String salleCle, String nom, String ville, String dept) {
     Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
     params.put("nom", nom);
     params.put("nomNorm", salleCle);
     params.put("ville", ville);
-    params.put("cp", cp);
+    params.put("dept", dept);
     return jdbc.queryForObject(
         """
-        INSERT INTO salles (salle_cle, nom, nom_norm, ville, cp)
-        VALUES (:salleCle, :nom, :nomNorm, :ville, :cp)
+        INSERT INTO salles (salle_cle, nom, nom_norm, ville, dept)
+        VALUES (:salleCle, :nom, :nomNorm, :ville, :dept)
         ON CONFLICT (salle_cle) DO UPDATE
             SET nom   = EXCLUDED.nom,
                 ville = COALESCE(EXCLUDED.ville, salles.ville),
-                cp    = COALESCE(EXCLUDED.cp, salles.cp)
+                dept  = COALESCE(EXCLUDED.dept, salles.dept)
         RETURNING id
         """,
         params,
@@ -175,21 +176,21 @@ class SalleRepository {
   /// @param salleUuid UUID de la salle
   /// @param nom       nouveau nom (null = inchangé)
   /// @param ville     nouvelle ville (null = inchangée)
-  /// @param cp        nouveau code postal (null = inchangé)
-  void mettreAJourSalle(UUID salleUuid, String nom, String ville, String cp) {
+  /// @param dept      nouveau numéro de département (null = inchangé)
+  void mettreAJourSalle(UUID salleUuid, String nom, String ville, String dept) {
     jdbc.update(
         """
         UPDATE salles
         SET nom   = COALESCE(:nom, nom),
             ville = COALESCE(:ville, ville),
-            cp    = COALESCE(:cp, cp)
+            dept  = COALESCE(:dept, dept)
         WHERE id = CAST(:uuid AS uuid)
         """,
         Map.of(
             "uuid", salleUuid.toString(),
             "nom", (Object) nom,
             "ville", (Object) ville,
-            "cp", (Object) cp));
+            "dept", (Object) dept));
   }
 
   /// Retourne les identifiants préfixés de toutes les sources d'une salle, séparés par une virgule.

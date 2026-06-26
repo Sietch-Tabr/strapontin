@@ -126,7 +126,7 @@
               <tr v-for="salle in sallesFiltrees" :key="salle.salleUuid">
                 <td class="source-salle-nom">{{ salle.nom }}</td>
                 <td v-if="vueDigitick" class="source-salle-loc">
-                  <span v-if="salle.ville || salle.cp">{{ [salle.ville, salle.cp].filter(Boolean).join(' ') }}</span>
+                  <span v-if="salle.ville || salle.dept">{{ [salle.ville, salle.dept].filter(Boolean).join(' ') }}</span>
                   <span v-else class="etat-vide-texte">—</span>
                 </td>
                 <td>
@@ -233,7 +233,7 @@
       </div>
       <div class="champ">
         <label for="ajout-cp" class="champ-label">Département</label>
-        <input id="ajout-cp" v-model="ajout.cp" type="text" maxlength="3" autocomplete="off" placeholder="77" />
+        <input id="ajout-cp" v-model="ajout.dept" type="text" maxlength="3" autocomplete="off" placeholder="77" />
       </div>
       <div class="dialog-pied">
         <button type="submit" class="btn btn-secondary" :disabled="enCours.ajout">Ajouter</button>
@@ -258,7 +258,7 @@
       </div>
       <div class="champ">
         <label for="edit-cp" class="champ-label">Département</label>
-        <input id="edit-cp" v-model="edition.cp" type="text" maxlength="3" autocomplete="off" placeholder="77" />
+        <input id="edit-cp" v-model="edition.dept" type="text" maxlength="3" autocomplete="off" placeholder="77" />
       </div>
       <div class="dialog-pied">
         <button type="submit" class="btn btn-secondary" :disabled="enCours.edition">Enregistrer</button>
@@ -300,9 +300,9 @@ const slugsEdites     = reactive({})
 const statutTester    = reactive({})
 const enCours         = reactive({})
 
-const ajout           = reactive({ nom: '', slug: '', ville: '', cp: '' })
+const ajout           = reactive({ nom: '', slug: '', ville: '', dept: '' })
 const ajoutSlugStatut = ref(null)
-const edition         = reactive({ salleUuid: null, nom: '', ville: '', cp: '' })
+const edition         = reactive({ salleUuid: null, nom: '', ville: '', dept: '' })
 const salleASupprimer = ref(null)
 
 const dialogAjoutRef  = ref(null)
@@ -463,7 +463,7 @@ function ouvrirAjout() {
   ajout.nom = ''
   ajout.slug = ''
   ajout.ville = ''
-  ajout.cp = ''
+  ajout.dept = ''
   ajoutSlugStatut.value = null
   dialogAjoutRef.value?.showModal()
 }
@@ -500,7 +500,7 @@ async function creerSalleDigitick() {
     const rep = await fetch('/api/admin/digitick-salles', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nom: ajout.nom, slug: ajout.slug, ville: ajout.ville || null, cp: ajout.cp || null }),
+      body: JSON.stringify({ nom: ajout.nom, slug: ajout.slug, ville: ajout.ville || null, dept: ajout.dept || null }),
       signal: controleur.signal,
     })
     if (rep.ok) {
@@ -522,7 +522,7 @@ function ouvrirEdition(salle) {
   edition.salleUuid = salle.salleUuid
   edition.nom = salle.nom ?? ''
   edition.ville = salle.ville ?? ''
-  edition.cp = salle.cp ?? ''
+  edition.dept = salle.dept ?? ''
   dialogEditionRef.value?.showModal()
 }
 
@@ -537,7 +537,7 @@ async function sauvegarderEdition() {
         nom: edition.nom || null,
         slug: null,
         ville: edition.ville || null,
-        cp: edition.cp || null,
+        dept: edition.dept || null,
       }),
       signal: controleur.signal,
     })

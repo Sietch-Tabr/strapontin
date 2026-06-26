@@ -179,25 +179,25 @@ public class SalleService {
   /// @param nom   nom affiché de la salle
   /// @param slug  slug Digitick
   /// @param ville ville (peut être {@code null})
-  /// @param cp    code postal (peut être {@code null})
+  /// @param dept  numéro de département (peut être {@code null})
   /// @return UUID stable de la salle créée ou retrouvée
   @Transactional
-  public UUID creerSalleDigitick(String nom, String slug, String ville, String cp) {
+  public UUID creerSalleDigitick(String nom, String slug, String ville, String dept) {
     String salleCle = normaliserSalleCle(nom);
-    UUID salleUuid = salleRepository.upsertSalleAvecLoc(salleCle, nom, ville, cp);
+    UUID salleUuid = salleRepository.upsertSalleAvecLoc(salleCle, nom, ville, dept);
     salleRepository.enregistrerSalleSource(salleUuid, "digitick", slug);
     declencherWorkerParSources(salleUuid);
     return salleUuid;
   }
 
-  /// Met à jour les métadonnées d'une salle (nom, ville, CP).
+  /// Met à jour les métadonnées d'une salle (nom, ville, département).
   ///
   /// @param salleUuid UUID de la salle
   /// @param nom       nouveau nom (null = inchangé)
   /// @param ville     nouvelle ville (null = inchangée)
-  /// @param cp        nouveau code postal (null = inchangé)
-  public void mettreAJourSalle(UUID salleUuid, String nom, String ville, String cp) {
-    salleRepository.mettreAJourSalle(salleUuid, nom, ville, cp);
+  /// @param dept      nouveau numéro de département (null = inchangé)
+  public void mettreAJourSalle(UUID salleUuid, String nom, String ville, String dept) {
+    salleRepository.mettreAJourSalle(salleUuid, nom, ville, dept);
   }
 
   /// Retourne les identifiants sources CSV d'une salle (ex. {@code

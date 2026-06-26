@@ -1,0 +1,1 @@
+ALTER TABLE salles RENAME COLUMN cp TO dept;

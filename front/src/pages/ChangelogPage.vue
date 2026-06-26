@@ -28,6 +28,14 @@
               <li>L'onglet Sources permet désormais de créer, modifier et supprimer des salles Digitick directement (nom, slug, ville, département) — sans passer par un import manuel. Le bouton « Tester » vérifie que le slug retourne bien des concerts avant la création.</li>
             </ul>
           </div>
+          <div>
+            <p class="changelog-categorie">Compatibilité</p>
+            <ul>
+              <li>Lors d'une recherche de salle, une même salle pouvait apparaître en double si elle était liée à plusieurs sources (Digitick et Eventim) — corrigé.</li>
+              <li>Sur iPhone, une mise à jour de l'application affichait un écran entièrement blanc pendant la transition. Un écran de chargement (icône + "Mise à jour en cours…") s'affiche désormais pendant cette courte transition.</li>
+              <li>Le nom de certaines salles Eventim s'affichait en majuscules (ex. "LEMPREINTE SAVIGNY LE TEMPLE CEDEX"). Les noms sont désormais normalisés en casse lisible.</li>
+            </ul>
+          </div>
         </div>
       </section>
 

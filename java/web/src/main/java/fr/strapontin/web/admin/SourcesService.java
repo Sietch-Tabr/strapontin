@@ -228,7 +228,7 @@ public class SourcesService {
   private List<SalleSourceAdmin> listerSallesAvecDigitick() {
     return jdbc.query(
         """
-        SELECT s.id, s.nom, s.ville, s.cp, ss.identifiant_externe AS digitick_slug
+        SELECT s.id, s.nom, s.ville, s.dept, ss.identifiant_externe AS digitick_slug
         FROM salles s
         JOIN salle_sources ss ON ss.salle_id = s.id AND ss.source = 'digitick'
         ORDER BY lower(s.nom)
@@ -240,7 +240,7 @@ public class SourcesService {
                 rs.getString("nom"),
                 rs.getString("digitick_slug"),
                 rs.getString("ville"),
-                rs.getString("cp")));
+                rs.getString("dept")));
   }
 
   private List<SalleSourceAdmin> listerSallesAvecSources() {
@@ -249,11 +249,11 @@ public class SourcesService {
         SELECT s.id,
                s.nom,
                s.ville,
-               s.cp,
+               s.dept,
                MAX(CASE WHEN ss.source = 'digitick' THEN ss.identifiant_externe END) AS digitick_slug
         FROM salles s
         LEFT JOIN salle_sources ss ON ss.salle_id = s.id
-        GROUP BY s.id, s.nom, s.ville, s.cp
+        GROUP BY s.id, s.nom, s.ville, s.dept
         HAVING MAX(CASE WHEN ss.source = 'ticketmaster' THEN ss.identifiant_externe END) IS NULL
            AND MAX(CASE WHEN ss.source = 'eventim'      THEN ss.identifiant_externe END) IS NULL
         ORDER BY lower(s.nom)
@@ -265,6 +265,6 @@ public class SourcesService {
                 rs.getString("nom"),
                 rs.getString("digitick_slug"),
                 rs.getString("ville"),
-                rs.getString("cp")));
+                rs.getString("dept")));
   }
 }
