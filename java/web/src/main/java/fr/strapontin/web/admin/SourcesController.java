@@ -107,7 +107,8 @@ public class SourcesController {
     if (slug.isEmpty() || slug.length() > 100) return erreur(400, "Slug Digitick invalide.");
     String ville =
         requete.ville() == null || requete.ville().isBlank() ? null : requete.ville().strip();
-    String dept = requete.dept() == null || requete.dept().isBlank() ? null : requete.dept().strip();
+    String dept =
+        requete.dept() == null || requete.dept().isBlank() ? null : requete.dept().strip();
     UUID salleUuid = sourcesService.creerSalleDigitick(nom, slug, ville, dept);
     return ResponseEntity.status(201).body(Map.of("salleUuid", salleUuid.toString()));
   }
@@ -125,7 +126,8 @@ public class SourcesController {
     String nom = requete.nom() == null || requete.nom().isBlank() ? null : requete.nom().strip();
     String ville =
         requete.ville() == null || requete.ville().isBlank() ? null : requete.ville().strip();
-    String dept = requete.dept() == null || requete.dept().isBlank() ? null : requete.dept().strip();
+    String dept =
+        requete.dept() == null || requete.dept().isBlank() ? null : requete.dept().strip();
     sourcesService.modifierSalleDigitick(uuid, nom, ville, dept);
     return ResponseEntity.ok(Map.of("succes", true));
   }
