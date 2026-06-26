@@ -117,14 +117,13 @@ public class SourcesService {
   /// @param salleUuid UUID de la salle
   /// @param slug      nouveau slug Digitick (peut être vide pour supprimer)
   public void mettreAJourDigitickSlug(UUID salleUuid, String slug) {
-    if (slug == null || slug.isBlank()) {
-      jdbc.update(
-          """
-          DELETE FROM salle_sources
-          WHERE salle_id = CAST(:uuid AS uuid) AND source = 'digitick'
-          """,
-          Map.of("uuid", salleUuid.toString()));
-    } else {
+    jdbc.update(
+        """
+        DELETE FROM salle_sources
+        WHERE salle_id = CAST(:uuid AS uuid) AND source = 'digitick'
+        """,
+        Map.of("uuid", salleUuid.toString()));
+    if (slug != null && !slug.isBlank()) {
       jdbc.update(
           """
           INSERT INTO salle_sources (salle_id, source, identifiant_externe)
