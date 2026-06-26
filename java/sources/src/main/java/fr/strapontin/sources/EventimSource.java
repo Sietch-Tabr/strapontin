@@ -285,7 +285,7 @@ public class EventimSource implements SourceConcerts {
       String artisteSourceId) {
     String salle =
         location != null && location.get("name") != null
-            ? (String) location.get("name")
+            ? TicketmasterSource.normaliserCasse((String) location.get("name"))
             : "Salle inconnue";
     String ville = location != null ? (String) location.get("city") : null;
     String dept = extraireDept(location != null ? (String) location.get("postalCode") : null);
