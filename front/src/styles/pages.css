@@ -1331,6 +1331,10 @@ fieldset.notif-grille {
   background: #f3f4f6;
   color: #374151;
 }
+.badge-source-digitick {
+  background: #ecfdf5;
+  color: #065f46;
+}
 .dark .badge-source-concerts {
   background: #1e3a8a;
   color: #93c5fd;
@@ -1338,6 +1342,10 @@ fieldset.notif-grille {
 .dark .badge-source-metadonnees {
   background: #374151;
   color: #d1d5db;
+}
+.dark .badge-source-digitick {
+  background: #064e3b;
+  color: #6ee7b7;
 }
 .source-carte-detail {
   font-size: 0.8rem;
@@ -1377,6 +1385,14 @@ fieldset.notif-grille {
 }
 .source-test-ko {
   color: #991b1b;
+}
+.source-digitick-actions {
+  margin-bottom: 0.75rem;
+}
+.source-salle-loc {
+  font-size: 0.85rem;
+  color: var(--texte-secondaire, #6b7280);
+  white-space: nowrap;
 }
 .source-actions {
   display: flex;

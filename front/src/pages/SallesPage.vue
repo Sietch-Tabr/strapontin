@@ -19,7 +19,7 @@
       />
       <button type="submit" class="btn btn-secondary">Rechercher</button>
     </form>
-    <p class="form-aide">Saisissez au moins 2 caractères. La recherche porte sur les concerts en base et les suggestions Ticketmaster. Si une salle n'apparaît pas, vous pouvez l'ajouter directement par nom.</p>
+    <p class="form-aide">Saisissez au moins 2 caractères. La recherche porte sur les concerts en base, les salles Digitick configurées et les suggestions Ticketmaster. Si une salle n'apparaît pas, vous pouvez l'ajouter directement par nom.</p>
 
     <div v-if="erreur" class="alerte alerte-erreur" role="alert" aria-live="assertive">{{ erreur }}</div>
 
@@ -34,11 +34,12 @@
       >
         <h2 class="section-label">Résultats pour « {{ qSoumis }} »</h2>
         <ul class="liste-cartes">
-          <li v-for="r in donnees.resultats" :key="r.salle + r.tmVenueId" class="carte-item">
+          <li v-for="r in donnees.resultats" :key="r.salle + r.tmVenueId + r.digitickSlug" class="carte-item">
             <div>
               <p class="carte-nom">{{ r.salle }}</p>
               <p v-if="r.ville" class="carte-sous-titre">{{ r.ville }}</p>
               <span v-if="r.tmVenueId" class="badge badge-source">TM</span>
+              <span v-if="r.digitickSlug" class="badge badge-source badge-source-digitick">Digitick</span>
             </div>
             <button
               type="button"
@@ -77,7 +78,10 @@
         <h2 class="section-label">Salles suivies</h2>
         <ul class="liste-cartes">
           <li v-for="salle in donnees.salles" :key="salle.id" class="carte-item">
-            <span class="carte-nom">{{ salle.nom }}</span>
+            <span class="carte-nom">
+              {{ salle.nom }}
+              <span v-if="salle.aDigitick" class="badge badge-source badge-source-digitick">Digitick</span>
+            </span>
             <button
               type="button"
               class="btn btn-sm btn-danger-texte"

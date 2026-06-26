@@ -528,6 +528,118 @@ test.describe("Scénario: admin — onglet Sources", () => {
       page.locator("table#table-sources-salles, p.etat-vide-texte"),
     ).toBeVisible({ timeout: 5000 });
   });
+
+  test("admin_sources_digitick_boutonAjouter_visible_dansVueDigitick", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    await page.locator('a[href="#sources"]').click();
+    await expect(page.locator("section#sources")).toBeVisible();
+    const toggle = page.locator(".source-vue-toggle button", {
+      hasText: /[Dd]igitick/,
+    });
+    await toggle.click();
+    await expect(
+      page.locator("button", { hasText: "Ajouter une salle" }),
+    ).toBeVisible();
+  });
+
+  test("admin_sources_digitick_api_creerEtSupprimerSalle", async () => {
+    const ctx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    let salleUuid: string | null = null;
+    try {
+      const repCreation = await ctx.post("/api/admin/digitick-salles", {
+        data: {
+          nom: "Salle Test E2E Digitick",
+          slug: "salle-test-e2e",
+          ville: "Paris",
+          cp: "75001",
+        },
+      });
+      expect(repCreation.status()).toBe(201);
+      const corps = await repCreation.json();
+      salleUuid = corps.salleUuid;
+      expect(salleUuid).toBeTruthy();
+
+      const repSources = await ctx.get("/api/admin/sources");
+      expect(repSources.ok()).toBe(true);
+      const donnees = await repSources.json();
+      const sallesDigitick: { nom: string }[] = donnees.sallesDigitick ?? [];
+      expect(
+        sallesDigitick.some((s) => s.nom === "Salle Test E2E Digitick"),
+      ).toBe(true);
+    } finally {
+      if (salleUuid) {
+        await ctx.delete(`/api/admin/digitick-salles/${salleUuid}`);
+      }
+      await ctx.dispose();
+    }
+  });
+
+  test("admin_sources_digitick_api_supprimer_salleAvecContrainte_retourne409", async () => {
+    const ctx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    let salleUuid: string | null = null;
+    try {
+      const repCreation = await ctx.post("/api/admin/digitick-salles", {
+        data: { nom: "Salle Test Contrainte", slug: "salle-contrainte-e2e" },
+      });
+      expect(repCreation.status()).toBe(201);
+      salleUuid = (await repCreation.json()).salleUuid;
+
+      const repSuivi = await ctx.post("/api/salles", {
+        data: { nom: "Salle Test Contrainte", tmVenueId: null },
+      });
+      expect([200, 201, 409].includes(repSuivi.status())).toBe(true);
+
+      const repSuppression = await ctx.delete(
+        `/api/admin/digitick-salles/${salleUuid}`,
+      );
+      expect(repSuppression.status()).toBe(409);
+    } finally {
+      if (salleUuid) {
+        await ctx.delete(`/api/salles/${salleUuid}`).catch(() => {});
+        await ctx.delete(`/api/admin/digitick-salles/${salleUuid}`).catch(() => {});
+      }
+      await ctx.dispose();
+    }
+  });
+
+  test("admin_sources_digitick_api_rechercheSalleAvecSlug", async () => {
+    const ctx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    let salleUuid: string | null = null;
+    try {
+      const repCreation = await ctx.post("/api/admin/digitick-salles", {
+        data: { nom: "Zenith E2E Digitick", slug: "zenith-e2e" },
+      });
+      expect(repCreation.status()).toBe(201);
+      salleUuid = (await repCreation.json()).salleUuid;
+
+      const repRecherche = await ctx.get("/api/salles?q=Zenith+E2E");
+      expect(repRecherche.ok()).toBe(true);
+      const donnees = await repRecherche.json();
+      const resultats: { salle: string; digitickSlug: string | null }[] =
+        donnees.resultats ?? [];
+      const trouvee = resultats.find((r) => r.salle === "Zenith E2E Digitick");
+      expect(trouvee).toBeTruthy();
+      expect(trouvee?.digitickSlug).toBe("zenith-e2e");
+    } finally {
+      if (salleUuid) {
+        await ctx.delete(`/api/admin/digitick-salles/${salleUuid}`);
+      }
+      await ctx.dispose();
+    }
+  });
 });
 
 test.describe("Scénario: admin — onglet Jobs (sections Fetches/Maintenance)", () => {
