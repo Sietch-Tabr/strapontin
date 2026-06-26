@@ -295,6 +295,7 @@ public class WorkerService {
         concerts.size(),
         dedoublonnes.size());
     persisterConcerts.persisterConcerts(dedoublonnes);
+    recalculerMatchesService.recalculerMatches(null);
     log.info("fetch:salle terminé identifiants={}", identifiantsStr);
   }
 

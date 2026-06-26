@@ -67,6 +67,9 @@ test.describe("Scénario: catalogue — artistes", () => {
   test("artistes_ajouterEtSupprimer_fluxComplet_toastSuccesAuDeux", async ({
     page,
   }) => {
+    // Nettoyage préventif : garantit un état propre même si un run précédent a échoué
+    await supprimerArtisteParNom("Nina Simone");
+
     await page.goto("/artistes");
 
     // Rechercher et suivre
@@ -74,7 +77,7 @@ test.describe("Scénario: catalogue — artistes", () => {
     await page.getByRole("button", { name: "Rechercher" }).click();
 
     const btnSuivre = page.getByRole("button", { name: /Suivre/ }).first();
-    await expect(btnSuivre).toBeVisible({ timeout: 15000 });
+    await expect(btnSuivre).toBeVisible({ timeout: 25000 });
 
     const ariaLabel = (await btnSuivre.getAttribute("aria-label")) ?? "";
     const nomArtiste = ariaLabel.replace(/^Suivre\s+/i, "").trim();

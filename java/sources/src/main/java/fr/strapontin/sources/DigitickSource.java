@@ -6,6 +6,7 @@ package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
 import java.nio.charset.Charset;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -15,6 +16,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 /// Client de scraping pour la billetterie Digitick (web.digitick.com).
@@ -48,17 +50,24 @@ public class DigitickSource implements SourceConcerts {
 
   private final RestClient restClient;
 
-  /// Crée une instance avec User-Agent navigateur standard.
+  /// Crée une instance avec User-Agent navigateur standard et HTTP/1.1 forcé.
   public DigitickSource() {
-    this(
-        RestClient.builder()
-            .defaultHeader(
-                "User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                    + " (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
-            .defaultHeader("Accept", "text/html,application/xhtml+xml,*/*")
-            .defaultHeader("Accept-Language", "fr-FR,fr;q=0.9")
-            .build());
+    this(creerRestClient());
+  }
+
+  private static RestClient creerRestClient() {
+    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+    factory.setConnectTimeout(Duration.ofSeconds(10));
+    factory.setReadTimeout(Duration.ofSeconds(15));
+    return RestClient.builder()
+        .requestFactory(factory)
+        .defaultHeader(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                + " (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+        .defaultHeader("Accept", "text/html,application/xhtml+xml,*/*")
+        .defaultHeader("Accept-Language", "fr-FR,fr;q=0.9")
+        .build();
   }
 
   /// Crée une instance avec un RestClient personnalisé (injection de test).

@@ -86,9 +86,12 @@ public class SalleService {
               .filter(
                   r -> !sallesDejaAjoutees.contains(normaliserSalleCle((String) r.get("salle"))))
               .map(
-                  r ->
-                      new ResultatSalle(
-                          (String) r.get("salle"), (String) r.get("ville"), null, "base"))
+                  r -> {
+                    String digitickSlug = (String) r.get("digitick_slug");
+                    String src = digitickSlug != null ? "base-digitick" : "base";
+                    return new ResultatSalle(
+                        (String) r.get("salle"), (String) r.get("ville"), null, digitickSlug, src);
+                  })
               .collect(Collectors.toCollection(ArrayList::new));
 
       if (listeResultats.size() < 3) {
@@ -144,8 +147,19 @@ public class SalleService {
     }
     salleRepository.ajouterPourUtilisateur(userId, salleUuid);
 
-    if (tmVenueId != null) {
-      declencherWorkerSalle(tmVenueId);
+    declencherWorkerParSources(salleUuid);
+  }
+
+  /// Déclenche immédiatement un fetch pour une salle identifiée par son UUID.
+  ///
+  /// <p>Lit toutes les sources configurées dans {@code salle_sources} (TM, Digitick…)
+  /// et les transmet au worker en une seule requête.
+  ///
+  /// @param salleUuid UUID de la salle
+  public void declencherWorkerParSources(UUID salleUuid) {
+    String identifiants = salleRepository.lireIdentifiantsSources(salleUuid);
+    if (identifiants != null) {
+      declencherWorkerSalle(identifiants);
     }
   }
 
@@ -155,6 +169,52 @@ public class SalleService {
   /// @param salleUuid UUID stable de la salle
   public void supprimer(String userId, UUID salleUuid) {
     salleRepository.supprimerPourUtilisateur(userId, salleUuid);
+  }
+
+  /// Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
+  ///
+  /// <p>Upsert sur {@code salle_cle}, enregistre le slug dans {@code salle_sources},
+  /// puis déclenche le worker.
+  ///
+  /// @param nom   nom affiché de la salle
+  /// @param slug  slug Digitick
+  /// @param ville ville (peut être {@code null})
+  /// @param cp    code postal (peut être {@code null})
+  /// @return UUID stable de la salle créée ou retrouvée
+  @Transactional
+  public UUID creerSalleDigitick(String nom, String slug, String ville, String cp) {
+    String salleCle = normaliserSalleCle(nom);
+    UUID salleUuid = salleRepository.upsertSalleAvecLoc(salleCle, nom, ville, cp);
+    salleRepository.enregistrerSalleSource(salleUuid, "digitick", slug);
+    declencherWorkerParSources(salleUuid);
+    return salleUuid;
+  }
+
+  /// Met à jour les métadonnées d'une salle (nom, ville, CP).
+  ///
+  /// @param salleUuid UUID de la salle
+  /// @param nom       nouveau nom (null = inchangé)
+  /// @param ville     nouvelle ville (null = inchangée)
+  /// @param cp        nouveau code postal (null = inchangé)
+  public void mettreAJourSalle(UUID salleUuid, String nom, String ville, String cp) {
+    salleRepository.mettreAJourSalle(salleUuid, nom, ville, cp);
+  }
+
+  /// Retourne les identifiants sources CSV d'une salle (ex. {@code
+  // "digitick:lempreinte,tm:rZ..."}).
+  ///
+  /// @param salleUuid UUID de la salle
+  /// @return CSV d'identifiants ou {@code null} si aucun
+  public String lireIdentifiantsSources(UUID salleUuid) {
+    return salleRepository.lireIdentifiantsSources(salleUuid);
+  }
+
+  /// Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
+  ///
+  /// @param salleUuid UUID de la salle
+  /// @return {@code true} si supprimée, {@code false} si des contraintes bloquent
+  public boolean supprimerSalleDigitick(UUID salleUuid) {
+    return salleRepository.supprimerSalleDigitick(salleUuid);
   }
 
   /// Normalise un nom de salle en retirant accents, ponctuation et espaces (clé stable).
@@ -230,7 +290,7 @@ public class SalleService {
                 String id = (String) v.get("id");
                 Map<String, Object> city = (Map<String, Object>) v.get("city");
                 String ville = city != null ? (String) city.get("name") : null;
-                return new ResultatSalle(nom, ville, id, "ticketmaster");
+                return new ResultatSalle(nom, ville, id, null, "ticketmaster");
               })
           .filter(r -> r.salle() != null)
           .collect(Collectors.toList());
@@ -241,8 +301,7 @@ public class SalleService {
     }
   }
 
-  private void declencherWorkerSalle(String venueId) {
-    String identifiants = "tm:" + venueId;
+  private void declencherWorkerSalle(String identifiants) {
     httpClient
         .sendAsync(
             HttpRequest.newBuilder()

@@ -6,11 +6,13 @@ package fr.strapontin.web.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
+import fr.strapontin.web.salle.SalleService;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -34,15 +36,21 @@ public class SourcesService {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
+  private final SalleService salleService;
 
   /// @param jdbc         accès JDBC
   /// @param objectMapper désérialiseur JSON (quota TM)
   /// @param restClient   client HTTP partagé (test connexion Digitick)
+  /// @param salleService service salle (upsert, mise à jour, déclenchement worker)
   public SourcesService(
-      NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper, RestClient restClient) {
+      NamedParameterJdbcTemplate jdbc,
+      ObjectMapper objectMapper,
+      RestClient restClient,
+      SalleService salleService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.restClient = restClient;
+    this.salleService = salleService;
   }
 
   /// Retourne les statuts agrégés de toutes les sources et les deux listes de salles.
@@ -70,20 +78,36 @@ public class SourcesService {
   /// @param salleUuid UUID de la salle
   /// @return identifiants CSV ou {@code null} si aucun identifiant connu
   public String obtenirIdentifiantsSalle(UUID salleUuid) {
-    List<Map<String, Object>> lignes =
-        jdbc.queryForList(
-            """
-            SELECT source, identifiant_externe
-            FROM salle_sources
-            WHERE salle_id = CAST(:uuid AS uuid)
-            ORDER BY source
-            """,
-            Map.of("uuid", salleUuid.toString()));
-    if (lignes.isEmpty()) return null;
-    return lignes.stream()
-        .map(l -> l.get("source") + ":" + l.get("identifiant_externe"))
-        .reduce((a, b) -> a + "," + b)
-        .orElse(null);
+    return salleService.lireIdentifiantsSources(salleUuid);
+  }
+
+  /// Crée une salle Digitick dans le référentiel et déclenche immédiatement un fetch.
+  ///
+  /// @param nom   nom affiché de la salle
+  /// @param slug  slug Digitick (ex. {@code "lempreinte"})
+  /// @param ville ville (peut être {@code null})
+  /// @param cp    code postal 5 chiffres (peut être {@code null})
+  /// @return UUID stable de la salle créée ou retrouvée
+  public UUID creerSalleDigitick(String nom, String slug, String ville, String cp) {
+    return salleService.creerSalleDigitick(nom, slug, ville, cp);
+  }
+
+  /// Met à jour les métadonnées d'une salle Digitick (nom, ville, CP).
+  ///
+  /// @param salleUuid UUID de la salle
+  /// @param nom       nouveau nom (null = inchangé)
+  /// @param ville     nouvelle ville (null = inchangée)
+  /// @param cp        nouveau code postal (null = inchangé)
+  public void modifierSalleDigitick(UUID salleUuid, String nom, String ville, String cp) {
+    salleService.mettreAJourSalle(salleUuid, nom, ville, cp);
+  }
+
+  /// Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
+  ///
+  /// @param salleUuid UUID de la salle
+  /// @return {@code true} si supprimée, {@code false} si des contraintes bloquent la suppression
+  public boolean supprimerSalleDigitick(UUID salleUuid) {
+    return salleService.supprimerSalleDigitick(salleUuid);
   }
 
   /// Met à jour le slug Digitick d'une salle dans {@code salle_sources}.
@@ -111,20 +135,30 @@ public class SourcesService {
     }
   }
 
-  /// Teste l'accessibilité d'un slug Digitick via un HEAD HTTP.
+  /// Teste un slug Digitick et retourne le nombre de concerts trouvés.
+  ///
+  /// <p>Fait un GET sur l'endpoint AJAX Digitick et compte les {@code dl} portant une classe
+  /// {@code evenementN} (chiffre immédiatement après "evenement"), même critère que
+  /// {@code DigitickSource} avec {@code dl[class~=evenement\\d+]}. Les sous-éléments
+  /// ({@code evenementNom}, {@code evenementDate}…) sont exclus car non suivis d'un chiffre.
+  /// Retourne -1 si le slug est invalide ou inaccessible.
   ///
   /// @param slug slug à tester
-  /// @return {@code true} si HTTP 2xx, {@code false} sinon ou en cas d'erreur réseau
-  public boolean testerDigitickSlug(String slug) {
-    if (slug == null || slug.isBlank()) return false;
+  /// @return nombre de concerts (≥ 0) ou -1 si inaccessible / slug invalide
+  public int testerDigitickSlug(String slug) {
+    if (slug == null || slug.isBlank()) return -1;
     try {
-      restClient.head().uri(URL_DIGITICK, slug).retrieve().toBodilessEntity();
-      return true;
+      byte[] octets = restClient.get().uri(URL_DIGITICK, slug).retrieve().body(byte[].class);
+      String html =
+          octets != null ? new String(octets, java.nio.charset.StandardCharsets.ISO_8859_1) : "";
+      return (int) PATTERN_EVENEMENT.matcher(html).results().count();
     } catch (Exception e) {
       log.debug("Test slug Digitick '{}' — inaccessible : {}", slug, e.getMessage());
-      return false;
+      return -1;
     }
   }
+
+  private static final Pattern PATTERN_EVENEMENT = Pattern.compile("evenement\\d");
 
   private List<StatutSource> construireSources() {
     Instant dernierFetch = lireDernierFetch();
@@ -194,7 +228,7 @@ public class SourcesService {
   private List<SalleSourceAdmin> listerSallesAvecDigitick() {
     return jdbc.query(
         """
-        SELECT s.id, s.nom, ss.identifiant_externe AS digitick_slug
+        SELECT s.id, s.nom, s.ville, s.cp, ss.identifiant_externe AS digitick_slug
         FROM salles s
         JOIN salle_sources ss ON ss.salle_id = s.id AND ss.source = 'digitick'
         ORDER BY lower(s.nom)
@@ -204,7 +238,9 @@ public class SourcesService {
             new SalleSourceAdmin(
                 rs.getObject("id", UUID.class),
                 rs.getString("nom"),
-                rs.getString("digitick_slug")));
+                rs.getString("digitick_slug"),
+                rs.getString("ville"),
+                rs.getString("cp")));
   }
 
   private List<SalleSourceAdmin> listerSallesAvecSources() {
@@ -212,10 +248,12 @@ public class SourcesService {
         """
         SELECT s.id,
                s.nom,
+               s.ville,
+               s.cp,
                MAX(CASE WHEN ss.source = 'digitick' THEN ss.identifiant_externe END) AS digitick_slug
         FROM salles s
         LEFT JOIN salle_sources ss ON ss.salle_id = s.id
-        GROUP BY s.id, s.nom
+        GROUP BY s.id, s.nom, s.ville, s.cp
         HAVING MAX(CASE WHEN ss.source = 'ticketmaster' THEN ss.identifiant_externe END) IS NULL
            AND MAX(CASE WHEN ss.source = 'eventim'      THEN ss.identifiant_externe END) IS NULL
         ORDER BY lower(s.nom)
@@ -225,6 +263,8 @@ public class SourcesService {
             new SalleSourceAdmin(
                 rs.getObject("id", UUID.class),
                 rs.getString("nom"),
-                rs.getString("digitick_slug")));
+                rs.getString("digitick_slug"),
+                rs.getString("ville"),
+                rs.getString("cp")));
   }
 }

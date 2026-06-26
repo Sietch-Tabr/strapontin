@@ -47,7 +47,7 @@ class SalleControllerTest {
 
   @Test
   void dejaLaSuivie_nomIdentique_retourneVrai() {
-    var salles = List.of(new SalleUtilisateur(UUID.randomUUID(), "Olympia", Instant.EPOCH));
+    var salles = List.of(new SalleUtilisateur(UUID.randomUUID(), "Olympia", Instant.EPOCH, false));
     String rechercheNorm = SalleService.normaliserSalleCle("Olympia");
     boolean dejaLaSuivie =
         salles.stream()
@@ -57,7 +57,7 @@ class SalleControllerTest {
 
   @Test
   void dejaLaSuivie_nomAvecAccentEtCasseDifferente_retourneVrai() {
-    var salles = List.of(new SalleUtilisateur(UUID.randomUUID(), "Zénith", Instant.EPOCH));
+    var salles = List.of(new SalleUtilisateur(UUID.randomUUID(), "Zénith", Instant.EPOCH, false));
     String rechercheNorm = SalleService.normaliserSalleCle("zenith");
     boolean dejaLaSuivie =
         salles.stream()
@@ -67,7 +67,7 @@ class SalleControllerTest {
 
   @Test
   void dejaLaSuivie_nomDifferent_retourneFaux() {
-    var salles = List.of(new SalleUtilisateur(UUID.randomUUID(), "Olympia", Instant.EPOCH));
+    var salles = List.of(new SalleUtilisateur(UUID.randomUUID(), "Olympia", Instant.EPOCH, false));
     String rechercheNorm = SalleService.normaliserSalleCle("Bataclan");
     boolean dejaLaSuivie =
         salles.stream()

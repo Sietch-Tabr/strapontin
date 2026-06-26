@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
+import fr.strapontin.web.salle.SalleService;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -40,7 +41,9 @@ class SourcesServiceTest {
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    sourcesService = new SourcesService(jdbc, new ObjectMapper(), mock(RestClient.class));
+    sourcesService =
+        new SourcesService(
+            jdbc, new ObjectMapper(), mock(RestClient.class), mock(SalleService.class));
   }
 
   @Test
@@ -163,9 +166,9 @@ class SourcesServiceTest {
   }
 
   @Test
-  void testerDigitickSlug_slugVide_retourneFalse() {
-    assertFalse(sourcesService.testerDigitickSlug(""));
-    assertFalse(sourcesService.testerDigitickSlug(null));
+  void testerDigitickSlug_slugVide_retourneNegatif() {
+    assertTrue(sourcesService.testerDigitickSlug("") < 0);
+    assertTrue(sourcesService.testerDigitickSlug(null) < 0);
   }
 
   @Test
@@ -195,13 +198,13 @@ class SourcesServiceTest {
   }
 
   @Test
-  void testerDigitickSlug_erreurReseau_retourneFalse() {
+  void testerDigitickSlug_erreurReseau_retourneNegatif() {
     RestClient restClientEchoue = mock(RestClient.class);
-    RestClient.RequestHeadersUriSpec<?> spec = mock(RestClient.RequestHeadersUriSpec.class);
-    when(restClientEchoue.head()).thenThrow(new RuntimeException("timeout"));
-    SourcesService service = new SourcesService(jdbc, new ObjectMapper(), restClientEchoue);
+    when(restClientEchoue.get()).thenThrow(new RuntimeException("timeout"));
+    SourcesService service =
+        new SourcesService(jdbc, new ObjectMapper(), restClientEchoue, mock(SalleService.class));
 
-    assertFalse(service.testerDigitickSlug("lempreinte"));
+    assertTrue(service.testerDigitickSlug("lempreinte") < 0);
   }
 
   @Test
@@ -217,7 +220,7 @@ class SourcesServiceTest {
             anyMap(),
             org.mockito.ArgumentMatchers
                 .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
-        .thenReturn(List.of(new SalleSourceAdmin(uuid, "L'Olympia", null)));
+        .thenReturn(List.of(new SalleSourceAdmin(uuid, "L'Olympia", null, null, null)));
 
     Map<String, Object> resultat = sourcesService.lireSources();
     List<SalleSourceAdmin> salles = (List<SalleSourceAdmin>) resultat.get("salles");
