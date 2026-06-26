@@ -35,12 +35,21 @@
   <RouterView v-else />
 
   <ToastContainer />
+
+  <Transition name="overlay-maj">
+    <div v-if="miseAJourEnCours" class="overlay-mise-a-jour" role="status" aria-label="Mise à jour en cours">
+      <img src="/images/icon-192.png" alt="" class="overlay-logo" />
+      <p class="overlay-texte">Mise à jour en cours…</p>
+    </div>
+  </Transition>
 </template>
 
 <script setup>
 defineOptions({ name: 'App' })
 
 import { ref, computed, watchEffect, watch, onMounted } from 'vue'
+
+const miseAJourEnCours = ref(false)
 import { useRoute, useRouter } from 'vue-router'
 import SidebarNav from './components/layout/SidebarNav.vue'
 import BottomNav from './components/layout/BottomNav.vue'
@@ -109,7 +118,8 @@ onMounted(async () => {
   chargerBanniere()
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      window.location.reload()
+      miseAJourEnCours.value = true
+      window.location.href = window.location.href
     })
     navigator.serviceWorker.addEventListener('message', (event) => {
       if (event.data?.type === 'nav-ancre') {
