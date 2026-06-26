@@ -17,9 +17,15 @@
             </ul>
           </div>
           <div>
+            <p class="changelog-categorie">Salles</p>
+            <ul>
+              <li>Les salles Digitick configurées apparaissent désormais dans les résultats de recherche avec un badge « Digitick », même avant l'import de leurs premiers concerts. Elles sont également identifiées dans « Mes salles ».</li>
+            </ul>
+          </div>
+          <div>
             <p class="changelog-categorie">Administration</p>
             <ul>
-              <li>L'onglet Sources permet désormais de tester et de configurer un identifiant Digitick pour chaque salle — le bouton « Tester » vérifie l'accessibilité du programme en temps réel.</li>
+              <li>L'onglet Sources permet désormais de créer, modifier et supprimer des salles Digitick directement (nom, slug, ville, département) — sans passer par un import manuel. Le bouton « Tester » vérifie que le slug retourne bien des concerts avant la création.</li>
             </ul>
           </div>
         </div>

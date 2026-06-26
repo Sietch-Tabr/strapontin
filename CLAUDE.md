@@ -33,7 +33,7 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - **Records** : top-level dans le package domaine (plus d'inner classes dans les contrôleurs)
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) : `NoResourceFoundException` → 404, `HttpRequestMethodNotSupportedException` → 405, `AuthenticationException` → 401, `DuplicateKeyException` → 409, `DataAccessException` → 500
 - `ClientController` (`/api/client/erreur`) : remontée des erreurs JS des navigateurs vers `logs_admin`, source `client-js`
-- `SourcesController` / `SourcesService` (`/api/admin/sources`, `/api/admin/salles/{uuid}/digitick-slug|tester-digitick|fetch`) : onglet Sources admin — statuts des sources + config slugs Digitick
+- `SourcesController` / `SourcesService` (`/api/admin/sources`, `/api/admin/salles/{uuid}/digitick-slug|tester-digitick|fetch`, CRUD `/api/admin/digitick-salles`) : onglet Sources admin — statuts des sources + CRUD salles Digitick (admin-curé)
 - `VapidService` : génération clés VAPID EC P-256 (extrait d'`AdminService` en v2.2.0)
 - `BanniereService` / `WorkerProxyService` : extraits d'`AdminService` en v2.2.3 (bannière système ; proxy HTTP worker via le `RestClient` partagé). `GenerateurSecrets` (package `securite`) : tokens/hash extraits d'`AdminService`
 - `FiltreConcertsBuilder` (package `concert`) : fragments WHERE/ORDER BY/pagination communs à `DecouverteService` et `SpectacleService`
