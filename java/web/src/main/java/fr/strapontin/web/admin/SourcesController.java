@@ -95,7 +95,7 @@ public class SourcesController {
 
   /// Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
   ///
-  /// @param requete corps JSON avec {@code nom}, {@code slug}, {@code ville} (opt.), {@code cp}
+  /// @param requete corps JSON avec {@code nom}, {@code slug}, {@code ville} (opt.), {@code dept}
   ///     (opt.)
   /// @return 201 avec {@code {salleUuid}} si créée, 400 si invalide
   @PostMapping("/digitick-salles")
@@ -107,12 +107,12 @@ public class SourcesController {
     if (slug.isEmpty() || slug.length() > 100) return erreur(400, "Slug Digitick invalide.");
     String ville =
         requete.ville() == null || requete.ville().isBlank() ? null : requete.ville().strip();
-    String cp = requete.cp() == null || requete.cp().isBlank() ? null : requete.cp().strip();
-    UUID salleUuid = sourcesService.creerSalleDigitick(nom, slug, ville, cp);
+    String dept = requete.dept() == null || requete.dept().isBlank() ? null : requete.dept().strip();
+    UUID salleUuid = sourcesService.creerSalleDigitick(nom, slug, ville, dept);
     return ResponseEntity.status(201).body(Map.of("salleUuid", salleUuid.toString()));
   }
 
-  /// Met à jour les métadonnées d'une salle Digitick (nom, ville, CP).
+  /// Met à jour les métadonnées d'une salle Digitick (nom, ville, département).
   ///
   /// @param salleUuid UUID de la salle
   /// @param requete   corps JSON avec les champs à modifier (null = inchangé)
@@ -125,8 +125,8 @@ public class SourcesController {
     String nom = requete.nom() == null || requete.nom().isBlank() ? null : requete.nom().strip();
     String ville =
         requete.ville() == null || requete.ville().isBlank() ? null : requete.ville().strip();
-    String cp = requete.cp() == null || requete.cp().isBlank() ? null : requete.cp().strip();
-    sourcesService.modifierSalleDigitick(uuid, nom, ville, cp);
+    String dept = requete.dept() == null || requete.dept().isBlank() ? null : requete.dept().strip();
+    sourcesService.modifierSalleDigitick(uuid, nom, ville, dept);
     return ResponseEntity.ok(Map.of("succes", true));
   }
 

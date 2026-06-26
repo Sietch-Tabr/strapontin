@@ -9,7 +9,7 @@ package fr.strapontin.web.admin;
 /// @param nom   nom d'affichage de la salle (obligatoire)
 /// @param slug  slug Digitick (obligatoire à la création, optionnel en modification)
 /// @param ville ville (optionnel — aide à la recherche avant le premier fetch)
-/// @param cp    code postal sur 5 caractères (optionnel)
+/// @param dept  numéro de département (optionnel, ex. {@code "77"})
 /// @since 2.4.0
 /// @author Kwaite
-public record RequeteDigitickSalle(String nom, String slug, String ville, String cp) {}
+public record RequeteDigitickSalle(String nom, String slug, String ville, String dept) {}
