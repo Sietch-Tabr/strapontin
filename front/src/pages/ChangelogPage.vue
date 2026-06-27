@@ -34,6 +34,8 @@
               <li>Lors d'une recherche de salle, une même salle pouvait apparaître en double si elle était liée à plusieurs sources (Digitick et Eventim) — corrigé.</li>
               <li>Sur iPhone, une mise à jour de l'application affichait un écran entièrement blanc pendant la transition. Un écran de chargement (icône + "Mise à jour en cours…") s'affiche désormais pendant cette courte transition.</li>
               <li>Le nom de certaines salles Eventim s'affichait en majuscules (ex. "LEMPREINTE SAVIGNY LE TEMPLE CEDEX"). Les noms sont désormais normalisés en casse lisible.</li>
+              <li>Certaines salles Eventim qui changent de nom entre deux mises à jour (ex. « Grand Kursaal » / « Kursaal Besancon », « Auditorium Megacite » / « Megacite Amiens ») créaient des concerts en double — corrigé.</li>
+              <li>Les artistes Ticketmaster dont le nom contient des caractères stylistiques comme « $ » ou « &amp; » (ex. « Chri$tian Gates ») ne créent plus de doublons lorsque Ticketmaster corrige le nom lors d'un fetch ultérieur.</li>
             </ul>
           </div>
         </div>
