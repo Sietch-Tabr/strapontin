@@ -11,6 +11,13 @@ public final class Normalisation {
   private static final Pattern TIRETS = Pattern.compile("[-–—]");
   private static final Pattern NON_ALPHANUM = Pattern.compile("[^a-z0-9\\s]");
   private static final Pattern ESPACES_MULTIPLES = Pattern.compile("\\s+");
+  /// Sigles stylistiques TM : "$" utilisé comme "S" dans les noms d'artiste (ex. "Chri$tian").
+  /// Supprimé sans espace pour éviter un artiste_norm parasite ("chri tian" au lieu de
+  // "christian").
+  private static final Pattern DOLLAR = Pattern.compile("\\$");
+  /// Esperluette entourée d'espaces → "and" (ex. "Katia & Marielle" → "Katia and Marielle").
+  /// Harmonise avec la version littérale pour que les deux fetches TM produisent le même norm.
+  private static final Pattern ESPERLUETTE = Pattern.compile(" & ");
 
   /// Caractères non décomposables par NFD : NFD retourne le même codepoint, le pattern
   /// NON_ALPHANUM les supprime entièrement. Ces substitutions les remplacent avant NFD.
@@ -28,6 +35,8 @@ public final class Normalisation {
     s = ACCENTS.matcher(s).replaceAll("");
     s = APOSTROPHES.matcher(s).replaceAll(" ");
     s = TIRETS.matcher(s).replaceAll(" ");
+    s = DOLLAR.matcher(s).replaceAll("");
+    s = ESPERLUETTE.matcher(s).replaceAll(" and ");
     s = NON_ALPHANUM.matcher(s).replaceAll(" ");
     return ESPACES_MULTIPLES.matcher(s).replaceAll(" ").trim();
   }
