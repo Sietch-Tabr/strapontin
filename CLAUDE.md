@@ -5,7 +5,7 @@
 ```
 strapontin/
 ├── java/
-│   ├── pom.xml       ← parent BOM (Java 25, Spring Boot 4.0.6)
+│   ├── pom.xml       ← parent BOM (Java 25, Spring Boot 4.1.0)
 │   ├── core/         ← normalisation, dédup, types partagés
 │   ├── sources/      ← clients TM, Eventim, Deezer
 │   ├── web/          ← Spring Boot REST API + Vue SPA (port 8080)
@@ -48,8 +48,8 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 
 - **Spring Boot 4.1.0** + **Vue 3 + Vite** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
 - **Spring Security 7** — auth session, TOTP 2FA optionnel (bucket4j rate-limiting) ; `anyRequest().authenticated()` — non-API sans session → redirect `/login`, API → 401 JSON
-- **Spring Data JDBC** + PostgreSQL 18 — données persistantes
-- **Quartz** — jobs background (fetch concerts)
+- **Spring Data JDBC** + PostgreSQL 18 — données persistantes. Tuning : `shared_buffers=400MB`, `work_mem=16MB`, `effective_cache_size=2GB`.
+- **Quartz** — jobs background (fetch concerts) ; `threadPool.threadCount=10` (virtual threads)
 - **Flyway 12** — migrations DB (`java/web/src/main/resources/db/migration/`)
 - **Resend** — notifications email (tier gratuit 3 000/mois) ; gabarits HTML via `EmailTemplates.java` (text blocks Java)
 - **web-push (VAPID)** — notifications push PWA

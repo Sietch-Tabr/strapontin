@@ -251,6 +251,15 @@ pct exec "$VMID" -- bash -c "
     systemctl reload postgresql
 "
 
+echo "[6] Tuning postgresql.conf..."
+pct exec "$VMID" -- bash -c "
+    PG_CONF=/etc/postgresql/${PG_VERSION}/main/postgresql.conf
+    sed -i 's/^#*shared_buffers\s*=.*/shared_buffers = 400MB/' \$PG_CONF
+    sed -i 's/^#*work_mem\s*=.*/work_mem = 16MB/' \$PG_CONF
+    sed -i 's/^#*effective_cache_size\s*=.*/effective_cache_size = 2GB/' \$PG_CONF
+    systemctl restart postgresql
+"
+
 # ---------------------------------------------------------------
 # 7. Utilisateur applicatif + répertoires
 # ---------------------------------------------------------------
@@ -312,7 +321,7 @@ Type=simple
 User=$APP_USER
 WorkingDirectory=$APP_DIR
 EnvironmentFile=$APP_DIR/.env
-ExecStart=/usr/bin/java -Xms64m -Xmx256m -jar $APP_DIR/worker.jar
+ExecStart=/usr/bin/java -Xms64m -Xmx384m -XX:+UseZGC -jar $APP_DIR/worker.jar
 SuccessExitStatus=143
 Restart=on-failure
 RestartSec=5
@@ -333,7 +342,7 @@ Type=simple
 User=$APP_USER
 WorkingDirectory=$APP_DIR
 EnvironmentFile=$APP_DIR/.env
-ExecStart=/usr/bin/java -Xms128m -Xmx512m -jar $APP_DIR/web.jar
+ExecStart=/usr/bin/java -Xms128m -Xmx768m -XX:+UseZGC -jar $APP_DIR/web.jar
 SuccessExitStatus=143
 Restart=on-failure
 RestartSec=5
