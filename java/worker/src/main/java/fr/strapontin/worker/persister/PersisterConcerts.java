@@ -63,7 +63,8 @@ public class PersisterConcerts {
   // Longueur minimale pour inclure un token dans le calcul Jaccard (filtre "le", "de", "la"…).
   private static final int LONGUEUR_MIN_TOKEN_JACCARD = 3;
   private static final double SEUIL_JACCARD_SALLE = 0.5;
-  // Critère pivot : token commun d'au moins LONGUEUR_MIN_PIVOT caractères + Jaccard > SEUIL_JACCARD_PIVOT.
+  // Critère pivot : token commun d'au moins LONGUEUR_MIN_PIVOT caractères + Jaccard >
+  // SEUIL_JACCARD_PIVOT.
   // Couvre les variantes Eventim type "grand kursaal"/"kursaal besancon" (Jaccard=0.33, pivot ≥ 7).
   // Requiert le filtre dept dans chercherSalleParTokens() pour éviter les faux positifs homonymes.
   private static final int LONGUEUR_MIN_PIVOT = 7;
@@ -223,12 +224,15 @@ public class PersisterConcerts {
     intersection.retainAll(tokB);
     Set<String> union = new HashSet<>(tokA);
     union.addAll(tokB);
-    double jaccard = union.isEmpty() ? (tokA.isEmpty() && tokB.isEmpty() ? 1.0 : 0.0)
-        : (double) intersection.size() / union.size();
+    double jaccard =
+        union.isEmpty()
+            ? (tokA.isEmpty() && tokB.isEmpty() ? 1.0 : 0.0)
+            : (double) intersection.size() / union.size();
     if (jaccard > SEUIL_JACCARD_SALLE) return true;
     // Critère pivot : requiert ≥ 2 tokens dans chaque nom pour éviter les faux positifs
     // de type "galaxie" (1 token) vs "le galaxie amneville".
-    return tokA.size() >= 2 && tokB.size() >= 2
+    return tokA.size() >= 2
+        && tokB.size() >= 2
         && jaccard > SEUIL_JACCARD_PIVOT
         && intersection.stream().anyMatch(t -> t.length() >= LONGUEUR_MIN_PIVOT);
   }
@@ -979,9 +983,10 @@ public class PersisterConcerts {
 
     Map<UUID, String> candidatsParUuid = new LinkedHashMap<>();
     for (String token : tokens) {
-      MapSqlParameterSource params = new MapSqlParameterSource()
-          .addValue("pattern", "%" + token + "%")
-          .addValue("dept", dept, Types.VARCHAR);
+      MapSqlParameterSource params =
+          new MapSqlParameterSource()
+              .addValue("pattern", "%" + token + "%")
+              .addValue("dept", dept, Types.VARCHAR);
       List<Map<String, Object>> lignes =
           jdbc.queryForList(
               "SELECT id, nom_norm FROM salles"

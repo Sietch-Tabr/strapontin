@@ -12,7 +12,8 @@ public final class Normalisation {
   private static final Pattern NON_ALPHANUM = Pattern.compile("[^a-z0-9\\s]");
   private static final Pattern ESPACES_MULTIPLES = Pattern.compile("\\s+");
   /// Sigles stylistiques TM : "$" utilisé comme "S" dans les noms d'artiste (ex. "Chri$tian").
-  /// Supprimé sans espace pour éviter un artiste_norm parasite ("chri tian" au lieu de "christian").
+  /// Supprimé sans espace pour éviter un artiste_norm parasite ("chri tian" au lieu de
+  // "christian").
   private static final Pattern DOLLAR = Pattern.compile("\\$");
   /// Esperluette entourée d'espaces → "and" (ex. "Katia & Marielle" → "Katia and Marielle").
   /// Harmonise avec la version littérale pour que les deux fetches TM produisent le même norm.
