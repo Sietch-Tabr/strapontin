@@ -100,6 +100,27 @@ class NormalisationTest {
   }
 
   @Test
+  void normaliserTexte_dollarStyleArtiste_supprimeSansEspace() {
+    // #703 : TM utilise "$" comme "S" — supprimé sans espace pour éviter "chri tian"
+    // ("chri$tian" → "chritian", pas "christian") mais Jaro("chritian", "christian") ≥ 0.95
+    assertEquals("chritian", Normalisation.normaliserTexte("Chri$tian"));
+    assertEquals("chritian gate", Normalisation.normaliserTexte("Chri$tian Gate$"));
+  }
+
+  @Test
+  void normaliserTexte_esperluetteIsolee_normaliseEnAnd() {
+    // #703 : "Katia & Marielle" (fetch 1) et "Katia and Marielle" (fetch 2) → même norm
+    assertEquals("katia and marielle", Normalisation.normaliserTexte("Katia & Marielle"));
+    assertEquals("katia and marielle", Normalisation.normaliserTexte("Katia and Marielle"));
+  }
+
+  @Test
+  void normaliserTexte_esperluetteColleeMotsSansEspace_remplaceeParEspace() {
+    // Esperluette sans espaces → remplacée par espace via NON_ALPHANUM (pas "and")
+    assertEquals("rock roll", Normalisation.normaliserTexte("rock&roll"));
+  }
+
+  @Test
   void normaliserTexte_elyseeAvecEtSansAccents_memeResultat() {
     // non-régression #639 : TM supprime les accents ("Elysee Montmartre") mais la salle existe
     // en base avec accents ("Elysée Montmartre") — la normalisation doit produire la même clé

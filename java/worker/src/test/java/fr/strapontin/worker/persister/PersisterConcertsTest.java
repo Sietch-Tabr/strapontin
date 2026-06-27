@@ -177,6 +177,22 @@ class PersisterConcertsTest {
     assertFalse(PersisterConcerts.estDoublonSalle("zenith de bordeaux", "zenith de caen"));
   }
 
+  // --- estDoublonSalle — critère pivot (#702) ---
+
+  @Test
+  void estDoublonSalle_kursaalBesanconVsGrandKursaal_retourneTrue() {
+    // #702 : Eventim renomme "Grand Kursaal" → "Kursaal Besancon" entre deux fetches
+    // Token pivot "kursaal" (7 chars), Jaccard = 1/3 = 0.33 > 0.3
+    assertTrue(PersisterConcerts.estDoublonSalle("grand kursaal", "kursaal besancon"));
+  }
+
+  @Test
+  void estDoublonSalle_megaciteAmiensVsAuditoriumMegacite_retourneTrue() {
+    // #702 : Eventim renomme "Auditorium Megacite" → "Megacite Amiens" entre deux fetches
+    // Token pivot "megacite" (8 chars), Jaccard = 1/3 = 0.33 > 0.3
+    assertTrue(PersisterConcerts.estDoublonSalle("auditorium megacite", "megacite amiens"));
+  }
+
   // --- jaccardTokens ---
 
   @Test
@@ -266,6 +282,23 @@ class PersisterConcertsTest {
   void estDoublonArtiste_krashKarmaEspaceOmise_retourneTrue() {
     // #668 : Jaro("krash karma", "krashkarma") ≈ 0.97 ≥ 0.95 — même artiste, espace omis
     assertTrue(PersisterConcerts.estDoublonArtiste("krash karma", "krashkarma"));
+  }
+
+  @Test
+  void estDoublonArtiste_dollarStyleArtisteTM_retourneTrue() {
+    // #703 : "Chri$tian Gate$" → norm "chritian gate" ($ supprimé sans espace)
+    //        "Christian Gates" → norm "christian gates"
+    // Jaro("chritian gate", "christian gates") ≈ 0.956 ≥ 0.95
+    assertTrue(PersisterConcerts.estDoublonArtiste("chritian gate", "christian gates"));
+  }
+
+  @Test
+  void estDoublonArtiste_esperluetteVsAnd_retourneTrue() {
+    // #703 : "Katia & Marielle Labèque" → norm "katia and marielle labeque" (nouveau)
+    //        "Katia and Marielle Labèque" → norm "katia and marielle labeque" (identique)
+    assertTrue(
+        PersisterConcerts.estDoublonArtiste(
+            "katia and marielle labeque", "katia and marielle labeque"));
   }
 
   // --- deduplicerParCleConflit ---

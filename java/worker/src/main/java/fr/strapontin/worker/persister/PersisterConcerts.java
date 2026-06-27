@@ -63,6 +63,11 @@ public class PersisterConcerts {
   // Longueur minimale pour inclure un token dans le calcul Jaccard (filtre "le", "de", "la"…).
   private static final int LONGUEUR_MIN_TOKEN_JACCARD = 3;
   private static final double SEUIL_JACCARD_SALLE = 0.5;
+  // Critère pivot : token commun d'au moins LONGUEUR_MIN_PIVOT caractères + Jaccard > SEUIL_JACCARD_PIVOT.
+  // Couvre les variantes Eventim type "grand kursaal"/"kursaal besancon" (Jaccard=0.33, pivot ≥ 7).
+  // Requiert le filtre dept dans chercherSalleParTokens() pour éviter les faux positifs homonymes.
+  private static final int LONGUEUR_MIN_PIVOT = 7;
+  private static final double SEUIL_JACCARD_PIVOT = 0.3;
 
   // Seuil artiste : Jaro ≥ 0.95 + containment avec ratio court/long ≥ 0.65.
   // Jaro évite les faux positifs par préfixe commun ("julien dore"/"julien morel" Jaro=0.914 →
@@ -162,6 +167,12 @@ public class PersisterConcerts {
         && plusLong.contains(court);
   }
 
+  private static Set<String> tokensSignificatifs(String s) {
+    Set<String> tokens = new HashSet<>(Arrays.asList(s.split("\\s+")));
+    tokens.removeIf(t -> t.length() < LONGUEUR_MIN_TOKEN_JACCARD);
+    return tokens;
+  }
+
   /// Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
   ///
   /// <p>Seuls les tokens d'au moins {@value #LONGUEUR_MIN_TOKEN_JACCARD} caractères sont pris en
@@ -171,10 +182,8 @@ public class PersisterConcerts {
   /// @param b deuxième chaîne normalisée
   /// @return coefficient de Jaccard entre 0.0 et 1.0
   static double jaccardTokens(String a, String b) {
-    Set<String> tokensA = new HashSet<>(Arrays.asList(a.split("\\s+")));
-    Set<String> tokensB = new HashSet<>(Arrays.asList(b.split("\\s+")));
-    tokensA.removeIf(t -> t.length() < LONGUEUR_MIN_TOKEN_JACCARD);
-    tokensB.removeIf(t -> t.length() < LONGUEUR_MIN_TOKEN_JACCARD);
+    Set<String> tokensA = tokensSignificatifs(a);
+    Set<String> tokensB = tokensSignificatifs(b);
     if (tokensA.isEmpty() && tokensB.isEmpty()) return 1.0;
     Set<String> union = new HashSet<>(tokensA);
     union.addAll(tokensB);
@@ -193,6 +202,12 @@ public class PersisterConcerts {
   ///       de réordonnancement inter-sources ("zenith europe strasbourg" / "zenith de strasbourg
   ///       europe"). Seuil strict évite le faux positif "zenith"/"zenith bordeaux" (Jaccard=0.5).
   ///   </li>
+  ///   <li>Token pivot — un token commun de longueur ≥ {@value #LONGUEUR_MIN_PIVOT} et Jaccard
+  ///       {@code > }{@value #SEUIL_JACCARD_PIVOT}. Couvre les variantes Eventim type
+  ///       "grand kursaal"/"kursaal besancon" (token "kursaal", Jaccard=0.33). Requiert le filtre
+  ///       {@code dept} dans {@link #chercherSalleParTokens} pour éviter les faux positifs
+  ///       entre salles homonymes de villes distinctes.
+  ///   </li>
   /// </ol>
   ///
   /// @param a premier nom normalisé
@@ -202,7 +217,20 @@ public class PersisterConcerts {
     if (estDoublonTexte(
         a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE, RATIO_MIN_CONTAINMENT_SALLE))
       return true;
-    return jaccardTokens(a, b) > SEUIL_JACCARD_SALLE;
+    Set<String> tokA = tokensSignificatifs(a);
+    Set<String> tokB = tokensSignificatifs(b);
+    Set<String> intersection = new HashSet<>(tokA);
+    intersection.retainAll(tokB);
+    Set<String> union = new HashSet<>(tokA);
+    union.addAll(tokB);
+    double jaccard = union.isEmpty() ? (tokA.isEmpty() && tokB.isEmpty() ? 1.0 : 0.0)
+        : (double) intersection.size() / union.size();
+    if (jaccard > SEUIL_JACCARD_SALLE) return true;
+    // Critère pivot : requiert ≥ 2 tokens dans chaque nom pour éviter les faux positifs
+    // de type "galaxie" (1 token) vs "le galaxie amneville".
+    return tokA.size() >= 2 && tokB.size() >= 2
+        && jaccard > SEUIL_JACCARD_PIVOT
+        && intersection.stream().anyMatch(t -> t.length() >= LONGUEUR_MIN_PIVOT);
   }
 
   /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
@@ -900,15 +928,16 @@ public class PersisterConcerts {
     UUID salleUuid = existants.isEmpty() ? null : existants.get(0);
 
     if (salleUuid == null) {
-      salleUuid = chercherSalleParTokens(c.salle());
+      salleUuid = chercherSalleParTokens(c.salle(), c.dept());
     }
 
     if (salleUuid == null) {
       String salleCle = Normalisation.normaliserTexte(c.salle());
       jdbc.update(
-          "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES (:salleCle, :nom, :nomNorm)"
+          "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
+              + " VALUES (:salleCle, :nom, :nomNorm, :dept)"
               + " ON CONFLICT (salle_cle) DO NOTHING",
-          Map.of("salleCle", salleCle, "nom", c.salle(), "nomNorm", salleCle));
+          Map.of("salleCle", salleCle, "nom", c.salle(), "nomNorm", salleCle, "dept", c.dept()));
       salleUuid =
           jdbc.queryForObject(
               "SELECT id FROM salles WHERE salle_cle = :salleCle",
@@ -934,33 +963,45 @@ public class PersisterConcerts {
   }
 
   /// Cherche une salle existante dont le {@code nom_norm} est un doublon du nom fourni selon
-  /// {@link #estDoublonSalle}. Utilise le premier token significatif comme filtre SQL pour limiter
-  /// le volume de candidats comparés en mémoire.
+  /// {@link #estDoublonSalle}. Interroge la base pour chaque token significatif du nom afin de
+  /// maximiser les chances de trouver une salle renommée (ex. "auditorium megacite" → "megacite
+  /// amiens" : le token "auditorium" ne suffit pas, il faut aussi tester "megacite").
+  /// Le filtre {@code dept} élimine les salles homonymes de départements distincts, réduisant le
+  /// risque de faux positif du critère pivot dans {@link #estDoublonSalle}.
   ///
-  /// @param nom nom brut de la salle à créer
+  /// @param nom  nom brut de la salle à créer
+  /// @param dept département connu du concert (nullable — désactive le filtre si absent)
   /// @return UUID de la salle existante correspondante, ou {@code null} si aucune trouvée
-  private UUID chercherSalleParTokens(String nom) {
+  private UUID chercherSalleParTokens(String nom, String dept) {
     String nomNorm = Normalisation.normaliserTexte(nom);
-    String premierToken =
-        Arrays.stream(nomNorm.split("\\s+"))
-            .filter(t -> t.length() >= LONGUEUR_MIN_TOKEN_JACCARD)
-            .findFirst()
-            .orElse(null);
-    if (premierToken == null) return null;
+    Set<String> tokens = tokensSignificatifs(nomNorm);
+    if (tokens.isEmpty()) return null;
 
-    List<Map<String, Object>> candidats =
-        jdbc.queryForList(
-            "SELECT id, nom_norm FROM salles WHERE nom_norm LIKE :pattern LIMIT 50",
-            Map.of("pattern", "%" + premierToken + "%"));
-    for (var candidat : candidats) {
-      if (estDoublonSalle(nomNorm, (String) candidat.get("nom_norm"))) {
-        UUID uuid = (UUID) candidat.get("id");
+    Map<UUID, String> candidatsParUuid = new LinkedHashMap<>();
+    for (String token : tokens) {
+      MapSqlParameterSource params = new MapSqlParameterSource()
+          .addValue("pattern", "%" + token + "%")
+          .addValue("dept", dept, Types.VARCHAR);
+      List<Map<String, Object>> lignes =
+          jdbc.queryForList(
+              "SELECT id, nom_norm FROM salles"
+                  + " WHERE nom_norm LIKE :pattern"
+                  + " AND (:dept IS NULL OR dept IS NULL OR dept = :dept)"
+                  + " LIMIT 50",
+              params);
+      for (var ligne : lignes) {
+        UUID uuid = (UUID) ligne.get("id");
+        candidatsParUuid.putIfAbsent(uuid, (String) ligne.get("nom_norm"));
+      }
+    }
+    for (var entree : candidatsParUuid.entrySet()) {
+      if (estDoublonSalle(nomNorm, entree.getValue())) {
         log.info(
-            "salle doublon détecté par Jaccard : '{}' ≈ '{}' uuid={}",
+            "salle doublon détecté par tokens : '{}' ≈ '{}' uuid={}",
             nom,
-            candidat.get("nom_norm"),
-            uuid);
-        return uuid;
+            entree.getValue(),
+            entree.getKey());
+        return entree.getKey();
       }
     }
     return null;
