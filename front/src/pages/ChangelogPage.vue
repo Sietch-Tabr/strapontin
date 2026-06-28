@@ -26,6 +26,7 @@
             <p class="changelog-categorie">Administration</p>
             <ul>
               <li>L'onglet Sources permet désormais de créer, modifier et supprimer des salles Digitick directement (nom, slug, ville, département) — sans passer par un import manuel. Le bouton « Tester » vérifie que le slug retourne bien des concerts avant la création.</li>
+              <li>Les concerts des salles configurées (Ticketmaster, Eventim, Digitick) sont désormais rechargés périodiquement en arrière-plan — sans attendre une action manuelle ou l'ajout d'une salle par un utilisateur.</li>
             </ul>
           </div>
           <div>
@@ -34,8 +35,11 @@
               <li>Lors d'une recherche de salle, une même salle pouvait apparaître en double si elle était liée à plusieurs sources (Digitick et Eventim) — corrigé.</li>
               <li>Sur iPhone, une mise à jour de l'application affichait un écran entièrement blanc pendant la transition. Un écran de chargement (icône + "Mise à jour en cours…") s'affiche désormais pendant cette courte transition.</li>
               <li>Le nom de certaines salles Eventim s'affichait en majuscules (ex. "LEMPREINTE SAVIGNY LE TEMPLE CEDEX"). Les noms sont désormais normalisés en casse lisible.</li>
+              <li>Le nom de certaines salles Ticketmaster s'affichait entièrement en majuscules dans les résultats de recherche — corrigé.</li>
+              <li>Lors de la recherche d'une salle, les salles déjà connues (avec des concerts en base) apparaissent désormais dans les suggestions locales sans déclencher un appel à Ticketmaster — évite les résultats en double ou la confusion entre plusieurs identifiants pour la même salle.</li>
               <li>Certaines salles Eventim qui changent de nom entre deux mises à jour (ex. « Grand Kursaal » / « Kursaal Besancon », « Auditorium Megacite » / « Megacite Amiens ») créaient des concerts en double — corrigé.</li>
               <li>Les artistes Ticketmaster dont le nom contient des caractères stylistiques comme « $ » ou « &amp; » (ex. « Chri$tian Gates ») ne créent plus de doublons lorsque Ticketmaster corrige le nom lors d'un fetch ultérieur.</li>
+              <li>Pour les pages de festival (ex. Solidays) dont le nom de l'artiste varie selon le cycle de mise à jour, le concert n'est désormais créé qu'une seule fois — les notifications répétées sur le même concert sont supprimées.</li>
             </ul>
           </div>
         </div>

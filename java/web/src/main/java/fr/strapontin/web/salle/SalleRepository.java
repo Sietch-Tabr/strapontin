@@ -60,13 +60,15 @@ class SalleRepository {
                 rs.getBoolean("a_digitick")));
   }
 
-  /// Recherche des salles dans les concerts existants et le référentiel Digitick.
+  /// Recherche des salles dans les concerts existants, le référentiel Digitick et
+  /// les salles connues avec concerts.
   ///
-  /// <p>Union de deux sources :
+  /// <p>Union de trois sources :
   /// <ol>
-  ///   <li>Concerts en base — {@code salle_norm} nettoyé LIKE :pattern</li>
-  ///   <li>Salles configurées Digitick — {@code salles.nom_norm} nettoyé LIKE :pattern
-  ///       (inclut les salles sans concerts)</li>
+  ///   <li>Concerts en base sans UUID — {@code salle_norm} nettoyé LIKE :pattern</li>
+  ///   <li>Salles configurées Digitick — {@code salles.nom_norm} nettoyé LIKE :pattern</li>
+  ///   <li>Salles connues avec concerts ({@code salle_uuid IS NOT NULL}) — évite un appel TM
+  ///       inutile et permet à {@code estMemeSalle} de filtrer les doublons de venueId</li>
   /// </ol>
   ///
   /// @param pattern valeur LIKE sur la clé normalisée (ex. {@code "%lempreinte%"})
@@ -84,6 +86,11 @@ class SalleRepository {
             FROM salles s
             JOIN salle_sources ss ON ss.salle_id = s.id AND ss.source = 'digitick'
             WHERE regexp_replace(s.nom_norm, '[^a-z0-9]', '', 'g') LIKE :pattern
+            UNION
+            SELECT DISTINCT s.nom AS salle, s.ville AS ville, null::text AS digitick_slug
+            FROM salles s
+            WHERE EXISTS (SELECT 1 FROM concerts c WHERE c.salle_uuid = s.id)
+              AND regexp_replace(s.nom_norm, '[^a-z0-9]', '', 'g') LIKE :pattern
         ) t
         ORDER BY salle
         LIMIT 10

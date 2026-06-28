@@ -1092,6 +1092,90 @@ public class PersisterConcerts {
   /// @param nbMisAJour nombre de concerts mis à jour
   public record ResultatPersistance(int nbInseres, int nbMisAJour) {}
 
+  /// Résout les concerts dont l'URL existe déjà en base sous un {@code artiste_norm} différent.
+  ///
+  /// <p>Couvre le cas des pages festival Eventim : une même URL peut exposer des artistes
+  /// différents selon le fetch (ex. "Yael Naim" vs "Solidays 2026"). Sans cette résolution,
+  /// deux lignes coexisteraient en base avec le même {@code (source, url, date, heure)} mais
+  /// des {@code artiste_norm} différents, déclenchant une suppression cyclique dans
+  /// {@link #supprimerDoublonsParUrl} et une notification à chaque cycle.
+  ///
+  /// <p>Pour chaque concert avec une URL non-nulle, si une ligne existe en base pour la même
+  /// clé {@code (source, url, date, heure)}, l'{@code artiste_norm} et l'{@code artiste_id}
+  /// de la ligne existante sont propagés au concert entrant afin que l'upsert ON CONFLICT
+  /// mette à jour la ligne existante plutôt qu'en créer une nouvelle.
+  ///
+  /// @param concerts concerts après résolution des identités sources
+  /// @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL
+  private List<ValeurConcert> resoudreParUrl(List<ValeurConcert> concerts) {
+    List<ValeurConcert> avecUrl = concerts.stream().filter(c -> c.url() != null).toList();
+    if (avecUrl.isEmpty()) return concerts;
+
+    List<String> urls = avecUrl.stream().map(ValeurConcert::url).distinct().toList();
+    List<Map<String, Object>> lignesExistantes =
+        jdbc.queryForList(
+            "SELECT artiste_norm, artiste_id, date, heure, source, url"
+                + " FROM concerts WHERE url IN (:urls)",
+            Map.of("urls", urls));
+
+    if (lignesExistantes.isEmpty()) return concerts;
+
+    record CleUrl(String source, String url, LocalDate date, LocalTime heure) {}
+
+    Map<CleUrl, Map<String, Object>> index = new HashMap<>();
+    for (Map<String, Object> l : lignesExistantes) {
+      java.sql.Date sqlDate = (java.sql.Date) l.get("date");
+      java.sql.Time sqlHeure = (java.sql.Time) l.get("heure");
+      CleUrl cle =
+          new CleUrl(
+              (String) l.get("source"),
+              (String) l.get("url"),
+              sqlDate != null ? sqlDate.toLocalDate() : null,
+              sqlHeure != null ? sqlHeure.toLocalTime() : null);
+      index.putIfAbsent(cle, l);
+    }
+
+    return concerts.stream()
+        .map(
+            c -> {
+              if (c.url() == null) return c;
+              CleUrl cle = new CleUrl(c.source(), c.url(), c.date(), c.heure());
+              Map<String, Object> existant = index.get(cle);
+              if (existant == null) return c;
+              String artisteNormExistant = (String) existant.get("artiste_norm");
+              UUID artisteIdExistant = (UUID) existant.get("artiste_id");
+              if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm()))
+                return c;
+              log.debug(
+                  "url doublon résolu entrant={} existant={} url={}",
+                  c.artisteNorm(),
+                  artisteNormExistant,
+                  c.url());
+              UUID artisteIdFinal = c.artisteId() != null ? c.artisteId() : artisteIdExistant;
+              return new ValeurConcert(
+                  c.artiste(),
+                  artisteNormExistant,
+                  c.date(),
+                  c.heure(),
+                  c.salle(),
+                  c.salleNorm(),
+                  c.ville(),
+                  c.dept(),
+                  c.url(),
+                  c.source(),
+                  c.classification(),
+                  c.genre(),
+                  c.statut(),
+                  c.presaleDebut(),
+                  c.presaleNom(),
+                  c.salleSourceId(),
+                  c.artisteSourceId(),
+                  c.salleUuid(),
+                  artisteIdFinal);
+            })
+        .toList();
+  }
+
   @Transactional
   public ResultatPersistance persisterConcerts(List<ConcertBrut> liste) {
     if (liste.isEmpty()) return new ResultatPersistance(0, 0);
@@ -1147,6 +1231,7 @@ public class PersisterConcerts {
               .toList();
 
       List<ValeurConcert> valeurs = resoudreIdentitesSources(valeursBrutes);
+      valeurs = resoudreParUrl(valeurs);
       valeurs = reconcilierSalles(valeurs);
       valeurs = reconcilierArtistes(valeurs);
       // Deuxième passe salle : couvre le cas où artiste_norm et salle_norm varient simultanément.
