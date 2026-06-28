@@ -86,6 +86,13 @@ class PersisterConcertsIntegrationTest {
         null);
   }
 
+  private static ConcertBrut concertAvecUrl(
+      String artiste, String date, String salle, String source, String url) {
+    return new ConcertBrut(
+        artiste, date, "20:30", salle, "Paris", "75", url, source, "music", "Pop", "onsale", null,
+        null, null, null);
+  }
+
   private static ConcertBrut concertAvecSourceId(
       String artiste, String date, String salle, String salleSourceId, String artisteSourceId) {
     return new ConcertBrut(
@@ -527,6 +534,32 @@ class PersisterConcertsIntegrationTest {
 
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(2L, count, "matinée et soirée doivent être deux concerts distincts");
+  }
+
+  @Test
+  void persisterConcerts_memeUrlArtistesDifferents_unifieArtisteNorm() {
+    // #719 — page festival Eventim : "Yael Naim" (batch H:00) puis "Solidays 2026" (region H:30)
+    // ont la même URL source. resoudreParUrl doit forcer l'artiste_norm du 2ème fetch à celui
+    // du 1er fetch déjà en base, évitant deux lignes et les notifications répétées.
+    String urlFestival = "https://www.eventim.fr/event/solidays-2026-hippodrome-de-longchamp-21086080/";
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecUrl("Yael Naim", "2026-06-28", "Hippodrome de Longchamp", "eventim", urlFestival)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecUrl(
+                "Solidays 2026", "2026-06-28", "Hippodrome de Longchamp", "eventim", urlFestival)));
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(1L, count, "les deux concerts avec la même URL doivent fusionner en un seul");
+
+    String artisteEnBase =
+        jdbc.queryForObject(
+            "SELECT artiste_norm FROM concerts", Map.of(), String.class);
+    assertEquals(
+        "yael naim", artisteEnBase, "l'artiste_norm du premier fetch doit être conservé");
   }
 
   @Test

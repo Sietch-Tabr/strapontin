@@ -299,6 +299,73 @@ public class WorkerService {
     log.info("fetch:salle terminé identifiants={}", identifiantsStr);
   }
 
+  /// Fetch périodique de toutes les salles ayant des sources configurées dans {@code salle_sources}.
+  ///
+  /// Boucle sur toutes les salles du référentiel et exécute le même pipeline que
+  /// {@link #executerFetchSalle} en agrégeant les concerts avant persistance.
+  /// Suspendu si le quota TM est insuffisant.
+  public void executerFetchSallesAll() {
+    log.info("fetch:salles:all démarré");
+    long debut = System.currentTimeMillis();
+    String erreur = null;
+    ResultatPersistance resultat = new ResultatPersistance(0, 0);
+    try {
+      if (!gestionQuotaTM.cronAutorise()) {
+        log.warn("fetch:salles:all suspendu — quota TM insuffisant");
+        erreur = "quota insuffisant";
+        return;
+      }
+
+      List<String> identifiantsParSalle =
+          jdbc.queryForList(
+              "SELECT string_agg(ss.source || ':' || ss.identifiant_externe, ',')"
+                  + " FROM salle_sources ss GROUP BY ss.salle_id",
+              Map.of(),
+              String.class);
+
+      if (identifiantsParSalle.isEmpty()) {
+        log.info("fetch:salles:all — aucune salle avec source configurée");
+        return;
+      }
+
+      List<ConcertBrut> tous = new ArrayList<>();
+      for (String identifiantsStr : identifiantsParSalle) {
+        if (identifiantsStr == null) continue;
+        for (String id : identifiantsStr.split(",")) {
+          String identifiant = id.trim();
+          for (SourceConcerts source : sources) {
+            if (source.accepteIdentifiantSalle(identifiant)) {
+              try {
+                tous.addAll(source.fetchSalle(identifiant));
+              } catch (Exception e) {
+                log.warn(
+                    "{} fetchSalle échoué identifiant={} : {}", source.nom(), identifiant, e.getMessage());
+              }
+            }
+          }
+        }
+      }
+      sauvegarderQuota();
+
+      List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
+      log.info(
+          "fetch:salles:all salles={} bruts={} dédoublonnés={}",
+          identifiantsParSalle.size(),
+          tous.size(),
+          dedoublonnes.size());
+
+      resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+      recalculerMatchesService.recalculerMatches(null);
+      notificationDigestService.executerDigest("temps_reel");
+      log.info("fetch:salles:all terminé");
+    } catch (Exception e) {
+      erreur = e.getMessage();
+      log.error("fetch:salles:all échoué", e);
+    } finally {
+      enregistrerStatJob("fetch:salles:all", System.currentTimeMillis() - debut, resultat, erreur);
+    }
+  }
+
   /// Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
   ///
   /// @param userIds IDs à recalculer, ou `null` pour tous

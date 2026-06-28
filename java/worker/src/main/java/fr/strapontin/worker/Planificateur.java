@@ -6,6 +6,7 @@ package fr.strapontin.worker;
 
 import fr.strapontin.worker.jobs.FetchArtistesBatchJob;
 import fr.strapontin.worker.jobs.FetchRegionJob;
+import fr.strapontin.worker.jobs.FetchSallesAllJob;
 import fr.strapontin.worker.jobs.NotifierDigestJob;
 import fr.strapontin.worker.jobs.PurgerArtistesJob;
 import fr.strapontin.worker.jobs.PurgerConcertsJob;
@@ -26,9 +27,11 @@ import org.springframework.context.annotation.Configuration;
 ///
 /// Déclencheurs configurés :
 ///
-/// - `fetch:artistes:batch` — toutes les 2 heures (cf. `worker.cron.fetch-artistes`)
-/// - `fetch:region` — toutes les 2 heures (cf. `worker.cron.fetch-region`)
-/// - `recalculer:matches` — toutes les 2 heures (cf. `worker.cron.recalculer-matches`)
+/// - `fetch:artistes:batch` — 11 cycles/jour : 01h, 05h, puis toutes les 2h de 07h à 23h
+///   (cf. `worker.cron.fetch-artistes`)
+/// - `fetch:region` — mêmes heures + 30 min (cf. `worker.cron.fetch-region`)
+/// - `fetch:salles:all` — mêmes heures que fetch:region (cf. `worker.cron.fetch-salles`)
+/// - `recalculer:matches` — mêmes heures que fetch:artistes (cf. `worker.cron.recalculer-matches`)
 /// - `purger:concerts` — tous les jours à minuit
 /// - `purger:salles` — tous les jours à 0h05 (après purge concerts)
 /// - `purger:artistes` — tous les jours à 0h06 (après purge salles)
@@ -37,20 +40,24 @@ import org.springframework.context.annotation.Configuration;
 /// - `revoquer:admins` — toutes les heures
 ///
 /// Le job `fetch:salle` est planifié dynamiquement par [WorkerService]
-/// selon les salles configurées.
+/// selon les salles configurées. `fetch:salles:all` est le pendant périodique
+/// qui boucle sur toutes les salles ayant des sources configurées.
 ///
 /// @since 2.0.0
 /// @author Kwaite
 @Configuration
 public class Planificateur {
 
-  @Value("${worker.cron.fetch-artistes:0 0 0/2 * * ?}")
+  @Value("${worker.cron.fetch-artistes:0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronFetchArtistes;
 
-  @Value("${worker.cron.fetch-region:0 30 0/2 * * ?}")
+  @Value("${worker.cron.fetch-region:0 30 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronFetchRegion;
 
-  @Value("${worker.cron.recalculer-matches:0 0 1/2 * * ?}")
+  @Value("${worker.cron.fetch-salles:0 30 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
+  private String cronFetchSalles;
+
+  @Value("${worker.cron.recalculer-matches:0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronRecalculerMatches;
 
   @Bean
@@ -84,6 +91,23 @@ public class Planificateur {
         .forJob(jobDetailFetchRegion)
         .withIdentity("triggerFetchRegion")
         .withSchedule(CronScheduleBuilder.cronSchedule(cronFetchRegion))
+        .build();
+  }
+
+  @Bean
+  JobDetail jobDetailFetchSallesAll() {
+    return JobBuilder.newJob(FetchSallesAllJob.class)
+        .withIdentity("fetchSallesAll")
+        .storeDurably()
+        .build();
+  }
+
+  @Bean
+  Trigger triggerFetchSallesAll(JobDetail jobDetailFetchSallesAll) {
+    return TriggerBuilder.newTrigger()
+        .forJob(jobDetailFetchSallesAll)
+        .withIdentity("triggerFetchSallesAll")
+        .withSchedule(CronScheduleBuilder.cronSchedule(cronFetchSalles))
         .build();
   }
 

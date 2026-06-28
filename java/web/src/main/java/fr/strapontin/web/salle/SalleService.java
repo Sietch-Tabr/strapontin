@@ -5,6 +5,7 @@
 package fr.strapontin.web.salle;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.config.ConfigService;
@@ -286,7 +287,12 @@ public class SalleService {
       return venues.stream()
           .map(
               v -> {
-                String nom = (String) v.get("name");
+                String nomBrut = (String) v.get("name");
+                if (nomBrut == null) return new ResultatSalle(null, null, null, null, "ticketmaster");
+                String nom = TicketmasterSource.normaliserCasse(nomBrut);
+                if (nomBrut.contains("??")) {
+                  log.warn("TM salle nom corrompu id={} nom='{}'", v.get("id"), nomBrut);
+                }
                 String id = (String) v.get("id");
                 Map<String, Object> city = (Map<String, Object>) v.get("city");
                 String ville = city != null ? (String) city.get("name") : null;
