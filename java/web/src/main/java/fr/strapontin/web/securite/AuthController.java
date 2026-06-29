@@ -45,7 +45,7 @@ public class AuthController {
   private static final Logger log = LoggerFactory.getLogger(AuthController.class);
   private static final String SESSION_ECHECS_TOTP = "TOTP_ECHECS";
   private static final int MAX_ECHECS_TOTP = 5;
-  private static final Pattern FORMAT_IDENTIFIANT = Pattern.compile("^[a-zA-Z0-9_]+$");
+  private static final Pattern FORMAT_IDENTIFIANT = Pattern.compile("^[a-zA-Z0-9._-]+$");
 
   private final AuthenticationManager authenticationManager;
   private final AuthService authService;
@@ -296,7 +296,8 @@ public class AuthController {
             .body(
                 Map.of(
                     "erreur",
-                    "L'identifiant ne peut contenir que des lettres, chiffres et underscores."));
+                    "L'identifiant ne peut contenir que des lettres, chiffres, points,"
+                        + " tirets et underscores."));
       }
       String identFinal = authService.activerCompteInvite(req.token(), ident, req.motDePasse());
 

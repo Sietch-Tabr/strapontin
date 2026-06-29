@@ -16,6 +16,8 @@ public record RequeteIdentifiant(
     @NotBlank(message = "L'identifiant est obligatoire.")
         @Size(min = 3, max = 30, message = "L'identifiant doit contenir entre 3 et 30 caractères.")
         @Pattern(
-            regexp = "[a-zA-Z0-9_]+",
-            message = "L'identifiant ne peut contenir que des lettres, chiffres et underscores.")
+            regexp = "[a-zA-Z0-9._-]+",
+            message =
+                "L'identifiant ne peut contenir que des lettres, chiffres, points,"
+                    + " tirets et underscores.")
         String identifiant) {}

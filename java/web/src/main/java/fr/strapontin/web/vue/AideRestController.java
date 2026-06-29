@@ -53,12 +53,13 @@ public class AideRestController {
 
   /// Retourne la configuration nécessaire à la page d'aide.
   ///
-  /// @return resendDisponible et contactEmail
+  /// @return resendDisponible, contactEmail et signalLien
   @GetMapping("/config")
   public ResponseEntity<Map<String, Object>> config() {
     Map<String, Object> corps = new HashMap<>();
     corps.put("resendDisponible", emailService.estDisponible());
     corps.put("contactEmail", configService.lireConfig("CONTACT_EMAIL").orElse(""));
+    corps.put("signalLien", configService.lireConfig("SIGNAL_LIEN").orElse(""));
     return ResponseEntity.ok(corps);
   }
 

@@ -133,6 +133,12 @@
                 Écrivez à <a :href="'mailto:' + config.contactEmail">l'administrateur</a>.
               </p>
             </div>
+            <div v-if="config && config.signalLien">
+              <p class="param-aide">
+                Rejoignez la communauté sur
+                <a :href="config.signalLien" target="_blank" rel="noopener noreferrer">Signal</a>.
+              </p>
+            </div>
           </div>
         </div>
       </section>

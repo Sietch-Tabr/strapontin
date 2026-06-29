@@ -119,7 +119,7 @@ onMounted(async () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       miseAJourEnCours.value = true
-      window.location.href = window.location.href
+      window.location.reload()
     })
     navigator.serviceWorker.addEventListener('message', (event) => {
       if (event.data?.type === 'nav-ancre') {

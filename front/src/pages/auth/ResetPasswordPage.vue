@@ -25,9 +25,9 @@
           required
           minlength="3"
           maxlength="30"
-          pattern="[a-zA-Z0-9_]+"
+          pattern="[a-zA-Z0-9._\-]+"
           autocomplete="username"
-          placeholder="Entre 3 et 30 caractères (lettres, chiffres, _)"
+          placeholder="Entre 3 et 30 caractères (lettres, chiffres, . - _)"
         />
       </div>
       <div class="form-group">

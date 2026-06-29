@@ -55,9 +55,11 @@ public class AdminService {
           "RESEND_WEBHOOK_SECRET",
           "CONTACT_EMAIL",
           "PUBLIC_BASE_URL",
+          "SIGNAL_LIEN",
           "VAPID_PUBLIC_KEY",
           "VAPID_PRIVATE_KEY");
-  private static final Set<String> CLES_EN_CLAIR = Set.of("CONTACT_EMAIL", "PUBLIC_BASE_URL");
+  private static final Set<String> CLES_EN_CLAIR =
+      Set.of("CONTACT_EMAIL", "PUBLIC_BASE_URL", "SIGNAL_LIEN");
   private static final Set<String> CLES_OBLIGATOIRES = Set.of("CONTACT_EMAIL", "PUBLIC_BASE_URL");
   private static final Pattern FORMAT_TM_KEY = Pattern.compile("^[A-Za-z0-9]{16,64}$");
   private static final Pattern FORMAT_RESEND_KEY = Pattern.compile("^re_[A-Za-z0-9_-]{10,}$");
@@ -121,17 +123,23 @@ public class AdminService {
     }
   }
 
-  /// Retourne la liste des utilisateurs avec leur dernière activité.
+  /// Retourne la liste des utilisateurs avec leur dernière activité et compteurs de suivi.
   ///
   /// @return utilisateurs triés par date de création
   public List<UtilisateurAdmin> listerUtilisateurs() {
     List<Map<String, Object>> tousLesUsers =
         jdbc.queryForList(
             """
-            SELECT id, email, role::text, username, display_username, must_change_credentials,
-                   created_at, revocation_admin_le
-            FROM users
-            ORDER BY created_at
+            SELECT u.id, u.email, u.role::text, u.username, u.display_username,
+                   u.must_change_credentials, u.created_at, u.revocation_admin_le,
+                   COUNT(DISTINCT us.salle_uuid) AS nb_salles,
+                   COUNT(DISTINCT ua.artiste_id) AS nb_artistes
+            FROM users u
+            LEFT JOIN user_salles us ON us.user_id = u.id
+            LEFT JOIN user_artistes ua ON ua.user_id = u.id
+            GROUP BY u.id, u.email, u.role, u.username, u.display_username,
+                     u.must_change_credentials, u.created_at, u.revocation_admin_le
+            ORDER BY u.created_at
             """,
             Map.of());
 
@@ -153,6 +161,8 @@ public class AdminService {
               String username = (String) u.get("username");
               Long derniereMs = activiteParUsername.get(username);
               java.sql.Timestamp revocationTs = (java.sql.Timestamp) u.get("revocation_admin_le");
+              Number nbSallesNum = (Number) u.get("nb_salles");
+              Number nbArtistesNum = (Number) u.get("nb_artistes");
               return new UtilisateurAdmin(
                   (String) u.get("id"),
                   (String) u.get("email"),
@@ -162,7 +172,9 @@ public class AdminService {
                   (Boolean) u.get("must_change_credentials"),
                   ((java.sql.Timestamp) u.get("created_at")).toInstant(),
                   derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null,
-                  revocationTs != null ? revocationTs.toInstant() : null);
+                  revocationTs != null ? revocationTs.toInstant() : null,
+                  nbSallesNum != null ? nbSallesNum.intValue() : 0,
+                  nbArtistesNum != null ? nbArtistesNum.intValue() : 0);
             })
         .toList();
   }

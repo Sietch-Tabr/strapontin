@@ -19,4 +19,6 @@ public record UtilisateurAdmin(
     boolean mustChangeCredentials,
     Instant createdAt,
     Instant derniereActivite,
-    Instant revocationAdminLe) {}
+    Instant revocationAdminLe,
+    int nbSalles,
+    int nbArtistes) {}
