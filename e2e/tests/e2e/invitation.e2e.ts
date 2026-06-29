@@ -51,7 +51,13 @@ test.describe("Scénario: invitation — dialog de confirmation", () => {
     await expect(page.locator("section#utilisateurs")).toBeVisible();
 
     await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
+    const attendreCreation = page.waitForResponse(
+      (r) =>
+        r.url().includes("/api/admin/utilisateurs") &&
+        r.request().method() === "POST",
+    );
     await page.click('.form-creer-utilisateur button[type="submit"]');
+    await attendreCreation;
 
     const dialog = page.locator("dialog#dialog-invitation");
     await expect(dialog).toBeVisible({ timeout: 5000 });
