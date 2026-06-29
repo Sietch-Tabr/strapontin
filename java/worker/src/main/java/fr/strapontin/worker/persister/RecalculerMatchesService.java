@@ -120,7 +120,7 @@ public class RecalculerMatchesService {
     if (artisteIds.isEmpty() && salleUuids.isEmpty()) return;
 
     List<String> departements = obtenirDepartementsUser(userId);
-    Set<String> concertIds = new LinkedHashSet<>();
+    Set<UUID> concertIds = new LinkedHashSet<>();
 
     if (!artisteIds.isEmpty()) {
       concertIds.addAll(rechercherConcertsParArtistes(artisteIds, departements, aujourdhui));
@@ -157,48 +157,45 @@ public class RecalculerMatchesService {
     }
   }
 
-  private List<String> rechercherConcertsParArtistes(
+  private List<UUID> rechercherConcertsParArtistes(
       List<UUID> artisteIds, List<String> departements, String aujourdhui) {
-    List<String> artisteIdsStr = artisteIds.stream().map(UUID::toString).toList();
     Map<String, Object> params = new HashMap<>();
-    params.put("artisteIds", artisteIdsStr);
+    params.put("artisteIds", artisteIds);
     params.put("aujourdhui", LocalDate.parse(aujourdhui));
 
     String sql;
     if (departements.isEmpty()) {
       sql =
-          "SELECT DISTINCT id::text FROM concerts"
-              + " WHERE artiste_id::text IN (:artisteIds) AND date >= :aujourdhui";
+          "SELECT DISTINCT id FROM concerts"
+              + " WHERE artiste_id IN (:artisteIds) AND date >= :aujourdhui";
     } else {
       params.put("departements", departements);
       sql =
-          "SELECT DISTINCT id::text FROM concerts"
-              + " WHERE artiste_id::text IN (:artisteIds) AND date >= :aujourdhui"
+          "SELECT DISTINCT id FROM concerts"
+              + " WHERE artiste_id IN (:artisteIds) AND date >= :aujourdhui"
               + " AND dept = ANY(ARRAY[:departements])";
     }
-    return jdbc.queryForList(sql, params, String.class);
+    return jdbc.queryForList(sql, params, UUID.class);
   }
 
-  private List<String> rechercherConcertsParSalles(List<UUID> salleUuids, String aujourdhui) {
-    List<String> uuidsStr = salleUuids.stream().map(UUID::toString).toList();
+  private List<UUID> rechercherConcertsParSalles(List<UUID> salleUuids, String aujourdhui) {
     return jdbc.queryForList(
-        "SELECT DISTINCT id::text FROM concerts"
-            + " WHERE salle_uuid::text IN (:salleUuids) AND date >= :aujourdhui",
-        Map.of("salleUuids", uuidsStr, "aujourdhui", LocalDate.parse(aujourdhui)),
-        String.class);
+        "SELECT DISTINCT id FROM concerts"
+            + " WHERE salle_uuid IN (:salleUuids) AND date >= :aujourdhui",
+        Map.of("salleUuids", salleUuids, "aujourdhui", LocalDate.parse(aujourdhui)),
+        UUID.class);
   }
 
-  private void supprimerMatchesPetimes(String userId, Set<String> concertIds) {
+  private void supprimerMatchesPetimes(String userId, Set<UUID> concertIds) {
     jdbc.update(
-        "DELETE FROM user_matches WHERE user_id = :userId AND concert_id::text NOT IN"
-            + " (:concertIds)",
+        "DELETE FROM user_matches WHERE user_id = :userId AND concert_id NOT IN (:concertIds)",
         Map.of(CLE_USER_ID, userId, "concertIds", concertIds));
   }
 
-  private void insererNouveauxMatches(String userId, Set<String> concertIds) {
+  private void insererNouveauxMatches(String userId, Set<UUID> concertIds) {
     String sql =
         "INSERT INTO user_matches (user_id, concert_id)"
-            + " VALUES (:userId, CAST(:concertId AS uuid)) ON CONFLICT DO NOTHING";
+            + " VALUES (:userId, :concertId) ON CONFLICT DO NOTHING";
     SqlParameterSource[] params =
         concertIds.stream()
             .map(
@@ -212,7 +209,7 @@ public class RecalculerMatchesService {
     }
   }
 
-  private void marquerIndisponiblesCommeLus(String userId, Set<String> concertIds) {
+  private void marquerIndisponiblesCommeLus(String userId, Set<UUID> concertIds) {
     jdbc.update(
         """
         UPDATE user_matches um
@@ -221,7 +218,7 @@ public class RecalculerMatchesService {
           AND um.notification_envoyee_le IS NULL
           AND um.concert_id IN (
             SELECT c.id FROM concerts c
-            WHERE c.id::text IN (:concertIds)
+            WHERE c.id IN (:concertIds)
               AND c.disponible = false
           )
         """,

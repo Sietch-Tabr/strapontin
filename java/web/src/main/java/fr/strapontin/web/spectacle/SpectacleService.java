@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -209,25 +210,25 @@ public class SpectacleService {
     boolean sourceSalles = sources == null || sources.isEmpty() || sources.contains("salles");
 
     if (sourceArtistes && !sourceSalles) {
-      List<String> ids =
+      List<UUID> ids =
           jdbc.queryForList(
-              "SELECT artiste_id::text FROM user_artistes WHERE user_id = :u",
+              "SELECT artiste_id FROM user_artistes WHERE user_id = :u",
               Map.of("u", userId),
-              String.class);
+              UUID.class);
       if (ids.isEmpty()) where.append(" AND false");
       else {
-        where.append(" AND c.artiste_id::text IN (:artisteIds)");
+        where.append(" AND c.artiste_id IN (:artisteIds)");
         params.put("artisteIds", ids);
       }
     } else if (sourceSalles && !sourceArtistes) {
-      List<String> ids =
+      List<UUID> ids =
           jdbc.queryForList(
-              "SELECT salle_uuid::text FROM user_salles WHERE user_id = :u",
+              "SELECT salle_uuid FROM user_salles WHERE user_id = :u",
               Map.of("u", userId),
-              String.class);
+              UUID.class);
       if (ids.isEmpty()) where.append(" AND false");
       else {
-        where.append(" AND c.salle_uuid::text IN (:salleIds)");
+        where.append(" AND c.salle_uuid IN (:salleIds)");
         params.put("salleIds", ids);
       }
     }

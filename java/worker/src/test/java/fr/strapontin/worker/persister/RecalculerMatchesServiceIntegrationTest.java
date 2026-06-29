@@ -239,6 +239,19 @@ class RecalculerMatchesServiceIntegrationTest {
   }
 
   @Test
+  void recalculerMatches_salleUuidIdentiqueSalleNormDifferente_matchUniqueParUuid() {
+    insererUser("u30");
+    UUID salleUuid = insererSalle("lempreinte");
+    insererUserSalle("u30", salleUuid);
+    // Migration V14 garantit l'unicité par salle_uuid — un seul concert doit exister
+    insererConcert("KrashKarma", "krashkarma", DATE_FUTURE, "lempreinte savigny", null, salleUuid);
+
+    service.recalculerMatches(List.of("u30"));
+
+    assertEquals(1, compterMatches("u30"), "Un seul match attendu via salle_uuid unique");
+  }
+
+  @Test
   void recalculerMatches_userSansAbonnement_matchesOrphelinsPurges() {
     insererUser("u8");
     insererConcert("Test", "test", DATE_FUTURE, "test", null, null);
