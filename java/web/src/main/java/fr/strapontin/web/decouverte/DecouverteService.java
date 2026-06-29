@@ -69,8 +69,13 @@ public class DecouverteService {
     String genreStr = FiltreConcertsBuilder.tronquer(filtre.genre(), 50);
     StringBuilder where =
         construireFiltresWhere(
-            deptsActifs, rechercheNorm, filtre.mois(), genreStr, filtre.classification(),
-            aujourd8, params);
+            deptsActifs,
+            rechercheNorm,
+            filtre.mois(),
+            genreStr,
+            filtre.classification(),
+            aujourd8,
+            params);
 
     String orderBy = FiltreConcertsBuilder.clauseTri(filtre.tri());
 
@@ -91,8 +96,7 @@ public class DecouverteService {
     var futureFiltres =
         CompletableFuture.supplyAsync(() -> chargerFiltresDisponibles(whereBase, baseParams));
     var futureSyncTs = CompletableFuture.supplyAsync(this::lireDerniereSync);
-    var futureSyncParDept =
-        CompletableFuture.supplyAsync(() -> lireSyncParDept(deptsActifs));
+    var futureSyncParDept = CompletableFuture.supplyAsync(() -> lireSyncParDept(deptsActifs));
 
     List<ConcertDecouverte> concerts =
         jdbc.query(
@@ -173,9 +177,7 @@ public class DecouverteService {
   private int compterTotal(StringBuilder where, Map<String, Object> params) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(
-            "SELECT COUNT(*) FROM concerts c WHERE " + where,
-            new HashMap<>(params),
-            Integer.class),
+            "SELECT COUNT(*) FROM concerts c WHERE " + where, new HashMap<>(params), Integer.class),
         0);
   }
 
