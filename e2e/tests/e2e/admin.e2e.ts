@@ -443,9 +443,12 @@ test.describe("Scénario: admin — onglet Sources", () => {
       });
       try {
         const uuid = "00000000-0000-0000-0000-000000000001";
-        const rep = await ctx.post(`/api/admin/salles/${uuid}/tester-digitick`, {
-          data: { slug: "lempreinte" },
-        });
+        const rep = await ctx.post(
+          `/api/admin/salles/${uuid}/tester-digitick`,
+          {
+            data: { slug: "lempreinte" },
+          },
+        );
         expect(rep.status()).toBe(200);
         const corps = await rep.json();
         expect(corps.accessible).toBe(true);
@@ -612,7 +615,9 @@ test.describe("Scénario: admin — onglet Sources", () => {
     } finally {
       if (salleUuid) {
         await ctx.delete(`/api/salles/${salleUuid}`).catch(() => {});
-        await ctx.delete(`/api/admin/digitick-salles/${salleUuid}`).catch(() => {});
+        await ctx
+          .delete(`/api/admin/digitick-salles/${salleUuid}`)
+          .catch(() => {});
       }
       await ctx.dispose();
     }
