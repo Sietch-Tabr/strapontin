@@ -52,9 +52,7 @@ public class DecouverteService {
 
     List<String> deptsUtilisateur = lireDeptsUtilisateur(userId);
     List<String> deptsActifs =
-        (filtre.depts() == null || filtre.depts().isEmpty())
-            ? deptsUtilisateur
-            : filtre.depts();
+        (filtre.depts() == null || filtre.depts().isEmpty()) ? deptsUtilisateur : filtre.depts();
 
     Map<String, Object> params = new HashMap<>();
     params.put("limit", CONCERTS_PAR_PAGE);

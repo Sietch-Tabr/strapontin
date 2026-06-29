@@ -12,9 +12,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Service pour les paramètres utilisateur : statistiques et flux de changement d'email.
 ///
@@ -99,8 +99,7 @@ public class ParametresService {
             "id", UUID.randomUUID().toString(),
             "identifier", prefixe,
             "value", GenerateurSecrets.sha256Hex(token),
-            "expiresAt",
-                java.sql.Timestamp.from(Instant.now().plus(24, ChronoUnit.HOURS))));
+            "expiresAt", java.sql.Timestamp.from(Instant.now().plus(24, ChronoUnit.HOURS))));
     jdbc.update(
         "UPDATE users SET pending_email = :email WHERE id = :id",
         Map.of("email", emailNorm, "id", details.id()));
@@ -175,8 +174,7 @@ public class ParametresService {
     if (emailDejaUtilise(nouvelEmail, userId)) {
       jdbc.update("UPDATE users SET pending_email = NULL WHERE id = :id", Map.of("id", userId));
       jdbc.update(
-          "DELETE FROM verifications WHERE identifier = :p",
-          Map.of("p", "email-change:" + userId));
+          "DELETE FROM verifications WHERE identifier = :p", Map.of("p", "email-change:" + userId));
       return new ResultatConfirmation(ResultatConfirmation.Statut.EMAIL_DEJA_UTILISE, userId);
     }
 

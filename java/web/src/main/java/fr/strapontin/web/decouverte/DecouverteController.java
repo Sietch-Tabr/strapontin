@@ -50,8 +50,8 @@ public class DecouverteController {
       Authentication auth) {
     String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
     FiltreConcerts filtre =
-        new FiltreConcerts(q, mois, genre, classification, tri, page,
-            false, false, null, null, depts);
+        new FiltreConcerts(
+            q, mois, genre, classification, tri, page, false, false, null, null, depts);
     return ResponseEntity.ok(decouverteService.decouvrir(userId, filtre));
   }
 

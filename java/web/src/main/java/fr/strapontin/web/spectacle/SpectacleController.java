@@ -56,8 +56,18 @@ public class SpectacleController {
       Authentication auth) {
     String userId = utilisateur(auth).id();
     FiltreConcerts filtre =
-        new FiltreConcerts(q, mois, genre, classification, tri, page,
-            quinzaine, masques, sources, indisponibles, null);
+        new FiltreConcerts(
+            q,
+            mois,
+            genre,
+            classification,
+            tri,
+            page,
+            quinzaine,
+            masques,
+            sources,
+            indisponibles,
+            null);
     return ResponseEntity.ok(spectacleService.listerSpectacles(userId, filtre));
   }
 

@@ -42,7 +42,8 @@ public class ParametresRestController {
 
   /// @param parametresService service métier des paramètres
   /// @param configService     service de configuration pour lire PUBLIC_BASE_URL
-  public ParametresRestController(ParametresService parametresService, ConfigService configService) {
+  public ParametresRestController(
+      ParametresService parametresService, ConfigService configService) {
     this.parametresService = parametresService;
     this.configService = configService;
   }

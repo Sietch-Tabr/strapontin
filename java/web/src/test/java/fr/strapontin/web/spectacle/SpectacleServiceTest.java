@@ -40,11 +40,29 @@ class SpectacleServiceTest {
     service = new SpectacleService(jdbc, userConfigService);
   }
 
-  private static FiltreConcerts filtre(String q, String mois, String classification, String genre,
-      boolean quinzaine, String tri, boolean masques, List<String> sources,
-      String indisponibles, int page) {
-    return new FiltreConcerts(q, mois, genre, classification, tri, page,
-        quinzaine, masques, sources, indisponibles, null);
+  private static FiltreConcerts filtre(
+      String q,
+      String mois,
+      String classification,
+      String genre,
+      boolean quinzaine,
+      String tri,
+      boolean masques,
+      List<String> sources,
+      String indisponibles,
+      int page) {
+    return new FiltreConcerts(
+        q,
+        mois,
+        genre,
+        classification,
+        tri,
+        page,
+        quinzaine,
+        masques,
+        sources,
+        indisponibles,
+        null);
   }
 
   @Test
@@ -76,8 +94,7 @@ class SpectacleServiceTest {
 
     ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
 
-    service.listerSpectacles(
-        "u1", filtre("", "", "", "", true, "date", false, null, null, 0));
+    service.listerSpectacles("u1", filtre("", "", "", "", true, "date", false, null, null, 0));
 
     verify(jdbc).query(contains("dans15Jours"), captor.capture(), any(RowMapper.class));
     assertTrue(captor.getValue().containsKey("dans15Jours"));
@@ -131,7 +148,8 @@ class SpectacleServiceTest {
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(0);
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
-    service.listerSpectacles("u1", filtre("", "", "", "", false, "nouveaute", false, null, null, 0));
+    service.listerSpectacles(
+        "u1", filtre("", "", "", "", false, "nouveaute", false, null, null, 0));
 
     verify(jdbc).query(contains("first_seen DESC"), anyMap(), any(RowMapper.class));
   }

@@ -56,9 +56,7 @@ public class SpectacleService {
     int pageNum = Math.max(0, filtre.page());
     boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
     boolean inclureIndisponibles =
-        filtre.indisponibles() != null
-            ? "1".equals(filtre.indisponibles())
-            : !filtreDisponibles;
+        filtre.indisponibles() != null ? "1".equals(filtre.indisponibles()) : !filtreDisponibles;
     String conditionMasque = filtre.masques() ? "NOT NULL" : "NULL";
 
     Map<String, Object> params = new HashMap<>();
