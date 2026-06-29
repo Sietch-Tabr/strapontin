@@ -54,12 +54,14 @@ test.describe("Bannière système overlay", () => {
       timeout: 5000,
     });
     await page.locator(".banniere-fermer").click();
-    await expect(page.locator(".banniere-overlay")).toBeHidden({
-      timeout: 2000,
+    // v-if : l'élément est retiré du DOM après la transition leave (200ms).
+    // toBeHidden ne suffit pas car opacity:0 reste "visible" pour Playwright.
+    await expect(page.locator(".banniere-overlay")).not.toBeAttached({
+      timeout: 3000,
     });
     await page.goto("/spectacles");
-    await expect(page.locator(".banniere-overlay")).toBeHidden({
-      timeout: 2000,
+    await expect(page.locator(".banniere-overlay")).not.toBeAttached({
+      timeout: 3000,
     });
   });
 

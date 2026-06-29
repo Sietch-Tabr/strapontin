@@ -6,6 +6,7 @@
         :key="item.href"
         :href="item.href"
         :class="{ actif: estActif(item.href) }"
+        :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguer(item.href)"
       >
         <span v-if="item.href === '/'" class="bottom-nav-badge-wrapper">

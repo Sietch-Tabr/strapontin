@@ -1,14 +1,15 @@
 <template>
   <AuthLayout>
+    <h1 class="sr-only">Connexion</h1>
     <div class="auth-logo">
       <img src="/images/logo.webp" alt="Strapontin" />
     </div>
     <p class="auth-subtitle">Connectez-vous à votre compte</p>
 
-    <div v-if="erreurSoumission" class="alerte alerte-erreur">
+    <div v-if="erreurSoumission" role="alert" aria-live="assertive" class="alerte alerte-erreur">
       {{ erreurSoumission }}
     </div>
-    <div v-else-if="messageSucces" class="alerte alerte-succes">
+    <div v-else-if="messageSucces" role="status" class="alerte alerte-succes">
       {{ messageSucces }}
     </div>
 
