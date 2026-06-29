@@ -211,13 +211,14 @@ test.describe("Scénario: indicateur de chargement (#644)", () => {
       });
 
       const gotoPromise = page.goto(url);
-      await page.waitForLoadState("domcontentloaded");
+      // Ne pas attendre domcontentloaded : en Firefox, cet événement peut se déclencher
+      // après que Vue a déjà monté et traité la réponse retardée, ce qui fait manquer l'état.
       await expect(page.locator(".etat-chargement")).toBeVisible({
-        timeout: 3000,
+        timeout: 5000,
       });
       await gotoPromise;
       await expect(page.locator(".etat-chargement")).not.toBeVisible({
-        timeout: 4000,
+        timeout: 5000,
       });
     });
   }
@@ -235,9 +236,9 @@ test.describe("Scénario: indicateur de chargement admin (#644)", () => {
     });
 
     const gotoPromise = page.goto("/admin");
-    await page.waitForLoadState("domcontentloaded");
+    // Ne pas attendre domcontentloaded (race condition Firefox — voir tests pages ci-dessus).
     await expect(page.locator(".etat-chargement").first()).toBeVisible({
-      timeout: 3000,
+      timeout: 5000,
     });
     await gotoPromise;
     await expect(page.locator(".etat-chargement").first()).not.toBeVisible({

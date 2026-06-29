@@ -431,22 +431,31 @@ test.describe("Scénario: admin — onglet Sources", () => {
     ).toBeVisible();
   });
 
-  test("admin_sources_api_tester_slug_valide", async () => {
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
-    try {
-      const uuid = "00000000-0000-0000-0000-000000000001";
-      const rep = await ctx.post(`/api/admin/salles/${uuid}/tester-digitick`, {
-        data: { slug: "lempreinte" },
+  // Ce test effectue un appel HTTP réel vers web.digitick.com — une défaillance réseau
+  // transitoire peut le faire échouer. retries: 1 tolère un incident passager sans masquer un vrai bug.
+  test.describe("admin_sources_api_tester_slug_valide (réseau externe)", () => {
+    test.describe.configure({ retries: 1 });
+
+    test("admin_sources_api_tester_slug_valide", async () => {
+      const ctx = await playwrightRequest.newContext({
+        baseURL: BASE_URL,
+        storageState: FICHIER_AUTH_ADMIN,
       });
-      expect(rep.status()).toBe(200);
-      const corps = await rep.json();
-      expect(corps.accessible).toBe(true);
-    } finally {
-      await ctx.dispose();
-    }
+      try {
+        const uuid = "00000000-0000-0000-0000-000000000001";
+        const rep = await ctx.post(
+          `/api/admin/salles/${uuid}/tester-digitick`,
+          {
+            data: { slug: "lempreinte" },
+          },
+        );
+        expect(rep.status()).toBe(200);
+        const corps = await rep.json();
+        expect(corps.accessible).toBe(true);
+      } finally {
+        await ctx.dispose();
+      }
+    });
   });
 
   test("admin_sources_api_tester_slug_invalide", async () => {
@@ -606,7 +615,9 @@ test.describe("Scénario: admin — onglet Sources", () => {
     } finally {
       if (salleUuid) {
         await ctx.delete(`/api/salles/${salleUuid}`).catch(() => {});
-        await ctx.delete(`/api/admin/digitick-salles/${salleUuid}`).catch(() => {});
+        await ctx
+          .delete(`/api/admin/digitick-salles/${salleUuid}`)
+          .catch(() => {});
       }
       await ctx.dispose();
     }

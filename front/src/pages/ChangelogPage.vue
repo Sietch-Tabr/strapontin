@@ -8,6 +8,37 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.4.1 — 29 juin 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Compte</p>
+            <ul>
+              <li>Les identifiants de connexion peuvent désormais contenir des points (.) et des tirets (-) en plus des lettres, chiffres et underscores.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Concerts</p>
+            <ul>
+              <li>Des concerts d'un artiste homonyme ou dont le nom contient celui d'un artiste suivi (ex. « Anuv Jain » lors d'un fetch de « Jain ») pouvaient s'afficher à tort — corrigé.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>La liste des utilisateurs affiche maintenant le nombre d'artistes et de salles suivis par chaque compte.</li>
+              <li>Un lien Signal (groupe ou contact) peut être configuré depuis Admin &gt; Configuration. S'il est renseigné, il apparaît sur la page Aide.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Compatibilité</p>
+            <ul>
+              <li>Sur certains navigateurs (Chrome, Safari), la mise à jour de l'application PWA pouvait laisser la page bloquée sur l'écran « Mise à jour en cours… » — corrigé.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.4.0 — 25 juin 2026</h2>
         <div class="changelog-entrees">
           <div>

@@ -35,6 +35,7 @@
                 <span v-if="u.derniereActivite">Dernière activité : {{ formaterInstant(u.derniereActivite) }}</span>
                 <span v-else>Jamais connecté</span>
               </p>
+              <p class="user-carte-suivi">{{ u.nbArtistes }} artiste{{ u.nbArtistes !== 1 ? 's' : '' }}, {{ u.nbSalles }} salle{{ u.nbSalles !== 1 ? 's' : '' }}</p>
             </div>
             <div v-if="u.id !== utilisateurCourantId" class="user-carte-actions">
               <button type="button" class="btn btn-sm btn-secondary" @click="toggleModif(u.id)">Modifier</button>

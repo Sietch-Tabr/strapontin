@@ -216,9 +216,25 @@ class AuthControllerTest {
   void reinitialiserMotDePasse_identifiantFormatInvalide_retourne400() {
     var reponse =
         authController.reinitialiserMotDePasse(
-            new ResetPasswordRequest("token", "motdepasse12345", "alice@test"),
+            new ResetPasswordRequest("token", "motdepasse12345", "alice:test"),
             mock(HttpServletRequest.class));
     assertEquals(400, reponse.getStatusCode().value());
+  }
+
+  @Test
+  void reinitialiserMotDePasse_identifiantAvecPointEtTiret_passeLaValidationFormat() {
+    // Si le format est valide, activerCompteInvite est appelé (pas un retour 400 format).
+    // On simule un token invalide pour vérifier que la validation format ne bloque pas.
+    doThrow(new RuntimeException("token simulé invalide"))
+        .when(authService)
+        .activerCompteInvite(anyString(), anyString(), anyString());
+    assertThrows(
+        RuntimeException.class,
+        () ->
+            authController.reinitialiserMotDePasse(
+                new ResetPasswordRequest("token", "motdepasse12345", "alice.dupont-2"),
+                mock(HttpServletRequest.class)),
+        "alice.dupont-2 doit passer la validation de format et atteindre activerCompteInvite");
   }
 
   @Test

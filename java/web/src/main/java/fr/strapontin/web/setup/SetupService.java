@@ -73,9 +73,10 @@ public class SetupService {
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
     String motDePasse = requete.motDePasse() == null ? "" : requete.motDePasse();
 
-    if (identifiant.length() < 3 || !identifiant.matches("[a-z0-9_]+")) {
+    if (identifiant.length() < 3 || !identifiant.matches("[a-z0-9._-]+")) {
       throw new ErreurMetier(
-          "L'identifiant doit contenir au moins 3 caractères (lettres minuscules, chiffres, _).");
+          "L'identifiant doit contenir au moins 3 caractères"
+              + " (lettres minuscules, chiffres, points, tirets, _).");
     }
     if (email.isEmpty() || !email.contains("@"))
       throw new ErreurMetier("L'adresse email est invalide.");

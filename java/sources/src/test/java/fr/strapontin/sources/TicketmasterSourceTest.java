@@ -668,4 +668,52 @@ class TicketmasterSourceTest {
 
     assertEquals("offsale", concert.statut());
   }
+
+  // --- filtrage homonymes / partiels (#715) ---
+
+  @Test
+  void mapEvenement_fallbackEtAttractionNomDifferent_retourneNull() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(Map.of("name", "Anuv Jain")),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Zénith Paris",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75019")))));
+    assertNull(
+        TicketmasterSource.mapEvenement(evt, "Jain"),
+        "Un concert d'Anuv Jain ne doit pas être retourné lors d'un fetch de Jain");
+  }
+
+  @Test
+  void mapEvenement_fallbackEtAttractionNomIdentique_accepteEvenement() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(Map.of("name", "Julien Clerc")),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name", "Zénith Paris",
+                                "city", Map.of("name", "Paris"),
+                                "postalCode", "75019")))));
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "Julien Clerc");
+    assertNotNull(resultat);
+    assertEquals("Julien Clerc", resultat.artiste());
+  }
+
+  @Test
+  void mapEvenement_fallbackNullAttractionPresente_accepteEvenementSansVerification() {
+    // fetchSalle passe null comme fallback — pas de filtrage par nom attendu
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
+    assertNotNull(resultat);
+    assertEquals("Julien Clerc", resultat.artiste());
+  }
 }

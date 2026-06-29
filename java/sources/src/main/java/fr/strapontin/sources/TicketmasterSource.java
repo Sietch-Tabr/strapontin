@@ -343,7 +343,16 @@ public class TicketmasterSource implements SourceAvecFetchLot {
         attractions != null && !attractions.isEmpty()
             ? (String) attractions.get(0).get("name")
             : null;
-    if (nomAttraction != null) return normaliserCasse(nomAttraction);
+    if (nomAttraction != null) {
+      // Si la recherche était par nom d'artiste, rejeter les attractions dont le nom normalisé
+      // ne correspond pas exactement (évite les homonymes partiels, ex: "Anuv Jain" pour "Jain").
+      if (artisteFallback != null
+          && !Normalisation.normaliserTexte(nomAttraction)
+              .equals(Normalisation.normaliserTexte(artisteFallback))) {
+        return null;
+      }
+      return normaliserCasse(nomAttraction);
+    }
     if (artisteFallback == null) return null;
     String nomEvenement = (String) evt.get("name");
     if (nomEvenement != null
