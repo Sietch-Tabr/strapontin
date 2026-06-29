@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.decouverte;
 
+import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.List;
 import java.util.Map;
@@ -48,8 +49,10 @@ public class DecouverteController {
       @RequestParam(required = false, defaultValue = "0") int page,
       Authentication auth) {
     String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
-    return ResponseEntity.ok(
-        decouverteService.decouvrir(userId, depts, q, mois, genre, classification, tri, page));
+    FiltreConcerts filtre =
+        new FiltreConcerts(q, mois, genre, classification, tri, page,
+            false, false, null, null, depts);
+    return ResponseEntity.ok(decouverteService.decouvrir(userId, filtre));
   }
 
   /// Déclenche un fetch régional pour les départements fournis.

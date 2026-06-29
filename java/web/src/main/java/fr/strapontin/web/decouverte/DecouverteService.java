@@ -6,6 +6,7 @@ package fr.strapontin.web.decouverte;
 
 import static fr.strapontin.web.concert.FiltreConcertsBuilder.CONCERTS_PAR_PAGE;
 
+import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.concert.FiltreConcertsBuilder;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -42,41 +43,35 @@ public class DecouverteService {
 
   /// Retourne les concerts filtrés par département et critères.
   ///
-  /// @param userId         identifiant de l'utilisateur (pour lire ses départements par défaut)
-  /// @param depts          liste de départements (null = utiliser ceux de l'utilisateur)
-  /// @param q              terme de recherche
-  /// @param mois           filtre mois YYYY-MM
-  /// @param genre          filtre genre
-  /// @param classification filtre classification
-  /// @param tri            {@code "date"} ou {@code "nouveaute"}
-  /// @param page           numéro de page (0-indexé)
+  /// @param userId  identifiant de l'utilisateur (pour lire ses départements par défaut)
+  /// @param filtre  critères de filtrage ; {@code depts} null = utiliser ceux de l'utilisateur
   /// @return réponse paginée avec filtres disponibles
-  public ReponseDecouverte decouvrir(
-      String userId,
-      List<String> depts,
-      String q,
-      String mois,
-      String genre,
-      String classification,
-      String tri,
-      int page) {
-
+  public ReponseDecouverte decouvrir(String userId, FiltreConcerts filtre) {
     LocalDate aujourd8 = LocalDate.now();
-    int pageNum = Math.max(0, page);
+    int pageNum = Math.max(0, filtre.page());
 
     List<String> deptsUtilisateur = lireDeptsUtilisateur(userId);
-    List<String> deptsActifs = (depts == null || depts.isEmpty()) ? deptsUtilisateur : depts;
+    List<String> deptsActifs =
+        (filtre.depts() == null || filtre.depts().isEmpty())
+            ? deptsUtilisateur
+            : filtre.depts();
 
     Map<String, Object> params = new HashMap<>();
     params.put("limit", CONCERTS_PAR_PAGE);
     params.put("offset", pageNum * CONCERTS_PAR_PAGE);
-    String rechercheNorm = FiltreConcertsBuilder.tronquer(q, 100);
-    String genreStr = FiltreConcertsBuilder.tronquer(genre, 50);
+    String rechercheNorm = FiltreConcertsBuilder.tronquer(filtre.q(), 100);
+    String genreStr = FiltreConcertsBuilder.tronquer(filtre.genre(), 50);
     StringBuilder where =
         construireFiltresWhere(
-            deptsActifs, rechercheNorm, mois, genreStr, classification, aujourd8, params);
+            deptsActifs,
+            rechercheNorm,
+            filtre.mois(),
+            genreStr,
+            filtre.classification(),
+            aujourd8,
+            params);
 
-    String orderBy = FiltreConcertsBuilder.clauseTri(tri);
+    String orderBy = FiltreConcertsBuilder.clauseTri(filtre.tri());
 
     List<ConcertDecouverte> concerts =
         jdbc.query(

@@ -86,7 +86,8 @@ public class NotificationDigestService {
       boolean notifArtistes,
       boolean notifSalles,
       boolean notifArtistesPush,
-      boolean notifSallesPush) {}
+      boolean notifSallesPush,
+      String frequenceNotifications) {}
 
   /// Parcourt les matches non notifiés pour une fréquence donnée, envoie le digest,
   /// met à jour `notifie_le`.
@@ -112,6 +113,7 @@ public class NotificationDigestService {
                      c.statut,
                      uc.notif_artistes, uc.notif_salles,
                      uc.notif_artistes_push, uc.notif_salles_push,
+                     uc.frequence_notifications::text AS frequence_notifications,
                      CASE
                        WHEN EXISTS (
                          SELECT 1 FROM user_artistes ua
@@ -127,19 +129,37 @@ public class NotificationDigestService {
               JOIN user_config uc ON uc.user_id = um.user_id
               WHERE um.notification_envoyee_le IS NULL
                 AND um.masque_le  IS NULL
-                AND uc.frequence_notifications = CAST(:frequence AS frequence_notif)
                 AND (
-                  ((uc.notif_artistes = true OR uc.notif_artistes_push = true) AND EXISTS (
-                    SELECT 1 FROM user_artistes ua
-                    WHERE ua.user_id = um.user_id
-                      AND c.artiste_id = ua.artiste_id
-                  ))
+                  (uc.frequence_notifications = CAST(:frequence AS frequence_notif)
+                   AND (
+                     ((uc.notif_artistes = true OR uc.notif_artistes_push = true) AND EXISTS (
+                       SELECT 1 FROM user_artistes ua
+                       WHERE ua.user_id = um.user_id
+                         AND c.artiste_id = ua.artiste_id
+                     ))
+                     OR
+                     ((uc.notif_salles = true OR uc.notif_salles_push = true) AND EXISTS (
+                       SELECT 1 FROM user_salles us
+                       WHERE us.user_id = um.user_id
+                         AND c.salle_uuid = us.salle_uuid
+                     ))
+                   ))
                   OR
-                  ((uc.notif_salles = true OR uc.notif_salles_push = true) AND EXISTS (
-                    SELECT 1 FROM user_salles us
-                    WHERE us.user_id = um.user_id
-                      AND c.salle_uuid = us.salle_uuid
-                  ))
+                  (CAST(:frequence AS frequence_notif) = 'temps_reel'
+                   AND uc.frequence_notifications = 'jamais'
+                   AND (
+                     (uc.notif_artistes_push = true AND EXISTS (
+                       SELECT 1 FROM user_artistes ua
+                       WHERE ua.user_id = um.user_id
+                         AND c.artiste_id = ua.artiste_id
+                     ))
+                     OR
+                     (uc.notif_salles_push = true AND EXISTS (
+                       SELECT 1 FROM user_salles us
+                       WHERE us.user_id = um.user_id
+                         AND c.salle_uuid = us.salle_uuid
+                     ))
+                   ))
                 )
               ORDER BY um.user_id, c.date
               """,
@@ -162,7 +182,8 @@ public class NotificationDigestService {
                 Boolean.TRUE.equals(ligne.get("notif_artistes")),
                 Boolean.TRUE.equals(ligne.get("notif_salles")),
                 Boolean.TRUE.equals(ligne.get("notif_artistes_push")),
-                Boolean.TRUE.equals(ligne.get("notif_salles_push"))));
+                Boolean.TRUE.equals(ligne.get("notif_salles_push")),
+                (String) ligne.get("frequence_notifications")));
         parUtilisateur
             .computeIfAbsent(userId, _ -> new ArrayList<>())
             .add(
@@ -235,13 +256,16 @@ public class NotificationDigestService {
 
   private ResultatDigest envoyerDigest(
       String userId, String email, List<ConcertNotif> concerts, ConfigNotifUser config) {
+    boolean emailActif = !"jamais".equals(config.frequenceNotifications());
     List<ConcertNotif> concertsEmail =
-        concerts.stream()
-            .filter(
-                c ->
-                    ("ARTISTE".equals(c.source()) && config.notifArtistes())
-                        || ("SALLE".equals(c.source()) && config.notifSalles()))
-            .toList();
+        emailActif
+            ? concerts.stream()
+                .filter(
+                    c ->
+                        ("ARTISTE".equals(c.source()) && config.notifArtistes())
+                            || ("SALLE".equals(c.source()) && config.notifSalles()))
+                .toList()
+            : List.of();
     List<ConcertNotif> concertsPush =
         concerts.stream()
             .filter(
