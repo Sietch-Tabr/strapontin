@@ -299,7 +299,8 @@ public class WorkerService {
     log.info("fetch:salle terminé identifiants={}", identifiantsStr);
   }
 
-  /// Fetch périodique de toutes les salles ayant des sources configurées dans {@code salle_sources}.
+  /// Fetch périodique de toutes les salles ayant des sources configurées dans {@code
+  // salle_sources}.
   ///
   /// Boucle sur toutes les salles du référentiel et exécute le même pipeline que
   /// {@link #executerFetchSalle} en agrégeant les concerts avant persistance.
@@ -339,7 +340,10 @@ public class WorkerService {
                 tous.addAll(source.fetchSalle(identifiant));
               } catch (Exception e) {
                 log.warn(
-                    "{} fetchSalle échoué identifiant={} : {}", source.nom(), identifiant, e.getMessage());
+                    "{} fetchSalle échoué identifiant={} : {}",
+                    source.nom(),
+                    identifiant,
+                    e.getMessage());
               }
             }
           }
@@ -495,14 +499,17 @@ public class WorkerService {
     }
   }
 
-  /// Supprime les entrées de `logs_admin` plus anciennes que 30 jours
-  /// et les entrées de `fetch_jobs_historique` plus anciennes que 7 jours.
+  /// Supprime les entrées de `logs_admin` plus anciennes que 30 jours,
+  /// les entrées de `fetch_jobs_historique` plus anciennes que 7 jours,
+  /// et les vérifications (tokens d'invitation, emails de confirmation) expirées
+  /// depuis plus de 7 jours.
   ///
   /// Remplace l'ancien plafond de 200 entrées purgé à chaque insertion : la rétention
   /// est désormais temporelle et la purge planifiée (cf. `PurgerLogsAdminJob`).
   public void executerPurgerLogsAdmin() {
     long seuilLogs = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
     Instant seuilHistorique = Instant.now().minusSeconds(7L * 24 * 60 * 60);
+    Instant seuilVerifications = Instant.now().minusSeconds(7L * 24 * 60 * 60);
     log.info("purger:logs-admin seuilLogs={} seuilHistorique={}", seuilLogs, seuilHistorique);
     long debut = System.currentTimeMillis();
     try {
@@ -512,14 +519,20 @@ public class WorkerService {
           jdbc.update(
               "DELETE FROM fetch_jobs_historique WHERE exec_le < :seuil",
               Map.of("seuil", Timestamp.from(seuilHistorique)));
+      int supprimesVerifications =
+          jdbc.update(
+              "DELETE FROM verifications WHERE expire_le < :seuil",
+              Map.of("seuil", Timestamp.from(seuilVerifications)));
       log.info(
-          "purger:logs-admin terminé supprimesLogs={} supprimesHistorique={}",
+          "purger:logs-admin terminé supprimesLogs={} supprimesHistorique={}"
+              + " supprimesVerifications={}",
           supprimesLogs,
-          supprimesHistorique);
+          supprimesHistorique,
+          supprimesVerifications);
       enregistrerStatJob(
           "purger:logs-admin",
           System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, supprimesLogs + supprimesHistorique),
+          new ResultatPersistance(0, supprimesLogs + supprimesHistorique + supprimesVerifications),
           null);
     } catch (Exception e) {
       log.error("purger:logs-admin échoué", e);

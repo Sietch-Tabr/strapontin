@@ -51,7 +51,9 @@ test.describe("Scénario: navigation et chargement des pages", () => {
   });
 
   test("health_actuator_retourne_status_up", async ({ request }) => {
-    const rep = await request.get("/actuator/health");
+    const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
+    const managementUrl = BASE_URL.replace(/:8080$/, ":9090").replace(/:3000$/, ":9090");
+    const rep = await request.get(`${managementUrl}/actuator/health`);
     expect(rep.status()).toBe(200);
     const corps = await rep.json();
     expect(corps.status).toBe("UP");

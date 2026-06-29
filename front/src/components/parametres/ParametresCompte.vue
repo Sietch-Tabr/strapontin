@@ -35,7 +35,7 @@
           type="text"
           minlength="3"
           maxlength="30"
-          pattern="[a-zA-Z0-9_]+"
+          pattern="[a-zA-Z0-9._-]+"
           autocomplete="username"
         />
         <button type="submit" class="btn btn-secondary">Modifier</button>

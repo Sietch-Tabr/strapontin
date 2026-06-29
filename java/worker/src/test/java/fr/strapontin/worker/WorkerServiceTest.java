@@ -177,4 +177,24 @@ class WorkerServiceTest {
     verify(jdbc).update(contains("INSERT INTO fetch_jobs (type_job"), anyMap());
     verify(jdbc).update(contains("INSERT INTO fetch_jobs_historique"), anyMap());
   }
+
+  @Test
+  void executerPurgerLogsAdmin_supprimeTroisTablesEtEnregistreStat() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    workerService.executerPurgerLogsAdmin();
+
+    verify(jdbc).update(contains("DELETE FROM logs_admin"), anyMap());
+    verify(jdbc).update(contains("DELETE FROM fetch_jobs_historique"), anyMap());
+    verify(jdbc).update(contains("DELETE FROM verifications"), anyMap());
+    verify(jdbc).update(contains("INSERT INTO fetch_jobs (type_job"), anyMap());
+    verify(jdbc).update(contains("INSERT INTO fetch_jobs_historique"), anyMap());
+  }
+
+  @Test
+  void executerPurgerLogsAdmin_erreur_nePropagePas() {
+    when(jdbc.update(anyString(), anyMap())).thenThrow(new RuntimeException("DB down"));
+
+    assertDoesNotThrow(() -> workerService.executerPurgerLogsAdmin());
+  }
 }

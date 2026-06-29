@@ -509,6 +509,18 @@ test.describe("Scénario: Données — suppression de compte", () => {
   });
 });
 
+test.describe("Scénario: champ identifiant — pattern HTML", () => {
+  test("input_identifiant_pattern_accepte_point_et_tiret", async ({ page }) => {
+    await page.goto("/parametres#compte");
+    await expect(page.locator("section#compte")).toBeVisible();
+    const input = page.locator("input#identifiant");
+    await expect(input).toBeVisible();
+    const pattern = await input.getAttribute("pattern");
+    expect(pattern).toContain(".");
+    expect(pattern).toContain("-");
+  });
+});
+
 test.describe("Scénario: page TOTP enrollment", () => {
   test("totp_page_affiche_formulaire_confirmation", async ({ page }) => {
     await page.goto("/parametres/totp");

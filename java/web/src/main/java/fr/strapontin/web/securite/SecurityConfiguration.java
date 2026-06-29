@@ -106,7 +106,11 @@ public class SecurityConfiguration {
                                     + " object-src 'none';"
                                     + " base-uri 'self';"
                                     + " form-action 'self'"))
-                    .addHeaderWriter(new StaticHeadersWriter("X-Robots-Tag", "noindex, nofollow")))
+                    .addHeaderWriter(new StaticHeadersWriter("X-Robots-Tag", "noindex, nofollow"))
+                    .addHeaderWriter(
+                        new StaticHeadersWriter(
+                            "Permissions-Policy",
+                            "camera=(), microphone=(), geolocation=(), payment=()")))
         .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)

@@ -53,4 +53,10 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
     await expect(page.locator("main")).toBeVisible();
     await expect(page.locator("main")).not.toBeEmpty();
   });
+
+  test("aide_suppression_compte_lien_self_service_present", async ({ page }) => {
+    await page.goto("/aide");
+    await expect(page.locator("body")).not.toContainText("sur demande à l'administrateur");
+    await expect(page.getByRole("link", { name: "Paramètres → Compte" })).toBeVisible();
+  });
 });
