@@ -8,6 +8,18 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.5.4 — 15 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Notifications</p>
+            <ul>
+              <li>Les notifications push peuvent désormais être activées indépendamment des emails — il n'est plus nécessaire d'avoir une fréquence email active pour recevoir des notifications sur l'appareil.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.5.3 — 12 juillet 2026</h2>
         <div class="changelog-entrees">
           <div>
