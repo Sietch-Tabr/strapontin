@@ -41,14 +41,14 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - `ParametresService` (package `utilisateur`, v2.5.4) : stats compteurs + flux changement email (@Transactional) — extrait de `ParametresRestController` (#744)
 - `SourceConcerts` / `SourceAvecFetchLot` (module `sources`, v2.3.0) : `WorkerService` source-agnostique — ajouter une source = créer une classe + bean Spring. Identifiants salle préfixés par source (`"tm:venueId"`). Voir wiki Architecture.
 - `core` : `QuotaTM` (type partagé) et `UtilitairesChaine.echapperJson` mutualisés en v2.2.3
-- `SpectacleService` : COUNT et filtres disponibles calculés en parallèle via `CompletableFuture` (threads virtuels)
+- `SpectacleService` et `DecouverteService` : COUNT et filtres disponibles calculés en parallèle via `CompletableFuture` (threads virtuels)
 - `RecalculerMatchesService` : recalcul parallèle par utilisateur via `Executors.newVirtualThreadPerTaskExecutor()`, 1 transaction par user (`TransactionTemplate`)
 - `WebConfiguration` : beans `ObjectMapper` + `RestClient` (timeout 5 s / 10 s)
 - Référence : `PersisterConcerts` + `RecalculerMatchesService` dans `java/worker/`
 
 ## Stack technique (v2.2.0)
 
-- **Spring Boot 4.1.0** + **Vue 3 + Vite** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
+- **Spring Boot 4.1.0** + **Vue 3 + Vite 8.1** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
 - **Spring Security 7** — auth session, TOTP 2FA optionnel (bucket4j rate-limiting) ; `anyRequest().authenticated()` — non-API sans session → redirect `/login`, API → 401 JSON
 - **Spring Data JDBC** + PostgreSQL 18 — données persistantes. Tuning : `shared_buffers=400MB`, `work_mem=16MB`, `effective_cache_size=2GB`.
 - **Quartz** — jobs background (fetch concerts) ; `threadPool.threadCount=10` (virtual threads)
