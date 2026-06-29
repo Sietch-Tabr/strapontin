@@ -5,6 +5,8 @@
 package fr.strapontin.web.email;
 
 import fr.strapontin.web.admin.LogAdminService;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -56,7 +58,11 @@ public class BackupAlerteController {
       @RequestParam(defaultValue = "") String raison,
       @RequestParam(defaultValue = "") String archive,
       @RequestHeader(value = "Authorization", defaultValue = "") String authorization) {
-    if (backupSecret.isBlank() || !("Bearer " + backupSecret).equals(authorization)) {
+    String attendu = "Bearer " + backupSecret;
+    if (backupSecret.isBlank()
+        || !MessageDigest.isEqual(
+            attendu.getBytes(StandardCharsets.UTF_8),
+            authorization.getBytes(StandardCharsets.UTF_8))) {
       return ResponseEntity.status(403).body(Map.of("erreur", "Accès refusé."));
     }
     if ("succes".equals(statut)) {

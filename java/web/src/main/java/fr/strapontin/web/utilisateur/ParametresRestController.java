@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -41,6 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/parametres")
 public class ParametresRestController {
 
+  private static final Logger log = LoggerFactory.getLogger(ParametresRestController.class);
   private static final Pattern FORMAT_EMAIL =
       Pattern.compile("^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$");
   private static final SecureRandom RNG = new SecureRandom();
@@ -259,11 +262,15 @@ public class ParametresRestController {
         .filter(s -> !s.isBlank())
         .orElseGet(
             () -> {
+              log.warn(
+                  "PUBLIC_BASE_URL absente — URL construite depuis la requête (risque Host Header"
+                      + " Injection si derrière un proxy)");
               String scheme = request.getScheme();
               String host = request.getServerName();
               int port = request.getServerPort();
               boolean portDefaut =
-                  ("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443);
+                  ("http".equals(scheme) && port == 80)
+                      || ("https".equals(scheme) && port == 443);
               return scheme
                   + "://"
                   + host

@@ -16,6 +16,8 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,17 +37,21 @@ public class AuthService {
   private final VerificationRepository verificationRepository;
   private final EmailService emailService;
   private final PasswordEncoder passwordEncoder;
+  private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
 
   /// @param verificationRepository accès aux tokens de vérification
   /// @param emailService           service d'envoi d'emails
   /// @param passwordEncoder        encodeur bcrypt
+  /// @param sessionRepository      dépôt de sessions JDBC (révocation après reset de mdp)
   public AuthService(
       VerificationRepository verificationRepository,
       EmailService emailService,
-      PasswordEncoder passwordEncoder) {
+      PasswordEncoder passwordEncoder,
+      FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
     this.verificationRepository = verificationRepository;
     this.emailService = emailService;
     this.passwordEncoder = passwordEncoder;
+    this.sessionRepository = sessionRepository;
   }
 
   /// Déclenche un email de réinitialisation de mot de passe.
@@ -146,6 +152,18 @@ public class AuthService {
       verificationRepository.majMustChangeFalseParEmail(email);
     }
     verificationRepository.supprimerParTokenHash(tokenHash);
+    revoquerSessionsUtilisateur(email);
+  }
+
+  private void revoquerSessionsUtilisateur(String email) {
+    verificationRepository
+        .lireUsernameParEmail(email)
+        .ifPresent(
+            username ->
+                sessionRepository
+                    .findByPrincipalName(username)
+                    .keySet()
+                    .forEach(sessionRepository::deleteById));
   }
 
   private static String genererToken(int nbOctets) {

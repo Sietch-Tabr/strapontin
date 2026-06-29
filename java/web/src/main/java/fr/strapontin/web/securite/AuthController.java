@@ -249,8 +249,7 @@ public class AuthController {
   public ResponseEntity<Map<String, Object>> motDePasseOublie(
       @RequestBody ForgotPasswordRequest req, HttpServletRequest httpRequest) {
     if (req.email() != null && !req.email().isBlank()) {
-      authService.motDePasseOublie(
-          req.email().strip().toLowerCase(), baseUrlDepuisRequete(httpRequest));
+      authService.motDePasseOublie(req.email().strip().toLowerCase(), baseUrlDepuisRequete(httpRequest));
     }
     return ResponseEntity.ok(Map.of("succes", true));
   }
@@ -337,6 +336,9 @@ public class AuthController {
         .filter(s -> !s.isBlank())
         .orElseGet(
             () -> {
+              log.warn(
+                  "PUBLIC_BASE_URL absente — URL construite depuis la requête (risque Host Header"
+                      + " Injection si derrière un proxy)");
               String scheme = request.getScheme();
               String host = request.getServerName();
               int port = request.getServerPort();

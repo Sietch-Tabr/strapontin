@@ -106,13 +106,13 @@ public class ResendWebhookController {
 
       if ("email.bounced".equals(type)) {
         String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");
-        log.warn("Bounce email Resend : {}", emailDestinataire);
+        log.warn("Bounce email Resend : emailHash={}", emailDestinataire.hashCode());
         logAdminService.logAdmin(
             "warn", "web", "bounce email reçu", Map.of("email", emailDestinataire));
         notifierAdminBounce(emailDestinataire);
       } else if ("email.complained".equals(type)) {
         String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");
-        log.warn("Plainte email Resend (spam) : {}", emailDestinataire);
+        log.warn("Plainte email Resend (spam) : emailHash={}", emailDestinataire.hashCode());
       }
     } catch (Exception e) {
       log.error("Erreur lors du traitement du webhook Resend", e);
