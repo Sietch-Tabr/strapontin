@@ -299,7 +299,8 @@ public class WorkerService {
     log.info("fetch:salle terminé identifiants={}", identifiantsStr);
   }
 
-  /// Fetch périodique de toutes les salles ayant des sources configurées dans {@code salle_sources}.
+  /// Fetch périodique de toutes les salles ayant des sources configurées dans {@code
+  // salle_sources}.
   ///
   /// Boucle sur toutes les salles du référentiel et exécute le même pipeline que
   /// {@link #executerFetchSalle} en agrégeant les concerts avant persistance.
@@ -339,7 +340,10 @@ public class WorkerService {
                 tous.addAll(source.fetchSalle(identifiant));
               } catch (Exception e) {
                 log.warn(
-                    "{} fetchSalle échoué identifiant={} : {}", source.nom(), identifiant, e.getMessage());
+                    "{} fetchSalle échoué identifiant={} : {}",
+                    source.nom(),
+                    identifiant,
+                    e.getMessage());
               }
             }
           }

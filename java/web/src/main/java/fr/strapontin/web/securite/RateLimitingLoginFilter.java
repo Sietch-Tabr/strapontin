@@ -52,7 +52,10 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
   private final LogAdminService logAdminService;
 
   private final Cache<String, Bucket> buckets =
-      Caffeine.newBuilder().expireAfterWrite(FENETRE_RESET.plusMinutes(5)).maximumSize(10_000).build();
+      Caffeine.newBuilder()
+          .expireAfterWrite(FENETRE_RESET.plusMinutes(5))
+          .maximumSize(10_000)
+          .build();
 
   public RateLimitingLoginFilter(LogAdminService logAdminService) {
     this.logAdminService = logAdminService;
