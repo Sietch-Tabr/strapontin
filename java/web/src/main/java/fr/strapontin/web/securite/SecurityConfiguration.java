@@ -118,6 +118,7 @@ public class SecurityConfiguration {
                         "/images/**",
                         "/icons/**",
                         "/favicon.ico",
+                        "/robots.txt",
                         "/manifest.json",
                         "/sw.js",
                         "/offline.html",
