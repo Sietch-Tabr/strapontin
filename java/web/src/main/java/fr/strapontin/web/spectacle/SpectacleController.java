@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.spectacle;
 
+import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.HashMap;
 import java.util.List;
@@ -54,19 +55,20 @@ public class SpectacleController {
       @RequestParam(required = false, defaultValue = "0") int page,
       Authentication auth) {
     String userId = utilisateur(auth).id();
-    return ResponseEntity.ok(
-        spectacleService.listerSpectacles(
-            userId,
+    FiltreConcerts filtre =
+        new FiltreConcerts(
             q,
             mois,
-            classification,
             genre,
-            quinzaine,
+            classification,
             tri,
+            page,
+            quinzaine,
             masques,
             sources,
             indisponibles,
-            page));
+            null);
+    return ResponseEntity.ok(spectacleService.listerSpectacles(userId, filtre));
   }
 
   /// Masque ou démasque un concert pour l'utilisateur courant.

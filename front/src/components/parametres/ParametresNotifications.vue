@@ -109,15 +109,13 @@
       </div>
       <div v-else>
         <p class="param-aide">
-          Recevez une notification sur cet appareil en même temps que vos emails de digest.
-        </p>
-        <p v-if="frequenceNotifications === 'jamais'" class="form-aide">
-          Les notifications push ne fonctionneront qu'avec une fréquence email active.
+          Recevez une notification sur cet appareil dès qu'un nouveau concert correspond à vos
+          préférences.
         </p>
         <button
           type="button"
           class="btn btn-secondary"
-          :disabled="pushEnCours || frequenceNotifications === 'jamais'"
+          :disabled="pushEnCours"
           @click="abonnerPush"
         >
           Activer les notifications push

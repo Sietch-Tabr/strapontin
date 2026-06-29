@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.utilisateur.UserConfigService;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,31 @@ class SpectacleServiceTest {
     service = new SpectacleService(jdbc, userConfigService);
   }
 
+  private static FiltreConcerts filtre(
+      String q,
+      String mois,
+      String classification,
+      String genre,
+      boolean quinzaine,
+      String tri,
+      boolean masques,
+      List<String> sources,
+      String indisponibles,
+      int page) {
+    return new FiltreConcerts(
+        q,
+        mois,
+        genre,
+        classification,
+        tri,
+        page,
+        quinzaine,
+        masques,
+        sources,
+        indisponibles,
+        null);
+  }
+
   @Test
   @SuppressWarnings("unchecked")
   void listerSpectacles_sansFiltre_retournePremierePage() {
@@ -49,7 +75,7 @@ class SpectacleServiceTest {
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
     ReponseSpectacles rep =
-        service.listerSpectacles("u1", "", "", "", "", false, "date", false, null, null, 0);
+        service.listerSpectacles("u1", filtre("", "", "", "", false, "date", false, null, null, 0));
 
     assertNotNull(rep);
     assertEquals(0, rep.page());
@@ -68,7 +94,7 @@ class SpectacleServiceTest {
 
     ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
 
-    service.listerSpectacles("u1", "", "", "", "", true, "date", false, null, null, 0);
+    service.listerSpectacles("u1", filtre("", "", "", "", true, "date", false, null, null, 0));
 
     verify(jdbc).query(contains("dans15Jours"), captor.capture(), any(RowMapper.class));
     assertTrue(captor.getValue().containsKey("dans15Jours"));
@@ -88,7 +114,7 @@ class SpectacleServiceTest {
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
     service.listerSpectacles(
-        "u1", "", "", "", "", false, "date", false, List.of("artistes"), null, 0);
+        "u1", filtre("", "", "", "", false, "date", false, List.of("artistes"), null, 0));
 
     verify(jdbc, atLeastOnce())
         .queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(UUID.class));
@@ -107,7 +133,7 @@ class SpectacleServiceTest {
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
     service.listerSpectacles(
-        "u1", "", "", "", "", false, "date", false, List.of("artistes"), null, 0);
+        "u1", filtre("", "", "", "", false, "date", false, List.of("artistes"), null, 0));
 
     verify(jdbc).query(contains("AND false"), anyMap(), any(RowMapper.class));
   }
@@ -122,7 +148,8 @@ class SpectacleServiceTest {
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(0);
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
-    service.listerSpectacles("u1", "", "", "", "", false, "nouveaute", false, null, null, 0);
+    service.listerSpectacles(
+        "u1", filtre("", "", "", "", false, "nouveaute", false, null, null, 0));
 
     verify(jdbc).query(contains("first_seen DESC"), anyMap(), any(RowMapper.class));
   }
@@ -138,7 +165,7 @@ class SpectacleServiceTest {
 
     ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
 
-    service.listerSpectacles("u1", "", "", "", "", false, "date", false, null, null, 2);
+    service.listerSpectacles("u1", filtre("", "", "", "", false, "date", false, null, null, 2));
 
     verify(jdbc).query(contains("LIMIT"), captor.capture(), any(RowMapper.class));
     assertEquals(200, captor.getValue().get("offset"));

@@ -6,6 +6,7 @@ package fr.strapontin.web.spectacle;
 
 import static fr.strapontin.web.concert.FiltreConcertsBuilder.CONCERTS_PAR_PAGE;
 
+import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.concert.FiltreConcertsBuilder;
 import fr.strapontin.web.utilisateur.UserConfigService;
 import java.sql.ResultSet;
@@ -47,54 +48,22 @@ public class SpectacleService {
   /// <p>COUNT(*), filtres disponibles et nbSuivi sont calculés en parallèle avec la requête
   /// principale pour réduire le nombre de round-trips séquentiels.
   ///
-  /// @param userId            identifiant de l'utilisateur
-  /// @param q                 terme de recherche artiste (optionnel)
-  /// @param mois              filtre mois YYYY-MM (optionnel)
-  /// @param classification    filtre classification (optionnel)
-  /// @param genre             filtre genre (optionnel)
-  /// @param quinzaine         {@code true} pour limiter aux 15 prochains jours
-  /// @param tri               {@code "date"} ou {@code "nouveaute"}
-  /// @param masques           {@code true} pour afficher les concerts masqués
-  /// @param sources           liste de sources ({@code "artistes"}, {@code "salles"})
-  /// @param indisponibles     {@code "1"} pour inclure les concerts non disponibles
-  /// @param page              numéro de page (0-indexé)
+  /// @param userId identifiant de l'utilisateur
+  /// @param filtre critères de filtrage et de pagination
   /// @return réponse paginée avec filtres disponibles
-  public ReponseSpectacles listerSpectacles(
-      String userId,
-      String q,
-      String mois,
-      String classification,
-      String genre,
-      boolean quinzaine,
-      String tri,
-      boolean masques,
-      List<String> sources,
-      String indisponibles,
-      int page) {
-
+  public ReponseSpectacles listerSpectacles(String userId, FiltreConcerts filtre) {
     LocalDate aujourd8 = LocalDate.now();
-    int pageNum = Math.max(0, page);
+    int pageNum = Math.max(0, filtre.page());
     boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
     boolean inclureIndisponibles =
-        indisponibles != null ? "1".equals(indisponibles) : !filtreDisponibles;
-    String conditionMasque = masques ? "NOT NULL" : "NULL";
+        filtre.indisponibles() != null ? "1".equals(filtre.indisponibles()) : !filtreDisponibles;
+    String conditionMasque = filtre.masques() ? "NOT NULL" : "NULL";
 
     Map<String, Object> params = new HashMap<>();
     params.put("userId", userId);
     params.put("aujourd8", aujourd8);
     StringBuilder whereClause =
-        construireWhere(
-            userId,
-            q,
-            mois,
-            classification,
-            genre,
-            quinzaine,
-            conditionMasque,
-            inclureIndisponibles,
-            sources,
-            aujourd8,
-            params);
+        construireWhere(userId, filtre, conditionMasque, inclureIndisponibles, aujourd8, params);
 
     String selectSql =
         """
@@ -108,7 +77,7 @@ public class SpectacleService {
         ORDER BY %s
         LIMIT :limit OFFSET :offset
         """
-            .formatted(whereClause, FiltreConcertsBuilder.clauseTri(tri));
+            .formatted(whereClause, FiltreConcertsBuilder.clauseTri(filtre.tri()));
 
     Map<String, Object> paramsPage = new HashMap<>(params);
     paramsPage.put("limit", CONCERTS_PAR_PAGE);
@@ -123,7 +92,7 @@ public class SpectacleService {
     // Requête principale sur le thread courant pendant que les futures s'exécutent
     List<SpectacleDto> concerts = jdbc.query(selectSql, paramsPage, (rs, _) -> mapSpectacle(rs));
 
-    FiltresDisponibles filtres = chargerFiltresDisponibles(conditionMasque, baseParams);
+    FiltresDisponibles filtresDispos = chargerFiltresDisponibles(conditionMasque, baseParams);
 
     int total = futureTotal.join();
     int nbSuivi = futureNbSuivi.join();
@@ -133,9 +102,9 @@ public class SpectacleService {
         pageNum,
         Math.max(1, (int) Math.ceil((double) total / CONCERTS_PAR_PAGE)),
         total,
-        filtres.genres(),
-        filtres.mois(),
-        filtres.classifications(),
+        filtresDispos.genres(),
+        filtresDispos.mois(),
+        filtresDispos.classifications(),
         inclureIndisponibles,
         nbSuivi > 0);
   }
@@ -143,27 +112,17 @@ public class SpectacleService {
   /// Construit la clause WHERE de la requête principale et remplit les paramètres nommés.
   ///
   /// @param userId               identifiant de l'utilisateur
-  /// @param q                    terme de recherche artiste
-  /// @param mois                 filtre mois YYYY-MM
-  /// @param classification       filtre classification
-  /// @param genre                filtre genre
-  /// @param quinzaine            limite aux 15 prochains jours
+  /// @param filtre               critères de filtrage
   /// @param conditionMasque      {@code "NULL"} ou {@code "NOT NULL"} selon l'affichage des masqués
   /// @param inclureIndisponibles inclut les concerts non disponibles
-  /// @param sources              sources actives (artistes/salles)
   /// @param aujourd8             date du jour
   /// @param params               paramètres nommés à remplir
   /// @return la clause WHERE construite
   private StringBuilder construireWhere(
       String userId,
-      String q,
-      String mois,
-      String classification,
-      String genre,
-      boolean quinzaine,
+      FiltreConcerts filtre,
       String conditionMasque,
       boolean inclureIndisponibles,
-      List<String> sources,
       LocalDate aujourd8,
       Map<String, Object> params) {
 
@@ -176,7 +135,7 @@ public class SpectacleService {
             """
                 .formatted(conditionMasque));
 
-    if (quinzaine) {
+    if (filtre.quinzaine()) {
       where.append(" AND c.date <= :dans15Jours");
       params.put("dans15Jours", aujourd8.plusDays(15));
     }
@@ -186,15 +145,16 @@ public class SpectacleService {
               + " 'postponed'))");
     }
 
-    String recherche = FiltreConcertsBuilder.tronquer(q, 100);
+    String recherche = FiltreConcertsBuilder.tronquer(filtre.q(), 100);
     if (!recherche.isEmpty()) {
       where.append(" AND c.artiste ILIKE :recherche");
       params.put("recherche", "%" + recherche + "%");
     }
-    FiltreConcertsBuilder.appliquerMois(where, params, mois);
-    FiltreConcertsBuilder.appliquerClassification(where, params, classification);
-    FiltreConcertsBuilder.appliquerGenre(where, params, FiltreConcertsBuilder.tronquer(genre, 50));
-    appliquerFiltreSources(where, params, userId, sources);
+    FiltreConcertsBuilder.appliquerMois(where, params, filtre.mois());
+    FiltreConcertsBuilder.appliquerClassification(where, params, filtre.classification());
+    FiltreConcertsBuilder.appliquerGenre(
+        where, params, FiltreConcertsBuilder.tronquer(filtre.genre(), 50));
+    appliquerFiltreSources(where, params, userId, filtre.sources());
     return where;
   }
 
