@@ -9,6 +9,7 @@
         :key="item.href"
         :href="item.href"
         :class="{ actif: estActif(item.href) }"
+        :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguer(item.href)"
       >
         <svg class="icon" aria-hidden="true">
@@ -27,6 +28,7 @@
         :key="item.href"
         :href="item.href"
         :class="{ actif: estActif(item.href) }"
+        :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguer(item.href)"
       >
         <svg class="icon" aria-hidden="true">
@@ -40,6 +42,7 @@
         v-if="estAdmin"
         href="/admin"
         :class="{ actif: estActif('/admin') }"
+        :aria-current="estActif('/admin') ? 'page' : undefined"
         @click.prevent="naviguer('/admin')"
       >
         <svg class="icon" aria-hidden="true">
@@ -52,6 +55,7 @@
         :key="item.href"
         :href="item.href"
         :class="{ actif: estActif(item.href) }"
+        :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguer(item.href)"
       >
         <svg class="icon" aria-hidden="true">

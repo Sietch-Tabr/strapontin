@@ -8,6 +8,25 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.5.3 — 12 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Accessibilité</p>
+            <ul>
+              <li>La page de connexion indique désormais son titre aux lecteurs d'écran (h1 invisible à l'affichage, lisible pour les technologies d'assistance).</li>
+              <li>Les messages d'erreur et de succès sur la page de connexion sont automatiquement lus par les lecteurs d'écran dès leur apparition.</li>
+              <li>Les liens de navigation (sidebar, barre mobile, menu « Plus ») indiquent aux technologies d'assistance quel est le lien correspondant à la page active (<code>aria-current="page"</code>).</li>
+              <li>Le menu « Plus » sur mobile est maintenant déclaré comme un dialogue modal, empêchant les lecteurs d'écran de parcourir le contenu situé derrière.</li>
+              <li>Le lien « Aller au contenu principal » (navigation clavier) s'affiche avec un contour visible au focus — le ratio de contraste est passé de 1,09:1 à plus de 12:1.</li>
+              <li>L'indicateur de focus sur les champs de saisie est désormais un contour solide (2 px, couleur primaire) au lieu d'un halo semi-transparent peu visible.</li>
+              <li>Le contraste des boutons de texte secondaires a été amélioré pour atteindre le seuil WCAG 2.1 AA (4,5:1).</li>
+              <li>La hauteur minimale des liens du menu mobile est portée à 44 px pour faciliter l'interaction tactile (WCAG 2.5.5).</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.5.0 — 29 juin 2026</h2>
         <div class="changelog-entrees">
           <div>

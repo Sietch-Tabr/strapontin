@@ -3,6 +3,7 @@
     id="dialog-nav-plus"
     ref="dialogRef"
     aria-label="Menu supplémentaire"
+    aria-modal="true"
     @click="clicBackdrop"
     @close="$emit('fermer')"
   >
@@ -13,6 +14,7 @@
         :key="item.href"
         :href="item.href"
         :class="{ actif: estActif(item.href) }"
+        :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguerEtFermer(item.href)"
       >
         <svg class="icon" aria-hidden="true">
@@ -25,6 +27,7 @@
         v-if="estAdmin"
         href="/admin"
         :class="{ actif: estActif('/admin') }"
+        :aria-current="estActif('/admin') ? 'page' : undefined"
         @click.prevent="naviguerEtFermer('/admin')"
       >
         <svg class="icon" aria-hidden="true">
@@ -37,6 +40,7 @@
         :key="item.href"
         :href="item.href"
         :class="{ actif: estActif(item.href) }"
+        :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguerEtFermer(item.href)"
       >
         <svg class="icon" aria-hidden="true">

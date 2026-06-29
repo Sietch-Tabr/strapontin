@@ -133,7 +133,7 @@ html {
   background: var(--bg);
   padding: 0.5rem 1rem;
   border-radius: 4px;
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--primary);
 }
 body {
   font-family: var(--font);
