@@ -8,6 +8,18 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.5.5 — 22 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Performances</p>
+            <ul>
+              <li>La page Découverte se charge plus rapidement : les requêtes de filtres disponibles (genres, mois, classifications) et les données de synchronisation sont maintenant calculées en parallèle.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.5.4 — 15 juillet 2026</h2>
         <div class="changelog-entrees">
           <div>
