@@ -23,26 +23,36 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/// Filtre de rate limiting sur l'endpoint de login.
+/// Filtre de rate limiting sur les endpoints d'authentification publics.
 ///
-/// <p>Limite à 5 tentatives par adresse IP sur une fenêtre glissante de 15 minutes.
+/// <p>Limites par endpoint :
+/// <ul>
+///   <li>{@code /api/auth/login} : 15 tentatives / 15 minutes par IP
+///   <li>{@code /api/auth/forgot-password} : 15 tentatives / 15 minutes par IP
+///   <li>{@code /api/auth/reset-password} : 30 tentatives / heure par IP
+/// </ul>
 /// Les buckets sont stockés en Caffeine (perte acceptable au redémarrage —
-/// la fenêtre de 15 min reste cohérente en pratique).
+/// la fenêtre glissante reste cohérente en pratique).
 ///
 /// @since 2.0.0
 /// @author Kwaite
 @Component
 public class RateLimitingLoginFilter extends OncePerRequestFilter {
 
-  private static final int MAX_TENTATIVES = 15;
-  private static final Duration FENETRE = Duration.ofMinutes(15);
+  private static final int MAX_TENTATIVES_LOGIN = 15;
+  private static final Duration FENETRE_LOGIN = Duration.ofMinutes(15);
+
+  private static final int MAX_TENTATIVES_RESET = 30;
+  private static final Duration FENETRE_RESET = Duration.ofHours(1);
+
   private static final Set<String> URLS_LOGIN =
       Set.of("/api/auth/login", "/api/auth/forgot-password");
+  private static final String URL_RESET_PASSWORD = "/api/auth/reset-password";
 
   private final LogAdminService logAdminService;
 
   private final Cache<String, Bucket> buckets =
-      Caffeine.newBuilder().expireAfterWrite(FENETRE.plusMinutes(1)).maximumSize(10_000).build();
+      Caffeine.newBuilder().expireAfterWrite(FENETRE_RESET.plusMinutes(5)).maximumSize(10_000).build();
 
   public RateLimitingLoginFilter(LogAdminService logAdminService) {
     this.logAdminService = logAdminService;
@@ -52,15 +62,17 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest request, HttpServletResponse response, FilterChain chain)
       throws ServletException, IOException {
+    String chemin = request.getServletPath();
     if (!HttpMethod.POST.matches(request.getMethod())
-        || !URLS_LOGIN.contains(request.getServletPath())) {
+        || (!URLS_LOGIN.contains(chemin) && !URL_RESET_PASSWORD.equals(chemin))) {
       chain.doFilter(request, response);
       return;
     }
 
     String ip = request.getRemoteAddr();
-    String cleBucket = ip + ":" + request.getServletPath();
-    Bucket bucket = buckets.get(cleBucket, _ -> creerBucket());
+    String cleBucket = ip + ":" + chemin;
+    boolean estReset = URL_RESET_PASSWORD.equals(chemin);
+    Bucket bucket = buckets.get(cleBucket, _ -> estReset ? creerBucketReset() : creerBucketLogin());
 
     if (bucket.tryConsume(1)) {
       chain.doFilter(request, response);
@@ -68,22 +80,31 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
       logAdminService.logAdmin(
           "warn",
           "auth",
-          "Rate limit connexion atteint : " + ip + " sur " + request.getServletPath(),
+          "Rate limit connexion atteint : " + ip + " sur " + chemin,
           Map.of("ip", ip));
       response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
       response.setContentType(MediaType.APPLICATION_JSON_VALUE);
       response.setCharacterEncoding("UTF-8");
       response
           .getWriter()
-          .write("{\"erreur\":\"Trop de tentatives de connexion. Réessayez dans 15 minutes.\"}");
+          .write("{\"erreur\":\"Trop de tentatives. Réessayez dans quelques minutes.\"}");
     }
   }
 
-  private Bucket creerBucket() {
+  private Bucket creerBucketLogin() {
     Bandwidth limite =
         Bandwidth.builder()
-            .capacity(MAX_TENTATIVES)
-            .refillIntervally(MAX_TENTATIVES, FENETRE)
+            .capacity(MAX_TENTATIVES_LOGIN)
+            .refillIntervally(MAX_TENTATIVES_LOGIN, FENETRE_LOGIN)
+            .build();
+    return Bucket.builder().addLimit(limite).build();
+  }
+
+  private Bucket creerBucketReset() {
+    Bandwidth limite =
+        Bandwidth.builder()
+            .capacity(MAX_TENTATIVES_RESET)
+            .refillIntervally(MAX_TENTATIVES_RESET, FENETRE_RESET)
             .build();
     return Bucket.builder().addLimit(limite).build();
   }

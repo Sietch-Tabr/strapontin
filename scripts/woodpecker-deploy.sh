@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+trap 'rm -f /tmp/key' EXIT
+
 echo "$SSH_KEY" > /tmp/key
 chmod 600 /tmp/key
 

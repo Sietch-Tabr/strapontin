@@ -8,6 +8,24 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.5.0 — 29 juin 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Aide</p>
+            <ul>
+              <li>La page Aide indique désormais que la suppression de compte se fait directement depuis Paramètres → Compte, sans passer par l'administrateur.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Paramètres</p>
+            <ul>
+              <li>Le champ de modification d'identifiant accepte maintenant les points (.) et tirets (-), en cohérence avec la validation serveur.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.4.1 — 29 juin 2026</h2>
         <div class="changelog-entrees">
           <div>

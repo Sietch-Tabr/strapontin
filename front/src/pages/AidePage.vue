@@ -91,7 +91,7 @@
             <ul>
               <li>Données collectées : nom, identifiant, email, préférences et sessions. Utilisées uniquement pour le fonctionnement de l'application, jamais partagées.</li>
               <li>Hébergement sur serveur privé en France. Données conservées tant que le compte est actif.</li>
-              <li>Export intégral depuis <RouterLink to="/parametres">Paramètres</RouterLink>. Suppression de compte sur demande à l'administrateur.</li>
+              <li>Export intégral et suppression de compte depuis <RouterLink to="/parametres">Paramètres → Compte</RouterLink>.</li>
             </ul>
           </div>
 

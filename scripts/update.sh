@@ -35,7 +35,7 @@ systemctl restart strapontin-web strapontin-worker
 echo "[update] Attente démarrage web (max 60 s)..."
 HEALTH_OK=false
 for i in $(seq 1 60); do
-    if curl -sf "http://localhost:8080/actuator/health" | grep -q '"status":"UP"'; then
+    if curl -sf "http://localhost:9090/actuator/health" | grep -q '"status":"UP"'; then
         echo "[update] Service web UP (${i}s)"
         HEALTH_OK=true
         break

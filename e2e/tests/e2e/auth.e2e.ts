@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
 
+const E2E_USER_IDENTIFIANT = "e2euser";
+const E2E_USER_MOT_DE_PASSE =
+  process.env["E2E_USER_MOT_DE_PASSE"] ?? "e2e-user-2026";
+
 test.describe("Scénario: authentification et gardes de route", () => {
   test("accueil_charge_si_authentifie", async ({ page }) => {
     await page.goto("/");
@@ -173,5 +177,34 @@ test.describe("Scénario: cookie de session — durée", () => {
     const maintenant = Date.now() / 1000;
     expect(cookie!.expires).toBeGreaterThan(maintenant);
     expect(cookie!.expires).toBeLessThan(maintenant + 31 * 24 * 3600);
+  });
+});
+
+test.describe("Scénario: API auth", () => {
+  test("reponse_http_contient_permissions_policy", async ({ request }) => {
+    const rep = await request.get("/");
+    const header = rep.headers()["permissions-policy"];
+    expect(header).toBeDefined();
+    expect(header).toContain("camera=()");
+    expect(header).toContain("microphone=()");
+    expect(header).toContain("geolocation=()");
+    expect(header).toContain("payment=()");
+  });
+
+  test("logout_set_cookie_suppress_secure_et_samesite_lax", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ storageState: undefined });
+    await ctx.request.post("/api/auth/login", {
+      data: {
+        identifiant: E2E_USER_IDENTIFIANT,
+        motDePasse: E2E_USER_MOT_DE_PASSE,
+      },
+    });
+    const rep = await ctx.request.post("/api/auth/logout");
+    const setCookie = (rep.headers()["set-cookie"] ?? "").toLowerCase();
+    expect(setCookie).toContain("secure");
+    expect(setCookie).toContain("samesite=lax");
+    await ctx.close();
   });
 });

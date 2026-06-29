@@ -10,11 +10,14 @@ import static org.mockito.Mockito.*;
 
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -235,6 +238,37 @@ class AuthControllerTest {
                 new ResetPasswordRequest("token", "motdepasse12345", "alice.dupont-2"),
                 mock(HttpServletRequest.class)),
         "alice.dupont-2 doit passer la validation de format et atteindre activerCompteInvite");
+  }
+
+  // --- logout ---
+
+  @Test
+  void logout_sansSession_retourne204() {
+    HttpServletRequest req = mock(HttpServletRequest.class);
+    HttpServletResponse resp = mock(HttpServletResponse.class);
+    when(req.getSession(false)).thenReturn(null);
+
+    var reponse = authController.logout(req, resp);
+
+    assertEquals(204, reponse.getStatusCode().value());
+  }
+
+  @Test
+  void logout_cookieSuppression_aFlagsSecureEtSameSite() {
+    HttpServletRequest req = mock(HttpServletRequest.class);
+    HttpServletResponse resp = mock(HttpServletResponse.class);
+    when(req.getSession(false)).thenReturn(null);
+
+    authController.logout(req, resp);
+
+    ArgumentCaptor<Cookie> cookieCaptor = ArgumentCaptor.forClass(Cookie.class);
+    verify(resp).addCookie(cookieCaptor.capture());
+    Cookie cookie = cookieCaptor.getValue();
+    assertEquals("SESSION", cookie.getName());
+    assertEquals(0, cookie.getMaxAge());
+    assertTrue(cookie.isHttpOnly());
+    assertTrue(cookie.getSecure());
+    assertEquals("Lax", cookie.getAttribute("SameSite"));
   }
 
   @Test

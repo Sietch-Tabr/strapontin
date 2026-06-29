@@ -73,6 +73,10 @@ systemctl restart strapontin-web strapontin-worker
 # Logs prod (depuis Mac)
 ssh root@192.168.20.79 "journalctl -u strapontin-web -n 50 --no-pager"
 ssh root@192.168.20.79 "journalctl -u strapontin-worker -n 50 --no-pager"
+
+# Health check Actuator (depuis le LXC)
+curl -sf http://localhost:9090/actuator/health   # web
+curl -sf http://localhost:9091/actuator/health   # worker
 ```
 
 ### Build et déploiement LXC dev
