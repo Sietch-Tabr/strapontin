@@ -11,6 +11,7 @@ import static org.mockito.Mockito.*;
 import fr.strapontin.web.utilisateur.UserConfigService;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -75,10 +76,12 @@ class SpectacleServiceTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void listerSpectacles_sourceArtistesSeuls_filtreParNormes() {
+  void listerSpectacles_sourceArtistesSeuls_filtreParUuids() {
+    UUID id1 = UUID.randomUUID();
+    UUID id2 = UUID.randomUUID();
     when(userConfigService.lireFiltreDisponibles("u1")).thenReturn(false);
-    when(jdbc.queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(String.class)))
-        .thenReturn(List.of("radiohead", "portishead"));
+    when(jdbc.queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(UUID.class)))
+        .thenReturn(List.of(id1, id2));
     when(jdbc.query(contains("LIMIT"), anyMap(), any(RowMapper.class))).thenReturn(List.of());
     when(jdbc.queryForObject(contains("COUNT(*)"), anyMap(), eq(Integer.class))).thenReturn(0);
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(2);
@@ -88,7 +91,7 @@ class SpectacleServiceTest {
         "u1", "", "", "", "", false, "date", false, List.of("artistes"), null, 0);
 
     verify(jdbc, atLeastOnce())
-        .queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(String.class));
+        .queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(UUID.class));
     verify(jdbc).query(contains("artisteIds"), anyMap(), any(RowMapper.class));
   }
 
@@ -96,7 +99,7 @@ class SpectacleServiceTest {
   @SuppressWarnings("unchecked")
   void listerSpectacles_sourceArtistesVide_ajouteFalse() {
     when(userConfigService.lireFiltreDisponibles("u1")).thenReturn(false);
-    when(jdbc.queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(String.class)))
+    when(jdbc.queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(UUID.class)))
         .thenReturn(List.of());
     when(jdbc.query(contains("LIMIT"), anyMap(), any(RowMapper.class))).thenReturn(List.of());
     when(jdbc.queryForObject(contains("COUNT(*)"), anyMap(), eq(Integer.class))).thenReturn(0);
