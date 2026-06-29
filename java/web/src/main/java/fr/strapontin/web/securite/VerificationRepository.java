@@ -125,6 +125,22 @@ public class VerificationRepository {
         Map.of("ident", identifiant, "email", email));
   }
 
+  /// Retourne le nom de connexion (username) d'un utilisateur à partir de son email.
+  ///
+  /// @param email email de l'utilisateur (normalisé)
+  /// @return le username, ou {@link Optional#empty()} si l'utilisateur n'existe pas ou n'a
+  // pas de username
+  public Optional<String> lireUsernameParEmail(String email) {
+    List<String> lignes =
+        jdbc.queryForList(
+            "SELECT username FROM users WHERE lower(email) = lower(:email)",
+            Map.of("email", email),
+            String.class);
+    return lignes.isEmpty() || lignes.get(0) == null
+        ? Optional.empty()
+        : Optional.of(lignes.get(0));
+  }
+
   /// Vérifie si un identifiant est déjà pris par un autre utilisateur (exclusion par email).
   ///
   /// @param identifiant identifiant à vérifier (en minuscules)

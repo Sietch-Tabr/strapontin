@@ -126,9 +126,9 @@ public class EmailService {
     try {
       envoyer(
           ctx.get(), email, ctx.get().expediteur(), "Votre invitation Strapontin", corps, texte);
-      log.info("Invitation envoyée : {}", email);
+      log.info("Invitation envoyée : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi invitation : {}", email, e);
+      log.error("Échec envoi invitation : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -165,9 +165,9 @@ public class EmailService {
           "Réinitialisation de votre mot de passe Strapontin",
           corps,
           texte);
-      log.info("Email reset MDP envoyé : {}", email);
+      log.info("Email reset MDP envoyé : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi reset MDP : {}", email, e);
+      log.error("Échec envoi reset MDP : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -204,9 +204,9 @@ public class EmailService {
           "Votre double authentification Strapontin a été réinitialisée",
           corps,
           texte);
-      log.info("Email reset 2FA envoyé : {}", email);
+      log.info("Email reset 2FA envoyé : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi reset 2FA : {}", email, e);
+      log.error("Échec envoi reset 2FA : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -243,9 +243,9 @@ public class EmailService {
           "Confirmez votre nouvelle adresse email — Strapontin",
           corps,
           texte);
-      log.info("Confirmation email envoyée : {}", email);
+      log.info("Confirmation email envoyée : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi confirmation email : {}", email, e);
+      log.error("Échec envoi confirmation email : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -286,7 +286,8 @@ public class EmailService {
           "[Strapontin] Salle manquante — " + nom,
           corpsAdmin,
           texteAdmin);
-      log.info("Signalement salle manquante envoyé par : {}", emailUtilisateur);
+      log.info(
+          "Signalement salle manquante envoyé par : emailHash={}", emailUtilisateur.hashCode());
     } catch (Exception e) {
       log.error("Échec envoi signalement salle manquante", e);
       return;
@@ -304,9 +305,13 @@ public class EmailService {
           "Votre signalement Strapontin a été transmis",
           corpsUser,
           texteUser);
-      log.info("Confirmation signalement salle envoyée : {}", emailUtilisateur);
+      log.info(
+          "Confirmation signalement salle envoyée : emailHash={}", emailUtilisateur.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi confirmation signalement salle : {}", emailUtilisateur, e);
+      log.error(
+          "Échec envoi confirmation signalement salle : emailHash={}",
+          emailUtilisateur.hashCode(),
+          e);
     }
   }
 
@@ -344,7 +349,7 @@ public class EmailService {
           "[Strapontin] Signalement — %s".formatted(typeLabel),
           corps,
           texte);
-      log.info("Signalement envoyé : {}", expediteurEmail);
+      log.info("Signalement envoyé : emailHash={}", expediteurEmail.hashCode());
     } catch (Exception e) {
       log.error("Échec envoi signalement", e);
     }
@@ -384,10 +389,10 @@ public class EmailService {
 
     try {
       envoyer(ctx.get(), email, ctx.get().expediteur(), sujet, corps, sujet);
-      log.info("Digest envoyé : {} ({} concert(s))", email, nb);
+      log.info("Digest envoyé : emailHash={} ({} concert(s))", email.hashCode(), nb);
       return true;
     } catch (Exception e) {
-      log.error("Échec envoi digest : {}", email, e);
+      log.error("Échec envoi digest : emailHash={}", email.hashCode(), e);
       return false;
     }
   }
@@ -422,9 +427,9 @@ public class EmailService {
           "Votre compte Strapontin a été supprimé",
           corps,
           texte);
-      log.info("Email suppression compte envoyé : {}", email);
+      log.info("Email suppression compte envoyé : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi suppression compte : {}", email, e);
+      log.error("Échec envoi suppression compte : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -452,7 +457,7 @@ public class EmailService {
               + ". Consultez l'administration : "
               + ctx.get().baseUrl()
               + "/admin");
-      log.info("Notification bounce envoyée pour : {}", emailBouncee);
+      log.info("Notification bounce envoyée : emailHash={}", emailBouncee.hashCode());
     } catch (Exception e) {
       log.error("Échec envoi notification bounce", e);
     }
@@ -505,10 +510,10 @@ public class EmailService {
           EmailTemplates.emailTest(ctx.get().baseUrl()),
           "Test de configuration email Strapontin. Si vous recevez cet email, la configuration"
               + " Resend est correcte.");
-      log.info("Email de test envoyé : {}", emailAdmin);
+      log.info("Email de test envoyé : emailHash={}", emailAdmin.hashCode());
       return true;
     } catch (Exception e) {
-      log.error("Échec envoi email de test : {}", emailAdmin, e);
+      log.error("Échec envoi email de test : emailHash={}", emailAdmin.hashCode(), e);
       return false;
     }
   }
@@ -542,9 +547,9 @@ public class EmailService {
           "Vous êtes maintenant administrateur Strapontin",
           corps,
           texte);
-      log.info("Email promotion admin envoyé : {}", email);
+      log.info("Email promotion admin envoyé : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi email promotion admin : {}", email, e);
+      log.error("Échec envoi email promotion admin : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -578,9 +583,9 @@ public class EmailService {
           "Strapontin — préavis de révocation admin",
           corps,
           texte);
-      log.info("Email préavis révocation admin envoyé : {}", email);
+      log.info("Email préavis révocation admin envoyé : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi préavis révocation admin : {}", email, e);
+      log.error("Échec envoi préavis révocation admin : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -612,7 +617,7 @@ public class EmailService {
           corps,
           "Worker inactif — %s Consultez l'administration : %s/admin"
               .formatted(detail, ctx.get().baseUrl()));
-      log.info("Alerte worker envoyée : {}", email);
+      log.info("Alerte worker envoyée : emailHash={}", email.hashCode());
     } catch (Exception e) {
       log.error("Échec envoi alerte worker", e);
     }

@@ -362,6 +362,9 @@ public class AdminController {
         .filter(s -> !s.isBlank())
         .orElseGet(
             () -> {
+              log.warn(
+                  "PUBLIC_BASE_URL absente — URL construite depuis la requête (risque Host Header"
+                      + " Injection si derrière un proxy)");
               String scheme = request.getScheme();
               String host = request.getServerName();
               int port = request.getServerPort();
