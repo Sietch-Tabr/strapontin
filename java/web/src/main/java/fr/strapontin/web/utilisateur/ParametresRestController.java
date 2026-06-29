@@ -269,8 +269,7 @@ public class ParametresRestController {
               String host = request.getServerName();
               int port = request.getServerPort();
               boolean portDefaut =
-                  ("http".equals(scheme) && port == 80)
-                      || ("https".equals(scheme) && port == 443);
+                  ("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443);
               return scheme
                   + "://"
                   + host

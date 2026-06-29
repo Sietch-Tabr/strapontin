@@ -249,7 +249,8 @@ public class AuthController {
   public ResponseEntity<Map<String, Object>> motDePasseOublie(
       @RequestBody ForgotPasswordRequest req, HttpServletRequest httpRequest) {
     if (req.email() != null && !req.email().isBlank()) {
-      authService.motDePasseOublie(req.email().strip().toLowerCase(), baseUrlDepuisRequete(httpRequest));
+      authService.motDePasseOublie(
+          req.email().strip().toLowerCase(), baseUrlDepuisRequete(httpRequest));
     }
     return ResponseEntity.ok(Map.of("succes", true));
   }
