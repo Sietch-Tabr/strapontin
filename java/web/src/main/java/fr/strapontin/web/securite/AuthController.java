@@ -183,8 +183,7 @@ public class AuthController {
     String secret = (String) utilisateur.get("two_factor_secret");
     if (totpService.verifierCode(secret, req.code())) {
       jdbc.update(
-          "UPDATE users SET totp_failure_count = 0 WHERE id = :id",
-          Map.of("id", principal.id()));
+          "UPDATE users SET totp_failure_count = 0 WHERE id = :id", Map.of("id", principal.id()));
       session.removeAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE);
       log.debug("Challenge TOTP validé : {}", principal.identifiant());
       logAdminService.logAdmin(
