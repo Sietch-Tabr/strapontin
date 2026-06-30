@@ -437,7 +437,8 @@ public class AdminService {
     if (cible.isEmpty()) return false;
 
     jdbc.update(
-        "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false WHERE id = :id",
+        "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false,"
+            + " totp_failure_count = 0 WHERE id = :id",
         Map.of("id", userId));
     emailService.envoyer2faReinitialisee((String) cible.get(0).get("email"));
     logAdminService.logAdmin(
