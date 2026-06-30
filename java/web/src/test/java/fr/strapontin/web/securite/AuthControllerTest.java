@@ -14,7 +14,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -106,14 +106,15 @@ class AuthControllerTest {
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
 
-    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
-        .thenReturn(List.of("SECRETBASE32"));
+    when(jdbc.queryForMap(anyString(), anyMap()))
+        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 0));
     when(totpService.verifierCode("SECRETBASE32", "123456")).thenReturn(true);
 
     var reponse =
         authController.verifierTotp(new TotpChallengeRequest("123456"), httpRequest, auth);
 
     assertEquals(200, reponse.getStatusCode().value());
+    verify(jdbc).update(contains("totp_failure_count = 0"), anyMap());
   }
 
   @Test
@@ -124,7 +125,6 @@ class AuthControllerTest {
     when(httpRequest.getSession(false)).thenReturn(session);
     when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
-    when(session.getAttribute("TOTP_ECHECS")).thenReturn(null);
 
     UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
@@ -132,15 +132,15 @@ class AuthControllerTest {
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
 
-    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
-        .thenReturn(List.of("SECRETBASE32"));
+    when(jdbc.queryForMap(anyString(), anyMap()))
+        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 0));
     when(totpService.verifierCode("SECRETBASE32", "000000")).thenReturn(false);
 
     var reponse =
         authController.verifierTotp(new TotpChallengeRequest("000000"), httpRequest, auth);
 
     assertEquals(422, reponse.getStatusCode().value());
-    verify(session).setAttribute("TOTP_ECHECS", 1);
+    verify(jdbc).update(contains("totp_failure_count + 1"), anyMap());
   }
 
   @Test
@@ -151,7 +151,6 @@ class AuthControllerTest {
     when(httpRequest.getSession(false)).thenReturn(session);
     when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
-    when(session.getAttribute("TOTP_ECHECS")).thenReturn(4);
 
     UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
@@ -159,8 +158,9 @@ class AuthControllerTest {
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
 
-    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
-        .thenReturn(List.of("SECRETBASE32"));
+    // 4 échecs déjà enregistrés → le 5e déclenche le verrouillage
+    when(jdbc.queryForMap(anyString(), anyMap()))
+        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 4));
     when(totpService.verifierCode("SECRETBASE32", "000000")).thenReturn(false);
 
     var reponse =
@@ -168,6 +168,33 @@ class AuthControllerTest {
 
     assertEquals(HttpStatus.UNAUTHORIZED.value(), reponse.getStatusCode().value());
     verify(session).invalidate();
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void verifierTotp_compteurDejaVerrouille_invalideSessionEtRetourne401() {
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    HttpSession session = mock(HttpSession.class);
+    when(httpRequest.getSession(false)).thenReturn(session);
+    when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+    when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
+
+    UtilisateurDetails principal =
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
+    Authentication auth = mock(Authentication.class);
+    when(auth.isAuthenticated()).thenReturn(true);
+    when(auth.getPrincipal()).thenReturn(principal);
+
+    // Compte déjà verrouillé en base (≥ MAX_ECHECS_TOTP) — aucun code ne doit être vérifié
+    when(jdbc.queryForMap(anyString(), anyMap()))
+        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 5));
+
+    var reponse =
+        authController.verifierTotp(new TotpChallengeRequest("000000"), httpRequest, auth);
+
+    assertEquals(HttpStatus.UNAUTHORIZED.value(), reponse.getStatusCode().value());
+    verify(session).invalidate();
+    verify(totpService, never()).verifierCode(anyString(), anyString());
   }
 
   // --- reinitialiserMotDePasse ---

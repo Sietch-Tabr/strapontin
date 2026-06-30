@@ -10,7 +10,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -43,7 +42,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
   private static final Logger log = LoggerFactory.getLogger(AuthController.class);
-  private static final String SESSION_ECHECS_TOTP = "TOTP_ECHECS";
   private static final int MAX_ECHECS_TOTP = 5;
   private static final Pattern FORMAT_IDENTIFIANT = Pattern.compile("^[a-zA-Z0-9._-]+$");
 
@@ -143,13 +141,16 @@ public class AuthController {
 
   /// Vérifie le code TOTP soumis pendant le challenge post-login.
   ///
-  /// <p>Après {@value MAX_ECHECS_TOTP} échecs consécutifs, la session est invalidée.
+  /// <p>Le compteur d'échecs est persisté en base ({@code users.totp_failure_count}).
+  /// Après {@value MAX_ECHECS_TOTP} échecs consécutifs, le compte est verrouillé de façon
+  /// persistante et la session est invalidée. Un admin peut débloquer via
+  /// {@code POST /api/admin/utilisateurs/{id}/reset-totp}.
   ///
   /// @param req         le corps contenant le code à 6 chiffres
   /// @param httpRequest la requête HTTP (pour lire et modifier la session)
   /// @param auth        le contexte d'authentification Spring Security
-  /// @return 200 si valide — 422 si code incorrect — 409 si pas de challenge en attente — 401 si
-  ///     trop d'échecs
+  /// @return 200 si valide — 422 si code incorrect — 409 si pas de challenge en attente —
+  ///     401 si trop d'échecs ou compte verrouillé
   @PostMapping("/api/auth/totp")
   public ResponseEntity<Map<String, Object>> verifierTotp(
       @RequestBody TotpChallengeRequest req, HttpServletRequest httpRequest, Authentication auth) {
@@ -166,16 +167,24 @@ public class AuthController {
           .body(Map.of("erreur", "Authentification requise"));
     }
 
-    List<String> secrets =
-        jdbc.queryForList(
-            "SELECT two_factor_secret FROM users WHERE id = :id",
-            Map.of("id", principal.id()),
-            String.class);
+    Map<String, Object> utilisateur =
+        jdbc.queryForMap(
+            "SELECT two_factor_secret, totp_failure_count FROM users WHERE id = :id",
+            Map.of("id", principal.id()));
 
-    String secret = secrets.isEmpty() ? null : secrets.get(0);
+    int echecsCourants = ((Number) utilisateur.get("totp_failure_count")).intValue();
+    if (echecsCourants >= MAX_ECHECS_TOTP) {
+      session.invalidate();
+      log.debug("Compte TOTP verrouillé, session invalidée : {}", principal.identifiant());
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("erreur", "Compte verrouillé. Contactez un administrateur."));
+    }
+
+    String secret = (String) utilisateur.get("two_factor_secret");
     if (totpService.verifierCode(secret, req.code())) {
+      jdbc.update(
+          "UPDATE users SET totp_failure_count = 0 WHERE id = :id", Map.of("id", principal.id()));
       session.removeAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE);
-      session.removeAttribute(SESSION_ECHECS_TOTP);
       log.debug("Challenge TOTP validé : {}", principal.identifiant());
       logAdminService.logAdmin(
           "info",
@@ -185,7 +194,10 @@ public class AuthController {
       return ResponseEntity.ok(Map.of("succes", true));
     }
 
-    int echecs = (session.getAttribute(SESSION_ECHECS_TOTP) instanceof Integer n) ? n + 1 : 1;
+    int nouveauxEchecs = echecsCourants + 1;
+    jdbc.update(
+        "UPDATE users SET totp_failure_count = totp_failure_count + 1 WHERE id = :id",
+        Map.of("id", principal.id()));
     logAdminService.logAdmin(
         "warn",
         "auth",
@@ -193,17 +205,16 @@ public class AuthController {
         Map.of(
             "identifiant", principal.identifiant(),
             "ip", httpRequest.getRemoteAddr(),
-            "essais", echecs));
+            "essais", nouveauxEchecs));
 
-    if (echecs >= MAX_ECHECS_TOTP) {
+    if (nouveauxEchecs >= MAX_ECHECS_TOTP) {
       session.invalidate();
       log.debug("Trop de tentatives TOTP, session invalidée : {}", principal.identifiant());
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(Map.of("erreur", "Trop de tentatives"));
+          .body(Map.of("erreur", "Trop de tentatives. Compte verrouillé."));
     }
 
-    session.setAttribute(SESSION_ECHECS_TOTP, echecs);
-    int restants = MAX_ECHECS_TOTP - echecs;
+    int restants = MAX_ECHECS_TOTP - nouveauxEchecs;
     return ResponseEntity.status(422)
         .body(Map.of("erreur", "Code incorrect. " + restants + " essai(s) restant(s)."));
   }

@@ -8,6 +8,18 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.5.6 — 27 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Sécurité</p>
+            <ul>
+              <li>Le compteur d'échecs du code d'authentification à deux facteurs est maintenant persisté en base de données. Après 5 tentatives incorrectes, le compte est verrouillé de façon permanente et un administrateur doit réinitialiser la 2FA pour le déverrouiller.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.5.5 — 22 juillet 2026</h2>
         <div class="changelog-entrees">
           <div>

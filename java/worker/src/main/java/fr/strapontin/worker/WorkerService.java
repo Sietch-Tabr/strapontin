@@ -521,7 +521,7 @@ public class WorkerService {
               Map.of("seuil", Timestamp.from(seuilHistorique)));
       int supprimesVerifications =
           jdbc.update(
-              "DELETE FROM verifications WHERE expire_le < :seuil",
+              "DELETE FROM verifications WHERE expires_at < :seuil",
               Map.of("seuil", Timestamp.from(seuilVerifications)));
       log.info(
           "purger:logs-admin terminé supprimesLogs={} supprimesHistorique={}"

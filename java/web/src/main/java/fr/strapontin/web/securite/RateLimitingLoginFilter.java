@@ -31,8 +31,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 ///   <li>{@code /api/auth/forgot-password} : 15 tentatives / 15 minutes par IP
 ///   <li>{@code /api/auth/reset-password} : 30 tentatives / heure par IP
 /// </ul>
-/// Les buckets sont stockés en Caffeine (perte acceptable au redémarrage —
-/// la fenêtre glissante reste cohérente en pratique).
+///
+/// <p><b>Persistance :</b> les buckets sont stockés en mémoire Caffeine et perdus au redémarrage
+/// de l'application. Les tentatives bloquées (HTTP 429) sont loguées dans {@code logs_admin}
+/// (source {@code auth}, niveau {@code warn}) pour permettre leur surveillance. Le risque résiduel
+/// est acceptable pour un système invite-only ; migration vers un stockage persistant
+/// (PostgreSQL) à envisager si l'exposition publique évolue.
 ///
 /// @since 2.0.0
 /// @author Kwaite
