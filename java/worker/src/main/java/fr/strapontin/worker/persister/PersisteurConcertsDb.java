@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 /// Service de persistance SQL pur pour les concerts.
 ///
 /// <p>Effectue l'upsert par lot en base avec la stratégie ON CONFLICT sur
-/// {@code (artiste_norm, date, heure, salle_norm)} (NULLS NOT DISTINCT). Gère
+/// {@code (artiste_norm, date, heure, salle_uuid)} (NULLS NOT DISTINCT, migration V37). Gère
 /// la suppression des doublons par URL et par {@code salle_uuid} (TM+Eventim).
 ///
 /// <p>Résout les UUIDs internes depuis les identifiants sources préfixés

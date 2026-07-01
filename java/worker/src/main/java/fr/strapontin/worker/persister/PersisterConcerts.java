@@ -135,16 +135,22 @@ public class PersisterConcerts {
     return new ArrayList<>(parCle.values());
   }
 
-  /// Dédoublonne un lot réconcilié par {@code (artisteNorm, date, heure, salleNorm)}.
+  /// Dédoublonne un lot réconcilié par {@code (artisteNorm, date, heure, salleUuid)}.
   ///
-  /// <p>Les réécritures de {@code salleNorm} par {@link ReconciliateurSalles} peuvent créer
-  /// de nouveaux doublons intra-lot. Cette passe les élimine.
+  /// <p>La contrainte {@code uq_concerts_artiste_date_heure_salle} porte sur {@code salle_uuid}
+  /// (NULLS NOT DISTINCT) depuis la migration V37/V14. Deux concerts TM/Eventim nommant la même
+  /// salle différemment ont le même {@code salle_uuid} après résolution — ils conflicteraient au
+  /// sein d'un même INSERT ON CONFLICT DO UPDATE. Ce dedup les élimine en amont.
   ///
-  /// @param lot valeurs de concerts après réconciliation des salles
+  /// <p>Doit être appelé APRÈS {@link ReconciliateurSalles#raccrocherSallesParNomNorm} afin que
+  /// tous les {@code salle_uuid} soient résolus.
+  ///
+  /// @param lot valeurs de concerts après réconciliation complète des salles
   /// @return lot sans doublons
   public static List<ValeurConcert> deduplicerLotReconcilie(List<ValeurConcert> lot) {
     Map<String, ValeurConcert> parCle = new LinkedHashMap<>();
     for (ValeurConcert v : lot) {
+      String salleId = v.salleUuid() != null ? v.salleUuid().toString() : v.salleNorm();
       String cle =
           v.artisteNorm()
               + "|"
@@ -152,7 +158,7 @@ public class PersisterConcerts {
               + "|"
               + (v.heure() != null ? v.heure() : "")
               + "|"
-              + v.salleNorm();
+              + salleId;
       ValeurConcert existant = parCle.get(cle);
       if (existant == null
           || scoreArtisteSalle(v.artiste(), v.salle())
@@ -278,8 +284,8 @@ public class PersisterConcerts {
       valeurs = reconciliateurArtistes.reconcilierArtistes(valeurs);
       // Deuxième passe salle : couvre le cas où artiste_norm et salle_norm varient simultanément.
       valeurs = reconciliateurSalles.reconcilierSalles(valeurs);
-      valeurs = deduplicerLotReconcilie(valeurs);
       valeurs = reconciliateurSalles.raccrocherSallesParNomNorm(valeurs);
+      valeurs = deduplicerLotReconcilie(valeurs);
 
       ResultatPersistance resultatLot = db.upsertLot(valeurs);
       totalInserts += resultatLot.nbInseres();

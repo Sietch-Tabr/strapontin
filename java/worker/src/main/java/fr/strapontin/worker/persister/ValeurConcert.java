@@ -49,9 +49,25 @@ public record ValeurConcert(
   /// @return nouveau record avec le champ modifié
   public ValeurConcert avecSalleNorm(String nouvelleSalleNorm) {
     return new ValeurConcert(
-        artiste, artisteNorm, date, heure, salle, nouvelleSalleNorm,
-        ville, dept, url, source, classification, genre, statut,
-        presaleDebut, presaleNom, salleSourceId, artisteSourceId, salleUuid, artisteId);
+        artiste,
+        artisteNorm,
+        date,
+        heure,
+        salle,
+        nouvelleSalleNorm,
+        ville,
+        dept,
+        url,
+        source,
+        classification,
+        genre,
+        statut,
+        presaleDebut,
+        presaleNom,
+        salleSourceId,
+        artisteSourceId,
+        salleUuid,
+        artisteId);
   }
 
   /// Retourne un nouveau concert avec le {@code salleUuid} remplacé.
@@ -60,9 +76,25 @@ public record ValeurConcert(
   /// @return nouveau record avec le champ modifié
   public ValeurConcert avecSalleUuid(UUID nouvelleSalleUuid) {
     return new ValeurConcert(
-        artiste, artisteNorm, date, heure, salle, salleNorm,
-        ville, dept, url, source, classification, genre, statut,
-        presaleDebut, presaleNom, salleSourceId, artisteSourceId, nouvelleSalleUuid, artisteId);
+        artiste,
+        artisteNorm,
+        date,
+        heure,
+        salle,
+        salleNorm,
+        ville,
+        dept,
+        url,
+        source,
+        classification,
+        genre,
+        statut,
+        presaleDebut,
+        presaleNom,
+        salleSourceId,
+        artisteSourceId,
+        nouvelleSalleUuid,
+        artisteId);
   }
 
   /// Retourne un nouveau concert avec l'{@code artisteNorm} remplacé.
@@ -71,9 +103,25 @@ public record ValeurConcert(
   /// @return nouveau record avec le champ modifié
   public ValeurConcert avecArtisteNorm(String nouvelArtisteNorm) {
     return new ValeurConcert(
-        artiste, nouvelArtisteNorm, date, heure, salle, salleNorm,
-        ville, dept, url, source, classification, genre, statut,
-        presaleDebut, presaleNom, salleSourceId, artisteSourceId, salleUuid, artisteId);
+        artiste,
+        nouvelArtisteNorm,
+        date,
+        heure,
+        salle,
+        salleNorm,
+        ville,
+        dept,
+        url,
+        source,
+        classification,
+        genre,
+        statut,
+        presaleDebut,
+        presaleNom,
+        salleSourceId,
+        artisteSourceId,
+        salleUuid,
+        artisteId);
   }
 
   /// Retourne un nouveau concert avec l'{@code artisteId} remplacé.
@@ -82,9 +130,25 @@ public record ValeurConcert(
   /// @return nouveau record avec le champ modifié
   public ValeurConcert avecArtisteId(UUID nouvelArtisteId) {
     return new ValeurConcert(
-        artiste, artisteNorm, date, heure, salle, salleNorm,
-        ville, dept, url, source, classification, genre, statut,
-        presaleDebut, presaleNom, salleSourceId, artisteSourceId, salleUuid, nouvelArtisteId);
+        artiste,
+        artisteNorm,
+        date,
+        heure,
+        salle,
+        salleNorm,
+        ville,
+        dept,
+        url,
+        source,
+        classification,
+        genre,
+        statut,
+        presaleDebut,
+        presaleNom,
+        salleSourceId,
+        artisteSourceId,
+        salleUuid,
+        nouvelArtisteId);
   }
 
   /// Retourne un nouveau concert avec le {@code salleUuid} et l'{@code artisteId} remplacés.
@@ -94,9 +158,24 @@ public record ValeurConcert(
   /// @return nouveau record avec les champs modifiés
   public ValeurConcert avecUuids(UUID nouvelleSalleUuid, UUID nouvelArtisteId) {
     return new ValeurConcert(
-        artiste, artisteNorm, date, heure, salle, salleNorm,
-        ville, dept, url, source, classification, genre, statut,
-        presaleDebut, presaleNom, salleSourceId, artisteSourceId, nouvelleSalleUuid,
+        artiste,
+        artisteNorm,
+        date,
+        heure,
+        salle,
+        salleNorm,
+        ville,
+        dept,
+        url,
+        source,
+        classification,
+        genre,
+        statut,
+        presaleDebut,
+        presaleNom,
+        salleSourceId,
+        artisteSourceId,
+        nouvelleSalleUuid,
         nouvelArtisteId);
   }
 
@@ -107,8 +186,24 @@ public record ValeurConcert(
   /// @return nouveau record avec les champs modifiés
   public ValeurConcert avecArtisteNormEtId(String nouvelArtisteNorm, UUID nouvelArtisteId) {
     return new ValeurConcert(
-        artiste, nouvelArtisteNorm, date, heure, salle, salleNorm,
-        ville, dept, url, source, classification, genre, statut,
-        presaleDebut, presaleNom, salleSourceId, artisteSourceId, salleUuid, nouvelArtisteId);
+        artiste,
+        nouvelArtisteNorm,
+        date,
+        heure,
+        salle,
+        salleNorm,
+        ville,
+        dept,
+        url,
+        source,
+        classification,
+        genre,
+        statut,
+        presaleDebut,
+        presaleNom,
+        salleSourceId,
+        artisteSourceId,
+        salleUuid,
+        nouvelArtisteId);
   }
 }

@@ -541,11 +541,13 @@ class PersisterConcertsIntegrationTest {
     // #719 — page festival Eventim : "Yael Naim" (batch H:00) puis "Solidays 2026" (region H:30)
     // ont la même URL source. resoudreParUrl doit forcer l'artiste_norm du 2ème fetch à celui
     // du 1er fetch déjà en base, évitant deux lignes et les notifications répétées.
-    String urlFestival = "https://www.eventim.fr/event/solidays-2026-hippodrome-de-longchamp-21086080/";
+    String urlFestival =
+        "https://www.eventim.fr/event/solidays-2026-hippodrome-de-longchamp-21086080/";
 
     persisterConcerts.persisterConcerts(
         List.of(
-            concertAvecUrl("Yael Naim", "2026-06-28", "Hippodrome de Longchamp", "eventim", urlFestival)));
+            concertAvecUrl(
+                "Yael Naim", "2026-06-28", "Hippodrome de Longchamp", "eventim", urlFestival)));
 
     persisterConcerts.persisterConcerts(
         List.of(
@@ -556,10 +558,8 @@ class PersisterConcertsIntegrationTest {
     assertEquals(1L, count, "les deux concerts avec la même URL doivent fusionner en un seul");
 
     String artisteEnBase =
-        jdbc.queryForObject(
-            "SELECT artiste_norm FROM concerts", Map.of(), String.class);
-    assertEquals(
-        "yael naim", artisteEnBase, "l'artiste_norm du premier fetch doit être conservé");
+        jdbc.queryForObject("SELECT artiste_norm FROM concerts", Map.of(), String.class);
+    assertEquals("yael naim", artisteEnBase, "l'artiste_norm du premier fetch doit être conservé");
   }
 
   @Test
@@ -599,7 +599,8 @@ class PersisterConcertsIntegrationTest {
             "SELECT artiste_id FROM concerts WHERE artiste_norm = 'mika'",
             Map.of(),
             (rs, _) -> rs.getObject("artiste_id", java.util.UUID.class));
-    assertEquals(artisteId, artisteIdEnBase, "artiste_id doit être résolu par nom_norm pour Digitick");
+    assertEquals(
+        artisteId, artisteIdEnBase, "artiste_id doit être résolu par nom_norm pour Digitick");
   }
 
   @Test
@@ -615,5 +616,74 @@ class PersisterConcertsIntegrationTest {
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(
         1L, count, "deux concerts sans heure du même artiste/date/salle doivent fusionner");
+  }
+
+  @Test
+  void persisterConcerts_memeArtisteMemeDateSalleNormsDifferentsMemeUuid_neLancePasBadSqlGrammar() {
+    // Régression #738/#745 — la contrainte uq_concerts_artiste_date_heure_salle porte sur
+    // salle_uuid depuis V37. TM et Eventim nommant la même salle différemment mais résolvant
+    // au même salle_uuid produisaient un "ON CONFLICT DO UPDATE command cannot affect row a
+    // second time" si deduplicerLotReconcilie utilisait salle_norm comme clé.
+    java.util.UUID salleUuid = java.util.UUID.randomUUID();
+    String salleCle = "salle-test-" + salleUuid;
+    jdbc.update(
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept)"
+            + " VALUES (CAST(:id AS uuid), :salleCle, :nom, :nomNorm, '75')",
+        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+            .addValue("id", salleUuid.toString())
+            .addValue("salleCle", salleCle)
+            .addValue("nom", "Zénith Paris La Villette")
+            .addValue("nomNorm", "zenith paris la villette"));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:salleId AS uuid), 'ticketmaster', 'TM_VENUE_001')",
+        Map.of("salleId", salleUuid.toString()));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:salleId AS uuid), 'eventim', 'eventim:internal:zenith de paris')",
+        Map.of("salleId", salleUuid.toString()));
+
+    List<ConcertBrut> liste =
+        List.of(
+            new ConcertBrut(
+                "Radiohead",
+                "2026-11-20",
+                null,
+                "Zenith Paris La Villette",
+                "Paris",
+                "75",
+                "https://www.ticketmaster.fr/radiohead",
+                "ticketmaster",
+                null,
+                "Concert",
+                null,
+                null,
+                null,
+                "tm:TM_VENUE_001",
+                null),
+            new ConcertBrut(
+                "Radiohead",
+                "2026-11-20",
+                null,
+                "Zenith de Paris",
+                "Paris",
+                "75",
+                "https://www.eventim.fr/radiohead",
+                "eventim",
+                null,
+                "Concert",
+                null,
+                null,
+                null,
+                "eventim:internal:zenith de paris",
+                null));
+
+    assertDoesNotThrow(
+        () -> persisterConcerts.persisterConcerts(liste),
+        "persisterConcerts ne doit pas lever BadSqlGrammarException quand deux concerts ont"
+            + " le même salle_uuid mais des salle_norm différents");
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(1L, count, "les deux concerts doivent fusionner en un seul via salle_uuid");
   }
 }
