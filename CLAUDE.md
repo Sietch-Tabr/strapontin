@@ -44,6 +44,7 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - `SpectacleService` et `DecouverteService` : COUNT et filtres disponibles calculés en parallèle via `CompletableFuture` (threads virtuels)
 - `RecalculerMatchesService` : recalcul parallèle par utilisateur via `Executors.newVirtualThreadPerTaskExecutor()`, 1 transaction par user (`TransactionTemplate`)
 - `WebConfiguration` : beans `ObjectMapper` + `RestClient` (timeout 5 s / 10 s)
+- `PersisterConcerts` (v2.5.7) : orchestrateur injectant `ReconciliateurSalles`, `ReconciliateurArtistes`, `PersisteurConcertsDb`. `resoudreArtisteParNomNorm` couvre toutes les sources sans `artisteId`, y compris Digitick (pas d'identifiant artiste externe).
 - Référence : `PersisterConcerts` + `RecalculerMatchesService` dans `java/worker/`
 
 ## Stack technique (v2.2.0)
@@ -212,7 +213,8 @@ Migrations Flyway dans `java/web/src/main/resources/db/migration/` — ne jamais
 `users.id` : type `text` (UUID généré par Java).
 **v2.3.0 (V23)** : `salles.salle_uuid uuid`, tables `artistes`, `salle_sources`, `artiste_sources`, colonnes `salle_uuid`/`artiste_id` sur `concerts`, `user_salles`, `user_artistes`. Migration additive.
 **v2.3.0 (V24)** : nettoyage post-backfill #628 — `salles.salle_uuid` → `salles.id` (PK uuid), ancienne PK text → `salles.salle_cle` (UNIQUE) ; PK `user_salles` = `(user_id, salle_uuid)` ; PK `user_artistes` = `(user_id, artiste_id)` ; suppression `salle_id`/`tm_venue_id`/`artiste_normalise`/`attraction_id`/`concerts.salle_cle`.
-**v2.5.6 (V39)** : `users.totp_failure_count INT DEFAULT 0` — compteur d'échecs TOTP persisté en base (#732). Dernière version web : V39, worker : V12.
+**v2.5.6 (V39)** : `users.totp_failure_count INT DEFAULT 0` — compteur d'échecs TOTP persisté en base (#732).
+**v2.5.7 (V40 web / V15 worker)** : backfill `artiste_id` concerts futurs sans artiste ; V15 worker : `ALTER TYPE source_concert ADD VALUE 'digitick'`. Dernière version web : V40, worker : V15.
 Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de-base-de-données)
 
 ## Conventions Java

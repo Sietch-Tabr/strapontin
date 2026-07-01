@@ -8,6 +8,18 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.5.7 — 1er juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Qualité des données</p>
+            <ul>
+              <li>Les concerts issus de Digitick sont désormais correctement rattachés à un artiste suivi, ce qui les fait apparaître dans vos correspondances et notifications.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.5.6 — 27 juillet 2026</h2>
         <div class="changelog-entrees">
           <div>

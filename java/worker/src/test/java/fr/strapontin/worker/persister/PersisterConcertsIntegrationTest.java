@@ -225,12 +225,12 @@ class PersisterConcertsIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(
             concert(
-                "Comédies Musicales", "2026-06-19", "Cirque D'Hiver Bouglione", "ticketmaster")));
+                "Comédies Musicales", "2026-11-19", "Cirque D'Hiver Bouglione", "ticketmaster")));
     persisterConcerts.persisterConcerts(
         List.of(
             concert(
                 "Les Comédies Musicales",
-                "2026-06-19",
+                "2026-11-19",
                 "Cirque D'Hiver Bouglione",
                 "ticketmaster")));
 
@@ -560,6 +560,46 @@ class PersisterConcertsIntegrationTest {
             "SELECT artiste_norm FROM concerts", Map.of(), String.class);
     assertEquals(
         "yael naim", artisteEnBase, "l'artiste_norm du premier fetch doit être conservé");
+  }
+
+  @Test
+  void persisterConcerts_digitickSansArtisteSourceId_resolutionParNomNorm() {
+    // #739 — Digitick ne fournit pas d'artisteSourceId : la résolution doit quand même
+    // retrouver l'artiste_id en base via correspondance exacte sur artiste_norm.
+    java.util.UUID artisteId = java.util.UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
+        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+            .addValue("id", artisteId.toString())
+            .addValue("nom", "Mika")
+            .addValue("nomNorm", "mika"));
+
+    ConcertBrut concertDigitick =
+        new ConcertBrut(
+            "Mika",
+            "2026-12-10",
+            "20:00",
+            "Le Zénith Paris",
+            "Paris",
+            "75",
+            "https://web.digitick.com/mika-zenith-paris",
+            "digitick",
+            null,
+            "Concert",
+            null,
+            null,
+            null,
+            "digitick:zenith-paris",
+            null);
+
+    persisterConcerts.persisterConcerts(List.of(concertDigitick));
+
+    java.util.UUID artisteIdEnBase =
+        jdbc.queryForObject(
+            "SELECT artiste_id FROM concerts WHERE artiste_norm = 'mika'",
+            Map.of(),
+            (rs, _) -> rs.getObject("artiste_id", java.util.UUID.class));
+    assertEquals(artisteId, artisteIdEnBase, "artiste_id doit être résolu par nom_norm pour Digitick");
   }
 
   @Test
