@@ -14,6 +14,7 @@
             <p class="changelog-categorie">Qualité des données</p>
             <ul>
               <li>Les concerts issus de Digitick sont désormais correctement rattachés à un artiste suivi, ce qui les fait apparaître dans vos correspondances et notifications.</li>
+              <li>Correction d'un bug pouvant empêcher certains concerts d'être enregistrés quand deux sources (Ticketmaster et Eventim) nommaient la même salle différemment lors d'un même cycle de fetch.</li>
             </ul>
           </div>
         </div>
