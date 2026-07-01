@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -196,5 +197,74 @@ class WorkerServiceTest {
     when(jdbc.update(anyString(), anyMap())).thenThrow(new RuntimeException("DB down"));
 
     assertDoesNotThrow(() -> workerService.executerPurgerLogsAdmin());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void executerFetchSallesAll_quotaInsuffisant_neFetchPas() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(false);
+
+    workerService.executerFetchSallesAll();
+
+    verify(persisterConcerts, never()).persisterConcerts(any());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void executerFetchSallesAll_aucuneSalle_nePersiste() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
+
+    workerService.executerFetchSallesAll();
+
+    verify(persisterConcerts, never()).persisterConcerts(any());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void executerFetchSallesAll_avecSalle_fetchEtPersiste() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
+        .thenReturn(List.of("tm:venue-99"));
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+    when(tm.accepteIdentifiantSalle("tm:venue-99")).thenReturn(true);
+    when(tm.fetchSalle("tm:venue-99")).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+    when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
+
+    workerService.executerFetchSallesAll();
+
+    verify(tm).fetchSalle("tm:venue-99");
+    verify(persisterConcerts).persisterConcerts(any());
+  }
+
+  @Test
+  void executerRevoquerAdmins_aucunAdmin_nInsertePasLogs() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
+
+    workerService.executerRevoquerAdmins();
+
+    verify(jdbc, times(1)).update(contains("UPDATE users"), anyMap());
+    verify(jdbc, never()).update(contains("INSERT INTO logs_admin"), anyMap());
+  }
+
+  @Test
+  void executerRevoquerAdmins_avecAdmins_insereLogs() {
+    when(jdbc.update(contains("UPDATE users"), anyMap())).thenReturn(2);
+    when(jdbc.update(contains("INSERT INTO logs_admin"), anyMap())).thenReturn(1);
+    when(jdbc.update(contains("INSERT INTO fetch_jobs"), anyMap())).thenReturn(1);
+    when(jdbc.update(contains("INSERT INTO fetch_jobs_historique"), anyMap())).thenReturn(1);
+
+    workerService.executerRevoquerAdmins();
+
+    verify(jdbc).update(contains("UPDATE users"), anyMap());
+    verify(jdbc).update(contains("INSERT INTO logs_admin"), anyMap());
+  }
+
+  @Test
+  void executerRevoquerAdmins_erreur_nePropagePas() {
+    when(jdbc.update(anyString(), anyMap())).thenThrow(new RuntimeException("DB down"));
+
+    assertDoesNotThrow(() -> workerService.executerRevoquerAdmins());
   }
 }
