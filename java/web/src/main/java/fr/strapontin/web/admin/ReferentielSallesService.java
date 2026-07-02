@@ -44,8 +44,8 @@ public class ReferentielSallesService {
   /// @param nom              filtre nom partiel (insensible à la casse), peut être null
   /// @param ville            filtre ville partielle, peut être null
   /// @param dept             filtre département exact, peut être null
-  /// @param statut           filtre {@code "vivant"}/{@code "suspect"}/{@code "mort"}, peut être
-  ///     null
+  /// @param statut           filtre {@code "a_jour"}/{@code "a_verifier"}/{@code "invalide"}, peut
+  ///     être null
   /// @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id}
   ///     — facilite le repérage des candidats à corriger manuellement sans parcourir toute la
   ///     pagination (une salle avec beaucoup de concerts liés peut être loin dans le tri par
@@ -118,9 +118,9 @@ public class ReferentielSallesService {
                COUNT(DISTINCT c.id) FILTER (WHERE c.date >= CURRENT_DATE) AS nb_concerts,
                COALESCE(string_agg(DISTINCT ss.source, ','), '') AS sources,
                CASE
-                 WHEN MIN(ss.suspect_depuis) IS NULL THEN 'vivant'
-                 WHEN MIN(ss.suspect_depuis) < now() - interval '24 hours' THEN 'mort'
-                 ELSE 'suspect'
+                 WHEN MIN(ss.suspect_depuis) IS NULL THEN 'a_jour'
+                 WHEN MIN(ss.suspect_depuis) < now() - interval '24 hours' THEN 'invalide'
+                 ELSE 'a_verifier'
                END AS statut
         FROM salles s
         LEFT JOIN concerts c ON c.salle_uuid = s.id

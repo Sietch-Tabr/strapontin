@@ -70,6 +70,18 @@ class SourcesServiceTest {
     assertEquals("ticketmaster", tm.id());
     assertEquals("ok", tm.etatQuota());
     assertNull(tm.quotaTM());
+    assertEquals(0, tm.nbSallesConfigurees());
+    assertEquals(0, tm.nbArtistesConfigures());
+
+    StatutSource eventim = sources.get(1);
+    assertEquals("eventim", eventim.id());
+    assertEquals(0, eventim.nbSallesConfigurees());
+    assertEquals(0, eventim.nbArtistesConfigures());
+
+    StatutSource deezer = sources.get(2);
+    assertEquals("deezer", deezer.id());
+    assertNull(deezer.nbSallesConfigurees());
+    assertEquals(0, deezer.nbArtistesConfigures());
 
     StatutSource digitick = sources.get(3);
     assertEquals("digitick", digitick.id());
@@ -79,6 +91,34 @@ class SourcesServiceTest {
     assertEquals("wikidata", wikidata.id());
     assertEquals(0, wikidata.nbSallesConfigurees());
     assertEquals(0, wikidata.nbArtistesConfigures());
+  }
+
+  // #777 : les comptages par source doivent bien interroger salle_sources/artiste_sources avec
+  // le littéral de source correspondant (ticketmaster/eventim), pas une requête générique.
+  @Test
+  @SuppressWarnings("unchecked")
+  void lireSources_comptesParSource_interrogeTicketmasterEtEventim() {
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
+    ArgumentCaptor<Map> paramsCaptor = ArgumentCaptor.forClass(Map.class);
+    when(jdbc.queryForObject(anyString(), paramsCaptor.capture(), eq(Integer.class))).thenReturn(0);
+    when(jdbc.query(
+            anyString(),
+            anyMap(),
+            org.mockito.ArgumentMatchers
+                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
+        .thenReturn(List.of());
+
+    sourcesService.lireSources();
+
+    List<Object> sourcesInterrogees =
+        paramsCaptor.getAllValues().stream()
+            .map(m -> m.get("source"))
+            .filter(java.util.Objects::nonNull)
+            .toList();
+    assertTrue(sourcesInterrogees.contains("ticketmaster"));
+    assertTrue(sourcesInterrogees.contains("eventim"));
+    assertTrue(sourcesInterrogees.contains("digitick"));
   }
 
   @Test

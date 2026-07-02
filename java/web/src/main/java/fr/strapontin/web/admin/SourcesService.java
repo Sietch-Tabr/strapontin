@@ -163,7 +163,6 @@ public class SourcesService {
     Instant dernierFetch = lireDernierFetch();
     QuotaTM quotaTM = lireQuotaTMDepuisBase();
     String etatQuota = calculerEtatQuota(quotaTM);
-    int nbDigitick = compterSallesDigitick();
 
     List<StatutSource> sources = new ArrayList<>();
     sources.add(
@@ -174,13 +173,31 @@ public class SourcesService {
             quotaTM,
             etatQuota,
             dernierFetch,
+            compterSallesParSource("ticketmaster"),
+            compterArtistesParSource("ticketmaster")));
+    sources.add(
+        new StatutSource(
+            "eventim",
+            "Eventim",
+            "concerts",
             null,
+            null,
+            dernierFetch,
+            compterSallesParSource("eventim"),
+            compterArtistesParSource("eventim")));
+    sources.add(
+        new StatutSource(
+            "deezer", "Deezer", "metadonnees", null, null, null, null, compterArtistesDeezer()));
+    sources.add(
+        new StatutSource(
+            "digitick",
+            "Digitick",
+            "concerts",
+            null,
+            null,
+            null,
+            compterSallesParSource("digitick"),
             null));
-    sources.add(
-        new StatutSource("eventim", "Eventim", "concerts", null, null, dernierFetch, null, null));
-    sources.add(new StatutSource("deezer", "Deezer", "metadonnees", null, null, null, null, null));
-    sources.add(
-        new StatutSource("digitick", "Digitick", "concerts", null, null, null, nbDigitick, null));
     sources.add(
         new StatutSource(
             "wikidata",
@@ -229,16 +246,55 @@ public class SourcesService {
     }
   }
 
-  private int compterSallesDigitick() {
+  /// Compte les salles reliées à une source externe donnée (#777).
+  ///
+  /// @param source identifiant de la source (ex. {@code "ticketmaster"}, {@code "digitick"})
+  /// @return nombre de salles avec un identifiant pour cette source, 0 en cas d'échec
+  private Integer compterSallesParSource(String source) {
     try {
       Integer nb =
           jdbc.queryForObject(
-              "SELECT COUNT(*) FROM salle_sources WHERE source = 'digitick'",
-              Map.of(),
+              "SELECT COUNT(*) FROM salle_sources WHERE source = :source",
+              Map.of("source", source),
               Integer.class);
       return nb != null ? nb : 0;
     } catch (Exception e) {
-      log.debug("Impossible de compter les salles Digitick : {}", e.getMessage());
+      log.debug("Impossible de compter les salles pour la source {} : {}", source, e.getMessage());
+      return 0;
+    }
+  }
+
+  /// Compte les artistes reliés à une source externe donnée (#777).
+  ///
+  /// @param source identifiant de la source (ex. {@code "ticketmaster"})
+  /// @return nombre d'artistes avec un identifiant pour cette source, 0 en cas d'échec
+  private Integer compterArtistesParSource(String source) {
+    try {
+      Integer nb =
+          jdbc.queryForObject(
+              "SELECT COUNT(*) FROM artiste_sources WHERE source = :source",
+              Map.of("source", source),
+              Integer.class);
+      return nb != null ? nb : 0;
+    } catch (Exception e) {
+      log.debug(
+          "Impossible de compter les artistes pour la source {} : {}", source, e.getMessage());
+      return 0;
+    }
+  }
+
+  /// Compte les artistes avec un identifiant Deezer (#777) — colonne directe sur {@code artistes},
+  /// pas d'entrée dans {@code artiste_sources} pour cette source.
+  ///
+  /// @return nombre d'artistes avec {@code deezer_id} renseigné, 0 en cas d'échec
+  private Integer compterArtistesDeezer() {
+    try {
+      Integer nb =
+          jdbc.queryForObject(
+              "SELECT COUNT(*) FROM artistes WHERE deezer_id IS NOT NULL", Map.of(), Integer.class);
+      return nb != null ? nb : 0;
+    } catch (Exception e) {
+      log.debug("Impossible de compter les artistes Deezer : {}", e.getMessage());
       return 0;
     }
   }

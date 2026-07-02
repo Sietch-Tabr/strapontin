@@ -19,9 +19,9 @@
         />
         <select v-model="filtreStatut" aria-label="Filtrer par statut" @change="rechargerPage0">
           <option value="">Tous statuts</option>
-          <option value="vivant">Vivant</option>
-          <option value="suspect">Suspect</option>
-          <option value="mort">Mort</option>
+          <option value="a_jour">À jour</option>
+          <option value="a_verifier">À vérifier</option>
+          <option value="invalide">Invalide</option>
         </select>
         <label class="source-filtre-checkbox">
           <input
@@ -75,7 +75,7 @@
                     <span v-if="!artiste.sources.length" class="etat-vide-texte">—</span>
                   </td>
                   <td data-label="Statut">
-                    <span class="badge-quota" :class="classeStatut(artiste.statut)">{{ artiste.statut }}</span>
+                    <span class="badge-quota" :class="classeStatut(artiste.statut)">{{ libelleStatut(artiste.statut) }}</span>
                   </td>
                   <td data-label="Wikidata">
                     <a v-if="artiste.wikidataId" :href="'https://www.wikidata.org/wiki/' + artiste.wikidataId" target="_blank" rel="noopener noreferrer">{{ artiste.wikidataId }}</a>
@@ -186,9 +186,16 @@ const enCoursFusion = ref(false)
 const controleur = new AbortController()
 
 function classeStatut(statut) {
-  if (statut === 'mort') return 'badge-quota-critique'
-  if (statut === 'suspect') return 'badge-quota-attention'
+  if (statut === 'invalide') return 'badge-quota-critique'
+  if (statut === 'a_verifier') return 'badge-quota-attention'
   return ''
+}
+
+function libelleStatut(statut) {
+  if (statut === 'a_jour') return 'À jour'
+  if (statut === 'a_verifier') return 'À vérifier'
+  if (statut === 'invalide') return 'Invalide'
+  return statut
 }
 
 async function charger() {

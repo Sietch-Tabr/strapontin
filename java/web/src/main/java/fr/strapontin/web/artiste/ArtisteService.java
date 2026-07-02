@@ -46,7 +46,7 @@ public class ArtisteService {
   private static final String DEEZER_URL = "https://api.deezer.com/search/artist";
   private static final String WIKIDATA_API_URL = "https://www.wikidata.org/w/api.php";
   private static final String WIKIDATA_USER_AGENT =
-      "Strapontin/2.6.1 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
+      "Strapontin/2.6.2 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
   // Mots-clés (description Wikidata, fr/en) distinguant un artiste musical ou un humoriste
   // (#717, #767) des homonymes non pertinents pour l'autocomplete.
   private static final Pattern MOTS_CLES_ARTISTE =
@@ -123,7 +123,7 @@ public class ArtisteService {
       }
 
       suggestions = resultatsSuggestions;
-      dejaLeSuivi = nomsSuivisNorm.contains(Normalisation.normaliserTexte(recherche));
+      dejaLeSuivi = contientCorrespondancePartielle(rechercheNorm, nomsSuivisNorm);
     }
 
     return new ReponseArtistes(artistes, suggestions, dejaLeSuivi);
@@ -248,6 +248,22 @@ public class ArtisteService {
       }
     }
     return artisteRepository.upsertArtiste(nom, normalise);
+  }
+
+  /// Indique si une recherche correspond, même partiellement, à un artiste déjà suivi (#780).
+  ///
+  /// <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un
+  /// terme partiel (ex. "Yael" ne matchait pas "yaelnaim") alors que l'artiste a bien été trouvé
+  /// puis exclu des suggestions car déjà suivi — l'utilisateur n'avait alors aucun signal
+  /// expliquant l'absence de résultat.
+  ///
+  /// <p>Package-private (plutôt que {@code private}) pour être testable directement.
+  ///
+  /// @param rechercheNorm nom normalisé de la recherche ({@link Normalisation#normaliserTexte})
+  /// @param nomsNorm      noms normalisés des artistes déjà suivis
+  /// @return {@code true} si un artiste déjà suivi contient la recherche
+  static boolean contientCorrespondancePartielle(String rechercheNorm, Set<String> nomsNorm) {
+    return nomsNorm.stream().anyMatch(nom -> nom.contains(rechercheNorm));
   }
 
   /// Supprime un artiste de la liste de suivi.

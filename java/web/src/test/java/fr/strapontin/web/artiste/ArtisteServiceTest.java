@@ -165,4 +165,25 @@ class ArtisteServiceTest {
     assertDoesNotThrow(() -> service.supprimer("u1", artisteId));
     verify(artisteRepository).supprimer("u1", artisteId);
   }
+
+  // #780 : "Yael" doit être détecté comme correspondant partiellement à "yaelnaim" déjà suivi —
+  // avant correctif, seule une égalité stricte était testée et l'utilisateur voyait "Aucun
+  // résultat" alors que l'artiste était déjà suivi.
+  @Test
+  void contientCorrespondancePartielle_rechercheSubstringDunNomSuivi_retourneTrue() {
+    assertTrue(
+        ArtisteService.contientCorrespondancePartielle("yael", java.util.Set.of("yaelnaim")));
+  }
+
+  @Test
+  void contientCorrespondancePartielle_correspondanceExacte_retourneTrue() {
+    assertTrue(
+        ArtisteService.contientCorrespondancePartielle("yaelnaim", java.util.Set.of("yaelnaim")));
+  }
+
+  @Test
+  void contientCorrespondancePartielle_aucuneCorrespondance_retourneFalse() {
+    assertFalse(
+        ArtisteService.contientCorrespondancePartielle("radiohead", java.util.Set.of("yaelnaim")));
+  }
 }

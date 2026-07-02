@@ -54,9 +54,26 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
     await expect(page.locator("main")).not.toBeEmpty();
   });
 
-  test("aide_suppression_compte_lien_self_service_present", async ({ page }) => {
+  // #775 : garde-fou contre la récidive — sans repli automatique, chaque nouvelle version
+  // laissée en <section> non repliée fait grossir la page indéfiniment (12 versions dépliées
+  // d'affilée constatées avant ce correctif). Échoue si la convention documentée dans
+  // ChangelogPage.vue (convertir la <section> précédente en <details> à chaque nouvelle version)
+  // n'est pas respectée.
+  test("changelog_versionsAnciennes_repliees", async ({ page }) => {
+    await page.goto("/changelog");
+    const sectionsOuvertes = await page.locator(".changelog > section").count();
+    expect(sectionsOuvertes).toBeLessThanOrEqual(2);
+  });
+
+  test("aide_suppression_compte_lien_self_service_present", async ({
+    page,
+  }) => {
     await page.goto("/aide");
-    await expect(page.locator("body")).not.toContainText("sur demande à l'administrateur");
-    await expect(page.getByRole("link", { name: "Paramètres → Compte" })).toBeVisible();
+    await expect(page.locator("body")).not.toContainText(
+      "sur demande à l'administrateur",
+    );
+    await expect(
+      page.getByRole("link", { name: "Paramètres → Compte" }),
+    ).toBeVisible();
   });
 });

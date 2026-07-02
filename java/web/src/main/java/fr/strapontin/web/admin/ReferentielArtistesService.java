@@ -42,8 +42,8 @@ public class ReferentielArtistesService {
   ///
   /// @param page             numéro de page (0-indexé)
   /// @param nom              filtre nom partiel (insensible à la casse), peut être null
-  /// @param statut           filtre {@code "vivant"}/{@code "suspect"}/{@code "mort"}, peut être
-  ///     null
+  /// @param statut           filtre {@code "a_jour"}/{@code "a_verifier"}/{@code "invalide"}, peut
+  ///     être null
   /// @param wikidataManquant si {@code true}, ne retourne que les artistes sans {@code wikidata_id}
   ///     — facilite le repérage des candidats à corriger manuellement sans parcourir toute la
   ///     pagination
@@ -106,9 +106,9 @@ public class ReferentielArtistesService {
                COUNT(DISTINCT c.id) FILTER (WHERE c.date >= CURRENT_DATE) AS nb_concerts,
                COALESCE(string_agg(DISTINCT asrc.source, ','), '') AS sources,
                CASE
-                 WHEN MIN(asrc.suspect_depuis) IS NULL THEN 'vivant'
-                 WHEN MIN(asrc.suspect_depuis) < now() - interval '24 hours' THEN 'mort'
-                 ELSE 'suspect'
+                 WHEN MIN(asrc.suspect_depuis) IS NULL THEN 'a_jour'
+                 WHEN MIN(asrc.suspect_depuis) < now() - interval '24 hours' THEN 'invalide'
+                 ELSE 'a_verifier'
                END AS statut
         FROM artistes a
         LEFT JOIN concerts c ON c.artiste_id = a.id

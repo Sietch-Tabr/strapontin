@@ -47,10 +47,19 @@ public class SalleService {
   private static final String TM_VENUES_URL =
       "https://app.ticketmaster.com/discovery/v2/venues.json";
   private static final String NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
-  // Types Nominatim pertinents pour une salle de spectacle (#718) — au-delà de class=amenity,
-  // certaines salles sont classées leisure/tourism selon la saisie OSM locale.
+  // Types Nominatim pertinents pour une salle de spectacle (#718, #779) — testés sur le type de
+  // premier niveau ET sur extratags.amenity (une salle taguée leisure/tourism, ex. un stade, peut
+  // porter amenity en tag secondaire). community_centre couvre les salles des fêtes/polyvalentes
+  // (petites communes, souvent seule couverture Digitick disponible).
   private static final Set<String> TYPES_SALLE_NOMINATIM =
-      Set.of("music_venue", "arts_centre", "theatre", "nightclub", "events_venue", "concert_hall");
+      Set.of(
+          "music_venue",
+          "arts_centre",
+          "theatre",
+          "nightclub",
+          "events_venue",
+          "concert_hall",
+          "community_centre");
   private static final int CAP_SALLES = 200;
 
   private final SalleRepository salleRepository;
@@ -120,8 +129,7 @@ public class SalleService {
 
       resultats = listeResultats;
       String rechercheNorm = normaliserSalleCle(recherche);
-      dejaLaSuivie =
-          salles.stream().anyMatch(s -> normaliserSalleCle(s.nom()).equals(rechercheNorm));
+      dejaLaSuivie = contientCorrespondancePartielle(rechercheNorm, sallesDejaAjoutees);
     }
 
     return new ReponseSalles(salles, resultats, dejaLaSuivie);
@@ -344,6 +352,22 @@ public class SalleService {
     return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}", "").replaceAll("[^a-z0-9]", "");
   }
 
+  /// Indique si une recherche correspond, même partiellement, à une salle déjà suivie (#780).
+  ///
+  /// <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un
+  /// terme partiel (ex. "Zenith" ne matchait pas "zenithparis") alors que la salle a bien été
+  /// trouvée puis exclue des suggestions car déjà suivie — l'utilisateur n'avait alors aucun
+  /// signal expliquant l'absence de résultat.
+  ///
+  /// <p>Package-private (plutôt que {@code private}) pour être testable directement.
+  ///
+  /// @param rechercheNorm clé normalisée de la recherche ({@link #normaliserSalleCle})
+  /// @param clesNorm      clés normalisées des salles déjà suivies
+  /// @return {@code true} si une salle déjà suivie contient la recherche
+  static boolean contientCorrespondancePartielle(String rechercheNorm, Set<String> clesNorm) {
+    return clesNorm.stream().anyMatch(cle -> cle.contains(rechercheNorm));
+  }
+
   private static boolean estMemeSalle(String a, String b) {
     String na = normaliserSalleCle(a);
     String nb = normaliserSalleCle(b);
@@ -391,7 +415,7 @@ public class SalleService {
       HttpRequest request =
           HttpRequest.newBuilder()
               .uri(URI.create(url))
-              .header("User-Agent", "Strapontin/2.6.1 (contact: " + contact + ")")
+              .header("User-Agent", "Strapontin/2.6.2 (contact: " + contact + ")")
               .timeout(Duration.ofSeconds(3))
               .GET()
               .build();
@@ -411,15 +435,32 @@ public class SalleService {
     }
   }
 
+  /// Filtre et convertit les résultats bruts Nominatim en suggestions de salle (#718, #779).
+  ///
+  /// <p>Un résultat est pertinent si son {@code type} de premier niveau ou son
+  /// {@code extratags.amenity} (tag secondaire) figure dans {@link #TYPES_SALLE_NOMINATIM} —
+  /// {@code class=amenity} seul n'est plus suffisant (trop large : laissait passer des bornes de
+  /// recharge électrique) et une salle classée sous {@code leisure}/{@code tourism} (ex. un
+  /// stade avec {@code extratags.amenity=music_venue}) n'est plus rejetée à tort.
+  ///
+  /// <p>Package-private (plutôt que {@code private}) pour être testable directement, sans appel
+  /// réseau réel.
+  ///
+  /// @param json corps de la réponse Nominatim (tableau JSON)
+  /// @return suggestions filtrées par pertinence, vide si aucune ou en cas d'échec de parsing
   @SuppressWarnings("unchecked")
-  private List<ResultatSalle> parseNominatimResultats(String json) {
+  List<ResultatSalle> parseNominatimResultats(String json) {
     List<ResultatSalle> resultats = new ArrayList<>();
     try {
       List<Map<String, Object>> items = objectMapper.readValue(json, List.class);
       for (Map<String, Object> item : items) {
-        String classe = (String) item.get("class");
         String type = (String) item.get("type");
-        if (!"amenity".equals(classe) && !TYPES_SALLE_NOMINATIM.contains(type)) continue;
+        Map<String, Object> extratags = (Map<String, Object>) item.get("extratags");
+        String amenitySecondaire = extratags != null ? (String) extratags.get("amenity") : null;
+        boolean pertinent =
+            TYPES_SALLE_NOMINATIM.contains(type)
+                || (amenitySecondaire != null && TYPES_SALLE_NOMINATIM.contains(amenitySecondaire));
+        if (!pertinent) continue;
 
         String displayName = (String) item.get("display_name");
         if (displayName == null || displayName.isBlank()) continue;
@@ -432,7 +473,6 @@ public class SalleService {
         Map<String, Object> address = (Map<String, Object>) item.get("address");
         String ville = extraireVille(address);
 
-        Map<String, Object> extratags = (Map<String, Object>) item.get("extratags");
         String wikidataId = extratags != null ? (String) extratags.get("wikidata") : null;
 
         resultats.add(new ResultatSalle(nom, ville, null, null, "osm", osmId, wikidataId));
