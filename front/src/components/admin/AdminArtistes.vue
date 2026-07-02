@@ -40,66 +40,68 @@
 
       <EtatChargement v-if="chargement" />
       <template v-else>
-        <div class="table-wrapper">
-          <table aria-label="Référentiel artistes">
-            <thead>
-              <tr>
-                <th scope="col"><span class="sr-only">Sélection</span></th>
-                <th scope="col">Artiste</th>
-                <th scope="col">Concerts</th>
-                <th scope="col">Sources</th>
-                <th scope="col">Statut</th>
-                <th scope="col">Wikidata</th>
-                <th scope="col">Deezer</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="artiste in artistes" :key="artiste.id">
-                <td>
-                  <input
-                    type="checkbox"
-                    :checked="selection.includes(artiste.id)"
-                    :aria-label="'Sélectionner ' + (artiste.nomAffiche || artiste.nom)"
-                    @change="basculerSelection(artiste.id)"
-                  />
-                </td>
-                <td class="source-salle-nom">
-                  {{ artiste.nomAffiche || artiste.nom }}
-                  <span v-if="artiste.nomAffiche && artiste.nomAffiche !== artiste.nom" class="param-aide"> ({{ artiste.nom }})</span>
-                </td>
-                <td>{{ artiste.nbConcerts }}</td>
-                <td>
-                  <span v-for="src in artiste.sources" :key="src" class="badge-source badge-source-metadonnees">{{ src }}</span>
-                  <span v-if="!artiste.sources.length" class="etat-vide-texte">—</span>
-                </td>
-                <td>
-                  <span class="badge-quota" :class="classeStatut(artiste.statut)">{{ artiste.statut }}</span>
-                </td>
-                <td>
-                  <a v-if="artiste.wikidataId" :href="'https://www.wikidata.org/wiki/' + artiste.wikidataId" target="_blank" rel="noopener noreferrer">{{ artiste.wikidataId }}</a>
-                  <span v-else class="etat-vide-texte">—</span>
-                </td>
-                <td>
-                  <a v-if="artiste.deezerId" :href="'https://www.deezer.com/artist/' + artiste.deezerId" target="_blank" rel="noopener noreferrer">{{ artiste.deezerId }}</a>
-                  <span v-else class="etat-vide-texte">—</span>
-                </td>
-                <td class="source-actions">
-                  <button type="button" class="btn btn-secondary btn-sm" @click="ouvrirEdition(artiste)">Éditer</button>
-                  <button
-                    v-if="artiste.wikidataId || artiste.deezerId"
-                    type="button"
-                    class="btn btn-texte btn-sm"
-                    title="Effacer wikidata_id/deezer_id/nom affiché pour redécouvrir au prochain cycle"
-                    @click="reinitialiserEnrichissement(artiste)"
-                  >Réinitialiser</button>
-                </td>
-              </tr>
-              <tr v-if="artistes.length === 0">
-                <td colspan="8" class="etat-vide-texte">Aucun artiste ne correspond aux filtres.</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="artistes-conteneur">
+          <div class="table-wrapper">
+            <table aria-label="Référentiel artistes">
+              <thead>
+                <tr>
+                  <th scope="col"><span class="sr-only">Sélection</span></th>
+                  <th scope="col">Artiste</th>
+                  <th scope="col">Concerts</th>
+                  <th scope="col">Sources</th>
+                  <th scope="col">Statut</th>
+                  <th scope="col">Wikidata</th>
+                  <th scope="col">Deezer</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="artiste in artistes" :key="artiste.id">
+                  <td data-label="">
+                    <input
+                      type="checkbox"
+                      :checked="selection.includes(artiste.id)"
+                      :aria-label="'Sélectionner ' + (artiste.nomAffiche || artiste.nom)"
+                      @change="basculerSelection(artiste.id)"
+                    />
+                  </td>
+                  <td class="source-salle-nom" data-label="Artiste">
+                    {{ artiste.nomAffiche || artiste.nom }}
+                    <span v-if="artiste.nomAffiche && artiste.nomAffiche !== artiste.nom" class="param-aide"> ({{ artiste.nom }})</span>
+                  </td>
+                  <td data-label="Concerts">{{ artiste.nbConcerts }}</td>
+                  <td data-label="Sources">
+                    <span v-for="src in artiste.sources" :key="src" class="badge-source badge-source-metadonnees">{{ src }}</span>
+                    <span v-if="!artiste.sources.length" class="etat-vide-texte">—</span>
+                  </td>
+                  <td data-label="Statut">
+                    <span class="badge-quota" :class="classeStatut(artiste.statut)">{{ artiste.statut }}</span>
+                  </td>
+                  <td data-label="Wikidata">
+                    <a v-if="artiste.wikidataId" :href="'https://www.wikidata.org/wiki/' + artiste.wikidataId" target="_blank" rel="noopener noreferrer">{{ artiste.wikidataId }}</a>
+                    <span v-else class="etat-vide-texte">—</span>
+                  </td>
+                  <td data-label="Deezer">
+                    <a v-if="artiste.deezerId" :href="'https://www.deezer.com/artist/' + artiste.deezerId" target="_blank" rel="noopener noreferrer">{{ artiste.deezerId }}</a>
+                    <span v-else class="etat-vide-texte">—</span>
+                  </td>
+                  <td class="source-actions" data-label="">
+                    <button type="button" class="btn btn-secondary btn-sm" @click="ouvrirEdition(artiste)">Éditer</button>
+                    <button
+                      v-if="artiste.wikidataId || artiste.deezerId"
+                      type="button"
+                      class="btn btn-danger btn-sm"
+                      title="Effacer wikidata_id/deezer_id/nom affiché pour redécouvrir au prochain cycle"
+                      @click="reinitialiserEnrichissement(artiste)"
+                    >Réinitialiser</button>
+                  </td>
+                </tr>
+                <tr v-if="artistes.length === 0">
+                  <td colspan="8" class="etat-vide-texte">Aucun artiste ne correspond aux filtres.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div class="pagination" v-if="totalPages > 1">

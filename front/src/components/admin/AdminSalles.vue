@@ -57,63 +57,65 @@
 
       <EtatChargement v-if="chargement" />
       <template v-else>
-        <div class="table-wrapper">
-          <table aria-label="Référentiel salles">
-            <thead>
-              <tr>
-                <th scope="col"><span class="sr-only">Sélection</span></th>
-                <th scope="col">Salle</th>
-                <th scope="col">Ville / Dept</th>
-                <th scope="col">Concerts</th>
-                <th scope="col">Sources</th>
-                <th scope="col">Statut</th>
-                <th scope="col">Wikidata</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="salle in salles" :key="salle.id">
-                <td>
-                  <input
-                    type="checkbox"
-                    :checked="selection.includes(salle.id)"
-                    :aria-label="'Sélectionner ' + (salle.nomAffiche || salle.nom)"
-                    @change="basculerSelection(salle.id)"
-                  />
-                </td>
-                <td class="source-salle-nom">
-                  {{ salle.nomAffiche || salle.nom }}
-                  <span v-if="salle.nomAffiche && salle.nomAffiche !== salle.nom" class="param-aide"> ({{ salle.nom }})</span>
-                </td>
-                <td>{{ [salle.ville, salle.dept].filter(Boolean).join(' ') || '—' }}</td>
-                <td>{{ salle.nbConcerts }}</td>
-                <td>
-                  <span v-for="src in salle.sources" :key="src" class="badge-source badge-source-metadonnees">{{ src }}</span>
-                  <span v-if="!salle.sources.length" class="etat-vide-texte">—</span>
-                </td>
-                <td>
-                  <span class="badge-quota" :class="classeStatut(salle.statut)">{{ salle.statut }}</span>
-                </td>
-                <td>
-                  <a v-if="salle.wikidataId" :href="'https://www.wikidata.org/wiki/' + salle.wikidataId" target="_blank" rel="noopener noreferrer">{{ salle.wikidataId }}</a>
-                  <span v-else class="etat-vide-texte">—</span>
-                </td>
-                <td class="source-actions">
-                  <button type="button" class="btn btn-secondary btn-sm" @click="ouvrirEdition(salle)">Éditer</button>
-                  <button
-                    v-if="salle.wikidataId"
-                    type="button"
-                    class="btn btn-texte btn-sm"
-                    title="Effacer wikidata_id/nom affiché/ville pour redécouvrir au prochain cycle"
-                    @click="reinitialiserEnrichissement(salle)"
-                  >Réinitialiser</button>
-                </td>
-              </tr>
-              <tr v-if="salles.length === 0">
-                <td colspan="8" class="etat-vide-texte">Aucune salle ne correspond aux filtres.</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="salles-conteneur">
+          <div class="table-wrapper">
+            <table aria-label="Référentiel salles">
+              <thead>
+                <tr>
+                  <th scope="col"><span class="sr-only">Sélection</span></th>
+                  <th scope="col">Salle</th>
+                  <th scope="col">Ville / Dept</th>
+                  <th scope="col">Concerts</th>
+                  <th scope="col">Sources</th>
+                  <th scope="col">Statut</th>
+                  <th scope="col">Wikidata</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="salle in salles" :key="salle.id">
+                  <td data-label="">
+                    <input
+                      type="checkbox"
+                      :checked="selection.includes(salle.id)"
+                      :aria-label="'Sélectionner ' + (salle.nomAffiche || salle.nom)"
+                      @change="basculerSelection(salle.id)"
+                    />
+                  </td>
+                  <td class="source-salle-nom" data-label="Salle">
+                    {{ salle.nomAffiche || salle.nom }}
+                    <span v-if="salle.nomAffiche && salle.nomAffiche !== salle.nom" class="param-aide"> ({{ salle.nom }})</span>
+                  </td>
+                  <td data-label="Ville / Dept">{{ [salle.ville, salle.dept].filter(Boolean).join(' ') || '—' }}</td>
+                  <td data-label="Concerts">{{ salle.nbConcerts }}</td>
+                  <td data-label="Sources">
+                    <span v-for="src in salle.sources" :key="src" class="badge-source badge-source-metadonnees">{{ src }}</span>
+                    <span v-if="!salle.sources.length" class="etat-vide-texte">—</span>
+                  </td>
+                  <td data-label="Statut">
+                    <span class="badge-quota" :class="classeStatut(salle.statut)">{{ salle.statut }}</span>
+                  </td>
+                  <td data-label="Wikidata">
+                    <a v-if="salle.wikidataId" :href="'https://www.wikidata.org/wiki/' + salle.wikidataId" target="_blank" rel="noopener noreferrer">{{ salle.wikidataId }}</a>
+                    <span v-else class="etat-vide-texte">—</span>
+                  </td>
+                  <td class="source-actions" data-label="">
+                    <button type="button" class="btn btn-secondary btn-sm" @click="ouvrirEdition(salle)">Éditer</button>
+                    <button
+                      v-if="salle.wikidataId"
+                      type="button"
+                      class="btn btn-danger btn-sm"
+                      title="Effacer wikidata_id/nom affiché/ville pour redécouvrir au prochain cycle"
+                      @click="reinitialiserEnrichissement(salle)"
+                    >Réinitialiser</button>
+                  </td>
+                </tr>
+                <tr v-if="salles.length === 0">
+                  <td colspan="8" class="etat-vide-texte">Aucune salle ne correspond aux filtres.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div class="pagination" v-if="totalPages > 1">
