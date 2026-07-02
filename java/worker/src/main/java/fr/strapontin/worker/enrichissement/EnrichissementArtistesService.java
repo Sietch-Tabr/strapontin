@@ -1,0 +1,250 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.worker.enrichissement;
+
+import fr.strapontin.sources.ArtisteAEnrichir;
+import fr.strapontin.sources.EnrichissementArtiste;
+import fr.strapontin.sources.SourceEnrichissementArtiste;
+import fr.strapontin.worker.LogsAdminWorker;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Service;
+
+/// Orchestrateur d'enrichissement des artistes (#711 étape 3 + #716).
+///
+/// Boucle sur les {@link SourceEnrichissementArtiste} injectées (une nouvelle source = un bean
+/// Spring, sans modification de ce service). L'ordre de déclaration des beans dans
+/// {@code EnrichissementConfiguration} importe : {@code WikidataArtisteSource} doit être déclaré
+/// avant {@code DeezerArtisteSource} — le {@code deezerId} (P2722) découvert par Wikidata est
+/// propagé aux sources suivantes dans la même passe pour que Deezer puisse confirmer le nom.
+///
+/// Contient la logique #716 : le P6262 Wikidata sert de cross-validation indépendante de TM
+/// pour l'entrée {@code artiste_sources(source='ticketmaster')} — absent → insertion auto,
+/// identique → rien, différent → log seul (pas d'écrasement automatique d'un lien déjà établi).
+///
+/// Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : la
+/// découverte Wikidata sans Q-ID connu est séquentielle (une requête par artiste, rate-limitée) —
+/// persister uniquement à la toute fin perdrait tout le travail déjà résolu en cas d'interruption
+/// avant la fin du cycle.
+///
+/// @since 2.6.0
+/// @author Kwaite
+@Service
+public class EnrichissementArtistesService {
+
+  private static final Logger log = LoggerFactory.getLogger(EnrichissementArtistesService.class);
+
+  static final int PLAFOND_NOCTURNE = 500;
+  static final int TAILLE_LOT_PERSISTANCE = 25;
+  // Délai entre deux lots de persistance, en plus du délai intra-source (500ms/appel côté
+  // WikidataArtisteSource en mode découverte) — laisse Wikidata respirer entre deux lots plutôt
+  // que d'enchaîner immédiatement.
+  private static final long DELAI_ENTRE_LOTS_MS = 2000;
+
+  private final NamedParameterJdbcTemplate jdbc;
+  private final List<SourceEnrichissementArtiste> sources;
+  private final LogsAdminWorker logsAdminWorker;
+
+  public EnrichissementArtistesService(
+      NamedParameterJdbcTemplate jdbc,
+      List<SourceEnrichissementArtiste> sources,
+      LogsAdminWorker logsAdminWorker) {
+    this.jdbc = jdbc;
+    this.sources = sources;
+    this.logsAdminWorker = logsAdminWorker;
+  }
+
+  /// Enrichit jusqu'à {@link #PLAFOND_NOCTURNE} artistes sans {@code wikidata_id}, priorisés par
+  /// nombre de concerts liés. N'écrase jamais un {@code nom_affiche} déjà présent (override
+  /// manuel admin #710).
+  ///
+  /// @return nombre d'artistes effectivement mis à jour
+  public int enrichir() {
+    List<ArtisteAEnrichir> candidats = selectionnerCandidats();
+    if (candidats.isEmpty()) {
+      log.info("enrichissement:artistes — aucun candidat");
+      return 0;
+    }
+
+    int nbEnrichis = 0;
+    for (int i = 0; i < candidats.size(); i += TAILLE_LOT_PERSISTANCE) {
+      if (i > 0) attendreEntreLots();
+      List<ArtisteAEnrichir> lot =
+          candidats.subList(i, Math.min(i + TAILLE_LOT_PERSISTANCE, candidats.size()));
+      nbEnrichis += enrichirEtPersisterLot(lot);
+    }
+    log.info("enrichissement:artistes candidats={} enrichis={}", candidats.size(), nbEnrichis);
+    return nbEnrichis;
+  }
+
+  private static void attendreEntreLots() {
+    try {
+      Thread.sleep(DELAI_ENTRE_LOTS_MS);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  private int enrichirEtPersisterLot(List<ArtisteAEnrichir> lot) {
+    Map<UUID, String> attractionIdsExistants = lireAttractionIdsExistants(lot);
+
+    Map<UUID, EnrichissementArtiste> accumule = new HashMap<>();
+    List<ArtisteAEnrichir> courant = lot;
+    for (SourceEnrichissementArtiste source : sources) {
+      Map<UUID, EnrichissementArtiste> resultat = source.enrichirLot(courant);
+      for (var entree : resultat.entrySet()) {
+        accumule.merge(
+            entree.getKey(), entree.getValue(), EnrichissementArtistesService::fusionner);
+      }
+      courant = appliquerConnus(courant, accumule);
+    }
+
+    int nbEnrichis = 0;
+    for (ArtisteAEnrichir artiste : lot) {
+      EnrichissementArtiste enrichissement = accumule.get(artiste.id());
+      if (enrichissement == null) continue;
+      if (!mettreAJourArtiste(artiste.id(), artiste.nom(), enrichissement)) continue;
+      traiterCrossValidationP6262(
+          artiste, enrichissement, attractionIdsExistants.get(artiste.id()));
+      nbEnrichis++;
+    }
+    return nbEnrichis;
+  }
+
+  private List<ArtisteAEnrichir> selectionnerCandidats() {
+    return jdbc.query(
+        """
+        SELECT a.id, a.nom, a.nom_norm, a.deezer_id
+        FROM artistes a
+        LEFT JOIN concerts c ON c.artiste_id = a.id AND c.date >= CURRENT_DATE
+        WHERE a.wikidata_id IS NULL
+        GROUP BY a.id, a.nom, a.nom_norm, a.deezer_id
+        ORDER BY COUNT(c.id) DESC
+        LIMIT :plafond
+        """,
+        Map.of("plafond", PLAFOND_NOCTURNE),
+        (rs, _) ->
+            new ArtisteAEnrichir(
+                rs.getObject("id", UUID.class),
+                rs.getString("nom"),
+                rs.getString("nom_norm"),
+                null,
+                rs.getString("deezer_id")));
+  }
+
+  private Map<UUID, String> lireAttractionIdsExistants(List<ArtisteAEnrichir> candidats) {
+    List<UUID> ids = candidats.stream().map(ArtisteAEnrichir::id).toList();
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            """
+            SELECT artiste_id, identifiant_externe
+            FROM artiste_sources
+            WHERE source = 'ticketmaster' AND artiste_id IN (:ids)
+            """,
+            Map.of("ids", ids));
+    Map<UUID, String> resultat = new HashMap<>();
+    for (var ligne : lignes) {
+      resultat.put((UUID) ligne.get("artiste_id"), (String) ligne.get("identifiant_externe"));
+    }
+    return resultat;
+  }
+
+  private static List<ArtisteAEnrichir> appliquerConnus(
+      List<ArtisteAEnrichir> candidats, Map<UUID, EnrichissementArtiste> accumule) {
+    return candidats.stream()
+        .map(
+            a -> {
+              EnrichissementArtiste e = accumule.get(a.id());
+              String wikidataId =
+                  e != null && e.wikidataId() != null ? e.wikidataId() : a.wikidataId();
+              String deezerId = e != null && e.deezerId() != null ? e.deezerId() : a.deezerId();
+              return new ArtisteAEnrichir(a.id(), a.nom(), a.nomNorm(), wikidataId, deezerId);
+            })
+        .toList();
+  }
+
+  private static EnrichissementArtiste fusionner(EnrichissementArtiste a, EnrichissementArtiste b) {
+    return new EnrichissementArtiste(
+        b.wikidataId() != null ? b.wikidataId() : a.wikidataId(),
+        b.nomAffiche() != null ? b.nomAffiche() : a.nomAffiche(),
+        b.deezerId() != null ? b.deezerId() : a.deezerId(),
+        b.ticketmasterAttractionId() != null
+            ? b.ticketmasterAttractionId()
+            : a.ticketmasterAttractionId());
+  }
+
+  /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
+  ///     découvert est déjà porté par un autre artiste (contrainte {@code idx_artistes_wikidata_id})
+  ///     — signe d'un faux positif de correspondance ou d'un doublon non encore fusionné (#710) ; le
+  ///     conflit est loggé plutôt que de faire échouer tout le cycle de réconciliation, et la
+  ///     cross-validation P6262 associée est également sautée (basée sur le même enrichissement).
+  private boolean mettreAJourArtiste(UUID artisteId, String nom, EnrichissementArtiste e) {
+    Map<String, Object> params = new HashMap<>();
+    params.put("wikidataId", e.wikidataId());
+    params.put("nomAffiche", e.nomAffiche());
+    params.put("deezerId", e.deezerId());
+    params.put("id", artisteId.toString());
+    try {
+      jdbc.update(
+          """
+          UPDATE artistes SET
+            wikidata_id = COALESCE(wikidata_id, :wikidataId),
+            nom_affiche = COALESCE(nom_affiche, :nomAffiche),
+            deezer_id   = COALESCE(deezer_id, :deezerId)
+          WHERE id = CAST(:id AS uuid)
+          """,
+          params);
+      return true;
+    } catch (DuplicateKeyException ex) {
+      logsAdminWorker.inserer(
+          "warn",
+          "enrichissement-wikidata",
+          "wikidataId déjà attribué à un autre artiste — conflit ignoré artiste="
+              + nom
+              + " wikidataId="
+              + e.wikidataId(),
+          Map.of("artisteId", artisteId.toString(), "wikidataId", e.wikidataId()));
+      return false;
+    }
+  }
+
+  /// #716 : P6262 fait autorité pour le lien TM, indépendamment de la découverte par mot-clé.
+  private void traiterCrossValidationP6262(
+      ArtisteAEnrichir artiste, EnrichissementArtiste enrichissement, String attractionIdExistant) {
+    String tmIdWikidata = enrichissement.ticketmasterAttractionId();
+    if (tmIdWikidata == null) return;
+
+    if (attractionIdExistant == null) {
+      jdbc.update(
+          """
+          INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)
+          VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :tmId)
+          ON CONFLICT DO NOTHING
+          """,
+          Map.of("artisteId", artiste.id().toString(), "tmId", tmIdWikidata));
+      log.info("P6262 — lien TM inséré artiste={} attractionId={}", artiste.nom(), tmIdWikidata);
+    } else if (!attractionIdExistant.equals(tmIdWikidata)) {
+      logsAdminWorker.inserer(
+          "warn",
+          "enrichissement-wikidata",
+          "discordance P6262 artiste="
+              + artiste.nom()
+              + " tmActuel="
+              + attractionIdExistant
+              + " tmWikidata="
+              + tmIdWikidata,
+          Map.of(
+              "artisteId", artiste.id().toString(),
+              "attractionIdActuel", attractionIdExistant,
+              "attractionIdWikidata", tmIdWikidata));
+    }
+  }
+}

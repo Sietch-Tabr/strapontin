@@ -64,10 +64,21 @@
             </p>
           </template>
 
+          <template v-else-if="source.id === 'wikidata'">
+            <p class="source-carte-detail">
+              {{ source.nbSallesConfigurees ?? 0 }} salle{{ source.nbSallesConfigurees > 1 ? 's' : '' }}
+              et {{ source.nbArtistesConfigures ?? 0 }} artiste{{ source.nbArtistesConfigures > 1 ? 's' : '' }}
+              avec identifiant Wikidata.
+            </p>
+            <p class="source-carte-detail param-aide">
+              Alimenté par le job nocturne de réconciliation (voir onglet Salles / Artistes).
+            </p>
+          </template>
+
           <p v-if="source.dernierFetch" class="source-carte-detail param-aide">
             Dernier fetch : {{ formaterInstant(source.dernierFetch) }}
           </p>
-          <p v-else-if="source.id !== 'deezer' && source.id !== 'digitick'" class="source-carte-detail param-aide">
+          <p v-else-if="source.id !== 'deezer' && source.id !== 'digitick' && source.id !== 'wikidata'" class="source-carte-detail param-aide">
             Jamais exécuté
           </p>
         </div>

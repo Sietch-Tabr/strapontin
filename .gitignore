@@ -35,3 +35,4 @@ QODER.md
 .claude/
 .mcp.json
 tests/
+.playwright-mcp/

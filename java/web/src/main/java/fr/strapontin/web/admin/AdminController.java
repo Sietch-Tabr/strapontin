@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /// Contrôleur REST d'administration.
@@ -328,6 +329,20 @@ public class AdminController {
   @PostMapping("/relancer")
   public ResponseEntity<Map<String, Object>> relancerFetches() {
     ResultatRelance resultat = workerProxyService.relancerFetches();
+    if (resultat.succes()) {
+      return ResponseEntity.ok(Map.of("statut", "déclenché"));
+    }
+    return ResponseEntity.status(503).body(Map.of("erreur", resultat.messageErreur()));
+  }
+
+  /// Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible
+  /// (v2.6.0, #706/#710) — bouton « Relancer » par job dans l'onglet admin Tableau de bord.
+  ///
+  /// @param typeJob identifiant lisible du job (ex. {@code "purger:salles"})
+  /// @return 200 si déclenché, 503 si le worker est inaccessible ou le job inconnu
+  @PostMapping("/jobs/relancer")
+  public ResponseEntity<Map<String, Object>> relancerJob(@RequestParam String typeJob) {
+    ResultatRelance resultat = workerProxyService.relancerJob(typeJob);
     if (resultat.succes()) {
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     }

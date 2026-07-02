@@ -8,6 +8,27 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.6.0 — 1er juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Qualité des données</p>
+            <ul>
+              <li>Les noms des salles et des artistes sont désormais progressivement enrichis avec leur nom canonique (source Wikidata/OpenStreetMap), pour plus de cohérence dans l'affichage.</li>
+              <li>Un job nocturne détecte automatiquement les identifiants de salles/artistes devenus invalides chez Ticketmaster et tente de les retrouver.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Nouveaux onglets « Salles » et « Artistes » dans l'administration : vue d'ensemble du référentiel, correction manuelle du nom affiché, fusion de doublons.</li>
+              <li>Wikidata apparaît désormais dans l'onglet « Sources » de l'administration, avec le nombre de salles et d'artistes enrichis.</li>
+              <li>Filtre « Sans Wikidata » et bouton « Réinitialiser » dans les onglets « Salles »/« Artistes » pour repérer et corriger facilement les entrées non enrichies ou mal associées.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.5.7 — 1er juillet 2026</h2>
         <div class="changelog-entrees">
           <div>

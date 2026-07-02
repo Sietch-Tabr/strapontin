@@ -352,14 +352,14 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    await expect(page.locator(".source-carte")).toHaveCount(4);
+    await expect(page.locator(".source-carte")).toHaveCount(5);
     await expect(page.locator(".source-carte-large")).toHaveCount(1);
     await expect(page.locator(".source-carte-large")).toContainText(
       "Ticketmaster",
     );
     await expect(
       page.locator(".source-carte:not(.source-carte-large)"),
-    ).toHaveCount(3);
+    ).toHaveCount(4);
   });
 
   test("admin_sources_table_salles_visible", async ({ page, isMobile }) => {
@@ -689,7 +689,7 @@ test.describe("Scénario: admin — onglet Jobs (sections Fetches/Maintenance)",
     await expect(sectionFetches.locator("button#btn-relancer")).toBeVisible();
   });
 
-  test("admin_jobs_desktop_bouton_relancer_absent_maintenance", async ({
+  test("admin_jobs_desktop_boutonRelancerGlobal_absent_maintenance", async ({
     page,
     isMobile,
   }) => {
@@ -699,9 +699,25 @@ test.describe("Scénario: admin — onglet Jobs (sections Fetches/Maintenance)",
       hasText: "Maintenance",
     });
     await expect(sectionMaintenance).toBeVisible();
+    // Le bouton global "Relancer les fetches maintenant" (#btn-relancer) reste réservé à la
+    // section Fetches — la Maintenance a un bouton "Relancer" par job (v2.6.0, #706/#710).
     await expect(
       sectionMaintenance.locator("button#btn-relancer"),
     ).not.toBeAttached();
+  });
+
+  test("admin_jobs_desktop_boutonRelancerParJob_present_maintenance", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    await page.goto("/admin");
+    const sectionMaintenance = page.locator("section#jobs .param-bloc", {
+      hasText: "Maintenance",
+    });
+    await expect(sectionMaintenance).toBeVisible();
+    const premiereCarte = sectionMaintenance.locator(".job-carte").first();
+    await expect(premiereCarte.getByRole("button", { name: "Relancer" })).toBeVisible();
   });
 });
 
@@ -729,12 +745,13 @@ test.describe("Scénario: admin — API endpoints", () => {
     const corps = await rep.json();
     expect(Array.isArray(corps.sources)).toBe(true);
     expect(Array.isArray(corps.salles)).toBe(true);
-    expect(corps.sources.length).toBe(4);
+    expect(corps.sources.length).toBe(5);
     const ids = corps.sources.map((s: { id: string }) => s.id);
     expect(ids).toContain("ticketmaster");
     expect(ids).toContain("eventim");
     expect(ids).toContain("deezer");
     expect(ids).toContain("digitick");
+    expect(ids).toContain("wikidata");
   });
 
   test("api_admin_revoquerAdmin_seulAdmin_retourne409", async ({ request }) => {
@@ -746,5 +763,20 @@ test.describe("Scénario: admin — API endpoints", () => {
       `/api/admin/utilisateurs/${admins[0].id}/revoquer-admin`,
     );
     expect(rep.status()).toBe(400);
+  });
+
+  // Bouton "Relancer" par job de maintenance (v2.6.0, #706/#710).
+  test("api_admin_jobsRelancer_typeJobConnu_retourne200", async ({ request }) => {
+    const rep = await request.post(
+      "/api/admin/jobs/relancer?typeJob=" + encodeURIComponent("purger:logs-admin"),
+    );
+    expect(rep.status()).toBe(200);
+  });
+
+  test("api_admin_jobsRelancer_typeJobInconnu_retourne503", async ({ request }) => {
+    const rep = await request.post(
+      "/api/admin/jobs/relancer?typeJob=" + encodeURIComponent("job:inexistant"),
+    );
+    expect(rep.status()).toBe(503);
   });
 });

@@ -28,6 +28,8 @@
     <div class="admin-sections">
       <KeepAlive><AdminJobs         v-if="ongletActif === '#jobs'"          /></KeepAlive>
       <KeepAlive><AdminSources      v-if="ongletActif === '#sources'"       /></KeepAlive>
+      <KeepAlive><AdminSalles       v-if="ongletActif === '#salles'"        /></KeepAlive>
+      <KeepAlive><AdminArtistes     v-if="ongletActif === '#artistes'"      /></KeepAlive>
       <KeepAlive><AdminLogs         v-if="ongletActif === '#logs'"          /></KeepAlive>
       <KeepAlive><AdminConfig       v-if="ongletActif === '#configuration'" /></KeepAlive>
       <KeepAlive><AdminBanniere     v-if="ongletActif === '#banniere'"      /></KeepAlive>
@@ -44,6 +46,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useEstMobile } from '../composables/useBreakpoint.js'
 import AdminJobs          from '../components/admin/AdminJobs.vue'
 import AdminSources       from '../components/admin/AdminSources.vue'
+import AdminSalles        from '../components/admin/AdminSalles.vue'
+import AdminArtistes      from '../components/admin/AdminArtistes.vue'
 import AdminLogs          from '../components/admin/AdminLogs.vue'
 import AdminConfig        from '../components/admin/AdminConfig.vue'
 import AdminBanniere      from '../components/admin/AdminBanniere.vue'
@@ -56,6 +60,8 @@ const estMobile = useEstMobile()
 const onglets = [
   { ancre: '#jobs',          label: 'Tableau de bord' },
   { ancre: '#sources',       label: 'Sources' },
+  { ancre: '#salles',        label: 'Salles' },
+  { ancre: '#artistes',      label: 'Artistes' },
   { ancre: '#logs',          label: 'Logs' },
   { ancre: '#configuration', label: 'Configuration' },
   { ancre: '#banniere',      label: 'Bannière' },

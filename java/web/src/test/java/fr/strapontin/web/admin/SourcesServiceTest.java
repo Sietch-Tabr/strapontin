@@ -64,7 +64,7 @@ class SourcesServiceTest {
     assertNotNull(resultat.get("sources"));
     assertNotNull(resultat.get("salles"));
     List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
-    assertEquals(4, sources.size());
+    assertEquals(5, sources.size());
 
     StatutSource tm = sources.get(0);
     assertEquals("ticketmaster", tm.id());
@@ -74,6 +74,11 @@ class SourcesServiceTest {
     StatutSource digitick = sources.get(3);
     assertEquals("digitick", digitick.id());
     assertEquals(0, digitick.nbSallesConfigurees());
+
+    StatutSource wikidata = sources.get(4);
+    assertEquals("wikidata", wikidata.id());
+    assertEquals(0, wikidata.nbSallesConfigurees());
+    assertEquals(0, wikidata.nbArtistesConfigures());
   }
 
   @Test

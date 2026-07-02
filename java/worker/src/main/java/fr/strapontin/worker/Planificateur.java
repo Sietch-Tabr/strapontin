@@ -13,6 +13,7 @@ import fr.strapontin.worker.jobs.PurgerConcertsJob;
 import fr.strapontin.worker.jobs.PurgerLogsAdminJob;
 import fr.strapontin.worker.jobs.PurgerSallesJob;
 import fr.strapontin.worker.jobs.RecalculerMatchesJob;
+import fr.strapontin.worker.jobs.ReconciliationNocturneJob;
 import fr.strapontin.worker.jobs.RevoquerAdminsJob;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
@@ -38,6 +39,7 @@ import org.springframework.context.annotation.Configuration;
 /// - `purger:logs-admin` — tous les jours à 0h15
 /// - `notifier:digest` — tous les jours à 8h
 /// - `revoquer:admins` — toutes les heures
+/// - `reconciliation:nocturne` — tous les jours à 3h (#706)
 ///
 /// Le job `fetch:salle` est planifié dynamiquement par [WorkerService]
 /// selon les salles configurées. `fetch:salles:all` est le pendant périodique
@@ -227,6 +229,23 @@ public class Planificateur {
         .forJob(jobDetailRevoquerAdmins)
         .withIdentity("triggerRevoquerAdmins")
         .withSchedule(CronScheduleBuilder.cronSchedule("0 0 * * * ?"))
+        .build();
+  }
+
+  @Bean
+  JobDetail jobDetailReconciliationNocturne() {
+    return JobBuilder.newJob(ReconciliationNocturneJob.class)
+        .withIdentity("reconciliationNocturne")
+        .storeDurably()
+        .build();
+  }
+
+  @Bean
+  Trigger triggerReconciliationNocturne(JobDetail jobDetailReconciliationNocturne) {
+    return TriggerBuilder.newTrigger()
+        .forJob(jobDetailReconciliationNocturne)
+        .withIdentity("triggerReconciliationNocturne")
+        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 3 * * ?"))
         .build();
   }
 }

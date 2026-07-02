@@ -698,6 +698,109 @@ public class TicketmasterSource implements SourceAvecFetchLot {
     return concerts;
   }
 
+  /// Statut de vivacité d'un identifiant TM (#706 phase 1).
+  public enum StatutIdTM {
+    VIVANT,
+    MORT
+  }
+
+  /// Candidat de redécouverte pour une salle TM disparue.
+  ///
+  /// @param id  venueId TM candidat
+  /// @param nom nom de la salle chez TM
+  public record CandidatVenueTM(String id, String nom) {}
+
+  /// Vérifie qu'un venueId TM existe toujours.
+  ///
+  /// @param venueId identifiant de salle TM
+  /// @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT} sinon
+  public StatutIdTM verifierVenue(String venueId) {
+    return verifierRessource("/venues/" + venueId + ".json");
+  }
+
+  /// Vérifie qu'un attractionId TM existe toujours.
+  ///
+  /// @param attractionId identifiant d'artiste TM
+  /// @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT} sinon
+  public StatutIdTM verifierAttraction(String attractionId) {
+    return verifierRessource("/attractions/" + attractionId + ".json");
+  }
+
+  private StatutIdTM verifierRessource(String chemin) {
+    String uri =
+        UriComponentsBuilder.fromUriString(BASE_URL + chemin)
+            .queryParam("apikey", apiKey)
+            .build()
+            .toUriString();
+    attendreRateLimitGlobal();
+    try {
+      restClient.get().uri(uri).retrieve().toBodilessEntity();
+      return StatutIdTM.VIVANT;
+    } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+      return StatutIdTM.MORT;
+    } catch (Exception e) {
+      log.warn("verifierRessource TM échoué chemin={} : {}", chemin, e.getMessage());
+      return StatutIdTM.VIVANT;
+    }
+  }
+
+  /// Recherche des salles TM candidates par nom (redécouverte active, #706 phase 1).
+  ///
+  /// @param nom nom de la salle recherchée
+  /// @return candidats trouvés (peut être vide)
+  @SuppressWarnings("unchecked")
+  public List<CandidatVenueTM> rechercherVenuesParNom(String nom) {
+    String uri =
+        UriComponentsBuilder.fromUriString(BASE_URL + "/venues.json")
+            .queryParam("keyword", nom)
+            .queryParam("countryCode", "FR")
+            .queryParam("apikey", apiKey)
+            .build()
+            .toUriString();
+    attendreRateLimitGlobal();
+    try {
+      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      if (data == null) return List.of();
+      var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
+      var venues = embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
+      if (venues == null) return List.of();
+      List<CandidatVenueTM> resultat = new ArrayList<>();
+      for (var v : venues) {
+        Object id = v.get("id");
+        if (id != null) resultat.add(new CandidatVenueTM((String) id, (String) v.get("name")));
+      }
+      return resultat;
+    } catch (Exception e) {
+      log.warn("rechercherVenuesParNom TM échoué nom='{}' : {}", nom, e.getMessage());
+      return List.of();
+    }
+  }
+
+  /// Compte les événements à venir d'une salle TM (validation d'un candidat de redécouverte).
+  ///
+  /// @param venueId identifiant de salle TM
+  /// @return nombre d'événements trouvés, 0 en cas d'erreur
+  @SuppressWarnings("unchecked")
+  public int compterEventsVenue(String venueId) {
+    String uri =
+        UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
+            .queryParam("venueId", venueId)
+            .queryParam("size", 1)
+            .queryParam("apikey", apiKey)
+            .build()
+            .toUriString();
+    attendreRateLimitGlobal();
+    try {
+      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      if (data == null) return 0;
+      var page = (Map<String, Object>) data.get("page");
+      return page != null ? ((Number) page.get("totalElements")).intValue() : 0;
+    } catch (Exception e) {
+      log.warn("compterEventsVenue TM échoué venueId={} : {}", venueId, e.getMessage());
+      return 0;
+    }
+  }
+
   /// Récupère les concerts par région (géolocalisation centre de département).
   ///
   /// @param depts   liste de codes département (ex: ["75", "92"])

@@ -716,4 +716,126 @@ class TicketmasterSourceTest {
     assertNotNull(resultat);
     assertEquals("Julien Clerc", resultat.artiste());
   }
+
+  // --- Tests santé des sources (#706) ---
+
+  @Test
+  void verifierVenue_reponse200_retourneVivant() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/venues/rZFSnyZdFvA.json")))
+        .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    assertEquals(TicketmasterSource.StatutIdTM.VIVANT, source.verifierVenue("rZFSnyZdFvA"));
+    serveur.verify();
+  }
+
+  @Test
+  void verifierVenue_reponse404_retourneMort() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/venues/venueMort.json")))
+        .andRespond(withStatus(org.springframework.http.HttpStatus.NOT_FOUND));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    assertEquals(TicketmasterSource.StatutIdTM.MORT, source.verifierVenue("venueMort"));
+    serveur.verify();
+  }
+
+  @Test
+  void verifierAttraction_reponse404_retourneMort() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(
+            requestTo(org.hamcrest.Matchers.containsString("/attractions/attractionMorte.json")))
+        .andRespond(withStatus(org.springframework.http.HttpStatus.NOT_FOUND));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    assertEquals(TicketmasterSource.StatutIdTM.MORT, source.verifierAttraction("attractionMorte"));
+    serveur.verify();
+  }
+
+  @Test
+  void rechercherVenuesParNom_reponseValide_retourneCandidats() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/venues.json")))
+        .andRespond(
+            withSuccess(
+                """
+                {"_embedded":{"venues":[{"id":"rZ7abc","name":"Zenith Nantes"}]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<TicketmasterSource.CandidatVenueTM> candidats =
+        source.rechercherVenuesParNom("Zenith Nantes");
+
+    assertEquals(1, candidats.size());
+    assertEquals("rZ7abc", candidats.get(0).id());
+    serveur.verify();
+  }
+
+  @Test
+  void rechercherVenuesParNom_embeddedAbsent_retourneListeVide() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/venues.json")))
+        .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    assertTrue(source.rechercherVenuesParNom("Inconnue").isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void compterEventsVenue_reponseValide_retourneTotal() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(
+                """
+                {"page":{"totalElements":3}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    assertEquals(3, source.compterEventsVenue("rZ7abc"));
+    serveur.verify();
+  }
+
+  @Test
+  void compterEventsVenue_erreurReseau_retourneZero() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withServerError());
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    assertEquals(0, source.compterEventsVenue("rZ7abc"));
+    serveur.verify();
+  }
 }

@@ -168,10 +168,29 @@ public class SourcesService {
     List<StatutSource> sources = new ArrayList<>();
     sources.add(
         new StatutSource(
-            "ticketmaster", "Ticketmaster", "concerts", quotaTM, etatQuota, dernierFetch, null));
-    sources.add(new StatutSource("eventim", "Eventim", "concerts", null, null, dernierFetch, null));
-    sources.add(new StatutSource("deezer", "Deezer", "metadonnees", null, null, null, null));
-    sources.add(new StatutSource("digitick", "Digitick", "concerts", null, null, null, nbDigitick));
+            "ticketmaster",
+            "Ticketmaster",
+            "concerts",
+            quotaTM,
+            etatQuota,
+            dernierFetch,
+            null,
+            null));
+    sources.add(
+        new StatutSource("eventim", "Eventim", "concerts", null, null, dernierFetch, null, null));
+    sources.add(new StatutSource("deezer", "Deezer", "metadonnees", null, null, null, null, null));
+    sources.add(
+        new StatutSource("digitick", "Digitick", "concerts", null, null, null, nbDigitick, null));
+    sources.add(
+        new StatutSource(
+            "wikidata",
+            "Wikidata",
+            "metadonnees",
+            null,
+            null,
+            null,
+            compterSallesWikidata(),
+            compterArtistesWikidata()));
     return sources;
   }
 
@@ -220,6 +239,32 @@ public class SourcesService {
       return nb != null ? nb : 0;
     } catch (Exception e) {
       log.debug("Impossible de compter les salles Digitick : {}", e.getMessage());
+      return 0;
+    }
+  }
+
+  private Integer compterSallesWikidata() {
+    try {
+      Integer nb =
+          jdbc.queryForObject(
+              "SELECT COUNT(*) FROM salles WHERE wikidata_id IS NOT NULL", Map.of(), Integer.class);
+      return nb != null ? nb : 0;
+    } catch (Exception e) {
+      log.debug("Impossible de compter les salles Wikidata : {}", e.getMessage());
+      return 0;
+    }
+  }
+
+  private Integer compterArtistesWikidata() {
+    try {
+      Integer nb =
+          jdbc.queryForObject(
+              "SELECT COUNT(*) FROM artistes WHERE wikidata_id IS NOT NULL",
+              Map.of(),
+              Integer.class);
+      return nb != null ? nb : 0;
+    } catch (Exception e) {
+      log.debug("Impossible de compter les artistes Wikidata : {}", e.getMessage());
       return 0;
     }
   }

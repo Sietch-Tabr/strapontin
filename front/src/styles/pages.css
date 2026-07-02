@@ -1293,6 +1293,13 @@ fieldset.notif-grille {
   display: flex;
   gap: 0.375rem;
 }
+.source-filtre-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
 .badge-compteur {
   display: inline-block;
   background: var(--accent);

@@ -41,14 +41,22 @@ public class TriggerController {
   private static final Logger log = LoggerFactory.getLogger(TriggerController.class);
 
   private static final Map<String, String> NOM_JOBS =
-      Map.of(
-          "fetchArtistesBatch", "fetch:artistes:batch",
-          "fetchRegion", "fetch:region",
-          "purgerConcerts", "purger:concerts",
-          "purgerSalles", "purger:salles",
-          "purgerArtistes", "purger:artistes",
-          "recalculerMatches", "recalculer:matches",
-          "notifierDigest", "notifier:digest");
+      Map.ofEntries(
+          Map.entry("fetchArtistesBatch", "fetch:artistes:batch"),
+          Map.entry("fetchRegion", "fetch:region"),
+          Map.entry("fetchSallesAll", "fetch:salles:all"),
+          Map.entry("purgerConcerts", "purger:concerts"),
+          Map.entry("purgerSalles", "purger:salles"),
+          Map.entry("purgerArtistes", "purger:artistes"),
+          Map.entry("purgerLogsAdmin", "purger:logs-admin"),
+          Map.entry("revoquerAdmins", "revoquer:admins"),
+          Map.entry("recalculerMatches", "recalculer:matches"),
+          Map.entry("notifierDigest", "notifier:digest"),
+          Map.entry("reconciliationNocturne", "reconciliation:nocturne"));
+
+  private static final Map<String, String> CLE_PAR_TYPE_JOB =
+      NOM_JOBS.entrySet().stream()
+          .collect(java.util.stream.Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
 
   private final Scheduler scheduler;
 
@@ -137,6 +145,34 @@ public class TriggerController {
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     } catch (SchedulerException e) {
       log.warn("Erreur déclenchement artiste", e);
+      return ResponseEntity.internalServerError()
+          .body(Map.of("erreur", "Erreur Quartz : " + e.getMessage()));
+    }
+  }
+
+  /// Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible
+  /// (ex. {@code "purger:salles"}, {@code "reconciliation:nocturne"}), uniquement si aucune
+  /// instance n'est déjà en cours. Un seul endpoint générique pour tous les jobs à bouton
+  /// « Relancer » de l'onglet admin Tableau de bord — éviter d'en dupliquer un par job.
+  ///
+  /// @param typeJob identifiant lisible du job (clé de {@link #NOM_JOBS})
+  /// @return 200 si déclenché ou déjà en cours, 400 si job inconnu, 500 en cas d'erreur Quartz
+  @PostMapping("/job")
+  public ResponseEntity<Map<String, String>> relancerJob(@RequestParam String typeJob) {
+    String cle = CLE_PAR_TYPE_JOB.get(typeJob);
+    if (cle == null) {
+      return ResponseEntity.badRequest().body(Map.of("erreur", "Job inconnu : " + typeJob));
+    }
+    try {
+      if (jobEnCours(cle)) {
+        log.debug("{} déjà en cours — ignoré", typeJob);
+        return ResponseEntity.ok(Map.of("statut", "déjà en cours"));
+      }
+      scheduler.triggerJob(JobKey.jobKey(cle));
+      log.info("Déclenchement manuel : {}", typeJob);
+      return ResponseEntity.ok(Map.of("statut", "déclenché"));
+    } catch (SchedulerException e) {
+      log.warn("Erreur déclenchement {}", typeJob, e);
       return ResponseEntity.internalServerError()
           .body(Map.of("erreur", "Erreur Quartz : " + e.getMessage()));
     }
