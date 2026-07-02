@@ -8,14 +8,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.web.ErreurMetier;
+import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.config.ConfigService;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +77,61 @@ class SalleServiceTest {
     UUID r2 = salleService.creerSalleDigitick("L'Empreinte", "lempreinte", null, null);
 
     assertEquals(r1, r2);
+  }
+
+  @Test
+  void ajouter_nomValideSansCandidat_creeNouvelleSalle() {
+    UUID nouvelUuid = UUID.randomUUID();
+    when(salleRepository.chercherCandidatsParCle(any())).thenReturn(List.of());
+    when(salleRepository.upsertSalle("olympia", "Olympia")).thenReturn(nouvelUuid);
+    when(salleRepository.existePourUtilisateur("u1", nouvelUuid)).thenReturn(false);
+    when(salleRepository.compterPourUtilisateur("u1")).thenReturn(0);
+
+    salleService.ajouter("u1", "Olympia", null);
+
+    verify(salleRepository).ajouterPourUtilisateur("u1", nouvelUuid);
+  }
+
+  // Régression : une salle déjà présente sous un nom incluant un suffixe descriptif absent côté
+  // Wikidata/référentiel ne doit pas créer un second UUID (cas réel : "Zenith Paris - la
+  // Villette" côté TM/Eventim vs "Zénith Paris" en référentiel) — même algorithme flou que
+  // ReconciliateurSalles côté worker et WikidataSalleSource côté enrichissement.
+  @Test
+  void ajouter_variantFlouDejaPresente_reutiliseSalleExistanteSansUpsert() {
+    UUID salleExistante = UUID.randomUUID();
+    Map<String, Object> candidat = new HashMap<>();
+    candidat.put("id", salleExistante);
+    candidat.put("salle_cle", "zenithparis");
+    candidat.put("nom", "Zénith Paris");
+    when(salleRepository.chercherCandidatsParCle(any())).thenReturn(List.of(candidat));
+    when(salleRepository.existePourUtilisateur("u1", salleExistante)).thenReturn(false);
+    when(salleRepository.compterPourUtilisateur("u1")).thenReturn(0);
+
+    salleService.ajouter("u1", "Zenith Paris - la Villette", null);
+
+    verify(salleRepository, never()).upsertSalle(anyString(), anyString());
+    verify(salleRepository).ajouterPourUtilisateur("u1", salleExistante);
+  }
+
+  @Test
+  void ajouter_salleDejaSuivie_leveRessourceDejaExistante() {
+    UUID uuid = UUID.randomUUID();
+    when(salleRepository.chercherCandidatsParCle(any())).thenReturn(List.of());
+    when(salleRepository.upsertSalle(any(), any())).thenReturn(uuid);
+    when(salleRepository.existePourUtilisateur("u1", uuid)).thenReturn(true);
+
+    assertThrows(RessourceDejaExistante.class, () -> salleService.ajouter("u1", "Olympia", null));
+  }
+
+  @Test
+  void ajouter_capAtteint_leveErreurMetier() {
+    UUID uuid = UUID.randomUUID();
+    when(salleRepository.chercherCandidatsParCle(any())).thenReturn(List.of());
+    when(salleRepository.upsertSalle(any(), any())).thenReturn(uuid);
+    when(salleRepository.existePourUtilisateur("u1", uuid)).thenReturn(false);
+    when(salleRepository.compterPourUtilisateur("u1")).thenReturn(200);
+
+    assertThrows(ErreurMetier.class, () -> salleService.ajouter("u1", "Olympia", null));
   }
 
   @Test

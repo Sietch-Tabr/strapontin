@@ -14,6 +14,8 @@ import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
+import fr.strapontin.worker.sante.ReconciliationNocturneService;
+import fr.strapontin.worker.sante.SuiviSanteSourcesService;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -40,6 +42,8 @@ public class WorkerService {
 
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
   private static final int TAILLE_LOT_TM = 20;
+  private static final int TAILLE_LOT_DEPTS = 5;
+  private static final int TAILLE_LOT_SALLES = 20;
 
   private final List<SourceConcerts> sources;
   private final TicketmasterSource tm;
@@ -49,6 +53,8 @@ public class WorkerService {
   private final GestionQuotaTM gestionQuotaTM;
   private final NotificationDigestService notificationDigestService;
   private final NamedParameterJdbcTemplate jdbc;
+  private final SuiviSanteSourcesService suiviSanteSourcesService;
+  private final ReconciliationNocturneService reconciliationNocturneService;
 
   public WorkerService(
       List<SourceConcerts> sources,
@@ -58,7 +64,9 @@ public class WorkerService {
       RecalculerMatchesService recalculerMatchesService,
       GestionQuotaTM gestionQuotaTM,
       NotificationDigestService notificationDigestService,
-      NamedParameterJdbcTemplate jdbc) {
+      NamedParameterJdbcTemplate jdbc,
+      SuiviSanteSourcesService suiviSanteSourcesService,
+      ReconciliationNocturneService reconciliationNocturneService) {
     this.sources = sources;
     this.tm = tm;
     this.resolveur = resolveur;
@@ -67,6 +75,8 @@ public class WorkerService {
     this.gestionQuotaTM = gestionQuotaTM;
     this.notificationDigestService = notificationDigestService;
     this.jdbc = jdbc;
+    this.suiviSanteSourcesService = suiviSanteSourcesService;
+    this.reconciliationNocturneService = reconciliationNocturneService;
   }
 
   /// Fetch global de tous les artistes suivis (TM par attraction ID + Eventim individuel).
@@ -100,31 +110,14 @@ public class WorkerService {
         return;
       }
 
-      List<ConcertBrut> concertsTM = fetchTMParArtistes(rows);
-      sauvegarderQuota();
-
       List<SourceConcerts> sourcesSimples =
           sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
-      List<ConcertBrut> concertsAutresSources = new ArrayList<>();
-      for (SourceConcerts source : sourcesSimples) {
-        for (Map<String, Object> row : rows) {
-          String nom = (String) row.get("artiste_affiche");
-          try {
-            concertsAutresSources.addAll(source.fetchArtiste(nom));
-          } catch (Exception e) {
-            log.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
-          }
-          attendreRateLimit();
-        }
+
+      for (int i = 0; i < rows.size(); i += TAILLE_LOT_TM) {
+        List<Map<String, Object>> lot = rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
+        resultat = accumuler(resultat, traiterLotArtistesBatch(lot, sourcesSimples));
       }
-
-      List<ConcertBrut> tous = new ArrayList<>(concertsTM);
-      tous.addAll(concertsAutresSources);
-
-      List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
-      log.info("fetch:artistes:batch bruts={} dédoublonnés={}", tous.size(), dedoublonnes.size());
-
-      resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+      sauvegarderQuota();
       recalculerMatchesService.recalculerMatches(null);
       notificationDigestService.executerDigest("temps_reel");
       log.info("fetch:artistes:batch terminé");
@@ -135,6 +128,51 @@ public class WorkerService {
       enregistrerStatJob(
           "fetch:artistes:batch", System.currentTimeMillis() - debut, resultat, erreur);
     }
+  }
+
+  /// Fetch + dédoublonnage + persistance d'un lot d'artistes (taille {@value TAILLE_LOT_TM}).
+  ///
+  /// <p>Persistance par lot plutôt qu'en un seul bloc final : sans cela, une interruption
+  /// (redéploiement, crash) avant la fin du cycle complet perdrait tout le travail de fetch déjà
+  /// effectué sur ce cycle (quota TM consommé pour rien). Le dédoublonnage cross-sources
+  /// (TM/Eventim) reste correct à cette granularité : un même concert n'est jamais rapporté par
+  /// deux sources pour deux artistes différents, la comparaison par lot suffit.
+  ///
+  /// @param lot            sous-ensemble de lignes artiste (taille {@value TAILLE_LOT_TM})
+  /// @param sourcesSimples sources hors {@link SourceAvecFetchLot} (fetch individuel par artiste)
+  /// @return bilan de persistance du lot
+  private ResultatPersistance traiterLotArtistesBatch(
+      List<Map<String, Object>> lot, List<SourceConcerts> sourcesSimples) {
+    List<ConcertBrut> concertsTM = fetchTMParArtistes(lot);
+
+    List<ConcertBrut> concertsAutresSources = new ArrayList<>();
+    for (SourceConcerts source : sourcesSimples) {
+      for (Map<String, Object> row : lot) {
+        String nom = (String) row.get("artiste_affiche");
+        try {
+          concertsAutresSources.addAll(source.fetchArtiste(nom));
+        } catch (Exception e) {
+          log.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
+        }
+        attendreRateLimit();
+      }
+    }
+
+    List<ConcertBrut> tous = new ArrayList<>(concertsTM);
+    tous.addAll(concertsAutresSources);
+
+    List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
+    log.info(
+        "fetch:artistes:batch lot={} bruts={} dédoublonnés={}",
+        lot.size(),
+        tous.size(),
+        dedoublonnes.size());
+
+    return persisterConcerts.persisterConcerts(dedoublonnes);
+  }
+
+  private static ResultatPersistance accumuler(ResultatPersistance a, ResultatPersistance b) {
+    return new ResultatPersistance(a.nbInseres() + b.nbInseres(), a.nbMisAJour() + b.nbMisAJour());
   }
 
   /// Fetch TM pour une liste d'artistes suivis.
@@ -152,6 +190,29 @@ public class WorkerService {
   /// @param rows lignes agrégées par {@code artiste_id} avec {@code artiste_affiche},
   ///     {@code artiste_id_str}, {@code attraction_id}
   /// @return concerts bruts collectés depuis TM
+  /// Fetch une salle auprès de la source qui accepte son identifiant et enregistre le résultat
+  /// auprès de {@link SuiviSanteSourcesService} (#706 phase 1).
+  ///
+  /// @param identifiant identifiant préfixé {@code source:identifiant_externe}
+  /// @param destination liste dans laquelle ajouter les concerts trouvés
+  private void fetchEtSuivreSalle(String identifiant, List<ConcertBrut> destination) {
+    for (SourceConcerts source : sources) {
+      if (source.accepteIdentifiantSalle(identifiant)) {
+        try {
+          List<ConcertBrut> resultat = source.fetchSalle(identifiant);
+          destination.addAll(resultat);
+          suiviSanteSourcesService.enregistrerResultatSalle(identifiant, resultat.size());
+        } catch (Exception e) {
+          log.error(
+              "{} fetchSalle échoué identifiant={} : {}",
+              source.nom(),
+              identifiant,
+              e.getMessage());
+        }
+      }
+    }
+  }
+
   private List<ConcertBrut> fetchTMParArtistes(List<Map<String, Object>> rows) {
     List<ConcertBrut> resultats = new ArrayList<>();
     List<String> attractionIds = new ArrayList<>();
@@ -186,7 +247,9 @@ public class WorkerService {
       List<String> lot =
           attractionIds.subList(i, Math.min(i + TAILLE_LOT_TM, attractionIds.size()));
       try {
-        resultats.addAll(tm.fetchArtistesLot(lot));
+        List<ConcertBrut> concertsLot = tm.fetchArtistesLot(lot);
+        resultats.addAll(concertsLot);
+        suiviSanteSourcesService.enregistrerResultatArtistesLot(lot, concertsLot);
       } catch (Exception e) {
         log.warn("TM fetchArtistesLot lot={} échoué : {}", lot.size(), e.getMessage());
       }
@@ -233,24 +296,12 @@ public class WorkerService {
       }
 
       List<String> deptsListe = new ArrayList<>(tousLesDepts);
-      List<ConcertBrut> tous = new ArrayList<>();
-      for (SourceConcerts source : sources) {
-        try {
-          tous.addAll(source.fetchRegion(deptsListe, null));
-        } catch (Exception e) {
-          log.warn("{} fetchRegion échoué : {}", source.nom(), e.getMessage());
-        }
+      for (int i = 0; i < deptsListe.size(); i += TAILLE_LOT_DEPTS) {
+        List<String> lotDepts =
+            deptsListe.subList(i, Math.min(i + TAILLE_LOT_DEPTS, deptsListe.size()));
+        resultat = accumuler(resultat, traiterLotDepartements(lotDepts));
       }
       sauvegarderQuota();
-
-      List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
-      log.info(
-          "fetch:region depts={} bruts={} dédoublonnés={}",
-          tousLesDepts.size(),
-          tous.size(),
-          dedoublonnes.size());
-
-      resultat = persisterConcerts.persisterConcerts(dedoublonnes);
       recalculerMatchesService.recalculerMatches(null);
       notificationDigestService.executerDigest("temps_reel");
       log.info("fetch:region terminé");
@@ -260,6 +311,36 @@ public class WorkerService {
     } finally {
       enregistrerStatJob("fetch:region", System.currentTimeMillis() - debut, resultat, erreur);
     }
+  }
+
+  /// Fetch + dédoublonnage + persistance d'un lot de départements (taille
+  /// {@value TAILLE_LOT_DEPTS}).
+  ///
+  /// <p>Persistance par lot plutôt qu'en un seul bloc final (même motif que
+  /// {@link #traiterLotArtistesBatch}) : le dédoublonnage cross-sources reste correct à cette
+  /// granularité, un même concert n'étant jamais rapporté par deux sources dans deux départements
+  /// différents.
+  ///
+  /// @param lotDepts sous-ensemble de départements (taille {@value TAILLE_LOT_DEPTS})
+  /// @return bilan de persistance du lot
+  private ResultatPersistance traiterLotDepartements(List<String> lotDepts) {
+    List<ConcertBrut> tous = new ArrayList<>();
+    for (SourceConcerts source : sources) {
+      try {
+        tous.addAll(source.fetchRegion(lotDepts, null));
+      } catch (Exception e) {
+        log.warn("{} fetchRegion échoué depts={} : {}", source.nom(), lotDepts, e.getMessage());
+      }
+    }
+
+    List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
+    log.info(
+        "fetch:region depts={} bruts={} dédoublonnés={}",
+        lotDepts.size(),
+        tous.size(),
+        dedoublonnes.size());
+
+    return persisterConcerts.persisterConcerts(dedoublonnes);
   }
 
   /// Fetch les concerts d'une ou plusieurs salles identifiées par leurs identifiants préfixés.
@@ -275,16 +356,7 @@ public class WorkerService {
     String[] identifiants = identifiantsStr.split(",");
     List<ConcertBrut> concerts = new ArrayList<>();
     for (String identifiant : identifiants) {
-      String id = identifiant.trim();
-      for (SourceConcerts source : sources) {
-        if (source.accepteIdentifiantSalle(id)) {
-          try {
-            concerts.addAll(source.fetchSalle(id));
-          } catch (Exception e) {
-            log.error("{} fetchSalle échoué identifiant={} : {}", source.nom(), id, e.getMessage());
-          }
-        }
-      }
+      fetchEtSuivreSalle(identifiant.trim(), concerts);
     }
     sauvegarderQuota();
 
@@ -329,36 +401,13 @@ public class WorkerService {
         return;
       }
 
-      List<ConcertBrut> tous = new ArrayList<>();
-      for (String identifiantsStr : identifiantsParSalle) {
-        if (identifiantsStr == null) continue;
-        for (String id : identifiantsStr.split(",")) {
-          String identifiant = id.trim();
-          for (SourceConcerts source : sources) {
-            if (source.accepteIdentifiantSalle(identifiant)) {
-              try {
-                tous.addAll(source.fetchSalle(identifiant));
-              } catch (Exception e) {
-                log.warn(
-                    "{} fetchSalle échoué identifiant={} : {}",
-                    source.nom(),
-                    identifiant,
-                    e.getMessage());
-              }
-            }
-          }
-        }
+      for (int i = 0; i < identifiantsParSalle.size(); i += TAILLE_LOT_SALLES) {
+        List<String> lotSalles =
+            identifiantsParSalle.subList(
+                i, Math.min(i + TAILLE_LOT_SALLES, identifiantsParSalle.size()));
+        resultat = accumuler(resultat, traiterLotSalles(lotSalles));
       }
       sauvegarderQuota();
-
-      List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
-      log.info(
-          "fetch:salles:all salles={} bruts={} dédoublonnés={}",
-          identifiantsParSalle.size(),
-          tous.size(),
-          dedoublonnes.size());
-
-      resultat = persisterConcerts.persisterConcerts(dedoublonnes);
       recalculerMatchesService.recalculerMatches(null);
       notificationDigestService.executerDigest("temps_reel");
       log.info("fetch:salles:all terminé");
@@ -368,6 +417,34 @@ public class WorkerService {
     } finally {
       enregistrerStatJob("fetch:salles:all", System.currentTimeMillis() - debut, resultat, erreur);
     }
+  }
+
+  /// Fetch + dédoublonnage + persistance d'un lot de salles (taille {@value TAILLE_LOT_SALLES}).
+  ///
+  /// <p>Persistance par lot plutôt qu'en un seul bloc final (même motif que
+  /// {@link #traiterLotArtistesBatch}) : chaque chaîne d'identifiants regroupe déjà toutes les
+  /// sources d'une même salle ({@code GROUP BY ss.salle_id}), le dédoublonnage cross-sources reste
+  /// donc correct à cette granularité.
+  ///
+  /// @param lotSalles sous-ensemble de chaînes d'identifiants préfixés, une par salle
+  /// @return bilan de persistance du lot
+  private ResultatPersistance traiterLotSalles(List<String> lotSalles) {
+    List<ConcertBrut> tous = new ArrayList<>();
+    for (String identifiantsStr : lotSalles) {
+      if (identifiantsStr == null) continue;
+      for (String id : identifiantsStr.split(",")) {
+        fetchEtSuivreSalle(id.trim(), tous);
+      }
+    }
+
+    List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
+    log.info(
+        "fetch:salles:all salles={} bruts={} dédoublonnés={}",
+        lotSalles.size(),
+        tous.size(),
+        dedoublonnes.size());
+
+    return persisterConcerts.persisterConcerts(dedoublonnes);
   }
 
   /// Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
@@ -496,6 +573,38 @@ public class WorkerService {
           System.currentTimeMillis() - debut,
           new ResultatPersistance(0, 0),
           e.getMessage());
+    }
+  }
+
+  /// Job nocturne de réconciliation des sources salles/artistes (#706) : health-check et
+  /// redécouverte des identifiants suspects, puis enrichissement Wikidata/OSM/Deezer.
+  public void executerReconciliationNocturne() {
+    log.info("reconciliation:nocturne démarré");
+    long debut = System.currentTimeMillis();
+    String erreur = null;
+    ResultatPersistance resultat = new ResultatPersistance(0, 0);
+    try {
+      var bilan = reconciliationNocturneService.executer();
+      resultat =
+          new ResultatPersistance(
+              0,
+              bilan.sallesRedecouvertes()
+                  + bilan.enrichissementsSalle()
+                  + bilan.enrichissementsArtiste());
+      log.info(
+          "reconciliation:nocturne terminé sallesVerifiees={} redecouvertes={} ambigues={}"
+              + " enrichissementsSalle={} enrichissementsArtiste={}",
+          bilan.sallesVerifiees(),
+          bilan.sallesRedecouvertes(),
+          bilan.ambigues(),
+          bilan.enrichissementsSalle(),
+          bilan.enrichissementsArtiste());
+    } catch (Exception e) {
+      erreur = e.getMessage();
+      log.error("reconciliation:nocturne échoué", e);
+    } finally {
+      enregistrerStatJob(
+          "reconciliation:nocturne", System.currentTimeMillis() - debut, resultat, erreur);
     }
   }
 

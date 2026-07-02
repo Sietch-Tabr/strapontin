@@ -4,10 +4,13 @@
  */
 package fr.strapontin.web.artiste;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -92,6 +95,32 @@ class ArtisteRepository {
             Map.of(CLE_USER_ID, userId),
             Integer.class),
         0);
+  }
+
+  /// Recherche les artistes du référentiel dont le {@code nom_norm} partage au moins un des
+  /// tokens fournis — pré-filtre SQL avant application de la correspondance floue
+  /// ({@code CorrespondanceArtiste.estDoublonArtiste}, non exprimable en SQL).
+  ///
+  /// @param tokens tokens significatifs (≥3 caractères) du nom recherché
+  /// @return jusqu'à 50 candidats {@code (id, nom_norm)}, vide si {@code tokens} est vide
+  List<Map<String, Object>> chercherCandidatsParTokens(Set<String> tokens) {
+    if (tokens.isEmpty()) return List.of();
+
+    List<String> tokensList = new ArrayList<>(tokens);
+    StringBuilder whereTokens = new StringBuilder("(");
+    for (int i = 0; i < tokensList.size(); i++) {
+      if (i > 0) whereTokens.append(" OR ");
+      whereTokens.append("nom_norm LIKE :t").append(i);
+    }
+    whereTokens.append(")");
+
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    for (int i = 0; i < tokensList.size(); i++) {
+      params.addValue("t" + i, "%" + tokensList.get(i) + "%");
+    }
+
+    return jdbc.queryForList(
+        "SELECT id, nom_norm FROM artistes WHERE " + whereTokens + " LIMIT 50", params);
   }
 
   /// Insère ou récupère un artiste dans le référentiel global et retourne son UUID stable.

@@ -5,6 +5,8 @@
 package fr.strapontin.web.artiste;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.core.CorrespondanceArtiste;
+import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
@@ -115,7 +117,11 @@ public class ArtisteService {
 
   /// Ajoute un artiste à la liste de suivi dans une transaction atomique.
   ///
-  /// <p>Vérifie le doublon et le cap avant l'insertion.
+  /// <p>Vérifie le doublon et le cap avant l'insertion. La résolution de l'artiste dans le
+  /// référentiel global tolère les variantes orthographiques mineures (voir
+  /// {@link #resoudreArtisteId}) pour éviter de créer un doublon d'UUID pour un artiste déjà
+  /// présent sous une graphie légèrement différente (ex. "Krash Karma" / "KrashKarma" — cas réel
+  /// ayant nécessité une fusion manuelle en base avant ce correctif, v2.6.0).
   ///
   /// @param userId identifiant de l'utilisateur
   /// @param nom    nom de l'artiste (non-vide, max 200 car.)
@@ -125,7 +131,7 @@ public class ArtisteService {
   public void ajouter(String userId, String nom) {
     String normalise = Normalisation.normaliserTexte(nom);
 
-    UUID artisteId = artisteRepository.upsertArtiste(nom, normalise);
+    UUID artisteId = resoudreArtisteId(nom, normalise);
     if (artisteRepository.existePourUtilisateur(userId, artisteId)) {
       throw new RessourceDejaExistante("Cet artiste est déjà dans votre liste.");
     }
@@ -135,6 +141,31 @@ public class ArtisteService {
 
     artisteRepository.ajouter(userId, nom, artisteId);
     declencherWorkerArtiste();
+  }
+
+  /// Résout l'UUID d'un artiste dans le référentiel global, en réutilisant un artiste existant
+  /// dont le nom est un doublon flou ({@link CorrespondanceArtiste#estDoublonArtiste}) plutôt que
+  /// d'en créer un nouveau. En cas de correspondance exacte de {@code nom_norm}, passe par
+  /// {@code upsertArtiste} pour conserver le comportement existant de mise à jour du nom affiché
+  /// global ; en cas de correspondance floue seulement, réutilise l'UUID existant sans toucher au
+  /// nom global déjà établi (le nom tapé par cet utilisateur reste visible via
+  /// {@code user_artistes.artiste_affiche}, indépendant du nom global).
+  ///
+  /// @param nom       nom affiché tel que saisi
+  /// @param normalise nom normalisé ({@link Normalisation#normaliserTexte})
+  /// @return UUID de l'artiste existant ou nouvellement créé
+  private UUID resoudreArtisteId(String nom, String normalise) {
+    Set<String> tokens = CorrespondanceSalle.tokensSignificatifs(normalise);
+    for (Map<String, Object> candidat : artisteRepository.chercherCandidatsParTokens(tokens)) {
+      String nomNormCandidat = (String) candidat.get("nom_norm");
+      if (nomNormCandidat.equals(normalise)) {
+        return artisteRepository.upsertArtiste(nom, normalise);
+      }
+      if (CorrespondanceArtiste.estDoublonArtiste(normalise, nomNormCandidat)) {
+        return (UUID) candidat.get("id");
+      }
+    }
+    return artisteRepository.upsertArtiste(nom, normalise);
   }
 
   /// Supprime un artiste de la liste de suivi.

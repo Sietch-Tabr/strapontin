@@ -1,0 +1,45 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.core;
+
+/// Détermine si deux noms d'artiste normalisés désignent le même artiste.
+///
+/// Extrait de `worker/persister/ReconciliateurArtistes` (v2.5.7) vers `core` pour être
+/// réutilisable par le module `web` (ajout d'artiste, v2.6.0) sans dépendance `web` → `worker`.
+///
+/// @since 2.6.0
+/// @author Kwaite
+public final class CorrespondanceArtiste {
+
+  // Seuil artiste : Jaro ≥ 0.95 + containment ratio court/long ≥ 0.65.
+  // Jaro évite les faux positifs par préfixe commun ("julien dore"/"julien morel" Jaro=0.914 →
+  // false) tout en couvrant les variantes sans espace ("krash karma"/"krashkarma" Jaro=0.97 →
+  // true). Les troncatures TM ("aliz"/"alizee", "fawn"/"fawnn") passent par containment.
+  private static final double SEUIL_JARO_ARTISTE = 0.95;
+  private static final int LONGUEUR_MIN_CONTAINMENT_ARTISTE = 4;
+  private static final double RATIO_MIN_CONTAINMENT_ARTISTE = 0.65;
+
+  private CorrespondanceArtiste() {}
+
+  /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
+  ///
+  /// Jaro ≥ 0.95 (meilleur que Levenshtein pour les noms propres courts) complété par un
+  /// containment avec ratio court/long ≥ 0.65 pour les troncatures TM ("aliz"/"alizee",
+  /// "fawn"/"fawnn") et les variations longues ("star academy"/"star academy 1").
+  ///
+  /// @param a premier nom normalisé
+  /// @param b deuxième nom normalisé
+  /// @return {@code true} si les artistes sont considérés identiques
+  public static boolean estDoublonArtiste(String a, String b) {
+    if (a.equals(b)) return true;
+    if (Normalisation.jaro(a, b) >= SEUIL_JARO_ARTISTE) return true;
+    String court = a.length() <= b.length() ? a : b;
+    String plusLong = a.length() <= b.length() ? b : a;
+    double ratio = (double) court.length() / plusLong.length();
+    return court.length() >= LONGUEUR_MIN_CONTAINMENT_ARTISTE
+        && ratio >= RATIO_MIN_CONTAINMENT_ARTISTE
+        && plusLong.contains(court);
+  }
+}

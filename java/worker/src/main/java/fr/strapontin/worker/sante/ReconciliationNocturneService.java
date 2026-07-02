@@ -1,0 +1,258 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.worker.sante;
+
+import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.TicketmasterSource.CandidatVenueTM;
+import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
+import fr.strapontin.worker.LogsAdminWorker;
+import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
+import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Service;
+
+/// Orchestrateur du job nocturne de réconciliation des sources salles/artistes (#706).
+///
+/// Phase 1 — health-check des identifiants TM suspects (`suspect_depuis IS NOT NULL`) et
+/// redécouverte active si l'identifiant est mort. Digitick : alerte seule (pas de redécouverte
+/// auto, slugs gérés manuellement via #710). Eventim : ignoré (IDs synthétiques, pas de
+/// health-check pertinent).
+///
+/// Phase 2 — délègue à {@link EnrichissementSallesService} et
+/// {@link EnrichissementArtistesService} (#711/#716).
+///
+/// La redécouverte passive décrite dans le ticket #706 (scanner les concerts des dernières 24h)
+/// n'est pas implémentée : le pipeline temps réel existant
+/// ({@code ReconciliateurSalles.upsertSalleSource}, exécuté à chaque fetch) réalise déjà cette
+/// association par correspondance de nom, et {@code concerts} ne conserve pas l'identifiant brut
+/// une fois résolu — un scan nocturne dédié ne découvrirait rien de plus (décision actée pour
+/// le jalon 2.6.0).
+///
+/// @since 2.6.0
+/// @author Kwaite
+@Service
+public class ReconciliationNocturneService {
+
+  private static final Logger log = LoggerFactory.getLogger(ReconciliationNocturneService.class);
+
+  private final NamedParameterJdbcTemplate jdbc;
+  private final TicketmasterSource tm;
+  private final LogsAdminWorker logsAdminWorker;
+  private final EnrichissementSallesService enrichissementSalles;
+  private final EnrichissementArtistesService enrichissementArtistes;
+
+  public ReconciliationNocturneService(
+      NamedParameterJdbcTemplate jdbc,
+      TicketmasterSource tm,
+      LogsAdminWorker logsAdminWorker,
+      EnrichissementSallesService enrichissementSalles,
+      EnrichissementArtistesService enrichissementArtistes) {
+    this.jdbc = jdbc;
+    this.tm = tm;
+    this.logsAdminWorker = logsAdminWorker;
+    this.enrichissementSalles = enrichissementSalles;
+    this.enrichissementArtistes = enrichissementArtistes;
+  }
+
+  /// Exécute les deux phases du job nocturne.
+  ///
+  /// <p>L'enrichissement artistes (Wikidata/Deezer) est traité avant l'enrichissement salles
+  /// (Overpass/Wikidata) : l'instance publique Overpass est une infrastructure partagée
+  /// régulièrement surchargée (timeouts fréquents en 2026), chaque lot en échec consommant tout
+  /// son timeout client avant d'abandonner. Ce risque de ralentissement ne doit pas retarder
+  /// l'enrichissement artistes, indépendant d'Overpass.
+  ///
+  /// @return bilan agrégé de l'exécution
+  public ResultatReconciliation executer() {
+    int[] bilanSalles = healthCheckSallesTM();
+    healthCheckArtistesTM();
+    alerterDigitickSuspect();
+
+    int enrichisArtistes = enrichissementArtistes.enrichir();
+    int enrichisSalles = enrichissementSalles.enrichir();
+
+    return new ResultatReconciliation(
+        bilanSalles[0], bilanSalles[1], bilanSalles[2], enrichisSalles, enrichisArtistes);
+  }
+
+  /// @return tableau {@code [verifiees, redecouvertes, ambigues]}
+  private int[] healthCheckSallesTM() {
+    List<Map<String, Object>> suspectes =
+        jdbc.queryForList(
+            """
+            SELECT ss.salle_id, ss.identifiant_externe, s.nom
+            FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
+            WHERE ss.source = 'ticketmaster' AND ss.suspect_depuis IS NOT NULL
+            """,
+            Map.of());
+
+    int verifiees = 0;
+    int redecouvertes = 0;
+    int ambigues = 0;
+    for (var ligne : suspectes) {
+      UUID salleId = (UUID) ligne.get("salle_id");
+      String ancienVenueId = (String) ligne.get("identifiant_externe");
+      String nom = (String) ligne.get("nom");
+      verifiees++;
+      if (tm.verifierVenue(ancienVenueId) != StatutIdTM.MORT) {
+        reinitialiserSuspect("salle_sources", "salle_id", salleId);
+        continue;
+      }
+
+      int resultatRedecouverte = redecouvrirSalle(salleId, ancienVenueId, nom);
+      if (resultatRedecouverte > 0) redecouvertes++;
+      else if (resultatRedecouverte < 0) ambigues++;
+    }
+    return new int[] {verifiees, redecouvertes, ambigues};
+  }
+
+  /// @return 1 si redécouverte automatique effectuée, -1 si ambigu (0 ou ≥2 candidats), 0 sinon
+  private int redecouvrirSalle(UUID salleId, String ancienVenueId, String nom) {
+    List<CandidatVenueTM> candidats = tm.rechercherVenuesParNom(nom);
+    List<CandidatVenueTM> valides =
+        candidats.stream()
+            .filter(c -> !c.id().equals(ancienVenueId))
+            .filter(c -> tm.compterEventsVenue(c.id()) > 0)
+            .filter(c -> !dejaUtiliseParAutreEntite("salle_sources", "salle_id", salleId, c.id()))
+            .toList();
+
+    if (valides.size() == 1) {
+      String nouveauId = valides.get(0).id();
+      jdbc.update(
+          """
+          UPDATE salle_sources
+          SET identifiant_externe = :nouveauId, nb_zero_consecutifs = 0, suspect_depuis = NULL
+          WHERE salle_id = CAST(:salleId AS uuid) AND source = 'ticketmaster'
+          """,
+          Map.of("nouveauId", nouveauId, "salleId", salleId.toString()));
+      log.info(
+          "reconciliation:nocturne — salle redécouverte nom={} ancien={} nouveau={}",
+          nom,
+          ancienVenueId,
+          nouveauId);
+      return 1;
+    }
+
+    logsAdminWorker.inserer(
+        "warn",
+        "reconciliation-nocturne",
+        "redécouverte ambiguë salle="
+            + nom
+            + " ancienVenueId="
+            + ancienVenueId
+            + " candidats="
+            + valides.size(),
+        Map.of(
+            "salleId",
+            salleId.toString(),
+            "ancienVenueId",
+            ancienVenueId,
+            "nbCandidats",
+            valides.size()));
+    return -1;
+  }
+
+  private void healthCheckArtistesTM() {
+    List<Map<String, Object>> suspects =
+        jdbc.queryForList(
+            """
+            SELECT asrc.artiste_id, asrc.identifiant_externe, a.nom
+            FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
+            WHERE asrc.source = 'ticketmaster' AND asrc.suspect_depuis IS NOT NULL
+            """,
+            Map.of());
+
+    for (var ligne : suspects) {
+      UUID artisteId = (UUID) ligne.get("artiste_id");
+      String ancienAttractionId = (String) ligne.get("identifiant_externe");
+      String nom = (String) ligne.get("nom");
+      if (tm.verifierAttraction(ancienAttractionId) != StatutIdTM.MORT) {
+        reinitialiserSuspect("artiste_sources", "artiste_id", artisteId);
+        continue;
+      }
+      redecouvrirArtiste(artisteId, ancienAttractionId, nom);
+    }
+  }
+
+  /// Le compteur passif ({@code nb_zero_consecutifs}) peut signaler à tort un identifiant suspect
+  /// alors qu'il s'agit simplement d'une salle/artiste sans événement à venir pour l'instant — la
+  /// vérification active de cette phase fait autorité et doit effacer ce faux positif dès qu'elle
+  /// confirme que l'identifiant TM est toujours vivant, plutôt que de laisser le statut "suspect"
+  /// perdurer jusqu'à expiration (24h, cf. {@link #executer()}).
+  private void reinitialiserSuspect(String table, String colonneId, UUID id) {
+    jdbc.update(
+        "UPDATE "
+            + table
+            + " SET nb_zero_consecutifs = 0, suspect_depuis = NULL"
+            + " WHERE "
+            + colonneId
+            + " = CAST(:id AS uuid) AND source = 'ticketmaster'",
+        Map.of("id", id.toString()));
+  }
+
+  private void redecouvrirArtiste(UUID artisteId, String ancienAttractionId, String nom) {
+    String nouveauId = tm.rechercherAttractionId(nom);
+    if (nouveauId != null
+        && !nouveauId.equals(ancienAttractionId)
+        && !dejaUtiliseParAutreEntite("artiste_sources", "artiste_id", artisteId, nouveauId)) {
+      jdbc.update(
+          """
+          UPDATE artiste_sources
+          SET identifiant_externe = :nouveauId, nb_zero_consecutifs = 0, suspect_depuis = NULL
+          WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
+          """,
+          Map.of("nouveauId", nouveauId, "artisteId", artisteId.toString()));
+      log.info(
+          "reconciliation:nocturne — artiste redécouvert nom={} ancien={} nouveau={}",
+          nom,
+          ancienAttractionId,
+          nouveauId);
+      return;
+    }
+    logsAdminWorker.inserer(
+        "warn",
+        "reconciliation-nocturne",
+        "redécouverte artiste échouée nom=" + nom + " ancienAttractionId=" + ancienAttractionId,
+        Map.of("artisteId", artisteId.toString(), "ancienAttractionId", ancienAttractionId));
+  }
+
+  private boolean dejaUtiliseParAutreEntite(
+      String table, String colonneId, UUID idActuel, String candidatId) {
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT 1 FROM "
+                + table
+                + " WHERE source = 'ticketmaster' AND identifiant_externe ="
+                + " :candidatId AND "
+                + colonneId
+                + " != CAST(:idActuel AS uuid)",
+            Map.of("candidatId", candidatId, "idActuel", idActuel.toString()));
+    return !lignes.isEmpty();
+  }
+
+  private void alerterDigitickSuspect() {
+    List<Map<String, Object>> suspectes =
+        jdbc.queryForList(
+            """
+            SELECT ss.identifiant_externe, s.nom
+            FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
+            WHERE ss.source = 'digitick' AND ss.suspect_depuis IS NOT NULL
+            """,
+            Map.of());
+    if (suspectes.isEmpty()) return;
+
+    logsAdminWorker.inserer(
+        "warn",
+        "reconciliation-nocturne",
+        suspectes.size()
+            + " slug(s) Digitick suspect(s) — correction manuelle via l'onglet admin Salles",
+        Map.of("nbSuspectes", suspectes.size()));
+  }
+}

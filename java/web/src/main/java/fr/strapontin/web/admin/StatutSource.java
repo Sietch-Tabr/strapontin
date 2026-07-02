@@ -15,8 +15,10 @@ import java.time.Instant;
 /// @param quotaTM               quota Ticketmaster (non null pour id={@code "ticketmaster"})
 /// @param etatQuota             {@code "ok"}, {@code "attention"} ou {@code "critique"}
 /// @param dernierFetch          date du dernier fetch réussi (null si jamais exécuté)
-/// @param nbSallesConfigurees   nb de salles avec un slug pour cette source (null si non
-// applicable)
+/// @param nbSallesConfigurees   nb de salles avec un slug (Digitick) ou un {@code wikidata_id}
+// (Wikidata) pour cette source (null si non applicable)
+/// @param nbArtistesConfigures  nb d'artistes avec un {@code wikidata_id} pour cette source (null
+// si non applicable, uniquement renseigné pour {@code "wikidata"})
 /// @since 2.3.0
 /// @author Kwaite
 public record StatutSource(
@@ -26,4 +28,5 @@ public record StatutSource(
     QuotaTM quotaTM,
     String etatQuota,
     Instant dernierFetch,
-    Integer nbSallesConfigurees) {}
+    Integer nbSallesConfigurees,
+    Integer nbArtistesConfigures) {}

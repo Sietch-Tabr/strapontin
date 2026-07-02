@@ -9,7 +9,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -125,6 +127,33 @@ class SalleRepository {
             Map.of(CLE_USER_ID, userId),
             Integer.class),
         0);
+  }
+
+  /// Recherche les salles du référentiel dont la {@code salle_cle} partage au moins un des
+  /// tokens fournis — pré-filtre SQL avant application de la correspondance floue
+  /// ({@code CorrespondanceSalle.estDoublonSalle} sur {@code nom}, non exprimable en SQL).
+  ///
+  /// @param tokens clés normalisées ({@code SalleService.normaliserSalleCle}) des mots du nom
+  ///     recherché, filtrées aux tokens d'au moins 3 caractères
+  /// @return jusqu'à 50 candidats {@code (id, salle_cle, nom)}, vide si {@code tokens} est vide
+  List<Map<String, Object>> chercherCandidatsParCle(Set<String> tokens) {
+    if (tokens.isEmpty()) return List.of();
+
+    List<String> tokensList = new ArrayList<>(tokens);
+    StringBuilder whereTokens = new StringBuilder("(");
+    for (int i = 0; i < tokensList.size(); i++) {
+      if (i > 0) whereTokens.append(" OR ");
+      whereTokens.append("salle_cle LIKE :t").append(i);
+    }
+    whereTokens.append(")");
+
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    for (int i = 0; i < tokensList.size(); i++) {
+      params.addValue("t" + i, "%" + tokensList.get(i) + "%");
+    }
+
+    return jdbc.queryForList(
+        "SELECT id, salle_cle, nom FROM salles WHERE " + whereTokens + " LIMIT 50", params);
   }
 
   /// Insère ou met à jour une salle dans le référentiel et retourne son UUID stable.

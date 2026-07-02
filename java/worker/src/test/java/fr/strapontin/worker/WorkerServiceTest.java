@@ -24,6 +24,9 @@ import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
+import fr.strapontin.worker.sante.ReconciliationNocturneService;
+import fr.strapontin.worker.sante.ResultatReconciliation;
+import fr.strapontin.worker.sante.SuiviSanteSourcesService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +46,8 @@ class WorkerServiceTest {
   private GestionQuotaTM gestionQuotaTM;
   private NotificationDigestService notificationDigestService;
   private NamedParameterJdbcTemplate jdbc;
+  private SuiviSanteSourcesService suiviSanteSourcesService;
+  private ReconciliationNocturneService reconciliationNocturneService;
   private WorkerService workerService;
 
   @BeforeEach
@@ -56,6 +61,8 @@ class WorkerServiceTest {
     gestionQuotaTM = mock(GestionQuotaTM.class);
     notificationDigestService = mock(NotificationDigestService.class);
     jdbc = mock(NamedParameterJdbcTemplate.class);
+    suiviSanteSourcesService = mock(SuiviSanteSourcesService.class);
+    reconciliationNocturneService = mock(ReconciliationNocturneService.class);
     workerService =
         new WorkerService(
             sources,
@@ -65,7 +72,9 @@ class WorkerServiceTest {
             recalculerMatchesService,
             gestionQuotaTM,
             notificationDigestService,
-            jdbc);
+            jdbc,
+            suiviSanteSourcesService,
+            reconciliationNocturneService);
   }
 
   @Test
@@ -86,6 +95,31 @@ class WorkerServiceTest {
     workerService.executerFetchArtistesBatch();
 
     verify(persisterConcerts, never()).persisterConcerts(any());
+  }
+
+  // Régression : persister uniquement à la toute fin perdrait tout le travail de fetch déjà
+  // effectué (quota TM consommé) en cas d'interruption avant la fin du cycle — la persistance doit
+  // avoir lieu lot par lot (taille 20), pas en un seul bloc final.
+  @Test
+  void executerFetchArtistesBatch_plusDeVingtCinqArtistes_persisteParLotDeVingt() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
+    for (int i = 0; i < 25; i++) {
+      java.util.Map<String, Object> row = new java.util.HashMap<>();
+      row.put("artiste_id_str", "artiste-" + i);
+      row.put("artiste_affiche", "Artiste " + i);
+      row.put("attraction_id", "attractionId" + i);
+      rows.add(row);
+    }
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(rows);
+    when(tm.fetchArtistesLot(any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    workerService.executerFetchArtistesBatch();
+
+    verify(persisterConcerts, times(2)).persisterConcerts(any());
+    verify(tm, times(2)).fetchArtistesLot(any());
   }
 
   @Test
@@ -112,6 +146,18 @@ class WorkerServiceTest {
   }
 
   @Test
+  void executerFetchSalle_appelleSuiviSanteSourcesAvecLeResultat() {
+    when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
+    when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
+    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    workerService.executerFetchSalle("tm:venue-42");
+
+    verify(suiviSanteSourcesService).enregistrerResultatSalle("tm:venue-42", 0);
+  }
+
+  @Test
   void executerFetchSalle_identifiantsMultiples_dispatcheParSource() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-1")).thenReturn(true);
@@ -124,6 +170,28 @@ class WorkerServiceTest {
 
     verify(tm).fetchSalle("tm:venue-1");
     verify(tm).fetchSalle("tm:venue-2");
+  }
+
+  // Régression : même motif que fetch:artistes:batch — persistance par lot de départements
+  // (taille 5), pas en un seul bloc final.
+  @Test
+  @SuppressWarnings("unchecked")
+  void executerFetchRegion_plusDeCinqDepartements_persisteParLotDeCinq() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
+    when(jdbc.query(
+            anyString(),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any()))
+        .thenReturn(List.<String[]>of(depts));
+    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
+    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+    when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
+
+    workerService.executerFetchRegion();
+
+    verify(persisterConcerts, times(3)).persisterConcerts(any());
   }
 
   @Test
@@ -236,6 +304,62 @@ class WorkerServiceTest {
 
     verify(tm).fetchSalle("tm:venue-99");
     verify(persisterConcerts).persisterConcerts(any());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void executerFetchSallesAll_appelleSuiviSanteSourcesAvecLeResultat() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
+        .thenReturn(List.of("tm:venue-99"));
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+    when(tm.accepteIdentifiantSalle("tm:venue-99")).thenReturn(true);
+    when(tm.fetchSalle("tm:venue-99")).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+    when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
+
+    workerService.executerFetchSallesAll();
+
+    verify(suiviSanteSourcesService).enregistrerResultatSalle("tm:venue-99", 0);
+  }
+
+  // Régression : même motif que fetch:artistes:batch — persistance par lot de salles (taille 20).
+  @Test
+  @SuppressWarnings("unchecked")
+  void executerFetchSallesAll_plusDeVingtSalles_persisteParLotDeVingt() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.List<String> identifiants = new java.util.ArrayList<>();
+    for (int i = 0; i < 25; i++) identifiants.add("tm:venue-" + i);
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(identifiants);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+    when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
+    when(tm.fetchSalle(anyString())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+    when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
+
+    workerService.executerFetchSallesAll();
+
+    verify(persisterConcerts, times(2)).persisterConcerts(any());
+  }
+
+  @Test
+  void executerReconciliationNocturne_nominal_appelleLeServiceEtEnregistreLaStat() {
+    when(reconciliationNocturneService.executer())
+        .thenReturn(new ResultatReconciliation(2, 1, 0, 3, 4));
+
+    workerService.executerReconciliationNocturne();
+
+    verify(reconciliationNocturneService).executer();
+    verify(jdbc).update(contains("INSERT INTO fetch_jobs "), anyMap());
+  }
+
+  @Test
+  void executerReconciliationNocturne_exception_neRelancePasEtEnregistreErreur() {
+    when(reconciliationNocturneService.executer()).thenThrow(new RuntimeException("Wikidata down"));
+
+    assertDoesNotThrow(() -> workerService.executerReconciliationNocturne());
+
+    verify(jdbc).update(contains("INSERT INTO fetch_jobs "), anyMap());
   }
 
   @Test

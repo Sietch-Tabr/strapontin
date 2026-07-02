@@ -75,6 +75,12 @@
           <p v-if="stat.prochaineExec" class="job-carte-detail">
             Prochaine exécution : {{ formaterInstant(stat.prochaineExec) }}
           </p>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            :disabled="jobsEnCours.includes(stat.typeJob) || relanceJobEnCours[stat.typeJob]"
+            @click="relancerJob(stat.typeJob)"
+          >Relancer</button>
         </div>
       </div>
       <p v-else class="etat-vide-texte">Aucun job de maintenance exécuté pour l'instant.</p>
@@ -100,7 +106,7 @@
 <script setup>
 defineOptions({ name: 'AdminJobs' })
 
-import { ref, shallowRef, computed, onMounted, onUnmounted } from 'vue'
+import { ref, shallowRef, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useToasts } from '../../composables/useToasts.js'
 import { formaterInstant } from '../../composables/useDates.js'
 import EtatChargement from '../EtatChargement.vue'
@@ -125,6 +131,7 @@ const statsJobs = shallowRef([])
 const jobsEnCours = shallowRef([])
 const workerLastSuccess = ref(null)
 const relancerEnCours = ref(false)
+const relanceJobEnCours = reactive({})
 let pollingInterval = null
 // #571 : annule les fetch en vol à la destruction du composant (pas de maj de refs mortes).
 const controleur = new AbortController()
@@ -191,6 +198,26 @@ async function relancerFetches() {
     if (e.name === 'AbortError') return
     relancerEnCours.value = false
     afficherToast('Erreur réseau.', 'erreur')
+  }
+}
+
+async function relancerJob(typeJob) {
+  relanceJobEnCours[typeJob] = true
+  try {
+    const rep = await fetch(
+      `/api/admin/jobs/relancer?typeJob=${encodeURIComponent(typeJob)}`,
+      { method: 'POST', signal: controleur.signal },
+    )
+    if (rep.ok) {
+      afficherToast('Job relancé.', 'succes')
+      demarrerPolling()
+    } else {
+      afficherToast('Erreur — worker inaccessible.', 'erreur')
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') afficherToast('Erreur réseau.', 'erreur')
+  } finally {
+    relanceJobEnCours[typeJob] = false
   }
 }
 

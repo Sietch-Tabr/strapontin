@@ -40,6 +40,11 @@ XxxController (HTTP pur) → XxxService (@Transactional, logique métier) → Xx
 - `FiltreConcerts` (record, package `concert`, v2.5.4) : critères de filtrage partagés entre `SpectacleService.listerSpectacles` et `DecouverteService.decouvrir` — remplace les signatures à 11/8 paramètres (#743)
 - `ParametresService` (package `utilisateur`, v2.5.4) : stats compteurs + flux changement email (@Transactional) — extrait de `ParametresRestController` (#744)
 - `SourceConcerts` / `SourceAvecFetchLot` (module `sources`, v2.3.0) : `WorkerService` source-agnostique — ajouter une source = créer une classe + bean Spring. Identifiants salle préfixés par source (`"tm:venueId"`). Voir wiki Architecture.
+- `SourceEnrichissementSalle` / `SourceEnrichissementArtiste` (module `sources`, v2.6.0) : enrichissement Wikidata/OSM/Deezer, même pattern extensible (`OverpassSalleSource`, `WikidataSalleSource`, `WikidataArtisteSource`, `DeezerArtisteSource`). Orchestré côté worker par `EnrichissementSallesService`/`EnrichissementArtistesService` (package `enrichissement`), persistance par lot de 25 avec délai 2s entre lots. `WikidataSalleSource` et `DeezerArtisteSource` ont chacun un mode découverte par nom (`SERVICE wikibase:mwapi` / `/search/artist?q=`) indépendant d'Overpass et du P2722 Wikidata respectivement — ni Overpass ni le P2722 ne sont un passage obligé. Un conflit sur l'index unique `idx_salles_wikidata_id`/`idx_artistes_wikidata_id` (même Q-ID matché sur deux entités) est rattrapé par entité (`DuplicateKeyException`) et loggé (`enrichissement-wikidata`) plutôt que de faire échouer tout le cycle nocturne.
+- `core.CorrespondanceSalle` / `core.CorrespondanceArtiste` (v2.6.0) : algorithmes de dédoublonnage flou (Levenshtein/Jaccard salles, Jaro artistes) extraits de `worker/persister` pour être partagés par `sources` (`WikidataSalleSource`) et `web` (ajout « Mes salles »/« Mes artistes », `SalleService`/`ArtisteService`) — un seul algorithme par entité dans tout le projet. Détail et justification des seuils : voir wiki Architecture.
+- `ReconciliationNocturneService` + `SuiviSanteSourcesService` (package `sante`, worker, v2.6.0) : health-check/redécouverte des IDs TM suspects (`ReconciliationNocturneJob`, 3h) + compteur d'échecs consécutifs alimenté par les fetchs existants. La vérification active (`TicketmasterSource.verifierVenue`/`verifierAttraction`) réinitialise `nb_zero_consecutifs`/`suspect_depuis` dès qu'elle confirme un ID vivant — le compteur passif seul ne suffit pas à qualifier un ID mort (une salle/artiste sans concert à venir n'est pas un ID mort).
+- Persistance par lot (v2.6.0) : `EnrichissementSallesService`/`EnrichissementArtistesService` (lots de 25) et `WorkerService.executerFetchArtistesBatch`/`executerFetchRegion`/`executerFetchSallesAll` (lots de 20 artistes/5 départements/20 salles) persistent au fur et à mesure plutôt qu'en un seul bloc final — une interruption (redéploiement, crash) avant la fin du cycle ne perd que le lot en cours, pas tout le travail déjà résolu. Le dédoublonnage cross-sources (`Dedoublonner`) reste correct à cette granularité : un même concert n'est jamais rapporté par deux sources pour deux artistes/départements/salles différents.
+- `ReferentielSallesService` / `ReferentielArtistesService` (web, package `admin`, v2.6.0) : onglets admin Salles/Artistes — liste paginée, édition `nom_affiche`, fusion de doublons.
 - `core` : `QuotaTM` (type partagé) et `UtilitairesChaine.echapperJson` mutualisés en v2.2.3
 - `SpectacleService` et `DecouverteService` : COUNT et filtres disponibles calculés en parallèle via `CompletableFuture` (threads virtuels)
 - `RecalculerMatchesService` : recalcul parallèle par utilisateur via `Executors.newVirtualThreadPerTaskExecutor()`, 1 transaction par user (`TransactionTemplate`)
@@ -147,14 +152,15 @@ Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SE
 
 ## Sources de données
 
-| Source                        | Statut                                                                        |
-| ----------------------------- | ----------------------------------------------------------------------------- |
-| Ticketmaster Discovery v2     | Core                                                                          |
-| Eventim France                | Core                                                                          |
-| Digitick (`web.digitick.com`) | Core (v2.4.0, #610) — scraping HTML par salle, slug dans `salle_sources`      |
-| Deezer Search API             | Autocomplete artiste (`/artistes`) — sans clé. Remplace MusicBrainz (bloqué). |
-| Bandsintown                   | Abandonné — HTTP 401 depuis 2026-04-10 (#65)                                  |
-| MusicBrainz                   | Bloqué — IP SFR blacklistée par Cloudflare (#293)                             |
+| Source                                                | Statut                                                                                                                                                                                                                                                                           |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ticketmaster Discovery v2                             | Core                                                                                                                                                                                                                                                                             |
+| Eventim France                                        | Core                                                                                                                                                                                                                                                                             |
+| Digitick (`web.digitick.com`)                         | Core (v2.4.0, #610) — scraping HTML par salle, slug dans `salle_sources`                                                                                                                                                                                                         |
+| Deezer Search API                                     | Autocomplete artiste (`/artistes`) — sans clé. Remplace MusicBrainz (bloqué).                                                                                                                                                                                                    |
+| Wikidata (SPARQL) + OSM (Overpass, `overpass-api.de`) | Enrichissement (v2.6.0, #711/#716) — noms canoniques, Deezer ID, P6262 (cross-validation TM). Visible dans `/admin` > Sources. Overpass en incident de surcharge documenté depuis avril 2026 (bbox au lieu d'`area[...]`, échecs 504 non bloquants) — voir `OverpassSalleSource` |
+| Bandsintown                                           | Abandonné — HTTP 401 depuis 2026-04-10 (#65)                                                                                                                                                                                                                                     |
+| MusicBrainz                                           | Bloqué — IP SFR blacklistée par Cloudflare (#293)                                                                                                                                                                                                                                |
 
 ## Jobs background (Quartz)
 
@@ -162,20 +168,21 @@ Paradigme : **pré-fetch en arrière-plan, jamais d'appel API depuis le browser*
 
 Cron adaptatif (v2.4.0, #721) : `0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?` — 11 cycles/jour.
 
-| Job                     | Déclenchement                   | Description                                                               |
-| ----------------------- | ------------------------------- | ------------------------------------------------------------------------- |
-| `FetchArtisteJob`       | Ajout artiste + cron adaptatif  | Fetch TM + Eventim par nom artiste                                        |
-| `FetchArtistesBatchJob` | Cron adaptatif (H:00)           | Fetch TM en lots de 20 attractionIds                                      |
-| `FetchRegionJob`        | Cron adaptatif (H:30) + manuel  | Fetch TM + Eventim par département                                        |
-| `FetchSallesAllJob`     | Cron adaptatif (H:30)           | Fetch de toutes les salles avec sources configurées (v2.4.0, #720)        |
-| `FetchSalleJob`         | Ajout salle + déclenchement API | Fetch par identifiants préfixés (`CLE_IDENTIFIANTS`, ex. `"tm:venueId"`)  |
-| `RecalculerMatchesJob`  | Cron adaptatif (H:00)           | Recalcule `user_matches` pour tous les users                              |
-| `PurgerConcertsJob`     | Cron quotidien (minuit)         | Supprime concerts passés depuis > 7 jours                                 |
-| `PurgerLogsAdminJob`    | Cron quotidien (0h15)           | Supprime les `logs_admin` > 30 jours et `fetch_jobs_historique` > 7 jours |
-| `RevoquerAdminsJob`     | Cron horaire (H:00)             | Applique les révocations admin dont la date est dépassée                  |
+| Job                         | Déclenchement                   | Description                                                                                   |
+| --------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------- |
+| `FetchArtisteJob`           | Ajout artiste + cron adaptatif  | Fetch TM + Eventim par nom artiste                                                            |
+| `FetchArtistesBatchJob`     | Cron adaptatif (H:00)           | Fetch TM en lots de 20 attractionIds                                                          |
+| `FetchRegionJob`            | Cron adaptatif (H:30) + manuel  | Fetch TM + Eventim par département                                                            |
+| `FetchSallesAllJob`         | Cron adaptatif (H:30)           | Fetch de toutes les salles avec sources configurées (v2.4.0, #720)                            |
+| `FetchSalleJob`             | Ajout salle + déclenchement API | Fetch par identifiants préfixés (`CLE_IDENTIFIANTS`, ex. `"tm:venueId"`)                      |
+| `RecalculerMatchesJob`      | Cron adaptatif (H:00)           | Recalcule `user_matches` pour tous les users                                                  |
+| `PurgerConcertsJob`         | Cron quotidien (minuit)         | Supprime concerts passés depuis > 7 jours                                                     |
+| `PurgerLogsAdminJob`        | Cron quotidien (0h15)           | Supprime les `logs_admin` > 30 jours et `fetch_jobs_historique` > 7 jours                     |
+| `RevoquerAdminsJob`         | Cron horaire (H:00)             | Applique les révocations admin dont la date est dépassée                                      |
+| `ReconciliationNocturneJob` | Cron quotidien (3h)             | Health-check/redécouverte IDs TM suspects + enrichissement Wikidata/OSM/Deezer (v2.6.0, #706) |
 
 Rate limiting TM : max 2 jobs simultanés (3 → HTTP 429). Quota TM persisté dans `app_config` (`TM_QUOTA_JSON`).
-`FetchArtistesBatchJob`, `FetchRegionJob`, `FetchSallesAllJob`, `RecalculerMatchesJob` annotés `@DisallowConcurrentExecution`. `WatchdogWorkerService` (`@Scheduled`, côté web) : alerte email si worker inactif > 3 h.
+`FetchArtistesBatchJob`, `FetchRegionJob`, `FetchSallesAllJob`, `RecalculerMatchesJob`, `ReconciliationNocturneJob` annotés `@DisallowConcurrentExecution`. `WatchdogWorkerService` (`@Scheduled`, côté web) : alerte email si worker inactif > 3 h.
 
 ## Authentification
 
@@ -203,7 +210,7 @@ Résolution UUID-first (v2.3.0, ticket #621) : `PersisterConcerts.resoudreIdenti
 - **Thème** : cookie `theme` (1 an) + `user_config.theme` → pas de FOUC
 - **Navigation** : Vue Router (`front/src/router/`) — sidebar desktop, bottom nav + drawer mobile. `useEstMobile()` (`front/src/composables/useBreakpoint.js`, seuil 1024 px) contrôle le rendu conditionnel via `v-if` — pas de duplication DOM ni de `display: none`.
 - **Pages à onglets** (`admin`, `parametres`) : orchestrateur léger + sous-composants autonomes (`KeepAlive` + `v-if`). Chaque sous-composant fetch ses données dans `onMounted`. `<select v-model>` sur mobile (`v-if="estMobile"`), `<nav v-else>` sur desktop — rendu conditionnel via `useEstMobile()`. Onglet actif géré par Vue (`:class="{ actif }"`) — pas de sélecteurs CSS `:has()`.
-  - Admin : `front/src/components/admin/` (AdminJobs, AdminSources, AdminLogs, AdminConfig, AdminBanniere, AdminUtilisateurs)
+  - Admin : `front/src/components/admin/` (AdminJobs, AdminSources, AdminSalles, AdminArtistes, AdminLogs, AdminConfig, AdminBanniere, AdminUtilisateurs)
   - Paramètres : `front/src/components/parametres/` (ParametresPreferences, ParametresNotifications, ParametresCompte, ParametresDonnees)
 - **Toasts** : Popover API, `afficherToast(message, type)` retourne un `id` pour fermeture ciblée. `App.vue` gère offline/online : toast persistant à la perte de connexion, fermé à la reconnexion.
 
@@ -214,7 +221,8 @@ Migrations Flyway dans `java/web/src/main/resources/db/migration/` — ne jamais
 **v2.3.0 (V23)** : `salles.salle_uuid uuid`, tables `artistes`, `salle_sources`, `artiste_sources`, colonnes `salle_uuid`/`artiste_id` sur `concerts`, `user_salles`, `user_artistes`. Migration additive.
 **v2.3.0 (V24)** : nettoyage post-backfill #628 — `salles.salle_uuid` → `salles.id` (PK uuid), ancienne PK text → `salles.salle_cle` (UNIQUE) ; PK `user_salles` = `(user_id, salle_uuid)` ; PK `user_artistes` = `(user_id, artiste_id)` ; suppression `salle_id`/`tm_venue_id`/`artiste_normalise`/`attraction_id`/`concerts.salle_cle`.
 **v2.5.6 (V39)** : `users.totp_failure_count INT DEFAULT 0` — compteur d'échecs TOTP persisté en base (#732).
-**v2.5.7 (V40 web / V15 worker)** : backfill `artiste_id` concerts futurs sans artiste ; V15 worker : `ALTER TYPE source_concert ADD VALUE 'digitick'`. Dernière version web : V40, worker : V15.
+**v2.5.7 (V40 web / V15 worker)** : backfill `artiste_id` concerts futurs sans artiste ; V15 worker : `ALTER TYPE source_concert ADD VALUE 'digitick'`.
+**v2.6.0 (V41-43 web / V16-18 worker)** : `nb_zero_consecutifs`/`suspect_depuis` sur `salle_sources`/`artiste_sources` ; `salles.wikidata_id`/`nom_affiche` ; `artistes.wikidata_id`/`deezer_id`/`nom_affiche` (#706/#711). Dernière version web : V43, worker : V18.
 Détails : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de-base-de-données)
 
 ## Conventions Java

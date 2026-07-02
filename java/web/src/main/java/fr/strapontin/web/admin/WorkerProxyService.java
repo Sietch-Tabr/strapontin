@@ -123,4 +123,30 @@ public class WorkerProxyService {
       return new ResultatRelance(false, "Worker inaccessible.");
     }
   }
+
+  /// Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible
+  /// (ex. {@code "purger:salles"}, {@code "reconciliation:nocturne"}) via l'endpoint générique
+  /// du worker (v2.6.0, #706/#710).
+  ///
+  /// @param typeJob identifiant lisible du job à relancer
+  /// @return le résultat métier (succès, ou échec avec message si le worker est inaccessible ou
+  ///     le job inconnu)
+  public ResultatRelance relancerJob(String typeJob) {
+    try {
+      restClient
+          .post()
+          .uri(WORKER_BASE_URL + "/trigger/job?typeJob={typeJob}", typeJob)
+          .retrieve()
+          .toBodilessEntity();
+      logAdminService.logAdmin(
+          "info", "admin", "Job relancé manuellement", Map.of("typeJob", typeJob));
+      return new ResultatRelance(true, null);
+    } catch (RestClientResponseException e) {
+      return new ResultatRelance(
+          false, "Worker inaccessible ou job inconnu (statut " + e.getStatusCode().value() + ").");
+    } catch (Exception e) {
+      log.warn("Erreur appel worker trigger job typeJob={}", typeJob, e);
+      return new ResultatRelance(false, "Worker inaccessible.");
+    }
+  }
 }

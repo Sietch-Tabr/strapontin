@@ -12,6 +12,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.admin.LogAdminService;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,6 +73,42 @@ class ArtisteServiceTest {
     service.ajouter("u1", "Radiohead");
 
     verify(artisteRepository).ajouter("u1", "Radiohead", artisteId);
+  }
+
+  // Régression : "Krash Karma" / "KrashKarma" ont historiquement créé deux artistes distincts en
+  // base (fusion manuelle nécessaire, V28__fusionner_doublon_artiste_krashkarma.sql) faute de
+  // tolérance floue à l'ajout. La résolution doit désormais réutiliser l'UUID existant sans créer
+  // de doublon ni appeler upsertArtiste (qui écraserait le nom affiché global).
+  @Test
+  void ajouter_variantFlouDejaPresent_reutiliseArtisteExistantSansUpsert() {
+    UUID artisteExistant = UUID.randomUUID();
+    Map<String, Object> candidat = new HashMap<>();
+    candidat.put("id", artisteExistant);
+    candidat.put("nom_norm", "krash karma");
+    when(artisteRepository.chercherCandidatsParTokens(any())).thenReturn(List.of(candidat));
+    when(artisteRepository.existePourUtilisateur("u1", artisteExistant)).thenReturn(false);
+    when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(0);
+
+    service.ajouter("u1", "KrashKarma");
+
+    verify(artisteRepository, never()).upsertArtiste(anyString(), anyString());
+    verify(artisteRepository).ajouter("u1", "KrashKarma", artisteExistant);
+  }
+
+  @Test
+  void ajouter_correspondanceExacteParmiLesCandidats_passeParUpsertPourMettreAJourLeNom() {
+    UUID artisteId = UUID.randomUUID();
+    Map<String, Object> candidat = new HashMap<>();
+    candidat.put("id", artisteId);
+    candidat.put("nom_norm", "radiohead");
+    when(artisteRepository.chercherCandidatsParTokens(any())).thenReturn(List.of(candidat));
+    when(artisteRepository.upsertArtiste("Radiohead", "radiohead")).thenReturn(artisteId);
+    when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(false);
+    when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(0);
+
+    service.ajouter("u1", "Radiohead");
+
+    verify(artisteRepository).upsertArtiste("Radiohead", "radiohead");
   }
 
   @Test

@@ -4,11 +4,11 @@
  */
 package fr.strapontin.worker.persister;
 
+import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
 import java.sql.Types;
 import java.text.Normalizer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -25,8 +25,10 @@ import org.springframework.stereotype.Service;
 /// Service de réconciliation des noms de salle entre fetches successifs.
 ///
 /// <p>Deux passes de réconciliation : intra-lot (variantes dans le même fetch) puis
-/// contre la base (variantes entre deux fetches). Utilise {@link #estDoublonSalle}
-/// pour déterminer si deux noms désignent la même salle.
+/// contre la base (variantes entre deux fetches). Utilise {@link
+// CorrespondanceSalle#estDoublonSalle}
+/// (module {@code core}, partagé avec {@code sources} — voir `WikidataSalleSource`) pour
+/// déterminer si deux noms désignent la même salle.
 ///
 /// <p>Gère également l'upsert de nouvelles salles et le rattachement des salles
 /// par {@code nom_norm} exact pour les concerts sans {@code salleSourceId}.
@@ -38,21 +40,6 @@ public class ReconciliateurSalles {
 
   private static final Logger log = LoggerFactory.getLogger(ReconciliateurSalles.class);
 
-  // Seuils Levenshtein ≥ 0.75 + containment ratio court/long ≥ 0.5.
-  // 0.75 évite les faux positifs entre villes ("zenith bordeaux"/"zenith caen" sim=0.61 → false)
-  // tout en couvrant les variantes légitimes ("l olympia"/"olympia" sim=0.78 → true).
-  private static final double SEUIL_SIMILARITE_SALLE = 0.75;
-  private static final int LONGUEUR_MIN_CONTAINMENT_SALLE = 4;
-  private static final double RATIO_MIN_CONTAINMENT_SALLE = 0.5;
-  // Longueur minimale pour inclure un token dans le calcul Jaccard (filtre "le", "de", "la"…).
-  static final int LONGUEUR_MIN_TOKEN_JACCARD = 3;
-  private static final double SEUIL_JACCARD_SALLE = 0.5;
-  // Critère pivot : token commun ≥ LONGUEUR_MIN_PIVOT + Jaccard > SEUIL_JACCARD_PIVOT.
-  // Couvre les variantes Eventim "grand kursaal"/"kursaal besancon" (Jaccard=0.33, pivot≥7).
-  // Requiert le filtre dept dans chercherSalleParTokens pour éviter les faux positifs homonymes.
-  private static final int LONGUEUR_MIN_PIVOT = 7;
-  private static final double SEUIL_JACCARD_PIVOT = 0.3;
-
   private final NamedParameterJdbcTemplate jdbc;
 
   /// @param jdbc template JDBC injecté par Spring
@@ -60,91 +47,28 @@ public class ReconciliateurSalles {
     this.jdbc = jdbc;
   }
 
-  /// Vérifie si deux chaînes normalisées désignent la même entité via Levenshtein ou containment.
-  ///
-  /// @param a                      première chaîne normalisée
-  /// @param b                      deuxième chaîne normalisée
-  /// @param seuilSimilarite        seuil de similarité Levenshtein (0 à 1)
-  /// @param longueurMinContainment longueur minimale de la chaîne courte pour containment
-  /// @param ratioMinContainment    ratio minimal court/long pour containment
-  /// @return {@code true} si les deux chaînes sont considérées identiques
-  static boolean estDoublonTexte(
-      String a,
-      String b,
-      double seuilSimilarite,
-      int longueurMinContainment,
-      double ratioMinContainment) {
-    if (a.equals(b)) return true;
-    if (Normalisation.similarite(a, b) >= seuilSimilarite) return true;
-    String court = a.length() <= b.length() ? a : b;
-    String plusLong = a.length() <= b.length() ? b : a;
-    double ratio = (double) court.length() / plusLong.length();
-    return court.length() >= longueurMinContainment
-        && ratio >= ratioMinContainment
-        && plusLong.contains(court);
-  }
-
   static Set<String> tokensSignificatifs(String s) {
-    Set<String> tokens = new HashSet<>(Arrays.asList(s.split("\\s+")));
-    tokens.removeIf(t -> t.length() < LONGUEUR_MIN_TOKEN_JACCARD);
-    return tokens;
+    return CorrespondanceSalle.tokensSignificatifs(s);
   }
 
   /// Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
   ///
-  /// <p>Seuls les tokens d'au moins {@value #LONGUEUR_MIN_TOKEN_JACCARD} caractères sont pris en
-  /// compte (filtre les articles "le", "de", "la"…). Retourne 1.0 si les deux unions sont vides.
-  ///
   /// @param a première chaîne normalisée
   /// @param b deuxième chaîne normalisée
   /// @return coefficient de Jaccard entre 0.0 et 1.0
+  /// @see CorrespondanceSalle#jaccardTokens
   public static double jaccardTokens(String a, String b) {
-    Set<String> tokensA = tokensSignificatifs(a);
-    Set<String> tokensB = tokensSignificatifs(b);
-    if (tokensA.isEmpty() && tokensB.isEmpty()) return 1.0;
-    Set<String> union = new HashSet<>(tokensA);
-    union.addAll(tokensB);
-    if (union.isEmpty()) return 0.0;
-    Set<String> intersection = new HashSet<>(tokensA);
-    intersection.retainAll(tokensB);
-    return (double) intersection.size() / union.size();
+    return CorrespondanceSalle.jaccardTokens(a, b);
   }
 
   /// Vérifie si deux noms de salle normalisés désignent la même salle.
   ///
-  /// <p>Trois critères en union :
-  /// <ol>
-  ///   <li>Levenshtein ≥ 0.75 ou containment (via {@link #estDoublonTexte})</li>
-  ///   <li>Jaccard tokens strict {@code > 0.5} — insensible à l'ordre des mots</li>
-  ///   <li>Token pivot — token commun ≥ {@value #LONGUEUR_MIN_PIVOT} chars et Jaccard
-  ///       {@code > }{@value #SEUIL_JACCARD_PIVOT}. Requiert filtre {@code dept} dans
-  ///       {@link #chercherSalleParTokens} pour éviter les faux positifs inter-villes.</li>
-  /// </ol>
-  ///
   /// @param a premier nom normalisé
   /// @param b deuxième nom normalisé
   /// @return {@code true} si les salles sont considérées identiques
+  /// @see CorrespondanceSalle#estDoublonSalle
   public static boolean estDoublonSalle(String a, String b) {
-    if (estDoublonTexte(
-        a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE, RATIO_MIN_CONTAINMENT_SALLE))
-      return true;
-    Set<String> tokA = tokensSignificatifs(a);
-    Set<String> tokB = tokensSignificatifs(b);
-    Set<String> intersection = new HashSet<>(tokA);
-    intersection.retainAll(tokB);
-    Set<String> union = new HashSet<>(tokA);
-    union.addAll(tokB);
-    double jaccard =
-        union.isEmpty()
-            ? (tokA.isEmpty() && tokB.isEmpty() ? 1.0 : 0.0)
-            : (double) intersection.size() / union.size();
-    if (jaccard > SEUIL_JACCARD_SALLE) return true;
-    // Critère pivot : requiert ≥ 2 tokens dans chaque nom pour éviter les faux positifs
-    // de type "galaxie" (1 token) vs "le galaxie amneville".
-    return tokA.size() >= 2
-        && tokB.size() >= 2
-        && jaccard > SEUIL_JACCARD_PIVOT
-        && intersection.stream().anyMatch(t -> t.length() >= LONGUEUR_MIN_PIVOT);
+    return CorrespondanceSalle.estDoublonSalle(a, b);
   }
 
   /// Calcule un score de qualité pour choisir le meilleur nom de salle.

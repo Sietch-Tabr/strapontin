@@ -1,0 +1,20 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.sources;
+
+/// Résultat d'enrichissement d'un artiste par une {@link SourceEnrichissementArtiste} (#711/#716).
+///
+/// Tous les champs sont nullable — une source ne renseigne que ce qu'elle sait produire.
+/// {@code ticketmasterAttractionId} porte le P6262 Wikidata (#716), une cross-validation
+/// indépendante de TM plutôt qu'un enrichissement cosmétique.
+///
+/// @param wikidataId               Q-ID Wikidata découvert ou confirmé
+/// @param nomAffiche               nom canonique français
+/// @param deezerId                 identifiant Deezer (P2722 Wikidata, ou confirmé par Deezer)
+/// @param ticketmasterAttractionId attractionId TM porté par le Q-ID Wikidata (P6262)
+/// @since 2.6.0
+/// @author Kwaite
+public record EnrichissementArtiste(
+    String wikidataId, String nomAffiche, String deezerId, String ticketmasterAttractionId) {}

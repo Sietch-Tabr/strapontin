@@ -4,7 +4,7 @@
  */
 package fr.strapontin.worker.persister;
 
-import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.CorrespondanceArtiste;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,8 +21,9 @@ import org.springframework.stereotype.Service;
 /// Service de réconciliation des noms d'artiste et de résolution des {@code artiste_id}.
 ///
 /// <p>Deux passes de réconciliation : intra-lot (variantes dans le même fetch) puis
-/// contre la base (variantes entre deux fetches). Utilise {@link #estDoublonArtiste}
-/// pour déterminer si deux noms désignent le même artiste.
+/// contre la base (variantes entre deux fetches). Utilise
+/// {@link CorrespondanceArtiste#estDoublonArtiste} (module {@code core}, partagé avec {@code web}
+/// — voir {@code ArtisteService.ajouter}) pour déterminer si deux noms désignent le même artiste.
 ///
 /// <p>La résolution par nom ({@link #resoudreArtisteParNomNorm}) couvre toutes les
 /// sources sans {@code artiste_id}, y compris Digitick qui ne fournit pas
@@ -35,14 +36,6 @@ public class ReconciliateurArtistes {
 
   private static final Logger log = LoggerFactory.getLogger(ReconciliateurArtistes.class);
 
-  // Seuil artiste : Jaro ≥ 0.95 + containment ratio court/long ≥ 0.65.
-  // Jaro évite les faux positifs par préfixe commun ("julien dore"/"julien morel" Jaro=0.914 →
-  // false) tout en couvrant les variantes sans espace ("krash karma"/"krashkarma" Jaro=0.97 →
-  // true). Les troncatures TM ("aliz"/"alizee", "fawn"/"fawnn") passent par containment.
-  private static final double SEUIL_JARO_ARTISTE = 0.95;
-  private static final int LONGUEUR_MIN_CONTAINMENT_ARTISTE = 4;
-  private static final double RATIO_MIN_CONTAINMENT_ARTISTE = 0.65;
-
   private record ArtisteExistant(String artisteNorm, UUID artisteId) {}
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -54,22 +47,12 @@ public class ReconciliateurArtistes {
 
   /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
   ///
-  /// Jaro ≥ 0.95 (meilleur que Levenshtein pour les noms propres courts) complété par un
-  /// containment avec ratio court/long ≥ 0.65 pour les troncatures TM ("aliz"/"alizee",
-  /// "fawn"/"fawnn") et les variations longues ("star academy"/"star academy 1").
-  ///
   /// @param a premier nom normalisé
   /// @param b deuxième nom normalisé
   /// @return {@code true} si les artistes sont considérés identiques
+  /// @see CorrespondanceArtiste#estDoublonArtiste
   public static boolean estDoublonArtiste(String a, String b) {
-    if (a.equals(b)) return true;
-    if (Normalisation.jaro(a, b) >= SEUIL_JARO_ARTISTE) return true;
-    String court = a.length() <= b.length() ? a : b;
-    String plusLong = a.length() <= b.length() ? b : a;
-    double ratio = (double) court.length() / plusLong.length();
-    return court.length() >= LONGUEUR_MIN_CONTAINMENT_ARTISTE
-        && ratio >= RATIO_MIN_CONTAINMENT_ARTISTE
-        && plusLong.contains(court);
+    return CorrespondanceArtiste.estDoublonArtiste(a, b);
   }
 
   /// Résout les chaînes de remplacement transitives : si A→B et B→C, met à jour A→C.

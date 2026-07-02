@@ -5,6 +5,8 @@
 package fr.strapontin.web.salle;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.core.CorrespondanceSalle;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
@@ -18,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -121,7 +124,10 @@ public class SalleService {
 
   /// Ajoute une salle à la liste de suivi dans une transaction atomique.
   ///
-  /// <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation.
+  /// <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation. La
+  /// résolution de la salle dans le référentiel global tolère les variantes orthographiques
+  /// mineures (voir {@link #resoudreSalleUuid}) pour éviter de créer un doublon d'UUID pour une
+  /// salle déjà présente sous une graphie légèrement différente.
   ///
   /// @param userId    identifiant de l'utilisateur
   /// @param nom       nom de la salle (non-vide, max 200 car.)
@@ -135,7 +141,7 @@ public class SalleService {
       throw new ErreurMetier("Nom de salle invalide.");
     }
 
-    UUID salleUuid = salleRepository.upsertSalle(salleCle, nom);
+    UUID salleUuid = resoudreSalleUuid(nom, salleCle);
     if (salleRepository.existePourUtilisateur(userId, salleUuid)) {
       throw new RessourceDejaExistante("Cette salle est déjà dans votre liste.");
     }
@@ -149,6 +155,42 @@ public class SalleService {
     salleRepository.ajouterPourUtilisateur(userId, salleUuid);
 
     declencherWorkerParSources(salleUuid);
+  }
+
+  /// Résout l'UUID d'une salle dans le référentiel global, en réutilisant une salle existante
+  /// dont le nom est un doublon flou plutôt que d'en créer une nouvelle. La comparaison floue
+  /// utilise {@link CorrespondanceSalle#estDoublonSalle} sur le nom normalisé au sens de
+  /// {@link Normalisation#normaliserTexte} (même algorithme que {@code ReconciliateurSalles} côté
+  /// worker et {@code WikidataSalleSource} côté enrichissement) plutôt que {@link #estMemeSalle} —
+  /// {@code salle_cle} concatène tous les caractères alphanumériques sans espace, ce qui rend le
+  /// Jaccard sur tokens inopérant ; {@code nom} conserve les espaces nécessaires à la
+  /// tokenisation. En cas de correspondance exacte de {@code salle_cle}, passe par
+  /// {@code upsertSalle} pour conserver le comportement existant de mise à jour du nom affiché ;
+  /// en cas de correspondance floue seulement, réutilise l'UUID existant sans toucher au nom déjà
+  /// établi.
+  ///
+  /// @param nom      nom affiché tel que saisi
+  /// @param salleCle clé normalisée ({@link #normaliserSalleCle})
+  /// @return UUID de la salle existante ou nouvellement créée
+  private UUID resoudreSalleUuid(String nom, String salleCle) {
+    Set<String> tokens =
+        Arrays.stream(nom.split("\\s+"))
+            .map(SalleService::normaliserSalleCle)
+            .filter(t -> t.length() >= 3)
+            .collect(Collectors.toSet());
+    String nomNormCible = Normalisation.normaliserTexte(nom);
+    for (Map<String, Object> candidat : salleRepository.chercherCandidatsParCle(tokens)) {
+      String cleCandidate = (String) candidat.get("salle_cle");
+      if (cleCandidate.equals(salleCle)) {
+        return salleRepository.upsertSalle(salleCle, nom);
+      }
+      String nomCandidat = (String) candidat.get("nom");
+      if (CorrespondanceSalle.estDoublonSalle(
+          nomNormCible, Normalisation.normaliserTexte(nomCandidat))) {
+        return (UUID) candidat.get("id");
+      }
+    }
+    return salleRepository.upsertSalle(salleCle, nom);
   }
 
   /// Déclenche immédiatement un fetch pour une salle identifiée par son UUID.
@@ -288,7 +330,8 @@ public class SalleService {
           .map(
               v -> {
                 String nomBrut = (String) v.get("name");
-                if (nomBrut == null) return new ResultatSalle(null, null, null, null, "ticketmaster");
+                if (nomBrut == null)
+                  return new ResultatSalle(null, null, null, null, "ticketmaster");
                 String nom = TicketmasterSource.normaliserCasse(nomBrut);
                 if (nomBrut.contains("??")) {
                   log.warn("TM salle nom corrompu id={} nom='{}'", v.get("id"), nomBrut);
