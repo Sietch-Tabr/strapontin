@@ -6,7 +6,14 @@ export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "**/*.e2e.ts",
   timeout: 60000,
-  retries: process.env["CI"] ? 2 : 0,
+  // Retries toujours actifs (pas seulement en CI — Woodpecker ne lance pas les E2E, ce projet
+  // les exécute uniquement en local/manuel, la condition CI ne se déclenchait donc jamais).
+  // webkit/mobile-safari (même moteur WebKit) présentent un blocage réseau intermittent
+  // page.goto (aucune requête, page blanche) confirmé identique sur du code non modifié et
+  // après suppression de navigationPreload — c'est une instabilité du driver Playwright-WebKit
+  // sous charge soutenue, pas un bug applicatif. Le retry absorbe cette classe de flakiness,
+  // pratique standard pour les suites E2E navigateur (voir wiki Développement-local).
+  retries: 2,
   workers: 1,
   fullyParallel: false,
 

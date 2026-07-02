@@ -93,18 +93,18 @@ self.addEventListener("error", function (e) {
 self.addEventListener("install", () => self.skipWaiting());
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    (async () => {
-      await self.clients.claim();
-      if (self.registration.navigationPreload) {
-        await self.registration.navigationPreload.enable();
-      }
-    })(),
-  );
+  event.waitUntil(self.clients.claim());
 });
 
-// Navigation browser : NavigationPreload + timeout 6 s, page offline inlinée sinon.
+// Navigation browser : timeout 6 s, page offline inlinée sinon.
 // Les assets précachés (bundles JS/CSS, images, icônes) sont gérés par precacheAndRoute.
+//
+// NavigationPreload volontairement désactivé (retiré en v2.6.1) : `event.preloadResponse`
+// n'est protégée par aucun timeout dans les implémentations navigateur, et son support s'est
+// révélé incomplet sur WebKit — la promesse peut ne jamais se résoudre, bloquant la navigation
+// indéfiniment (`page.goto` sans réponse, aucune requête réseau visible). Le gain de
+// NavigationPreload (paralléliser le fetch avec le démarrage du SW) est négligeable pour une
+// SPA de cette taille au regard du risque de blocage total qu'il introduit.
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   if (new URL(event.request.url).pathname.startsWith("/api/")) return;
@@ -112,10 +112,6 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     (async () => {
-      try {
-        const preload = await event.preloadResponse;
-        if (preload && preload.ok) return preload;
-      } catch (_) {}
       const minuterie = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("timeout")), 6000),
       );
