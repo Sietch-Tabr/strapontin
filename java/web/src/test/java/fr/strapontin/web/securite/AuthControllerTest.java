@@ -24,7 +24,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 
 /// Tests unitaires pour {@link AuthController} — challenge TOTP et réinitialisation de mot de
-// passe.
+/// passe.
 ///
 /// @since 2.2.5
 /// @author Kwaite

@@ -110,7 +110,8 @@ class EnrichissementSallesServiceTest {
             Map.of(salleId, new EnrichissementSalle(null, "Salle X Canonique", null, null, null)));
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(source1, source2, source3), logsAdminWorkerMock());
+        new EnrichissementSallesService(
+            jdbc, List.of(source1, source2, source3), logsAdminWorkerMock());
     int nb = service.enrichir();
 
     assertEquals(1, nb);
@@ -164,7 +165,8 @@ class EnrichissementSallesServiceTest {
               return resultat;
             });
 
-    EnrichissementSallesService service = new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorkerMock());
+    EnrichissementSallesService service =
+        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorkerMock());
     int nb = service.enrichir();
 
     assertEquals(30, nb);
@@ -179,7 +181,8 @@ class EnrichissementSallesServiceTest {
   // Régression prod (2 juillet 2026, cycle 06h25) : deux salles distinctes matchées sur le même
   // wikidataId ont fait remonter une DuplicateKeyException (idx_salles_wikidata_id) qui a tué tout
   // le cycle de réconciliation nocturne avant le traitement des lots suivants. Le conflit doit être
-  // isolé à la salle concernée, loggé, et ne jamais interrompre le reste du lot ni les lots suivants.
+  // isolé à la salle concernée, loggé, et ne jamais interrompre le reste du lot ni les lots
+  // suivants.
   @Test
   @SuppressWarnings("unchecked")
   void enrichir_wikidataIdDejaAttribueAUneAutreSalle_loggeLeConflitEtContinueLesAutresSalles() {
@@ -187,11 +190,12 @@ class EnrichissementSallesServiceTest {
     UUID salleOk = UUID.randomUUID();
     SalleAEnrichir candidatConflit =
         new SalleAEnrichir(salleEnConflit, "Orleans Arena", "orleans arena", null, null, null);
-    SalleAEnrichir candidatOk =
-        new SalleAEnrichir(salleOk, "Zenith", "zenith", null, null, null);
+    SalleAEnrichir candidatOk = new SalleAEnrichir(salleOk, "Zenith", "zenith", null, null, null);
     NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidatConflit, candidatOk));
-    when(jdbc.update(anyString(), org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
-            params -> salleEnConflit.toString().equals(params.get("id")))))
+    when(jdbc.update(
+            anyString(),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                params -> salleEnConflit.toString().equals(params.get("id")))))
         .thenThrow(new DuplicateKeyException("idx_salles_wikidata_id"));
 
     SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);

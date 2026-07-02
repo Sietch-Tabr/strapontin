@@ -181,11 +181,12 @@ public class EnrichissementArtistesService {
             : a.ticketmasterAttractionId());
   }
 
-  /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
-  ///     découvert est déjà porté par un autre artiste (contrainte {@code idx_artistes_wikidata_id})
-  ///     — signe d'un faux positif de correspondance ou d'un doublon non encore fusionné (#710) ; le
-  ///     conflit est loggé plutôt que de faire échouer tout le cycle de réconciliation, et la
-  ///     cross-validation P6262 associée est également sautée (basée sur le même enrichissement).
+  /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code
+  ///     wikidataId} découvert est déjà porté par un autre artiste (contrainte {@code
+  ///     idx_artistes_wikidata_id}) — signe d'un faux positif de correspondance ou d'un doublon
+  ///     non encore fusionné (#710) ; le conflit est loggé plutôt que de faire échouer tout le
+  ///     cycle de réconciliation, et la cross-validation P6262 associée est également sautée
+  ///     (basée sur le même enrichissement).
   private boolean mettreAJourArtiste(UUID artisteId, String nom, EnrichissementArtiste e) {
     Map<String, Object> params = new HashMap<>();
     params.put("wikidataId", e.wikidataId());

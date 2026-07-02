@@ -45,7 +45,7 @@ public class ReferentielSallesService {
   /// @param ville            filtre ville partielle, peut être null
   /// @param dept             filtre département exact, peut être null
   /// @param statut           filtre {@code "vivant"}/{@code "suspect"}/{@code "mort"}, peut être
-  // null
+  ///     null
   /// @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id}
   ///     — facilite le repérage des candidats à corriger manuellement sans parcourir toute la
   ///     pagination (une salle avec beaucoup de concerts liés peut être loin dans le tri par
@@ -146,7 +146,10 @@ public class ReferentielSallesService {
             Map.of("id", salleId.toString()));
     if (nb > 0) {
       logAdminService.logAdmin(
-          "info", "admin", "enrichissement salle réinitialisé", Map.of("salleId", salleId.toString()));
+          "info",
+          "admin",
+          "enrichissement salle réinitialisé",
+          Map.of("salleId", salleId.toString()));
     }
     return nb > 0;
   }

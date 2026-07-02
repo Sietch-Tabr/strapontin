@@ -43,7 +43,7 @@ public class ReferentielArtistesService {
   /// @param page             numéro de page (0-indexé)
   /// @param nom              filtre nom partiel (insensible à la casse), peut être null
   /// @param statut           filtre {@code "vivant"}/{@code "suspect"}/{@code "mort"}, peut être
-  // null
+  ///     null
   /// @param wikidataManquant si {@code true}, ne retourne que les artistes sans {@code wikidata_id}
   ///     — facilite le repérage des candidats à corriger manuellement sans parcourir toute la
   ///     pagination

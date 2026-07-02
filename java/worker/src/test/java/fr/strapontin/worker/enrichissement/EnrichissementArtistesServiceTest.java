@@ -224,20 +224,15 @@ class EnrichissementArtistesServiceTest {
   @Test
   void enrichir_wikidataIdDejaAttribueAUnAutreArtiste_loggeLeConflitEtSauteLaCrossValidation() {
     UUID artisteEnConflit = UUID.randomUUID();
-    ArtisteAEnrichir candidat =
-        new ArtisteAEnrichir(artisteEnConflit, "Jain", "jain", null, null);
+    ArtisteAEnrichir candidat = new ArtisteAEnrichir(artisteEnConflit, "Jain", "jain", null, null);
     NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
-    when(jdbc.update(
-            org.mockito.ArgumentMatchers.contains("UPDATE artistes"),
-            anyMap()))
+    when(jdbc.update(org.mockito.ArgumentMatchers.contains("UPDATE artistes"), anyMap()))
         .thenThrow(new DuplicateKeyException("idx_artistes_wikidata_id"));
 
     SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
     when(wikidata.enrichirLot(any()))
         .thenReturn(
-            Map.of(
-                artisteEnConflit,
-                new EnrichissementArtiste("Q1", "Jain", null, "K8vZ917oGV7")));
+            Map.of(artisteEnConflit, new EnrichissementArtiste("Q1", "Jain", null, "K8vZ917oGV7")));
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementArtistesService service =
