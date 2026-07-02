@@ -110,4 +110,26 @@ public class LogAdminService {
                 rs.getString("message"),
                 rs.getString("meta")));
   }
+
+  /// Retourne les entrées de niveau {@code error} postérieures à {@code tsDepuis} (#765).
+  ///
+  /// @param tsDepuis horodatage Unix en millisecondes, exclusif
+  /// @return les entrées d'erreur, de la plus ancienne à la plus récente
+  public List<EntreeLogAdmin> lireErreursDepuis(long tsDepuis) {
+    return jdbc.query(
+        """
+        SELECT ts, niveau, source, message, meta::text
+        FROM logs_admin
+        WHERE niveau = 'error' AND ts > :tsDepuis
+        ORDER BY ts
+        """,
+        Map.of("tsDepuis", tsDepuis),
+        (rs, _) ->
+            new EntreeLogAdmin(
+                rs.getLong("ts"),
+                rs.getString("niveau"),
+                rs.getString("source"),
+                rs.getString("message"),
+                rs.getString("meta")));
+  }
 }

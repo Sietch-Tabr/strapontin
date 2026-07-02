@@ -7,6 +7,7 @@ package fr.strapontin.web.email;
 import com.resend.Resend;
 import com.resend.core.exception.ResendException;
 import com.resend.services.emails.model.CreateEmailOptions;
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -620,6 +621,42 @@ public class EmailService {
       log.info("Alerte worker envoyée : emailHash={}", email.hashCode());
     } catch (Exception e) {
       log.error("Échec envoi alerte worker", e);
+    }
+  }
+
+  /// Envoie un digest des nouvelles entrées {@code logs_admin} de niveau erreur (#765).
+  ///
+  /// @param email   l'adresse email de l'administrateur
+  /// @param erreurs les entrées d'erreur à inclure dans le digest (non vide)
+  /// @return {@code true} si l'email a effectivement été envoyé, {@code false} sinon
+  ///     (RESEND_API_KEY absent ou échec d'envoi) — dans ce cas le curseur ne doit pas avancer
+  ///     côté appelant, pour ne perdre aucune erreur en cas de panne temporaire de Resend
+  public boolean envoyerAlerteLogsAdmin(
+      String email, List<LogAdminService.EntreeLogAdmin> erreurs) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — alerte logs admin non envoyée");
+      return false;
+    }
+
+    String corps = EmailTemplates.alerteLogsAdmin(erreurs, ctx.get().baseUrl());
+    String sujet = "Strapontin — " + erreurs.size() + " nouvelle(s) erreur(s) admin";
+    try {
+      envoyer(
+          ctx.get(),
+          email,
+          ctx.get().expediteur(),
+          sujet,
+          corps,
+          erreurs.size()
+              + " nouvelle(s) erreur(s) dans logs_admin. Consultez l'administration : "
+              + ctx.get().baseUrl()
+              + "/admin");
+      log.info("Alerte logs admin envoyée : emailHash={} nb={}", email.hashCode(), erreurs.size());
+      return true;
+    } catch (Exception e) {
+      log.error("Échec envoi alerte logs admin", e);
+      return false;
     }
   }
 

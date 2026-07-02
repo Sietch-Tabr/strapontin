@@ -134,6 +134,74 @@ class SalleServiceTest {
     assertThrows(ErreurMetier.class, () -> salleService.ajouter("u1", "Olympia", null));
   }
 
+  // #718 : sélection d'une suggestion Nominatim à l'ajout — persiste osmId (salle_sources) et
+  // wikidataId (salles.wikidata_id) sans attendre le job nocturne.
+  @Test
+  void ajouter_osmIdEtWikidataIdFournis_persisteLesDeux() {
+    UUID uuid = UUID.randomUUID();
+    when(salleRepository.chercherCandidatsParCle(any())).thenReturn(List.of());
+    when(salleRepository.upsertSalle("rockstore", "Rockstore")).thenReturn(uuid);
+    when(salleRepository.existePourUtilisateur("u1", uuid)).thenReturn(false);
+    when(salleRepository.compterPourUtilisateur("u1")).thenReturn(0);
+
+    salleService.ajouter("u1", "Rockstore", null, "way/12345", "Q3438008");
+
+    verify(salleRepository).enregistrerSalleSource(uuid, "osm", "way/12345");
+    verify(salleRepository).mettreAJourWikidataId(uuid, "Q3438008");
+    verify(salleRepository).ajouterPourUtilisateur("u1", uuid);
+  }
+
+  // #718 : conflit sur idx_salles_wikidata_id (Q-ID déjà porté par une autre salle) — rattrapé,
+  // ne doit jamais faire échouer l'ajout à la liste de suivi.
+  @Test
+  void ajouter_wikidataIdDejaAttribueAUneAutreSalle_neFaitPasEchouerLajout() {
+    UUID uuid = UUID.randomUUID();
+    when(salleRepository.chercherCandidatsParCle(any())).thenReturn(List.of());
+    when(salleRepository.upsertSalle("rockstore", "Rockstore")).thenReturn(uuid);
+    when(salleRepository.existePourUtilisateur("u1", uuid)).thenReturn(false);
+    when(salleRepository.compterPourUtilisateur("u1")).thenReturn(0);
+    org.mockito.Mockito.doThrow(new org.springframework.dao.DuplicateKeyException("conflit"))
+        .when(salleRepository)
+        .mettreAJourWikidataId(uuid, "Q3438008");
+
+    org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+        () -> salleService.ajouter("u1", "Rockstore", null, null, "Q3438008"));
+
+    verify(salleRepository).ajouterPourUtilisateur("u1", uuid);
+  }
+
+  // #718 : deux résultats externes désignant la même salle (Nominatim + Ticketmaster) doivent
+  // fusionner en une seule suggestion combinant osmId et tmVenueId, pas créer un doublon.
+  @Test
+  void fusionnerOuAjouter_candidatCorrespondantExistant_fusionneLesIdentifiants() {
+    List<ResultatSalle> liste =
+        new java.util.ArrayList<>(
+            List.of(
+                new ResultatSalle("Rockstore", "Montpellier", null, null, "osm", "way/1", "Q1")));
+    ResultatSalle candidatTm = new ResultatSalle("Rockstore", null, "tm123", null, "ticketmaster");
+
+    SalleService.fusionnerOuAjouter(liste, candidatTm);
+
+    assertEquals(1, liste.size());
+    ResultatSalle fusionne = liste.get(0);
+    assertEquals("tm123", fusionne.tmVenueId());
+    assertEquals("way/1", fusionne.osmId());
+    assertEquals("Q1", fusionne.wikidataId());
+    assertEquals("Montpellier", fusionne.ville());
+  }
+
+  @Test
+  void fusionnerOuAjouter_candidatSansCorrespondance_ajouteNouvelleEntree() {
+    List<ResultatSalle> liste = new java.util.ArrayList<>();
+    ResultatSalle candidat =
+        new ResultatSalle("Bataclan", "Paris", null, null, "osm", "way/2", "Q2");
+
+    SalleService.fusionnerOuAjouter(liste, candidat);
+
+    assertEquals(1, liste.size());
+    assertEquals("Bataclan", liste.get(0).salle());
+  }
+
   @Test
   void mettreAJourSalle_appelleRepository() {
     UUID uuid = UUID.randomUUID();

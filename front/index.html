@@ -20,6 +20,14 @@
   </head>
   <body>
     <div id="app"></div>
+    <!--
+      #766 : filet de secours hors bundle (premier lancement PWA hors-ligne avant toute
+      synchronisation — le service worker n'a pas encore eu l'occasion de précacher les assets).
+      Sans lui, un échec réseau sur /src/main.js laisse #app vide indéfiniment : écran noir sans
+      aucun message. Script externe (public/offline-fallback.js), jamais inline : la Content
+      Security Policy de l'application impose script-src 'self' sans unsafe-inline.
+    -->
+    <script src="/offline-fallback.js"></script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

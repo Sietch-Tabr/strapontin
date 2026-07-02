@@ -57,7 +57,7 @@ public class ArtisteController {
   public ResponseEntity<Map<String, Object>> ajouterArtiste(
       @Valid @RequestBody RequeteAjouter requete, Authentication auth) {
     String userId = utilisateur(auth).id();
-    artisteService.ajouter(userId, requete.nom().strip());
+    artisteService.ajouter(userId, requete.nom().strip(), requete.wikidataId());
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }
 

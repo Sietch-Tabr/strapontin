@@ -5,6 +5,7 @@
 package fr.strapontin.web.utilisateur;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.core.FiltreArtiste;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.admin.LogAdminService;
 import java.net.URI;
@@ -205,6 +206,10 @@ public class PreferencesService {
     int traites = 0, rejetes = 0;
     for (ArtisteExport a : artistes) {
       if (a.nom() == null || a.nom().isBlank()) {
+        rejetes++;
+        continue;
+      }
+      if (FiltreArtiste.estTribute(a.nom())) {
         rejetes++;
         continue;
       }

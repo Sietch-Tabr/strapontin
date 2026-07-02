@@ -62,14 +62,14 @@ class ArtisteControllerTest {
 
     assertEquals(HttpStatus.CREATED, rep.getStatusCode());
     assertEquals(true, rep.getBody().get("succes"));
-    verify(artisteService).ajouter("user-1", "Radiohead");
+    verify(artisteService).ajouter("user-1", "Radiohead", null);
   }
 
   @Test
   void ajouterArtiste_artisteDejaPresent_propageLexception() {
     doThrow(new RessourceDejaExistante("Déjà suivi."))
         .when(artisteService)
-        .ajouter(eq("user-1"), anyString());
+        .ajouter(eq("user-1"), anyString(), any());
 
     assertThrows(
         RessourceDejaExistante.class,

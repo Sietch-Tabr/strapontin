@@ -7,6 +7,7 @@ package fr.strapontin.web.artiste;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.CorrespondanceSalle;
+import fr.strapontin.core.FiltreArtiste;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
@@ -24,9 +25,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +44,17 @@ public class ArtisteService {
 
   private static final Logger log = LoggerFactory.getLogger(ArtisteService.class);
   private static final String DEEZER_URL = "https://api.deezer.com/search/artist";
+  private static final String WIKIDATA_API_URL = "https://www.wikidata.org/w/api.php";
+  private static final String WIKIDATA_USER_AGENT =
+      "Strapontin/2.6.1 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
+  // Mots-clés (description Wikidata, fr/en) distinguant un artiste musical ou un humoriste
+  // (#717, #767) des homonymes non pertinents pour l'autocomplete.
+  private static final Pattern MOTS_CLES_ARTISTE =
+      Pattern.compile(
+          "chanteur|chanteuse|musicien|musicienne|rappeur|rappeuse|compositeur|compositrice"
+              + "|groupe|humoriste|dj\\b"
+              + "|singer|rapper|musician|band|composer|songwriter|comedian|humorist",
+          Pattern.CASE_INSENSITIVE);
   private static final int CAP_ARTISTES = 500;
 
   private final ArtisteRepository artisteRepository;
@@ -63,7 +77,9 @@ public class ArtisteService {
 
   /// Liste les artistes suivis, avec suggestions si {@code q} est fourni.
   ///
-  /// <p>Complète la base avec l'API Deezer si moins de 3 résultats locaux.
+  /// <p>Complète la base avec Wikidata Search (#717) puis, si toujours moins de 3 résultats,
+  /// avec l'API Deezer (comportement historique conservé en dernier repli — utile pour les
+  /// artistes émergents sans page Wikidata).
   ///
   /// @param userId    identifiant de l'utilisateur
   /// @param q         terme de recherche (optionnel, min 2 caractères)
@@ -91,21 +107,19 @@ public class ArtisteService {
               .map(a -> new SuggestionArtiste(a, "base"))
               .collect(Collectors.toCollection(ArrayList::new));
 
-      if (resultatsSuggestions.size() < 3) {
-        List<SuggestionArtiste> deezer = rechercherDeezer(recherche);
-        Set<String> nomsDejaPresents =
-            resultatsSuggestions.stream()
-                .map(s -> Normalisation.normaliserTexte(s.nom()))
-                .collect(Collectors.toCollection(HashSet::new));
-        nomsDejaPresents.addAll(nomsSuivisNorm);
+      Set<String> nomsDejaPresents =
+          resultatsSuggestions.stream()
+              .map(s -> Normalisation.normaliserTexte(s.nom()))
+              .collect(Collectors.toCollection(HashSet::new));
+      nomsDejaPresents.addAll(nomsSuivisNorm);
 
-        for (SuggestionArtiste r : deezer) {
-          String norm = Normalisation.normaliserTexte(r.nom());
-          if (!nomsDejaPresents.contains(norm)) {
-            resultatsSuggestions.add(r);
-            nomsDejaPresents.add(norm);
-          }
-        }
+      if (resultatsSuggestions.size() < 3) {
+        ajouterSuggestionsInedites(
+            resultatsSuggestions, nomsDejaPresents, rechercherWikidata(recherche));
+      }
+      if (resultatsSuggestions.size() < 3) {
+        ajouterSuggestionsInedites(
+            resultatsSuggestions, nomsDejaPresents, rechercherDeezer(recherche));
       }
 
       suggestions = resultatsSuggestions;
@@ -113,6 +127,17 @@ public class ArtisteService {
     }
 
     return new ReponseArtistes(artistes, suggestions, dejaLeSuivi);
+  }
+
+  private static void ajouterSuggestionsInedites(
+      List<SuggestionArtiste> cible, Set<String> nomsDejaPresents, List<SuggestionArtiste> source) {
+    for (SuggestionArtiste r : source) {
+      String norm = Normalisation.normaliserTexte(r.nom());
+      if (!nomsDejaPresents.contains(norm)) {
+        cible.add(r);
+        nomsDejaPresents.add(norm);
+      }
+    }
   }
 
   /// Ajoute un artiste à la liste de suivi dans une transaction atomique.
@@ -126,9 +151,42 @@ public class ArtisteService {
   /// @param userId identifiant de l'utilisateur
   /// @param nom    nom de l'artiste (non-vide, max 200 car.)
   /// @throws RessourceDejaExistante si l'artiste est déjà suivi
-  /// @throws ErreurMetier si le cap de 500 artistes est atteint
+  /// @throws ErreurMetier si le nom est un tribute/hommage (#768) ou si le cap de 500 artistes
+  ///     est atteint
   @Transactional
   public void ajouter(String userId, String nom) {
+    ajouter(userId, nom, null);
+  }
+
+  /// Ajoute un artiste à la liste de suivi dans une transaction atomique.
+  ///
+  /// <p>Vérifie le doublon et le cap avant l'insertion. La résolution de l'artiste dans le
+  /// référentiel global tolère les variantes orthographiques mineures (voir
+  /// {@link #resoudreArtisteId}) pour éviter de créer un doublon d'UUID pour un artiste déjà
+  /// présent sous une graphie légèrement différente (ex. "Krash Karma" / "KrashKarma" — cas réel
+  /// ayant nécessité une fusion manuelle en base avant ce correctif, v2.6.0).
+  ///
+  /// <p>Si {@code wikidataId} est fourni (l'utilisateur a choisi une suggestion Wikidata plutôt
+  /// que de saisir un nom libre, #717), résout le P2722 (Deezer ID) via {@code wbgetentities} et
+  /// persiste les IDs stables immédiatement, sans attendre le job d'enrichissement nocturne
+  /// (#706). Un conflit sur l'index unique {@code idx_artistes_wikidata_id} (Q-ID déjà porté par
+  /// un autre artiste) est rattrapé et loggé plutôt que de faire échouer l'ajout — même pattern
+  /// que {@code EnrichissementArtistesService} (jalon 2.6.0) : mieux vaut suivre l'artiste sans
+  /// son Q-ID que ne pas pouvoir le suivre du tout.
+  ///
+  /// @param userId     identifiant de l'utilisateur
+  /// @param nom        nom de l'artiste (non-vide, max 200 car.)
+  /// @param wikidataId Q-ID Wikidata optionnel (peut être {@code null})
+  /// @throws RessourceDejaExistante si l'artiste est déjà suivi
+  /// @throws ErreurMetier si le nom est un tribute/hommage (#768) ou si le cap de 500 artistes
+  ///     est atteint
+  @Transactional
+  public void ajouter(String userId, String nom, String wikidataId) {
+    if (FiltreArtiste.estTribute(nom)) {
+      throw new ErreurMetier(
+          "Ce nom ressemble à un hommage/tribute — suivez l'artiste original plutôt que"
+              + " l'attraction dédiée.");
+    }
     String normalise = Normalisation.normaliserTexte(nom);
 
     UUID artisteId = resoudreArtisteId(nom, normalise);
@@ -140,7 +198,31 @@ public class ArtisteService {
     }
 
     artisteRepository.ajouter(userId, nom, artisteId);
+    if (wikidataId != null && !wikidataId.isBlank()) {
+      resoudreEtPersisterWikidata(artisteId, nom, wikidataId);
+    }
     declencherWorkerArtiste();
+  }
+
+  private void resoudreEtPersisterWikidata(UUID artisteId, String nom, String wikidataId) {
+    try {
+      artisteRepository.enregistrerArtisteSource(artisteId, "wikidata", wikidataId);
+      String deezerId = resoudreDeezerId(wikidataId);
+      if (deezerId != null) {
+        artisteRepository.enregistrerArtisteSource(artisteId, "deezer", deezerId);
+      }
+      artisteRepository.mettreAJourIdsWikidata(artisteId, wikidataId, deezerId);
+    } catch (DuplicateKeyException e) {
+      log.warn(
+          "wikidataId déjà attribué à un autre artiste — conflit ignoré artiste={} wikidataId={}",
+          nom,
+          wikidataId);
+      logAdminService.logAdmin(
+          "warn",
+          "enrichissement-wikidata",
+          "wikidataId déjà attribué à un autre artiste — conflit ignoré",
+          Map.of("artiste", nom, "wikidataId", wikidataId));
+    }
   }
 
   /// Résout l'UUID d'un artiste dans le référentiel global, en réutilisant un artiste existant
@@ -180,6 +262,117 @@ public class ArtisteService {
         "web",
         "artiste supprimé",
         Map.of("userId", userId, "artisteId", artisteId.toString()));
+  }
+
+  /// Recherche des artistes par nom via Wikidata Search ({@code wbsearchentities}, #717).
+  ///
+  /// <p>Ne résout pas le P2722 (Deezer ID) à ce stade — un appel {@code wbgetentities}
+  /// supplémentaire par candidat serait disproportionné pour de l'autocomplete interactif ; le
+  /// P2722 n'est résolu qu'à la sélection effective (voir {@link #resoudreDeezerId}).
+  ///
+  /// @param terme terme de recherche saisi par l'utilisateur
+  /// @return suggestions Wikidata filtrées par mots-clés de description, vide si aucune ou en
+  ///     cas d'échec réseau
+  private List<SuggestionArtiste> rechercherWikidata(String terme) {
+    try {
+      String url =
+          WIKIDATA_API_URL
+              + "?action=wbsearchentities&search="
+              + URLEncoder.encode(terme, StandardCharsets.UTF_8)
+              + "&language=fr&format=json&type=item&limit=6";
+      HttpRequest request =
+          HttpRequest.newBuilder()
+              .uri(URI.create(url))
+              .header("User-Agent", WIKIDATA_USER_AGENT)
+              .timeout(Duration.ofSeconds(5))
+              .GET()
+              .build();
+      HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      if (response.statusCode() != 200) {
+        log.warn("Wikidata Search erreur HTTP {} pour '{}'", response.statusCode(), terme);
+        return List.of();
+      }
+      return parseWikidataResultats(response.body());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return List.of();
+    } catch (Exception e) {
+      log.warn("Wikidata Search échouée pour '{}'", terme, e);
+      return List.of();
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<SuggestionArtiste> parseWikidataResultats(String json) {
+    List<SuggestionArtiste> resultats = new ArrayList<>();
+    try {
+      Map<String, Object> root = objectMapper.readValue(json, Map.class);
+      List<Map<String, Object>> search = (List<Map<String, Object>>) root.get("search");
+      if (search == null) return resultats;
+
+      for (Map<String, Object> item : search) {
+        String label = (String) item.get("label");
+        String id = (String) item.get("id");
+        if (label == null || label.isBlank() || id == null) continue;
+        String description = (String) item.get("description");
+        // Description absente : on ne peut ni confirmer ni exclure — on garde plutôt que de
+        // priver l'utilisateur d'un résultat potentiellement pertinent (simple suggestion,
+        // l'utilisateur reste seul décideur au clic).
+        if (description != null && !MOTS_CLES_ARTISTE.matcher(description).find()) continue;
+        resultats.add(new SuggestionArtiste(label, "wikidata", description, id));
+      }
+    } catch (Exception _) {
+      log.warn("Wikidata Search parsing JSON échoué");
+    }
+    return resultats;
+  }
+
+  /// Résout le P2722 (Deezer ID) d'un artiste Wikidata via {@code wbgetentities}.
+  ///
+  /// <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
+  /// ({@code Mockito.spy}) évitant un appel réseau réel vers Wikidata en test unitaire.
+  ///
+  /// @param wikidataId Q-ID Wikidata
+  /// @return identifiant Deezer, ou {@code null} si absent ou en cas d'échec réseau
+  @SuppressWarnings("unchecked")
+  String resoudreDeezerId(String wikidataId) {
+    try {
+      String url =
+          WIKIDATA_API_URL
+              + "?action=wbgetentities&ids="
+              + wikidataId
+              + "&props=claims&format=json";
+      HttpRequest request =
+          HttpRequest.newBuilder()
+              .uri(URI.create(url))
+              .header("User-Agent", WIKIDATA_USER_AGENT)
+              .timeout(Duration.ofSeconds(5))
+              .GET()
+              .build();
+      HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      if (response.statusCode() != 200) return null;
+
+      Map<String, Object> root = objectMapper.readValue(response.body(), Map.class);
+      Map<String, Object> entities = (Map<String, Object>) root.get("entities");
+      if (entities == null) return null;
+      Map<String, Object> entite = (Map<String, Object>) entities.get(wikidataId);
+      if (entite == null) return null;
+      Map<String, Object> claims = (Map<String, Object>) entite.get("claims");
+      if (claims == null) return null;
+      List<Map<String, Object>> p2722 = (List<Map<String, Object>>) claims.get("P2722");
+      if (p2722 == null || p2722.isEmpty()) return null;
+      Map<String, Object> mainsnak = (Map<String, Object>) p2722.get(0).get("mainsnak");
+      Map<String, Object> datavalue = (Map<String, Object>) mainsnak.get("datavalue");
+      return (String) datavalue.get("value");
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
+    } catch (Exception e) {
+      log.warn("Wikidata wbgetentities échoué pour '{}'", wikidataId, e);
+      return null;
+    }
   }
 
   private List<SuggestionArtiste> rechercherDeezer(String terme) {

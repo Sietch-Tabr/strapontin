@@ -272,6 +272,22 @@ class SalleRepository {
     return nb > 0;
   }
 
+  /// Met à jour {@code wikidata_id} d'une salle si absent (#718) — ne touche jamais une valeur
+  /// déjà résolue par le job nocturne ({@code COALESCE}). Peut lever
+  /// {@link org.springframework.dao.DuplicateKeyException} ({@code idx_salles_wikidata_id}) — à
+  /// la charge de l'appelant (même piège qu'{@code EnrichissementSallesService}, jalon 2.6.0).
+  ///
+  /// @param salleUuid  UUID stable de la salle
+  /// @param wikidataId Q-ID Wikidata
+  void mettreAJourWikidataId(UUID salleUuid, String wikidataId) {
+    jdbc.update(
+        """
+        UPDATE salles SET wikidata_id = COALESCE(wikidata_id, :wikidataId)
+        WHERE id = CAST(:uuid AS uuid)
+        """,
+        Map.of("uuid", salleUuid.toString(), "wikidataId", wikidataId));
+  }
+
   /// Enregistre une correspondance source externe → salle interne.
   ///
   /// @param salleUuid           UUID stable de la salle

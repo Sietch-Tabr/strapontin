@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -225,7 +226,13 @@ public class WikidataSalleSource implements SourceEnrichissementSalle {
     return Optional.empty();
   }
 
-  /// Cherche une correspondance floue ({@link CorrespondanceSalle#estDoublonSalle}) sur le
+  // Nombre minimal de tokens significatifs cibles pour appliquer le containment asymétrique
+  // (#769) — évite qu'un nom d'un seul mot ("galaxie") soit considéré contenu dans n'importe
+  // quel candidat plus long au seul motif qu'il partage ce mot.
+  private static final int TAILLE_MIN_TOKENS_CONTAINMENT = 2;
+
+  /// Cherche une correspondance floue ({@link CorrespondanceSalle#estDoublonSalle}, complété par
+  /// un containment de tokens asymétrique, cf. {@link #estCorrespondanceAsymetrique}) sur le
   /// libellé principal Wikidata ou l'un de ses alias.
   ///
   /// <p>Les alias sont vérifiés en plus du libellé principal, pas à la place : les grandes salles
@@ -239,17 +246,47 @@ public class WikidataSalleSource implements SourceEnrichissementSalle {
   private static String trouverLabelCorrespondant(
       String nomNormCible, String itemLabel, String aliases) {
     if (itemLabel != null
-        && CorrespondanceSalle.estDoublonSalle(
-            nomNormCible, Normalisation.normaliserTexte(itemLabel))) {
+        && estCorrespondanceAsymetrique(nomNormCible, Normalisation.normaliserTexte(itemLabel))) {
       return itemLabel;
     }
     if (aliases == null || aliases.isBlank()) return null;
     for (String alias : aliases.split("\\|")) {
-      if (CorrespondanceSalle.estDoublonSalle(nomNormCible, Normalisation.normaliserTexte(alias))) {
+      if (estCorrespondanceAsymetrique(nomNormCible, Normalisation.normaliserTexte(alias))) {
         return alias;
       }
     }
     return null;
+  }
+
+  /// Complète {@link CorrespondanceSalle#estDoublonSalle} par un containment de tokens
+  /// asymétrique (#769) : couvre le cas où Wikidata combine l'ancien et le nouveau nom dans un
+  /// seul alias (constaté en production : « Dôme de Paris » — nom Strapontin actuel — n'est
+  /// rapproché d'aucun candidat mwapi malgré l'existence de l'entité correcte en rang 0, son
+  /// libellé principal étant « Palais des sports » et son alias le plus proche « Dôme de Paris -
+  /// Palais des Sports »). Cet alias est trop long relativement à notre nom pour satisfaire le
+  /// containment de caractères (ratio {@code < 0.5}) ou le Jaccard symétrique (0.4, sous le
+  /// seuil 0.5) de {@code estDoublonSalle} — les deux critères pénalisent le nombre de mots
+  /// supplémentaires côté Wikidata, alors que ces mots supplémentaires sont justement l'ancien
+  /// nom, pas du bruit.
+  ///
+  /// <p>Asymétrique à dessein : exige que <strong>tous</strong> les tokens significatifs de
+  /// notre nom (le plus souvent court, le nom commercial actuel) soient présents dans le
+  /// candidat Wikidata (souvent plus long, combinant plusieurs noms), jamais l'inverse — un
+  /// candidat plus court que notre nom reste filtré par {@code estDoublonSalle} seul. Le
+  /// {@value #TAILLE_MIN_TOKENS_CONTAINMENT} minimum de tokens cible évite qu'un nom d'un seul
+  /// mot corresponde à n'importe quel candidat le contenant (même risque de faux positif qu'un
+  /// Jaccard non borné, documenté dans {@link CorrespondanceSalle}).
+  ///
+  /// @param nomNormCible  nom Strapontin normalisé
+  /// @param candidatNorm  libellé ou alias Wikidata normalisé
+  /// @return {@code true} si les tokens significatifs de {@code nomNormCible} sont tous inclus
+  ///     dans ceux de {@code candidatNorm}
+  private static boolean estCorrespondanceAsymetrique(String nomNormCible, String candidatNorm) {
+    if (CorrespondanceSalle.estDoublonSalle(nomNormCible, candidatNorm)) return true;
+    Set<String> tokensCible = CorrespondanceSalle.tokensSignificatifs(nomNormCible);
+    if (tokensCible.size() < TAILLE_MIN_TOKENS_CONTAINMENT) return false;
+    Set<String> tokensCandidat = CorrespondanceSalle.tokensSignificatifs(candidatNorm);
+    return tokensCandidat.containsAll(tokensCible);
   }
 
   private static String construireRequeteDecouverte(String nom) {

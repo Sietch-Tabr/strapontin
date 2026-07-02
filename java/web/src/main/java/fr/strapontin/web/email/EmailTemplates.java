@@ -4,7 +4,13 @@
  */
 package fr.strapontin.web.email;
 
+import fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 /// Génération des corps HTML de tous les emails transactionnels Strapontin.
@@ -270,6 +276,47 @@ final class EmailTemplates {
                 C_TEXTE,
                 bouton(baseUrl + "/admin", "Aller à l'administration →"));
     return enveloppErreur("Worker inactif", corps, baseUrl);
+  }
+
+  /// Digest d'alerte pour les nouvelles entrées {@code logs_admin} de niveau erreur (#765).
+  ///
+  /// @param erreurs liste des entrées d'erreur à afficher (non vide)
+  /// @param baseUrl l'URL publique de base de l'application
+  /// @return le HTML du digest d'erreurs
+  static String alerteLogsAdmin(List<EntreeLogAdmin> erreurs, String baseUrl) {
+    String lignesHtml =
+        erreurs.stream()
+            .map(
+                entree -> {
+                  String dateFormatee =
+                      DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
+                          .withLocale(Locale.FRANCE)
+                          .withZone(ZoneId.of("Europe/Paris"))
+                          .format(Instant.ofEpochMilli(entree.ts()));
+                  return """
+                  <tr>
+                    <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top">
+                      <div style="font-weight: 600; color: %s; font-size: 14px">%s — %s</div>
+                      <div style="color: #666; font-size: 13px; margin-top: 2px">%s</div>
+                    </td>
+                  </tr>
+                  """
+                      .formatted(
+                          C_ERREUR, e(dateFormatee), e(entree.source()), e(entree.message()));
+                })
+            .collect(Collectors.joining());
+    String corps =
+        """
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px">%d nouvelle(s) entrée(s) d'erreur dans les logs admin :</p>
+        <table style="border-collapse: collapse; width: 100%%">%s</table>
+        <p style="margin-top: 24px">%s</p>
+        """
+            .formatted(
+                C_TEXTE,
+                erreurs.size(),
+                lignesHtml,
+                bouton(baseUrl + "/admin", "Voir les logs admin →"));
+    return enveloppErreur("Nouvelles erreurs — logs admin", corps, baseUrl);
   }
 
   /// Notification de suppression de compte par un administrateur.

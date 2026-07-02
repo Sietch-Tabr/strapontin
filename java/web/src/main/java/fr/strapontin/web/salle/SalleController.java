@@ -88,8 +88,14 @@ public class SalleController {
         requete.tmVenueId() == null || requete.tmVenueId().isBlank()
             ? null
             : requete.tmVenueId().strip();
+    String osmId =
+        requete.osmId() == null || requete.osmId().isBlank() ? null : requete.osmId().strip();
+    String wikidataId =
+        requete.wikidataId() == null || requete.wikidataId().isBlank()
+            ? null
+            : requete.wikidataId().strip();
 
-    salleService.ajouter(userId, nom, tmVenueId);
+    salleService.ajouter(userId, nom, tmVenueId, osmId, wikidataId);
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }
 
