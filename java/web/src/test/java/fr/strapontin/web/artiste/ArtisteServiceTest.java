@@ -20,7 +20,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 
 /// Tests unitaires de {@link ArtisteService}.
 ///
@@ -61,6 +63,12 @@ class ArtisteServiceTest {
 
     assertThrows(ErreurMetier.class, () -> service.ajouter("u1", "Radiohead"));
     verify(artisteRepository, never()).ajouter(anyString(), anyString(), any());
+  }
+
+  @Test
+  void ajouter_nomTribute_leveErreurMetierSansAppelerLeRepository() {
+    assertThrows(ErreurMetier.class, () -> service.ajouter("u1", "Tribute to Nina Simone"));
+    verifyNoInteractions(artisteRepository);
   }
 
   @Test
@@ -109,6 +117,46 @@ class ArtisteServiceTest {
     service.ajouter("u1", "Radiohead");
 
     verify(artisteRepository).upsertArtiste("Radiohead", "radiohead");
+  }
+
+  // #717 : sélection d'une suggestion Wikidata à l'ajout — résout le P2722 (Deezer ID) et
+  // persiste les deux sources sans attendre le job nocturne. resoudreDeezerId est substituée
+  // (Mockito.spy) pour éviter un appel réseau réel vers Wikidata en test unitaire.
+  @Test
+  void ajouter_wikidataIdFourni_resoutDeezerIdEtPersisteLesSources() {
+    UUID artisteId = UUID.randomUUID();
+    when(artisteRepository.upsertArtiste("Daft Punk", "daft punk")).thenReturn(artisteId);
+    when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(false);
+    when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(0);
+
+    ArtisteService spy = Mockito.spy(service);
+    doReturn("27").when(spy).resoudreDeezerId("Q167023");
+
+    spy.ajouter("u1", "Daft Punk", "Q167023");
+
+    verify(artisteRepository).enregistrerArtisteSource(artisteId, "wikidata", "Q167023");
+    verify(artisteRepository).enregistrerArtisteSource(artisteId, "deezer", "27");
+    verify(artisteRepository).mettreAJourIdsWikidata(artisteId, "Q167023", "27");
+  }
+
+  // #717 : conflit sur idx_artistes_wikidata_id (Q-ID déjà porté par un autre artiste) — rattrapé
+  // et loggé, ne doit jamais faire échouer l'ajout à la liste de suivi.
+  @Test
+  void ajouter_wikidataIdDejaAttribueAUnAutreArtiste_neFaitPasEchouerLajout() {
+    UUID artisteId = UUID.randomUUID();
+    when(artisteRepository.upsertArtiste("Daft Punk", "daft punk")).thenReturn(artisteId);
+    when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(false);
+    when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(0);
+    doThrow(new DuplicateKeyException("conflit"))
+        .when(artisteRepository)
+        .enregistrerArtisteSource(artisteId, "wikidata", "Q167023");
+
+    assertDoesNotThrow(() -> service.ajouter("u1", "Daft Punk", "Q167023"));
+
+    verify(artisteRepository).ajouter("u1", "Daft Punk", artisteId);
+    verify(logAdminService)
+        .logAdmin(eq("warn"), eq("enrichissement-wikidata"), anyString(), anyMap());
+    verify(artisteRepository, never()).mettreAJourIdsWikidata(any(), any(), any());
   }
 
   @Test

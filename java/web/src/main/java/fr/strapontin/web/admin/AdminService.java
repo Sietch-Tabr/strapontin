@@ -19,6 +19,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -538,7 +540,7 @@ public class AdminService {
     Map<String, Instant> prochainesExec = workerProxyService.obtenirProchainesExec();
 
     QuotaTM quotaFinal = quotaTM;
-    List<StatJob> statsComplets =
+    List<StatJob> statsConnus =
         statsJobs.stream()
             .map(
                 j ->
@@ -551,6 +553,8 @@ public class AdminService {
                         j.erreur(),
                         prochainesExec.get(j.typeJob())))
             .toList();
+
+    List<StatJob> statsComplets = completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
 
     String etatQuota = "ok";
     if (quotaFinal != null && quotaFinal.total() > 0) {
@@ -565,6 +569,35 @@ public class AdminService {
     reponse.put("workerLastSuccess", workerLastSuccess);
     reponse.put("jobsEnCours", jobsEnCours);
     return reponse;
+  }
+
+  /// Complète les statistiques de jobs avec une entrée synthétique pour tout job Quartz planifié
+  /// ({@code prochainesExec}) mais n'ayant jamais écrit de ligne dans {@code fetch_jobs}.
+  ///
+  /// <p>Sans cette complétion, un job de maintenance tout juste ajouté (ex. {@code
+  /// reconciliation:nocturne}, cron 3h) reste invisible et non déclenchable manuellement depuis
+  /// l'admin tant que son premier passage cron automatique n'a pas eu lieu (#762).
+  ///
+  /// @param statsConnus    statistiques déjà présentes en base, triées ou non
+  /// @param prochainesExec prochaines exécutions planifiées par {@code typeJob} (source de vérité
+  ///                       du worker sur les jobs existants)
+  /// @return statistiques triées par {@code typeJob}, complétées des jobs jamais exécutés
+  static List<StatJob> completerAvecJobsJamaisExecutes(
+      List<StatJob> statsConnus, Map<String, Instant> prochainesExec) {
+    Set<String> typesConnus =
+        statsConnus.stream().map(StatJob::typeJob).collect(Collectors.toSet());
+    List<StatJob> statsJamaisExecutes =
+        prochainesExec.keySet().stream()
+            .filter(typeJob -> !typesConnus.contains(typeJob))
+            .map(
+                typeJob ->
+                    new StatJob(typeJob, null, null, null, null, null, prochainesExec.get(typeJob)))
+            .toList();
+
+    List<StatJob> statsComplets = new ArrayList<>(statsConnus);
+    statsComplets.addAll(statsJamaisExecutes);
+    statsComplets.sort(Comparator.comparing(StatJob::typeJob));
+    return statsComplets;
   }
 
   private String validerFormatConfig(String cle, String valeur) {

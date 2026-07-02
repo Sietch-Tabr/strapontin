@@ -223,6 +223,45 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // #769 : "Dôme de Paris" (nom Strapontin actuel) n'a ni libellé principal ("Palais des
+  // sports") ni alias exact correspondant sur Wikidata — l'alias le plus proche, "Dôme de Paris
+  // - Palais des Sports", combine ancien et nouveau nom et est trop long pour satisfaire le
+  // containment/Jaccard symétrique de estDoublonSalle (Jaccard=0.4, ratio de containment=0.41,
+  // tous deux sous les seuils 0.5). Reproduit avec les données réelles interrogées manuellement
+  // sur query.wikidata.org (Q2234305).
+  @Test
+  void enrichirLot_decouverte_absorbeAliasCombinantAncienEtNouveauNom() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Dôme de Paris", "dome de paris", null, null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q2234305"},
+                   "itemLabel":{"type":"literal","value":"Palais des sports"},
+                   "aliases":{"type":"literal",
+                     "value":"Palais des sports de Paris|Dôme de Paris - Palais des Sports"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertEquals(1, resultat.size());
+    assertEquals("Q2234305", resultat.get(id).wikidataId());
+    serveur.verify();
+  }
+
   @Test
   void enrichirLot_decouverteNomDifferent_ignoreCandidat() {
     RestClient.Builder builder = RestClient.builder();

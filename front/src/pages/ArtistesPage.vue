@@ -21,7 +21,7 @@
         Rechercher
       </button>
     </form>
-    <p class="form-aide">Saisissez au moins 2 caractères. La recherche propose les artistes déjà en base, puis des suggestions Deezer.</p>
+    <p class="form-aide">Saisissez au moins 2 caractères. La recherche propose les artistes déjà en base, puis des suggestions Wikidata et Deezer.</p>
 
     <div v-if="erreur" class="alerte alerte-erreur" role="alert" aria-live="assertive">{{ erreur }}</div>
 
@@ -36,13 +36,19 @@
       >
         <h2 class="section-label">Résultats pour « {{ qSoumis }} »</h2>
         <ul class="liste-cartes">
-          <li v-for="s in donnees.suggestions" :key="s.nom" class="carte-item">
-            <p class="carte-nom">{{ s.nom }}</p>
+          <li v-for="s in donnees.suggestions" :key="s.nom + (s.wikidataId || '')" class="carte-item">
+            <div>
+              <p class="carte-nom">
+                {{ s.nom }}
+                <span v-if="s.source === 'wikidata'" class="badge-source badge-source-metadonnees">wikidata</span>
+              </p>
+              <p v-if="s.description" class="carte-sous-titre">{{ s.description }}</p>
+            </div>
             <button
               type="button"
               class="btn btn-sm btn-secondary"
               :aria-label="'Suivre ' + s.nom"
-              @click="ajouter(s.nom)"
+              @click="ajouter(s.nom, s.wikidataId)"
             >Suivre</button>
           </li>
         </ul>
@@ -138,13 +144,13 @@ async function rechercher() {
   }
 }
 
-async function ajouter(nom) {
+async function ajouter(nom, wikidataId = null) {
   erreur.value = ''
   try {
     const rep = await fetch('/api/artistes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nom }),
+      body: JSON.stringify({ nom, wikidataId }),
     })
     if (rep.status === 409) {
       afficherToast('Vous suivez déjà cet artiste.', 'info')

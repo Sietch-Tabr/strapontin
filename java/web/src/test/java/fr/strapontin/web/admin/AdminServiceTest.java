@@ -305,4 +305,39 @@ class AdminServiceTest {
     verify(emailService, never()).envoyer2faReinitialisee(anyString());
     verify(logAdminService, never()).logAdmin(anyString(), anyString(), anyString(), anyMap());
   }
+
+  @Test
+  void completerAvecJobsJamaisExecutes_jobPlanifieSansHistorique_ajouteEntreeSynthetique() {
+    List<StatJob> statsConnus =
+        List.of(new StatJob("purger:concerts", java.time.Instant.EPOCH, 10, 1, 2, null, null));
+    Map<String, java.time.Instant> prochainesExec =
+        Map.of(
+            "purger:concerts", java.time.Instant.EPOCH,
+            "reconciliation:nocturne", java.time.Instant.MAX);
+
+    List<StatJob> resultat =
+        AdminService.completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
+
+    assertEquals(2, resultat.size());
+    StatJob jamaisExecute =
+        resultat.stream()
+            .filter(s -> s.typeJob().equals("reconciliation:nocturne"))
+            .findFirst()
+            .orElseThrow();
+    assertEquals(null, jamaisExecute.derniereExec());
+    assertEquals(java.time.Instant.MAX, jamaisExecute.prochaineExec());
+  }
+
+  @Test
+  void completerAvecJobsJamaisExecutes_tousLesJobsConnus_neDupliquePas() {
+    List<StatJob> statsConnus =
+        List.of(new StatJob("purger:concerts", java.time.Instant.EPOCH, 10, 1, 2, null, null));
+    Map<String, java.time.Instant> prochainesExec =
+        Map.of("purger:concerts", java.time.Instant.EPOCH);
+
+    List<StatJob> resultat =
+        AdminService.completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
+
+    assertEquals(1, resultat.size());
+  }
 }

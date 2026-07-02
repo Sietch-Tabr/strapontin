@@ -76,7 +76,14 @@ test.describe("Scénario: catalogue — artistes", () => {
     await page.fill("input#q-artiste", "Nina Simone");
     await page.getByRole("button", { name: "Rechercher" }).click();
 
-    const btnSuivre = page.getByRole("button", { name: /Suivre/ }).first();
+    // Correspondance exacte plutôt que .first() : les suggestions Wikidata/Deezer combinées
+    // (#717) incluent désormais aussi des variantes non pertinentes (karaoké, tribute — cette
+    // dernière filtrée par #768 et provoquant une erreur si sélectionnée) classées avant le nom
+    // canonique selon la source.
+    const btnSuivre = page.getByRole("button", {
+      name: "Suivre Nina Simone",
+      exact: true,
+    });
     await expect(btnSuivre).toBeVisible({ timeout: 25000 });
 
     const ariaLabel = (await btnSuivre.getAttribute("aria-label")) ?? "";
@@ -103,6 +110,26 @@ test.describe("Scénario: catalogue — artistes", () => {
     // Artiste supprimé inline — retirer de la liste de nettoyage afterEach
     artistesANettoyer.splice(0);
   });
+
+  // #717 : suggestion Wikidata Search — badge + description affichés à l'autocomplete.
+  // Restreint à chromium : dépend de la disponibilité réelle de l'API Wikidata (pas de contrôle
+  // sur son rate-limit), éviter de le tester 5x en parallèle sur tous les navigateurs.
+  test(
+    "artistes_rechercheWikidata_afficheBadgeEtDescription",
+    { tag: "@chromium-only" },
+    async ({ page, browserName }) => {
+      test.skip(browserName !== "chromium", "dépendance API Wikidata externe — chromium only");
+
+      await page.goto("/artistes");
+      await page.fill("input#q-artiste", "Stromae");
+      await page.getByRole("button", { name: "Rechercher" }).click();
+
+      const badgeWikidata = page.locator(".badge-source-metadonnees", {
+        hasText: "wikidata",
+      });
+      await expect(badgeWikidata.first()).toBeVisible({ timeout: 25000 });
+    },
+  );
 });
 
 test.describe("Scénario: catalogue — salles", () => {
@@ -141,6 +168,23 @@ test.describe("Scénario: catalogue — salles", () => {
     // Salle supprimée inline — retirer de la liste de nettoyage afterEach
     sallesANettoyer.splice(0);
   });
+
+  // #718 : suggestion Nominatim — badge "osm" affiché à l'autocomplete. Restreint à chromium :
+  // dépend de la disponibilité réelle de l'API Nominatim (pas de contrôle sur son rate-limit).
+  test(
+    "salles_rechercheNominatim_afficheBadgeOsm",
+    { tag: "@chromium-only" },
+    async ({ page, browserName }) => {
+      test.skip(browserName !== "chromium", "dépendance API Nominatim externe — chromium only");
+
+      await page.goto("/salles");
+      await page.fill("input#q-salle", "Rockstore Montpellier");
+      await page.getByRole("button", { name: "Rechercher" }).click();
+
+      const badgeOsm = page.locator(".badge-source-metadonnees", { hasText: "osm" });
+      await expect(badgeOsm.first()).toBeVisible({ timeout: 25000 });
+    },
+  );
 });
 
 test.describe("Scénario: catalogue — recherche salle caractères spéciaux", () => {

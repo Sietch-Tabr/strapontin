@@ -176,6 +176,39 @@ class EmailTemplatesTest {
     assertThat(html).contains("color: #c00");
   }
 
+  // ---- alerteLogsAdmin() ----
+
+  @Test
+  void alerteLogsAdmin_afficheToutesLesEntreesEtLeCompte() {
+    List<fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin> erreurs =
+        List.of(
+            new fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin(
+                1751500000000L, "error", "worker", "échec purger:logs-admin", null),
+            new fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin(
+                1751500100000L, "error", "reconciliation-nocturne", "conflit wikidataId", null));
+
+    String html = EmailTemplates.alerteLogsAdmin(erreurs, "https://app.fr");
+
+    assertThat(html).contains("2 nouvelle(s) entrée(s)");
+    assertThat(html).contains("échec purger:logs-admin");
+    assertThat(html).contains("conflit wikidataId");
+    assertThat(html).contains("worker");
+    assertThat(html).contains("reconciliation-nocturne");
+    assertThat(html).contains("color: #c00");
+  }
+
+  @Test
+  void alerteLogsAdmin_messageAvecBalises_estEchappe() {
+    List<fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin> erreurs =
+        List.of(
+            new fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin(
+                1751500000000L, "error", "worker", "<script>alert(1)</script>", null));
+
+    String html = EmailTemplates.alerteLogsAdmin(erreurs, "https://app.fr");
+
+    assertThat(html).doesNotContain("<script>");
+  }
+
   // ---- signalementSalleManquante() ----
 
   @Test

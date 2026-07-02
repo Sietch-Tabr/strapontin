@@ -8,6 +8,40 @@
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <section>
+        <h2 class="changelog-version">v 2.6.1 — 2 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Ajout d'artistes et de salles</p>
+            <ul>
+              <li>Les suggestions à l'ajout d'un artiste affichent désormais une description (source Wikidata) pour vous aider à choisir le bon artiste parmi plusieurs homonymes.</li>
+              <li>Les suggestions à l'ajout d'une salle s'appuient désormais aussi sur OpenStreetMap, en complément de Ticketmaster — plus de salles proposées, badge « osm » sur les résultats correspondants.</li>
+              <li>Un nom d'attraction de type « hommage à » ou « tribute to » n'est plus proposé à l'ajout : suivez directement l'artiste original.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Qualité des données</p>
+            <ul>
+              <li>Les artistes non-musiciens (humoristes notamment) peuvent désormais être enrichis avec leur fiche Wikidata.</li>
+              <li>Amélioration du rapprochement automatique des salles dont le nom a changé au fil du temps (renommages commerciaux).</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Fiabilité</p>
+            <ul>
+              <li>Correction d'un écran noir pouvant apparaître au tout premier lancement de l'application installée (PWA) sans connexion — un message clair s'affiche désormais.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Un job de maintenance jamais encore exécuté est désormais visible et peut être déclenché manuellement depuis l'onglet « Jobs ».</li>
+              <li>Alerte email automatique en cas de nouvelles erreurs détectées dans les journaux d'administration.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 class="changelog-version">v 2.6.0 — 1er juillet 2026</h2>
         <div class="changelog-entrees">
           <div>

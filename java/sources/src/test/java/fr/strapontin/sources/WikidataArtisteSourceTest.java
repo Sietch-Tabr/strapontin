@@ -158,6 +158,78 @@ class WikidataArtisteSourceTest {
     serveur.verify();
   }
 
+  // #767 : un humoriste (P106 humoriste, pas musicien) doit être rapprochable — avant correction,
+  // le filtre de découverte n'acceptait que "humain+musicien" ou "groupe", excluant
+  // structurellement des artistes légitimement suivis comme Pierre-Emmanuel Barré.
+  @Test
+  void enrichirLot_decouverteHumoriste_estRapproche() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    ArtisteAEnrichir artiste =
+        new ArtisteAEnrichir(id, "Pierre-Emmanuel Barré", "pierre-emmanuel barre", null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q245068")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q3382524"},
+                   "itemLabel":{"type":"literal","value":"Pierre-Emmanuel Barré"},
+                   "typeMatch":{"type":"literal","value":"humain"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+
+    assertEquals("Q3382524", resultat.get(id).wikidataId());
+    serveur.verify();
+  }
+
+  // #772 : homonymie groupe/personne (ex. Van Halen, groupe nommé du vrai nom de famille de son
+  // fondateur) — deux entités distinctes de types différents parmi les meilleurs candidats
+  // doivent bloquer tout rapprochement plutôt que de deviner celle en tête.
+  @Test
+  void enrichirLot_decouverteAmbigueGroupeEtPersonne_neRapprocheRien() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Van Halen", "van halen", null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q483472"},
+                   "itemLabel":{"type":"literal","value":"Van Halen"},
+                   "typeMatch":{"type":"literal","value":"groupe"},
+                   "num":{"type":"literal","value":"0"}},
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q222832"},
+                   "itemLabel":{"type":"literal","value":"Eddie Van Halen"},
+                   "typeMatch":{"type":"literal","value":"humain"},
+                   "num":{"type":"literal","value":"1"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+
+    assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
   @Test
   void enrichirLot_lotVide_retourneVideSansHttp() {
     RestClient.Builder builder = RestClient.builder();

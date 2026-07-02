@@ -5,6 +5,7 @@
 package fr.strapontin.web.artiste;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -152,6 +153,48 @@ class ArtisteRepository {
         VALUES (:userId, :nom, CAST(:artisteId AS uuid))
         """,
         Map.of(CLE_USER_ID, userId, "nom", nom, "artisteId", artisteId.toString()));
+  }
+
+  /// Enregistre une correspondance source externe → artiste interne (#717).
+  ///
+  /// @param artisteId          UUID stable de l'artiste
+  /// @param source             nom de la source (ex. {@code "wikidata"}, {@code "deezer"})
+  /// @param identifiantExterne identifiant dans la source externe
+  void enregistrerArtisteSource(UUID artisteId, String source, String identifiantExterne) {
+    jdbc.update(
+        """
+        INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)
+        VALUES (CAST(:artisteId AS uuid), :source, :identifiantExterne)
+        ON CONFLICT DO NOTHING
+        """,
+        Map.of(
+            "artisteId", artisteId.toString(),
+            "source", source,
+            "identifiantExterne", identifiantExterne));
+  }
+
+  /// Met à jour {@code wikidata_id}/{@code deezer_id} d'un artiste si absents (#717) — ne
+  /// touche jamais une valeur déjà résolue par le job nocturne ({@code COALESCE}). Peut lever
+  /// {@link org.springframework.dao.DuplicateKeyException} ({@code idx_artistes_wikidata_id}) —
+  /// à la charge de l'appelant (même piège qu'{@code EnrichissementArtistesService}, jalon
+  /// 2.6.0).
+  ///
+  /// @param artisteId UUID stable de l'artiste
+  /// @param wikidataId Q-ID Wikidata (peut être {@code null})
+  /// @param deezerId   identifiant Deezer (peut être {@code null})
+  void mettreAJourIdsWikidata(UUID artisteId, String wikidataId, String deezerId) {
+    Map<String, Object> params = new HashMap<>();
+    params.put("id", artisteId.toString());
+    params.put("wikidataId", wikidataId);
+    params.put("deezerId", deezerId);
+    jdbc.update(
+        """
+        UPDATE artistes SET
+          wikidata_id = COALESCE(wikidata_id, :wikidataId),
+          deezer_id   = COALESCE(deezer_id, :deezerId)
+        WHERE id = CAST(:id AS uuid)
+        """,
+        params);
   }
 
   /// Supprime un artiste de la liste de suivi.

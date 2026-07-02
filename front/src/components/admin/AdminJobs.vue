@@ -122,6 +122,9 @@ const LABELS_JOBS = {
   'purger:artistes':      'Purge artistes orphelins',
   'recalculer:matches':   'Recalcul matchs',
   'fetch:salle':          'Salle',
+  'reconciliation:nocturne': 'Réconciliation nocturne',
+  'purger:logs-admin':       'Purge logs admin',
+  'revoquer:admins':         'Révocation admins',
 }
 
 const TYPES_FETCHES = new Set(['fetch:artistes:batch', 'fetch:region'])
