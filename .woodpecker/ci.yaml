@@ -14,8 +14,19 @@ steps:
       - event: push
         branch: main
 
+  - name: test-front
+    image: node:26-alpine
+    volumes:
+      - /var/cache/woodpecker/npm:/root/.npm
+    commands:
+      - cd front && npm ci && npm run test:unit
+    when:
+      - event: push
+        branch: main
+
   - name: build-front
     image: node:26-alpine
+    depends_on: [test-front]
     volumes:
       - /var/cache/woodpecker/npm:/root/.npm
     commands:

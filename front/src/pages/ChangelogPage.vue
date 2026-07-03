@@ -35,6 +35,18 @@
             </ul>
           </div>
           <div>
+            <p class="changelog-categorie">Qualité des données</p>
+            <ul>
+              <li>Les salles dont le nom contient une apostrophe (ex. « L'Empreinte ») peuvent désormais être rapprochées correctement des données OpenStreetMap, qui utilisent parfois une apostrophe typographique différente de celle de nos sources.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Fiabilité</p>
+            <ul>
+              <li>Sur la PWA installée sur iPhone, les notifications ne sont plus masquées par la barre de navigation du bas.</li>
+            </ul>
+          </div>
+          <div>
             <p class="changelog-categorie">Interface</p>
             <ul>
               <li>Les anciennes versions de cette page se replient désormais automatiquement — seule la dernière reste visible par défaut.</li>

@@ -160,6 +160,7 @@ defineOptions({ name: 'AdminArtistes' })
 import { ref, shallowRef, reactive, onMounted, onUnmounted } from 'vue'
 import EtatChargement from '../EtatChargement.vue'
 import { useToasts } from '../../composables/useToasts.js'
+import { classeStatut, libelleStatut } from '../../utils/statutReferentiel.js'
 
 const { afficherToast } = useToasts()
 
@@ -184,19 +185,6 @@ const cibleChoisie = ref(null)
 const enCoursFusion = ref(false)
 
 const controleur = new AbortController()
-
-function classeStatut(statut) {
-  if (statut === 'invalide') return 'badge-quota-critique'
-  if (statut === 'a_verifier') return 'badge-quota-attention'
-  return ''
-}
-
-function libelleStatut(statut) {
-  if (statut === 'a_jour') return 'À jour'
-  if (statut === 'a_verifier') return 'À vérifier'
-  if (statut === 'invalide') return 'Invalide'
-  return statut
-}
 
 async function charger() {
   chargement.value = true
