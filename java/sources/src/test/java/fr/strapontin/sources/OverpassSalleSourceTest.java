@@ -147,6 +147,49 @@ class OverpassSalleSourceTest {
   }
 
   @Test
+  void enrichirLot_nomAvecApostropheDroite_matchApostropheCourbeOsm() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id,
+            "L'Empreinte",
+            fr.strapontin.core.Normalisation.normaliserTexte("L'Empreinte"),
+            null,
+            null,
+            null);
+
+    serveur
+        .expect(requestTo(OverpassSalleSourceTestUrl()))
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.containsString(
+                        java.net.URLEncoder.encode(
+                            "L['’]Empreinte", java.nio.charset.StandardCharsets.UTF_8))))
+        .andRespond(
+            withSuccess(
+                """
+                {"elements":[{"type":"node","id":1,"tags":{
+                  "amenity":"music_venue",
+                  "name":"L’Empreinte",
+                  "operator":"Agglomération Grand Paris Sud"
+                }}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    OverpassSalleSource source = new OverpassSalleSource(restClient);
+    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
+
+    assertEquals(1, resultat.size());
+    assertNotNull(resultat.get(id));
+    serveur.verify();
+  }
+
+  @Test
   void enrichirLot_lotVide_retourneVideSansHttp() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();

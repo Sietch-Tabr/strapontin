@@ -66,6 +66,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle {
   private static final Duration TIMEOUT_LECTURE_CLIENT = Duration.ofSeconds(70);
 
   private static final Pattern METACARACTERES_REGEX = Pattern.compile("([.^$|()\\[\\]{}*+?\\\\])");
+  private static final Pattern APOSTROPHE_DROITE = Pattern.compile("'");
 
   private final RestClient restClient;
   private final AtomicLong dernierAppelMs = new AtomicLong(0);
@@ -129,8 +130,18 @@ public class OverpassSalleSource implements SourceEnrichissementSalle {
     }
   }
 
+  // OSM tague fréquemment ses noms avec l'apostrophe typographique courbe (’, U+2019) plutôt que
+  // l'apostrophe droite (', U+0027) utilisée dans les noms Strapontin (issus de
+  // TM/Eventim/Digitick).
+  // Le filtre ["name"~"regex"] est appliqué côté serveur Overpass sur la chaîne brute : sans cette
+  // substitution, une regex contenant l'apostrophe droite ne matche jamais un nom OSM en apostrophe
+  // courbe (#783, constaté sur « L'Empreinte » à Savigny-le-Temple). La normalisation de
+  // Normalisation.normaliserTexte, elle, n'intervient qu'après réception de la réponse
+  // (mapperReponse)
+  // et ne peut pas rattraper un élément qu'Overpass n'a jamais renvoyé.
   private static String echapperRegex(String nom) {
-    return METACARACTERES_REGEX.matcher(nom).replaceAll("\\\\$1");
+    String echappe = METACARACTERES_REGEX.matcher(nom).replaceAll("\\\\$1");
+    return APOSTROPHE_DROITE.matcher(echappe).replaceAll("['’]");
   }
 
   // Bounding box englobant la France métropolitaine (marge incluse). Volontairement PAS

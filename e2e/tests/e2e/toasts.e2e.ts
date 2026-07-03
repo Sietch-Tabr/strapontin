@@ -57,6 +57,52 @@ test.describe("Toasts (Popover API)", () => {
       timeout: 8000,
     });
   });
+
+  // #774 : vérification statique du fichier CSS livré (pas de comportement spécifique navigateur —
+  // Playwright ne permet pas de simuler env(safe-area-inset-bottom), cf. commentaire dans
+  // components.css). Restreint à chromium, même logique que les autres vérifications statiques de ce
+  // module (cf. catalogue.e2e.ts).
+  test(
+    "règle CSS bottom du toast mobile inclut la safe-area iOS",
+    { tag: "@chromium-only" },
+    async ({ page, browserName }) => {
+      test.skip(
+        browserName !== "chromium",
+        "vérification statique du CSS livré — chromium only",
+      );
+      await page.goto("/");
+      // Chrome normalise mediaText en syntaxe "range" (ex. "(width <= 1024px)" au lieu de
+      // "(max-width: 1024px)") dans le CSSOM — chercher "1024px" plutôt que "max-width".
+      const contientSafeArea = await page.evaluate(() => {
+        for (const feuille of Array.from(document.styleSheets)) {
+          let regles;
+          try {
+            regles = Array.from(feuille.cssRules);
+          } catch {
+            continue;
+          }
+          for (const regle of regles) {
+            if (
+              regle instanceof CSSMediaRule &&
+              regle.media.mediaText.includes("1024px")
+            ) {
+              for (const sousRegle of Array.from(regle.cssRules)) {
+                if (
+                  sousRegle instanceof CSSStyleRule &&
+                  sousRegle.selectorText.includes("alerte") &&
+                  sousRegle.cssText.includes("safe-area-inset-bottom")
+                ) {
+                  return true;
+                }
+              }
+            }
+          }
+        }
+        return false;
+      });
+      expect(contientSafeArea).toBe(true);
+    },
+  );
 });
 
 test.describe("Toasts — actions admin", () => {
