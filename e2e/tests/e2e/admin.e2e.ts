@@ -717,7 +717,9 @@ test.describe("Scénario: admin — onglet Jobs (sections Fetches/Maintenance)",
     });
     await expect(sectionMaintenance).toBeVisible();
     const premiereCarte = sectionMaintenance.locator(".job-carte").first();
-    await expect(premiereCarte.getByRole("button", { name: "Relancer" })).toBeVisible();
+    await expect(
+      premiereCarte.getByRole("button", { name: "Relancer" }),
+    ).toBeVisible();
   });
 });
 
@@ -752,6 +754,24 @@ test.describe("Scénario: admin — API endpoints", () => {
     expect(ids).toContain("deezer");
     expect(ids).toContain("digitick");
     expect(ids).toContain("wikidata");
+
+    // #777 : TM/Eventim/Deezer doivent désormais exposer un décompte d'items suivis, comme
+    // Digitick/Wikidata le faisaient déjà — sans ça les cartes admin ne peuvent pas afficher
+    // le nombre de salles/artistes suivis via cette source.
+    type Source = {
+      id: string;
+      nbSallesConfigurees: number | null;
+      nbArtistesConfigures: number | null;
+    };
+    const sources: Source[] = corps.sources;
+    const tm = sources.find((s) => s.id === "ticketmaster")!;
+    const eventim = sources.find((s) => s.id === "eventim")!;
+    const deezer = sources.find((s) => s.id === "deezer")!;
+    expect(tm.nbSallesConfigurees).not.toBeUndefined();
+    expect(tm.nbArtistesConfigures).not.toBeUndefined();
+    expect(eventim.nbSallesConfigurees).not.toBeUndefined();
+    expect(eventim.nbArtistesConfigures).not.toBeUndefined();
+    expect(deezer.nbArtistesConfigures).not.toBeUndefined();
   });
 
   test("api_admin_revoquerAdmin_seulAdmin_retourne409", async ({ request }) => {
@@ -766,16 +786,22 @@ test.describe("Scénario: admin — API endpoints", () => {
   });
 
   // Bouton "Relancer" par job de maintenance (v2.6.0, #706/#710).
-  test("api_admin_jobsRelancer_typeJobConnu_retourne200", async ({ request }) => {
+  test("api_admin_jobsRelancer_typeJobConnu_retourne200", async ({
+    request,
+  }) => {
     const rep = await request.post(
-      "/api/admin/jobs/relancer?typeJob=" + encodeURIComponent("purger:logs-admin"),
+      "/api/admin/jobs/relancer?typeJob=" +
+        encodeURIComponent("purger:logs-admin"),
     );
     expect(rep.status()).toBe(200);
   });
 
-  test("api_admin_jobsRelancer_typeJobInconnu_retourne503", async ({ request }) => {
+  test("api_admin_jobsRelancer_typeJobInconnu_retourne503", async ({
+    request,
+  }) => {
     const rep = await request.post(
-      "/api/admin/jobs/relancer?typeJob=" + encodeURIComponent("job:inexistant"),
+      "/api/admin/jobs/relancer?typeJob=" +
+        encodeURIComponent("job:inexistant"),
     );
     expect(rep.status()).toBe(503);
   });

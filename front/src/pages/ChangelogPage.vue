@@ -7,8 +7,45 @@
     <div class="max-w-xl changelog">
       <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
 
+      <!-- Convention (#775) : à chaque nouvelle version, convertir la <section> précédente en
+           <details>/<summary> (même gabarit que les versions ci-dessous) pour qu'une seule
+           version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
+           échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.6.1 — 2 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.6.2 — 2 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Salles</p>
+            <ul>
+              <li>Les suggestions à la recherche d'une salle reconnaissent désormais aussi les salles classées différemment sur OpenStreetMap (ex. stades, salles polyvalentes) — une salle de concert n'était pas toujours proposée selon sa catégorisation, tandis que des lieux non pertinents (bornes de recharge…) pouvaient s'afficher à tort.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Artistes</p>
+            <ul>
+              <li>Rechercher un artiste avec un terme partiel affiche désormais correctement « Vous suivez déjà » quand un artiste correspondant est déjà dans vos suivis, plutôt que « Aucun résultat ».</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Les cartes Ticketmaster, Eventim et Deezer de l'onglet Sources affichent désormais le nombre de salles/artistes suivis via chaque source, comme c'était déjà le cas pour Digitick et Wikidata.</li>
+              <li>Les statuts « Vivant »/« Suspect »/« Mort » des onglets Salles/Artistes sont renommés en « À jour »/« À vérifier »/« Invalide », plus explicites.</li>
+              <li>Simplification d'une mention technique superflue sur la carte Wikidata.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Interface</p>
+            <ul>
+              <li>Les anciennes versions de cette page se replient désormais automatiquement — seule la dernière reste visible par défaut.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.6.1 — 2 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Ajout d'artistes et de salles</p>
@@ -39,10 +76,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section>
-        <h2 class="changelog-version">v 2.6.0 — 1er juillet 2026</h2>
+      <details>
+        <summary><h2 class="changelog-version">v 2.6.0 — 1er juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Qualité des données</p>
@@ -60,10 +99,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section>
-        <h2 class="changelog-version">v 2.5.7 — 1er juillet 2026</h2>
+      <details>
+        <summary><h2 class="changelog-version">v 2.5.7 — 1er juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Qualité des données</p>
@@ -73,10 +114,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section>
-        <h2 class="changelog-version">v 2.5.6 — 27 juillet 2026</h2>
+      <details>
+        <summary><h2 class="changelog-version">v 2.5.6 — 27 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Sécurité</p>
@@ -85,10 +128,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section>
-        <h2 class="changelog-version">v 2.5.5 — 22 juillet 2026</h2>
+      <details>
+        <summary><h2 class="changelog-version">v 2.5.5 — 22 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Performances</p>
@@ -97,10 +142,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section>
-        <h2 class="changelog-version">v 2.5.4 — 15 juillet 2026</h2>
+      <details>
+        <summary><h2 class="changelog-version">v 2.5.4 — 15 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Notifications</p>
@@ -109,10 +156,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section>
-        <h2 class="changelog-version">v 2.5.3 — 12 juillet 2026</h2>
+      <details>
+        <summary><h2 class="changelog-version">v 2.5.3 — 12 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Accessibilité</p>
@@ -128,10 +177,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section>
-        <h2 class="changelog-version">v 2.5.0 — 29 juin 2026</h2>
+      <details>
+        <summary><h2 class="changelog-version">v 2.5.0 — 29 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Aide</p>
@@ -146,10 +197,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section>
-        <h2 class="changelog-version">v 2.4.1 — 29 juin 2026</h2>
+      <details>
+        <summary><h2 class="changelog-version">v 2.4.1 — 29 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Compte</p>
@@ -177,10 +230,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section>
-        <h2 class="changelog-version">v 2.4.0 — 25 juin 2026</h2>
+      <details>
+        <summary><h2 class="changelog-version">v 2.4.0 — 25 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Concerts</p>
@@ -215,10 +270,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section>
-        <h2 class="changelog-version">v 2.3.0 — 23 juin 2026</h2>
+      <details>
+        <summary><h2 class="changelog-version">v 2.3.0 — 23 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Interface</p>
@@ -268,10 +325,12 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section>
-        <h2 class="changelog-version">v 2.2.5 — 18 juin 2026</h2>
+      <details>
+        <summary><h2 class="changelog-version">v 2.2.5 — 18 juin 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Interface</p>
@@ -310,7 +369,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.2.4 — 12 juin 2026</h2></summary>

@@ -53,6 +53,17 @@
               </p>
             </div>
             <p v-else class="etat-vide-texte">Quota non disponible (aucun fetch effectué).</p>
+            <p class="source-carte-detail param-aide">
+              {{ source.nbSallesConfigurees ?? 0 }} salle{{ source.nbSallesConfigurees > 1 ? 's' : '' }}
+              et {{ source.nbArtistesConfigures ?? 0 }} artiste{{ source.nbArtistesConfigures > 1 ? 's' : '' }} suivis via cette source.
+            </p>
+          </template>
+
+          <template v-else-if="source.id === 'eventim'">
+            <p class="source-carte-detail">
+              {{ source.nbSallesConfigurees ?? 0 }} salle{{ source.nbSallesConfigurees > 1 ? 's' : '' }}
+              et {{ source.nbArtistesConfigures ?? 0 }} artiste{{ source.nbArtistesConfigures > 1 ? 's' : '' }} suivis via cette source.
+            </p>
           </template>
 
           <template v-else-if="source.id === 'digitick'">
@@ -64,14 +75,20 @@
             </p>
           </template>
 
+          <template v-else-if="source.id === 'deezer'">
+            <p class="source-carte-detail">
+              <span v-if="source.nbArtistesConfigures > 0">
+                {{ source.nbArtistesConfigures }} artiste{{ source.nbArtistesConfigures > 1 ? 's' : '' }} avec identifiant Deezer.
+              </span>
+              <span v-else class="etat-vide-texte">Aucun artiste avec identifiant Deezer.</span>
+            </p>
+          </template>
+
           <template v-else-if="source.id === 'wikidata'">
             <p class="source-carte-detail">
               {{ source.nbSallesConfigurees ?? 0 }} salle{{ source.nbSallesConfigurees > 1 ? 's' : '' }}
               et {{ source.nbArtistesConfigures ?? 0 }} artiste{{ source.nbArtistesConfigures > 1 ? 's' : '' }}
               avec identifiant Wikidata.
-            </p>
-            <p class="source-carte-detail param-aide">
-              Alimenté par le job nocturne de réconciliation (voir onglet Salles / Artistes).
             </p>
           </template>
 

@@ -16,8 +16,8 @@ import java.util.UUID;
 /// @param dept       département connu
 /// @param nbConcerts nombre de concerts à venir liés à cette salle
 /// @param sources    sources externes liées (ex. {@code ["ticketmaster", "digitick"]})
-/// @param statut     {@code "vivant"}, {@code "suspect"} ou {@code "mort"} (basé sur
-///     {@code suspect_depuis}, #706)
+/// @param statut     {@code "a_jour"}, {@code "a_verifier"} ou {@code "invalide"} (basé sur
+///     {@code suspect_depuis}, #706, #778)
 /// @param wikidataId Q-ID Wikidata si présent
 /// @since 2.6.0
 /// @author Kwaite

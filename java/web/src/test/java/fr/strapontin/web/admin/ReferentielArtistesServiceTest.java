@@ -54,7 +54,7 @@ class ReferentielArtistesServiceTest {
                     "Jain",
                     2,
                     List.of("ticketmaster"),
-                    "vivant",
+                    "a_jour",
                     "Q3161164",
                     null)));
 
@@ -62,6 +62,27 @@ class ReferentielArtistesServiceTest {
 
     assertEquals(1, reponse.artistes().size());
     assertEquals(1L, reponse.totalArtistes());
+  }
+
+  // Régression #778 : les valeurs de statut exposées doivent être autoporteuses
+  // (a_jour/a_verifier/invalide) plutôt que vivant/suspect/mort, peu clairs hors contexte.
+  @Test
+  @SuppressWarnings("unchecked")
+  void lister_nominal_requeteUtiliseLesNouvellesValeursDeStatut() {
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(0L);
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+
+    service.lister(0, null, null, false);
+
+    verify(jdbc)
+        .queryForObject(
+            org.mockito.ArgumentMatchers.argThat(
+                (String sql) ->
+                    sql.contains("'a_jour'")
+                        && sql.contains("'a_verifier'")
+                        && sql.contains("'invalide'")),
+            anyMap(),
+            eq(Long.class));
   }
 
   // Régression : facilite le repérage des candidats à corriger manuellement dans une pagination

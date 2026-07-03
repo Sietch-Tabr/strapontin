@@ -24,6 +24,7 @@ import fr.strapontin.web.config.ConfigService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -202,6 +203,71 @@ class SalleServiceTest {
     assertEquals("Bataclan", liste.get(0).salle());
   }
 
+  // #779 : une salle taguée leisure/tourism (pas amenity) mais dont extratags.amenity confirme
+  // une salle de concert ne doit plus être rejetée (cas réel : Plenitude Arena, Nanterre,
+  // class=leisure/type=stadium avec extratags.amenity=music_venue).
+  @Test
+  void parseNominatimResultats_venueAvecExtratagsAmenity_estAcceptee() {
+    String json =
+        """
+        [{
+          "class": "leisure", "type": "stadium",
+          "display_name": "Plenitude Arena, 99, Boulevard Aimé Césaire, Nanterre, France",
+          "osm_type": "relation", "osm_id": 14479234,
+          "address": {"town": "Nanterre"},
+          "extratags": {"amenity": "music_venue", "wikidata": "Q2860806"}
+        }]
+        """;
+
+    List<ResultatSalle> resultats = salleService.parseNominatimResultats(json);
+
+    assertEquals(1, resultats.size());
+    assertEquals("Plenitude Arena", resultats.get(0).salle());
+    assertEquals("Q2860806", resultats.get(0).wikidataId());
+  }
+
+  // #779 : class=amenity ne suffit plus à lui seul — un type amenity non pertinent (ex. borne de
+  // recharge électrique) doit être rejeté même si class=amenity (cas réel : recherche "plenitude"
+  // renvoyant une borne de recharge à Bourgoin-Jallieu avant ce correctif).
+  @Test
+  void parseNominatimResultats_amenityNonPertinent_estRejetee() {
+    String json =
+        """
+        [{
+          "class": "amenity", "type": "charging_station",
+          "display_name": "Plenitude, Avenue Aristide Briand, Bourgoin-Jallieu, France",
+          "osm_type": "node", "osm_id": 12853857393,
+          "address": {"town": "Bourgoin-Jallieu"},
+          "extratags": {"operator": "Plenitude On The Road"}
+        }]
+        """;
+
+    List<ResultatSalle> resultats = salleService.parseNominatimResultats(json);
+
+    assertEquals(0, resultats.size());
+  }
+
+  // #779 : garde-fou de non-régression pour l'E2E salles_rechercheNominatim_afficheBadgeOsm —
+  // un type déjà présent dans TYPES_SALLE_NOMINATIM (arts_centre) reste accepté.
+  @Test
+  void parseNominatimResultats_typeDejaDansAllowlist_estAcceptee() {
+    String json =
+        """
+        [{
+          "class": "amenity", "type": "arts_centre",
+          "display_name": "Rockstore, Montpellier, France",
+          "osm_type": "way", "osm_id": 12345,
+          "address": {"city": "Montpellier"},
+          "extratags": {}
+        }]
+        """;
+
+    List<ResultatSalle> resultats = salleService.parseNominatimResultats(json);
+
+    assertEquals(1, resultats.size());
+    assertEquals("Rockstore", resultats.get(0).salle());
+  }
+
   @Test
   void mettreAJourSalle_appelleRepository() {
     UUID uuid = UUID.randomUUID();
@@ -250,5 +316,22 @@ class SalleServiceTest {
     when(salleRepository.lireIdentifiantsSources(uuid)).thenReturn(null);
     salleService.declencherWorkerParSources(uuid);
     verify(salleRepository).lireIdentifiantsSources(uuid);
+  }
+
+  // #780 : "zenith" doit être détecté comme correspondant partiellement à "zenithparis" déjà
+  // suivie — même correctif que ArtisteService.contientCorrespondancePartielle.
+  @Test
+  void contientCorrespondancePartielle_rechercheSubstringDuneSalleSuivie_retourneTrue() {
+    assertTrue(SalleService.contientCorrespondancePartielle("zenith", Set.of("zenithparis")));
+  }
+
+  @Test
+  void contientCorrespondancePartielle_correspondanceExacte_retourneTrue() {
+    assertTrue(SalleService.contientCorrespondancePartielle("zenithparis", Set.of("zenithparis")));
+  }
+
+  @Test
+  void contientCorrespondancePartielle_aucuneCorrespondance_retourneFalse() {
+    assertFalse(SalleService.contientCorrespondancePartielle("olympia", Set.of("zenithparis")));
   }
 }
