@@ -400,3 +400,41 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
     });
   });
 });
+
+test.describe("Scénario: accueil — nettoyage du paramètre ancre après scroll (#801)", () => {
+  // Avant #801, l'ancre survivait à tout changement de filtre suivant (basculerFiltre conserve
+  // route.query par spread), re-déclenchant un scroll forcé à chaque bascule de chip.
+  test("accueil_bascculerFiltreApresAncre_retireAncreDeLurl", async ({
+    page,
+  }) => {
+    const [,] = await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes("/api/accueil") && r.status() === 200,
+      ),
+      page.goto("/"),
+    ]);
+    const premierGroupe = page.locator(".concert-groupe").first();
+    await expect(
+      premierGroupe,
+      "Précondition : au moins un artiste suivi avec concert visible sur l'accueil",
+    ).toBeVisible({ timeout: 5000 });
+    const idGroupe = await premierGroupe.getAttribute("id");
+    expect(idGroupe).toBeTruthy();
+
+    // scrollVersAncre() retire l'ancre dès le premier scroll (onMounted, #801) — pas seulement
+    // au changement de filtre suivant. On attend donc directement la disparition plutôt que
+    // d'asserter sa présence transitoire juste après le goto (racy : la suppression peut déjà
+    // avoir eu lieu au moment où l'assertion s'exécute, notamment sur Firefox).
+    await page.goto(`/?ancre=${idGroupe}`);
+    await expect(page).not.toHaveURL(/ancre=/, { timeout: 5000 });
+
+    // Bascule de filtre suivante : l'ancre, déjà retirée, ne doit pas réapparaître.
+    await page.locator(".chips a", { hasText: "Nouveau" }).click();
+    await expect(page).toHaveURL(/nouveau=true/);
+    await expect(page).not.toHaveURL(/ancre=/);
+
+    await page.locator(".chips a", { hasText: "Nouveau" }).click();
+    await expect(page).not.toHaveURL(/nouveau=true/);
+    await expect(page).not.toHaveURL(/ancre=/);
+  });
+});
