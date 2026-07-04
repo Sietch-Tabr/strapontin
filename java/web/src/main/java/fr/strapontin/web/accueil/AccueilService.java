@@ -34,14 +34,28 @@ public class AccueilService {
     this.userConfigService = userConfigService;
   }
 
-  /// Marque tous les matches non encore vus comme vus pour l'utilisateur.
+  /// Marque comme vus les matches artiste non encore vus pour l'utilisateur.
   ///
-  /// <p>Appelé à la visite de l'accueil pour réinitialiser le badge de navigation.
+  /// <p>Appelé à la visite de l'accueil pour réinitialiser le badge de navigation. Restreint aux
+  /// matchs artiste (#799) — l'accueil n'affiche jamais les matchs salle (voir {@link #accueil}),
+  /// donc marquer aussi ces derniers effaçait à tort l'indicateur « Nouveau » par concert sur
+  /// {@code /spectacles} avant même que l'utilisateur n'ait visité cette page.
   ///
   /// @param userId identifiant de l'utilisateur
   public void marquerVus(String userId) {
     jdbc.update(
-        "UPDATE user_matches SET vu_le = now() WHERE user_id = :userId AND vu_le IS NULL",
+        """
+        UPDATE user_matches um
+        SET vu_le = now()
+        FROM concerts c
+        WHERE um.concert_id = c.id
+          AND um.user_id = :userId
+          AND um.vu_le IS NULL
+          AND EXISTS (
+            SELECT 1 FROM user_artistes ua
+            WHERE ua.user_id = um.user_id AND c.artiste_id = ua.artiste_id
+          )
+        """,
         Map.of(CLE_USER_ID, userId));
   }
 

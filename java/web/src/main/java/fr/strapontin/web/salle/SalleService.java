@@ -415,7 +415,7 @@ public class SalleService {
       HttpRequest request =
           HttpRequest.newBuilder()
               .uri(URI.create(url))
-              .header("User-Agent", "Strapontin/2.6.2 (contact: " + contact + ")")
+              .header("User-Agent", "Strapontin/2.6.3 (contact: " + contact + ")")
               .timeout(Duration.ofSeconds(3))
               .GET()
               .build();

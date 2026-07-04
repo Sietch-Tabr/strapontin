@@ -7,7 +7,6 @@ package fr.strapontin.web.email;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
-import com.resend.core.exception.ResendException;
 import com.resend.services.webhooks.model.VerifyWebhookOptions;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
@@ -90,7 +89,11 @@ public class ResendWebhookController {
                           "svix-signature", nvl(svixSignature)))
                   .secret(secret.get())
                   .build());
-    } catch (ResendException e) {
+    } catch (Exception e) {
+      // Exception large (pas seulement ResendException) : la vérification Svix embarquée lève
+      // aussi une NumberFormatException non enveloppée sur un svix-timestamp non numérique
+      // (#810) — sans ce catch, l'exception technique remonte en 500 (au lieu du 401 attendu
+      // pour une signature invalide) et déclenche une alerte email admin parasite.
       log.warn("Signature webhook Resend invalide : {}", e.getMessage());
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }

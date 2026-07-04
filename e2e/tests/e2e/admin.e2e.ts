@@ -785,6 +785,19 @@ test.describe("Scénario: admin — API endpoints", () => {
     expect(rep.status()).toBe(400);
   });
 
+  // #808 : annulerRevocationAdmin était le seul endpoint de gestion utilisateur sans garde
+  // userId === adminId — un admin en cours de révocation pouvait annuler sa propre révocation.
+  test("api_admin_annulerRevocationAdmin_soiMeme_retourne400", async ({
+    request,
+  }) => {
+    const repProfil = await request.get("/api/user/profile");
+    const profil = await repProfil.json();
+    const rep = await request.delete(
+      `/api/admin/utilisateurs/${profil.id}/revoquer-admin`,
+    );
+    expect(rep.status()).toBe(400);
+  });
+
   // Bouton "Relancer" par job de maintenance (v2.6.0, #706/#710).
   test("api_admin_jobsRelancer_typeJobConnu_retourne200", async ({
     request,

@@ -686,4 +686,70 @@ class PersisterConcertsIntegrationTest {
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count, "les deux concerts doivent fusionner en un seul via salle_uuid");
   }
+
+  // #790 — supprimerDoublonsParSalleUuid ne couvrait que les paires TM/Eventim codées en dur.
+  // Ce test simule un doublon résiduel TM+Digitick (même artiste_id/date/heure/salle_uuid mais
+  // artiste_norm distinct — la contrainte unique porte sur artiste_norm, pas artiste_id, donc les
+  // deux lignes peuvent légitimement coexister en base malgré une résolution UUID identique).
+  @Test
+  void persisterConcerts_doublonResiduelTicketmasterDigitick_supprimeLaLigneDigitick() {
+    java.util.UUID artisteId = java.util.UUID.randomUUID();
+    java.util.UUID salleUuid = java.util.UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
+        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+            .addValue("id", artisteId.toString())
+            .addValue("nom", "Coldplay")
+            .addValue("nomNorm", "coldplay"));
+    jdbc.update(
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept)"
+            + " VALUES (CAST(:id AS uuid), :salleCle, :nom, :nomNorm, '75')",
+        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+            .addValue("id", salleUuid.toString())
+            .addValue("salleCle", "salle-test-" + salleUuid)
+            .addValue("nom", "Accor Arena")
+            .addValue("nomNorm", "accor arena"));
+
+    String sqlInsertConcert =
+        """
+        INSERT INTO concerts
+            (artiste, artiste_norm, date, heure, salle, salle_norm, source, artiste_id, salle_uuid)
+        VALUES
+            (:artiste, :artisteNorm, '2026-12-05', '20:00', :salle, 'accor arena',
+             CAST(:source AS source_concert), CAST(:artisteId AS uuid), CAST(:salleUuid AS uuid))
+        """;
+    jdbc.update(
+        sqlInsertConcert,
+        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+            .addValue("artiste", "Coldplay")
+            .addValue("artisteNorm", "coldplay")
+            .addValue("salle", "Accor Arena")
+            .addValue("source", "ticketmaster")
+            .addValue("artisteId", artisteId.toString())
+            .addValue("salleUuid", salleUuid.toString()));
+    jdbc.update(
+        sqlInsertConcert,
+        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+            .addValue("artiste", "Cold Play")
+            .addValue("artisteNorm", "cold play")
+            .addValue("salle", "Accor Arena Digitick")
+            .addValue("source", "digitick")
+            .addValue("artisteId", artisteId.toString())
+            .addValue("salleUuid", salleUuid.toString()));
+
+    // Un concert sans rapport déclenche le passage de persisterConcerts (et donc le nettoyage
+    // supprimerDoublonsParSalleUuid) sans interagir avec les deux lignes insérées ci-dessus.
+    persisterConcerts.persisterConcerts(
+        List.of(concert("Artiste Sans Rapport", "2026-12-06", "Autre Salle", "ticketmaster")));
+
+    List<String> sourcesRestantes =
+        jdbc.queryForList(
+            "SELECT source::text FROM concerts WHERE artiste_id = CAST(:artisteId AS uuid)",
+            Map.of("artisteId", artisteId.toString()),
+            String.class);
+    assertEquals(
+        List.of("ticketmaster"),
+        sourcesRestantes,
+        "la ligne Digitick doit être supprimée au profit de la ligne Ticketmaster (priorité)");
+  }
 }

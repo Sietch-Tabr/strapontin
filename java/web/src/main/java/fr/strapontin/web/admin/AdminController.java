@@ -195,11 +195,14 @@ public class AdminController {
   ///
   /// @param userId identifiant de l'administrateur concerné
   /// @param auth   contexte d'authentification admin
-  /// @return 200 si annulée, 400 si aucune révocation en cours
+  /// @return 200 si annulée, 400 si auto-annulation ou aucune révocation en cours
   @DeleteMapping("/utilisateurs/{userId}/revoquer-admin")
   public ResponseEntity<Map<String, Object>> annulerRevocationAdmin(
       @PathVariable String userId, Authentication auth) {
     String adminId = utilisateur(auth).id();
+    if (userId.equals(adminId)) {
+      return erreur(400, "Impossible d'annuler votre propre révocation.");
+    }
     adminService.annulerRevocationAdmin(userId, adminId);
     return ResponseEntity.ok(Map.of("succes", true, "action", "annulerRevocationAdmin"));
   }

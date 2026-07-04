@@ -12,7 +12,40 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.6.2 — 2 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.6.3 — 4 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Accueil</p>
+            <ul>
+              <li>Le badge « Nouveau » de vos concerts n'est plus effacé à tort par une simple visite de l'accueil quand il concernait une salle suivie — il reste visible jusqu'à consultation réelle dans Mes spectacles.</li>
+              <li>Cliquer sur une notification puis changer de filtre sur l'accueil ne re-déclenche plus un défilement automatique intempestif vers le concert d'origine.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Qualité des données</p>
+            <ul>
+              <li>Deux séances distinctes du même spectacle le même jour (matinée et soirée) ne sont plus fusionnées à tort en une seule.</li>
+              <li>Les doublons résiduels entre Ticketmaster/Eventim et Digitick sont désormais nettoyés, pas seulement entre Ticketmaster et Eventim.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Notifications</p>
+            <ul>
+              <li>Un concert n'est plus marqué à tort comme notifié quand seul l'un de vos deux canaux (email/push) a réellement réussi à vous prévenir.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Sécurité</p>
+            <ul>
+              <li>Changer son mot de passe déconnecte désormais aussi vos sessions actives sur les autres appareils.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.6.2 — 2 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Salles</p>
@@ -53,7 +86,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.6.1 — 2 juillet 2026</h2></summary>

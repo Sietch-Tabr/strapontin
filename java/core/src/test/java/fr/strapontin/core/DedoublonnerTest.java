@@ -238,4 +238,97 @@ class DedoublonnerTest {
             concert("Portishead", "2025-05-21", "Olympia", null, "ticketmaster"));
     assertEquals(2, Dedoublonner.dedoublonner(concerts).size());
   }
+
+  // #793 : deux concerts du même artiste, même date, même ville, mais aucune ville renseignée
+  // (null) et deux salles réellement différentes ne doivent pas fusionner — avant le correctif,
+  // la clé de la passe exacte utilisait "" pour toute ville absente, fusionnant à tort deux
+  // concerts distincts faute de salle dans la clé.
+  @Test
+  void dedoublonner_villeNullMemeDateSallesDifferentes_nePasseFusionner() {
+    var concerts =
+        List.of(
+            concert("Portishead", "2025-05-20", "La Cigale", null, "bandsintown"),
+            concert("Portishead", "2025-05-20", "Olympia", null, "ticketmaster"));
+    assertEquals(2, Dedoublonner.dedoublonner(concerts).size());
+  }
+
+  // --- Heure (#793) ---
+
+  @Test
+  void dedoublonner_matineeEtSoiree_nePasseFusionnerHeuresDifferentes() {
+    var matinee =
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            "15:00",
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    var soiree =
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            "20:00",
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "eventim",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    assertEquals(2, Dedoublonner.dedoublonner(List.of(matinee, soiree)).size());
+  }
+
+  @Test
+  void dedoublonner_heureAbsenteDunCote_fusionneMalgreTout() {
+    var sansHeure =
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            null,
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    var avecHeure =
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            "20:00",
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "eventim",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    assertEquals(1, Dedoublonner.dedoublonner(List.of(sansHeure, avecHeure)).size());
+  }
 }

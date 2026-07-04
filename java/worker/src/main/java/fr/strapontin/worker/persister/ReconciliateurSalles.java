@@ -172,13 +172,25 @@ public class ReconciliateurSalles {
     return lot.stream().map(concert -> reconcilierUnConcert(concert, indexExistants)).toList();
   }
 
+  /// Réconcilie un concert contre les salles existantes d'une même clé (artiste, date).
+  ///
+  /// <p>Vérifie d'abord une correspondance exacte sur l'ensemble de la liste avant de retomber
+  /// sur une correspondance floue (#794) : sans cette priorité, l'absence de {@code ORDER BY}
+  /// sur la requête source (voir {@link #reconcilierSalles}) peut placer un candidat flou avant
+  /// un candidat exact, rattachant à tort le concert à la mauvaise salle alors qu'une
+  /// correspondance exacte existait plus loin dans la même liste.
+  ///
+  /// @param concert        concert à réconcilier
+  /// @param indexExistants noms de salle existants indexés par {@code artisteNorm|date}
+  /// @return concert réconcilié (salleNorm canonique si un candidat correspond)
   private ValeurConcert reconcilierUnConcert(
       ValeurConcert concert, Map<String, List<String>> indexExistants) {
     String cle = concert.artisteNorm() + "|" + concert.date();
     List<String> sallesExistantes = indexExistants.get(cle);
-    if (sallesExistantes == null) return concert;
+    if (sallesExistantes == null || sallesExistantes.contains(concert.salleNorm())) {
+      return concert;
+    }
     for (String salleNormExistante : sallesExistantes) {
-      if (salleNormExistante.equals(concert.salleNorm())) return concert;
       if (estDoublonSalle(concert.salleNorm(), salleNormExistante)) {
         log.debug(
             "doublon salle inter-jobs réconcilié entrant={} existant={}",

@@ -159,6 +159,15 @@ test.describe("Scénario: API paramètres — stats et TOTP", () => {
     await ctx.close();
   });
 
+  // #805 : PATCH /api/user/profile permettait de changer l'email sans confirmation, en
+  // contournant le flux sécurisé POST /api/parametres/email-change. L'endpoint est retiré.
+  test("api_user_profile_patch_nexistePlus", async ({ request }) => {
+    const rep = await request.patch("/api/user/profile", {
+      data: { email: "nouveau@exemple.fr" },
+    });
+    expect([404, 405]).toContain(rep.status());
+  });
+
   test("api_totp_setup_retourne_qr_et_secret", async ({ request }) => {
     const rep = await request.get("/api/totp/setup");
     expect(rep.status()).toBe(200);

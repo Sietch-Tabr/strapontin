@@ -42,29 +42,6 @@ class UtilisateurRepository {
         .findFirst();
   }
 
-  /// Vérifie si un email est déjà utilisé par un autre utilisateur.
-  ///
-  /// @param email  email à vérifier
-  /// @param userId identifiant de l'utilisateur courant (exclu de la vérification)
-  /// @return {@code true} si l'email est pris
-  boolean emailDejaUtilise(String email, String userId) {
-    return !jdbc.queryForList(
-            "SELECT 1 FROM users WHERE email = :email AND id != :userId",
-            Map.of("email", email, CLE_USER_ID, userId),
-            Integer.class)
-        .isEmpty();
-  }
-
-  /// Met à jour l'email.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param email  nouvel email (déjà validé et normalisé)
-  void majEmail(String userId, String email) {
-    jdbc.update(
-        "UPDATE users SET email = :email, updated_at = now() WHERE id = :userId",
-        Map.of("email", email, CLE_USER_ID, userId));
-  }
-
   /// Vérifie si un identifiant est déjà pris par un autre utilisateur.
   ///
   /// @param identifiant identifiant à vérifier (en minuscules)

@@ -11,6 +11,7 @@ import fr.strapontin.web.securite.UtilisateurDetails;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
@@ -78,7 +79,7 @@ public class SalleController {
   // GlobalExceptionHandler})
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterSalle(
-      @RequestBody RequeteAjouter requete, Authentication auth) {
+      @Valid @RequestBody RequeteAjouter requete, Authentication auth) {
     String userId = utilisateur(auth).id();
     String nom = requete.nom() == null ? "" : requete.nom().strip();
     if (nom.isEmpty() || nom.length() > 200) {

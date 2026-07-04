@@ -152,11 +152,23 @@ public class ReconciliateurArtistes {
     return c.avecArtisteNorm(canonique);
   }
 
+  /// Réconcilie un concert contre les candidats existants d'une même clé (date, salle).
+  ///
+  /// <p>Scanne toute la liste à la recherche d'une correspondance exacte avant de retomber sur
+  /// une correspondance floue (#794) : sans cette priorité, l'absence de {@code ORDER BY} sur la
+  /// requête source (voir {@link #reconcilierArtistes}) peut placer un candidat flou avant un
+  /// candidat exact dans le result set, faisant rattacher à tort le concert au mauvais artiste
+  /// alors qu'une correspondance exacte existait plus loin dans la même liste.
+  ///
+  /// @param concert        concert à réconcilier
+  /// @param indexExistants candidats existants indexés par {@code date|salleNorm}
+  /// @return concert réconcilié (artisteNorm/artisteId propagés si un candidat correspond)
   private ValeurConcert reconcilierUnArtiste(
       ValeurConcert concert, Map<String, List<ArtisteExistant>> indexExistants) {
     String cle = concert.date() + "|" + concert.salleNorm();
     List<ArtisteExistant> artistesExistants = indexExistants.get(cle);
     if (artistesExistants == null) return concert;
+
     for (ArtisteExistant existant : artistesExistants) {
       if (existant.artisteNorm().equals(concert.artisteNorm())) {
         if (concert.artisteId() == null && existant.artisteId() != null) {
@@ -164,6 +176,8 @@ public class ReconciliateurArtistes {
         }
         return concert;
       }
+    }
+    for (ArtisteExistant existant : artistesExistants) {
       if (estDoublonArtiste(concert.artisteNorm(), existant.artisteNorm())) {
         UUID artisteIdPropague =
             concert.artisteId() == null ? existant.artisteId() : concert.artisteId();

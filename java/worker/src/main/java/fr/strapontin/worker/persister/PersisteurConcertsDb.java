@@ -301,11 +301,21 @@ public class PersisteurConcertsDb {
     return 0;
   }
 
-  /// Supprime les doublons TM+Eventim non fusionnés par {@link ReconciliateurSalles}.
+  /// Priorité de source (plus petit = conservé) pour {@link #supprimerDoublonsParSalleUuid}.
+  private static final String SQL_PRIORITE_SOURCE =
+      "CASE %s::text"
+          + " WHEN 'ticketmaster' THEN 1"
+          + " WHEN 'eventim' THEN 2"
+          + " WHEN 'digitick' THEN 3"
+          + " ELSE 4 END";
+
+  /// Supprime les doublons cross-sources non fusionnés par {@link ReconciliateurSalles}.
   ///
-  /// <p>Quand TM et Eventim nomment la même salle différemment, deux lignes peuvent coexister
-  /// malgré un {@code salle_uuid} identique. Cette méthode supprime la ligne Eventim en
-  /// conservant la ligne TM comme référence.
+  /// <p>Quand deux sources nomment la même salle différemment, deux lignes peuvent coexister
+  /// malgré un {@code salle_uuid} identique. Généralisé à toutes les paires de sources — pas
+  /// seulement TM/Eventim (#790) — via une priorité TM &gt; Eventim &gt; Digitick : la ligne de
+  /// la source la moins prioritaire est supprimée, celle de la source la plus prioritaire est
+  /// conservée comme référence.
   ///
   /// @return nombre de concerts supprimés
   int supprimerDoublonsParSalleUuid() {
@@ -319,14 +329,17 @@ public class PersisteurConcertsDb {
                 + "    AND c1.date = c2.date"
                 + "    AND c1.heure IS NOT DISTINCT FROM c2.heure"
                 + "    AND c1.salle_uuid = c2.salle_uuid"
-                + "  WHERE c1.source = 'ticketmaster'"
-                + "    AND c2.source = 'eventim'"
-                + "    AND c1.artiste_id IS NOT NULL"
+                + "    AND c1.id != c2.id"
+                + "  WHERE c1.artiste_id IS NOT NULL"
                 + "    AND c1.salle_uuid IS NOT NULL"
+                + "    AND "
+                + SQL_PRIORITE_SOURCE.formatted("c1.source")
+                + "    < "
+                + SQL_PRIORITE_SOURCE.formatted("c2.source")
                 + ")",
             Map.of());
     if (nbSupprimees > 0)
-      log.info("doublons TM+Eventim (salle_uuid) supprimés count={}", nbSupprimees);
+      log.info("doublons cross-sources (salle_uuid) supprimés count={}", nbSupprimees);
     return nbSupprimees;
   }
 }
