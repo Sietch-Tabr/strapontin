@@ -374,7 +374,10 @@ class WorkerServiceTest {
 
   @Test
   void executerRevoquerAdmins_avecAdmins_insereLogs() {
+    when(jdbc.queryForList(contains("SELECT username"), anyMap(), eq(String.class)))
+        .thenReturn(List.of("ex-admin1", "ex-admin2"));
     when(jdbc.update(contains("UPDATE users"), anyMap())).thenReturn(2);
+    when(jdbc.update(contains("DELETE FROM SPRING_SESSION"), anyMap())).thenReturn(3);
     when(jdbc.update(contains("INSERT INTO logs_admin"), anyMap())).thenReturn(1);
     when(jdbc.update(contains("INSERT INTO fetch_jobs"), anyMap())).thenReturn(1);
     when(jdbc.update(contains("INSERT INTO fetch_jobs_historique"), anyMap())).thenReturn(1);
@@ -383,6 +386,38 @@ class WorkerServiceTest {
 
     verify(jdbc).update(contains("UPDATE users"), anyMap());
     verify(jdbc).update(contains("INSERT INTO logs_admin"), anyMap());
+  }
+
+  // #809 : après rétrogradation effective, les sessions Spring Session des comptes concernés
+  // sont supprimées — sinon un admin rétrogradé reste authentifié avec son ancien rôle jusqu'à
+  // expiration naturelle de sa session (30 jours).
+  @Test
+  void executerRevoquerAdmins_avecAdmins_revoqueLesSessions() {
+    when(jdbc.queryForList(contains("SELECT username"), anyMap(), eq(String.class)))
+        .thenReturn(List.of("ex-admin1", "ex-admin2"));
+    when(jdbc.update(contains("UPDATE users"), anyMap())).thenReturn(2);
+    when(jdbc.update(contains("DELETE FROM SPRING_SESSION"), anyMap())).thenReturn(3);
+    when(jdbc.update(contains("INSERT INTO logs_admin"), anyMap())).thenReturn(1);
+    when(jdbc.update(contains("INSERT INTO fetch_jobs"), anyMap())).thenReturn(1);
+    when(jdbc.update(contains("INSERT INTO fetch_jobs_historique"), anyMap())).thenReturn(1);
+
+    workerService.executerRevoquerAdmins();
+
+    verify(jdbc)
+        .update(
+            contains("DELETE FROM SPRING_SESSION"),
+            eq(java.util.Map.of("usernames", List.of("ex-admin1", "ex-admin2"))));
+  }
+
+  @Test
+  void executerRevoquerAdmins_aucunAdminRevoque_neSupprimeAucuneSession() {
+    when(jdbc.queryForList(contains("SELECT username"), anyMap(), eq(String.class)))
+        .thenReturn(List.of());
+    when(jdbc.update(contains("UPDATE users"), anyMap())).thenReturn(0);
+
+    workerService.executerRevoquerAdmins();
+
+    verify(jdbc, never()).update(contains("DELETE FROM SPRING_SESSION"), anyMap());
   }
 
   @Test

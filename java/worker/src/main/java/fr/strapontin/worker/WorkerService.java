@@ -81,7 +81,10 @@ public class WorkerService {
 
   /// Fetch global de tous les artistes suivis (TM par attraction ID + Eventim individuel).
   ///
-  /// Suspendu si le quota TM est inférieur à 500 (SEUIL_QUOTA_CRON).
+  /// Suspendu si le quota TM est inférieur à 500 (SEUIL_QUOTA_CRON). Une exception dans un lot
+  /// n'interrompt pas les lots suivants (#792) : le recalcul de matchs et le digest de
+  /// notification s'exécutent toujours sur la base des lots effectivement réussis, plutôt que
+  /// d'être sautés en cas d'échec partiel.
   public void executerFetchArtistesBatch() {
     log.info("fetch:artistes:batch démarré");
     long debut = System.currentTimeMillis();
@@ -115,7 +118,12 @@ public class WorkerService {
 
       for (int i = 0; i < rows.size(); i += TAILLE_LOT_TM) {
         List<Map<String, Object>> lot = rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
-        resultat = accumuler(resultat, traiterLotArtistesBatch(lot, sourcesSimples));
+        try {
+          resultat = accumuler(resultat, traiterLotArtistesBatch(lot, sourcesSimples));
+        } catch (Exception e) {
+          log.error(
+              "fetch:artistes:batch lot {}-{} échoué : {}", i, i + lot.size(), e.getMessage(), e);
+        }
       }
       sauvegarderQuota();
       recalculerMatchesService.recalculerMatches(null);
@@ -235,6 +243,9 @@ public class WorkerService {
         } catch (Exception e) {
           log.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());
         }
+        // #789 : throttle manquant ici jusqu'alors — un lot avec plusieurs artistes jamais
+        // résolus pouvait générer une rafale d'appels /attractions.json sans délai.
+        attendreRateLimit();
       }
       if (attractionId != null) {
         attractionIds.add(attractionId);
@@ -299,7 +310,11 @@ public class WorkerService {
       for (int i = 0; i < deptsListe.size(); i += TAILLE_LOT_DEPTS) {
         List<String> lotDepts =
             deptsListe.subList(i, Math.min(i + TAILLE_LOT_DEPTS, deptsListe.size()));
-        resultat = accumuler(resultat, traiterLotDepartements(lotDepts));
+        try {
+          resultat = accumuler(resultat, traiterLotDepartements(lotDepts));
+        } catch (Exception e) {
+          log.error("fetch:region lot {} échoué : {}", lotDepts, e.getMessage(), e);
+        }
       }
       sauvegarderQuota();
       recalculerMatchesService.recalculerMatches(null);
@@ -405,7 +420,12 @@ public class WorkerService {
         List<String> lotSalles =
             identifiantsParSalle.subList(
                 i, Math.min(i + TAILLE_LOT_SALLES, identifiantsParSalle.size()));
-        resultat = accumuler(resultat, traiterLotSalles(lotSalles));
+        try {
+          resultat = accumuler(resultat, traiterLotSalles(lotSalles));
+        } catch (Exception e) {
+          log.error(
+              "fetch:salles:all lot {}-{} échoué : {}", i, i + lotSalles.size(), e.getMessage(), e);
+        }
       }
       sauvegarderQuota();
       recalculerMatchesService.recalculerMatches(null);
@@ -655,12 +675,23 @@ public class WorkerService {
 
   /// Révoque les admins dont le délai de préavis est écoulé.
   ///
-  /// <p>Passe de `admin` à `user` tous les comptes dont `revocation_admin_le` est dans le passé.
+  /// <p>Passe de `admin` à `user` tous les comptes dont `revocation_admin_le` est dans le passé,
+  /// puis révoque leurs sessions actives (#809) — sans cela, un admin rétrogradé resterait
+  /// authentifié avec son ancien rôle `admin` (chargé en session à la connexion, jamais
+  /// rafraîchi) jusqu'à expiration naturelle de sa session (30 jours). Le module worker n'a pas
+  /// le bean {@code FindByIndexNameSessionRepository} (spécifique à Spring Session côté web) :
+  /// suppression directe des lignes {@code SPRING_SESSION} par {@code PRINCIPAL_NAME}, table
+  /// déjà lue en lecture seule ailleurs (voir {@code AdminService.listerUtilisateurs}).
   /// Loggue le bilan dans `logs_admin`.
   public void executerRevoquerAdmins() {
     log.info("revoquer:admins démarré");
     long debut = System.currentTimeMillis();
     try {
+      List<String> usernamesRevoques =
+          jdbc.queryForList(
+              "SELECT username FROM users WHERE revocation_admin_le < now() AND role = 'admin'",
+              Map.of(),
+              String.class);
       int nb =
           jdbc.update(
               """
@@ -670,6 +701,7 @@ public class WorkerService {
               Map.of());
       log.info("revoquer:admins terminé nb={}", nb);
       if (nb > 0) {
+        revoquerSessions(usernamesRevoques);
         jdbc.update(
             """
             INSERT INTO logs_admin (ts, niveau, source, message, meta)
@@ -694,6 +726,24 @@ public class WorkerService {
           System.currentTimeMillis() - debut,
           new ResultatPersistance(0, 0),
           e.getMessage());
+    }
+  }
+
+  /// Supprime les sessions Spring Session actives pour les identifiants fournis (#809).
+  ///
+  /// @param usernames identifiants (colonne {@code username}) des comptes venant d'être rétrogradés
+  private void revoquerSessions(List<String> usernames) {
+    if (usernames.isEmpty()) return;
+    try {
+      int supprimees =
+          jdbc.update(
+              "DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME IN (:usernames)",
+              Map.of("usernames", usernames));
+      if (supprimees > 0) {
+        log.info("revoquer:admins — sessions révoquées count={}", supprimees);
+      }
+    } catch (Exception e) {
+      log.warn("revoquer:admins — impossible de révoquer les sessions : {}", e.getMessage());
     }
   }
 

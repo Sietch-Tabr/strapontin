@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 /// Tests unitaires de [NotificationDigestService] avec mocks Mockito.
 ///
@@ -175,6 +176,56 @@ class NotificationDigestServiceTest {
     assertTrue(html.contains("Indochine"), "L'email doit contenir l'artiste");
     assertTrue(html.contains("Zénith Paris"), "L'email doit contenir la salle");
     assertTrue(html.contains("https://example.com"), "L'email doit contenir le lien billet");
+  }
+
+  // --- #795 : interprétation du statut HTTP push ---
+
+  @Test
+  void interpreterStatutPush_statut2xx_retourneSucces() {
+    assertEquals(
+        NotificationDigestService.ResultatEnvoiPush.SUCCES,
+        NotificationDigestService.interpreterStatutPush(201));
+  }
+
+  @Test
+  void interpreterStatutPush_statut404Ou410_retourneAbonnementMort() {
+    assertEquals(
+        NotificationDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
+        NotificationDigestService.interpreterStatutPush(404));
+    assertEquals(
+        NotificationDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
+        NotificationDigestService.interpreterStatutPush(410));
+  }
+
+  // Avant #795, tout statut différent de 404/410 était compté comme un succès — un 400 (payload
+  // malformé), un 429 (rate-limit) ou un 500 étaient donc traités à tort comme des envois réussis.
+  @Test
+  void interpreterStatutPush_statutErreurNi404Ni410_retourneEchec() {
+    assertEquals(
+        NotificationDigestService.ResultatEnvoiPush.ECHEC,
+        NotificationDigestService.interpreterStatutPush(400));
+    assertEquals(
+        NotificationDigestService.ResultatEnvoiPush.ECHEC,
+        NotificationDigestService.interpreterStatutPush(429));
+    assertEquals(
+        NotificationDigestService.ResultatEnvoiPush.ECHEC,
+        NotificationDigestService.interpreterStatutPush(500));
+  }
+
+  // --- #791 : marquage notification_envoyee_le uniquement si un canal a réellement réussi ---
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void executerDigest_toutEchoue_neMarqueAucunConcertNotifie() {
+    when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of(ligneTest("u3")));
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
+    when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
+    when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
+
+    service.executerDigest("quotidien");
+
+    verify(jdbc, never())
+        .update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
   private static Map<String, Object> ligneTest(String userId) {

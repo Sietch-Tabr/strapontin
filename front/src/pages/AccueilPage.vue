@@ -250,6 +250,11 @@ async function scrollVersAncre() {
   if (!ancre) return
   await nextTick()
   document.getElementById(String(ancre))?.scrollIntoView({ behavior: 'smooth' })
+  // #801 : retire l'ancre de l'URL une fois le scroll effectué — sinon basculerFiltre() la
+  // conserve par spread et chaque changement de filtre suivant re-déclenche le scroll forcé.
+  const q = { ...route.query }
+  delete q.ancre
+  router.replace({ query: q })
 }
 
 watch(() => route.query, async () => {

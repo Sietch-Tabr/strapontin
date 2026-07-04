@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,7 +29,9 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.CannotSerializeTransactionException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.web.client.RestClient;
 
 /// Tests unitaires pour {@link AdminService} (logique métier admin, dépendances mockées).
@@ -60,7 +63,9 @@ class AdminServiceTest {
             new ObjectMapper(),
             verificationRepository,
             mock(RestClient.class),
-            mock(WorkerProxyService.class));
+            mock(WorkerProxyService.class),
+            mock(FindByIndexNameSessionRepository.class));
+    adminService.setSelf(adminService);
   }
 
   @Test
@@ -147,14 +152,60 @@ class AdminServiceTest {
   }
 
   @Test
-  void modifierUtilisateur_changeRoleUser_nenvoiePasEmail() {
+  void modifierUtilisateur_changeRoleUserDejaUser_nenvoiePasEmail() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(Map.of("role", "user")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
     adminService.modifierUtilisateur("user-1", requete, "admin-1");
 
     verify(emailService, never()).envoyerPromotionAdmin(anyString());
+    verify(emailService, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
+  }
+
+  // #807 : PATCH modifierUtilisateur ne rétrograde plus jamais un admin immédiatement — délègue
+  // à initierRevocationAdmin (même délai différé 7 jours, même garde dernier admin) plutôt que
+  // d'exécuter un UPDATE role='user' direct.
+  @Test
+  void modifierUtilisateur_retrogradeAdminActuel_delegueAInitierRevocationAdmin() {
+    when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
+    Map<String, Object> ligneAdminCible = new HashMap<>();
+    ligneAdminCible.put("role", "admin");
+    ligneAdminCible.put("email", "admin-cible@exemple.fr");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneAdminCible));
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
+    adminService.modifierUtilisateur("admin-cible", requete, "admin-1");
+
+    verify(emailService).envoyerPreavisRevocationAdmin(eq("admin-cible@exemple.fr"), anyString());
+    verify(logAdminService)
+        .logAdmin(eq("warn"), eq("admin"), eq("révocation admin initiée"), anyMap());
+    verify(logAdminService, never())
+        .logAdmin(eq("warn"), eq("admin"), eq("rôle modifié"), anyMap());
+    verify(emailService, never()).envoyerPromotionAdmin(anyString());
+  }
+
+  // #807 : le seul admin restant ne peut pas être rétrogradé via PATCH, même combiné à un
+  // changement de nom dans la même requête.
+  @Test
+  void modifierUtilisateur_retrogradeSeulAdmin_leveErreurMetier409() {
+    when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
+    Map<String, Object> ligneAdminCible = new HashMap<>();
+    ligneAdminCible.put("role", "admin");
+    ligneAdminCible.put("email", "admin-cible@exemple.fr");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneAdminCible));
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(1);
+
+    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
+    ErreurMetier ex =
+        assertThrows(
+            ErreurMetier.class,
+            () -> adminService.modifierUtilisateur("admin-cible", requete, "admin-1"));
+
+    assertEquals(409, ex.getStatus());
   }
 
   @Test
@@ -208,6 +259,41 @@ class AdminServiceTest {
     verify(emailService).envoyerPreavisRevocationAdmin(eq("admin@exemple.fr"), anyString());
     verify(logAdminService)
         .logAdmin(eq("warn"), eq("admin"), eq("révocation admin initiée"), anyMap());
+  }
+
+  // #811 : deux révocations concurrentes peuvent lever un conflit de sérialisation PostgreSQL
+  // (isolation SERIALIZABLE) — la première tentative échoue, la seconde réussit.
+  @Test
+  void initierRevocationAdmin_conflitSerialisationPuisSucces_reessaieEtReussit() {
+    Map<String, Object> ligne = new HashMap<>();
+    ligne.put("email", "admin@exemple.fr");
+    ligne.put("role", "admin");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
+    when(jdbc.update(anyString(), anyMap()))
+        .thenThrow(new CannotSerializeTransactionException("conflit"))
+        .thenReturn(1);
+
+    adminService.initierRevocationAdmin("admin-1", "admin-2");
+
+    verify(jdbc, times(2)).update(anyString(), anyMap());
+    verify(emailService).envoyerPreavisRevocationAdmin(eq("admin@exemple.fr"), anyString());
+  }
+
+  @Test
+  void initierRevocationAdmin_conflitSerialisationPersistant_leveApresMaxTentatives() {
+    Map<String, Object> ligne = new HashMap<>();
+    ligne.put("email", "admin@exemple.fr");
+    ligne.put("role", "admin");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
+    when(jdbc.update(anyString(), anyMap()))
+        .thenThrow(new CannotSerializeTransactionException("conflit"));
+
+    assertThrows(
+        CannotSerializeTransactionException.class,
+        () -> adminService.initierRevocationAdmin("admin-1", "admin-2"));
+    verify(jdbc, times(3)).update(anyString(), anyMap());
   }
 
   @Test

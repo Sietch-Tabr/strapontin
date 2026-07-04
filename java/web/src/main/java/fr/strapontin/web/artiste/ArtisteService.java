@@ -32,6 +32,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /// Service de gestion des artistes suivis.
 ///
@@ -46,7 +48,7 @@ public class ArtisteService {
   private static final String DEEZER_URL = "https://api.deezer.com/search/artist";
   private static final String WIKIDATA_API_URL = "https://www.wikidata.org/w/api.php";
   private static final String WIKIDATA_USER_AGENT =
-      "Strapontin/2.6.2 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
+      "Strapontin/2.6.3 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
   // Mots-clés (description Wikidata, fr/en) distinguant un artiste musical ou un humoriste
   // (#717, #767) des homonymes non pertinents pour l'autocomplete.
   private static final Pattern MOTS_CLES_ARTISTE =
@@ -198,10 +200,41 @@ public class ArtisteService {
     }
 
     artisteRepository.ajouter(userId, nom, artisteId);
-    if (wikidataId != null && !wikidataId.isBlank()) {
-      resoudreEtPersisterWikidata(artisteId, nom, wikidataId);
+    executerApresCommit(artisteId, nom, wikidataId);
+  }
+
+  /// Diffère la résolution Wikidata/Deezer et le déclenchement du worker jusqu'après le commit
+  /// effectif de la transaction (#786, #788).
+  ///
+  /// <p>Sans cela, l'appel HTTP synchrone vers Wikidata ({@link #resoudreDeezerId}) retenait une
+  /// connexion JDBC HikariCP pendant toute sa durée (jusqu'à 5s), et le déclenchement du worker
+  /// pouvait s'exécuter avant que l'{@code INSERT} ne soit visible en base (isolation
+  /// {@code READ COMMITTED}), faisant manquer l'artiste tout juste ajouté au cycle de fetch qu'il
+  /// vient lui-même de déclencher. Exécute immédiatement si aucune transaction n'est active (ex.
+  /// tests unitaires sans contexte Spring).
+  ///
+  /// @param artisteId  UUID de l'artiste résolu/créé dans la transaction en cours
+  /// @param nom        nom affiché tel que saisi
+  /// @param wikidataId Q-ID Wikidata optionnel (peut être {@code null})
+  private void executerApresCommit(UUID artisteId, String nom, String wikidataId) {
+    Runnable action =
+        () -> {
+          if (wikidataId != null && !wikidataId.isBlank()) {
+            resoudreEtPersisterWikidata(artisteId, nom, wikidataId);
+          }
+          declencherWorkerArtiste();
+        };
+    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              action.run();
+            }
+          });
+    } else {
+      action.run();
     }
-    declencherWorkerArtiste();
   }
 
   private void resoudreEtPersisterWikidata(UUID artisteId, String nom, String wikidataId) {
@@ -357,7 +390,7 @@ public class ArtisteService {
       String url =
           WIKIDATA_API_URL
               + "?action=wbgetentities&ids="
-              + wikidataId
+              + URLEncoder.encode(wikidataId, StandardCharsets.UTF_8)
               + "&props=claims&format=json";
       HttpRequest request =
           HttpRequest.newBuilder()

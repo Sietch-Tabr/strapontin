@@ -17,10 +17,12 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import nl.martijndwars.webpush.Notification;
@@ -80,7 +82,15 @@ public class NotificationDigestService {
       String source,
       String statut) {}
 
-  private record ResultatDigest(boolean emailOk, boolean pushOk) {}
+  /// Résultat d'un envoi de digest, avec le sous-ensemble de concerts effectivement tenté par
+  /// canal (#791) — nécessaire pour ne marquer {@code notification_envoyee_le} que sur les
+  /// concerts réellement délivrés par un canal en succès, pas sur l'ensemble du digest dès qu'un
+  /// seul canal a réussi.
+  private record ResultatDigest(
+      boolean emailOk,
+      boolean pushOk,
+      List<ConcertNotif> concertsEmail,
+      List<ConcertNotif> concertsPush) {}
 
   private record ConfigNotifUser(
       boolean notifArtistes,
@@ -203,7 +213,7 @@ public class NotificationDigestService {
       for (Map.Entry<String, List<ConcertNotif>> entree : parUtilisateur.entrySet()) {
         String userId = entree.getKey();
         List<ConcertNotif> concerts = entree.getValue();
-        boolean notifEnvoyee = false;
+        Set<UUID> concertIdsNotifies = new LinkedHashSet<>();
         try {
           ResultatDigest res =
               envoyerDigest(
@@ -213,14 +223,21 @@ public class NotificationDigestService {
                   configsUtilisateurs.get(userId));
           if (res.emailOk()) nbEmailsOk++;
           if (res.pushOk()) nbPushOk++;
-          notifEnvoyee = res.emailOk() || res.pushOk();
+          // Seuls les concerts du canal effectivement en succès sont marqués notifiés (#791) :
+          // un digest mixte email+push où un seul canal échoue ne doit pas marquer à tort les
+          // concerts du canal en échec comme notifiés.
+          if (res.emailOk()) {
+            res.concertsEmail()
+                .forEach(c -> concertIdsNotifies.add(UUID.fromString(c.concertId())));
+          }
+          if (res.pushOk()) {
+            res.concertsPush().forEach(c -> concertIdsNotifies.add(UUID.fromString(c.concertId())));
+          }
         } catch (Exception e) {
           nbErreurs++;
           log.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
         }
-        if (notifEnvoyee) {
-          List<UUID> concertIds =
-              concerts.stream().map(c -> UUID.fromString(c.concertId())).toList();
+        if (!concertIdsNotifies.isEmpty()) {
           int updated =
               jdbc.update(
                   """
@@ -234,7 +251,7 @@ public class NotificationDigestService {
                   new MapSqlParameterSource()
                       .addValue("userId", userId)
                       .addValue("maintenant", maintenant)
-                      .addValue("concertIds", concertIds));
+                      .addValue("concertIds", concertIdsNotifies));
           nbMatchesNotifies += updated;
         } else {
           log.warn(
@@ -275,7 +292,7 @@ public class NotificationDigestService {
             .toList();
     boolean emailOk = envoyerEmail(email, concertsEmail);
     boolean pushOk = envoyerPush(userId, concertsPush);
-    return new ResultatDigest(emailOk, pushOk);
+    return new ResultatDigest(emailOk, pushOk, concertsEmail, concertsPush);
   }
 
   private boolean envoyerEmail(String email, List<ConcertNotif> concerts) {
@@ -313,6 +330,28 @@ public class NotificationDigestService {
     }
   }
 
+  /// Issue possible d'un envoi push individuel, selon le statut HTTP retourné par le push
+  /// service (#795).
+  enum ResultatEnvoiPush {
+    SUCCES,
+    ABONNEMENT_MORT,
+    ECHEC
+  }
+
+  /// Interprète le statut HTTP d'un envoi push.
+  ///
+  /// <p>Seul un statut 2xx est un succès. 404/410 signent un abonnement mort (à supprimer). Tout
+  /// le reste (400, 429, 5xx…) est un échec — avant #795, seuls 404/410 étaient exclus du
+  /// succès, comptant à tort tout autre code d'erreur comme un envoi réussi.
+  ///
+  /// @param status statut HTTP retourné par le push service
+  /// @return issue de l'envoi
+  static ResultatEnvoiPush interpreterStatutPush(int status) {
+    if (status == 404 || status == 410) return ResultatEnvoiPush.ABONNEMENT_MORT;
+    if (status >= 200 && status < 300) return ResultatEnvoiPush.SUCCES;
+    return ResultatEnvoiPush.ECHEC;
+  }
+
   private boolean envoyerPush(String userId, List<ConcertNotif> concerts) {
     if (concerts.isEmpty()) return false;
     Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
@@ -348,11 +387,18 @@ public class NotificationDigestService {
         Notification notification = new Notification(subscription, payload);
         HttpResponse response = pushService.send(notification);
         int status = response.getStatusLine().getStatusCode();
-        if (status == 404 || status == 410) {
-          jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
-          log.info("Abonnement push révoqué : {} — {}", userId, ab.get("endpoint"));
-        } else {
-          nbEnvoyes++;
+        switch (interpreterStatutPush(status)) {
+          case ABONNEMENT_MORT -> {
+            jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
+            log.info("Abonnement push révoqué : {} — {}", userId, ab.get("endpoint"));
+          }
+          case SUCCES -> nbEnvoyes++;
+          case ECHEC ->
+              // #795 : tout statut hors 2xx/404/410 (400, 429, 5xx...) est un échec, pas un
+              // succès implicite — sans cette branche, un push jamais délivré était compté
+              // comme réussi.
+              log.warn(
+                  "Push: statut inattendu {} pour {} — {}", status, userId, ab.get("endpoint"));
         }
       } catch (Exception e) {
         log.warn("Push: échec envoi pour {} — {}", userId, ab.get("endpoint"), e);

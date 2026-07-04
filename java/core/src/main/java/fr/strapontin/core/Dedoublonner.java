@@ -14,12 +14,16 @@ public final class Dedoublonner {
   private record ConcertEnrichi(
       ConcertBrut concert, String artisteNorm, String villeNorm, String salleNorm) {}
 
+  private static final String SANS_HEURE = "SANS_HEURE";
+
   private static ConcertEnrichi enrichir(ConcertBrut c) {
-    return new ConcertEnrichi(
-        c,
-        Normalisation.normaliserTexte(c.artiste()),
-        c.ville() != null ? Normalisation.normaliserVille(c.ville()) : "",
-        Normalisation.normaliserTexte(c.salle()));
+    String salleNorm = Normalisation.normaliserTexte(c.salle());
+    // Ville absente : repli sur salleNorm plutôt qu'une chaîne vide partagée par tous les
+    // concerts sans ville (#793) — deux concerts du même artiste le même jour, dans deux villes
+    // réellement différentes mais toutes deux non renseignées, ne fusionnent alors que s'ils
+    // partagent aussi la même salle.
+    String villeNorm = c.ville() != null ? Normalisation.normaliserVille(c.ville()) : salleNorm;
+    return new ConcertEnrichi(c, Normalisation.normaliserTexte(c.artiste()), villeNorm, salleNorm);
   }
 
   public static List<ConcertBrut> dedoublonner(List<ConcertBrut> concerts) {
@@ -27,10 +31,14 @@ public final class Dedoublonner {
 
     List<ConcertEnrichi> enrichis = concerts.stream().map(Dedoublonner::enrichir).toList();
 
-    // Passe 1 : exacte — (artiste_norm, date, ville_norm)
+    // Passe 1 : exacte — (artiste_norm, date, heure, ville_norm). L'heure est incluse (#793) :
+    // sans elle, deux concerts réellement distincts (matinée + soirée, même artiste/date/ville)
+    // fusionnaient à tort dès cette première passe.
     Map<String, List<ConcertEnrichi>> groupesExacts = new LinkedHashMap<>();
     for (ConcertEnrichi c : enrichis) {
-      String cle = c.artisteNorm() + "|" + c.concert().date() + "|" + c.villeNorm();
+      String heureCle = c.concert().heure() != null ? c.concert().heure() : SANS_HEURE;
+      String cle =
+          c.artisteNorm() + "|" + c.concert().date() + "|" + heureCle + "|" + c.villeNorm();
       groupesExacts.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
     }
 
@@ -88,7 +96,7 @@ public final class Dedoublonner {
         if (traites[j]) continue;
         double sim =
             Normalisation.similarite(groupe.get(i).artisteNorm(), groupe.get(j).artisteNorm());
-        if (sim >= SEUIL_SIMILARITE) {
+        if (sim >= SEUIL_SIMILARITE && heuresCompatibles(groupe.get(i), groupe.get(j))) {
           sousGroupe.add(groupe.get(j));
           traites[j] = true;
         }
@@ -96,6 +104,22 @@ public final class Dedoublonner {
       fusionnes.add(fusionner(sousGroupe));
     }
     return fusionnes;
+  }
+
+  /// Indique si deux concerts peuvent fusionner du point de vue de l'heure (#793).
+  ///
+  /// <p>Empêche la passe 2 (fuzzy, groupée par date+ville sans heure) de refusionner deux
+  /// concerts que la passe 1 vient de distinguer par heure (matinée + soirée) : deux heures
+  /// renseignées et différentes signent deux concerts distincts, une heure absente d'un côté
+  /// (ou des deux) ne permet ni de confirmer ni d'exclure la fusion.
+  ///
+  /// @param a premier concert enrichi
+  /// @param b second concert enrichi
+  /// @return {@code true} si les heures ne s'opposent pas à une fusion
+  private static boolean heuresCompatibles(ConcertEnrichi a, ConcertEnrichi b) {
+    var heureA = a.concert().heure();
+    var heureB = b.concert().heure();
+    return heureA == null || heureB == null || heureA.equals(heureB);
   }
 
   private static ConcertEnrichi choisirMeilleur(ConcertEnrichi meilleur, ConcertEnrichi candidat) {

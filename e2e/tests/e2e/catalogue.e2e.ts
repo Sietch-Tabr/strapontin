@@ -1,5 +1,5 @@
 import { test, expect, request as playwrightRequest } from "@playwright/test";
-import { FICHIER_AUTH_USER } from "./global-setup.js";
+import { FICHIER_AUTH_ADMIN, FICHIER_AUTH_USER } from "./global-setup.js";
 
 const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
 const artistesANettoyer: string[] = [];
@@ -118,7 +118,10 @@ test.describe("Scénario: catalogue — artistes", () => {
     "artistes_rechercheWikidata_afficheBadgeEtDescription",
     { tag: "@chromium-only" },
     async ({ page, browserName }) => {
-      test.skip(browserName !== "chromium", "dépendance API Wikidata externe — chromium only");
+      test.skip(
+        browserName !== "chromium",
+        "dépendance API Wikidata externe — chromium only",
+      );
 
       await page.goto("/artistes");
       await page.fill("input#q-artiste", "Stromae");
@@ -175,13 +178,18 @@ test.describe("Scénario: catalogue — salles", () => {
     "salles_rechercheNominatim_afficheBadgeOsm",
     { tag: "@chromium-only" },
     async ({ page, browserName }) => {
-      test.skip(browserName !== "chromium", "dépendance API Nominatim externe — chromium only");
+      test.skip(
+        browserName !== "chromium",
+        "dépendance API Nominatim externe — chromium only",
+      );
 
       await page.goto("/salles");
       await page.fill("input#q-salle", "Rockstore Montpellier");
       await page.getByRole("button", { name: "Rechercher" }).click();
 
-      const badgeOsm = page.locator(".badge-source-metadonnees", { hasText: "osm" });
+      const badgeOsm = page.locator(".badge-source-metadonnees", {
+        hasText: "osm",
+      });
       await expect(badgeOsm.first()).toBeVisible({ timeout: 25000 });
     },
   );
@@ -267,6 +275,35 @@ test.describe("Scénario: catalogue — signalement salle manquante", () => {
     await expect(
       page.getByRole("button", { name: "Signaler cette salle" }),
     ).toBeVisible({ timeout: 15000 });
+  });
+});
+
+test.describe("Scénario: découverte — rate-limit fetch global (#806)", () => {
+  // POST /api/decouverte/fetcher est déjà restreint à ROLE_ADMIN (SecurityConfiguration, depuis
+  // 2.5.0) — ce n'est donc pas n'importe quel utilisateur qui pouvait le déclencher, contrairement
+  // à la description initiale du ticket. Le rate-limit reste une défense en profondeur utile :
+  // ignore requete.depts() et déclenche le même fetch global que le bouton admin "Relance
+  // manuelle globale", sans quoi un admin cliquant plusieurs fois de suite (ou un script)
+  // pouvait consommer le quota TM inutilement. Bucket partagé par tous les appelants (pas par
+  // IP) : restreint à chromium pour ne pas l'épuiser depuis plusieurs navigateurs en parallèle.
+  test.use({ storageState: FICHIER_AUTH_ADMIN });
+
+  test("api_decouverte_fetcher_appelsRepetes_retourne429", async ({
+    request,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "chromium",
+      "Bucket partagé (1 / 5 min, tous appelants confondus) — testé sur chromium uniquement",
+    );
+    const premier = await request.post("/api/decouverte/fetcher", {
+      data: { depts: [] },
+    });
+    expect([200, 429, 503]).toContain(premier.status());
+
+    const deuxieme = await request.post("/api/decouverte/fetcher", {
+      data: { depts: [] },
+    });
+    expect(deuxieme.status()).toBe(429);
   });
 });
 
@@ -361,5 +398,43 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
     await expect(page.locator(".concert-ligne").first()).toBeVisible({
       timeout: 5000,
     });
+  });
+});
+
+test.describe("Scénario: accueil — nettoyage du paramètre ancre après scroll (#801)", () => {
+  // Avant #801, l'ancre survivait à tout changement de filtre suivant (basculerFiltre conserve
+  // route.query par spread), re-déclenchant un scroll forcé à chaque bascule de chip.
+  test("accueil_bascculerFiltreApresAncre_retireAncreDeLurl", async ({
+    page,
+  }) => {
+    const [,] = await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes("/api/accueil") && r.status() === 200,
+      ),
+      page.goto("/"),
+    ]);
+    const premierGroupe = page.locator(".concert-groupe").first();
+    await expect(
+      premierGroupe,
+      "Précondition : au moins un artiste suivi avec concert visible sur l'accueil",
+    ).toBeVisible({ timeout: 5000 });
+    const idGroupe = await premierGroupe.getAttribute("id");
+    expect(idGroupe).toBeTruthy();
+
+    // scrollVersAncre() retire l'ancre dès le premier scroll (onMounted, #801) — pas seulement
+    // au changement de filtre suivant. On attend donc directement la disparition plutôt que
+    // d'asserter sa présence transitoire juste après le goto (racy : la suppression peut déjà
+    // avoir eu lieu au moment où l'assertion s'exécute, notamment sur Firefox).
+    await page.goto(`/?ancre=${idGroupe}`);
+    await expect(page).not.toHaveURL(/ancre=/, { timeout: 5000 });
+
+    // Bascule de filtre suivante : l'ancre, déjà retirée, ne doit pas réapparaître.
+    await page.locator(".chips a", { hasText: "Nouveau" }).click();
+    await expect(page).toHaveURL(/nouveau=true/);
+    await expect(page).not.toHaveURL(/ancre=/);
+
+    await page.locator(".chips a", { hasText: "Nouveau" }).click();
+    await expect(page).not.toHaveURL(/nouveau=true/);
+    await expect(page).not.toHaveURL(/ancre=/);
   });
 });

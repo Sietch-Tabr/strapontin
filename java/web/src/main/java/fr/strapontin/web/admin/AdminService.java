@@ -31,9 +31,16 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.CannotSerializeTransactionException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
@@ -68,6 +75,7 @@ public class AdminService {
   private static final Pattern FORMAT_WEBHOOK_SECRET =
       Pattern.compile("^whsec_[A-Za-z0-9+/=]{16,}$");
   private static final Set<String> ROLES_VALIDES = Set.of("user", "admin");
+  private static final int MAX_TENTATIVES_REVOCATION = 3;
 
   private static final String TM_URL_TEST =
       "https://app.ticketmaster.com/discovery/v2/events.json"
@@ -81,7 +89,9 @@ public class AdminService {
   private final VerificationRepository verificationRepository;
   private final RestClient restClient;
   private final WorkerProxyService workerProxyService;
+  private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
+  private AdminService self;
 
   /// @param jdbc                   accès JDBC
   /// @param configService          lecture/écriture de la configuration applicative
@@ -91,6 +101,7 @@ public class AdminService {
   /// @param verificationRepository accès aux tokens de vérification
   /// @param restClient             client HTTP pour les tests d'API externes
   /// @param workerProxyService     proxy HTTP vers le worker (jobs en cours, prochaines exécutions)
+  /// @param sessionRepository      dépôt de sessions JDBC (révocation après changement de rôle)
   public AdminService(
       NamedParameterJdbcTemplate jdbc,
       ConfigService configService,
@@ -99,7 +110,8 @@ public class AdminService {
       ObjectMapper objectMapper,
       VerificationRepository verificationRepository,
       RestClient restClient,
-      WorkerProxyService workerProxyService) {
+      WorkerProxyService workerProxyService,
+      FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
     this.jdbc = jdbc;
     this.configService = configService;
     this.emailService = emailService;
@@ -108,6 +120,19 @@ public class AdminService {
     this.verificationRepository = verificationRepository;
     this.restClient = restClient;
     this.workerProxyService = workerProxyService;
+    this.sessionRepository = sessionRepository;
+  }
+
+  /// Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
+  /// éviter le problème d'auto-référence à la construction — l'appel à
+  /// {@link #initierRevocationAdminTransactionnel} passe ainsi par le proxy AOP Spring et
+  /// bénéficie de l'isolation {@code SERIALIZABLE}. En dehors d'un contexte Spring (tests
+  /// unitaires), {@code self} peut être positionné manuellement sur l'instance elle-même.
+  ///
+  /// @param self référence proxifiée de ce bean ({@code @Lazy})
+  @Autowired
+  public void setSelf(@Lazy AdminService self) {
+    this.self = self;
   }
 
   /// Teste la validité de la clé Ticketmaster API en effectuant un appel minimal.
@@ -244,10 +269,18 @@ public class AdminService {
   ///
   /// <p>Si le nouveau rôle est {@code admin}, envoie un email de promotion à l'utilisateur.
   ///
+  /// <p>Si le nouveau rôle est {@code user} et que la cible est actuellement {@code admin}, la
+  /// rétrogradation n'est <strong>pas</strong> appliquée immédiatement ici (#807) : elle est
+  /// déléguée à {@link #initierRevocationAdmin}, qui applique le même délai différé de 7 jours et
+  /// la même garde « dernier admin » que le bouton dédié — sans quoi ce chemin `PATCH` permettait
+  /// de contourner intégralement les deux protections.
+  ///
   /// @param userId  identifiant de l'utilisateur cible
   /// @param requete champs à modifier (nom, email, role — tous optionnels)
   /// @param adminId identifiant de l'admin demandeur
-  /// @throws ErreurMetier si les données sont invalides ou l'email est déjà utilisé
+  /// @throws ErreurMetier si les données sont invalides, l'email est déjà utilisé, ou
+  // (rétrogradation
+  ///     d'un admin) si c'est le seul admin restant (409)
   @Transactional
   public void modifierUtilisateur(
       String userId, RequeteModifierUtilisateur requete, String adminId) {
@@ -274,17 +307,29 @@ public class AdminService {
       if (emailPris) throw new ErreurMetier("Cette adresse email est déjà utilisée.");
     }
 
+    boolean retrogradationAdmin = false;
+    if (!role.isEmpty()) {
+      List<Map<String, Object>> roleActuelRows =
+          jdbc.queryForList(
+              "SELECT role::text AS role FROM users WHERE id = :id", Map.of("id", userId));
+      String roleActuel =
+          roleActuelRows.isEmpty() ? null : (String) roleActuelRows.get(0).get("role");
+      retrogradationAdmin = "user".equals(role) && "admin".equals(roleActuel);
+    }
+
     Map<String, Object> miseAJour = new HashMap<>();
     miseAJour.put("updatedAt", Timestamp.from(Instant.now()));
     miseAJour.put("userId", userId);
     if (!nom.isEmpty()) miseAJour.put("nom", nom);
     if (!email.isEmpty()) miseAJour.put("email", email);
-    if (!role.isEmpty()) miseAJour.put("role", role);
+    if (!role.isEmpty() && !retrogradationAdmin) miseAJour.put("role", role);
 
     StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
     if (!nom.isEmpty()) setClauses.append(", display_username = :nom");
     if (!email.isEmpty()) setClauses.append(", email = :email");
-    if (!role.isEmpty()) setClauses.append(", role = CAST(:role AS role_utilisateur)");
+    if (!role.isEmpty() && !retrogradationAdmin) {
+      setClauses.append(", role = CAST(:role AS role_utilisateur)");
+    }
     jdbc.update("UPDATE users SET " + setClauses + " WHERE id = :userId", miseAJour);
 
     if (!nom.isEmpty()) {
@@ -299,16 +344,20 @@ public class AdminService {
           Map.of("userId", userId, "nouvelEmail", email, "parAdmin", adminId));
     }
     if (!role.isEmpty()) {
-      logAdminService.logAdmin(
-          "warn",
-          "admin",
-          "rôle modifié",
-          Map.of("userId", userId, "nouveauRole", role, "parAdmin", adminId));
-      if ("admin".equals(role)) {
-        List<Map<String, Object>> cible =
-            jdbc.queryForList("SELECT email FROM users WHERE id = :id", Map.of("id", userId));
-        if (!cible.isEmpty()) {
-          emailService.envoyerPromotionAdmin((String) cible.get(0).get("email"));
+      if (retrogradationAdmin) {
+        initierRevocationAdmin(userId, adminId);
+      } else {
+        logAdminService.logAdmin(
+            "warn",
+            "admin",
+            "rôle modifié",
+            Map.of("userId", userId, "nouveauRole", role, "parAdmin", adminId));
+        if ("admin".equals(role)) {
+          List<Map<String, Object>> cible =
+              jdbc.queryForList("SELECT email FROM users WHERE id = :id", Map.of("id", userId));
+          if (!cible.isEmpty()) {
+            emailService.envoyerPromotionAdmin((String) cible.get(0).get("email"));
+          }
         }
       }
     }
@@ -316,13 +365,43 @@ public class AdminService {
 
   /// Initie une révocation différée du rôle admin (effective dans 7 jours).
   ///
-  /// <p>Envoie un email de préavis à l'administrateur concerné et loggue l'action.
+  /// <p>Réessaie jusqu'à {@value MAX_TENTATIVES_REVOCATION} fois en cas d'échec de sérialisation
+  /// (deux révocations concurrentes détectées par PostgreSQL, #811) — sans cela, deux admins se
+  /// révoquant mutuellement au même instant pourraient tous deux passer la garde « dernier admin »
+  /// avant qu'aucun des deux `UPDATE` ne soit committé.
   ///
   /// @param userId  identifiant de l'administrateur à révoquer
   /// @param adminId identifiant de l'admin demandeur
   /// @throws ErreurMetier si l'utilisateur est le seul admin restant (409)
   ///                      ou si l'utilisateur n'est pas admin (400)
   public void initierRevocationAdmin(String userId, String adminId) {
+    for (int tentative = 1; ; tentative++) {
+      try {
+        self.initierRevocationAdminTransactionnel(userId, adminId);
+        return;
+      } catch (CannotSerializeTransactionException e) {
+        if (tentative >= MAX_TENTATIVES_REVOCATION) throw e;
+        log.warn(
+            "Conflit de sérialisation lors de la révocation admin — nouvelle tentative ({}/{})",
+            tentative,
+            MAX_TENTATIVES_REVOCATION);
+      }
+    }
+  }
+
+  /// Partie transactionnelle et isolée de {@link #initierRevocationAdmin}.
+  ///
+  /// <p>Envoie un email de préavis à l'administrateur concerné et loggue l'action.
+  /// {@code REQUIRES_NEW} garantit une transaction dédiée même si appelée depuis une transaction
+  /// déjà ouverte (ex. {@link #modifierUtilisateur}, #807) — sans quoi l'isolation SERIALIZABLE
+  /// serait ignorée en cas d'imbrication dans une transaction moins stricte.
+  ///
+  /// @param userId  identifiant de l'administrateur à révoquer
+  /// @param adminId identifiant de l'admin demandeur
+  /// @throws ErreurMetier si l'utilisateur est le seul admin restant (409)
+  ///                      ou si l'utilisateur n'est pas admin (400)
+  @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
+  void initierRevocationAdminTransactionnel(String userId, String adminId) {
     List<Map<String, Object>> cible =
         jdbc.queryForList(
             "SELECT email, role::text AS role FROM users WHERE id = :id", Map.of("id", userId));
