@@ -102,28 +102,38 @@ public class ResendWebhookController {
     return ResponseEntity.ok().build();
   }
 
-  private void traiterEvenement(String corpsRaw) {
+  /// Traite un événement webhook Resend déjà authentifié (signature Svix vérifiée).
+  ///
+  /// <p>Visibilité package-private pour permettre un test unitaire direct — la vérification de
+  /// signature Svix ({@link #recevoirEvenement}) ne peut pas être simulée simplement en test.
+  ///
+  /// @param corpsRaw corps JSON brut de l'événement
+  void traiterEvenement(String corpsRaw) {
     try {
       JsonNode racine = objectMapper.readTree(corpsRaw);
       String type = racine.path("type").asText("");
+      String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");
 
+      // email.bounced et email.complained (plainte spam) reçoivent le même traitement (#832) :
+      // une plainte spam menace la réputation d'envoi du domaine au moins autant qu'un bounce.
       if ("email.bounced".equals(type)) {
-        String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");
-        log.warn("Bounce email Resend : emailHash={}", emailDestinataire.hashCode());
-        logAdminService.logAdmin(
-            "warn", "web", "bounce email reçu", Map.of("email", emailDestinataire));
-        notifierAdminBounce(emailDestinataire);
+        traiterIncidentEmail("Bounce", "bounce email reçu", emailDestinataire);
+        emailService.envoyerNotificationBounce(emailDestinataire);
       } else if ("email.complained".equals(type)) {
-        String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");
-        log.warn("Plainte email Resend (spam) : emailHash={}", emailDestinataire.hashCode());
+        traiterIncidentEmail("Plainte spam", "plainte spam email reçue", emailDestinataire);
+        emailService.envoyerNotificationPlainteSpam(emailDestinataire);
       }
     } catch (Exception e) {
       log.error("Erreur lors du traitement du webhook Resend", e);
     }
   }
 
-  private void notifierAdminBounce(String emailBouncee) {
-    emailService.envoyerNotificationBounce(emailBouncee);
+  /// Journalise un incident email (bounce ou plainte spam) avec l'adresse hachée — jamais en
+  /// clair dans {@code logs_admin} (#831), cohérent avec le hachage déjà appliqué côté SLF4J.
+  private void traiterIncidentEmail(String libelle, String messageLogAdmin, String email) {
+    String emailHash = String.valueOf(email.hashCode());
+    log.warn("{} email Resend : emailHash={}", libelle, emailHash);
+    logAdminService.logAdmin("warn", "web", messageLogAdmin, Map.of("email", emailHash));
   }
 
   private static String nvl(String valeur) {

@@ -12,7 +12,73 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.6.3 — 4 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.6.4 — 5 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Compte</p>
+            <ul>
+              <li>Un identifiant contenant un point ou un tiret est maintenant accepté à l'enregistrement, comme annoncé par le formulaire.</li>
+              <li>Un nom personnalisé par un administrateur n'est plus écrasé silencieusement quand vous changez votre identifiant.</li>
+              <li>Une coupure réseau brève ne vous déconnecte plus par erreur — seule une session réellement expirée vous renvoie vers la connexion.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Accueil / Mes spectacles</p>
+            <ul>
+              <li>Le badge « Nouveau » est désormais cohérent entre l'accueil et Mes spectacles.</li>
+              <li>Masquer un artiste masque maintenant bien tous ses concerts, même ceux détectés sous une orthographe légèrement différente selon la source.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Aide</p>
+            <ul>
+              <li>Le message de confirmation après l'envoi d'un signalement s'affiche désormais avant la fermeture du formulaire.</li>
+              <li>Si aucun moyen de contact n'est configuré, un message clair s'affiche à la place d'un lien de contact cassé.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Notifications push</p>
+            <ul>
+              <li>Cliquer sur une notification fonctionne à nouveau correctement dans tous les cas de configuration.</li>
+              <li>Le bouton d'activation des notifications push est désactivé quand la fréquence de notification est sur « Jamais ».</li>
+              <li>Le bouton « Envoyer une notification de test » cible désormais l'appareil depuis lequel vous cliquez.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Bannière système</p>
+            <ul>
+              <li>Une bannière refermée automatiquement réapparaît de nouveau à la page suivante, comme annoncé — elle restait auparavant masquée jusqu'au rechargement complet.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Qualité des données</p>
+            <ul>
+              <li>Fusionner deux fiches d'un même artiste dans l'administration ne laisse plus de concert en double.</li>
+              <li>L'import de vos préférences reconnaît désormais un artiste ou une salle déjà suivi même sous une variante orthographique proche, au lieu de créer un doublon.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Un slug Digitick déjà utilisé par une autre salle est désormais refusé explicitement plutôt que d'être repris silencieusement.</li>
+              <li>Modifier le nom ou l'email d'un utilisateur en même temps qu'une rétrogradation administrateur n'efface plus ces modifications.</li>
+              <li>Réinitialiser le mot de passe d'un utilisateur affiche un lien de secours si l'envoi d'email n'est pas disponible.</li>
+              <li>Sélectionner deux éléments à fusionner sur des pages différentes de la liste ne casse plus la boîte de dialogue de fusion.</li>
+              <li>Une plainte spam sur un email envoyé est désormais visible et notifiée, comme un rejet d'email.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Nouveautés</p>
+            <ul>
+              <li>Un indicateur signale désormais qu'une nouvelle version contient des nouveautés pas encore consultées.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.6.3 — 4 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Accueil</p>
@@ -41,7 +107,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.6.2 — 2 juillet 2026</h2></summary>

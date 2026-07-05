@@ -201,8 +201,9 @@ class ArtisteRepository {
   ///
   /// @param userId    identifiant de l'utilisateur
   /// @param artisteId UUID stable de l'artiste à supprimer
-  void supprimer(String userId, UUID artisteId) {
-    jdbc.update(
+  /// @return le nombre de lignes réellement supprimées (0 si l'artiste n'était pas suivi)
+  int supprimer(String userId, UUID artisteId) {
+    return jdbc.update(
         """
         DELETE FROM user_artistes
         WHERE user_id = :userId AND artiste_id = CAST(:artisteId AS uuid)

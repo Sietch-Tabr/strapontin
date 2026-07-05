@@ -4,12 +4,8 @@
  */
 package fr.strapontin.web.push;
 
-import fr.strapontin.core.Normalisation;
-import fr.strapontin.core.UtilitairesChaine;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,68 +47,11 @@ public class NotificationPushService {
     this.logAdminService = logAdminService;
   }
 
-  /// Paramètres d'un concert pour la notification push.
-  ///
-  /// @param artiste le nom de l'artiste
-  /// @param date    la date formatée (affichage direct)
-  /// @param salle   le nom de la salle
-  /// @param ville   la ville (peut être nulle)
-  /// @param url     l'URL de billetterie (peut être nulle)
-  public record ConcertPush(String artiste, String date, String salle, String ville, String url) {}
-
   /// Retourne la clé VAPID publique pour l'inscription côté navigateur.
   ///
   /// @return la clé VAPID publique encodée, ou vide si non configurée
   public Optional<String> obtenirCleVapidPublique() {
     return configService.lireConfig("VAPID_PUBLIC_KEY");
-  }
-
-  /// Envoie un digest push à tous les abonnements d'un utilisateur.
-  ///
-  /// @param userId   l'identifiant de l'utilisateur
-  /// @param concerts la liste des concerts à notifier
-  /// @return {@code true} si au moins une notification a été envoyée
-  public boolean envoyerPushDigest(String userId, List<ConcertPush> concerts) {
-    if (concerts.isEmpty()) return false;
-
-    Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
-    Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
-    if (clePublique.isEmpty() || clePrivee.isEmpty()) {
-      log.warn("VAPID non configuré — push ignoré pour {}", userId);
-      return false;
-    }
-
-    List<Map<String, Object>> abonnements =
-        jdbc.queryForList(
-            """
-            SELECT id, endpoint, p256dh, auth
-            FROM push_abonnements
-            WHERE user_id = :userId
-            """,
-            Map.of("userId", userId));
-    if (abonnements.isEmpty()) return false;
-
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
-    String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
-    String payload = construirePayload(concerts, baseUrl);
-
-    PushService pushService;
-    try {
-      pushService = new PushService(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
-    } catch (Exception e) {
-      log.error("Impossible d'initialiser le service VAPID", e);
-      return false;
-    }
-
-    int nbEnvoyes = 0;
-    for (Map<String, Object> ab : abonnements) {
-      nbEnvoyes += envoyerAUnAbonnement(ab, pushService, userId, payload);
-    }
-
-    if (nbEnvoyes > 0) {
-      log.info("Push digest envoyé : {} ({} abonnement(s))", userId, nbEnvoyes);
-    }
-    return nbEnvoyes > 0;
   }
 
   private int envoyerAUnAbonnement(
@@ -141,25 +80,41 @@ public class NotificationPushService {
     }
   }
 
-  /// Envoie une notification de test au dernier abonnement de l'utilisateur.
+  /// Envoie une notification de test à l'abonnement de l'utilisateur courant.
   ///
-  /// @param userId l'identifiant de l'utilisateur
+  /// <p>Si {@code endpoint} est fourni (l'appareil demandeur, disponible côté client via
+  /// {@code PushManager.getSubscription()}), cible précisément cet abonnement plutôt que de
+  /// sélectionner arbitrairement le plus récent par {@code id} (#826) — un utilisateur abonné sur
+  /// plusieurs appareils cliquant "Test" depuis l'un d'eux recevait auparavant la notification
+  /// sur un autre appareil, sans lien garanti avec la session courante (un UUID v4 n'a pas de
+  /// corrélation temporelle). Repli sur le plus récent si {@code endpoint} absent.
+  ///
+  /// @param userId   l'identifiant de l'utilisateur
+  /// @param endpoint l'endpoint de l'abonnement de l'appareil demandeur, ou {@code null}
   /// @return {@code true} si la notification a été envoyée
-  public boolean envoyerNotificationTest(String userId) {
+  public boolean envoyerNotificationTest(String userId, String endpoint) {
     Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
     Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
     if (clePublique.isEmpty() || clePrivee.isEmpty()) return false;
 
     List<Map<String, Object>> abonnements =
-        jdbc.queryForList(
-            """
-            SELECT id, endpoint, p256dh, auth
-            FROM push_abonnements
-            WHERE user_id = :userId
-            ORDER BY id DESC
-            LIMIT 1
-            """,
-            Map.of("userId", userId));
+        endpoint != null && !endpoint.isBlank()
+            ? jdbc.queryForList(
+                """
+                SELECT id, endpoint, p256dh, auth
+                FROM push_abonnements
+                WHERE user_id = :userId AND endpoint = :endpoint
+                """,
+                Map.of("userId", userId, CLE_ENDPOINT, endpoint))
+            : jdbc.queryForList(
+                """
+                SELECT id, endpoint, p256dh, auth
+                FROM push_abonnements
+                WHERE user_id = :userId
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                Map.of("userId", userId));
     if (abonnements.isEmpty()) return false;
 
     String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
@@ -185,39 +140,6 @@ public class NotificationPushService {
     jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", id));
     log.info("Abonnement push révoqué, supprimé : {} — {}", userId, endpoint);
     logAdminService.logAdmin("info", "web", "abonnement push révoqué", Map.of("userId", userId));
-  }
-
-  private static String construirePayload(List<ConcertPush> concerts, String baseUrl) {
-    ConcertPush premier = concerts.get(0);
-    String titre =
-        concerts.size() == 1
-            ? premier.artiste() + " — " + premier.salle()
-            : concerts.size() + " nouveaux concerts";
-
-    String corps =
-        concerts.size() == 1
-            ? premier.date() + (premier.ville() != null ? " · " + premier.ville() : "")
-            : concerts.stream()
-                .map(c -> c.artiste() + " · " + c.date())
-                .collect(java.util.stream.Collectors.joining("\n"));
-
-    String url =
-        concerts.size() == 1
-            ? baseUrl
-                + "/?ancre=artiste-"
-                + URLEncoder.encode(
-                    Normalisation.normaliserTexte(premier.artiste()), StandardCharsets.UTF_8)
-            : baseUrl + "/?nouveau=true";
-
-    // JSON construit manuellement (pas de dépendance Jackson pour ce payload simple)
-    return """
-    {"title":"%s","body":"%s","icon":"%s/images/icon-192.png","url":"%s"}\
-    """
-        .formatted(
-            UtilitairesChaine.echapperJson(titre),
-            UtilitairesChaine.echapperJson(corps),
-            baseUrl,
-            UtilitairesChaine.echapperJson(url));
   }
 
   private static int extraireCodeHttp(Exception e) {

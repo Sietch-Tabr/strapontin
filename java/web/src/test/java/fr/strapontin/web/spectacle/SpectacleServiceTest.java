@@ -185,22 +185,36 @@ class SpectacleServiceTest {
     verify(jdbc).update(contains("masque_le = NULL"), anyMap());
   }
 
+  // #818 : filtre désormais sur artiste_id (référentiel, stable) plutôt qu'artiste_norm (texte
+  // par source, pouvant diverger entre concerts d'un même artiste réel).
   @Test
-  void masquerArtiste_executeMiseAJourAvecNom() {
-    service.masquerArtiste("u1", "radiohead");
+  void masquerArtiste_executeMiseAJourAvecArtisteId() {
+    java.util.UUID artisteId = java.util.UUID.randomUUID();
+
+    service.masquerArtiste("u1", artisteId);
 
     ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
-    verify(jdbc).update(contains("masque_le = now()"), captor.capture());
-    assertEquals("radiohead", captor.getValue().get("artisteNorm"));
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.argThat(
+                (String sql) -> sql.contains("masque_le = now()") && sql.contains("artiste_id")),
+            captor.capture());
+    assertEquals(artisteId.toString(), captor.getValue().get("artisteId"));
     assertEquals("u1", captor.getValue().get("userId"));
   }
 
   @Test
-  void demasquerArtiste_executeMiseAJourAvecNull() {
-    service.demasquerArtiste("u1", "radiohead");
+  void demasquerArtiste_executeMiseAJourAvecArtisteId() {
+    java.util.UUID artisteId = java.util.UUID.randomUUID();
+
+    service.demasquerArtiste("u1", artisteId);
 
     ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
-    verify(jdbc).update(contains("masque_le = NULL"), captor.capture());
-    assertEquals("radiohead", captor.getValue().get("artisteNorm"));
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.argThat(
+                (String sql) -> sql.contains("masque_le = NULL") && sql.contains("artiste_id")),
+            captor.capture());
+    assertEquals(artisteId.toString(), captor.getValue().get("artisteId"));
   }
 }

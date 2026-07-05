@@ -6,6 +6,7 @@ package fr.strapontin.web.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.salle.SalleService;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -112,25 +113,55 @@ public class SourcesService {
 
   /// Met à jour le slug Digitick d'une salle dans {@code salle_sources}.
   ///
-  /// <p>Si le slug est vide, supprime l'entrée existante.
+  /// <p>Si le slug est vide, supprime l'entrée existante. Si le slug est déjà attribué à une
+  /// autre salle, lève une erreur 409 plutôt que de le voler silencieusement à cette autre salle
+  /// (#830) — le conflit est vérifié avant toute suppression pour ne pas perdre la configuration
+  /// existante si l'opération échoue.
   ///
   /// @param salleUuid UUID de la salle
   /// @param slug      nouveau slug Digitick (peut être vide pour supprimer)
+  /// @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
   public void mettreAJourDigitickSlug(UUID salleUuid, String slug) {
+    String slugStrip = slug == null ? "" : slug.strip();
+    if (!slugStrip.isEmpty()) {
+      verifierSlugDigitickLibre(salleUuid, slugStrip);
+    }
     jdbc.update(
         """
         DELETE FROM salle_sources
         WHERE salle_id = CAST(:uuid AS uuid) AND source = 'digitick'
         """,
         Map.of("uuid", salleUuid.toString()));
-    if (slug != null && !slug.isBlank()) {
+    if (!slugStrip.isEmpty()) {
       jdbc.update(
           """
           INSERT INTO salle_sources (salle_id, source, identifiant_externe)
           VALUES (CAST(:uuid AS uuid), 'digitick', :slug)
           ON CONFLICT (source, identifiant_externe) DO UPDATE SET salle_id = EXCLUDED.salle_id
           """,
-          Map.of("uuid", salleUuid.toString(), "slug", slug.strip()));
+          Map.of("uuid", salleUuid.toString(), "slug", slugStrip));
+    }
+  }
+
+  /// Vérifie qu'un slug Digitick n'est pas déjà attribué à une autre salle que {@code salleUuid}.
+  ///
+  /// @param salleUuid salle pour laquelle le slug est en cours d'attribution
+  /// @param slug      slug à vérifier
+  /// @throws ErreurMetier 409 si le slug est déjà utilisé par une autre salle
+  private void verifierSlugDigitickLibre(UUID salleUuid, String slug) {
+    List<Map<String, Object>> conflits =
+        jdbc.queryForList(
+            """
+            SELECT COALESCE(s.nom_affiche, s.nom) AS nom
+            FROM salle_sources ss
+            JOIN salles s ON s.id = ss.salle_id
+            WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
+              AND ss.salle_id != CAST(:uuid AS uuid)
+            """,
+            Map.of("slug", slug, "uuid", salleUuid.toString()));
+    if (!conflits.isEmpty()) {
+      throw new ErreurMetier(
+          "Slug déjà utilisé par la salle " + conflits.get(0).get("nom") + ".", 409);
     }
   }
 

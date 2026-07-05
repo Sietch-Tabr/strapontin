@@ -104,12 +104,18 @@ public class AccueilService {
     params.put(CLE_USER_ID, userId);
     params.put("aujourd8", aujourd8);
 
+    // #816 : est_nouveau (badge affiché par concert) unifié sur um.vu_le IS NULL — cohérent avec
+    // SpectacleDto.estNew et avec l'intention "jamais vu", plutôt que first_seen (fraîcheur en
+    // base, indépendante de l'utilisateur) utilisé auparavant ici. Sans lien avec le paramètre
+    // `nouveau` de cette méthode (filtre chip "Nouveau", basé sur first_seen — fonctionnalité
+    // distincte : concerts récemment détectés, pas concerts jamais vus).
     List<ConcertAccueil> lignes =
         jdbc.query(
             """
-            SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.artiste_norm, c.date::text,
+            SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.artiste_norm,
+                   c.artiste_id::text AS artiste_id, c.date::text,
                    c.heure::text, c.salle, c.ville, c.url, c.statut,
-                   c.first_seen >= (CURRENT_TIMESTAMP - INTERVAL '7 days') AS est_nouveau
+                   um.vu_le IS NULL AS est_nouveau
             FROM user_matches um
             INNER JOIN concerts c ON um.concert_id = c.id
             LEFT JOIN artistes a ON a.id = c.artiste_id
@@ -123,6 +129,7 @@ public class AccueilService {
                     rs.getString("id"),
                     rs.getString("artiste"),
                     rs.getString("artiste_norm"),
+                    rs.getString("artiste_id"),
                     rs.getString("date"),
                     rs.getString("heure"),
                     rs.getString("salle"),
@@ -143,7 +150,12 @@ public class AccueilService {
                   List<ConcertAccueil> dates = e.getValue();
                   boolean estNew = dates.stream().anyMatch(ConcertAccueil::estNew);
                   return new GroupeArtiste(
-                      e.getKey(), dates.get(0).artisteNorm(), dates.size() >= 2, estNew, dates);
+                      e.getKey(),
+                      dates.get(0).artisteNorm(),
+                      dates.get(0).artisteId(),
+                      dates.size() >= 2,
+                      estNew,
+                      dates);
                 })
             .toList();
 

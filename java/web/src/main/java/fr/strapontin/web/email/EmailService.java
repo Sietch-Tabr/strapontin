@@ -103,7 +103,7 @@ public class EmailService {
   /// Envoie un email d'invitation à un nouvel utilisateur.
   ///
   /// @param email     l'adresse email du destinataire
-  /// @param lienReset le lien de création de compte (valable 24 heures)
+  /// @param lienReset le lien de création de compte (valable 7 jours)
   public void envoyerInvitation(String email, String lienReset) {
     Optional<ContexteEmail> ctx = obtenirContexte();
     if (ctx.isEmpty()) {
@@ -113,12 +113,16 @@ public class EmailService {
 
     String corps = EmailTemplates.invitation(lienReset, ctx.get().baseUrl());
 
+    // #833 : corps texte brut corrigé à "7 jours" — copié depuis le gabarit de confirmation de
+    // changement d'email (celui-là bien à 24h) sans être adapté ; incohérent avec le HTML
+    // (EmailTemplates.invitation) et la durée réelle du token (AdminService.creerUtilisateur,
+    // Instant.now().plus(7, ChronoUnit.DAYS)).
     String texte =
         """
         Bienvenue sur Strapontin
 
         Votre compte a été créé. Cliquez sur le lien ci-dessous pour choisir
-        votre identifiant et votre mot de passe (lien valable 24 heures) :
+        votre identifiant et votre mot de passe (lien valable 7 jours) :
 
         %s
         """
@@ -461,6 +465,38 @@ public class EmailService {
       log.info("Notification bounce envoyée : emailHash={}", emailBouncee.hashCode());
     } catch (Exception e) {
       log.error("Échec envoi notification bounce", e);
+    }
+  }
+
+  /// Envoie une notification à l'admin quand un destinataire signale un email Strapontin comme
+  /// spam (#832) — même traitement que le bounce, une plainte spam menaçant la réputation
+  /// d'envoi du domaine au moins autant qu'un rejet définitif.
+  ///
+  /// @param emailPlaignant l'adresse email à l'origine de la plainte
+  public void envoyerNotificationPlainteSpam(String emailPlaignant) {
+    Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — notification plainte spam non envoyée");
+      return;
+    }
+
+    String corps = EmailTemplates.alertePlainteSpam(emailPlaignant, ctx.get().baseUrl());
+
+    try {
+      envoyer(
+          ctx.get(),
+          ctx.get().expediteur(),
+          ctx.get().expediteur(),
+          "Strapontin — plainte spam : " + emailPlaignant,
+          corps,
+          "Plainte spam signalée sur : "
+              + emailPlaignant
+              + ". Consultez l'administration : "
+              + ctx.get().baseUrl()
+              + "/admin");
+      log.info("Notification plainte spam envoyée : emailHash={}", emailPlaignant.hashCode());
+    } catch (Exception e) {
+      log.error("Échec envoi notification plainte spam", e);
     }
   }
 

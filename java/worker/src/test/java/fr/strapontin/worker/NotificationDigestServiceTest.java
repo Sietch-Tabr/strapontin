@@ -155,6 +155,35 @@ class NotificationDigestServiceTest {
         "L'URL push d'un concert de salle doit pointer vers /spectacles?source=salles");
   }
 
+  // #822 : l'URL absolue (préfixée par baseUrl) cassait router.push() côté service worker — les
+  // listeners main.js/App.vue passent l'URL telle quelle, qui ne matche aucune route déclarée
+  // avec un schéma https:// en préfixe. icon reste préfixé par baseUrl (résolu par le SW dans les
+  // deux cas), seule url doit désormais être un chemin relatif.
+  @Test
+  void construirePayloadPush_urlEstRelativeMemeAvecBaseUrlConfiguree() throws Exception {
+    var concert =
+        new NotificationDigestService.ConcertNotif(
+            "Stromae",
+            "2026-09-15",
+            "Olympia",
+            "Paris",
+            "https://example.com",
+            UUID.randomUUID().toString(),
+            "stromae",
+            "ARTISTE",
+            null);
+
+    String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.exemple.fr");
+
+    assertTrue(payload.contains("\"url\":\"/?ancre=artiste-stromae\""), payload);
+    assertFalse(
+        payload.contains("\"url\":\"https://strapontin.exemple.fr"),
+        "url ne doit plus être préfixée par baseUrl : " + payload);
+    assertTrue(
+        payload.contains("\"icon\":\"https://strapontin.exemple.fr/images/icon-192.png\""),
+        "icon doit rester préfixée par baseUrl : " + payload);
+  }
+
   @Test
   void construireCorpsEmail_formatHtml_contientArtiste() throws Exception {
     var concert =

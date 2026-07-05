@@ -20,7 +20,7 @@ import org.springframework.web.client.RestClient;
 class WorkerProxyServiceTest {
 
   @Test
-  void relancerJob_workerInaccessible_retourneEchecSansException() {
+  void relancerJob_workerInaccessible_retourneEchecAvecStatut503() {
     RestClient restClientEnPanne = mock(RestClient.class);
     when(restClientEnPanne.post()).thenThrow(new RuntimeException("connexion refusée"));
     LogAdminService logAdminService = mock(LogAdminService.class);
@@ -31,5 +31,8 @@ class WorkerProxyServiceTest {
 
     assertFalse(resultat.succes());
     assertNotNull(resultat.messageErreur());
+    // #837 : une exception réseau générique (pas de réponse HTTP du tout) reste un vrai 503 —
+    // distinct des cas où le worker répond mais avec un statut d'erreur (400/5xx).
+    assertEquals(503, resultat.statutHttp());
   }
 }

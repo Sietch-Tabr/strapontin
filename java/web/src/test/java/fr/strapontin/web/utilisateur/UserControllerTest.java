@@ -105,6 +105,20 @@ class UserControllerTest {
     verify(sessionRepository).deleteById("id-b");
   }
 
+  // #813 : régression #712 — un second contrôle manuel plus strict que la validation Bean
+  // rejetait à tort les identifiants contenant un point ou un tiret, pourtant autorisés par
+  // RequeteIdentifiant.
+  @Test
+  void majIdentifiant_avecPointEtTiret_neRejettePasEtDelegueAuRepository() {
+    RequeteIdentifiant requete = new RequeteIdentifiant("jean.dupont-2");
+
+    ResponseEntity<Map<String, Object>> rep =
+        controller.majIdentifiant(requete, authPour("user-1", "user"));
+
+    assertEquals(HttpStatus.OK, rep.getStatusCode());
+    verify(utilisateurRepository).majIdentifiant("user-1", "jean.dupont-2");
+  }
+
   @Test
   void changerMotDePasse_motDePasseActuelIncorrect_neRevoqueAucuneSession() {
     when(passwordEncoder.matches("faux", "")).thenReturn(false);

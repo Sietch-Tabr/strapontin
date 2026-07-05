@@ -9,6 +9,7 @@ import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -86,32 +87,43 @@ public class SpectacleController {
 
   /// Masque tous les concerts d'un artiste pour l'utilisateur courant.
   ///
-  /// @param requete corps JSON avec {@code artisteNorm}
+  /// @param requete corps JSON avec {@code artisteId}
   /// @param auth    contexte d'authentification
-  /// @return 200 si mis à jour, 400 si artisteNorm manquant
+  /// @return 200 si mis à jour, 400 si artisteId manquant ou invalide
   @PostMapping("/masquer-artiste")
   public ResponseEntity<Map<String, Object>> masquerArtiste(
       @RequestBody RequeteMasquerArtiste requete, Authentication auth) {
-    if (requete.artisteNorm() == null || requete.artisteNorm().isBlank()) {
-      return erreur(400, "Identifiant artiste manquant.");
+    UUID artisteId = parseUuid(requete.artisteId());
+    if (artisteId == null) {
+      return erreur(400, "Identifiant artiste manquant ou invalide.");
     }
-    spectacleService.masquerArtiste(utilisateur(auth).id(), requete.artisteNorm());
+    spectacleService.masquerArtiste(utilisateur(auth).id(), artisteId);
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
   /// Démasque tous les concerts d'un artiste pour l'utilisateur courant.
   ///
-  /// @param requete corps JSON avec {@code artisteNorm}
+  /// @param requete corps JSON avec {@code artisteId}
   /// @param auth    contexte d'authentification
-  /// @return 200 si mis à jour, 400 si artisteNorm manquant
+  /// @return 200 si mis à jour, 400 si artisteId manquant ou invalide
   @PostMapping("/demasquer-artiste")
   public ResponseEntity<Map<String, Object>> demasquerArtiste(
       @RequestBody RequeteMasquerArtiste requete, Authentication auth) {
-    if (requete.artisteNorm() == null || requete.artisteNorm().isBlank()) {
-      return erreur(400, "Identifiant artiste manquant.");
+    UUID artisteId = parseUuid(requete.artisteId());
+    if (artisteId == null) {
+      return erreur(400, "Identifiant artiste manquant ou invalide.");
     }
-    spectacleService.demasquerArtiste(utilisateur(auth).id(), requete.artisteNorm());
+    spectacleService.demasquerArtiste(utilisateur(auth).id(), artisteId);
     return ResponseEntity.ok(Map.of("succes", true));
+  }
+
+  private static UUID parseUuid(String valeur) {
+    if (valeur == null || valeur.isBlank()) return null;
+    try {
+      return UUID.fromString(valeur);
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {

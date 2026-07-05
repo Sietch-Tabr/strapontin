@@ -24,7 +24,11 @@ export function useSession() {
       }
       session.value = await rep.json();
     } catch (_) {
-      session.value = null;
+      // #823 : une exception ici (réseau coupé, DNS, etc.) ne signifie pas que la session est
+      // invalide côté serveur — contrairement à un 401 confirmé ci-dessus. Réinitialiser
+      // session.value à null forçait une redirection /login au prochain changement de route SPA
+      // alors que le cookie de session restait valide, déconnectant l'utilisateur sans raison
+      // réelle sur une simple coupure réseau transitoire. On garde la dernière valeur connue.
     } finally {
       chargement.value = false;
       sessionInitialisee.value = true;

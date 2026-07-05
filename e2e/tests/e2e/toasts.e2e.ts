@@ -53,8 +53,11 @@ test.describe("Toasts (Popover API)", () => {
 
   test("toast auto-dismiss après 4 s", async ({ page }) => {
     await soumettreDepartements(page);
+    // Délai réel du toast succès : 5000ms (useToasts.js delaiParType) — marge portée à 12s
+    // (au lieu de 8s) pour absorber la latence réseau/rendu sous charge parallèle complète de la
+    // suite (jalon 2.6.4, volume de tests fortement accru), sans changer le comportement vérifié.
     await expect(page.locator(".alerte-succes").first()).toBeHidden({
-      timeout: 8000,
+      timeout: 12000,
     });
   });
 

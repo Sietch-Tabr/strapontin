@@ -159,6 +159,7 @@ class ReferentielArtistesServiceTest {
     boolean fusionne = service.fusionner(cible, source);
 
     assertTrue(fusionne);
+    verify(jdbc, times(1)).update(contains("DELETE FROM concerts c1"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE concerts SET artiste_id"), anyMap());
     verify(jdbc, times(1)).update(contains("DELETE FROM user_artistes"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE user_artistes SET artiste_id"), anyMap());
@@ -168,15 +169,28 @@ class ReferentielArtistesServiceTest {
     verify(logAdminService).logAdmin(eq("info"), eq("admin"), any());
   }
 
-  // Contrairement à la fusion des salles, aucune étape de dédoublonnage préalable des concerts
-  // n'est nécessaire : uq_concerts_artiste_date_heure_salle porte sur artiste_norm, jamais en
-  // conflit lors d'un remapping artiste_id (cf. Javadoc du service).
+  // #828 : deux artistes fusionnés peuvent chacun avoir enregistré le même concert réel (même
+  // salle, même date/heure) sous un artiste_norm textuel différent selon la source — sans ce
+  // nettoyage préalable, les deux lignes concerts subsistaient après fusion, dupliquant le
+  // concert sur la fiche de l'artiste cible. Aligné sur ReferentielSallesService.fusionner.
   @Test
-  void fusionner_neContientPasDeDedoublonnagePrealableDesConcerts() {
+  void fusionner_concertEnConflitCoteCible_dedoublonneAvantRemapping() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
+    UUID cible = UUID.randomUUID();
+    UUID source = UUID.randomUUID();
 
-    service.fusionner(UUID.randomUUID(), UUID.randomUUID());
+    service.fusionner(cible, source);
 
-    verify(jdbc, never()).update(contains("DELETE FROM concerts c1"), anyMap());
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.argThat(
+                (String sql) ->
+                    sql.contains("DELETE FROM concerts c1")
+                        && sql.contains("USING concerts c2")
+                        && sql.contains("c1.artiste_id = CAST(:source AS uuid)")
+                        && sql.contains("c2.artiste_id = CAST(:cible AS uuid)")
+                        && sql.contains("c1.salle_uuid = c2.salle_uuid")
+                        && sql.contains("c1.date = c2.date")),
+            anyMap());
   }
 }

@@ -441,14 +441,45 @@ test.describe("Scénario: API compte — identifiant", () => {
     expect(corps).toHaveProperty("erreur");
   });
 
+  // #813 : ce test PATCH réellement l'identifiant du compte e2euser partagé (storageState par
+  // défaut) — sans restauration, les tests suivants du run (ex. totp.e2e.ts, qui se connecte via
+  // le login UI avec l'identifiant fixe "e2euser") échouent avec "Identifiant non trouvé".
+  // Restaurer dans un finally pour survivre même si l'assertion échoue.
   test("api_identifiant_valide_retourne_succes", async ({ request }) => {
     const identTmp = `e2etmp${Date.now()}`.slice(0, 20);
-    const rep = await request.patch("/api/user/identifiant", {
-      data: { identifiant: identTmp },
-    });
-    expect(rep.ok()).toBeTruthy();
-    const corps = await rep.json();
-    expect(corps).toHaveProperty("succes");
+    try {
+      const rep = await request.patch("/api/user/identifiant", {
+        data: { identifiant: identTmp },
+      });
+      expect(rep.ok()).toBeTruthy();
+      const corps = await rep.json();
+      expect(corps).toHaveProperty("succes");
+    } finally {
+      await request.patch("/api/user/identifiant", {
+        data: { identifiant: "e2euser" },
+      });
+    }
+  });
+
+  // #813 : régression #712 — un identifiant avec point ou tiret était rejeté par un second
+  // contrôle manuel plus strict que la validation Bean (RequeteIdentifiant). Restaure
+  // l'identifiant partagé e2euser dans un finally, voir commentaire ci-dessus.
+  test("api_identifiant_avecPointEtTiret_retourneSucces", async ({
+    request,
+  }) => {
+    const identTmp = `e2e.tmp-${Date.now()}`.slice(0, 30);
+    try {
+      const rep = await request.patch("/api/user/identifiant", {
+        data: { identifiant: identTmp },
+      });
+      expect(rep.ok()).toBeTruthy();
+      const corps = await rep.json();
+      expect(corps).toHaveProperty("succes");
+    } finally {
+      await request.patch("/api/user/identifiant", {
+        data: { identifiant: "e2euser" },
+      });
+    }
   });
 });
 
@@ -499,6 +530,10 @@ test.describe("Scénario: Données — suppression de compte", () => {
     });
     await page.locator("section#donnees button.btn-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
+    // Attendre explicitement le dialog (pattern déjà utilisé par le test précédent) — sans cela,
+    // .fill() peut retenter contre un élément pas encore visible sous charge parallèle et finir
+    // par expirer plutôt que de laisser l'auto-wait de Playwright suffire.
+    await expect(dialog).toBeVisible();
     await dialog.locator("input#confirmation-suppression").fill("supprimer");
     await expect(dialog.locator("button.btn-danger")).not.toBeDisabled();
     await dialog.locator("button.btn-secondary").click();
@@ -527,6 +562,31 @@ test.describe("Scénario: champ identifiant — pattern HTML", () => {
     const pattern = await input.getAttribute("pattern");
     expect(pattern).toContain(".");
     expect(pattern).toContain("-");
+  });
+
+  // #813 : le test ci-dessus ne vérifiait que l'attribut HTML, jamais une soumission réelle —
+  // le bug (contrôle serveur plus strict que le pattern) n'était donc jamais détecté. Restaure
+  // l'identifiant partagé e2euser dans un finally — sans quoi le login UI par identifiant fixe
+  // "e2euser" (ex. totp.e2e.ts) échoue pour le reste du run.
+  test("input_identifiant_avecPointEtTiret_soumissionReussie", async ({
+    page,
+  }) => {
+    await page.goto("/parametres#compte");
+    await expect(page.locator("section#compte")).toBeVisible();
+    const identTmp = `e2e.ui-${Date.now()}`.slice(0, 30);
+    try {
+      await page.locator("input#identifiant").fill(identTmp);
+      await page.locator("form.form-inline button[type='submit']").click();
+      await expect(
+        page
+          .locator(".alerte-succes")
+          .filter({ hasText: "Identifiant modifié" }),
+      ).toBeVisible({ timeout: 5000 });
+    } finally {
+      await page.request.patch("/api/user/identifiant", {
+        data: { identifiant: "e2euser" },
+      });
+    }
   });
 });
 

@@ -345,7 +345,7 @@ class AdminServiceTest {
   void reinitialiserMdp_utilisateurInexistant_retourneEmpty() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    Optional<String> resultat =
+    Optional<ResultatReset> resultat =
         adminService.reinitialiserMdp("user-1", "admin-1", "https://strapontin.fr");
 
     assertTrue(resultat.isEmpty());
@@ -353,17 +353,19 @@ class AdminServiceTest {
   }
 
   @Test
-  void reinitialiserMdp_utilisateurExistant_envoieResetEtRetourneEmail() {
+  void reinitialiserMdp_utilisateurExistant_envoieResetEtRetourneEmailEtLien() {
     Map<String, Object> ligne = new HashMap<>();
     ligne.put("id", "user-1");
     ligne.put("email", "carol@exemple.fr");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
 
-    Optional<String> resultat =
+    Optional<ResultatReset> resultat =
         adminService.reinitialiserMdp("user-1", "admin-1", "https://strapontin.fr");
 
     assertTrue(resultat.isPresent());
-    assertEquals("carol@exemple.fr", resultat.get());
+    assertEquals("carol@exemple.fr", resultat.get().email());
+    assertTrue(
+        resultat.get().lienReset().startsWith("https://strapontin.fr/reset-password?token="));
     verify(emailService).envoyerResetMotDePasse(eq("carol@exemple.fr"), anyString());
     verify(verificationRepository).supprimerParIdentifiant("reset:carol@exemple.fr");
   }

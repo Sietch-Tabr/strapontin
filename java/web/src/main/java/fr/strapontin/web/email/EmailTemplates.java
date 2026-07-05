@@ -256,6 +256,35 @@ final class EmailTemplates {
     return enveloppErreur("Bounce email", corps, baseUrl);
   }
 
+  /// Alerte de plainte spam (destinataire ayant signalé un email Strapontin comme indésirable).
+  ///
+  /// @param emailPlaignant l'adresse email à l'origine de la plainte
+  /// @param baseUrl        l'URL publique de base de l'application
+  /// @return le HTML de l'alerte plainte spam
+  static String alertePlainteSpam(String emailPlaignant, String baseUrl) {
+    String corps =
+        """
+        <p style="color: %s; font-size: 14px; margin: 0 0 16px">
+          Un destinataire a signalé un email envoyé par Strapontin comme indésirable (spam).
+        </p>
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+          Adresse concernée : <strong>%s</strong>
+        </p>
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+          Une plainte spam menace la réputation d'envoi du domaine. Vérifiez l'adresse email de
+          cet utilisateur depuis la page d'administration.
+        </p>
+        <p style="margin-top: 24px">%s</p>
+        """
+            .formatted(
+                C_TEXTE,
+                C_TEXTE,
+                e(emailPlaignant),
+                C_TEXTE,
+                bouton(baseUrl + "/admin", "Aller à l'administration →"));
+    return enveloppErreur("Plainte spam email", corps, baseUrl);
+  }
+
   /// Alerte de worker inactif (aucun job depuis plus de 3 heures).
   ///
   /// @param detail  description de la dernière activité (jamais null)

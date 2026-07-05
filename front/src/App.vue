@@ -8,6 +8,7 @@
         :nav-secondaire="navSecondaire"
         :nav-footer="navFooter"
         :nb-nouveau="nbNouveau"
+        :changelog-non-vu="changelogNonVu"
         :est-admin="estAdmin"
       />
       <main id="contenu-principal" class="main-content">
@@ -27,6 +28,7 @@
         :ouvert="drawerOuvert"
         :nav-secondaire="navSecondaire"
         :nav-footer="navFooter"
+        :changelog-non-vu="changelogNonVu"
         :est-admin="estAdmin"
         @fermer="drawerOuvert = false"
       />
@@ -92,8 +94,19 @@ const navFooter = [
 const nbNouveau = computed(() => session.value?.nbNouveau ?? 0)
 const estAdmin = computed(() => session.value?.role === 'admin')
 
-watch(() => route.path, () => {
+// #820 : badge "nouveautés" — changelog_version_vue pilote désormais un indicateur visuel,
+// complétant l'intention initiale du mécanisme (jusque là une écriture sans aucun lecteur).
+const changelogNonVu = ref(false)
+async function chargerChangelogNonVu() {
+  try {
+    const rep = await fetch('/api/changelog/nouveaute')
+    if (rep.ok) changelogNonVu.value = (await rep.json()).nonVu
+  } catch {}
+}
+
+watch(() => route.path, (chemin) => {
   drawerOuvert.value = false
+  if (chemin === '/changelog') changelogNonVu.value = false
 })
 
 watchEffect(() => {
@@ -116,6 +129,7 @@ watch(estPageAuth, (nouveau, ancien) => {
 onMounted(async () => {
   await chargerSession()
   chargerBanniere()
+  chargerChangelogNonVu()
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       miseAJourEnCours.value = true
@@ -129,6 +143,13 @@ onMounted(async () => {
   }
 
   let idToastHorsLigne = null
+  // #841 : si la PWA démarre alors que l'appareil est déjà hors-ligne (JS chargé depuis le cache
+  // du service worker, mais réseau absent), aucun événement 'offline' ne se déclenche jamais —
+  // les listeners de transition ci-dessous ne couvrent que les changements d'état, pas l'état
+  // initial. Vérifier navigator.onLine au montage pour afficher le toast immédiatement.
+  if (!navigator.onLine) {
+    idToastHorsLigne = afficherToast('Vous êtes hors ligne.', 'erreur')
+  }
   window.addEventListener('offline', () => {
     idToastHorsLigne = afficherToast('Vous êtes hors ligne.', 'erreur')
   })

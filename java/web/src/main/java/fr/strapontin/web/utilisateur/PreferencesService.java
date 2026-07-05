@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.FiltreArtiste;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.admin.LogAdminService;
+import fr.strapontin.web.artiste.ArtisteService;
+import fr.strapontin.web.salle.SalleService;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -42,15 +44,25 @@ public class PreferencesService {
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
   private final LogAdminService logAdminService;
+  private final ArtisteService artisteService;
+  private final SalleService salleService;
 
   /// @param jdbc            accès JDBC
   /// @param objectMapper    désérialiseur JSON
   /// @param logAdminService journalisation des actions admin
+  /// @param artisteService  résolution d'UUID artiste avec dédup floue (#824)
+  /// @param salleService    résolution d'UUID salle avec dédup floue (#824)
   public PreferencesService(
-      NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper, LogAdminService logAdminService) {
+      NamedParameterJdbcTemplate jdbc,
+      ObjectMapper objectMapper,
+      LogAdminService logAdminService,
+      ArtisteService artisteService,
+      SalleService salleService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.logAdminService = logAdminService;
+    this.artisteService = artisteService;
+    this.salleService = salleService;
     this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
   }
 
@@ -196,6 +208,10 @@ public class PreferencesService {
         configRows.isEmpty() ? null : configRows.get(0));
   }
 
+  // #824 : résolution de l'UUID artiste via ArtisteService.resoudreArtisteId — même dédup floue
+  // (CorrespondanceArtiste.estDoublonArtiste) que l'ajout interactif, plutôt qu'un ON CONFLICT
+  // exact sur nom_norm qui créait un doublon de référentiel pour une variante orthographique
+  // mineure (ex. "The Rolling Stones" importé alors que "Rolling Stones" est déjà suivi).
   private int[] importerArtistes(String userId, List<ArtisteExport> artistes) {
     Integer nbExistants =
         jdbc.queryForObject(
@@ -219,16 +235,7 @@ public class PreferencesService {
       }
       String nomSaisi = a.nom().strip();
       String normalise = Normalisation.normaliserTexte(nomSaisi);
-      UUID artisteId =
-          jdbc.queryForObject(
-              """
-              INSERT INTO artistes (nom, nom_norm)
-              VALUES (:nom, :nomNorm)
-              ON CONFLICT (nom_norm) DO UPDATE SET nom = EXCLUDED.nom
-              RETURNING id
-              """,
-              Map.of("nom", nomSaisi, "nomNorm", normalise),
-              (rs, _) -> rs.getObject("id", UUID.class));
+      UUID artisteId = artisteService.resoudreArtisteId(nomSaisi, normalise);
       jdbc.update(
           """
           INSERT INTO user_artistes (user_id, artiste_affiche, artiste_id)
@@ -241,6 +248,10 @@ public class PreferencesService {
     return new int[] {traites, rejetes};
   }
 
+  // #824 : résolution de l'UUID salle via SalleService.resoudreSalleUuid — même dédup floue
+  // (CorrespondanceSalle.estDoublonSalle) que l'ajout interactif, plutôt qu'un ON CONFLICT exact
+  // sur salle_cle. Le salleId de l'export JSON n'est volontairement pas utilisé pour retrouver
+  // une salle existante (comportement inchangé) — le nom est toujours re-normalisé.
   private int[] importerSalles(String userId, List<SalleExport> salles) {
     Integer nbExistants =
         jdbc.queryForObject(
@@ -255,7 +266,7 @@ public class PreferencesService {
         rejetes++;
         continue;
       }
-      String salleCle = Normalisation.normaliserSalleCle(nomSalle);
+      String salleCle = SalleService.normaliserSalleCle(nomSalle);
       if (salleCle.isEmpty()) {
         rejetes++;
         continue;
@@ -264,17 +275,7 @@ public class PreferencesService {
         rejetes++;
         continue;
       }
-      String nomNorm = Normalisation.normaliserTexte(nomSalle);
-      UUID salleUuid =
-          jdbc.queryForObject(
-              """
-              INSERT INTO salles (salle_cle, nom, nom_norm)
-              VALUES (:salleCle, :nom, :nomNorm)
-              ON CONFLICT (salle_cle) DO UPDATE SET nom = EXCLUDED.nom, nom_norm = EXCLUDED.nom_norm
-              RETURNING id
-              """,
-              Map.of("salleCle", salleCle, "nom", nomSalle, "nomNorm", nomNorm),
-              (rs, _) -> rs.getObject("id", UUID.class));
+      UUID salleUuid = salleService.resoudreSalleUuid(nomSalle, salleCle);
       jdbc.update(
           """
           INSERT INTO user_salles (user_id, salle_uuid)

@@ -154,6 +154,10 @@ public class AdminController {
 
   /// Envoie un email de réinitialisation de mot de passe à un utilisateur.
   ///
+  /// <p>Si Resend n'est pas disponible, inclut {@code lienReset} dans la réponse (#815) — comme
+  /// {@link #creerUtilisateur} — pour que l'admin puisse transmettre le lien manuellement à un
+  /// utilisateur bloqué, plutôt que de n'avoir aucun moyen de récupération.
+  ///
   /// @param userId  identifiant de l'utilisateur
   /// @param auth    contexte d'authentification admin
   /// @param request la requête HTTP
@@ -165,13 +169,20 @@ public class AdminController {
     if (userId.equals(adminId)) {
       return erreur(400, "Impossible de réinitialiser ce compte.");
     }
+    boolean emailDisponible = emailService.estDisponible();
     return adminService
         .reinitialiserMdp(userId, adminId, baseUrlDepuisRequete(request))
         .map(
-            email ->
-                ResponseEntity.ok(
-                    Map.<String, Object>of(
-                        "succes", true, "action", "reinitialiserMdp", "email", email)))
+            r -> {
+              Map<String, Object> corps = new HashMap<>();
+              corps.put("succes", true);
+              corps.put("action", "reinitialiserMdp");
+              corps.put("email", r.email());
+              if (!emailDisponible) {
+                corps.put("lienReset", r.lienReset());
+              }
+              return ResponseEntity.ok(corps);
+            })
         .orElseGet(() -> erreur(404, "Utilisateur introuvable."));
   }
 
@@ -328,28 +339,34 @@ public class AdminController {
 
   /// Déclenche immédiatement les fetches via le worker.
   ///
-  /// @return 200 si déclenché, 503 si le worker est inaccessible
+  /// @return 200 si déclenché, 502 en cas d'erreur interne worker, 503 si injoignable
   @PostMapping("/relancer")
   public ResponseEntity<Map<String, Object>> relancerFetches() {
     ResultatRelance resultat = workerProxyService.relancerFetches();
     if (resultat.succes()) {
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     }
-    return ResponseEntity.status(503).body(Map.of("erreur", resultat.messageErreur()));
+    return ResponseEntity.status(resultat.statutHttp())
+        .body(Map.of("erreur", resultat.messageErreur()));
   }
 
   /// Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible
   /// (v2.6.0, #706/#710) — bouton « Relancer » par job dans l'onglet admin Tableau de bord.
   ///
+  /// <p>Le code HTTP renvoyé distingue désormais (#837) le job inconnu (400) de l'erreur interne
+  /// worker (502) et du worker injoignable (503) — auparavant les trois étaient masqués sous un
+  /// 503 générique, ce qui égarait le diagnostic d'un admin.
+  ///
   /// @param typeJob identifiant lisible du job (ex. {@code "purger:salles"})
-  /// @return 200 si déclenché, 503 si le worker est inaccessible ou le job inconnu
+  /// @return 200 si déclenché, 400 si le job est inconnu, 502/503 selon la cause de l'échec
   @PostMapping("/jobs/relancer")
   public ResponseEntity<Map<String, Object>> relancerJob(@RequestParam String typeJob) {
     ResultatRelance resultat = workerProxyService.relancerJob(typeJob);
     if (resultat.succes()) {
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     }
-    return ResponseEntity.status(503).body(Map.of("erreur", resultat.messageErreur()));
+    return ResponseEntity.status(resultat.statutHttp())
+        .body(Map.of("erreur", resultat.messageErreur()));
   }
 
   /// Retourne les informations système non liées à la configuration chiffrée.

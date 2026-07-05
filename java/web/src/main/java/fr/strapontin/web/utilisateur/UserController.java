@@ -10,7 +10,6 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,8 +39,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
-
-  private static final Pattern FORMAT_IDENTIFIANT = Pattern.compile("^[a-zA-Z0-9_]+$");
 
   private final UtilisateurRepository utilisateurRepository;
   private final PasswordEncoder passwordEncoder;
@@ -89,16 +86,8 @@ public class UserController {
   public ResponseEntity<Map<String, Object>> majIdentifiant(
       @Valid @RequestBody RequeteIdentifiant requete, Authentication auth) {
     String userId = utilisateur(auth).id();
-    String identifiant =
-        requete.identifiant() == null ? "" : requete.identifiant().strip().toLowerCase();
+    String identifiant = requete.identifiant().strip().toLowerCase();
 
-    if (identifiant.length() < 3 || identifiant.length() > 30) {
-      return erreur(400, "L'identifiant doit contenir entre 3 et 30 caractères.");
-    }
-    if (!FORMAT_IDENTIFIANT.matcher(identifiant).matches()) {
-      return erreur(
-          400, "L'identifiant ne peut contenir que des lettres, chiffres et underscores.");
-    }
     if (utilisateurRepository.identifiantDejaUtilise(identifiant, userId)) {
       return erreur(400, "Cet identifiant est déjà utilisé.");
     }

@@ -162,8 +162,33 @@ class ArtisteServiceTest {
   @Test
   void supprimer_delegueAuRepository_sansException() {
     UUID artisteId = UUID.randomUUID();
+    when(artisteRepository.supprimer("u1", artisteId)).thenReturn(1);
+
     assertDoesNotThrow(() -> service.supprimer("u1", artisteId));
+
     verify(artisteRepository).supprimer("u1", artisteId);
+  }
+
+  // #836 : un DELETE no-op (artiste déjà retiré, jamais suivi, ou appartenant à un autre
+  // utilisateur) ne doit produire aucune entrée d'audit trompeuse "artiste supprimé".
+  @Test
+  void supprimer_artisteNonSuivi_neLogguePas() {
+    UUID artisteId = UUID.randomUUID();
+    when(artisteRepository.supprimer("u1", artisteId)).thenReturn(0);
+
+    service.supprimer("u1", artisteId);
+
+    verify(logAdminService, never()).logAdmin(anyString(), anyString(), anyString(), anyMap());
+  }
+
+  @Test
+  void supprimer_artisteReellementSupprime_logguePourAudit() {
+    UUID artisteId = UUID.randomUUID();
+    when(artisteRepository.supprimer("u1", artisteId)).thenReturn(1);
+
+    service.supprimer("u1", artisteId);
+
+    verify(logAdminService).logAdmin(eq("warn"), eq("web"), anyString(), anyMap());
   }
 
   // #780 : "Yael" doit être détecté comme correspondant partiellement à "yaelnaim" déjà suivi —

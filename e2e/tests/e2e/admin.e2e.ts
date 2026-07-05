@@ -328,6 +328,64 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       carteRevoc.locator(".badge-warn", { hasText: "révocation" }),
     ).not.toBeVisible({ timeout: 5000 });
   });
+
+  // #838 : avant correctif, une rétrogradation admin→user passait par un endpoint dédié
+  // (/revoquer-admin) distinct du PATCH — toute modification nom/email saisie dans le même
+  // formulaire était silencieusement perdue.
+  test("admin_retrogradationCombineeAvecNom_conserveLeNom", async ({
+    page,
+    isMobile,
+  }) => {
+    const emailTest = `e2e-retro-nom-${Date.now()}@example.com`;
+    emailsANettoyer.push(emailTest);
+
+    await page.goto("/admin");
+    await naviguerVersUtilisateurs(page, isMobile);
+
+    await page.fill('.form-creer-utilisateur input[type="email"]', emailTest);
+    await page.click('.form-creer-utilisateur button[type="submit"]');
+    const dialogInvit = page.locator("dialog#dialog-invitation");
+    await expect(dialogInvit).toBeVisible({ timeout: 5000 });
+    await page.click("button#btn-fermer-invitation");
+    await expect(dialogInvit).not.toBeVisible({ timeout: 3000 });
+
+    const carteUser = page
+      .locator(".user-carte")
+      .filter({ hasText: emailTest });
+    await carteUser.locator("button", { hasText: "Modifier" }).click();
+    await carteUser
+      .locator('select[aria-label="Rôle de l\'utilisateur"]')
+      .selectOption("admin");
+    await carteUser
+      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .click();
+    await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
+      timeout: 3000,
+    });
+    await page.click("button#dialog-confirmer-role-ok");
+
+    const carteAdmin = page
+      .locator(".user-carte")
+      .filter({ hasText: emailTest });
+    await carteAdmin.locator("button", { hasText: "Modifier" }).click();
+    await carteAdmin
+      .locator('input[placeholder="Nom d\'affichage"]')
+      .fill("Nom Conserve");
+    await carteAdmin
+      .locator('select[aria-label="Rôle de l\'utilisateur"]')
+      .selectOption("user");
+    await carteAdmin
+      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .click();
+    await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
+      timeout: 3000,
+    });
+    await page.click("button#dialog-confirmer-role-ok");
+
+    await expect(
+      page.locator(".user-carte").filter({ hasText: emailTest }),
+    ).toContainText("Nom Conserve", { timeout: 5000 });
+  });
 });
 
 test.describe("Scénario: admin — onglet Sources", () => {
@@ -809,13 +867,16 @@ test.describe("Scénario: admin — API endpoints", () => {
     expect(rep.status()).toBe(200);
   });
 
-  test("api_admin_jobsRelancer_typeJobInconnu_retourne503", async ({
+  // #837 : le worker retourne 400 (erreur cliente) pour un typeJob inconnu, jamais 503 — avant
+  // correctif, WorkerProxyService masquait tous les échecs (400, 5xx, injoignable) sous un 503
+  // générique, ce qui égarait le diagnostic d'un admin.
+  test("api_admin_jobsRelancer_typeJobInconnu_retourne400", async ({
     request,
   }) => {
     const rep = await request.post(
       "/api/admin/jobs/relancer?typeJob=" +
         encodeURIComponent("job:inexistant"),
     );
-    expect(rep.status()).toBe(503);
+    expect(rep.status()).toBe(400);
   });
 });

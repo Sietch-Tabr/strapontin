@@ -18,11 +18,38 @@ test.describe("Scénario: PWA — filet de secours hors-ligne au premier lanceme
     // #app doit rester vide tant que le délai n'est pas écoulé (pas de faux positif immédiat)
     await expect(page.locator("#app")).toBeEmpty();
 
+    // Délai réel du filet de secours : 4000ms (offline-fallback.js) — marge portée à 10s (au
+    // lieu de 6s) pour absorber la contention CPU/réseau sous charge parallèle complète de la
+    // suite (jalon 2.6.4, volume de tests fortement accru), sans changer le comportement vérifié.
     await expect(
       page.getByRole("heading", { name: "Vous êtes hors ligne" }),
-    ).toBeVisible({ timeout: 6000 });
+    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: "Réessayer" })).toBeVisible();
+  });
+});
+
+// #841 : distinct du scénario ci-dessus (bundle JS inatteignable) — ici le JS charge et Vue
+// monte normalement, seule la connectivité réseau est absente au démarrage. Les listeners
+// offline/online de App.vue ne réagissent qu'aux transitions d'état ; navigator.onLine n'était
+// vérifié nulle part au montage, donc le toast persistant n'apparaissait jamais si la PWA
+// démarrait déjà hors-ligne (ex. depuis le cache du service worker).
+test.describe("Scénario: PWA — démarrage alors que l'appareil est déjà hors-ligne (#841)", () => {
+  test("pwa_demarreDejaHorsLigne_afficheToastPersistantImmediatement", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window.navigator, "onLine", {
+        get: () => false,
+        configurable: true,
+      });
+    });
+
+    await page.goto("/");
+    await expect(page.locator("main")).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Réessayer" }),
-    ).toBeVisible();
+      page
+        .locator(".toast-conteneur .alerte-erreur")
+        .filter({ hasText: "Vous êtes hors ligne" }),
+    ).toBeVisible({ timeout: 3000 });
   });
 });

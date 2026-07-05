@@ -77,6 +77,28 @@ test.describe("Bannière système overlay", () => {
     await expect(overlay).toBeVisible({ timeout: 5000 });
   });
 
+  // #834 : l'auto-masquage (expiration de la minuterie, 10s pour "info") ne doit bloquer la
+  // réapparition que pour la navigation courante — contrairement à
+  // banniere_fermeture_manuelle_masque_definitivement ci-dessus, une navigation SPA suivante doit
+  // réafficher la bannière (Design-et-navigation.md : réapparaît à chaque changement de page,
+  // sauf fermeture manuelle). Avant correctif, idAutoMasque bloquait aussi la réapparition à la
+  // navigation, exactement comme une fermeture manuelle.
+  test("banniere_reapparaitApresAutoMasquage_a_la_navigation_suivante", async ({
+    page,
+  }) => {
+    await publierBanniere(page, "Test auto-masquage puis réapparition", "info");
+    await page.goto("/");
+    const overlay = page.locator(".banniere-overlay");
+    await expect(overlay).toBeVisible({ timeout: 5000 });
+
+    // Minuterie "info" = 10s (useBanniere.js DELAIS.info).
+    await expect(overlay).not.toBeAttached({ timeout: 12000 });
+
+    await page.locator('a[href="/spectacles"]').first().click();
+    await expect(page).toHaveURL(/\/spectacles/);
+    await expect(overlay).toBeVisible({ timeout: 5000 });
+  });
+
   test("banniere_desktop_positionnee_apres_sidebar", async ({
     page,
     isMobile,

@@ -217,12 +217,15 @@ async function demasquerConcert(concert, groupe) {
   }
 }
 
+// #818 : artisteId (UUID référentiel) plutôt qu'artisteNorm — garantit que tous les concerts du
+// groupe visuellement affiché sont couverts, artiste_norm pouvant diverger entre concerts d'un
+// même artiste réel selon la source de fetch. artisteNorm reste utilisé pour les clés Vue/ancres.
 async function masquerGroupe(groupe) {
   try {
     const rep = await fetch('/api/spectacles/masquer-artiste', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ artisteNorm: groupe.artisteNorm }),
+      body: JSON.stringify({ artisteId: groupe.artisteId }),
     })
     if (!rep.ok) throw new Error()
     donnees.value.artistesGroupes.splice(donnees.value.artistesGroupes.indexOf(groupe), 1)
@@ -236,7 +239,7 @@ async function demasquerGroupe(groupe) {
     const rep = await fetch('/api/spectacles/demasquer-artiste', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ artisteNorm: groupe.artisteNorm }),
+      body: JSON.stringify({ artisteId: groupe.artisteId }),
     })
     if (!rep.ok) throw new Error()
     donnees.value.artistesGroupes.splice(donnees.value.artistesGroupes.indexOf(groupe), 1)

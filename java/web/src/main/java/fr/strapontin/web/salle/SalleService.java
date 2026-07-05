@@ -136,7 +136,13 @@ public class SalleService {
   }
 
   /// Fusionne un candidat externe avec une suggestion déjà présente désignant la même salle
-  /// ({@link #estMemeSalle}), ou l'ajoute comme nouvelle suggestion sinon.
+  /// ({@link CorrespondanceSalle#estDoublonSalle}), ou l'ajoute comme nouvelle suggestion sinon.
+  ///
+  /// <p>Utilise le même algorithme que {@link #resoudreSalleUuid} (#835) — avant correctif,
+  /// {@code fusionnerOuAjouter} utilisait sa propre implémentation Levenshtein locale
+  /// ({@code estMemeSalle}), ce qui pouvait afficher deux suggestions distinctes dans l'UI alors
+  /// qu'un clic sur l'une ou l'autre aurait résolu vers le même UUID via {@code resoudreSalleUuid}
+  /// — un seul algorithme de dédoublonnage salle dans tout le projet.
   ///
   /// <p>Permet à Nominatim et Ticketmaster de contribuer chacun leurs identifiants (osmId,
   /// tmVenueId) à une même suggestion plutôt que de créer deux entrées dupliquées (#718).
@@ -148,7 +154,9 @@ public class SalleService {
   static void fusionnerOuAjouter(List<ResultatSalle> liste, ResultatSalle candidat) {
     for (int i = 0; i < liste.size(); i++) {
       ResultatSalle existant = liste.get(i);
-      if (estMemeSalle(existant.salle(), candidat.salle())) {
+      if (CorrespondanceSalle.estDoublonSalle(
+          Normalisation.normaliserTexte(existant.salle()),
+          Normalisation.normaliserTexte(candidat.salle()))) {
         liste.set(
             i,
             new ResultatSalle(
@@ -243,19 +251,22 @@ public class SalleService {
   /// Résout l'UUID d'une salle dans le référentiel global, en réutilisant une salle existante
   /// dont le nom est un doublon flou plutôt que d'en créer une nouvelle. La comparaison floue
   /// utilise {@link CorrespondanceSalle#estDoublonSalle} sur le nom normalisé au sens de
-  /// {@link Normalisation#normaliserTexte} (même algorithme que {@code ReconciliateurSalles} côté
-  /// worker et {@code WikidataSalleSource} côté enrichissement) plutôt que {@link #estMemeSalle} —
-  /// {@code salle_cle} concatène tous les caractères alphanumériques sans espace, ce qui rend le
-  /// Jaccard sur tokens inopérant ; {@code nom} conserve les espaces nécessaires à la
-  /// tokenisation. En cas de correspondance exacte de {@code salle_cle}, passe par
-  /// {@code upsertSalle} pour conserver le comportement existant de mise à jour du nom affiché ;
-  /// en cas de correspondance floue seulement, réutilise l'UUID existant sans toucher au nom déjà
-  /// établi.
+  /// {@link Normalisation#normaliserTexte} — même algorithme que {@code ReconciliateurSalles} côté
+  /// worker, {@code WikidataSalleSource} côté enrichissement, et {@link #fusionnerOuAjouter} côté
+  /// suggestions (#835, un seul algorithme de dédoublonnage salle dans tout le projet). En cas de
+  /// correspondance exacte de {@code salle_cle}, passe par {@code upsertSalle} pour conserver le
+  /// comportement existant de mise à jour du nom affiché ; en cas de correspondance floue
+  /// seulement, réutilise l'UUID existant sans toucher au nom déjà établi.
+  ///
+  /// <p>Public (pas seulement utilisé par {@link #ajouter}) : réutilisé par
+  /// {@code PreferencesService.importerSalles} (#824) pour que l'import de préférences applique
+  /// la même dédup floue que l'ajout interactif, plutôt qu'une égalité stricte sur
+  /// {@code salle_cle}.
   ///
   /// @param nom      nom affiché tel que saisi
   /// @param salleCle clé normalisée ({@link #normaliserSalleCle})
   /// @return UUID de la salle existante ou nouvellement créée
-  private UUID resoudreSalleUuid(String nom, String salleCle) {
+  public UUID resoudreSalleUuid(String nom, String salleCle) {
     Set<String> tokens =
         Arrays.stream(nom.split("\\s+"))
             .map(SalleService::normaliserSalleCle)
@@ -302,15 +313,27 @@ public class SalleService {
   /// <p>Upsert sur {@code salle_cle}, enregistre le slug dans {@code salle_sources},
   /// puis déclenche le worker.
   ///
+  /// <p>Si le slug est déjà attribué à une autre salle, lève une erreur 409 plutôt que de créer
+  /// une salle sans source Digitick fonctionnelle (#830) — {@code enregistrerSalleSource} fait un
+  /// {@code ON CONFLICT DO NOTHING} silencieux, qui laissait auparavant la nouvelle salle créée
+  /// avec un 201 "succès" trompeur mais aucune source réelle.
+  ///
   /// @param nom   nom affiché de la salle
   /// @param slug  slug Digitick
   /// @param ville ville (peut être {@code null})
   /// @param dept  numéro de département (peut être {@code null})
   /// @return UUID stable de la salle créée ou retrouvée
+  /// @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
   @Transactional
   public UUID creerSalleDigitick(String nom, String slug, String ville, String dept) {
     String salleCle = normaliserSalleCle(nom);
     UUID salleUuid = salleRepository.upsertSalleAvecLoc(salleCle, nom, ville, dept);
+    salleRepository
+        .trouverConflitDigitickSlug(slug, salleUuid)
+        .ifPresent(
+            nomConflit -> {
+              throw new ErreurMetier("Slug déjà utilisé par la salle " + nomConflit + ".", 409);
+            });
     salleRepository.enregistrerSalleSource(salleUuid, "digitick", slug);
     declencherWorkerParSources(salleUuid);
     return salleUuid;
@@ -366,33 +389,6 @@ public class SalleService {
   /// @return {@code true} si une salle déjà suivie contient la recherche
   static boolean contientCorrespondancePartielle(String rechercheNorm, Set<String> clesNorm) {
     return clesNorm.stream().anyMatch(cle -> cle.contains(rechercheNorm));
-  }
-
-  private static boolean estMemeSalle(String a, String b) {
-    String na = normaliserSalleCle(a);
-    String nb = normaliserSalleCle(b);
-    if (na.equals(nb)) return true;
-    int seuil = Math.max(2, (int) Math.floor(Math.min(na.length(), nb.length()) * 0.1));
-    return levenshtein(na, nb) <= seuil;
-  }
-
-  private static int levenshtein(String a, String b) {
-    int m = a.length(), n = b.length();
-    int[] dp = new int[n + 1];
-    for (int j = 0; j <= n; j++) dp[j] = j;
-    for (int i = 1; i <= m; i++) {
-      int prec = dp[0];
-      dp[0] = i;
-      for (int j = 1; j <= n; j++) {
-        int tmp = dp[j];
-        dp[j] =
-            a.charAt(i - 1) == b.charAt(j - 1)
-                ? prec
-                : 1 + Math.min(prec, Math.min(dp[j], dp[j - 1]));
-        prec = tmp;
-      }
-    }
-    return dp[n];
   }
 
   @SuppressWarnings("unchecked")

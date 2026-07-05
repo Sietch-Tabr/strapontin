@@ -112,10 +112,14 @@
           Recevez une notification sur cet appareil dès qu'un nouveau concert correspond à vos
           préférences.
         </p>
+        <p v-if="frequenceNotifications === 'jamais'" class="param-aide">
+          Activez d'abord une fréquence de notification ci-dessus — sur "Jamais", aucune
+          notification push ne serait envoyée.
+        </p>
         <button
           type="button"
           class="btn btn-secondary"
-          :disabled="pushEnCours"
+          :disabled="pushEnCours || frequenceNotifications === 'jamais'"
           @click="abonnerPush"
         >
           Activer les notifications push
@@ -268,10 +272,22 @@ async function abonnerPush() {
   }
 }
 
+// #826 : transmettre l'endpoint de l'appareil courant plutôt que de laisser le serveur
+// sélectionner arbitrairement le plus récent — sinon un utilisateur abonné sur plusieurs
+// appareils cliquant "Test" depuis l'un d'eux pouvait recevoir la notification sur un autre.
 async function testerPush() {
   testEnCours.value = true
   try {
-    const rep = await fetch('/api/push/tester', { method: 'POST' })
+    let endpoint = null
+    if (swRegistration) {
+      const abonnement = await swRegistration.pushManager.getSubscription()
+      endpoint = abonnement?.endpoint ?? null
+    }
+    const rep = await fetch('/api/push/tester', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint }),
+    })
     if (rep.ok) {
       afficherToast('Notification de test envoyée.', 'succes')
     } else {

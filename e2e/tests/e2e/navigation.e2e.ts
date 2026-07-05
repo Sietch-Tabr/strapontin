@@ -52,7 +52,10 @@ test.describe("Scénario: navigation et chargement des pages", () => {
 
   test("health_actuator_retourne_status_up", async ({ request }) => {
     const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
-    const managementUrl = BASE_URL.replace(/:8080$/, ":9090").replace(/:3000$/, ":9090");
+    const managementUrl = BASE_URL.replace(/:8080$/, ":9090").replace(
+      /:3000$/,
+      ":9090",
+    );
     const rep = await request.get(`${managementUrl}/actuator/health`);
     expect(rep.status()).toBe(200);
     const corps = await rep.json();
@@ -103,6 +106,16 @@ test.describe("Scénario: découverte — robustesse des filtres", () => {
     expect(response?.status()).not.toBe(500);
     await expect(page.locator("main")).toBeVisible();
   });
+
+  // #819 : "pas-une-date" ci-dessus ne matche même pas la regex de forme — ne reproduit donc
+  // jamais le crash réel. "2026-13" passe la regex (4 chiffres-tiret-2 chiffres) mais n'est pas
+  // un mois calendaire valide, faisant échouer LocalDate.parse avec une exception non interceptée
+  // avant correctif (500 générique au lieu du filtre ignoré documenté).
+  test("filtre_mois_calendaire_invalide_sans_erreur", async ({ page }) => {
+    const response = await page.goto("/decouverte?mois=2026-13");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
 });
 
 test.describe("Scénario: spectacles — robustesse des filtres", () => {
@@ -126,6 +139,14 @@ test.describe("Scénario: spectacles — robustesse des filtres", () => {
 
   test("spectacles_tri_nouveaute_sans_erreur", async ({ page }) => {
     const response = await page.goto("/spectacles?tri=nouveaute");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  // #819 : équivalent manquant pour /spectacles — FiltreConcertsBuilder.appliquerMois est
+  // partagé entre SpectacleService et DecouverteService, le crash affectait les deux routes.
+  test("spectacles_mois_calendaire_invalide_sans_erreur", async ({ page }) => {
+    const response = await page.goto("/spectacles?mois=2026-13");
     expect(response?.status()).not.toBe(500);
     await expect(page.locator("main")).toBeVisible();
   });
@@ -246,5 +267,55 @@ test.describe("Scénario: indicateur de chargement admin (#644)", () => {
     await expect(page.locator(".etat-chargement").first()).not.toBeVisible({
       timeout: 5000,
     });
+  });
+});
+
+// #823 : useSession.js traitait une exception réseau générique (fetch échoué) exactement comme
+// un 401 confirmé — session.value passait à null dans les deux cas, ce qui redirigeait vers
+// /login au prochain re-appel de chargerSession() (ex. écouteur 'online') alors que le cookie de
+// session restait valide côté serveur. Après correctif, seul un 401 confirmé invalide la session.
+test.describe("Scénario: garde de session — coupure réseau transitoire (#823)", () => {
+  test.use({ storageState: FICHIER_AUTH_USER });
+
+  test("erreurReseauSurChargerSession_neRedirigePasVersLogin", async ({
+    page,
+  }) => {
+    // Attendre la réponse du premier appel /api/session (déclenché par App.vue onMounted) avant
+    // de dispatcher 'online' — le listener 'online' n'est attaché qu'une fois ce premier appel
+    // résolu côté JS.
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes("/api/session")),
+      page.goto("/"),
+    ]);
+    await expect(page.locator("main")).toBeVisible();
+
+    let intercepte = false;
+    await page.route("**/api/session", async (route) => {
+      intercepte = true;
+      await route.abort();
+    });
+
+    // Le listener 'online' de App.vue rappelle chargerSession() — simule une coupure réseau
+    // brève suivie d'un retour de connectivité pendant que /api/session est encore instable.
+    // #823 : chargerSession() ignore tout appel concurrent tant qu'un premier est en cours
+    // (garde chargement.value) — un dispatch immédiatement après waitForResponse ci-dessus peut
+    // encore tomber pendant la fenêtre où ce guard est actif (la réponse réseau et l'exécution du
+    // finally() côté JS ne sont pas synchronisées), rendant un dispatch unique flaky. Redispatcher
+    // en boucle jusqu'à interception plutôt que de deviner le bon délai.
+    await expect
+      .poll(
+        async () => {
+          await page.evaluate(() => window.dispatchEvent(new Event("online")));
+          return intercepte;
+        },
+        { timeout: 5000 },
+      )
+      .toBe(true);
+
+    // Laisse le catch/finally de chargerSession() s'exécuter avant de vérifier l'absence de
+    // redirection.
+    await page.waitForTimeout(300);
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.locator("main")).toBeVisible();
   });
 });

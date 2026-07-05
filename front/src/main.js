@@ -16,22 +16,16 @@ window.afficherToast = afficherToast;
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
 
+  // #839 : un second listener "nav-ancre" existait dans App.vue (traitement effectif, toujours
+  // router.push) — celui-ci faisait double emploi et sa branche scrollIntoView était du code mort
+  // (les URLs construites côté serveur utilisent toujours une query string, jamais un #fragment,
+  // donc cible.hash était toujours vide). Ne garder qu'un seul listener message, dans App.vue.
   navigator.serviceWorker.addEventListener("message", (e) => {
     if (e.data?.type === "sw-error") {
       window.afficherToast?.(
         "Erreur service worker : " + e.data.message,
         "erreur",
       );
-      return;
-    }
-    if (e.data?.type !== "nav-ancre") return;
-    const cible = new URL(e.data.url, location.origin);
-    if (location.pathname === cible.pathname && cible.hash) {
-      document
-        .getElementById(cible.hash.slice(1))
-        ?.scrollIntoView({ behavior: "smooth" });
-    } else {
-      router.push(e.data.url);
     }
   });
 }

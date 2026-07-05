@@ -8,12 +8,17 @@ import fr.strapontin.web.utils.Dates;
 
 /// Concert dans la vue accueil d'un utilisateur.
 ///
+/// @param artisteId UUID stable de l'artiste dans le référentiel (#818) — utilisé pour le
+///     masquage/démasquage par groupe, contrairement à {@code artisteNorm} (texte par source,
+///     conservé pour les ancres de navigation) qui peut diverger entre concerts d'un même artiste
+///     réel selon la source de fetch.
 /// @since 2.1.0
 /// @author Kwaite
 public record ConcertAccueil(
     String id,
     String artiste,
     String artisteNorm,
+    String artisteId,
     String date,
     String heure,
     String salle,

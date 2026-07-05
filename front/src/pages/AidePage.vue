@@ -128,9 +128,14 @@
                 Ouvrir le formulaire
               </button>
             </div>
-            <div v-else-if="config">
+            <div v-else-if="config && config.contactEmail">
               <p class="param-aide">
                 Écrivez à <a :href="'mailto:' + config.contactEmail">l'administrateur</a>.
+              </p>
+            </div>
+            <div v-else-if="config">
+              <p class="param-aide">
+                Aucun moyen de contact configuré actuellement.
               </p>
             </div>
             <div v-if="config && config.signalLien">
@@ -243,7 +248,10 @@ async function envoyerSignalement() {
     succesSignalement.value = true
     messageSignalement.value = ''
     afficherToast('Signalement envoyé. Merci !', 'succes')
-    dialogRef.value?.close()
+    // #821 : fermer immédiatement empêchait Vue de jamais peindre l'alerte de succès (v-if
+    // succesSignalement) — le dialog disparaissait avant le prochain repaint. Le délai laisse le
+    // message visible un instant avant fermeture.
+    setTimeout(() => dialogRef.value?.close(), 1500)
   } catch {
     erreurSignalement.value = 'Impossible de se connecter au serveur.'
   } finally {

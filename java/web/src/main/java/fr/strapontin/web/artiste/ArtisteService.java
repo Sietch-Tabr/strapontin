@@ -266,10 +266,15 @@ public class ArtisteService {
   /// nom global déjà établi (le nom tapé par cet utilisateur reste visible via
   /// {@code user_artistes.artiste_affiche}, indépendant du nom global).
   ///
+  /// <p>Public (pas seulement utilisé par {@link #ajouter}) : réutilisé par
+  /// {@code PreferencesService.importerArtistes} (#824) pour que l'import de préférences
+  /// applique la même dédup floue que l'ajout interactif, plutôt qu'une égalité stricte sur
+  /// {@code nom_norm}.
+  ///
   /// @param nom       nom affiché tel que saisi
   /// @param normalise nom normalisé ({@link Normalisation#normaliserTexte})
   /// @return UUID de l'artiste existant ou nouvellement créé
-  private UUID resoudreArtisteId(String nom, String normalise) {
+  public UUID resoudreArtisteId(String nom, String normalise) {
     Set<String> tokens = CorrespondanceSalle.tokensSignificatifs(normalise);
     for (Map<String, Object> candidat : artisteRepository.chercherCandidatsParTokens(tokens)) {
       String nomNormCandidat = (String) candidat.get("nom_norm");
@@ -301,10 +306,16 @@ public class ArtisteService {
 
   /// Supprime un artiste de la liste de suivi.
   ///
+  /// <p>Ne journalise (log applicatif + {@code logs_admin}) que si l'artiste était réellement
+  /// suivi (#836) — un appel sur un artiste déjà retiré, jamais suivi, ou appartenant à un autre
+  /// utilisateur ne doit pas produire une fausse entrée d'audit "artiste supprimé".
+  ///
   /// @param userId    identifiant de l'utilisateur
   /// @param artisteId UUID stable de l'artiste
   public void supprimer(String userId, UUID artisteId) {
-    artisteRepository.supprimer(userId, artisteId);
+    if (artisteRepository.supprimer(userId, artisteId) == 0) {
+      return;
+    }
     log.info("artiste supprimé userId={} artisteId={}", userId, artisteId);
     logAdminService.logAdmin(
         "warn",

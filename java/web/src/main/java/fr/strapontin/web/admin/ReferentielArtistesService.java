@@ -16,11 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 /// Gestion du référentiel artistes pour l'onglet admin (#710) : liste paginée, édition du nom
 /// affiché, fusion de doublons.
 ///
-/// La fusion n'a pas besoin de dédoublonnage préalable des concerts : la contrainte unique
-/// {@code uq_concerts_artiste_date_heure_salle} porte sur {@code artiste_norm} (texte), pas sur
-/// {@code artiste_id} — deux artistes distincts ont nécessairement des {@code nom_norm}
-/// différents ({@code uq_artistes_nom_norm}), donc leurs concerts ont des {@code artiste_norm}
-/// différents et le remapping ne peut pas violer cette contrainte.
+/// <p>La fusion dédoublonne désormais les concerts en conflit avant remapping (#828), à l'image
+/// de {@link ReferentielSallesService#fusionner} : même si la contrainte unique
+/// {@code uq_concerts_artiste_date_heure_salle} porte sur {@code artiste_norm} (texte, jamais en
+/// conflit lors d'un remapping d'{@code artiste_id}), deux artistes distincts fusionnés peuvent
+/// chacun avoir enregistré le même concert réel (même salle, même date/heure) sous un
+/// {@code artiste_norm} textuel différent selon la source — sans ce nettoyage, les deux lignes
+/// subsistaient après fusion, dupliquant le concert sur la fiche de l'artiste cible.
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -177,6 +179,20 @@ public class ReferentielArtistesService {
 
     Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
 
+    // 1. Dédoublonner les concerts en conflit (même salle/date/heure déjà présent côté cible)
+    jdbc.update(
+        """
+        DELETE FROM concerts c1
+        USING concerts c2
+        WHERE c1.artiste_id = CAST(:source AS uuid)
+          AND c2.artiste_id = CAST(:cible AS uuid)
+          AND c1.salle_uuid = c2.salle_uuid
+          AND c1.date = c2.date
+          AND c1.heure IS NOT DISTINCT FROM c2.heure
+        """,
+        ids);
+
+    // 2. Réassigner les concerts restants
     jdbc.update(
         "UPDATE concerts SET artiste_id = CAST(:cible AS uuid) WHERE artiste_id = CAST(:source AS"
             + " uuid)",

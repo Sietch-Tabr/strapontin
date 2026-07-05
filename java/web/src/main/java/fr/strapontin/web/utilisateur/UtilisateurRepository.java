@@ -57,12 +57,21 @@ class UtilisateurRepository {
 
   /// Met à jour l'identifiant (username).
   ///
+  /// <p>Ne resynchronise {@code display_username} sur le nouvel identifiant que s'il n'a jamais
+  /// été personnalisé par un admin (#814) — sinon un nom affiché personnalisé
+  /// ({@link fr.strapontin.web.admin.AdminService}, champ {@code nom}) serait écrasé
+  /// silencieusement à chaque changement d'identifiant par l'utilisateur lui-même.
+  ///
   /// @param userId      identifiant de l'utilisateur
   /// @param identifiant nouvel identifiant (déjà validé, en minuscules)
   void majIdentifiant(String userId, String identifiant) {
     jdbc.update(
         """
-        UPDATE users SET username = :ident, display_username = :ident, updated_at = now()
+        UPDATE users
+        SET username = :ident,
+            display_username = CASE WHEN display_username = username THEN :ident
+                                     ELSE display_username END,
+            updated_at = now()
         WHERE id = :userId
         """,
         Map.of("ident", identifiant, CLE_USER_ID, userId));

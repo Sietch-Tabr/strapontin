@@ -165,6 +165,16 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <!-- #820 : génère META-INF/build-info.properties (bean BuildProperties)
+                         pour lire la version courante dynamiquement plutôt qu'une constante
+                         à maintenir manuellement à chaque release. -->
+                    <execution>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
