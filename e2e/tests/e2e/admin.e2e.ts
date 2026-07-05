@@ -607,6 +607,10 @@ test.describe("Scénario: admin — onglet Sources", () => {
     const toggle = page.locator(".source-vue-toggle button", {
       hasText: /[Dd]igitick/,
     });
+    // Comme admin_sources_toggle_digitick ci-dessus : attendre le toggle avant de cliquer,
+    // sinon le clic peut atteindre le bouton avant la fin du chargement (EtatChargement)
+    // qui conditionne son rendu (v-else), le rendant introuvable par intermittence.
+    await expect(toggle).toBeVisible();
     await toggle.click();
     await expect(
       page.locator("button", { hasText: "Ajouter une salle" }),

@@ -41,7 +41,7 @@ public class ReferentielSallesController {
   /// @param nom              filtre nom partiel
   /// @param ville            filtre ville partielle
   /// @param dept             filtre département exact
-  /// @param statut           filtre {@code vivant}/{@code suspect}/{@code mort}
+  /// @param statut           filtre {@code a_jour}/{@code a_verifier}/{@code invalide}
   /// @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id}
   /// @return 200 avec la page de résultats
   @GetMapping("/salles")

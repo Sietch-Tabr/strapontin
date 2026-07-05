@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -28,6 +29,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/user/config")
 public class UserConfigController {
 
+  /// Taille max du champ brut, avant découpage — largement suffisant pour les ~101 départements
+  /// français existants, même saisis avec une ponctuation ou des espaces excessifs.
+  private static final int MAX_LONGUEUR_DEPARTEMENTS = 1000;
+
   private final UserConfigService userConfigService;
 
   /// @param userConfigService service de gestion de la configuration utilisateur
@@ -50,16 +55,22 @@ public class UserConfigController {
   /// @param requete corps JSON avec {@code departements} séparés par virgules
   /// @param auth    contexte d'authentification
   /// @return 200 avec {@code succes} et éventuellement {@code ignores}
+  /// @throws ErreurMetier si le champ brut dépasse {@value #MAX_LONGUEUR_DEPARTEMENTS} caractères
   @PatchMapping("/departements")
   public ResponseEntity<Map<String, Object>> majDepartements(
       @RequestBody RequeteDepartements requete, Authentication auth) {
     String userId = utilisateur(auth).id();
 
+    String brut = requete.departements() == null ? "" : requete.departements();
+    if (brut.length() > MAX_LONGUEUR_DEPARTEMENTS) {
+      throw new ErreurMetier(
+          "Le champ départements ne peut pas dépasser "
+              + MAX_LONGUEUR_DEPARTEMENTS
+              + " caractères.");
+    }
+
     List<String> bruts =
-        Arrays.stream((requete.departements() == null ? "" : requete.departements()).split(","))
-            .map(String::strip)
-            .filter(s -> !s.isEmpty())
-            .toList();
+        Arrays.stream(brut.split(",")).map(String::strip).filter(s -> !s.isEmpty()).toList();
 
     UserConfigService.ResultatMajDepartements resultat =
         userConfigService.majDepartements(userId, bruts);
@@ -114,5 +125,4 @@ public class UserConfigController {
   private static UtilisateurDetails utilisateur(Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
   }
-
 }

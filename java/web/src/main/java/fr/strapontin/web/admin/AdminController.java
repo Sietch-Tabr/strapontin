@@ -263,12 +263,21 @@ public class AdminController {
 
   /// Génère une nouvelle paire de clés VAPID EC P-256.
   ///
-  /// @return 200 si générées
+  /// @return 200 avec la clé publique générée et le nombre d'abonnements push invalidés
   @PostMapping("/vapid/generer")
   public ResponseEntity<Map<String, Object>> genererVapid() {
     try {
-      vapidService.genererVapid();
-      return ResponseEntity.ok(Map.of("succes", true, "action", "genererVapid"));
+      VapidService.ResultatVapid resultat = vapidService.genererVapid();
+      return ResponseEntity.ok(
+          Map.of(
+              "succes",
+              true,
+              "action",
+              "genererVapid",
+              "clePublique",
+              resultat.clePublique(),
+              "nbAbonnementsSupprimes",
+              resultat.nbAbonnementsSupprimes()));
     } catch (Exception e) {
       log.error("Erreur génération clés VAPID", e);
       return erreur(500, "Erreur lors de la génération des clés VAPID.");

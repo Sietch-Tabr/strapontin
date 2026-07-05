@@ -276,7 +276,11 @@ async function confirmerVapid() {
   const rep = await fetch('/api/admin/vapid/generer', { method: 'POST' })
   const corps = await rep.json()
   if (rep.ok) {
-    afficherToast('Clés VAPID régénérées.', 'succes')
+    const nb = corps.nbAbonnementsSupprimes ?? 0
+    afficherToast(
+      `Clés VAPID régénérées. ${nb} abonnement${nb !== 1 ? 's' : ''} push invalidé${nb !== 1 ? 's' : ''}.`,
+      'succes',
+    )
     const repConfig = await fetch('/api/admin/config')
     if (repConfig.ok) configs.value = await repConfig.json()
   } else {

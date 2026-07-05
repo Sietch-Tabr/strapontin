@@ -342,6 +342,34 @@ class AdminServiceTest {
   }
 
   @Test
+  void sauvegarderConfig_formatVapidPublicInvalide_leveErreurMetier() {
+    assertThrows(
+        ErreurMetier.class,
+        () -> adminService.sauvegarderConfig("VAPID_PUBLIC_KEY", "n'importe-quoi", "admin-1"));
+  }
+
+  @Test
+  void sauvegarderConfig_formatVapidPrivateInvalide_leveErreurMetier() {
+    assertThrows(
+        ErreurMetier.class,
+        () -> adminService.sauvegarderConfig("VAPID_PRIVATE_KEY", "n'importe-quoi", "admin-1"));
+  }
+
+  @Test
+  void sauvegarderConfig_formatVapidPublicValide_sauvegarde() {
+    String clePublique = "A".repeat(87);
+    adminService.sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique, "admin-1");
+    verify(configService).sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique);
+  }
+
+  @Test
+  void sauvegarderConfig_formatVapidPrivateValide_sauvegarde() {
+    String clePrivee = "A".repeat(43);
+    adminService.sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee, "admin-1");
+    verify(configService).sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee);
+  }
+
+  @Test
   void reinitialiserMdp_utilisateurInexistant_retourneEmpty() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.push;
 
+import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,26 +18,41 @@ import org.springframework.web.bind.annotation.RestController;
 ///
 /// <p>{@code start_url} est dérivé de la requête HTTP entrante — fonctionne
 /// sans configuration {@code PUBLIC_BASE_URL}, en dev comme en prod.
-/// Le manifeste est servi sans cache navigateur.
+///
+/// <p>{@code id} est en revanche dérivé de {@code PUBLIC_BASE_URL} quand cette clé est
+/// configurée, pour rester stable quel que soit l'hôte utilisé pour accéder à l'instance
+/// (IP LAN, domaine public…) — un {@code id} variable ferait traiter chaque hôte comme une
+/// installation PWA distincte plutôt qu'une mise à jour de la même application (#859). Repli
+/// sur le comportement dynamique historique si {@code PUBLIC_BASE_URL} n'est pas configurée.
+///
+/// <p>Le manifeste est servi sans cache navigateur.
 ///
 /// @since 2.0.0
 /// @author Kwaite
 @RestController
 public class ManifestController {
 
+  private final ConfigService configService;
+
+  /// @param configService lecture de {@code PUBLIC_BASE_URL} pour stabiliser {@code id}
+  public ManifestController(ConfigService configService) {
+    this.configService = configService;
+  }
+
   /// Retourne le manifeste PWA au format {@code application/manifest+json}.
   ///
   /// @param request la requête HTTP courante (pour dériver la base URL)
-  /// @return le manifeste JSON avec {@code start_url} dynamique
+  /// @return le manifeste JSON avec {@code start_url} dynamique et {@code id} stable
   @GetMapping(value = "/manifest.json", produces = "application/manifest+json")
   public ResponseEntity<Map<String, Object>> manifest(HttpServletRequest request) {
     String baseUrl = baseUrlDepuisRequete(request);
+    String idBaseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse(baseUrl);
 
     Map<String, Object> manifest = new LinkedHashMap<>();
     manifest.put("name", "Strapontin");
     manifest.put("short_name", "Strapontin");
     manifest.put("description", "Concert finder — suivez vos artistes et salles préférés");
-    manifest.put("id", baseUrl + "/");
+    manifest.put("id", idBaseUrl + "/");
     manifest.put("start_url", baseUrl + "/");
     manifest.put("scope", "/");
     manifest.put("display", "standalone");

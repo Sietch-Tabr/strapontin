@@ -243,7 +243,7 @@ test.describe("Scénario: catalogue — signalement salle manquante", () => {
         commentaire: "",
       },
     });
-    expect([204, 503]).toContain(rep.status());
+    expect(rep.status()).toBe(204);
   });
 
   test("api_signaler_salleManquante_nomVide_retourne400", async ({

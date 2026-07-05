@@ -143,4 +143,52 @@ test.describe("Bannière système overlay", () => {
     });
     await expect(page.locator(".banniere-progression")).not.toBeVisible();
   });
+
+  // #852 : l'onglet admin n'affichait jamais l'état courant de la bannière.
+  test("admin_banniere_onglet_affiche_etat_publie", async ({ page }) => {
+    await publierBanniere(page, "Test onglet admin publié", "warning");
+    await page.goto("/admin#banniere");
+    await expect(page.locator("section#banniere")).toContainText(
+      "Test onglet admin publié",
+    );
+    await expect(page.locator("section#banniere")).toContainText("warning");
+  });
+
+  test("admin_banniere_onglet_affiche_aucune_banniere_publiee", async ({
+    page,
+  }) => {
+    await effacerBanniere(page);
+    await page.goto("/admin#banniere");
+    await expect(page.locator("section#banniere")).toContainText(
+      "Aucune bannière publiée",
+    );
+  });
+
+  test("admin_banniere_publierViaFormulaire_rafraichitEtatAffiche", async ({
+    page,
+  }) => {
+    await effacerBanniere(page);
+    await page.goto("/admin#banniere");
+    await page.locator("#banniere-message").fill("Test formulaire admin");
+    await page.locator("#banniere-type").selectOption("error");
+    await page.getByRole("button", { name: "Publier" }).click();
+    await expect(page.locator("section#banniere")).toContainText(
+      "Test formulaire admin",
+    );
+    await expect(page.locator("section#banniere")).toContainText("error");
+  });
+
+  test("admin_banniere_effacerViaFormulaire_rafraichitEtatAffiche", async ({
+    page,
+  }) => {
+    await publierBanniere(page, "Test avant effacement", "info");
+    await page.goto("/admin#banniere");
+    await expect(page.locator("section#banniere")).toContainText(
+      "Test avant effacement",
+    );
+    await page.getByRole("button", { name: "Effacer" }).click();
+    await expect(page.locator("section#banniere")).toContainText(
+      "Aucune bannière publiée",
+    );
+  });
 });

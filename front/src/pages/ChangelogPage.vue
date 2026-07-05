@@ -12,7 +12,22 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.6.4 — 5 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.6.5 — 5 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Régénérer les clés VAPID affiche désormais immédiatement le nombre d'abonnements push invalidés par le changement.</li>
+              <li>L'onglet Bannière affiche désormais l'état actuellement publié (message et type) plutôt que de laisser l'admin deviner.</li>
+              <li>Le libellé « Jamais connecté » a été remplacé par « Aucune session active », plus fidèle pour un utilisateur dont la session a simplement expiré.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.6.4 — 5 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Compte</p>
@@ -74,7 +89,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.6.3 — 4 juillet 2026</h2></summary>

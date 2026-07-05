@@ -211,7 +211,7 @@ test.describe("Scénario: export préférences JSON", () => {
 });
 
 test.describe("Scénario: import préférences — validation", () => {
-  test("api_preferences_importer_json_invalide_retourne_erreur", async ({
+  test("api_preferences_importer_jsonInvalide_retourne400", async ({
     request,
   }) => {
     const formData = new FormData();
@@ -231,7 +231,7 @@ test.describe("Scénario: import préférences — validation", () => {
         mode: "fusionner",
       },
     });
-    expect([200, 400, 422]).toContain(rep.status());
+    expect(rep.status()).toBe(400);
   });
 
   test("api_preferences_importer_sans_session_retourne_401_ou_302", async ({
