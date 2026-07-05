@@ -70,10 +70,7 @@ public class UserConfigController {
     }
 
     List<String> bruts =
-        Arrays.stream(brut.split(","))
-            .map(String::strip)
-            .filter(s -> !s.isEmpty())
-            .toList();
+        Arrays.stream(brut.split(",")).map(String::strip).filter(s -> !s.isEmpty()).toList();
 
     UserConfigService.ResultatMajDepartements resultat =
         userConfigService.majDepartements(userId, bruts);
@@ -128,5 +125,4 @@ public class UserConfigController {
   private static UtilisateurDetails utilisateur(Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
   }
-
 }

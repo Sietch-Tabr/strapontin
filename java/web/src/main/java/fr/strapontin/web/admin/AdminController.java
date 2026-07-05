@@ -270,10 +270,14 @@ public class AdminController {
       VapidService.ResultatVapid resultat = vapidService.genererVapid();
       return ResponseEntity.ok(
           Map.of(
-              "succes", true,
-              "action", "genererVapid",
-              "clePublique", resultat.clePublique(),
-              "nbAbonnementsSupprimes", resultat.nbAbonnementsSupprimes()));
+              "succes",
+              true,
+              "action",
+              "genererVapid",
+              "clePublique",
+              resultat.clePublique(),
+              "nbAbonnementsSupprimes",
+              resultat.nbAbonnementsSupprimes()));
     } catch (Exception e) {
       log.error("Erreur génération clés VAPID", e);
       return erreur(500, "Erreur lors de la génération des clés VAPID.");

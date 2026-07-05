@@ -47,8 +47,7 @@ class UserConfigControllerTest {
     String brut = "7".repeat(1001);
 
     assertThatThrownBy(
-            () ->
-                controller.majDepartements(new RequeteDepartements(brut), authPour("u1")))
+            () -> controller.majDepartements(new RequeteDepartements(brut), authPour("u1")))
         .isInstanceOf(ErreurMetier.class);
 
     verify(userConfigService, never()).majDepartements(any(), any());
