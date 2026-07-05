@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.session.FindByIndexNameSessionRepository;
@@ -33,6 +34,7 @@ class AuthServiceTest {
 
   private VerificationRepository verificationRepository;
   private FindByIndexNameSessionRepository<Session> sessionRepository;
+  private EmailService emailService;
   private AuthService authService;
 
   @BeforeEach
@@ -40,11 +42,11 @@ class AuthServiceTest {
   void setUp() {
     verificationRepository = mock(VerificationRepository.class);
     sessionRepository = mock(FindByIndexNameSessionRepository.class);
+    emailService = mock(EmailService.class);
     PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
     when(passwordEncoder.encode(any())).thenReturn("$hash$");
     authService =
-        new AuthService(
-            verificationRepository, mock(EmailService.class), passwordEncoder, sessionRepository);
+        new AuthService(verificationRepository, emailService, passwordEncoder, sessionRepository);
   }
 
   @Test
@@ -124,5 +126,54 @@ class AuthServiceTest {
     assertThat(identifiant).isEqualTo("bob");
     verify(verificationRepository).majUsernameEtActiverParEmail("alice@exemple.fr", "bob");
     verify(verificationRepository).supprimerParTokenHash(any());
+  }
+
+  @Test
+  void motDePasseOublie_emailInconnu_neFaitRienSansErreur_antiEnumeration() {
+    when(verificationRepository.utilisateurExistePourEmail("inconnu@exemple.fr")).thenReturn(false);
+
+    authService.motDePasseOublie("inconnu@exemple.fr", "https://strapontin.fr");
+
+    verify(verificationRepository, never()).inserer(any(), any(), any(), any());
+    verify(emailService, never()).envoyerResetMotDePasse(any(), any());
+  }
+
+  @Test
+  void motDePasseOublie_emailConnu_genereUnTokenExpirantDansUneHeure() {
+    when(verificationRepository.utilisateurExistePourEmail("alice@exemple.fr")).thenReturn(true);
+
+    authService.motDePasseOublie("alice@exemple.fr", "https://strapontin.fr");
+
+    verify(verificationRepository).supprimerParIdentifiant("reset:alice@exemple.fr");
+    ArgumentCaptor<java.time.Instant> expiration = ArgumentCaptor.forClass(java.time.Instant.class);
+    verify(verificationRepository)
+        .inserer(any(), eq("reset:alice@exemple.fr"), any(), expiration.capture());
+    long minutesAvantExpiration =
+        java.time.Duration.between(java.time.Instant.now(), expiration.getValue()).toMinutes();
+    assertThat(minutesAvantExpiration).isBetween(58L, 60L);
+    verify(emailService).envoyerResetMotDePasse(eq("alice@exemple.fr"), any());
+  }
+
+  @Test
+  void estTokenInvite_tokenInvitation_retourneVrai() {
+    when(verificationRepository.lireIdentifiantParTokenHash(any()))
+        .thenReturn(Optional.of("invite:alice@exemple.fr"));
+
+    assertThat(authService.estTokenInvite("token")).isTrue();
+  }
+
+  @Test
+  void estTokenInvite_tokenResetClassique_retourneFaux() {
+    when(verificationRepository.lireIdentifiantParTokenHash(any()))
+        .thenReturn(Optional.of("reset:alice@exemple.fr"));
+
+    assertThat(authService.estTokenInvite("token")).isFalse();
+  }
+
+  @Test
+  void estTokenInvite_tokenInconnu_retourneFaux() {
+    when(verificationRepository.lireIdentifiantParTokenHash(any())).thenReturn(Optional.empty());
+
+    assertThat(authService.estTokenInvite("token-inconnu")).isFalse();
   }
 }

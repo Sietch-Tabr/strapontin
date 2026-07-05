@@ -150,6 +150,65 @@ test.describe("Scénario: spectacles — robustesse des filtres", () => {
     expect(response?.status()).not.toBe(500);
     await expect(page.locator("main")).toBeVisible();
   });
+
+  // #880 : contrairement à /decouverte, aucun test ne couvrait les filtres genre/classification
+  // sur /spectacles.
+  test("spectacles_filtreGenre_sansErreur", async ({ page }) => {
+    const response = await page.goto("/spectacles?genre=Pop");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  test("spectacles_filtreClassification_sansErreur", async ({ page }) => {
+    const response = await page.goto("/spectacles?classification=concert");
+    expect(response?.status()).not.toBe(500);
+    await expect(page.locator("main")).toBeVisible();
+  });
+
+  // #880 : le test existant spectacles_tri_nouveaute_sans_erreur ne vérifie que l'absence de
+  // 500 — jamais l'ordre réel retourné. Vérifié au niveau API (contenu déterministe, pas
+  // dépendant du rendu DOM ni des données réelles présentes sur l'instance de test).
+  test("api_spectacles_triNouveaute_ordreParFirstSeenDecroissant", async ({
+    request,
+  }) => {
+    const rep = await request.get("/api/spectacles?tri=nouveaute");
+    expect(rep.status()).toBe(200);
+    const corps = await rep.json();
+    const dates = (corps.concerts as { firstSeen: string | null }[])
+      .map((c) => c.firstSeen)
+      .filter((d): d is string => d != null)
+      .map((d) => new Date(d).getTime());
+    for (let i = 1; i < dates.length; i++) {
+      expect(dates[i]).toBeLessThanOrEqual(dates[i - 1]);
+    }
+  });
+
+  // #880 : la pagination de /spectacles n'était jamais testée.
+  test("api_spectacles_pagination_pageReflewteeEtConcertsDistinctsDeLaPage0", async ({
+    request,
+  }) => {
+    const repPage0 = await request.get("/api/spectacles?page=0");
+    expect(repPage0.status()).toBe(200);
+    const page0 = await repPage0.json();
+    expect(page0.page).toBe(0);
+
+    if (page0.totalPages <= 1) {
+      test.skip(
+        true,
+        "une seule page de résultats sur cette instance — rien à comparer",
+      );
+      return;
+    }
+
+    const repPage1 = await request.get("/api/spectacles?page=1");
+    expect(repPage1.status()).toBe(200);
+    const page1 = await repPage1.json();
+    expect(page1.page).toBe(1);
+
+    const idsPage0 = new Set(page0.concerts.map((c: { id: string }) => c.id));
+    const idsPage1 = page1.concerts.map((c: { id: string }) => c.id);
+    expect(idsPage1.some((id: string) => idsPage0.has(id))).toBe(false);
+  });
 });
 
 test.describe("Scénario: navigation Vue Router sans rechargement complet", () => {
@@ -317,5 +376,22 @@ test.describe("Scénario: garde de session — coupure réseau transitoire (#823
     await page.waitForTimeout(300);
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.locator("main")).toBeVisible();
+  });
+
+  // #880 : le pendant du test ci-dessus manquait — un 401 réellement confirmé par le serveur
+  // (distinct d'un échec réseau) doit, lui, rediriger vers /login. Sans ce test symétrique, un
+  // futur correctif pourrait supprimer la redirection 401 par erreur sans qu'aucun test n'échoue.
+  test("session401Confirme_rediriegeVersLogin", async ({ page }) => {
+    await page.route("**/api/session", (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: "{}",
+      }),
+    );
+
+    await page.goto("/");
+
+    await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
   });
 });

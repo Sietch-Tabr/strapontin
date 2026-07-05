@@ -39,7 +39,36 @@ class AideRestControllerTest {
     controller = new AideRestController(emailService, configService);
     UtilisateurDetails utilisateur =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
-    when(auth.getPrincipal()).thenReturn(utilisateur);
+    lenient().when(auth.getPrincipal()).thenReturn(utilisateur);
+  }
+
+  @Test
+  void config_retourneResendDisponibleContactEmailEtSignalLien() {
+    when(emailService.estDisponible()).thenReturn(true);
+    when(configService.lireConfig("CONTACT_EMAIL"))
+        .thenReturn(java.util.Optional.of("contact@test.fr"));
+    when(configService.lireConfig("SIGNAL_LIEN"))
+        .thenReturn(java.util.Optional.of("https://signal.me/x"));
+
+    var rep = controller.config();
+
+    assertEquals(HttpStatus.OK, rep.getStatusCode());
+    assertEquals(true, rep.getBody().get("resendDisponible"));
+    assertEquals("contact@test.fr", rep.getBody().get("contactEmail"));
+    assertEquals("https://signal.me/x", rep.getBody().get("signalLien"));
+  }
+
+  @Test
+  void config_valeursAbsentes_replieSurChainesVides() {
+    when(emailService.estDisponible()).thenReturn(false);
+    when(configService.lireConfig("CONTACT_EMAIL")).thenReturn(java.util.Optional.empty());
+    when(configService.lireConfig("SIGNAL_LIEN")).thenReturn(java.util.Optional.empty());
+
+    var rep = controller.config();
+
+    assertEquals(false, rep.getBody().get("resendDisponible"));
+    assertEquals("", rep.getBody().get("contactEmail"));
+    assertEquals("", rep.getBody().get("signalLien"));
   }
 
   @Test
@@ -103,6 +132,34 @@ class AideRestControllerTest {
     req429.addHeader("X-Real-IP", "9.9.9.9");
     var rep = controller.signaler(new RequeteSignalement("bug", "msg"), auth, req429);
     assertEquals(HttpStatus.TOO_MANY_REQUESTS, rep.getStatusCode());
+  }
+
+  @Test
+  void signaler_typeValide_estTransmisTelQuelAEmailService() {
+    controller.signaler(new RequeteSignalement("suggestion", "message"), auth, requete("10.0.1.1"));
+
+    verify(emailService).envoyerSignalement("suggestion", "message", "k@test.fr");
+  }
+
+  @Test
+  void signaler_typeInvalide_replieSurQuestion() {
+    controller.signaler(
+        new RequeteSignalement("pas-un-type", "message"), auth, requete("10.0.1.2"));
+
+    verify(emailService).envoyerSignalement("question", "message", "k@test.fr");
+  }
+
+  @Test
+  void signaler_principalPasUtilisateurDetails_retourne401SansEnvoi() {
+    Authentication authAnonyme = mock(Authentication.class);
+    when(authAnonyme.getPrincipal()).thenReturn("anonymousUser");
+
+    var rep =
+        controller.signaler(
+            new RequeteSignalement("bug", "message"), authAnonyme, requete("10.0.1.3"));
+
+    assertEquals(HttpStatus.UNAUTHORIZED, rep.getStatusCode());
+    verify(emailService, never()).envoyerSignalement(anyString(), anyString(), anyString());
   }
 
   private static MockHttpServletRequest requete(String ip) {

@@ -1,9 +1,33 @@
 import { test, expect, request as playwrightRequest } from "@playwright/test";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
 
 test.use({ storageState: FICHIER_AUTH_ADMIN });
 
 const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
+const LXC_DEV_HOTE = "root@192.168.20.78";
+
+/** SHA-256 hex du token brut, identique à AuthService.sha256Hex côté serveur. */
+function sha256Hex(token: string): string {
+  return createHash("sha256").update(token, "utf8").digest("hex");
+}
+
+/**
+ * Antidate l'expiration d'un token de vérification en base (LXC dev uniquement).
+ *
+ * Aucun endpoint API ne permet de simuler un token expiré (J+7) — accès DB ponctuel via SSH
+ * validé explicitement pour ce cas de test, sur une donnée de test éphémère.
+ */
+function antidaterExpirationToken(tokenHash: string): void {
+  // SQL transmis via stdin (pas d'argument shell) pour éviter tout problème d'échappement
+  // des guillemets simples PostgreSQL à travers deux niveaux de shell (local + SSH).
+  const sql = `UPDATE verifications SET expires_at = now() - interval '1 day' WHERE value = '${tokenHash}';`;
+  execFileSync("ssh", [LXC_DEV_HOTE, `su postgres -c "psql -d strapontin"`], {
+    input: sql,
+    timeout: 15000,
+  });
+}
 
 const emailsANettoyer: string[] = [];
 
@@ -122,6 +146,122 @@ test.describe("Scénario: invitation — flux activation", () => {
     });
     expect(pageInvite.url()).not.toContain("/login");
     await ctxNavigateur.close();
+  });
+
+  // #877 : un token réellement expiré (J+7) doit être rejeté avec le même message qu'un token
+  // invalide — aucun endpoint API ne permet de simuler l'expiration, DB antidatée via SSH
+  // (donnée de test éphémère, cf. accès validé pour ce cas précis).
+  test("invitation_tokenExpire_activationRefuseeCommeInvalide", async ({
+    browser,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "chromium",
+      "Manipulation DB ciblée — testé sur chromium uniquement",
+    );
+
+    const emailTest = `e2e-expire-${Date.now()}@test.local`;
+    emailsANettoyer.push(emailTest);
+
+    const apiCtx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    let lienInvitation: string;
+    try {
+      const rep = await apiCtx.post("/api/admin/utilisateurs", {
+        data: { email: emailTest },
+      });
+      const corps = await rep.json();
+      if (!corps.lienReset) {
+        test.skip(
+          true,
+          "Service email configuré : lien non retourné par l'API",
+        );
+        return;
+      }
+      lienInvitation = corps.lienReset as string;
+    } finally {
+      await apiCtx.dispose();
+    }
+
+    const token = new URL(lienInvitation).searchParams.get("token")!;
+    antidaterExpirationToken(sha256Hex(token));
+
+    const ctx = await browser.newContext({
+      storageState: undefined,
+      baseURL: BASE_URL,
+    });
+    try {
+      const rep = await ctx.request.post("/api/auth/reset-password", {
+        data: {
+          token,
+          motDePasse: "MotDePasseTest12",
+          identifiant: `e2eexpire${Date.now()}`.slice(0, 30),
+        },
+      });
+      expect(rep.status()).toBe(400);
+      const corps = await rep.json();
+      expect(corps.erreur).toContain("invalide ou expiré");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  // #877 : une invitation jamais activée (mot de passe temporaire inconnu) doit se comporter
+  // comme n'importe quel échec de connexion — même code et forme de réponse qu'un identifiant
+  // inexistant, sans indiquer que le compte existe mais est inactif (pas de fuite d'information).
+  // Restreint à chromium : 2 tentatives de login consomment le rate-limiter bucket4j partagé
+  // (15/15min par IP) — répété sur 5 projets navigateurs depuis la même machine, les derniers
+  // exécutés (mobile-chrome/mobile-safari) tombaient en 429 plutôt qu'en 401.
+  test("invitation_compteJamaisActive_tentativeConnexionEchoueCommeIdentifiantInconnu", async ({
+    browser,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "chromium",
+      "2 tentatives de login — chromium uniquement pour ne pas épuiser le rate-limiter partagé",
+    );
+
+    const emailTest = `e2e-inactif-${Date.now()}@test.local`;
+    emailsANettoyer.push(emailTest);
+
+    const apiCtx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    let identifiantTemp: string;
+    try {
+      const rep = await apiCtx.post("/api/admin/utilisateurs", {
+        data: { email: emailTest },
+      });
+      const corps = await rep.json();
+      identifiantTemp = corps.identifiant as string;
+    } finally {
+      await apiCtx.dispose();
+    }
+
+    const ctx = await browser.newContext({
+      storageState: undefined,
+      baseURL: BASE_URL,
+    });
+    try {
+      const repCompteInactif = await ctx.request.post("/api/auth/login", {
+        data: {
+          identifiant: identifiantTemp,
+          motDePasse: "mauvaisMotDePasse123",
+        },
+      });
+      const repIdentifiantInconnu = await ctx.request.post("/api/auth/login", {
+        data: {
+          identifiant: `inconnu-${Date.now()}`,
+          motDePasse: "mauvaisMotDePasse123",
+        },
+      });
+
+      expect(repCompteInactif.status()).toBe(repIdentifiantInconnu.status());
+      expect(repCompteInactif.status()).toBe(401);
+    } finally {
+      await ctx.close();
+    }
   });
 
   test("invitation_tokenInvalide_formulaireVisibleSansCrash", async ({

@@ -36,6 +36,16 @@ test.describe("Scénario: service worker — présence et accessibilité", () =>
     expect(cacheControl).toContain("public");
   });
 
+  // Jalon 2.6.6 : ce test était un faux positif — `page.waitForFunction()` avec un prédicat
+  // async résout immédiatement dès que la fonction retourne un objet (la Promise elle-même,
+  // toujours "truthy"), sans attendre sa valeur résolue. Il "passait" en ~100ms quel que soit
+  // l'état réel du service worker. Corrigé par un polling manuel qui attend explicitement la
+  // valeur résolue à chaque itération — révèle alors que `navigator.serviceWorker` n'existe
+  // jamais dans cet environnement : le LXC dev est servi en HTTP sur une IP privée
+  // (192.168.20.78), donc `window.isSecureContext` est `false` et l'API Service Worker n'est
+  // jamais exposée par le navigateur (elle exige HTTPS ou `localhost`). Limitation
+  // d'environnement de test, pas un bug applicatif (prod sert bien en HTTPS) — testé à la place
+  // en Vitest (`useMiseAJourServiceWorker.test.js`) avec un conteneur service worker simulé.
   test("sw_enregistre_et_actif_apres_chargement", async ({
     page,
     browserName,
@@ -45,15 +55,25 @@ test.describe("Scénario: service worker — présence et accessibilité", () =>
       "WebKit headless ne supporte pas navigator.serviceWorker de façon fiable",
     );
     await page.goto("/");
-    await page.waitForFunction(
-      async () => {
+
+    const contexteSecurise = await page.evaluate(() => window.isSecureContext);
+    test.skip(
+      !contexteSecurise,
+      "Contexte non sécurisé (HTTP sur IP privée) — l'API Service Worker n'est jamais exposée" +
+        " ici, indépendamment du code applicatif. Voir prod (HTTPS) pour un contexte sécurisé.",
+    );
+
+    let actif = false;
+    const debut = Date.now();
+    while (Date.now() - debut < 15000 && !actif) {
+      actif = await page.evaluate(async () => {
         if (!("serviceWorker" in navigator)) return false;
         const reg = await navigator.serviceWorker.getRegistration("/");
         return reg !== undefined && reg.active !== null;
-      },
-      undefined,
-      { timeout: 15000 },
-    );
+      });
+      if (!actif) await page.waitForTimeout(200);
+    }
+    expect(actif).toBe(true);
   });
 });
 
@@ -103,6 +123,33 @@ test.describe("Scénario: PWA — manifest et installabilité", () => {
       vus.add(icon.src);
       const rep = await request.get(icon.src);
       expect(rep.status()).toBe(200);
+    }
+  });
+
+  // #880 : manifest.shortcuts jamais testé — ni sa présence, ni ses URLs, ni l'accessibilité de
+  // ses icônes.
+  test("manifest_json_contient_shortcuts_valides", async ({ request }) => {
+    const corps = await (await request.get("/manifest.json")).json();
+    expect(corps.shortcuts).toBeInstanceOf(Array);
+    expect(corps.shortcuts.length).toBeGreaterThan(0);
+
+    const urlsAttendues = ["/spectacles", "/decouverte", "/?nouveau=true"];
+    const urls = (corps.shortcuts as { url: string }[]).map((s) => s.url);
+    for (const url of urlsAttendues) {
+      expect(urls).toContain(url);
+    }
+
+    for (const shortcut of corps.shortcuts as {
+      name: string;
+      url: string;
+      icons: { src: string }[];
+    }[]) {
+      expect(shortcut.name).toBeTruthy();
+      expect(shortcut.icons.length).toBeGreaterThan(0);
+      for (const icon of shortcut.icons) {
+        const repIcone = await request.get(icon.src);
+        expect(repIcone.status()).toBe(200);
+      }
     }
   });
 

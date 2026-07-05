@@ -76,4 +76,88 @@ class FiltreConcertsBuilderTest {
 
     assertFalse(where.toString().contains("moisDebut"));
   }
+
+  @Test
+  void clauseTri_nouveaute_trieParFirstSeenDesc() {
+    assertEquals("c.first_seen DESC, c.date ASC", FiltreConcertsBuilder.clauseTri("nouveaute"));
+  }
+
+  @Test
+  void clauseTri_date_trieParDateAsc() {
+    assertEquals("c.date ASC, c.artiste ASC", FiltreConcertsBuilder.clauseTri("date"));
+  }
+
+  @Test
+  void clauseTri_valeurInconnue_replieSurDate() {
+    assertEquals("c.date ASC, c.artiste ASC", FiltreConcertsBuilder.clauseTri("autre-chose"));
+  }
+
+  @Test
+  void tronquer_chaineVide_retourneChaineVide() {
+    assertEquals("", FiltreConcertsBuilder.tronquer("", 10));
+  }
+
+  @Test
+  void tronquer_pluscourteQueLaLimite_estInchangee() {
+    assertEquals("radiohead", FiltreConcertsBuilder.tronquer("radiohead", 100));
+  }
+
+  @Test
+  void tronquer_longueurExactementLaLimite_estInchangee() {
+    assertEquals("12345", FiltreConcertsBuilder.tronquer("12345", 5));
+  }
+
+  @Test
+  void tronquer_pluslongueQueLaLimite_estTronqueeALaBorne() {
+    assertEquals("1234567890", FiltreConcertsBuilder.tronquer("1234567890abcdef", 10));
+  }
+
+  @Test
+  void tronquer_espacesDeBordure_sontRetiresAvantTroncature() {
+    assertEquals("radiohead", FiltreConcertsBuilder.tronquer("  radiohead  ", 100));
+  }
+
+  @Test
+  void appliquerGenre_genreVide_sansEffet() {
+    StringBuilder where = new StringBuilder();
+    Map<String, Object> params = new HashMap<>();
+
+    FiltreConcertsBuilder.appliquerGenre(where, params, "");
+
+    assertEquals(0, where.length());
+    assertTrue(params.isEmpty());
+  }
+
+  @Test
+  void appliquerGenre_genreNonVide_ajouteLaClauseIlike() {
+    StringBuilder where = new StringBuilder();
+    Map<String, Object> params = new HashMap<>();
+
+    FiltreConcertsBuilder.appliquerGenre(where, params, "Pop");
+
+    assertTrue(where.toString().contains("c.genre ILIKE :genre"));
+    assertEquals("Pop", params.get("genre"));
+  }
+
+  @Test
+  void appliquerClassification_classificationVide_sansEffet() {
+    StringBuilder where = new StringBuilder();
+    Map<String, Object> params = new HashMap<>();
+
+    FiltreConcertsBuilder.appliquerClassification(where, params, "");
+
+    assertEquals(0, where.length());
+    assertTrue(params.isEmpty());
+  }
+
+  @Test
+  void appliquerClassification_classificationNonVide_ajouteLaClauseEgalite() {
+    StringBuilder where = new StringBuilder();
+    Map<String, Object> params = new HashMap<>();
+
+    FiltreConcertsBuilder.appliquerClassification(where, params, "concert");
+
+    assertTrue(where.toString().contains("c.classification = :classification"));
+    assertEquals("concert", params.get("classification"));
+  }
 }

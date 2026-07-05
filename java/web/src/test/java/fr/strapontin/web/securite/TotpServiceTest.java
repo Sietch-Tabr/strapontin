@@ -106,6 +106,22 @@ class TotpServiceTest {
   }
 
   @Test
+  void verifierCode_memeCodeSoumisDeuxFois_secondAppelRefuse() throws Exception {
+    String secret = service.genererSecret();
+    byte[] secretOctets = TotpService.base32Decoder(secret);
+    long compteur = System.currentTimeMillis() / 1000L / 30L;
+    Method calculer = TotpService.class.getDeclaredMethod("calculerCode", byte[].class, long.class);
+    calculer.setAccessible(true);
+    String code = (String) calculer.invoke(service, secretOctets, compteur);
+
+    assertTrue(
+        service.verifierCode(secret, code), "Le premier appel avec un code valide doit réussir");
+    assertFalse(
+        service.verifierCode(secret, code),
+        "Le rejeu du même code valide dans la même fenêtre doit être refusé");
+  }
+
+  @Test
   void calculerCode_vecteursRFC6238_conformesAuStandard() throws Exception {
     // RFC 6238 Appendix B (SHA1) : secret ASCII "12345678901234567890", période 30 s.
     // Garantit la compatibilité avec les applications standard (Google Authenticator, Aegis…).

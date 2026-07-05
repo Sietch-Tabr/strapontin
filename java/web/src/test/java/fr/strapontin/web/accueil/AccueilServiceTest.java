@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.accueil;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,12 +32,14 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 class AccueilServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
+  private UserConfigService userConfigService;
   private AccueilService service;
 
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    service = new AccueilService(jdbc, mock(UserConfigService.class));
+    userConfigService = mock(UserConfigService.class);
+    service = new AccueilService(jdbc, userConfigService);
   }
 
   // #799 : marquerVus effaçait à tort le badge "Nouveau" des matchs salle (jamais affichés sur
@@ -75,5 +78,180 @@ class AccueilServiceTest {
     assertFalse(
         sql.contains("c.first_seen >= (CURRENT_TIMESTAMP - INTERVAL '7 days') AS est_nouveau"),
         "l'ancien calcul basé sur first_seen ne doit plus alimenter est_nouveau");
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void accueil_masquesVrai_filtreSurMasqueLeNotNull() {
+    stubRequetesVides();
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+
+    service.accueil("user-1", true, null, false);
+
+    verify(jdbc).query(sqlCaptor.capture(), anyMap(), any(RowMapper.class));
+    assertTrue(sqlCaptor.getValue().contains("um.masque_le IS NOT NULL"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void accueil_masquesFaux_filtreSurMasqueLeNull() {
+    stubRequetesVides();
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+
+    service.accueil("user-1", false, null, false);
+
+    verify(jdbc).query(sqlCaptor.capture(), anyMap(), any(RowMapper.class));
+    assertTrue(sqlCaptor.getValue().contains("um.masque_le IS NULL"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void accueil_indisponiblesExplicite1_nAjoutePasLaRestrictionDeStatut() {
+    stubRequetesVides();
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+
+    service.accueil("user-1", false, "1", false);
+
+    verify(jdbc).query(sqlCaptor.capture(), anyMap(), any(RowMapper.class));
+    assertFalse(sqlCaptor.getValue().contains("c.statut IS NULL OR c.statut IN"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void accueil_indisponiblesExplicite0_ajouteLaRestrictionDeStatut() {
+    stubRequetesVides();
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+
+    service.accueil("user-1", false, "0", false);
+
+    verify(jdbc).query(sqlCaptor.capture(), anyMap(), any(RowMapper.class));
+    assertTrue(sqlCaptor.getValue().contains("c.statut IS NULL OR c.statut IN"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void accueil_indisponiblesNullEtPreferenceDisponiblesSeuls_ajouteLaRestriction() {
+    stubRequetesVides();
+    when(userConfigService.lireFiltreDisponibles("user-1")).thenReturn(true);
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+
+    service.accueil("user-1", false, null, false);
+
+    verify(jdbc).query(sqlCaptor.capture(), anyMap(), any(RowMapper.class));
+    assertTrue(sqlCaptor.getValue().contains("c.statut IS NULL OR c.statut IN"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void accueil_indisponiblesNullEtPreferenceTousLesConcerts_nAjoutePasLaRestriction() {
+    stubRequetesVides();
+    when(userConfigService.lireFiltreDisponibles("user-1")).thenReturn(false);
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+
+    service.accueil("user-1", false, null, false);
+
+    verify(jdbc).query(sqlCaptor.capture(), anyMap(), any(RowMapper.class));
+    assertFalse(sqlCaptor.getValue().contains("c.statut IS NULL OR c.statut IN"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void accueil_nouveauVrai_filtreSurFirstSeenRecent() {
+    stubRequetesVides();
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+
+    service.accueil("user-1", false, null, true);
+
+    verify(jdbc).query(sqlCaptor.capture(), anyMap(), any(RowMapper.class));
+    assertTrue(
+        sqlCaptor.getValue().contains("c.first_seen >= (CURRENT_TIMESTAMP - INTERVAL '7 days')"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void accueil_regroupementParArtiste_estTourneeVraiSiAuMoinsDeuxDates() {
+    ConcertAccueil c1 =
+        new ConcertAccueil(
+            "c1",
+            "Radiohead",
+            "radiohead",
+            "a1",
+            "2026-08-01",
+            "20:00",
+            "Zenith",
+            "Paris",
+            "url1",
+            "onsale",
+            false);
+    ConcertAccueil c2 =
+        new ConcertAccueil(
+            "c2",
+            "Radiohead",
+            "radiohead",
+            "a1",
+            "2026-09-01",
+            "20:00",
+            "Olympia",
+            "Paris",
+            "url2",
+            "onsale",
+            true);
+    ConcertAccueil c3 =
+        new ConcertAccueil(
+            "c3",
+            "Muse",
+            "muse",
+            "a2",
+            "2026-08-10",
+            "20:00",
+            "Bercy",
+            "Paris",
+            "url3",
+            "onsale",
+            false);
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of(c1, c2, c3));
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
+
+    ReponseAccueil rep = service.accueil("user-1", false, null, false);
+
+    GroupeArtiste radiohead =
+        rep.artistesGroupes().stream()
+            .filter(g -> g.artiste().equals("Radiohead"))
+            .findFirst()
+            .orElseThrow();
+    assertTrue(radiohead.estTournee(), "2 dates ou plus doit être considéré comme une tournée");
+    assertTrue(
+        radiohead.estNew(), "au moins un concert nouveau du groupe doit rendre le groupe nouveau");
+
+    GroupeArtiste muse =
+        rep.artistesGroupes().stream()
+            .filter(g -> g.artiste().equals("Muse"))
+            .findFirst()
+            .orElseThrow();
+    assertFalse(muse.estTournee(), "1 seule date ne doit pas être une tournée");
+    assertFalse(muse.estNew());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void accueil_nbArtistesEtNbSalles_retournesDepuisLesComptagesJdbc() {
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(
+            org.mockito.ArgumentMatchers.contains("user_artistes"), anyMap(), eq(Integer.class)))
+        .thenReturn(12);
+    when(jdbc.queryForObject(
+            org.mockito.ArgumentMatchers.contains("user_salles"), anyMap(), eq(Integer.class)))
+        .thenReturn(3);
+
+    ReponseAccueil rep = service.accueil("user-1", false, null, false);
+
+    assertThat(rep.nbArtistes()).isEqualTo(12);
+    assertThat(rep.nbSalles()).isEqualTo(3);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void stubRequetesVides() {
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
   }
 }
