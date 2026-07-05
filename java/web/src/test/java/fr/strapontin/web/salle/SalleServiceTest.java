@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -78,6 +79,24 @@ class SalleServiceTest {
     UUID r2 = salleService.creerSalleDigitick("L'Empreinte", "lempreinte", null, null);
 
     assertEquals(r1, r2);
+  }
+
+  // #830 : un slug déjà attribué à une autre salle ne doit jamais créer un doublon mort (201
+  // trompeur sans source Digitick fonctionnelle) — erreur 409 explicite à la place.
+  @Test
+  void creerSalleDigitick_slugDejaAttribueAUneAutreSalle_leveErreurMetier409() {
+    UUID nouvelleSalle = UUID.randomUUID();
+    when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(nouvelleSalle);
+    when(salleRepository.trouverConflitDigitickSlug(eq("lempreinte"), eq(nouvelleSalle)))
+        .thenReturn(java.util.Optional.of("Autre Salle"));
+
+    ErreurMetier erreur =
+        assertThrows(
+            ErreurMetier.class,
+            () -> salleService.creerSalleDigitick("Doublon", "lempreinte", null, null));
+
+    assertEquals(409, erreur.getStatus());
+    verify(salleRepository, never()).enregistrerSalleSource(any(), any(), any());
   }
 
   @Test

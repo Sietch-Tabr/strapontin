@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -286,6 +287,27 @@ class SalleRepository {
         WHERE id = CAST(:uuid AS uuid)
         """,
         Map.of("uuid", salleUuid.toString(), "wikidataId", wikidataId));
+  }
+
+  /// Recherche une salle différente de {@code exclureSalleUuid} déjà associée à un slug Digitick
+  /// (#830) — permet de détecter un conflit avant l'attribution plutôt que d'échouer
+  /// silencieusement sur {@code ON CONFLICT DO NOTHING}.
+  ///
+  /// @param slug             slug Digitick à vérifier
+  /// @param exclureSalleUuid salle en cours d'attribution, exclue de la recherche
+  /// @return le nom affiché de la salle en conflit, si elle existe
+  Optional<String> trouverConflitDigitickSlug(String slug, UUID exclureSalleUuid) {
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            """
+            SELECT COALESCE(s.nom_affiche, s.nom) AS nom
+            FROM salle_sources ss
+            JOIN salles s ON s.id = ss.salle_id
+            WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
+              AND ss.salle_id != CAST(:uuid AS uuid)
+            """,
+            Map.of("slug", slug, "uuid", exclureSalleUuid.toString()));
+    return lignes.isEmpty() ? Optional.empty() : Optional.of((String) lignes.get(0).get("nom"));
   }
 
   /// Enregistre une correspondance source externe → salle interne.

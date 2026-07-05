@@ -473,12 +473,17 @@ public class AdminService {
 
   /// Envoie un email de réinitialisation de mot de passe à un utilisateur.
   ///
+  /// <p>Le lien de réinitialisation est toujours retourné dans {@link ResultatReset#lienReset()}
+  /// (#815) — comme {@link #creerUtilisateur}, c'est au contrôleur de décider de l'exposer à
+  /// l'admin selon la disponibilité de Resend, pour garder un filet de secours si l'email
+  /// n'atteint jamais l'utilisateur.
+  ///
   /// @param userId  identifiant de l'utilisateur cible
   /// @param adminId identifiant de l'admin demandeur
   /// @param baseUrl URL de base pour construire le lien
-  /// @return l'email de l'utilisateur si trouvé, {@link Optional#empty()} sinon
+  /// @return le résultat (email + lien) si l'utilisateur existe, {@link Optional#empty()} sinon
   @Transactional
-  public Optional<String> reinitialiserMdp(String userId, String adminId, String baseUrl) {
+  public Optional<ResultatReset> reinitialiserMdp(String userId, String adminId, String baseUrl) {
     List<Map<String, Object>> cible =
         jdbc.queryForList(
             "SELECT id, email FROM users WHERE id = :userId", Map.of("userId", userId));
@@ -493,14 +498,15 @@ public class AdminService {
     verificationRepository.inserer(
         UUID.randomUUID().toString(), prefixeReset, GenerateurSecrets.sha256Hex(token), expiresAt);
 
-    emailService.envoyerResetMotDePasse(email, baseUrl + "/reset-password?token=" + token);
+    String lienReset = baseUrl + "/reset-password?token=" + token;
+    emailService.envoyerResetMotDePasse(email, lienReset);
     logAdminService.logAdmin(
         "warn",
         "admin",
         "mot de passe réinitialisé",
         Map.of("userId", userId, "parAdmin", adminId));
 
-    return Optional.of(email);
+    return Optional.of(new ResultatReset(email, lienReset));
   }
 
   /// Réinitialise la 2FA TOTP d'un utilisateur : efface le secret et désactive la 2FA.

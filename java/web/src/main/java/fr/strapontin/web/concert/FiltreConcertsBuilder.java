@@ -5,6 +5,7 @@
 package fr.strapontin.web.concert;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 /// Fragments SQL communs aux requêtes de listing de concerts.
@@ -48,16 +49,27 @@ public final class FiltreConcertsBuilder {
 
   /// Ajoute le filtre mois ({@code YYYY-MM}) ; sans effet si le format est invalide.
   ///
+  /// <p>La regex ne valide que la forme (4 chiffres, tiret, 2 chiffres), pas la validité
+  /// calendaire — un mois comme {@code 2026-13} la passe puis faisait échouer
+  /// {@link LocalDate#parse} avec une exception non interceptée (#819, 500 générique au lieu du
+  /// contrat documenté "sans effet si invalide").
+  ///
   /// @param where  clause WHERE en construction
   /// @param params paramètres nommés
   /// @param mois   mois au format {@code YYYY-MM}
   public static void appliquerMois(StringBuilder where, Map<String, Object> params, String mois) {
-    if (!mois.isBlank() && mois.matches("\\d{4}-\\d{2}")) {
-      LocalDate debutMois = LocalDate.parse(mois + "-01");
-      where.append(" AND c.date >= :moisDebut AND c.date < :moisFin");
-      params.put("moisDebut", debutMois);
-      params.put("moisFin", debutMois.plusMonths(1));
+    if (mois.isBlank() || !mois.matches("\\d{4}-\\d{2}")) {
+      return;
     }
+    LocalDate debutMois;
+    try {
+      debutMois = LocalDate.parse(mois + "-01");
+    } catch (DateTimeParseException e) {
+      return;
+    }
+    where.append(" AND c.date >= :moisDebut AND c.date < :moisFin");
+    params.put("moisDebut", debutMois);
+    params.put("moisFin", debutMois.plusMonths(1));
   }
 
   /// Ajoute le filtre genre ({@code ILIKE}) ; sans effet si le genre est vide.

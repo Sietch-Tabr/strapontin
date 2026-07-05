@@ -148,6 +148,7 @@ class SourcesServiceTest {
   @Test
   void mettreAJourDigitickSlug_slugValide_upsert() {
     UUID uuid = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     sourcesService.mettreAJourDigitickSlug(uuid, "lempreinte");
@@ -156,6 +157,26 @@ class SourcesServiceTest {
         .update(
             argThat((String sql) -> sql.contains("INSERT INTO salle_sources")),
             argThat((Map<String, ?> params) -> "lempreinte".equals(params.get("slug"))));
+  }
+
+  // #830 : un slug déjà attribué à une autre salle ne doit jamais être volé silencieusement —
+  // erreur 409 explicite plutôt qu'un ON CONFLICT DO UPDATE muet.
+  @Test
+  void mettreAJourDigitickSlug_slugDejaAttribueAUneAutreSalle_leveErreurMetier409() {
+    UUID uuid = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(List.of(Map.of("nom", "Autre Salle")));
+
+    fr.strapontin.web.ErreurMetier erreur =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            fr.strapontin.web.ErreurMetier.class,
+            () -> sourcesService.mettreAJourDigitickSlug(uuid, "lempreinte"));
+
+    assertEquals(409, erreur.getStatus());
+    verify(jdbc, org.mockito.Mockito.never())
+        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), anyMap());
+    verify(jdbc, org.mockito.Mockito.never())
+        .update(argThat((String sql) -> sql.contains("INSERT INTO salle_sources")), anyMap());
   }
 
   @Test

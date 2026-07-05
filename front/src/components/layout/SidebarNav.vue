@@ -62,6 +62,11 @@
           <use :href="'/icons/lucide-sprite.svg#' + item.icone" />
         </svg>
         <span>{{ item.label }}</span>
+        <span
+          v-if="item.href === '/changelog' && changelogNonVu"
+          class="nav-badge--point"
+          aria-label="Nouveautés non lues"
+        ></span>
       </a>
       <hr />
       <form action="/logout" method="post" @submit.prevent="deconnecter">
@@ -82,6 +87,7 @@ const props = defineProps({
   navSecondaire: { type: Array, default: () => [] },
   navFooter: { type: Array, default: () => [] },
   nbNouveau: { type: Number, default: 0 },
+  changelogNonVu: { type: Boolean, default: false },
   estAdmin: { type: Boolean, default: false },
 })
 

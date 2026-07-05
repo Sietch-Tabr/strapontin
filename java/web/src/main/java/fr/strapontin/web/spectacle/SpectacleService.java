@@ -315,9 +315,15 @@ public class SpectacleService {
 
   /// Masque tous les concerts d'un artiste pour l'utilisateur courant.
   ///
-  /// @param userId      identifiant de l'utilisateur
-  /// @param artisteNorm identifiant normalisé de l'artiste
-  public void masquerArtiste(String userId, String artisteNorm) {
+  /// <p>Filtre sur {@code artiste_id} (référentiel, stable) plutôt que {@code artiste_norm}
+  /// (#818) — le worker (réconciliation cross-sources) démontre que {@code artiste_norm} peut
+  /// diverger pour un même artiste réel selon la source/le lot de fetch ; un filtre sur ce champ
+  /// texte ne couvrait donc qu'un sous-ensemble des concerts du groupe visuellement affiché sur
+  /// l'accueil (tous partageant le même {@code artiste_id}, groupés par nom affiché).
+  ///
+  /// @param userId    identifiant de l'utilisateur
+  /// @param artisteId UUID stable de l'artiste dans le référentiel
+  public void masquerArtiste(String userId, UUID artisteId) {
     jdbc.update(
         """
         UPDATE user_matches SET masque_le = now()
@@ -325,27 +331,30 @@ public class SpectacleService {
           AND masque_le IS NULL
           AND concert_id IN (
             SELECT id FROM concerts
-            WHERE artiste_norm = :artisteNorm AND date >= :aujourd8
+            WHERE artiste_id = CAST(:artisteId AS uuid) AND date >= :aujourd8
           )
         """,
-        Map.of("userId", userId, "artisteNorm", artisteNorm, "aujourd8", LocalDate.now()));
+        Map.of("userId", userId, "artisteId", artisteId.toString(), "aujourd8", LocalDate.now()));
   }
 
   /// Démasque tous les concerts d'un artiste pour l'utilisateur courant.
   ///
-  /// @param userId      identifiant de l'utilisateur
-  /// @param artisteNorm identifiant normalisé de l'artiste
-  public void demasquerArtiste(String userId, String artisteNorm) {
+  /// <p>Filtre sur {@code artiste_id} plutôt que {@code artiste_norm} — voir
+  /// {@link #masquerArtiste} (#818).
+  ///
+  /// @param userId    identifiant de l'utilisateur
+  /// @param artisteId UUID stable de l'artiste dans le référentiel
+  public void demasquerArtiste(String userId, UUID artisteId) {
     jdbc.update(
         """
         UPDATE user_matches SET masque_le = NULL
         WHERE user_id = :userId
           AND concert_id IN (
             SELECT id FROM concerts
-            WHERE artiste_norm = :artisteNorm AND date >= :aujourd8
+            WHERE artiste_id = CAST(:artisteId AS uuid) AND date >= :aujourd8
           )
         """,
-        Map.of("userId", userId, "artisteNorm", artisteNorm, "aujourd8", LocalDate.now()));
+        Map.of("userId", userId, "artisteId", artisteId.toString(), "aujourd8", LocalDate.now()));
   }
 
   /// Valeurs distinctes disponibles pour les filtres de la page spectacles.

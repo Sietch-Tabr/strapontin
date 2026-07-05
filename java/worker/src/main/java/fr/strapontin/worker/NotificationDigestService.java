@@ -408,6 +408,11 @@ public class NotificationDigestService {
     return nbEnvoyes > 0;
   }
 
+  // #822 : url en chemin relatif (pas préfixé par baseUrl) — les listeners du service worker
+  // (main.js/App.vue) passent cette valeur telle quelle à router.push(), qui ne matche aucune
+  // route déclarée avec un schéma https:// en préfixe si PUBLIC_BASE_URL est configurée
+  // (navigation muette au lieu du scroll/anchor visé). icon reste préfixé par baseUrl (ou
+  // relatif si absente), résolu par le service worker contre sa propre origine dans les deux cas.
   private static String construirePayloadPush(List<ConcertNotif> concerts, String baseUrl) {
     ConcertNotif premier = concerts.get(0);
     String titre =
@@ -425,15 +430,12 @@ public class NotificationDigestService {
     String url;
     if (concerts.size() == 1) {
       if ("SALLE".equals(premier.source())) {
-        url = baseUrl + "/spectacles?source=salles";
+        url = "/spectacles?source=salles";
       } else {
-        url =
-            baseUrl
-                + "/?ancre=artiste-"
-                + URLEncoder.encode(premier.artisteNorm(), StandardCharsets.UTF_8);
+        url = "/?ancre=artiste-" + URLEncoder.encode(premier.artisteNorm(), StandardCharsets.UTF_8);
       }
     } else {
-      url = baseUrl + "/?nouveau=true";
+      url = "/?nouveau=true";
     }
     return """
     {"title":"%s","body":"%s","icon":"%s/images/icon-192.png","url":"%s"}\

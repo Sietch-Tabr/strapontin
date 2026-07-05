@@ -109,18 +109,19 @@ public class WorkerProxyService {
 
   /// Déclenche immédiatement tous les fetches via le worker.
   ///
-  /// @return le résultat métier (succès, ou échec avec message si le worker est inaccessible)
+  /// @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause —
+  ///     #837)
   public ResultatRelance relancerFetches() {
     try {
       restClient.post().uri(WORKER_BASE_URL + "/trigger/tout").retrieve().toBodilessEntity();
       logAdminService.logAdmin("info", "admin", "Fetches relancés manuellement");
-      return new ResultatRelance(true, null);
+      return new ResultatRelance(true, null, 200);
     } catch (RestClientResponseException e) {
       return new ResultatRelance(
-          false, "Worker inaccessible (statut " + e.getStatusCode().value() + ").");
+          false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
     } catch (Exception e) {
       log.warn("Erreur appel worker trigger", e);
-      return new ResultatRelance(false, "Worker inaccessible.");
+      return new ResultatRelance(false, "Worker inaccessible.", 503);
     }
   }
 
@@ -128,9 +129,13 @@ public class WorkerProxyService {
   /// (ex. {@code "purger:salles"}, {@code "reconciliation:nocturne"}) via l'endpoint générique
   /// du worker (v2.6.0, #706/#710).
   ///
+  /// <p>Distingue trois causes d'échec (#837) plutôt que de toutes les renvoyer en 503 : le
+  /// worker répond 400 si {@code typeJob} est inconnu (erreur cliente, pas une panne), un autre
+  /// code d'erreur si Quartz échoue en interne, ou aucune réponse si le worker est réellement
+  /// injoignable.
+  ///
   /// @param typeJob identifiant lisible du job à relancer
-  /// @return le résultat métier (succès, ou échec avec message si le worker est inaccessible ou
-  ///     le job inconnu)
+  /// @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause)
   public ResultatRelance relancerJob(String typeJob) {
     try {
       restClient
@@ -140,13 +145,16 @@ public class WorkerProxyService {
           .toBodilessEntity();
       logAdminService.logAdmin(
           "info", "admin", "Job relancé manuellement", Map.of("typeJob", typeJob));
-      return new ResultatRelance(true, null);
+      return new ResultatRelance(true, null, 200);
     } catch (RestClientResponseException e) {
+      if (e.getStatusCode().value() == 400) {
+        return new ResultatRelance(false, "Job inconnu : " + typeJob + ".", 400);
+      }
       return new ResultatRelance(
-          false, "Worker inaccessible ou job inconnu (statut " + e.getStatusCode().value() + ").");
+          false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
     } catch (Exception e) {
       log.warn("Erreur appel worker trigger job typeJob={}", typeJob, e);
-      return new ResultatRelance(false, "Worker inaccessible.");
+      return new ResultatRelance(false, "Worker inaccessible.", 503);
     }
   }
 }

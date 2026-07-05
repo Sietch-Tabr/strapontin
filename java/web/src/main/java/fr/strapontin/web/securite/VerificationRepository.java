@@ -113,13 +113,20 @@ public class VerificationRepository {
 
   /// Définit l'identifiant et désactive le flag {@code must_change_credentials} par email.
   ///
+  /// <p>Ne resynchronise {@code display_username} sur le nouvel identifiant que s'il n'a jamais
+  /// été personnalisé par un admin (#814), même garde que
+  /// {@link fr.strapontin.web.utilisateur.UtilisateurRepository#majIdentifiant}.
+  ///
   /// @param email      email de l'utilisateur
   /// @param identifiant nouvel identifiant (déjà normalisé en minuscules)
   public void majUsernameEtActiverParEmail(String email, String identifiant) {
     jdbc.update(
         """
-        UPDATE users SET username = :ident, display_username = :ident,
-               must_change_credentials = false, updated_at = NOW()
+        UPDATE users
+        SET username = :ident,
+            display_username = CASE WHEN display_username = username THEN :ident
+                                     ELSE display_username END,
+            must_change_credentials = false, updated_at = NOW()
         WHERE lower(email) = lower(:email)
         """,
         Map.of("ident", identifiant, "email", email));

@@ -5,15 +5,20 @@
 package fr.strapontin.web.email;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -24,17 +29,18 @@ import org.springframework.http.ResponseEntity;
 class ResendWebhookControllerTest {
 
   private ConfigService configService;
+  private EmailService emailService;
+  private LogAdminService logAdminService;
   private ResendWebhookController controller;
 
   @BeforeEach
   void setUp() {
     configService = mock(ConfigService.class);
+    emailService = mock(EmailService.class);
+    logAdminService = mock(LogAdminService.class);
     controller =
         new ResendWebhookController(
-            configService,
-            mock(EmailService.class),
-            new ObjectMapper(),
-            mock(LogAdminService.class));
+            configService, emailService, new ObjectMapper(), logAdminService);
   }
 
   @Test
@@ -70,5 +76,41 @@ class ResendWebhookControllerTest {
         controller.recevoirEvenement("id-1", "1700000000", "v1,signature-invalide", "{}");
 
     assertEquals(HttpStatus.UNAUTHORIZED, reponse.getStatusCode());
+  }
+
+  // #831 : l'email ne doit jamais apparaître en clair dans logs_admin, cohérent avec le hachage
+  // déjà appliqué côté SLF4J juste au-dessus dans le code.
+  @Test
+  void traiterEvenement_bounce_journaliseEmailHacheEtNotifieAdmin() {
+    String corps =
+        """
+        {"type":"email.bounced","data":{"to":["victime@exemple.fr"]}}
+        """;
+
+    controller.traiterEvenement(corps);
+
+    ArgumentCaptor<Map<String, Object>> details = ArgumentCaptor.forClass(Map.class);
+    verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), details.capture());
+    assertEquals(String.valueOf("victime@exemple.fr".hashCode()), details.getValue().get("email"));
+    verify(emailService).envoyerNotificationBounce("victime@exemple.fr");
+  }
+
+  // #832 : une plainte spam (email.complained) reçoit désormais le même traitement qu'un
+  // bounce — logs_admin + notification admin — plutôt qu'un simple log SLF4J invisible.
+  @Test
+  void traiterEvenement_complained_journaliseEtNotifieAdminCommeUnBounce() {
+    String corps =
+        """
+        {"type":"email.complained","data":{"to":["plaignant@exemple.fr"]}}
+        """;
+
+    controller.traiterEvenement(corps);
+
+    ArgumentCaptor<Map<String, Object>> details = ArgumentCaptor.forClass(Map.class);
+    verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), details.capture());
+    assertEquals(
+        String.valueOf("plaignant@exemple.fr".hashCode()), details.getValue().get("email"));
+    verify(emailService).envoyerNotificationPlainteSpam("plaignant@exemple.fr");
+    verify(emailService, never()).envoyerNotificationBounce(anyString());
   }
 }

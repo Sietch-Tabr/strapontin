@@ -249,7 +249,6 @@ async function sauvegarderModif(u) {
   delete modifErreurs[u.id]
   const d = modifData[u.id]
   const roleChange = d.role !== u.role
-  const retrograder = u.role === 'admin' && d.role === 'user'
 
   if (roleChange) {
     modifEnAttenteRole.value = { user: u, data: { ...d } }
@@ -260,7 +259,7 @@ async function sauvegarderModif(u) {
   await envoyerPatch(u, d)
 }
 
-async function envoyerPatch(u, d) {
+async function envoyerPatch(u, d, messageSucces = 'Utilisateur modifié.') {
   const corps = {}
   if (d.nom !== (u.displayUsername ?? '')) corps.nom = d.nom
   if (d.email !== u.email) corps.email = d.email
@@ -280,7 +279,7 @@ async function envoyerPatch(u, d) {
   if (rep.ok) {
     toggleModif(u.id)
     await rechargerUtilisateurs()
-    afficherToast('Utilisateur modifié.', 'succes')
+    afficherToast(messageSucces, 'succes')
   } else {
     modifErreurs[u.id] = repCorps.erreur || 'Erreur.'
   }
@@ -291,24 +290,46 @@ function fermerDialogConfirmerRole() {
   modifEnAttenteRole.value = null
 }
 
+// #838 : envoyer aussi nom/email (requête PATCH séparée) avant l'appel de révocation — PATCH
+// /api/admin/utilisateurs/{id} délègue en interne à initierRevocationAdmin (transaction
+// SERIALIZABLE + REQUIRES_NEW) quand role passe à "user" ; l'imbriquer dans la même transaction
+// que la mise à jour nom/email épuise le pool de connexions (CannotCreateTransactionException,
+// constaté en e2e). Deux requêtes séquentielles évitent cette imbrication.
 async function confirmerChangementRole() {
   if (!modifEnAttenteRole.value) return
   const { user: u, data: d } = modifEnAttenteRole.value
   const retrograder = u.role === 'admin' && d.role === 'user'
   fermerDialogConfirmerRole()
 
-  if (retrograder) {
-    const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'POST' })
-    const corps = await rep.json()
-    if (rep.ok) {
-      toggleModif(u.id)
-      await rechargerUtilisateurs()
-      afficherToast('Révocation initiée. L\'administrateur sera prévenu par email.', 'succes')
-    } else {
-      modifErreurs[u.id] = corps.erreur || 'Erreur.'
-    }
-  } else {
+  if (!retrograder) {
     await envoyerPatch(u, d)
+    return
+  }
+
+  const corpsNomEmail = {}
+  if (d.nom !== (u.displayUsername ?? '')) corpsNomEmail.nom = d.nom
+  if (d.email !== u.email) corpsNomEmail.email = d.email
+  if (Object.keys(corpsNomEmail).length > 0) {
+    const repNomEmail = await fetch('/api/admin/utilisateurs/' + u.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(corpsNomEmail),
+    })
+    if (!repNomEmail.ok) {
+      const corpsErreur = await repNomEmail.json().catch(() => ({}))
+      modifErreurs[u.id] = corpsErreur.erreur || 'Erreur.'
+      return
+    }
+  }
+
+  const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'POST' })
+  const corps = await rep.json()
+  if (rep.ok) {
+    toggleModif(u.id)
+    await rechargerUtilisateurs()
+    afficherToast('Révocation initiée. L\'administrateur sera prévenu par email.', 'succes')
+  } else {
+    modifErreurs[u.id] = corps.erreur || 'Erreur.'
   }
 }
 

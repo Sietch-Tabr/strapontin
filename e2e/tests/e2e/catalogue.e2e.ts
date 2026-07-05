@@ -401,6 +401,75 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
   });
 });
 
+// #818 : masquerArtiste/demasquerArtiste filtrent désormais sur artisteId (référentiel) plutôt
+// qu'artisteNorm (texte par source) — vérifie que le flux group-level fonctionne toujours avec
+// le nouveau contrat API, et qu'un artisteId invalide est bien rejeté en 400.
+test.describe("Scénario: catalogue — masquage par artiste (#818)", () => {
+  test("accueil_masquerPuisDemasquerArtiste_disparaitPuisReapparait", async ({
+    page,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "firefox",
+      "Modifie user_matches partagé — concurrence avec les autres navigateurs en parallèle",
+    );
+    const repAccueil = await page.request.get("/api/accueil");
+    expect(repAccueil.ok()).toBeTruthy();
+    const corps = (await repAccueil.json()) as {
+      artistesGroupes: { artisteId: string }[];
+    };
+    const groupe = (corps.artistesGroupes ?? [])[0];
+    expect(
+      groupe,
+      "Précondition : au moins un groupe d'artiste visible sur l'accueil — vérifier que e2euser suit des artistes et que les jobs de fetch ont tourné",
+    ).toBeTruthy();
+
+    let masque = false;
+    try {
+      const repMasquer = await page.request.post(
+        "/api/spectacles/masquer-artiste",
+        { data: { artisteId: groupe.artisteId } },
+      );
+      expect(repMasquer.ok()).toBeTruthy();
+      masque = true;
+
+      const repApres = await page.request.get("/api/accueil");
+      expect(repApres.ok()).toBeTruthy();
+      const corpsApres = (await repApres.json()) as {
+        artistesGroupes: { artisteId: string }[];
+      };
+      expect(
+        (corpsApres.artistesGroupes ?? []).some(
+          (g) => g.artisteId === groupe.artisteId,
+        ),
+      ).toBe(false);
+    } finally {
+      if (masque) {
+        await page.request.post("/api/spectacles/demasquer-artiste", {
+          data: { artisteId: groupe.artisteId },
+        });
+      }
+    }
+  });
+
+  test("api_masquerArtiste_artisteIdInvalide_retourne400", async ({
+    request,
+  }) => {
+    const rep = await request.post("/api/spectacles/masquer-artiste", {
+      data: { artisteId: "pas-un-uuid" },
+    });
+    expect(rep.status()).toBe(400);
+  });
+
+  test("api_demasquerArtiste_artisteIdManquant_retourne400", async ({
+    request,
+  }) => {
+    const rep = await request.post("/api/spectacles/demasquer-artiste", {
+      data: {},
+    });
+    expect(rep.status()).toBe(400);
+  });
+});
+
 test.describe("Scénario: accueil — nettoyage du paramètre ancre après scroll (#801)", () => {
   // Avant #801, l'ancre survivait à tout changement de filtre suivant (basculerFiltre conserve
   // route.query par spread), re-déclenchant un scroll forcé à chaque bascule de chip.

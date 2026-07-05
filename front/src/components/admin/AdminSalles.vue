@@ -228,13 +228,25 @@ async function charger() {
   }
 }
 
+// #829 : la sélection (UUID) ne référence que des salles de la page courante — un changement de
+// page/filtre sans réinitialisation laissait ouvrirFusion() chercher un UUID absent de la page
+// rechargée, ouvrant un dialog de fusion vide sans aucun message explicite.
+function reinitialiserSelectionSiNonVide() {
+  if (selection.length > 0) {
+    selection.splice(0, selection.length)
+    afficherToast('Sélection réinitialisée (changement de page ou de filtre).', 'avertissement')
+  }
+}
+
 function rechargerPage0() {
   page.value = 0
+  reinitialiserSelectionSiNonVide()
   charger()
 }
 
 function allerPage(n) {
   page.value = Math.max(0, Math.min(n, totalPages.value - 1))
+  reinitialiserSelectionSiNonVide()
   charger()
 }
 

@@ -41,7 +41,7 @@ class AdminControllerRelancerJobTest {
   @Test
   void relancerJob_succes_retourne200() {
     when(workerProxyService.relancerJob("purger:salles"))
-        .thenReturn(new ResultatRelance(true, null));
+        .thenReturn(new ResultatRelance(true, null, 200));
 
     ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("purger:salles");
 
@@ -52,10 +52,33 @@ class AdminControllerRelancerJobTest {
   @Test
   void relancerJob_workerInaccessible_retourne503() {
     when(workerProxyService.relancerJob("reconciliation:nocturne"))
-        .thenReturn(new ResultatRelance(false, "Worker inaccessible."));
+        .thenReturn(new ResultatRelance(false, "Worker inaccessible.", 503));
 
     ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("reconciliation:nocturne");
 
     assertEquals(503, reponse.getStatusCode().value());
+  }
+
+  // #837 : un typeJob inconnu (erreur cliente 400 renvoyée par le worker) ne doit plus être
+  // masqué sous un 503 générique — l'admin doit pouvoir distinguer une faute de frappe d'une
+  // vraie panne du worker.
+  @Test
+  void relancerJob_typeJobInconnu_retourne400() {
+    when(workerProxyService.relancerJob("job:inexistant"))
+        .thenReturn(new ResultatRelance(false, "Job inconnu : job:inexistant.", 400));
+
+    ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("job:inexistant");
+
+    assertEquals(400, reponse.getStatusCode().value());
+  }
+
+  @Test
+  void relancerJob_erreurInterneWorker_retourne502() {
+    when(workerProxyService.relancerJob("reconciliation:nocturne"))
+        .thenReturn(new ResultatRelance(false, "Erreur interne worker (statut 500).", 502));
+
+    ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("reconciliation:nocturne");
+
+    assertEquals(502, reponse.getStatusCode().value());
   }
 }

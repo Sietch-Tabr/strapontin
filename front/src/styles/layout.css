@@ -84,6 +84,7 @@
   color: var(--fg-muted);
   font-size: 0.875rem;
   font-weight: 500;
+  position: relative;
   transition:
     background 0.15s,
     color 0.15s;
@@ -258,6 +259,7 @@
   color: var(--fg-muted);
   font-size: 0.9375rem;
   font-weight: 500;
+  position: relative;
   transition:
     background 0.15s,
     color 0.15s;
@@ -311,6 +313,19 @@
   top: 50%;
   right: 0.5rem;
   transform: translateY(-50%);
+}
+
+/* #820 : point simple (pas de compteur) — indique une nouveauté changelog non lue */
+.nav-badge--point {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--danger);
+  pointer-events: none;
 }
 
 /* Fix view-transition : isoler la bottom nav de la transition root */

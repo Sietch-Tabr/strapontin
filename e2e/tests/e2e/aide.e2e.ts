@@ -26,12 +26,48 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
     await page.goto("/aide");
     const btn = page.locator("#btn-ouvrir-signalement");
     if (!(await btn.isVisible())) {
-      // Resend non configuré : vérifier le lien mailto à la place
-      await expect(page.locator("a[href^='mailto:']")).toBeVisible();
+      // Resend non configuré : soit un lien mailto (CONTACT_EMAIL configuré), soit le message
+      // de repli #842 si aucun canal de contact n'est configuré du tout.
+      const lien = page.locator("a[href^='mailto:']");
+      if (await lien.count()) {
+        // #842 : le sélecteur href^='mailto:' matcherait aussi un mailto: vide sans adresse —
+        // vérifier le contenu réel.
+        await expect(lien).toHaveAttribute("href", /^mailto:.+@.+/);
+      } else {
+        await expect(
+          page.getByText("Aucun moyen de contact configuré actuellement."),
+        ).toBeVisible();
+      }
       return;
     }
     await btn.click();
     await expect(page.locator("#form-signalement")).toBeVisible();
+  });
+
+  // #821 : le test ci-dessus n'exerce que l'ouverture du dialog, jamais une soumission réelle —
+  // le bug (message de succès jamais peint car le dialog se ferme dans la même fonction
+  // synchrone) n'était donc jamais détecté. Restreint à chromium (bucket4j 3 signalements/heure
+  // partagé par IP — CLAUDE.md, éviter d'épuiser le quota sur plusieurs navigateurs).
+  test("aide_signalement_soumissionReussie_afficheAlerteAvantFermeture", async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium");
+    await page.goto("/aide");
+    const btn = page.locator("#btn-ouvrir-signalement");
+    if (!(await btn.isVisible())) test.skip();
+    await btn.click();
+    const dialog = page.locator("#dialog-signaler");
+    await expect(dialog).toBeVisible();
+
+    await page.locator("#message-signalement").fill("Signalement e2e #821");
+    await page.locator("#form-signalement button[type='submit']").click();
+
+    await expect(
+      dialog.locator(".alerte-succes", { hasText: "Signalement envoyé" }),
+    ).toBeVisible({ timeout: 2000 });
+    // Le dialog doit rester ouvert le temps que l'alerte soit visible (délai de fermeture #821),
+    // puis se fermer de lui-même.
+    await expect(dialog).not.toBeVisible({ timeout: 3000 });
   });
 
   test("aide_lien_changelog_present", async ({ page, isMobile }) => {
@@ -52,6 +88,26 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
     await page.goto("/changelog");
     await expect(page.locator("main")).toBeVisible();
     await expect(page.locator("main")).not.toBeEmpty();
+  });
+
+  // #820 : le mécanisme "changelog lu" était entièrement mort (VERSION_COURANTE figée,
+  // changelog_version_vue jamais relue) — pilote désormais un badge "nouveautés", vérifié ici
+  // via l'API plutôt que le badge visuel (dépend de l'historique déjà vu de e2euser, non
+  // déterministe entre les runs).
+  test("api_changelog_nouveaute_retourneBooleenEtSeDesactiveApresMarquage", async ({
+    page,
+  }) => {
+    const repAvant = await page.request.get("/api/changelog/nouveaute");
+    expect(repAvant.ok()).toBeTruthy();
+    const corpsAvant = await repAvant.json();
+    expect(typeof corpsAvant.nonVu).toBe("boolean");
+
+    const repMarquer = await page.request.post("/api/changelog/marquer-vue");
+    expect(repMarquer.status()).toBe(204);
+
+    const repApres = await page.request.get("/api/changelog/nouveaute");
+    const corpsApres = await repApres.json();
+    expect(corpsApres.nonVu).toBe(false);
   });
 
   // #775 : garde-fou contre la récidive — sans repli automatique, chaque nouvelle version
