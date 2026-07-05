@@ -1,5 +1,6 @@
 import { ref, watch, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
+import { parseJsonOuNull } from "../utils/reponseJson.js";
 
 const banniere = ref(null);
 const visible = ref(false);
@@ -51,7 +52,8 @@ function afficherSiPertinente() {
 export async function chargerBanniere() {
   try {
     const rep = await fetch("/api/banniere/json");
-    const data = rep.ok ? await rep.json() : null;
+    const texte = rep.ok ? await rep.text() : "";
+    const data = parseJsonOuNull(texte);
     banniere.value = data;
     if (!data?.message || estDismissed(data.id) || estAutoMasque(data.id)) {
       visible.value = false;

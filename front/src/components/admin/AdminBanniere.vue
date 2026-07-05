@@ -55,6 +55,7 @@ defineOptions({ name: 'AdminBanniere' })
 
 import { ref, onMounted } from 'vue'
 import { useToasts } from '../../composables/useToasts.js'
+import { parseJsonOuNull } from '../../utils/reponseJson.js'
 
 const { afficherToast } = useToasts()
 
@@ -64,7 +65,8 @@ const banniereActive = ref(null)
 
 async function chargerBanniereActive() {
   const rep = await fetch('/api/banniere/json')
-  banniereActive.value = rep.ok ? await rep.json() : null
+  const texte = rep.ok ? await rep.text() : ''
+  banniereActive.value = parseJsonOuNull(texte)
 }
 
 async function publierBanniere() {

@@ -163,4 +163,32 @@ test.describe("Bannière système overlay", () => {
       "Aucune bannière publiée",
     );
   });
+
+  test("admin_banniere_publierViaFormulaire_rafraichitEtatAffiche", async ({
+    page,
+  }) => {
+    await effacerBanniere(page);
+    await page.goto("/admin#banniere");
+    await page.locator("#banniere-message").fill("Test formulaire admin");
+    await page.locator("#banniere-type").selectOption("error");
+    await page.getByRole("button", { name: "Publier" }).click();
+    await expect(page.locator("section#banniere")).toContainText(
+      "Test formulaire admin",
+    );
+    await expect(page.locator("section#banniere")).toContainText("error");
+  });
+
+  test("admin_banniere_effacerViaFormulaire_rafraichitEtatAffiche", async ({
+    page,
+  }) => {
+    await publierBanniere(page, "Test avant effacement", "info");
+    await page.goto("/admin#banniere");
+    await expect(page.locator("section#banniere")).toContainText(
+      "Test avant effacement",
+    );
+    await page.getByRole("button", { name: "Effacer" }).click();
+    await expect(page.locator("section#banniere")).toContainText(
+      "Aucune bannière publiée",
+    );
+  });
 });
