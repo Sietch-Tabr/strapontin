@@ -74,6 +74,10 @@ public class AdminService {
   private static final Pattern FORMAT_RESEND_KEY = Pattern.compile("^re_[A-Za-z0-9_-]{10,}$");
   private static final Pattern FORMAT_WEBHOOK_SECRET =
       Pattern.compile("^whsec_[A-Za-z0-9+/=]{16,}$");
+  // Base64 URL-safe sans padding d'une clé EC P-256 : 65 octets (point non compressé, clé
+  // publique) ou 32 octets (scalaire, clé privée) — voir VapidService.genererVapid().
+  private static final Pattern FORMAT_VAPID_PUBLIC_KEY = Pattern.compile("^[A-Za-z0-9_-]{87}$");
+  private static final Pattern FORMAT_VAPID_PRIVATE_KEY = Pattern.compile("^[A-Za-z0-9_-]{43}$");
   private static final Set<String> ROLES_VALIDES = Set.of("user", "admin");
   private static final int MAX_TENTATIVES_REVOCATION = 3;
 
@@ -694,6 +698,14 @@ public class AdminService {
     }
     if ("RESEND_WEBHOOK_SECRET".equals(cle) && !FORMAT_WEBHOOK_SECRET.matcher(valeur).matches()) {
       return "La clé webhook Resend doit commencer par whsec_ suivi de caractères base64.";
+    }
+    if ("VAPID_PUBLIC_KEY".equals(cle) && !FORMAT_VAPID_PUBLIC_KEY.matcher(valeur).matches()) {
+      return "La clé publique VAPID doit être une clé EC P-256 encodée en Base64 URL-safe"
+          + " (87 caractères).";
+    }
+    if ("VAPID_PRIVATE_KEY".equals(cle) && !FORMAT_VAPID_PRIVATE_KEY.matcher(valeur).matches()) {
+      return "La clé privée VAPID doit être une clé EC P-256 encodée en Base64 URL-safe"
+          + " (43 caractères).";
     }
     if ("PUBLIC_BASE_URL".equals(cle)) {
       try {

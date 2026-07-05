@@ -18,6 +18,7 @@
           type="text"
           placeholder="75, 92, 93…"
           autocomplete="off"
+          maxlength="1000"
         />
         <button type="submit" class="btn btn-secondary">Enregistrer</button>
       </form>

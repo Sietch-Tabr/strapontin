@@ -15,6 +15,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
@@ -120,7 +121,13 @@ public class AuthService {
 
     log.info("Activation compte invitation : emailHash={}", email.hashCode());
     verificationRepository.majMotDePasseParEmail(email, passwordEncoder.encode(motDePasse));
-    verificationRepository.majUsernameEtActiverParEmail(email, identifiant);
+    try {
+      verificationRepository.majUsernameEtActiverParEmail(email, identifiant);
+    } catch (DataIntegrityViolationException e) {
+      // Race entre le contrôle ci-dessus et cet UPDATE : deux invitations concurrentes ont
+      // pu choisir le même identifiant entre-temps.
+      throw new ErreurMetier("Cet identifiant est déjà utilisé.");
+    }
     verificationRepository.supprimerParTokenHash(tokenHash);
 
     return identifiant;

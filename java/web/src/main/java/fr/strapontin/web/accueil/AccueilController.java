@@ -42,7 +42,7 @@ public class AccueilController {
     return ResponseEntity.noContent().build();
   }
 
-  /// Retourne les prochains concerts des artistes et salles suivis, groupés par artiste.
+  /// Retourne les prochains concerts des artistes suivis, groupés par artiste.
   ///
   /// @param masques       {@code true} pour afficher les concerts masqués
   /// @param indisponibles {@code "1"} pour inclure les concerts non disponibles

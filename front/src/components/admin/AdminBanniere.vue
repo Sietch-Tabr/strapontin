@@ -6,6 +6,13 @@
         Publiez un message visible par tous les utilisateurs connectés dans la minute.
         Le message réapparaît à chaque changement de page, sauf si l'utilisateur le ferme manuellement.
       </p>
+      <p v-if="banniereActive" class="param-aide">
+        <span class="badge badge-succes">Publiée</span>
+        Type : {{ banniereActive.type }} — « {{ banniereActive.message }} »
+      </p>
+      <p v-else class="param-aide">
+        <span class="badge badge-manquant" role="status">Aucune bannière publiée</span>
+      </p>
       <div class="form-champ">
         <label for="banniere-message" class="form-label">Message</label>
         <textarea
@@ -46,13 +53,19 @@
 <script setup>
 defineOptions({ name: 'AdminBanniere' })
 
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useToasts } from '../../composables/useToasts.js'
 
 const { afficherToast } = useToasts()
 
 const banniereMessage = ref('')
 const banniereType = ref('info')
+const banniereActive = ref(null)
+
+async function chargerBanniereActive() {
+  const rep = await fetch('/api/banniere/json')
+  banniereActive.value = rep.ok ? await rep.json() : null
+}
 
 async function publierBanniere() {
   const msg = banniereMessage.value.trim()
@@ -63,14 +76,24 @@ async function publierBanniere() {
     body: JSON.stringify({ message: msg, type: banniereType.value }),
   })
   const corps = await rep.json()
-  if (rep.ok) afficherToast('Bannière publiée.', 'succes')
-  else afficherToast(corps.erreur || 'Erreur lors de la publication.', 'erreur')
+  if (rep.ok) {
+    afficherToast('Bannière publiée.', 'succes')
+    await chargerBanniereActive()
+  } else {
+    afficherToast(corps.erreur || 'Erreur lors de la publication.', 'erreur')
+  }
 }
 
 async function effacerBanniere() {
   const rep = await fetch('/api/admin/banniere', { method: 'DELETE' })
   const corps = await rep.json()
-  if (rep.ok) afficherToast('Bannière effacée.', 'succes')
-  else afficherToast(corps.erreur || "Erreur lors de l'effacement.", 'erreur')
+  if (rep.ok) {
+    afficherToast('Bannière effacée.', 'succes')
+    await chargerBanniereActive()
+  } else {
+    afficherToast(corps.erreur || "Erreur lors de l'effacement.", 'erreur')
+  }
 }
+
+onMounted(chargerBanniereActive)
 </script>

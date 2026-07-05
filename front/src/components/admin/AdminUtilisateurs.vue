@@ -33,7 +33,7 @@
               <p class="user-carte-email">{{ u.email }}</p>
               <p class="user-carte-activite">
                 <span v-if="u.derniereActivite">Dernière activité : {{ formaterInstant(u.derniereActivite) }}</span>
-                <span v-else>Jamais connecté</span>
+                <span v-else>Aucune session active</span>
               </p>
               <p class="user-carte-suivi">{{ u.nbArtistes }} artiste{{ u.nbArtistes !== 1 ? 's' : '' }}, {{ u.nbSalles }} salle{{ u.nbSalles !== 1 ? 's' : '' }}</p>
             </div>

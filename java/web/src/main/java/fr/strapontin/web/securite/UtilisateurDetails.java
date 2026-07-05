@@ -14,9 +14,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 /// Représentation Spring Security d'un utilisateur Strapontin.
 ///
-/// <p>{@link #isCredentialsNonExpired()} retourne {@code false} quand
-/// {@code doitChangerCredentials} est vrai — Spring Security force alors le changement
-/// de mot de passe à la connexion.
+/// <p>{@link #isCredentialsNonExpired()} retourne toujours {@code true} : le forçage du
+/// changement de mot de passe pour un compte invité (`doitChangerCredentials`) n'est pas géré
+/// par ce mécanisme Spring Security mais explicitement par {@code AuthController}.
 ///
 /// @param id                    l'identifiant unique de l'utilisateur
 /// @param identifiant           le nom d'utilisateur (login, insensible à la casse)
