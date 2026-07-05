@@ -10,6 +10,7 @@ import static org.mockito.Mockito.*;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -120,6 +121,17 @@ class UserControllerTest {
   }
 
   @Test
+  void majIdentifiant_dejaUtilise_retourne400() {
+    when(utilisateurRepository.identifiantDejaUtilise("bob", "user-1")).thenReturn(true);
+
+    ResponseEntity<Map<String, Object>> rep =
+        controller.majIdentifiant(new RequeteIdentifiant("bob"), authPour("user-1", "user"));
+
+    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
+    verify(utilisateurRepository, never()).majIdentifiant(anyString(), anyString());
+  }
+
+  @Test
   void changerMotDePasse_motDePasseActuelIncorrect_neRevoqueAucuneSession() {
     when(passwordEncoder.matches("faux", "")).thenReturn(false);
 
@@ -130,5 +142,48 @@ class UserControllerTest {
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
     verify(sessionRepository, never()).findByPrincipalName(anyString());
     verify(utilisateurRepository, never()).changerMotDePasse(anyString(), anyString());
+  }
+
+  @Test
+  void changerMotDePasse_champsNull_retourne400() {
+    RequeteMotDePasse requete = new RequeteMotDePasse(null, null);
+
+    ResponseEntity<Map<String, Object>> rep =
+        controller.changerMotDePasse(requete, authPour("user-1", "user"));
+
+    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
+    verify(utilisateurRepository, never()).changerMotDePasse(anyString(), anyString());
+  }
+
+  @Test
+  void changerMotDePasse_nouveauTropCourt_retourne400() {
+    RequeteMotDePasse requete = new RequeteMotDePasse("actuel12345678", "court");
+
+    ResponseEntity<Map<String, Object>> rep =
+        controller.changerMotDePasse(requete, authPour("user-1", "user"));
+
+    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
+    verify(utilisateurRepository, never()).changerMotDePasse(anyString(), anyString());
+  }
+
+  @Test
+  void lireProfil_utilisateurExistant_retourne200AvecProfil() {
+    when(utilisateurRepository.lireEmails("user-1"))
+        .thenReturn(Optional.of(new UtilisateurRepository.EmailsUtilisateur("test@test.fr", null)));
+
+    ResponseEntity<ProfilUtilisateur> rep = controller.lireProfil(authPour("user-1", "user"));
+
+    assertEquals(HttpStatus.OK, rep.getStatusCode());
+    assertEquals("test@test.fr", rep.getBody().email());
+    assertEquals("login", rep.getBody().identifiant());
+  }
+
+  @Test
+  void lireProfil_utilisateurAbsent_retourne404() {
+    when(utilisateurRepository.lireEmails("user-1")).thenReturn(Optional.empty());
+
+    ResponseEntity<ProfilUtilisateur> rep = controller.lireProfil(authPour("user-1", "user"));
+
+    assertEquals(HttpStatus.NOT_FOUND, rep.getStatusCode());
   }
 }

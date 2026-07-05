@@ -31,25 +31,24 @@ import org.springframework.security.core.Authentication;
 class AuthControllerTest {
 
   private AuthController authController;
+  private AuthenticationManager authenticationManager;
   private AuthService authService;
   private TotpService totpService;
   private NamedParameterJdbcTemplate jdbc;
+  private ConfigService configService;
   private LogAdminService logAdminService;
 
   @BeforeEach
   void setUp() {
+    authenticationManager = mock(AuthenticationManager.class);
     authService = mock(AuthService.class);
     totpService = mock(TotpService.class);
     jdbc = mock(NamedParameterJdbcTemplate.class);
+    configService = mock(ConfigService.class);
     logAdminService = mock(LogAdminService.class);
     authController =
         new AuthController(
-            mock(AuthenticationManager.class),
-            authService,
-            totpService,
-            jdbc,
-            mock(ConfigService.class),
-            logAdminService);
+            authenticationManager, authService, totpService, jdbc, configService, logAdminService);
   }
 
   // --- verifierTotp ---
@@ -308,5 +307,180 @@ class AuthControllerTest {
             mock(HttpServletRequest.class));
 
     assertEquals(200, reponse.getStatusCode().value());
+  }
+
+  // --- login ---
+
+  @Test
+  void login_credentialsValides_retourneUtilisateurEtOuvreSession() {
+    UtilisateurDetails principal =
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
+    Authentication auth = mock(Authentication.class);
+    when(auth.getPrincipal()).thenReturn(principal);
+    when(authenticationManager.authenticate(any())).thenReturn(auth);
+
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    when(httpRequest.getSession(false)).thenReturn(null);
+    HttpSession session = mock(HttpSession.class);
+    when(httpRequest.getSession(true)).thenReturn(session);
+
+    var reponse = authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
+
+    assertEquals(200, reponse.getStatusCode().value());
+    assertEquals("alice", reponse.getBody().identifiant());
+    assertFalse(reponse.getBody().totpRequis());
+    verify(session, never()).setAttribute(eq(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE), any());
+  }
+
+  @Test
+  void login_sessionExistante_lInvalideAvantDEnCreerUneNouvelle() {
+    UtilisateurDetails principal =
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
+    Authentication auth = mock(Authentication.class);
+    when(auth.getPrincipal()).thenReturn(principal);
+    when(authenticationManager.authenticate(any())).thenReturn(auth);
+
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    HttpSession ancienneSession = mock(HttpSession.class);
+    when(httpRequest.getSession(false)).thenReturn(ancienneSession);
+    when(httpRequest.getSession(true)).thenReturn(mock(HttpSession.class));
+
+    authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
+
+    verify(ancienneSession).invalidate();
+  }
+
+  @Test
+  void login_totpActif_positionneSessionTotpEnAttente() {
+    UtilisateurDetails principal =
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
+    Authentication auth = mock(Authentication.class);
+    when(auth.getPrincipal()).thenReturn(principal);
+    when(authenticationManager.authenticate(any())).thenReturn(auth);
+
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    when(httpRequest.getSession(false)).thenReturn(null);
+    HttpSession session = mock(HttpSession.class);
+    when(httpRequest.getSession(true)).thenReturn(session);
+
+    var reponse = authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
+
+    assertTrue(reponse.getBody().totpRequis());
+    verify(session).setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
+  }
+
+  @Test
+  void login_principalInattendu_leveIllegalStateException() {
+    Authentication auth = mock(Authentication.class);
+    when(auth.getPrincipal()).thenReturn("pas-un-utilisateur-details");
+    when(authenticationManager.authenticate(any())).thenReturn(auth);
+
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    when(httpRequest.getSession(false)).thenReturn(null);
+    when(httpRequest.getSession(true)).thenReturn(mock(HttpSession.class));
+
+    assertThrows(
+        IllegalStateException.class,
+        () -> authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest));
+  }
+
+  // --- moi ---
+
+  @Test
+  void moi_nonAuthentifie_retourne401() {
+    var reponse = authController.moi(null, mock(HttpServletRequest.class));
+
+    assertEquals(HttpStatus.UNAUTHORIZED.value(), reponse.getStatusCode().value());
+  }
+
+  @Test
+  void moi_principalPasUtilisateurDetails_retourne401() {
+    Authentication auth = mock(Authentication.class);
+    when(auth.isAuthenticated()).thenReturn(true);
+    when(auth.getPrincipal()).thenReturn("anonymousUser");
+
+    var reponse = authController.moi(auth, mock(HttpServletRequest.class));
+
+    assertEquals(HttpStatus.UNAUTHORIZED.value(), reponse.getStatusCode().value());
+  }
+
+  @Test
+  void moi_authentifieAvecChallengeTotpEnAttente_retourneTotpRequisVrai() {
+    UtilisateurDetails principal =
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
+    Authentication auth = mock(Authentication.class);
+    when(auth.isAuthenticated()).thenReturn(true);
+    when(auth.getPrincipal()).thenReturn(principal);
+
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    HttpSession session = mock(HttpSession.class);
+    when(httpRequest.getSession(false)).thenReturn(session);
+    when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
+
+    var reponse = authController.moi(auth, httpRequest);
+
+    assertEquals(200, reponse.getStatusCode().value());
+    assertTrue(reponse.getBody().totpRequis());
+  }
+
+  @Test
+  void moi_authentifieSansSession_retourneTotpRequisFaux() {
+    UtilisateurDetails principal =
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
+    Authentication auth = mock(Authentication.class);
+    when(auth.isAuthenticated()).thenReturn(true);
+    when(auth.getPrincipal()).thenReturn(principal);
+
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    when(httpRequest.getSession(false)).thenReturn(null);
+
+    var reponse = authController.moi(auth, httpRequest);
+
+    assertFalse(reponse.getBody().totpRequis());
+  }
+
+  // --- motDePasseOublie (endpoint) ---
+
+  @Test
+  void motDePasseOublieEndpoint_emailBlanc_neDelegueRienEtRetourne200() {
+    var reponse =
+        authController.motDePasseOublie(
+            new ForgotPasswordRequest(""), mock(HttpServletRequest.class));
+
+    assertEquals(200, reponse.getStatusCode().value());
+    verify(authService, never()).motDePasseOublie(anyString(), anyString());
+  }
+
+  @Test
+  void motDePasseOublieEndpoint_emailPresent_normaliseEtDelegueAuService() {
+    when(configService.lireConfig("PUBLIC_BASE_URL"))
+        .thenReturn(java.util.Optional.of("https://strapontin.fr"));
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+
+    var reponse =
+        authController.motDePasseOublie(new ForgotPasswordRequest(" Alice@Test.FR "), httpRequest);
+
+    assertEquals(200, reponse.getStatusCode().value());
+    verify(authService).motDePasseOublie("alice@test.fr", "https://strapontin.fr");
+  }
+
+  // --- typeToken ---
+
+  @Test
+  void typeToken_tokenInvitation_retourneTypeInvite() {
+    when(authService.estTokenInvite("token")).thenReturn(true);
+
+    var reponse = authController.typeToken("token");
+
+    assertEquals("invite", reponse.getBody().get("type"));
+  }
+
+  @Test
+  void typeToken_tokenResetOuInconnu_retourneTypeReset() {
+    when(authService.estTokenInvite("token")).thenReturn(false);
+
+    var reponse = authController.typeToken("token");
+
+    assertEquals("reset", reponse.getBody().get("type"));
   }
 }

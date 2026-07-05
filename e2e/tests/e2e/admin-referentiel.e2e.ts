@@ -158,6 +158,86 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
         .filter({ hasText: "Sélection réinitialisée" }),
     ).toBeVisible({ timeout: 5000 });
   });
+
+  // #879 : tous les tests de fusion existants appellent l'API directement (POST
+  // .../fusionner/...), sans jamais piloter les cases à cocher et le dialog de confirmation —
+  // le bug de sélection cross-page (#829) ne pouvait donc jamais être détecté par la suite.
+  test("admin_salles_fusionPiloteeParIhm_checkboxesEtDialogReels", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+
+    const suffixe = Date.now();
+    const nomA = `ZZTestFusionIhmA-${suffixe}`;
+    const nomB = `ZZTestFusionIhmB-${suffixe}`;
+    const ctx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    let salleRestante: string | null = null;
+    try {
+      const repA = await ctx.post("/api/admin/digitick-salles", {
+        data: { nom: nomA, slug: `zztest-fusion-ihm-a-${suffixe}` },
+      });
+      expect(repA.status()).toBe(201);
+      const repB = await ctx.post("/api/admin/digitick-salles", {
+        data: { nom: nomB, slug: `zztest-fusion-ihm-b-${suffixe}` },
+      });
+      expect(repB.status()).toBe(201);
+
+      await page.goto("/admin");
+      await page.locator('a[href="#salles"]').click();
+      // Recherche par le suffixe partagé (timestamp) — présent dans les deux noms de test.
+      await page
+        .locator('section#salles input[aria-label="Rechercher une salle"]')
+        .fill(String(suffixe));
+
+      const ligneA = page.locator("section#salles table tbody tr", {
+        hasText: nomA,
+      });
+      const ligneB = page.locator("section#salles table tbody tr", {
+        hasText: nomB,
+      });
+      await expect(ligneA).toBeVisible({ timeout: 5000 });
+      await expect(ligneB).toBeVisible({ timeout: 5000 });
+
+      await ligneA.locator('input[type="checkbox"]').check();
+      await ligneB.locator('input[type="checkbox"]').check();
+
+      const boutonFusion = page.getByRole("button", {
+        name: /Fusionner \(2\/2\)/,
+      });
+      await expect(boutonFusion).toBeEnabled();
+      await boutonFusion.click();
+
+      const dialog = page.locator(
+        "dialog[aria-labelledby='titre-fusion-salle']",
+      );
+      await expect(dialog).toBeVisible({ timeout: 3000 });
+      await dialog.getByRole("radio", { name: new RegExp(nomA) }).check();
+      await dialog.getByRole("button", { name: "Fusionner" }).click();
+
+      await expect(
+        page.locator(".alerte-succes").filter({ hasText: "Salles fusionnées" }),
+      ).toBeVisible({ timeout: 5000 });
+      await expect(ligneB).not.toBeVisible({ timeout: 5000 });
+      await expect(ligneA).toBeVisible();
+
+      const repListe = await ctx.get(
+        `/api/admin/salles?nom=${encodeURIComponent(nomA)}`,
+      );
+      const donnees = await repListe.json();
+      salleRestante = donnees.salles[0]?.id ?? null;
+    } finally {
+      if (salleRestante) {
+        await ctx
+          .delete(`/api/admin/digitick-salles/${salleRestante}`)
+          .catch(() => {});
+      }
+      await ctx.dispose();
+    }
+  });
 });
 
 test.describe("Scénario: admin — API référentiel salles", () => {
@@ -362,6 +442,139 @@ test.describe("Scénario: admin — API référentiel salles", () => {
       if (salleB) {
         await ctx
           .delete(`/api/admin/digitick-salles/${salleB}`)
+          .catch(() => {});
+      }
+      await ctx.dispose();
+    }
+  });
+
+  // #879 : aucun équivalent "flux complet" n'existait côté artistes (contrairement aux salles) —
+  // édition du nom affiché puis fusion, en vérifiant la disparition de la source absorbée.
+  //
+  // Noms délibérément sans substring partagé (pas de préfixe/suffixe commun, ex. timestamp) :
+  // POST /api/artistes passe par la dédup floue de suivi (CorrespondanceArtiste.estDoublonArtiste,
+  // Jaro ≥ 0.95 | containment ≥ 0.65) — deux noms de test qui ne diffèrent que par 1 caractère
+  // (ex. suffixe "-A"/"-B" sur un même préfixe long) sont détectés comme doublon du même artiste
+  // et le second POST échoue en 409, contrairement aux salles (créées via /digitick-salles, un
+  // flux admin CRUD indépendant sans dédup de suivi).
+  test("api_admin_artistes_modifierEtFusionner_fluxComplet", async () => {
+    const ctx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    const nomA = `Zzargonautfusiontest${Date.now()}`;
+    const nomB = `Zzbaobabchinookwomble${Date.now()}`;
+    let artisteA: string | null = null;
+    let artisteB: string | null = null;
+    try {
+      const repAjoutA = await ctx.post("/api/artistes", {
+        data: { nom: nomA },
+      });
+      expect(repAjoutA.status()).toBe(201);
+      const repListeA = await ctx.get(
+        `/api/admin/artistes?nom=${encodeURIComponent(nomA)}`,
+      );
+      artisteA = (await repListeA.json()).artistes[0]?.id ?? null;
+      expect(artisteA).not.toBeNull();
+
+      const repAjoutB = await ctx.post("/api/artistes", {
+        data: { nom: nomB },
+      });
+      expect(repAjoutB.status()).toBe(201);
+      const repListeB = await ctx.get(
+        `/api/admin/artistes?nom=${encodeURIComponent(nomB)}`,
+      );
+      artisteB = (await repListeB.json()).artistes[0]?.id ?? null;
+      expect(artisteB).not.toBeNull();
+
+      const repPatch = await ctx.patch(`/api/admin/artistes/${artisteA}`, {
+        data: { nomAffiche: "Nom Canonique Artiste Test" },
+      });
+      expect(repPatch.status()).toBe(200);
+
+      const repFusion = await ctx.post(
+        `/api/admin/artistes/${artisteB}/fusionner/${artisteA}`,
+      );
+      expect(repFusion.status()).toBe(200);
+
+      const repListeApresFusion = await ctx.get(
+        `/api/admin/artistes?nom=${encodeURIComponent(nomB)}`,
+      );
+      const donneesApres = await repListeApresFusion.json();
+      expect(
+        donneesApres.artistes.some((a: { id: string }) => a.id === artisteB),
+      ).toBe(false);
+      artisteB = null;
+
+      const repListeFinale = await ctx.get(
+        `/api/admin/artistes?nom=${encodeURIComponent(nomA)}`,
+      );
+      const finale = (await repListeFinale.json()).artistes.find(
+        (a: { id: string }) => a.id === artisteA,
+      );
+      expect(finale?.nomAffiche).toBe("Nom Canonique Artiste Test");
+    } finally {
+      if (artisteA)
+        await ctx.delete(`/api/artistes/${artisteA}`).catch(() => {});
+      if (artisteB)
+        await ctx.delete(`/api/artistes/${artisteB}`).catch(() => {});
+      await ctx.dispose();
+    }
+  });
+
+  // #879 : intégrité post-fusion avec chevauchement réel de données préexistant — l'utilisateur
+  // admin suit les deux salles (user_salles en conflit potentiel) avant la fusion ; après fusion,
+  // le suivi doit être préservé sur la cible sans doublon ni exception (contrainte unique
+  // (user_id, salle_uuid)).
+  test("api_admin_salles_fusion_chevauchementUserSalles_preserveLeSuiviSansDoublon", async () => {
+    const ctx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_ADMIN,
+    });
+    const suffixe = Date.now();
+    const nomA = `ZZTestChevauchementA-${suffixe}`;
+    const nomB = `ZZTestChevauchementB-${suffixe}`;
+    let salleA: string | null = null;
+    try {
+      const repA = await ctx.post("/api/admin/digitick-salles", {
+        data: { nom: nomA, slug: `zztest-chevauchement-a-${suffixe}` },
+      });
+      expect(repA.status()).toBe(201);
+      salleA = (await repA.json()).salleUuid;
+      const repB = await ctx.post("/api/admin/digitick-salles", {
+        data: { nom: nomB, slug: `zztest-chevauchement-b-${suffixe}` },
+      });
+      expect(repB.status()).toBe(201);
+      const salleB = (await repB.json()).salleUuid;
+
+      // L'admin (utilisateur) suit les deux salles avant la fusion — chevauchement réel.
+      const repSuiviA = await ctx.post("/api/salles", { data: { nom: nomA } });
+      expect(repSuiviA.status()).toBe(201);
+      const repSuiviB = await ctx.post("/api/salles", { data: { nom: nomB } });
+      expect(repSuiviB.status()).toBe(201);
+
+      const repMesSallesAvant = await ctx.get(
+        `/api/salles?q=${encodeURIComponent(String(suffixe))}`,
+      );
+      const mesSallesAvant = (await repMesSallesAvant.json()).salles;
+      expect(mesSallesAvant.length).toBe(2);
+
+      const repFusion = await ctx.post(
+        `/api/admin/salles/${salleB}/fusionner/${salleA}`,
+      );
+      expect(repFusion.status()).toBe(200);
+
+      const repMesSallesApres = await ctx.get(
+        `/api/salles?q=${encodeURIComponent(String(suffixe))}`,
+      );
+      const mesSallesApres = (await repMesSallesApres.json()).salles;
+      expect(mesSallesApres.length).toBe(1);
+      expect(mesSallesApres[0].id).toBe(salleA);
+    } finally {
+      if (salleA) {
+        await ctx.delete(`/api/salles/${salleA}`).catch(() => {});
+        await ctx
+          .delete(`/api/admin/digitick-salles/${salleA}`)
           .catch(() => {});
       }
       await ctx.dispose();

@@ -63,6 +63,7 @@ import { useTheme } from './composables/useTheme.js'
 import { useSession } from './composables/useSession.js'
 import { useEstMobile } from './composables/useBreakpoint.js'
 import { useToasts } from './composables/useToasts.js'
+import { ecouterMiseAJourServiceWorker } from './composables/useMiseAJourServiceWorker.js'
 
 useTheme()
 const estMobile = useEstMobile()
@@ -131,14 +132,8 @@ onMounted(async () => {
   chargerBanniere()
   chargerChangelogNonVu()
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      miseAJourEnCours.value = true
-      window.location.reload()
-    })
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      if (event.data?.type === 'nav-ancre') {
-        router.push(event.data.url)
-      }
+    ecouterMiseAJourServiceWorker(miseAJourEnCours, navigator.serviceWorker, {
+      naviguerVersAncre: (url) => router.push(url),
     })
   }
 

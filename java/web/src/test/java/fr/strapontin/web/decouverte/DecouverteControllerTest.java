@@ -4,84 +4,84 @@
  */
 package fr.strapontin.web.decouverte;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-import java.time.LocalDate;
-import java.util.HashMap;
+import fr.strapontin.web.concert.FiltreConcerts;
+import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link DecouverteService}.
+/// Tests unitaires de {@link DecouverteController#decouvrir}.
 ///
-/// <p>Couvre le filtre mois via bornes de dates (correction du {@code to_char()} non indexable).
+/// <p>Les tests de {@code fetcher()} vivent dans {@link DecouverteControllerFetcherTest}.
+/// Les tests du filtre mois et du comportement global de {@code decouvrir} au niveau service
+/// vivent dans {@link DecouverteServiceTest}.
 ///
-/// @since 2.0.5
+/// @since 2.6.6
 /// @author Kwaite
 @ExtendWith(MockitoExtension.class)
 class DecouverteControllerTest {
 
-  @Mock private NamedParameterJdbcTemplate jdbc;
+  @Mock private DecouverteService decouverteService;
 
-  private DecouverteService service;
+  private DecouverteController controller;
+  private Authentication auth;
 
   @BeforeEach
   void setUp() {
-    service = new DecouverteService(jdbc);
+    controller = new DecouverteController(decouverteService);
+    UtilisateurDetails ud =
+        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
+    auth = mock(Authentication.class);
+    when(auth.getPrincipal()).thenReturn(ud);
   }
 
   @Test
-  void filtresMois_moisValide_poseBornesCorrectesEnParamsSql() throws Exception {
-    Map<String, Object> params = new HashMap<>();
-    invoquerConstruireFiltresWhere(service, "2026-05", params);
-    assertEquals(LocalDate.of(2026, 5, 1), params.get("moisDebut"));
-    assertEquals(LocalDate.of(2026, 6, 1), params.get("moisFin"));
+  void decouvrir_construitLeFiltreEtDelegueAuServiceAvecUserId() {
+    ReponseDecouverte attendu =
+        new ReponseDecouverte(
+            List.of(), 0, 1, 0, List.of(), List.of(), List.of(), List.of(), null, List.of());
+    when(decouverteService.decouvrir(eq("user-1"), any(FiltreConcerts.class))).thenReturn(attendu);
+
+    ResponseEntity<ReponseDecouverte> rep =
+        controller.decouvrir(
+            List.of("75", "92"), "zenith", "2026-05", "Pop", "concert", "nouveaute", 1, auth);
+
+    assertEquals(HttpStatus.OK, rep.getStatusCode());
+    assertSame(attendu, rep.getBody());
   }
 
   @Test
-  void filtresMois_decembre_moisFinEstJanvierAnneeSuivante() throws Exception {
-    Map<String, Object> params = new HashMap<>();
-    invoquerConstruireFiltresWhere(service, "2026-12", params);
-    assertEquals(LocalDate.of(2026, 12, 1), params.get("moisDebut"));
-    assertEquals(LocalDate.of(2027, 1, 1), params.get("moisFin"));
-  }
+  void decouvrir_transmetLesCriteresDansLeFiltre() {
+    ReponseDecouverte vide =
+        new ReponseDecouverte(
+            List.of(), 0, 1, 0, List.of(), List.of(), List.of(), List.of(), null, List.of());
+    when(decouverteService.decouvrir(eq("user-1"), any(FiltreConcerts.class))).thenReturn(vide);
 
-  @Test
-  void filtresMois_formatSansZeroLeading_filtreIgnore() throws Exception {
-    Map<String, Object> params = new HashMap<>();
-    invoquerConstruireFiltresWhere(service, "2026-5", params);
-    assertFalse(params.containsKey("moisDebut"));
-    assertFalse(params.containsKey("moisFin"));
-  }
+    controller.decouvrir(List.of("75"), "q", "2026-05", "Pop", "concert", "nouveaute", 2, auth);
 
-  @Test
-  void filtresMois_vide_filtreIgnore() throws Exception {
-    Map<String, Object> params = new HashMap<>();
-    invoquerConstruireFiltresWhere(service, "", params);
-    assertFalse(params.containsKey("moisDebut"));
-    assertFalse(params.containsKey("moisFin"));
-  }
-
-  @SuppressWarnings("unchecked")
-  private static void invoquerConstruireFiltresWhere(
-      DecouverteService svc, String mois, Map<String, Object> params) throws Exception {
-    var m =
-        DecouverteService.class.getDeclaredMethod(
-            "construireFiltresWhere",
-            List.class,
-            String.class,
-            String.class,
-            String.class,
-            String.class,
-            LocalDate.class,
-            Map.class);
-    m.setAccessible(true);
-    m.invoke(svc, List.of(), "", mois, "", "", LocalDate.of(2026, 5, 29), params);
+    org.mockito.ArgumentCaptor<FiltreConcerts> captor =
+        org.mockito.ArgumentCaptor.forClass(FiltreConcerts.class);
+    org.mockito.Mockito.verify(decouverteService).decouvrir(eq("user-1"), captor.capture());
+    FiltreConcerts filtre = captor.getValue();
+    assertEquals("q", filtre.q());
+    assertEquals("2026-05", filtre.mois());
+    assertEquals("Pop", filtre.genre());
+    assertEquals("concert", filtre.classification());
+    assertEquals("nouveaute", filtre.tri());
+    assertEquals(2, filtre.page());
+    assertEquals(List.of("75"), filtre.depts());
   }
 }

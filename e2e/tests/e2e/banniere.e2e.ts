@@ -99,6 +99,24 @@ test.describe("Bannière système overlay", () => {
     await expect(overlay).toBeVisible({ timeout: 5000 });
   });
 
+  // #880 : seul le minuteur "info" (10s) était laissé expirer naturellement — le minuteur
+  // "warning" (20s, useBanniere.js DELAIS.warning) n'était jamais testé jusqu'à expiration.
+  test("banniere_typeWarning_autoMasquageApres20s_puisReapparaitALaNavigation", async ({
+    page,
+  }) => {
+    await publierBanniere(page, "Test auto-masquage warning", "warning");
+    await page.goto("/");
+    const overlay = page.locator(".banniere-overlay");
+    await expect(overlay).toBeVisible({ timeout: 5000 });
+
+    // Minuterie "warning" = 20s (useBanniere.js DELAIS.warning).
+    await expect(overlay).not.toBeAttached({ timeout: 22000 });
+
+    await page.locator('a[href="/spectacles"]').first().click();
+    await expect(page).toHaveURL(/\/spectacles/);
+    await expect(overlay).toBeVisible({ timeout: 5000 });
+  });
+
   test("banniere_desktop_positionnee_apres_sidebar", async ({
     page,
     isMobile,

@@ -4,74 +4,113 @@
  */
 package fr.strapontin.web.salle;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import java.time.Instant;
+import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de la normalisation et de la détection des doublons pour les salles.
+/// Tests unitaires de {@link SalleController}.
 ///
-/// <p>Couvre {@link SalleService#normaliserSalleCle(String)} et la logique de suivi.
+/// <p>Vérifie la délégation à {@link SalleService} et la validation manuelle du contrôleur
+/// (nom vide/trop long, conversions blank→null des identifiants externes). Les tests de
+/// {@code signalerManquante} vivent dans {@link SalleSignalementControllerTest}.
 ///
-/// @since 2.0.5
+/// @since 2.6.6
 /// @author Kwaite
+@ExtendWith(MockitoExtension.class)
 class SalleControllerTest {
 
-  @Test
-  void normaliserSalleCle_nomStandard_retourneAlphanumeriqueMinuscule() {
-    assertEquals("olympia", SalleService.normaliserSalleCle("Olympia"));
+  @Mock private SalleService salleService;
+  @Mock private EmailService emailService;
+
+  private SalleController controller;
+  private Authentication auth;
+
+  @BeforeEach
+  void setUp() {
+    controller = new SalleController(salleService, emailService);
+    UtilisateurDetails ud =
+        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
+    auth = mock(Authentication.class);
+    when(auth.getPrincipal()).thenReturn(ud);
   }
 
   @Test
-  void normaliserSalleCle_accentsEtPonctuation_retireCaracteresSpeciaux() {
-    assertEquals("zenithdemontbrun", SalleService.normaliserSalleCle("Zénith de Montbrun"));
+  void listerSalles_delegueAuServiceAvecUserIdEtQ() {
+    ReponseSalles attendu = new ReponseSalles(List.of(), List.of(), false);
+    when(salleService.lister("user-1", "zenith")).thenReturn(attendu);
+
+    ResponseEntity<ReponseSalles> rep = controller.listerSalles("zenith", auth);
+
+    assertEquals(HttpStatus.OK, rep.getStatusCode());
+    assertEquals(attendu, rep.getBody());
   }
 
   @Test
-  void normaliserSalleCle_apostrophe_retireApostrophe() {
-    assertEquals("lempreinte", SalleService.normaliserSalleCle("l'empreinte"));
+  void ajouterSalle_nomValide_retourne201EtDelegueAuService() {
+    ResponseEntity<Map<String, Object>> rep =
+        controller.ajouterSalle(new RequeteAjouter("Olympia", "tm-123"), auth);
+
+    assertEquals(HttpStatus.CREATED, rep.getStatusCode());
+    assertEquals(true, rep.getBody().get("succes"));
+    verify(salleService).ajouter("user-1", "Olympia", "tm-123", null, null);
   }
 
   @Test
-  void normaliserSalleCle_tiret_retireTiret() {
-    assertEquals("zenitharena", SalleService.normaliserSalleCle("zenith-arena"));
+  void ajouterSalle_nomVide_retourne400SansDelegation() {
+    ResponseEntity<Map<String, Object>> rep =
+        controller.ajouterSalle(new RequeteAjouter("   ", null), auth);
+
+    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
+    verify(salleService, never()).ajouter(anyString(), anyString(), any(), any(), any());
   }
 
   @Test
-  void normaliserSalleCle_casseMixte_resultatIdentique() {
-    assertEquals(
-        SalleService.normaliserSalleCle("BATACLAN"), SalleService.normaliserSalleCle("bataclan"));
+  void ajouterSalle_nomTropLong_retourne400() {
+    ResponseEntity<Map<String, Object>> rep =
+        controller.ajouterSalle(new RequeteAjouter("a".repeat(201), null), auth);
+
+    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
   }
 
   @Test
-  void dejaLaSuivie_nomIdentique_retourneVrai() {
-    var salles = List.of(new SalleUtilisateur(UUID.randomUUID(), "Olympia", Instant.EPOCH, false));
-    String rechercheNorm = SalleService.normaliserSalleCle("Olympia");
-    boolean dejaLaSuivie =
-        salles.stream()
-            .anyMatch(s -> SalleService.normaliserSalleCle(s.nom()).equals(rechercheNorm));
-    assertTrue(dejaLaSuivie);
+  void ajouterSalle_identifiantsExternesBlancs_convertisEnNull() {
+    controller.ajouterSalle(new RequeteAjouter("Olympia", "  ", "", "  "), auth);
+
+    verify(salleService).ajouter("user-1", "Olympia", null, null, null);
   }
 
   @Test
-  void dejaLaSuivie_nomAvecAccentEtCasseDifferente_retourneVrai() {
-    var salles = List.of(new SalleUtilisateur(UUID.randomUUID(), "Zénith", Instant.EPOCH, false));
-    String rechercheNorm = SalleService.normaliserSalleCle("zenith");
-    boolean dejaLaSuivie =
-        salles.stream()
-            .anyMatch(s -> SalleService.normaliserSalleCle(s.nom()).equals(rechercheNorm));
-    assertTrue(dejaLaSuivie);
+  void ajouterSalle_identifiantsExternesPresents_sontStrippes() {
+    controller.ajouterSalle(new RequeteAjouter("Olympia", " tm-123 ", " osm-1 ", "Q42"), auth);
+
+    verify(salleService).ajouter("user-1", "Olympia", "tm-123", "osm-1", "Q42");
   }
 
   @Test
-  void dejaLaSuivie_nomDifferent_retourneFaux() {
-    var salles = List.of(new SalleUtilisateur(UUID.randomUUID(), "Olympia", Instant.EPOCH, false));
-    String rechercheNorm = SalleService.normaliserSalleCle("Bataclan");
-    boolean dejaLaSuivie =
-        salles.stream()
-            .anyMatch(s -> SalleService.normaliserSalleCle(s.nom()).equals(rechercheNorm));
-    assertFalse(dejaLaSuivie);
+  void supprimerSalle_delegueAuServiceEtRetourne204() {
+    UUID salleUuid = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
+    ResponseEntity<Void> rep = controller.supprimerSalle(salleUuid, auth);
+
+    assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
+    verify(salleService).supprimer("user-1", salleUuid);
   }
 }

@@ -122,4 +122,118 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
       await ctx.close();
     }
   });
+
+  test("blocage_apres_5_echecs_puis_deblocage_admin_et_reconnexion", async ({
+    browser,
+    browserName,
+    isMobile,
+  }) => {
+    test.skip(
+      browserName !== "chromium" || isMobile,
+      "login répété — chromium desktop uniquement",
+    );
+
+    const ctx = await browser.newContext({ storageState: undefined });
+    const page = await ctx.newPage();
+    let secret = "";
+    try {
+      // 1. Login + enrollment TOTP (comme le cycle propre ci-dessus).
+      await page.goto("/login");
+      await page.fill("input[name='identifiant']", USER);
+      await page.fill("input[name='motDePasse']", MDP);
+      await page.click("button[type='submit']");
+      await expect(page).not.toHaveURL(/login/, { timeout: 10000 });
+
+      const setup = await page.request.get("/api/totp/setup");
+      secret = (await setup.json()).totpSecret;
+      const confirm = await page.request.post("/api/totp/confirmer", {
+        data: { code: calculerCode(secret) },
+      });
+      expect(confirm.status()).toBe(200);
+
+      await page.request.post("/api/auth/logout");
+      await ctx.clearCookies();
+      await attendreProchaineFenetre();
+
+      // 2. Reconnexion → challenge TOTP en attente.
+      await page.goto("/login");
+      await page.fill("input[name='identifiant']", USER);
+      await page.fill("input[name='motDePasse']", MDP);
+      await page.click("button[type='submit']");
+      await expect(page).toHaveURL(/auth\/totp/, { timeout: 10000 });
+
+      // 3. 5 échecs consécutifs avec un code délibérément incorrect → verrouillage.
+      const codeValide = calculerCode(secret);
+      const codeFaux = codeValide === "000000" ? "000001" : "000000";
+      for (let essai = 1; essai <= 4; essai++) {
+        const rep = await page.request.post("/api/auth/totp", {
+          data: { code: codeFaux },
+        });
+        expect(rep.status(), `échec ${essai}/4 doit être 422`).toBe(422);
+      }
+      const repVerrouillage = await page.request.post("/api/auth/totp", {
+        data: { code: codeFaux },
+      });
+      expect(repVerrouillage.status()).toBe(401);
+      expect((await repVerrouillage.json()).erreur).toContain("verrouillé");
+
+      // 4. Le verrouillage est persistant en base : une nouvelle tentative de connexion
+      //    échoue immédiatement en 401, même avec le code TOTP correct.
+      await ctx.clearCookies();
+      await page.goto("/login");
+      await page.fill("input[name='identifiant']", USER);
+      await page.fill("input[name='motDePasse']", MDP);
+      await page.click("button[type='submit']");
+      await expect(page).toHaveURL(/auth\/totp/, { timeout: 10000 });
+      const repApresVerrouillage = await page.request.post("/api/auth/totp", {
+        data: { code: calculerCode(secret) },
+      });
+      expect(repApresVerrouillage.status()).toBe(401);
+
+      // 5. Un admin réinitialise la 2FA — le compte redevient accessible sans code.
+      const adminCtx = await browser.newContext({
+        storageState: FICHIER_AUTH_ADMIN,
+      });
+      const liste = await adminCtx.request.get("/api/admin/utilisateurs");
+      const users = await liste.json();
+      const u = users.find((x: { username: string }) => x.username === USER);
+      const resetRep = await adminCtx.request.post(
+        `/api/admin/utilisateurs/${u.id}/reset-totp`,
+      );
+      expect(resetRep.status()).toBe(200);
+      await adminCtx.close();
+      secret = ""; // la 2FA est désormais désactivée, plus besoin du cleanup du finally.
+
+      // 6. Reconnexion sans code TOTP requis.
+      await ctx.clearCookies();
+      await page.goto("/login");
+      await page.fill("input[name='identifiant']", USER);
+      await page.fill("input[name='motDePasse']", MDP);
+      await page.click("button[type='submit']");
+      await expect(page).not.toHaveURL(/login|auth\/totp/, { timeout: 10000 });
+      await expect(page.locator("main")).toBeVisible();
+    } finally {
+      if (secret) {
+        const adminCtx = await browser.newContext({
+          storageState: FICHIER_AUTH_ADMIN,
+        });
+        try {
+          const liste = await adminCtx.request.get("/api/admin/utilisateurs");
+          const users = await liste.json();
+          const u = users.find(
+            (x: { username: string }) => x.username === USER,
+          );
+          if (u) {
+            await adminCtx.request.post(
+              `/api/admin/utilisateurs/${u.id}/reset-totp`,
+            );
+          }
+        } catch {
+          /* best-effort */
+        }
+        await adminCtx.close();
+      }
+      await ctx.close();
+    }
+  });
 });

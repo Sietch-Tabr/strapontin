@@ -353,4 +353,32 @@ class SalleServiceTest {
   void contientCorrespondancePartielle_aucuneCorrespondance_retourneFalse() {
     assertFalse(SalleService.contientCorrespondancePartielle("olympia", Set.of("zenithparis")));
   }
+
+  // #865 : déplacés depuis l'ancien SalleControllerTest, qui ne testait en réalité pas
+  // SalleController mais cette méthode statique.
+  @Test
+  void normaliserSalleCle_nomStandard_retourneAlphanumeriqueMinuscule() {
+    assertEquals("olympia", SalleService.normaliserSalleCle("Olympia"));
+  }
+
+  @Test
+  void normaliserSalleCle_accentsEtPonctuation_retireCaracteresSpeciaux() {
+    assertEquals("zenithdemontbrun", SalleService.normaliserSalleCle("Zénith de Montbrun"));
+  }
+
+  @Test
+  void normaliserSalleCle_apostrophe_retireApostrophe() {
+    assertEquals("lempreinte", SalleService.normaliserSalleCle("l'empreinte"));
+  }
+
+  @Test
+  void normaliserSalleCle_tiret_retireTiret() {
+    assertEquals("zenitharena", SalleService.normaliserSalleCle("zenith-arena"));
+  }
+
+  @Test
+  void normaliserSalleCle_casseMixte_resultatIdentique() {
+    assertEquals(
+        SalleService.normaliserSalleCle("BATACLAN"), SalleService.normaliserSalleCle("bataclan"));
+  }
 }

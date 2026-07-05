@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Tests unitaires pour {@link PreferencesService} — focus sur la dédup floue de l'import (#824).
@@ -99,5 +100,161 @@ class PreferencesServiceTest {
     verify(salleService).resoudreSalleUuid(eq("Zenith Paris"), anyString());
     verify(jdbc, never())
         .update(org.mockito.ArgumentMatchers.contains("INSERT INTO salles"), anyMap());
+  }
+
+  @Test
+  void importerArtistes_capAtteintPartiellement_tronqueEtRejetteLeSurplus() {
+    when(jdbc.queryForObject(
+            org.mockito.ArgumentMatchers.contains("user_artistes"), anyMap(), eq(Integer.class)))
+        .thenReturn(498);
+    when(artisteService.resoudreArtisteId(anyString(), anyString())).thenReturn(UUID.randomUUID());
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    ExportComplet export =
+        new ExportComplet(
+            1,
+            "2026-07-04",
+            List.of(
+                new ArtisteExport("Artiste 1", null),
+                new ArtisteExport("Artiste 2", null),
+                new ArtisteExport("Artiste 3", null)),
+            null,
+            null);
+
+    PreferencesService.ResultatImportComplet resultat =
+        service.importer("u1", export, false, false);
+
+    assertEquals(2, resultat.artistes(), "seuls 2 artistes doivent passer avant le cap de 500");
+    assertEquals(1, resultat.rejetes());
+  }
+
+  @Test
+  void importerSalles_capAtteintPartiellement_tronqueEtRejetteLeSurplus() {
+    when(jdbc.queryForObject(
+            org.mockito.ArgumentMatchers.contains("user_salles"), anyMap(), eq(Integer.class)))
+        .thenReturn(199);
+    when(salleService.resoudreSalleUuid(anyString(), anyString())).thenReturn(UUID.randomUUID());
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    ExportComplet export =
+        new ExportComplet(
+            1,
+            "2026-07-04",
+            null,
+            List.of(new SalleExport(null, null, "Salle 1"), new SalleExport(null, null, "Salle 2")),
+            null);
+
+    PreferencesService.ResultatImportComplet resultat =
+        service.importer("u1", export, false, false);
+
+    assertEquals(1, resultat.salles(), "seule 1 salle doit passer avant le cap de 200");
+    assertEquals(1, resultat.rejetes());
+  }
+
+  @Test
+  void importerSalles_nomEtSalleCleVides_estRejetee() {
+    ExportComplet export =
+        new ExportComplet(1, "2026-07-04", null, List.of(new SalleExport(null, null, "   ")), null);
+
+    PreferencesService.ResultatImportComplet resultat =
+        service.importer("u1", export, false, false);
+
+    assertEquals(0, resultat.salles());
+    assertEquals(1, resultat.rejetes());
+    verify(salleService, never()).resoudreSalleUuid(anyString(), anyString());
+  }
+
+  @Test
+  void importer_modeEcraser_supprimeAvantReimport() {
+    when(jdbc.update(org.mockito.ArgumentMatchers.contains("DELETE FROM user_artistes"), anyMap()))
+        .thenReturn(3);
+    when(jdbc.update(org.mockito.ArgumentMatchers.contains("DELETE FROM user_salles"), anyMap()))
+        .thenReturn(2);
+
+    ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, null);
+
+    service.importer("u1", export, true, false);
+
+    verify(jdbc)
+        .update(org.mockito.ArgumentMatchers.contains("DELETE FROM user_artistes"), anyMap());
+    verify(jdbc).update(org.mockito.ArgumentMatchers.contains("DELETE FROM user_salles"), anyMap());
+  }
+
+  @Test
+  void importer_ecraserFaux_neSupprimeRien() {
+    ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, null);
+
+    service.importer("u1", export, false, false);
+
+    verify(jdbc, never())
+        .update(org.mockito.ArgumentMatchers.contains("DELETE FROM user_artistes"), anyMap());
+    verify(jdbc, never())
+        .update(org.mockito.ArgumentMatchers.contains("DELETE FROM user_salles"), anyMap());
+  }
+
+  @Test
+  void importer_fusionDepartements_sansEcraserNiImporterConfig() {
+    ConfigExport config =
+        new ConfigExport(List.of("75", "92"), true, "jamais", false, false, false, false, "auto");
+    ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, config);
+
+    service.importer("u1", export, false, false);
+
+    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    verify(jdbc)
+        .update(org.mockito.ArgumentMatchers.contains("SELECT DISTINCT unnest"), captor.capture());
+    assertEquals("u1", captor.getValue().get("userId"));
+    verify(jdbc, never())
+        .update(org.mockito.ArgumentMatchers.contains("INSERT INTO user_config"), anyMap());
+  }
+
+  @Test
+  void importer_importerConfigVrai_remplaceToute_neFusionnePas() {
+    ConfigExport config =
+        new ConfigExport(List.of("75"), true, "quotidien", true, false, false, false, "sombre");
+    ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, config);
+
+    service.importer("u1", export, false, true);
+
+    verify(jdbc).update(org.mockito.ArgumentMatchers.contains("INSERT INTO user_config"), anyMap());
+    verify(jdbc, never())
+        .update(org.mockito.ArgumentMatchers.contains("SELECT DISTINCT unnest"), anyMap());
+  }
+
+  @Test
+  void exporterPuisImporter_roundTrip_conserveArtisteEtSalle() {
+    when(jdbc.query(
+            org.mockito.ArgumentMatchers.contains("user_artistes"),
+            anyMap(),
+            org.mockito.ArgumentMatchers
+                .<org.springframework.jdbc.core.RowMapper<ArtisteExport>>any()))
+        .thenReturn(List.of(new ArtisteExport("Radiohead", "radiohead")));
+    when(jdbc.query(
+            org.mockito.ArgumentMatchers.contains("user_salles"),
+            anyMap(),
+            org.mockito.ArgumentMatchers
+                .<org.springframework.jdbc.core.RowMapper<SalleExport>>any()))
+        .thenReturn(List.of(new SalleExport("zenithparis", null, "Zenith Paris")));
+    when(jdbc.query(
+            org.mockito.ArgumentMatchers.contains("user_config"),
+            anyMap(),
+            org.mockito.ArgumentMatchers
+                .<org.springframework.jdbc.core.RowMapper<ConfigExport>>any()))
+        .thenReturn(List.of());
+
+    ExportComplet export = service.exporter("u1");
+
+    when(artisteService.resoudreArtisteId(eq("Radiohead"), anyString()))
+        .thenReturn(UUID.randomUUID());
+    when(salleService.resoudreSalleUuid(eq("Zenith Paris"), anyString()))
+        .thenReturn(UUID.randomUUID());
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    PreferencesService.ResultatImportComplet resultat =
+        service.importer("u2", export, false, false);
+
+    assertEquals(1, resultat.artistes());
+    assertEquals(1, resultat.salles());
+    assertEquals(0, resultat.rejetes());
   }
 }

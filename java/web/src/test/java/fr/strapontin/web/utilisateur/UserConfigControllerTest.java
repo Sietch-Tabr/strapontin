@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -62,5 +63,40 @@ class UserConfigControllerTest {
     controller.majDepartements(new RequeteDepartements(brut), authPour("u1"));
 
     verify(userConfigService).majDepartements(any(), any());
+  }
+
+  @Test
+  void majNotifications_delegueAuServiceAvecUserId() {
+    RequeteNotifications requete = new RequeteNotifications("quotidien", true, false, false, false);
+
+    controller.majNotifications(requete, authPour("u1"));
+
+    verify(userConfigService).majNotifications("u1", requete);
+  }
+
+  @Test
+  void majFiltres_delegueAuServiceAvecUserId() {
+    controller.majFiltres(new RequeteFiltres(false), authPour("u1"));
+
+    verify(userConfigService).majFiltres("u1", false);
+  }
+
+  @Test
+  void majTheme_delegueAuServiceEtRetourneLaValeur() {
+    var rep = controller.majTheme(new RequeteTheme("sombre"), authPour("u1"));
+
+    verify(userConfigService).majTheme("u1", "sombre");
+    assertThat(rep.getBody().get("theme")).isEqualTo("sombre");
+  }
+
+  @Test
+  void lireConfig_delegueAuServiceAvecUserId() {
+    ConfigUtilisateur config =
+        new ConfigUtilisateur(List.of(), true, "jamais", false, false, false, false, "auto", false);
+    when(userConfigService.lireConfig("u1")).thenReturn(config);
+
+    var rep = controller.lireConfig(authPour("u1"));
+
+    assertThat(rep.getBody()).isSameAs(config);
   }
 }
