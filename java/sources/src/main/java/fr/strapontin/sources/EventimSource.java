@@ -53,7 +53,8 @@ public class EventimSource implements SourceConcerts {
     this(
         RestClient.builder()
             .requestFactory(
-                ClientHttpFactory.creerRequestFactory(Duration.ofSeconds(10), Duration.ofSeconds(30)))
+                ClientHttpFactory.creerRequestFactory(
+                    Duration.ofSeconds(10), Duration.ofSeconds(30)))
             .defaultHeader("Accept", "application/json, text/plain, */*")
             .defaultHeader(
                 "User-Agent",

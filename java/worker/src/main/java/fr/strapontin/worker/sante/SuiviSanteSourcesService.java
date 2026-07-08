@@ -86,7 +86,10 @@ public class SuiviSanteSourcesService {
     // necessite_intervention_le n'existe que sur artiste_sources (#888) — résolution naturelle
     // dès qu'un fetch redevient positif, sans attendre le prochain cycle nocturne.
     String colonneInterventionResolue =
-        "artiste_sources".equals(table) ? ", necessite_intervention_le = CASE WHEN :succes THEN NULL ELSE necessite_intervention_le END" : "";
+        "artiste_sources".equals(table)
+            ? ", necessite_intervention_le = CASE WHEN :succes THEN NULL ELSE"
+                  + " necessite_intervention_le END"
+            : "";
     String sql =
         "UPDATE "
             + table

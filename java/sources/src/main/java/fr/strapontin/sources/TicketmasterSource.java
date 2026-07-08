@@ -186,7 +186,8 @@ public class TicketmasterSource implements SourceAvecFetchLot {
         apiKey,
         RestClient.builder()
             .requestFactory(
-                ClientHttpFactory.creerRequestFactory(Duration.ofSeconds(10), Duration.ofSeconds(30)))
+                ClientHttpFactory.creerRequestFactory(
+                    Duration.ofSeconds(10), Duration.ofSeconds(30)))
             .build());
   }
 

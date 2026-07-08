@@ -150,8 +150,7 @@ class SuiviSanteSourcesServiceTest {
 
     verify(jdbc)
         .update(
-            org.mockito.ArgumentMatchers.argThat(
-                sql -> !sql.contains("necessite_intervention_le")),
+            org.mockito.ArgumentMatchers.argThat(sql -> !sql.contains("necessite_intervention_le")),
             org.mockito.ArgumentMatchers.anyMap());
   }
 

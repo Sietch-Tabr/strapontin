@@ -208,7 +208,8 @@ class ReconciliationNocturneServiceTest {
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 p -> artisteId.toString().equals(p.get("artisteId"))));
     verify(logsAdminWorker)
-        .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("redécouverte artiste"), any());
+        .inserer(
+            eq("warn"), eq("reconciliation-nocturne"), contains("redécouverte artiste"), any());
   }
 
   @Test
