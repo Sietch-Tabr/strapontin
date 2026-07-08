@@ -12,7 +12,20 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.6.5 — 5 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.7.0 — 8 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Dans le référentiel Artistes, un statut « À vérifier » ne s'affiche plus jamais à tort : seul un statut « Invalide » confirmé par une vérification active apparaît désormais, l'ancien indicateur intermédiaire générait trop de faux positifs sur des artistes pourtant bien actifs.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.6.5 — 5 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Administration</p>
@@ -23,7 +36,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.6.4 — 5 juillet 2026</h2></summary>

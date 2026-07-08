@@ -19,6 +19,13 @@ import org.springframework.stereotype.Service;
 /// cadence 11 fetch/jour), l'identifiant devient "suspect" et sera traité par
 /// {@link ReconciliationNocturneService} au prochain cycle nocturne.
 ///
+/// Ce compteur passif reste volontairement générique aux deux tables, mais génère trop de faux
+/// positifs pour être exposé tel quel côté statut admin artistes (#888, 65% de faux positifs
+/// observés) : {@code artiste_sources.necessite_intervention_le}, posée uniquement par
+/// {@link ReconciliationNocturneService} en cas d'échec confirmé de la vérification active, fait
+/// désormais foi pour le statut affiché. Un fetch de nouveau positif sur un artiste TM efface
+/// cette colonne — la résolution est donc naturelle, sans attendre le prochain cycle nocturne.
+///
 /// @since 2.6.0
 /// @author Kwaite
 @Service
@@ -76,12 +83,17 @@ public class SuiviSanteSourcesService {
 
   private void mettreAJourCompteur(
       String table, String source, String identifiant, boolean succes) {
+    // necessite_intervention_le n'existe que sur artiste_sources (#888) — résolution naturelle
+    // dès qu'un fetch redevient positif, sans attendre le prochain cycle nocturne.
+    String colonneInterventionResolue =
+        "artiste_sources".equals(table) ? ", necessite_intervention_le = CASE WHEN :succes THEN NULL ELSE necessite_intervention_le END" : "";
     String sql =
         "UPDATE "
             + table
             + " SET nb_zero_consecutifs = CASE WHEN :succes THEN 0 ELSE nb_zero_consecutifs + 1"
             + " END, suspect_depuis = CASE WHEN :succes THEN NULL WHEN nb_zero_consecutifs + 1 >="
             + " :seuil AND suspect_depuis IS NULL THEN now() ELSE suspect_depuis END"
+            + colonneInterventionResolue
             + " WHERE source = :source AND identifiant_externe = :identifiant";
     try {
       jdbc.update(

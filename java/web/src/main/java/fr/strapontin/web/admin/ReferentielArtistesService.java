@@ -24,6 +24,14 @@ import org.springframework.transaction.annotation.Transactional;
 /// {@code artiste_norm} textuel différent selon la source — sans ce nettoyage, les deux lignes
 /// subsistaient après fusion, dupliquant le concert sur la fiche de l'artiste cible.
 ///
+/// <p>Le statut affiché est binaire ({@code a_jour}/{@code invalide}, #888) : contrairement à
+/// {@link ReferentielSallesService} (3 états basés sur {@code suspect_depuis}, compteur passif
+/// jugé fiable pour les salles), le statut artiste dérive de
+/// {@code artiste_sources.necessite_intervention_le}, posée uniquement quand la vérification
+/// active nocturne a confirmé l'identifiant mort ET échoué à en retrouver un nouveau — le
+/// compteur passif seul (trop de faux positifs sur des artistes sans date à venir) ne suffit
+/// plus à qualifier un état intermédiaire {@code a_verifier}.
+///
 /// @since 2.6.0
 /// @author Kwaite
 @Service
@@ -44,8 +52,8 @@ public class ReferentielArtistesService {
   ///
   /// @param page             numéro de page (0-indexé)
   /// @param nom              filtre nom partiel (insensible à la casse), peut être null
-  /// @param statut           filtre {@code "a_jour"}/{@code "a_verifier"}/{@code "invalide"}, peut
-  ///     être null
+  /// @param statut           filtre {@code "a_jour"}/{@code "invalide"} (#888, statut binaire —
+  ///     {@code "a_verifier"} n'est jamais retourné pour un artiste), peut être null
   /// @param wikidataManquant si {@code true}, ne retourne que les artistes sans {@code wikidata_id}
   ///     — facilite le repérage des candidats à corriger manuellement sans parcourir toute la
   ///     pagination
@@ -108,9 +116,8 @@ public class ReferentielArtistesService {
                COUNT(DISTINCT c.id) FILTER (WHERE c.date >= CURRENT_DATE) AS nb_concerts,
                COALESCE(string_agg(DISTINCT asrc.source, ','), '') AS sources,
                CASE
-                 WHEN MIN(asrc.suspect_depuis) IS NULL THEN 'a_jour'
-                 WHEN MIN(asrc.suspect_depuis) < now() - interval '24 hours' THEN 'invalide'
-                 ELSE 'a_verifier'
+                 WHEN MIN(asrc.necessite_intervention_le) IS NULL THEN 'a_jour'
+                 ELSE 'invalide'
                END AS statut
         FROM artistes a
         LEFT JOIN concerts c ON c.artiste_id = a.id
@@ -216,6 +223,13 @@ public class ReferentielArtistesService {
     jdbc.update(
         "UPDATE artiste_sources SET artiste_id = CAST(:cible AS uuid) WHERE artiste_id ="
             + " CAST(:source AS uuid)",
+        ids);
+
+    // #888 : une fusion admin est elle-même une résolution manuelle — efface le signal
+    // d'intervention hérité de l'artiste absorbé ou déjà posé sur la cible.
+    jdbc.update(
+        "UPDATE artiste_sources SET necessite_intervention_le = NULL WHERE artiste_id ="
+            + " CAST(:cible AS uuid)",
         ids);
 
     jdbc.update(

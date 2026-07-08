@@ -216,6 +216,12 @@ public class ReconciliationNocturneService {
           nouveauId);
       return;
     }
+    jdbc.update(
+        """
+        UPDATE artiste_sources SET necessite_intervention_le = now()
+        WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
+        """,
+        Map.of("artisteId", artisteId.toString()));
     logsAdminWorker.inserer(
         "warn",
         "reconciliation-nocturne",

@@ -128,6 +128,34 @@ class SuiviSanteSourcesServiceTest {
   }
 
   @Test
+  void enregistrerResultatArtistesLot_succes_effaceNecessiteInterventionArtisteSources() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc);
+
+    service.enregistrerResultatArtistesLot(
+        List.of("K1"), List.of(concertAvecArtisteSourceId("ticketmaster:K1")));
+
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("necessite_intervention_le"),
+            org.mockito.ArgumentMatchers.anyMap());
+  }
+
+  @Test
+  void enregistrerResultatSalle_succes_neReferencePasNecessiteInterventionSalleSources() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc);
+
+    service.enregistrerResultatSalle("ticketmaster:rZFSnyZdFvA", 1);
+
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.argThat(
+                sql -> !sql.contains("necessite_intervention_le")),
+            org.mockito.ArgumentMatchers.anyMap());
+  }
+
+  @Test
   void enregistrerResultatSalle_exceptionJdbc_neRelancePasException() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     when(jdbc.update(anyString(), org.mockito.ArgumentMatchers.anyMap()))
