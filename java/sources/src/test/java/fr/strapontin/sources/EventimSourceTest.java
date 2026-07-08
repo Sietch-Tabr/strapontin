@@ -240,6 +240,14 @@ class EventimSourceTest {
     assertNull(resultat.dept());
   }
 
+  // #887 : timeout HTTP explicite (connexion 10s/lecture 30s) via ClientHttpFactory
+  @Test
+  void constructeurParDefaut_neLancePasException_etExposeLeNomEventim() {
+    EventimSource source = new EventimSource();
+
+    assertEquals("eventim", source.nom());
+  }
+
   // --- Tests HTTP ---
 
   @Test
