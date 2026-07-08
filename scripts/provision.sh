@@ -325,7 +325,9 @@ ExecStart=/usr/bin/java -Xms64m -Xmx384m -XX:+UseZGC -jar $APP_DIR/worker.jar
 SuccessExitStatus=143
 Restart=on-failure
 RestartSec=5
-TimeoutStopSec=30
+# #886 : laisse le temps à wait-for-jobs-to-complete-on-shutdown (application.properties) de
+# terminer un cycle fetch en cours plutôt que de le tuer silencieusement lors d'un déploiement.
+TimeoutStopSec=90
 LimitNOFILE=65536
 
 [Install]

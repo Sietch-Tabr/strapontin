@@ -6,6 +6,7 @@ package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -46,10 +47,14 @@ public class EventimSource implements SourceConcerts {
 
   private final RestClient restClient;
 
-  /// Crée une instance avec un RestClient par défaut incluant les headers Eventim.
+  /// Crée une instance avec un RestClient par défaut incluant les headers Eventim et un timeout
+  /// explicite (connexion 10s, lecture 30s — #887).
   public EventimSource() {
     this(
         RestClient.builder()
+            .requestFactory(
+                ClientHttpFactory.creerRequestFactory(
+                    Duration.ofSeconds(10), Duration.ofSeconds(30)))
             .defaultHeader("Accept", "application/json, text/plain, */*")
             .defaultHeader(
                 "User-Agent",

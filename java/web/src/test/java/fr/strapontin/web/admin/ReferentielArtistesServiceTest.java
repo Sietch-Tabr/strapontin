@@ -65,7 +65,9 @@ class ReferentielArtistesServiceTest {
   }
 
   // Régression #778 : les valeurs de statut exposées doivent être autoporteuses
-  // (a_jour/a_verifier/invalide) plutôt que vivant/suspect/mort, peu clairs hors contexte.
+  // (a_jour/invalide) plutôt que vivant/suspect/mort, peu clairs hors contexte.
+  // #888 : statut désormais binaire (necessite_intervention_le), 'a_verifier' n'est plus jamais
+  // retourné pour un artiste — le compteur passif seul générait trop de faux positifs (65%).
   @Test
   @SuppressWarnings("unchecked")
   void lister_nominal_requeteUtiliseLesNouvellesValeursDeStatut() {
@@ -79,8 +81,9 @@ class ReferentielArtistesServiceTest {
             org.mockito.ArgumentMatchers.argThat(
                 (String sql) ->
                     sql.contains("'a_jour'")
-                        && sql.contains("'a_verifier'")
-                        && sql.contains("'invalide'")),
+                        && sql.contains("'invalide'")
+                        && !sql.contains("'a_verifier'")
+                        && sql.contains("necessite_intervention_le")),
             anyMap(),
             eq(Long.class));
   }
@@ -164,6 +167,8 @@ class ReferentielArtistesServiceTest {
     verify(jdbc, times(1)).update(contains("DELETE FROM user_artistes"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE user_artistes SET artiste_id"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE artiste_sources SET artiste_id"), anyMap());
+    verify(jdbc, times(1))
+        .update(contains("UPDATE artiste_sources SET necessite_intervention_le = NULL"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE artistes SET"), anyMap());
     verify(jdbc, times(1)).update(contains("DELETE FROM artistes WHERE"), anyMap());
     verify(logAdminService).logAdmin(eq("info"), eq("admin"), any());

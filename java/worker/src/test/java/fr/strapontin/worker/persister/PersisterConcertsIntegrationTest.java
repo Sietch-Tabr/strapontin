@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.sources.TicketmasterSource;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,12 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @SpringBootTest
 @ActiveProfiles("test")
 class PersisterConcertsIntegrationTest {
+
+  // Date relative à "aujourd'hui" (comme RecalculerMatchesServiceIntegrationTest#DATE_FUTURE) —
+  // ReconciliateurArtistes.reconcilierArtistes ne charge que les concerts des 7 derniers jours
+  // pour la réconciliation inter-jobs ; une date figée finit toujours par sortir de cette
+  // fenêtre au fil du temps (constaté sur "2026-06-28", devenu invalide après le 5 juillet).
+  private static final String DATE_RECENTE = LocalDate.now().toString();
 
   @ServiceConnection
   static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
@@ -211,9 +218,9 @@ class PersisterConcertsIntegrationTest {
   void persisterConcerts_artisteRenommeAvecSuffixeNumerique_metsAJourPasInsertion() {
     // ticket #619 — "Star Academy" -> "Star Academy 1" entre deux fetches TM, même salle/date
     persisterConcerts.persisterConcerts(
-        List.of(concert("Star Academy", "2026-06-28", "Accor Arena", "ticketmaster")));
+        List.of(concert("Star Academy", DATE_RECENTE, "Accor Arena", "ticketmaster")));
     persisterConcerts.persisterConcerts(
-        List.of(concert("Star Academy 1", "2026-06-28", "Accor Arena", "ticketmaster")));
+        List.of(concert("Star Academy 1", DATE_RECENTE, "Accor Arena", "ticketmaster")));
 
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count);
@@ -241,9 +248,9 @@ class PersisterConcertsIntegrationTest {
   @Test
   void persisterConcerts_artistesDistinctsMemeSalleEtDate_conserveLesDeuxConcerts() {
     persisterConcerts.persisterConcerts(
-        List.of(concert("Pink", "2026-06-28", "Accor Arena", "ticketmaster")));
+        List.of(concert("Pink", DATE_RECENTE, "Accor Arena", "ticketmaster")));
     persisterConcerts.persisterConcerts(
-        List.of(concert("Pink Floyd", "2026-06-28", "Accor Arena", "ticketmaster")));
+        List.of(concert("Pink Floyd", DATE_RECENTE, "Accor Arena", "ticketmaster")));
 
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(2L, count);
@@ -547,12 +554,12 @@ class PersisterConcertsIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(
             concertAvecUrl(
-                "Yael Naim", "2026-06-28", "Hippodrome de Longchamp", "eventim", urlFestival)));
+                "Yael Naim", DATE_RECENTE, "Hippodrome de Longchamp", "eventim", urlFestival)));
 
     persisterConcerts.persisterConcerts(
         List.of(
             concertAvecUrl(
-                "Solidays 2026", "2026-06-28", "Hippodrome de Longchamp", "eventim", urlFestival)));
+                "Solidays 2026", DATE_RECENTE, "Hippodrome de Longchamp", "eventim", urlFestival)));
 
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count, "les deux concerts avec la même URL doivent fusionner en un seul");

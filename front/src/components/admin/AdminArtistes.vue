@@ -20,7 +20,6 @@
         <select v-model="filtreStatut" aria-label="Filtrer par statut" @change="rechargerPage0">
           <option value="">Tous statuts</option>
           <option value="a_jour">À jour</option>
-          <option value="a_verifier">À vérifier</option>
           <option value="invalide">Invalide</option>
         </select>
         <label class="source-filtre-checkbox">

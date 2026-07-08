@@ -25,16 +25,20 @@
 
     <properties>
         <!-- Version CI-friendly (#764) : un seul bump ici met à jour parent + 4 modules enfants -->
-        <revision>2.6.6</revision>
+        <revision>2.7.0</revision>
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Override BOM : Spring Boot 4.1.0 tire Flyway 12.4.0 ; on requiert 12.9.0+ -->
-        <flyway.version>12.9.0</flyway.version>
+        <flyway.version>12.10.0</flyway.version>
         <caffeine.version>3.2.4</caffeine.version>
-        <postgresql.version>42.7.11</postgresql.version>
+        <postgresql.version>42.7.13</postgresql.version>
         <!-- Versions non gérées par le BOM -->
         <bouncycastle.version>1.84</bouncycastle.version>
         <webpush.version>5.1.2</webpush.version>
+        <!-- v4.15.0/v4.16.0 tirent okhttp 5.4.0, dont l'artefact Maven publié n'est qu'une
+             coquille de métadonnées Kotlin Multiplatform sans classes JVM (résolution de
+             variante Gradle non comprise par Maven) — reste en v4.14.1 (okhttp 4.12.0, jar
+             classique) tant que resend-java ne republie pas un artefact JVM consommable. -->
         <resend.version>v4.14.1</resend.version>
         <springdoc.version>3.0.3</springdoc.version>
         <bucket4j.version>8.19.0</bucket4j.version>

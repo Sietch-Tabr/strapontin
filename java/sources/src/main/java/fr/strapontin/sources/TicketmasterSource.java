@@ -7,6 +7,7 @@ package fr.strapontin.sources;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.QuotaTM;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -176,11 +177,18 @@ public class TicketmasterSource implements SourceAvecFetchLot {
   private final AtomicInteger erreursHttpCumulees = new AtomicInteger();
   private final AtomicLong dernierAppelMs = new AtomicLong(0);
 
-  /// Crée une instance avec la clé API fournie et un RestClient par défaut.
+  /// Crée une instance avec la clé API fournie et un RestClient par défaut (timeout connexion
+  /// 10s, lecture 30s — #887).
   ///
   /// @param apiKey clé API Ticketmaster Discovery v2
   public TicketmasterSource(String apiKey) {
-    this(apiKey, RestClient.create());
+    this(
+        apiKey,
+        RestClient.builder()
+            .requestFactory(
+                ClientHttpFactory.creerRequestFactory(
+                    Duration.ofSeconds(10), Duration.ofSeconds(30)))
+            .build());
   }
 
   /// Crée une instance avec la clé API et un RestClient personnalisé (injection de test).

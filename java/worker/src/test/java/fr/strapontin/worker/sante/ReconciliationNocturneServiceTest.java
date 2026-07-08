@@ -188,6 +188,31 @@ class ReconciliationNocturneServiceTest {
   }
 
   @Test
+  void executer_artisteMortAucunCandidat_poseNecessiteInterventionLe() {
+    UUID artisteId = UUID.randomUUID();
+    Map<String, Object> ligneArtiste = new HashMap<>();
+    ligneArtiste.put("artiste_id", artisteId);
+    ligneArtiste.put("identifiant_externe", "ancienAttractionId");
+    ligneArtiste.put("nom", "Jain");
+    when(jdbc.queryForList(contains("artiste_sources asrc JOIN artistes"), anyMap()))
+        .thenReturn(List.of(ligneArtiste));
+    when(tm.verifierAttraction("ancienAttractionId")).thenReturn(StatutIdTM.MORT);
+    when(tm.rechercherAttractionId("Jain")).thenReturn(null);
+
+    service.executer();
+
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.matches(
+                "(?s).*UPDATE artiste_sources.*necessite_intervention_le = now\\(\\).*"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> artisteId.toString().equals(p.get("artisteId"))));
+    verify(logsAdminWorker)
+        .inserer(
+            eq("warn"), eq("reconciliation-nocturne"), contains("redécouverte artiste"), any());
+  }
+
+  @Test
   void executer_artisteVivant_reinitialiseSuspectSansRedecouverte() {
     UUID artisteId = UUID.randomUUID();
     Map<String, Object> ligneArtiste = new HashMap<>();
