@@ -13,3 +13,19 @@ steps:
     commands:
       - apk add --no-cache openssh-client bash curl
       - bash scripts/woodpecker-restore-test.sh
+
+  - name: alerte-echec
+    image: alpine
+    depends_on: [restore-test]
+    environment:
+      RESEND_API_KEY:
+        from_secret: resend_api_key
+      ALERTE_EXPEDITEUR:
+        from_secret: alerte_expediteur
+      ALERTE_DESTINATAIRE:
+        from_secret: alerte_destinataire
+    commands:
+      - apk add --no-cache curl jq
+      - bash scripts/woodpecker-restore-test-alerte.sh
+    when:
+      - status: [failure]

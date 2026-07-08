@@ -31,6 +31,9 @@ $SSH "$PROXMOX" "pct stop ${LXC_TEMP_ID} --force 2>/dev/null; pct destroy ${LXC_
 echo "[restore-test] Clonage LXC ${LXC_PROD_ID} → ${LXC_TEMP_ID}..."
 $SSH "$PROXMOX" "pct clone ${LXC_PROD_ID} ${LXC_TEMP_ID} --full 1 --hostname strapontin-restore-test"
 
+echo "[restore-test] Réattribution réseau du clone (MAC neuve + DHCP — évite tout conflit avec l'IP statique de la prod)..."
+$SSH "$PROXMOX" "pct set ${LXC_TEMP_ID} --net0 name=eth0,bridge=vmbr0,tag=20,ip=dhcp"
+
 echo "[restore-test] Démarrage LXC ${LXC_TEMP_ID}..."
 $SSH "$PROXMOX" "pct start ${LXC_TEMP_ID}"
 
