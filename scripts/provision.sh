@@ -257,6 +257,8 @@ pct exec "$VMID" -- bash -c "
     sed -i 's/^#*shared_buffers\s*=.*/shared_buffers = 400MB/' \$PG_CONF
     sed -i 's/^#*work_mem\s*=.*/work_mem = 16MB/' \$PG_CONF
     sed -i 's/^#*effective_cache_size\s*=.*/effective_cache_size = 2GB/' \$PG_CONF
+    sed -i 's/^#*statement_timeout\s*=.*/statement_timeout = 30s/' \$PG_CONF
+    sed -i 's/^#*idle_in_transaction_session_timeout\s*=.*/idle_in_transaction_session_timeout = 30s/' \$PG_CONF
     systemctl restart postgresql
 "
 
