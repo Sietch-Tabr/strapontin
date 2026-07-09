@@ -7,6 +7,7 @@ set -euo pipefail
 
 FICHIER="${1:?Usage: restore.sh <strapontin_YYYYMMDD_HHMMSS.tar.gz>}"
 APP_DIR="/opt/strapontin"
+APP_USER_DEFAUT="strapontin"
 
 [ -f "$FICHIER" ] || { echo "ERREUR : fichier introuvable : $FICHIER" >&2; exit 1; }
 [[ "$FICHIER" == *.tar.gz ]] || { echo "ERREUR : fichier attendu en .tar.gz" >&2; exit 1; }
@@ -15,14 +16,20 @@ echo "=== Restauration Strapontin ==="
 echo "Fichier : $FICHIER"
 echo ""
 
-echo "[1/5] Arrêt des services..."
+echo "[1/6] Arrêt des services..."
 systemctl stop strapontin-web strapontin-worker
 
-echo "[2/5] Extraction de l'archive..."
-if tar -tzf "$FICHIER" | grep -q "^dump\.sql$"; then
+echo "[2/6] Extraction de l'archive..."
+# Capturer le contenu une seule fois : grep -q sur un pipe direct depuis tar
+# quitte dès la première correspondance, tar reçoit alors un SIGPIPE en
+# tentant d'écrire la suite et pipefail remonte à tort cet échec plutôt que
+# le succès de grep — bug constaté en conditions réelles, jamais détecté
+# avant faute d'exécution de ce script.
+CONTENU_ARCHIVE=$(tar -tzf "$FICHIER")
+if grep -q "^dump\.sql$" <<< "$CONTENU_ARCHIVE"; then
     tar -xzf "$FICHIER" -C /tmp dump.sql
     DUMP=/tmp/dump.sql
-elif tar -tzf "$FICHIER" | grep -q "^dump_local\.sql$"; then
+elif grep -q "^dump_local\.sql$" <<< "$CONTENU_ARCHIVE"; then
     tar -xzf "$FICHIER" -C /tmp dump_local.sql
     DUMP=/tmp/dump_local.sql
 else
@@ -31,22 +38,58 @@ else
 fi
 echo "  $DUMP extrait"
 
-echo "[3/5] Réinitialisation de la base..."
-su - postgres -c "dropdb --if-exists strapontin && createdb strapontin"
+echo "[3/6] Lecture du .env de l'archive (si présent)..."
+# Extrait avant de toucher à la base : le propriétaire de la base recréée à
+# l'étape suivante doit être ce compte applicatif, pas 'postgres' (voir #4).
+ENV_PRESENT=0
+APP_USER="$APP_USER_DEFAUT"
+NOUVEAU_MDP=""
+if grep -q "^\.env$" <<< "$CONTENU_ARCHIVE"; then
+    tar -xzf "$FICHIER" -C /tmp .env
+    APP_USER=$(grep '^SPRING_DATASOURCE_USERNAME=' /tmp/.env | cut -d'=' -f2-)
+    NOUVEAU_MDP=$(grep '^SPRING_DATASOURCE_PASSWORD=' /tmp/.env | cut -d'=' -f2-)
+    if [ -z "$APP_USER" ] || [ -z "$NOUVEAU_MDP" ]; then
+        echo "ERREUR : SPRING_DATASOURCE_USERNAME/PASSWORD absents du .env de l'archive" >&2
+        exit 1
+    fi
+    ENV_PRESENT=1
+    echo "  .env trouvé, utilisateur applicatif : $APP_USER"
+else
+    echo "  ATTENTION : aucun .env dans l'archive — utilisateur par défaut ($APP_USER_DEFAUT)"
+    echo "  conservé, le .env actuel n'est pas modifié."
+fi
 
-echo "[4/5] Restauration du dump..."
+echo "[4/6] Réinitialisation de la base (propriétaire : $APP_USER)..."
+# createdb sans -O appartient au rôle exécutant (postgres) : depuis PG15,
+# les droits CREATE sur le schéma public sont révoqués par défaut pour tout
+# rôle autre que le propriétaire — Flyway, connecté en tant que $APP_USER,
+# échouait alors sur toute migration avec "droit refusé pour le schéma
+# public". Bug pré-existant, jamais détecté faute d'exécution réelle de ce
+# script.
+su - postgres -c "dropdb --if-exists strapontin && createdb -O '$APP_USER' strapontin"
+
+echo "[5/6] Restauration du dump..."
 su - postgres -c "psql strapontin" < "$DUMP"
 rm "$DUMP"
 
-echo "[5/5] Redémarrage des services..."
+echo "[6/6] Finalisation..."
+if [ "$ENV_PRESENT" = "1" ]; then
+    # Le .env restauré peut porter un mot de passe différent de celui du rôle
+    # PostgreSQL actuel (ex. instance neuve provisionnée avec un mot de passe
+    # aléatoire) — sans ce réalignement, l'application ne peut plus se
+    # connecter à sa propre base malgré une restauration par ailleurs réussie.
+    su - postgres -c "psql -c \"ALTER USER $APP_USER WITH PASSWORD '$NOUVEAU_MDP';\""
+    mv /tmp/.env "$APP_DIR/.env"
+    chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
+    chmod 600 "$APP_DIR/.env"
+    echo "  .env restauré, mot de passe PostgreSQL réaligné"
+fi
+
+echo "Redémarrage des services..."
 systemctl start strapontin-web strapontin-worker
 
 echo ""
 echo "================================================================"
 echo "  Restauration terminée"
-echo "  Vérifiez l'application : curl -sf http://localhost:8080/actuator/health"
-echo "  IMPORTANT : si l'archive contient un .env, le restaurer pour que"
-echo "  APP_CONFIG_SECRET corresponde aux donnees chiffrees du dump :"
-echo "    tar -xzf $FICHIER -C $APP_DIR .env"
-echo "    systemctl restart strapontin-web strapontin-worker"
+echo "  Vérifiez l'application : curl -sf http://localhost:9090/actuator/health"
 echo "================================================================"
