@@ -17,7 +17,8 @@ strapontin/
     ├── backup-local.sh       ← dump PostgreSQL + .env + logs → local (/opt/strapontin/backup/, rétention 7j)
     ├── woodpecker-backup.sh  ← appelé par le step backup Woodpecker (copie + exécute backup-local.sh)
     ├── woodpecker-deploy.sh  ← appelé par le step deploy Woodpecker
-    └── restore.sh            ← restauration depuis archive tar.gz (NAS ou local)
+    ├── restore.sh            ← restauration depuis archive tar.gz (NAS ou local)
+    └── restore-test.sh       ← test de restauration à la demande (#748), jamais en CI
 ```
 
 ## Architecture module web — couche service/repository
@@ -141,6 +142,14 @@ Labels : `Bug`, `Feature`, `Question`, `Task`, `Duplicate`, `Invalid`.
 Pipeline active : **test (Maven) + test-front (Vitest) → build-front → build (Maven) → backup → deploy**, tous restreints à `branch: main`. `build-front` dépend de `test-front` (v2.6.2, #781), comme `build` dépend de `test`. Secrets requis : `ssh_key`, `lxc_host`. Le step `backup` exécute `woodpecker-backup.sh` (backup local sur le LXC prod avant déploiement).
 
 > **Woodpecker — repo trusted** : le repo doit être marqué "trusted" (Settings → repo → cocher "Trusted") pour autoriser les volumes Maven dans le pipeline.
+
+## Sauvegarde et restauration
+
+`backup.sh`/`backup-local.sh` archivent `dump.sql`/`dump_local.sql` + `.env` + logs. `restore.sh` restaure l'archive complète : recrée la base avec le **bon propriétaire** (`createdb -O <utilisateur>`, extrait du `.env` de l'archive) — depuis PostgreSQL 15, les droits `CREATE` sur le schéma `public` sont révoqués par défaut pour tout rôle autre que le propriétaire, un `createdb` sans `-O` (rôle `postgres` par défaut) fait donc échouer toute migration Flyway ultérieure avec `droit refusé pour le schéma public`. Restaure aussi le `.env` de l'archive et réaligne le mot de passe PostgreSQL du rôle applicatif sur `SPRING_DATASOURCE_PASSWORD` qu'il contient — sans ce réalignement, l'application ne peut plus se connecter à sa propre base après une restauration sur une instance dont le mot de passe diffère (ex. instance neuve).
+
+`scripts/restore-test.sh` (#748) : test de restauration à la demande, jamais automatisé en cron/CI. Séquence : `vzdump` snapshot de la prod (non disruptif) → `pct restore` en LXC temporaire (199) → réattribution réseau (MAC neuve + `ip=dhcp`, sinon le LXC restauré hérite de l'IP/MAC statique de la prod et provoque un conflit ARP pendant tout le test) → `restore.sh` → health checks (`:9090`/`:9091`, **pas** `:8080` — c'est le port applicatif/SPA, pas l'actuator) → destruction. `pct clone` est délibérément évité : il refuse de cloner un conteneur ayant un point de montage bind (`mp0`, le partage NAS de la prod, monté uniquement en profil `prod` de `provision.sh`) — `vzdump` l'exclut nativement (« not a volume »). Le LXC restauré hérite aussi du flag `protection` de la prod, à désactiver avant tout `pct destroy`.
+
+**Jamais automatisé via Woodpecker** : le LXC Woodpecker (VLAN 20, `192.168.20.0/24`) n'a volontairement pas de route active vers le réseau de management Proxmox (`192.168.1.0/24`, gateway distincte `192.168.1.1`) — confirmé (route présente mais tout le trafic, y compris ICMP, y est filtré), cohérent avec le modèle default-deny inter-VLAN déjà en place ailleurs sur cette infra (ex. NFS VLAN20→VLAN10 nécessite une règle explicite). Percer cette frontière donnerait à un pipeline CI (code de dépendances tierces, images Docker) un accès root à l'hyperviseur entier — disproportionné face au risque de compromission d'un pipeline. `scripts/restore-test.sh` s'exécute donc uniquement à la demande, copié puis lancé directement sur Proxmox.
 
 ## Variables d'environnement — java/web/.env
 
