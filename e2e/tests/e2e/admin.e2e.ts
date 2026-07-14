@@ -363,6 +363,16 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       timeout: 3000,
     });
     await page.click("button#dialog-confirmer-role-ok");
+    // Attendre le badge admin (reflète rechargerUtilisateurs() côté serveur) avant de recliquer
+    // « Modifier » — sinon la fermeture automatique du formulaire déclenchée par la sauvegarde
+    // précédente (encore en vol) peut arriver après ce reclic et refermer l'édition qui vient de
+    // rouvrir. Même pattern que le test sœur ci-dessus (ligne ~295).
+    await expect(
+      page
+        .locator(".user-carte")
+        .filter({ hasText: emailTest })
+        .locator(".badge-info"),
+    ).toBeVisible({ timeout: 5000 });
 
     const carteAdmin = page
       .locator(".user-carte")

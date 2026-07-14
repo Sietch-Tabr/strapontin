@@ -38,7 +38,7 @@
               <p class="user-carte-suivi">{{ u.nbArtistes }} artiste{{ u.nbArtistes !== 1 ? 's' : '' }}, {{ u.nbSalles }} salle{{ u.nbSalles !== 1 ? 's' : '' }}</p>
             </div>
             <div v-if="u.id !== utilisateurCourantId" class="user-carte-actions">
-              <button type="button" class="btn btn-sm btn-secondary" @click="toggleModif(u.id)">Modifier</button>
+              <button type="button" class="btn btn-sm btn-secondary" @click="ouvrirModif(u.id)">Modifier</button>
               <button type="button" class="btn btn-sm btn-secondary" @click="reinitMdp(u)">Réinit. MDP</button>
               <button type="button" class="btn btn-sm btn-secondary" @click="reinitTotp(u)">Réinit. 2FA</button>
               <button
@@ -59,7 +59,7 @@
                 <option value="admin">admin</option>
               </select>
               <button type="submit" class="btn btn-sm btn-primary">Enregistrer</button>
-              <button type="button" class="btn btn-sm btn-secondary" @click="toggleModif(u.id)">Annuler</button>
+              <button type="button" class="btn btn-sm btn-secondary" @click="fermerModif(u.id)">Annuler</button>
               <span v-if="modifErreurs[u.id]" class="erreur-modif">{{ modifErreurs[u.id] }}</span>
             </form>
           </div>
@@ -238,10 +238,20 @@ function fermerDialogInvitation() {
   fermerDialogInvitationModal()
 }
 
-function toggleModif(userId) {
+// Ouverture/fermeture par intention explicite, pas par bascule : « Modifier » n'a jamais
+// vocation à fermer, ni la fermeture après sauvegarde à rouvrir. Une bascule XOR se désynchronise
+// dès qu'un clic manuel et la fermeture asynchrone après sauvegarde s'entrelacent (le clic peut
+// fermer une édition en cours pendant qu'une sauvegarde précédente est encore en vol, laissant le
+// formulaire fermé alors que l'utilisateur vient de cliquer « Modifier »).
+function ouvrirModif(userId) {
   const s = new Set(modifOuverts.value)
-  if (s.has(userId)) s.delete(userId)
-  else s.add(userId)
+  s.add(userId)
+  modifOuverts.value = s
+}
+
+function fermerModif(userId) {
+  const s = new Set(modifOuverts.value)
+  s.delete(userId)
   modifOuverts.value = s
 }
 
@@ -266,7 +276,7 @@ async function envoyerPatch(u, d, messageSucces = 'Utilisateur modifié.') {
   if (d.role !== u.role) corps.role = d.role
 
   if (Object.keys(corps).length === 0) {
-    toggleModif(u.id)
+    fermerModif(u.id)
     return
   }
 
@@ -277,7 +287,7 @@ async function envoyerPatch(u, d, messageSucces = 'Utilisateur modifié.') {
   })
   const repCorps = await rep.json()
   if (rep.ok) {
-    toggleModif(u.id)
+    fermerModif(u.id)
     await rechargerUtilisateurs()
     afficherToast(messageSucces, 'succes')
   } else {
@@ -325,7 +335,7 @@ async function confirmerChangementRole() {
   const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'POST' })
   const corps = await rep.json()
   if (rep.ok) {
-    toggleModif(u.id)
+    fermerModif(u.id)
     await rechargerUtilisateurs()
     afficherToast('Révocation initiée. L\'administrateur sera prévenu par email.', 'succes')
   } else {
