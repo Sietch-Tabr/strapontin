@@ -20,6 +20,12 @@
               <li>Dans le référentiel Artistes, un statut « À vérifier » ne s'affiche plus jamais à tort : seul un statut « Invalide » confirmé par une vérification active apparaît désormais, l'ancien indicateur intermédiaire générait trop de faux positifs sur des artistes pourtant bien actifs.</li>
             </ul>
           </div>
+          <div>
+            <p class="changelog-categorie">Navigation</p>
+            <ul>
+              <li>Sur mobile, un appui sur un lien du menu « plus » pouvait parfois refermer le menu au lieu de naviguer — corrigé.</li>
+            </ul>
+          </div>
         </div>
       </section>
 

@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.CannotSerializeTransactionException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.web.client.RestClient;
@@ -271,7 +271,7 @@ class AdminServiceTest {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
     when(jdbc.update(anyString(), anyMap()))
-        .thenThrow(new CannotSerializeTransactionException("conflit"))
+        .thenThrow(new PessimisticLockingFailureException("conflit"))
         .thenReturn(1);
 
     adminService.initierRevocationAdmin("admin-1", "admin-2");
@@ -288,10 +288,10 @@ class AdminServiceTest {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
     when(jdbc.update(anyString(), anyMap()))
-        .thenThrow(new CannotSerializeTransactionException("conflit"));
+        .thenThrow(new PessimisticLockingFailureException("conflit"));
 
     assertThrows(
-        CannotSerializeTransactionException.class,
+        PessimisticLockingFailureException.class,
         () -> adminService.initierRevocationAdmin("admin-1", "admin-2"));
     verify(jdbc, times(3)).update(anyString(), anyMap());
   }

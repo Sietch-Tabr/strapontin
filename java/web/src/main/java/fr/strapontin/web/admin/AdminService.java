@@ -33,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.dao.CannotSerializeTransactionException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.session.FindByIndexNameSessionRepository;
@@ -383,7 +383,7 @@ public class AdminService {
       try {
         self.initierRevocationAdminTransactionnel(userId, adminId);
         return;
-      } catch (CannotSerializeTransactionException e) {
+      } catch (PessimisticLockingFailureException e) {
         if (tentative >= MAX_TENTATIVES_REVOCATION) throw e;
         log.warn(
             "Conflit de sérialisation lors de la révocation admin — nouvelle tentative ({}/{})",

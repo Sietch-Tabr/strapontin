@@ -22,8 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.dao.CannotSerializeTransactionException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -92,7 +92,7 @@ public class SetupService {
       try {
         self.initialiserTransactionnel(requete);
         return;
-      } catch (CannotSerializeTransactionException e) {
+      } catch (PessimisticLockingFailureException e) {
         if (tentative >= MAX_TENTATIVES) throw e;
         log.warn(
             "Conflit de sérialisation lors du setup — nouvelle tentative ({}/{})",

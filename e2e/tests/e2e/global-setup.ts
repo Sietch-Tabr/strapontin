@@ -1,4 +1,5 @@
 import { request } from "@playwright/test";
+import { execSync } from "child_process";
 import { existsSync, readFileSync } from "fs";
 
 const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
@@ -67,7 +68,52 @@ async function reinitialiserRateLimits(): Promise<void> {
   }
 }
 
+function listerPidsPlaywrightMcp(): string[] {
+  let sortie: string;
+  try {
+    sortie = execSync("ps aux", { encoding: "utf-8" });
+  } catch {
+    return []; // ps indisponible sur cette plateforme — ne bloque pas la suite pour autant
+  }
+  return sortie
+    .split("\n")
+    .filter((ligne) => /playwright-mcp/i.test(ligne))
+    .map((ligne) => ligne.trim().split(/\s+/)[1])
+    .filter((pid): pid is string => !!pid);
+}
+
+// Une session playwright-mcp (debug manuel) active en parallèle d'une suite E2E automatisée
+// ralentit fortement l'ensemble (facteur ~4x observé en session, faux timeouts en cascade sur
+// des tests sans rapport) sans jamais faire échouer clairement le run — juste le rendre très
+// lent, ce qui masque la vraie cause pendant potentiellement des dizaines de minutes. Échouer
+// immédiatement avec un message explicite plutôt que de laisser la suite tourner en silence.
+//
+// Un process playwright-mcp peut aussi apparaître de façon transitoire (reconnexion MCP,
+// quelques centaines de ms) sans jamais interférer réellement — un seul instantané `ps aux`
+// bloquerait alors des runs parfaitement sains. On ne retient donc que les PID encore présents
+// après un court délai, seule signature d'une session réellement soutenue.
+async function verifierAucunProcessAutomationParallele(): Promise<void> {
+  const premierReleve = listerPidsPlaywrightMcp();
+  if (premierReleve.length === 0) return;
+
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+  const secondReleve = new Set(listerPidsPlaywrightMcp());
+  const pidsPersistants = premierReleve.filter((pid) => secondReleve.has(pid));
+
+  if (pidsPersistants.length > 0) {
+    const pids = pidsPersistants.join(", ");
+    throw new Error(
+      `Processus playwright-mcp détecté(s) en parallèle (PID ${pids}, toujours présents après ` +
+        "3s) — une automatisation navigateur externe active pendant la suite E2E la ralentit " +
+        "fortement (facteur ~4x observé) et fausse les résultats. Arrêter ce(s) process avant " +
+        `de relancer : kill ${pids}`,
+    );
+  }
+}
+
 export default async function setup(): Promise<() => Promise<void>> {
+  await verifierAucunProcessAutomationParallele();
+
   const adminValide = sessionValide(FICHIER_AUTH_ADMIN);
   const userValide = sessionValide(FICHIER_AUTH_USER);
 
