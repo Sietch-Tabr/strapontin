@@ -47,8 +47,8 @@ VALUES (
 
 -- e2euser suit le premier artiste avec des concerts au moins 2 jours dans le futur
 -- (évite qu'un concert "aujourd'hui" expire pendant une suite de tests longue)
-INSERT INTO user_artistes (user_id, artiste_normalise, artiste_affiche, artiste_id)
-SELECT '${user_id}', a.nom_norm, a.nom, a.id
+INSERT INTO user_artistes (user_id, artiste_affiche, artiste_id)
+SELECT '${user_id}', a.nom, a.id
 FROM artistes a
 WHERE EXISTS (
   SELECT 1 FROM concerts c
@@ -64,6 +64,14 @@ FROM concerts c
 JOIN user_artistes ua ON ua.artiste_id = c.artiste_id AND ua.user_id = '${user_id}'
 WHERE c.date > CURRENT_DATE + INTERVAL '2 days'
 ON CONFLICT DO NOTHING;
+
+-- Départements vidés pour e2euser : RecalculerMatchesService filtre les matches par
+-- user_config.departements. Un filtre non vide restreindrait les matches aux seuls concerts
+-- de l'artiste suivi situés dans ces départements précis — l'artiste suivi ci-dessus est
+-- choisi uniquement sur sa date, sans notion de département, donc un filtre déjà positionné
+-- (par un test antérieur qui ne l'aurait pas réinitialisé) ferait disparaître silencieusement
+-- tous les matches au prochain cycle de recalcul.
+UPDATE user_config SET departements = '{}' WHERE user_id = '${user_id}';
 
 SELECT username, role FROM users WHERE username IN ('e2eadmin', 'e2euser', 'tmp_e2einv') ORDER BY username;
 SQL

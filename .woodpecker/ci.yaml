@@ -1,3 +1,6 @@
+concurrency:
+  limit: 1
+
 when:
   - event: push
     branch: main

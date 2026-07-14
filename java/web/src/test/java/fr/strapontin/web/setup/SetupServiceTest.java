@@ -20,8 +20,8 @@ import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.config.ConfigService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.CannotSerializeTransactionException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Tests unitaires de {@link SetupService} — isolation SERIALIZABLE et retry (#803).
@@ -64,7 +64,7 @@ class SetupServiceTest {
   void initialiser_conflitSerialisationPuisSucces_reessaieEtReussit() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
     when(jdbc.update(anyString(), anyMap()))
-        .thenThrow(new CannotSerializeTransactionException("conflit"))
+        .thenThrow(new PessimisticLockingFailureException("conflit"))
         .thenReturn(1)
         .thenReturn(1);
 
@@ -77,10 +77,10 @@ class SetupServiceTest {
   void initialiser_conflitSerialisationPersistant_leveApresMaxTentatives() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
     when(jdbc.update(anyString(), anyMap()))
-        .thenThrow(new CannotSerializeTransactionException("conflit"));
+        .thenThrow(new PessimisticLockingFailureException("conflit"));
 
     assertThrows(
-        CannotSerializeTransactionException.class, () -> setupService.initialiser(requeteValide()));
+        PessimisticLockingFailureException.class, () -> setupService.initialiser(requeteValide()));
     verify(jdbc, times(3)).update(anyString(), anyMap());
   }
 

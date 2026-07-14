@@ -13,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.dao.CannotSerializeTransactionException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -101,7 +101,7 @@ public class PushService {
       try {
         self.abonnerTransactionnel(userId, requete);
         return;
-      } catch (CannotSerializeTransactionException e) {
+      } catch (PessimisticLockingFailureException e) {
         if (tentative >= MAX_TENTATIVES_ABONNEMENT) throw e;
         log.warn(
             "Conflit de sérialisation lors de l'abonnement push — nouvelle tentative ({}/{})",

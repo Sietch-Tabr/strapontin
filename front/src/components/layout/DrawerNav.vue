@@ -7,7 +7,7 @@
     @click="clicBackdrop"
     @close="$emit('fermer')"
   >
-    <div class="dialog-nav-handle" aria-hidden="true"></div>
+    <div class="dialog-nav-handle" ref="handleRef" aria-hidden="true"></div>
     <div class="dialog-nav-contenu">
       <a
         v-for="item in navSecondaire"
@@ -79,6 +79,7 @@ const props = defineProps({
 const emit = defineEmits(['fermer'])
 
 const dialogRef = ref(null)
+const handleRef = ref(null)
 const route = useRoute()
 const { naviguer } = useNavigation()
 
@@ -118,18 +119,21 @@ async function deconnecter() {
 
 let touchDepart = 0
 
+// Écouteurs posés sur la poignée uniquement, pas sur le dialog entier : un touchend sur un
+// lien (bulle jusqu'au dialog) pouvait sinon être interprété comme un swipe et fermer le menu
+// pendant le clic, rendant la navigation vers ce lien intermittente.
 function enregistrerSwipe() {
-  const el = dialogRef.value
-  if (!el) return
+  const poignee = handleRef.value
+  if (!poignee) return
 
   const onTouchStart = (e) => {
     touchDepart = e.touches[0].clientY
   }
   const onTouchEnd = (e) => {
-    if (e.changedTouches[0].clientY - touchDepart > 80) el.close()
+    if (e.changedTouches[0].clientY - touchDepart > 80) dialogRef.value?.close()
   }
 
-  el.addEventListener('touchstart', onTouchStart, { passive: true, once: true })
-  el.addEventListener('touchend', onTouchEnd, { passive: true, once: true })
+  poignee.addEventListener('touchstart', onTouchStart, { passive: true, once: true })
+  poignee.addEventListener('touchend', onTouchEnd, { passive: true, once: true })
 }
 </script>

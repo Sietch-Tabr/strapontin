@@ -29,17 +29,20 @@
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Override BOM : Spring Boot 4.1.0 tire Flyway 12.4.0 ; on requiert 12.9.0+ -->
-        <flyway.version>12.10.0</flyway.version>
+        <flyway.version>12.11.0</flyway.version>
         <caffeine.version>3.2.4</caffeine.version>
         <postgresql.version>42.7.13</postgresql.version>
         <!-- Versions non gérées par le BOM -->
         <bouncycastle.version>1.84</bouncycastle.version>
         <webpush.version>5.1.2</webpush.version>
-        <!-- v4.15.0/v4.16.0 tirent okhttp 5.4.0, dont l'artefact Maven publié n'est qu'une
-             coquille de métadonnées Kotlin Multiplatform sans classes JVM (résolution de
-             variante Gradle non comprise par Maven) — reste en v4.14.1 (okhttp 4.12.0, jar
-             classique) tant que resend-java ne republie pas un artefact JVM consommable. -->
-        <resend.version>v4.14.1</resend.version>
+        <!-- v4.15.0/v4.16.0 tirent com.squareup.okhttp3:okhttp:5.4.0, dont l'artefact Maven
+             publié est volontairement vide côté JVM depuis okhttp 5.0.0 (square/okhttp#8913) :
+             okhttp est désormais un module Kotlin Multiplatform, Gradle résout la bonne variante
+             automatiquement mais Maven doit choisir explicitement okhttp-jvm. Exclu ci-dessous
+             et remplacé par une dépendance directe sur okhttp-jvm (jar JVM complet, contient
+             bien okhttp3.RequestBody). -->
+        <resend.version>v4.16.0</resend.version>
+        <okhttp-jvm.version>5.4.0</okhttp-jvm.version>
         <springdoc.version>3.0.3</springdoc.version>
         <bucket4j.version>8.19.0</bucket4j.version>
         <jsoup.version>1.22.2</jsoup.version>
@@ -115,6 +118,18 @@
                 <groupId>com.resend</groupId>
                 <artifactId>resend-java</artifactId>
                 <version>${resend.version}</version>
+                <exclusions>
+                    <!-- Coquille vide côté JVM (square/okhttp#8913) — voir okhttp-jvm ci-dessous -->
+                    <exclusion>
+                        <groupId>com.squareup.okhttp3</groupId>
+                        <artifactId>okhttp</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp-jvm</artifactId>
+                <version>${okhttp-jvm.version}</version>
             </dependency>
 
             <!-- OpenAPI / Swagger UI (série 3.x pour Spring Boot 4.x) -->
