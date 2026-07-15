@@ -342,6 +342,12 @@ class AdminServiceTest {
   }
 
   @Test
+  void sauvegarderConfig_adminAlertEmail_sauvegarde() {
+    adminService.sauvegarderConfig("ADMIN_ALERT_EMAIL", "alerte@strapontin.fr", "admin-1");
+    verify(configService).sauvegarderConfig("ADMIN_ALERT_EMAIL", "alerte@strapontin.fr");
+  }
+
+  @Test
   void sauvegarderConfig_formatVapidPublicInvalide_leveErreurMetier() {
     assertThrows(
         ErreurMetier.class,

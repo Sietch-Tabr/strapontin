@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.admin;
 
-import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -19,7 +18,8 @@ import org.springframework.stereotype.Service;
 /// Watchdog surveille l'activité du module worker toutes les heures.
 ///
 /// <p>Si aucun job réussi n'est enregistré depuis {@value #SEUIL_HEURES} heures,
-/// un email d'alerte est envoyé à l'adresse {@code CONTACT_EMAIL}.
+/// un email d'alerte est envoyé à l'adresse retournée par
+/// {@link EmailService#obtenirDestinataireAlerte()} (#907).
 /// Une nouvelle alerte ne peut être envoyée qu'après {@value #SEUIL_HEURES} heures
 /// depuis la dernière, pour éviter le spam en cas de panne prolongée.
 ///
@@ -34,15 +34,12 @@ public class WatchdogWorkerService {
   private static final Duration SEUIL_INACTIVITE = Duration.ofHours(SEUIL_HEURES);
 
   private final NamedParameterJdbcTemplate jdbc;
-  private final ConfigService configService;
   private final EmailService emailService;
 
   private volatile Instant derniereAlerte;
 
-  public WatchdogWorkerService(
-      NamedParameterJdbcTemplate jdbc, ConfigService configService, EmailService emailService) {
+  public WatchdogWorkerService(NamedParameterJdbcTemplate jdbc, EmailService emailService) {
     this.jdbc = jdbc;
-    this.configService = configService;
     this.emailService = emailService;
   }
 
@@ -64,14 +61,15 @@ public class WatchdogWorkerService {
     String detailIso = derniereExec != null ? derniereExec.toString() : null;
     log.warn("watchdog: worker inactif depuis {} — envoi alerte", detailIso);
 
-    configService
-        .lireConfig("CONTACT_EMAIL")
+    emailService
+        .obtenirDestinataireAlerte()
         .ifPresentOrElse(
             email -> {
               emailService.envoyerAlerteWorkerInactif(email, detailIso);
               derniereAlerte = Instant.now();
             },
-            () -> log.warn("watchdog: CONTACT_EMAIL absent — alerte non envoyée"));
+            () ->
+                log.warn("watchdog: aucun destinataire d'alerte disponible — alerte non envoyée"));
   }
 
   private Instant lireDerniereExecReussie() {

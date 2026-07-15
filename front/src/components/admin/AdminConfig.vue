@@ -7,7 +7,7 @@
     <!-- Général -->
     <div class="param-bloc">
       <h3 class="param-label">Général</h3>
-      <template v-for="cle in ['CONTACT_EMAIL', 'PUBLIC_BASE_URL', 'SIGNAL_LIEN']" :key="cle">
+      <template v-for="cle in ['CONTACT_EMAIL', 'ADMIN_ALERT_EMAIL', 'PUBLIC_BASE_URL', 'SIGNAL_LIEN']" :key="cle">
         <div class="config-groupe-item">
           <div class="param-label-ligne">
             <span class="param-label">{{ cle }}</span>
@@ -161,9 +161,10 @@ const { afficherToast } = useToasts()
 const { dialogRef: dialogVapidRef, ouvrir: ouvrirDialogVapidModal, fermer: fermerDialogVapidModal } = useDialog()
 
 const DESCRIPTIONS_CONFIG = {
-  CONTACT_EMAIL:   'Adresse d\'expédition des emails (From: et Reply-To:). Doit appartenir à un domaine vérifié dans Resend.',
-  PUBLIC_BASE_URL: 'URL publique de l\'application (ex. https://strapontin.kwaite.fr).',
-  SIGNAL_LIEN:     'Lien Signal optionnel (groupe ou contact). Si renseigné, affiché sur la page Aide.',
+  CONTACT_EMAIL:     'Adresse d\'expédition des emails (From: et Reply-To:). Doit appartenir à un domaine vérifié dans Resend.',
+  ADMIN_ALERT_EMAIL: 'Adresse recevant les alertes système (bounce, plainte spam, worker inactif, logs erreur). Doit être différente de CONTACT_EMAIL et posséder une vraie boîte de réception. Si absente, repli automatique sur l\'email du premier administrateur.',
+  PUBLIC_BASE_URL:   'URL publique de l\'application (ex. https://strapontin.kwaite.fr).',
+  SIGNAL_LIEN:       'Lien Signal optionnel (groupe ou contact). Si renseigné, affiché sur la page Aide.',
 }
 
 const chargement = ref(true)

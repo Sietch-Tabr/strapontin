@@ -63,12 +63,13 @@ public class AdminService {
           "RESEND_API_KEY",
           "RESEND_WEBHOOK_SECRET",
           "CONTACT_EMAIL",
+          "ADMIN_ALERT_EMAIL",
           "PUBLIC_BASE_URL",
           "SIGNAL_LIEN",
           "VAPID_PUBLIC_KEY",
           "VAPID_PRIVATE_KEY");
   private static final Set<String> CLES_EN_CLAIR =
-      Set.of("CONTACT_EMAIL", "PUBLIC_BASE_URL", "SIGNAL_LIEN");
+      Set.of("CONTACT_EMAIL", "ADMIN_ALERT_EMAIL", "PUBLIC_BASE_URL", "SIGNAL_LIEN");
   private static final Set<String> CLES_OBLIGATOIRES = Set.of("CONTACT_EMAIL", "PUBLIC_BASE_URL");
   private static final Pattern FORMAT_TM_KEY = Pattern.compile("^[A-Za-z0-9]{16,64}$");
   private static final Pattern FORMAT_RESEND_KEY = Pattern.compile("^re_[A-Za-z0-9_-]{10,}$");

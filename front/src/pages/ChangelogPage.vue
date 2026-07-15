@@ -18,6 +18,7 @@
             <p class="changelog-categorie">Administration</p>
             <ul>
               <li>Dans le référentiel Artistes, un statut « À vérifier » ne s'affiche plus jamais à tort : seul un statut « Invalide » confirmé par une vérification active apparaît désormais, l'ancien indicateur intermédiaire générait trop de faux positifs sur des artistes pourtant bien actifs.</li>
+              <li>Une adresse dédiée aux alertes système (panne, bounce email) peut désormais être configurée séparément de l'adresse d'expédition des emails.</li>
             </ul>
           </div>
           <div>
@@ -30,6 +31,7 @@
             <p class="changelog-categorie">Concerts</p>
             <ul>
               <li>Certains concerts d'une salle suivie via plusieurs sources (billetteries) n'apparaissaient plus en double lorsque l'orthographe du nom variait légèrement d'une source à l'autre.</li>
+              <li>Les concerts Eventim, indisponibles depuis plusieurs jours suite à une panne technique côté billetterie, sont de nouveau détectés.</li>
             </ul>
           </div>
         </div>

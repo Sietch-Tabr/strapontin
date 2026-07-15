@@ -9,6 +9,8 @@ import com.resend.core.exception.ResendException;
 import com.resend.services.emails.model.CreateEmailOptions;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -34,6 +36,14 @@ import org.springframework.stereotype.Service;
 public class EmailService {
 
   private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+
+  // Garde-fou anti-boucle (#907) : au plus une notification de bounce/plainte spam par heure,
+  // persisté en app_config pour survivre aux redéploiements (même pattern que
+  // AlerteLogsAdminService.CLE_CURSEUR) — sans ça, un problème de délivrabilité sur le nouveau
+  // destinataire d'alerte pourrait recréer une boucle du même type que celle du 15/07/2026.
+  private static final String CLE_DERNIERE_ALERTE_BOUNCE = "DERNIERE_ALERTE_BOUNCE_ENVOYEE";
+  private static final String CLE_DERNIERE_ALERTE_SPAM = "DERNIERE_ALERTE_SPAM_ENVOYEE";
+  private static final Duration INTERVALLE_MIN_ALERTE = Duration.ofMinutes(60);
 
   private final ConfigService configService;
   private final JdbcTemplate jdbcTemplate;
@@ -75,6 +85,31 @@ public class EmailService {
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
     }
+  }
+
+  /// Retourne l'adresse destinataire des alertes système (bounce, plainte spam, worker inactif,
+  /// digest logs_admin) — distincte de l'expéditeur (#907).
+  ///
+  /// <p>Priorité à `ADMIN_ALERT_EMAIL` si configurée, sinon repli sur le premier admin. Ne se
+  /// replie volontairement jamais sur `CONTACT_EMAIL`/l'expéditeur : c'est cette confusion qui a
+  /// provoqué la boucle de bounces du 15/07/2026 (une adresse `noreply` sans boîte de réception
+  /// réutilisée comme destinataire).
+  ///
+  /// @return l'adresse à notifier, vide si ni `ADMIN_ALERT_EMAIL` ni aucun admin n'existe
+  public Optional<String> obtenirDestinataireAlerte() {
+    return configService.lireConfig("ADMIN_ALERT_EMAIL").or(this::obtenirEmailPremierAdmin);
+  }
+
+  /// Indique si une alerte du type donné a déjà été envoyée il y a moins de
+  /// {@link #INTERVALLE_MIN_ALERTE} — garde-fou anti-boucle (#907).
+  private boolean alerteRecente(String cleConfig) {
+    return configService
+        .lireConfig(cleConfig)
+        .map(Instant::parse)
+        .map(
+            derniere ->
+                Duration.between(derniere, Instant.now()).compareTo(INTERVALLE_MIN_ALERTE) < 0)
+        .orElse(false);
   }
 
   private void envoyer(
@@ -440,11 +475,24 @@ public class EmailService {
 
   /// Envoie une notification à l'admin quand un email Strapontin est rejeté en bounce.
   ///
+  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907 — c'est
+  /// cette confusion qui a provoqué la boucle de bounces du 15/07/2026). Throttlée à une
+  /// notification par heure maximum.
+  ///
   /// @param emailBouncee l'adresse email qui a produit le bounce
   public void envoyerNotificationBounce(String emailBouncee) {
     Optional<ContexteEmail> ctx = obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — notification bounce non envoyée");
+      return;
+    }
+    if (alerteRecente(CLE_DERNIERE_ALERTE_BOUNCE)) {
+      log.debug("Notification bounce déjà envoyée récemment — ignorée (garde-fou anti-boucle)");
+      return;
+    }
+    Optional<String> destinataire = obtenirDestinataireAlerte();
+    if (destinataire.isEmpty()) {
+      log.warn("Aucun destinataire d'alerte disponible — notification bounce non envoyée");
       return;
     }
 
@@ -453,7 +501,7 @@ public class EmailService {
     try {
       envoyer(
           ctx.get(),
-          ctx.get().expediteur(),
+          destinataire.get(),
           ctx.get().expediteur(),
           "Strapontin — bounce email : " + emailBouncee,
           corps,
@@ -462,6 +510,7 @@ public class EmailService {
               + ". Consultez l'administration : "
               + ctx.get().baseUrl()
               + "/admin");
+      configService.sauvegarderConfig(CLE_DERNIERE_ALERTE_BOUNCE, Instant.now().toString());
       log.info("Notification bounce envoyée : emailHash={}", emailBouncee.hashCode());
     } catch (Exception e) {
       log.error("Échec envoi notification bounce", e);
@@ -472,11 +521,24 @@ public class EmailService {
   /// spam (#832) — même traitement que le bounce, une plainte spam menaçant la réputation
   /// d'envoi du domaine au moins autant qu'un rejet définitif.
   ///
+  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907).
+  /// Throttlée à une notification par heure maximum.
+  ///
   /// @param emailPlaignant l'adresse email à l'origine de la plainte
   public void envoyerNotificationPlainteSpam(String emailPlaignant) {
     Optional<ContexteEmail> ctx = obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — notification plainte spam non envoyée");
+      return;
+    }
+    if (alerteRecente(CLE_DERNIERE_ALERTE_SPAM)) {
+      log.debug(
+          "Notification plainte spam déjà envoyée récemment — ignorée (garde-fou anti-boucle)");
+      return;
+    }
+    Optional<String> destinataire = obtenirDestinataireAlerte();
+    if (destinataire.isEmpty()) {
+      log.warn("Aucun destinataire d'alerte disponible — notification plainte spam non envoyée");
       return;
     }
 
@@ -485,7 +547,7 @@ public class EmailService {
     try {
       envoyer(
           ctx.get(),
-          ctx.get().expediteur(),
+          destinataire.get(),
           ctx.get().expediteur(),
           "Strapontin — plainte spam : " + emailPlaignant,
           corps,
@@ -494,6 +556,7 @@ public class EmailService {
               + ". Consultez l'administration : "
               + ctx.get().baseUrl()
               + "/admin");
+      configService.sauvegarderConfig(CLE_DERNIERE_ALERTE_SPAM, Instant.now().toString());
       log.info("Notification plainte spam envoyée : emailHash={}", emailPlaignant.hashCode());
     } catch (Exception e) {
       log.error("Échec envoi notification plainte spam", e);
@@ -502,12 +565,19 @@ public class EmailService {
 
   /// Envoie une alerte à l'admin quand le backup nocturne a échoué.
   ///
+  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907).
+  ///
   /// @param horodatage l'horodatage du backup (format YYYYMMDD_HHMMSS), ou chaîne vide
   /// @param raison     la commande bash ayant déclenché l'échec, ou chaîne vide
   public void envoyerAlerteBackup(String horodatage, String raison) {
     Optional<ContexteEmail> ctx = obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — alerte backup non envoyée");
+      return;
+    }
+    Optional<String> destinataire = obtenirDestinataireAlerte();
+    if (destinataire.isEmpty()) {
+      log.warn("Aucun destinataire d'alerte disponible — alerte backup non envoyée");
       return;
     }
 
@@ -521,7 +591,7 @@ public class EmailService {
                 raison.isBlank() ? "" : " Raison : " + raison + ".",
                 ctx.get().baseUrl());
     try {
-      envoyer(ctx.get(), ctx.get().expediteur(), ctx.get().expediteur(), sujet, corps, texte);
+      envoyer(ctx.get(), destinataire.get(), ctx.get().expediteur(), sujet, corps, texte);
       log.info("Alerte backup envoyée");
     } catch (Exception e) {
       log.error("Échec envoi alerte backup", e);

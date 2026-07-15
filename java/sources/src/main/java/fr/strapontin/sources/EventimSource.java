@@ -46,6 +46,10 @@ public class EventimSource implements SourceConcerts {
   public static final List<String> CATEGORIES_REGION =
       List.of("Concerts & Festivals", "Classique & Danse");
 
+  /// `User-Agent` honnête de bot (#904) — jamais une chaîne `Mozilla/5.0...`, voir Javadoc du
+  /// constructeur par défaut pour la justification complète.
+  static final String USER_AGENT = "StrapontinBot/1.0 (+https://strapontin.kwaite.fr)";
+
   private final RestClient restClient;
   // Compteurs cumulés depuis le dernier prélèvement (remontés dans logs_admin par le worker, #901).
   private final AtomicInteger appelsCumules = new AtomicInteger();
@@ -53,29 +57,42 @@ public class EventimSource implements SourceConcerts {
 
   /// Crée une instance avec un RestClient par défaut incluant les headers Eventim et un timeout
   /// explicite (connexion 10s, lecture 30s — #887).
+  ///
+  /// <p>Le `User-Agent` identifie honnêtement un bot plutôt que de mimer un navigateur (#904) :
+  /// depuis le 09/07/2026, Akamai bloque en 403 tout client dont le `User-Agent` prétend être un
+  /// navigateur (`Mozilla/5.0...`, quel que soit le navigateur imité) sans en avoir la signature
+  /// réelle, alors qu'un `User-Agent` non-navigateur passe sans restriction — vérifié par tests
+  /// répétés depuis des réseaux distincts. Les en-têtes `sec-ch-ua*`/`Sec-Fetch-*`/`Referer`/
+  /// `Origin` (contournement anti-bot historique, commit 231c026, devenu obsolète) sont retirés
+  /// en conséquence : incohérents avec un `User-Agent` de bot.
+  ///
+  /// <p>Aucun `Accept-Encoding` explicite : envoyer ce header manuellement fait basculer
+  /// `SimpleClientHttpRequestFactory` (JDK `HttpURLConnection`, introduit par #887) en mode
+  /// « décompression à la charge de l'appelant » — Eventim répond alors en gzip sans jamais être
+  /// décompressé, faisant échouer la désérialisation JSON. En l'absence de ce header, le JDK ajoute
+  /// son propre `Accept-Encoding: gzip` et décompresse la réponse de façon transparente. Bug latent
+  /// introduit par #887 le 08/07/2026, masqué du 09/07 au correctif #904 par le blocage Akamai.
   public EventimSource() {
     this(
-        RestClient.builder()
+        builderAvecHeadersParDefaut()
             .requestFactory(
                 ClientHttpFactory.creerRequestFactory(
                     Duration.ofSeconds(10), Duration.ofSeconds(30)))
-            .defaultHeader("Accept", "application/json, text/plain, */*")
-            .defaultHeader(
-                "User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                    + " (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
-            .defaultHeader("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
-            .defaultHeader("Accept-Encoding", "gzip, deflate, br")
-            .defaultHeader("Referer", "https://www.eventim.fr/")
-            .defaultHeader("Origin", "https://www.eventim.fr")
-            .defaultHeader("sec-ch-ua", "\"Google Chrome\";v=\"131\", \"Not_A Brand\";v=\"24\"")
-            .defaultHeader("sec-ch-ua-mobile", "?0")
-            .defaultHeader("sec-ch-ua-platform", "\"Windows\"")
-            .defaultHeader("Sec-Fetch-Dest", "empty")
-            .defaultHeader("Sec-Fetch-Mode", "cors")
-            .defaultHeader("Sec-Fetch-Site", "same-site")
-            .defaultHeader("Connection", "keep-alive")
             .build());
+  }
+
+  /// Construit un {@link RestClient.Builder} avec les headers par défaut (sans requestFactory ni
+  /// build), pour permettre à {@link org.springframework.test.web.client.MockRestServiceServer}
+  /// de se lier à la configuration réelle en test (#904 — régression sur `User-Agent`/
+  /// `Accept-Encoding`).
+  ///
+  /// @return le builder configuré, prêt à recevoir une requestFactory
+  static RestClient.Builder builderAvecHeadersParDefaut() {
+    return RestClient.builder()
+        .defaultHeader("Accept", "application/json, text/plain, */*")
+        .defaultHeader("User-Agent", USER_AGENT)
+        .defaultHeader("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
+        .defaultHeader("Connection", "keep-alive");
   }
 
   /// Crée une instance avec un RestClient personnalisé (injection de test).

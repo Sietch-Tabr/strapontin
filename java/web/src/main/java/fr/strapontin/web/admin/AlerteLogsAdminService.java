@@ -34,8 +34,8 @@ public class AlerteLogsAdminService {
   private final EmailService emailService;
 
   /// @param logAdminService lecture des entrées d'erreur depuis le curseur
-  /// @param configService   lecture/écriture du curseur et de CONTACT_EMAIL
-  /// @param emailService    envoi du digest
+  /// @param configService   lecture/écriture du curseur
+  /// @param emailService    envoi du digest et résolution du destinataire d'alerte (#907)
   public AlerteLogsAdminService(
       LogAdminService logAdminService, ConfigService configService, EmailService emailService) {
     this.logAdminService = logAdminService;
@@ -53,10 +53,11 @@ public class AlerteLogsAdminService {
     List<LogAdminService.EntreeLogAdmin> erreurs = logAdminService.lireErreursDepuis(curseur);
     if (erreurs.isEmpty()) return;
 
-    Optional<String> email = configService.lireConfig("CONTACT_EMAIL");
+    Optional<String> email = emailService.obtenirDestinataireAlerte();
     if (email.isEmpty()) {
       log.warn(
-          "alerteLogsAdmin: CONTACT_EMAIL absent — {} erreur(s) en attente, curseur non avancé",
+          "alerteLogsAdmin: aucun destinataire d'alerte disponible — {} erreur(s) en attente,"
+              + " curseur non avancé",
           erreurs.size());
       return;
     }

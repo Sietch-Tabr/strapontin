@@ -61,7 +61,7 @@ class AlerteLogsAdminServiceTest {
             new EntreeLogAdmin(200L, "error", "worker", "échec job 2", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);
-    when(configService.lireConfig("CONTACT_EMAIL")).thenReturn(Optional.of("admin@exemple.fr"));
+    when(emailService.obtenirDestinataireAlerte()).thenReturn(Optional.of("admin@exemple.fr"));
     when(emailService.envoyerAlerteLogsAdmin("admin@exemple.fr", erreurs)).thenReturn(true);
 
     service.verifier();
@@ -70,12 +70,12 @@ class AlerteLogsAdminServiceTest {
   }
 
   @Test
-  void verifier_contactEmailAbsent_neAvancePasLeCurseur() {
+  void verifier_aucunDestinataireAlerte_neAvancePasLeCurseur() {
     List<EntreeLogAdmin> erreurs =
         List.of(new EntreeLogAdmin(100L, "error", "worker", "échec", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);
-    when(configService.lireConfig("CONTACT_EMAIL")).thenReturn(Optional.empty());
+    when(emailService.obtenirDestinataireAlerte()).thenReturn(Optional.empty());
 
     service.verifier();
 
@@ -89,7 +89,7 @@ class AlerteLogsAdminServiceTest {
         List.of(new EntreeLogAdmin(100L, "error", "worker", "échec", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);
-    when(configService.lireConfig("CONTACT_EMAIL")).thenReturn(Optional.of("admin@exemple.fr"));
+    when(emailService.obtenirDestinataireAlerte()).thenReturn(Optional.of("admin@exemple.fr"));
     when(emailService.envoyerAlerteLogsAdmin("admin@exemple.fr", erreurs)).thenReturn(false);
 
     service.verifier();
