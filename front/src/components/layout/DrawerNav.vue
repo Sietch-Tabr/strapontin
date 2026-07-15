@@ -101,8 +101,12 @@ function estActif(href) {
   return route.path === href || route.path.startsWith(href + '/')
 }
 
+// Fermeture synchrone, avant naviguer() : un close() différé par setTimeout(0) s'exécute
+// pendant la capture d'état de document.startViewTransition (utilisé par naviguer() sur les
+// navigateurs compatibles), ce qui fait avorter silencieusement la transition — router.push()
+// ne résout alors jamais et la navigation reste bloquée sur la page courante.
 function naviguerEtFermer(href) {
-  setTimeout(() => dialogRef.value?.close(), 0)
+  dialogRef.value?.close()
   naviguer(href)
 }
 

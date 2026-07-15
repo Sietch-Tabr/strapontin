@@ -5,6 +5,8 @@
 package fr.strapontin.worker.persister;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -14,8 +16,10 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 /// Tests unitaires de {@link ReconciliateurSalles} — priorité exacte avant flou (#794).
 ///
@@ -77,5 +81,36 @@ class ReconciliateurSallesTest {
 
     assertEquals(1, resultat.size());
     assertEquals("zenith de strasbourg europe", resultat.get(0).salleNorm());
+  }
+
+  // #902 : "L'Olympia" (TM, nom_norm="l olympia") déjà en base, Eventim fetch "LOlympia" (sans
+  // apostrophe, nom_norm="lolympia"). Le préfiltre par tokens seul ratait ce candidat (l'espace
+  // dans "l olympia" casse le LIKE sur le token "lolympia") — la clause squash doit le retrouver.
+  @Test
+  void chercherSalleParTokens_apostropheOmiseParUneAutreSource_retrouveLaSalleExistante() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    UUID uuidExistant = UUID.randomUUID();
+
+    Map<String, Object> candidat = new HashMap<>();
+    candidat.put("id", uuidExistant);
+    candidat.put("nom_norm", "l olympia");
+
+    when(jdbc.queryForList(anyString(), any(SqlParameterSource.class)))
+        .thenReturn(List.of(candidat));
+
+    UUID resultat = reconciliateur.chercherSalleParTokens("LOlympia", null);
+
+    assertEquals(uuidExistant, resultat);
+  }
+
+  @Test
+  void chercherSalleParTokens_aucunCandidat_retourneNull() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+
+    when(jdbc.queryForList(anyString(), any(SqlParameterSource.class))).thenReturn(List.of());
+
+    assertNull(reconciliateur.chercherSalleParTokens("Salle inédite", null));
   }
 }

@@ -293,9 +293,12 @@ public class ReconciliateurSalles {
   /// Cherche une salle existante dont le {@code nom_norm} est un doublon du nom fourni.
   ///
   /// <p>Émet une seule requête SQL pour tous les tokens significatifs du nom (corrige
-  /// le pattern N+1 antérieur où une requête était émise par token). Le filtre {@code dept}
-  /// élimine les salles homonymes de départements distincts, réduisant le risque de faux positif
-  /// du critère pivot dans {@link #estDoublonSalle}.
+  /// le pattern N+1 antérieur où une requête était émise par token), complétée par une clause
+  /// sur le {@code nom_norm} sans espaces (#902) : sans elle, une variante d'apostrophe/article
+  /// entre deux sources ("l olympia" vs "lolympia") ne partage aucun token substantiel et le
+  /// candidat n'est jamais récupéré, quand bien même {@link #estDoublonSalle} le détecterait.
+  /// Le filtre {@code dept} élimine les salles homonymes de départements distincts, réduisant le
+  /// risque de faux positif du critère pivot dans {@link #estDoublonSalle}.
   ///
   /// @param nom  nom brut de la salle à créer
   /// @param dept département connu du concert (nullable — désactive le filtre si absent)
@@ -303,7 +306,8 @@ public class ReconciliateurSalles {
   UUID chercherSalleParTokens(String nom, String dept) {
     String nomNorm = Normalisation.normaliserTexte(nom);
     Set<String> tokens = tokensSignificatifs(nomNorm);
-    if (tokens.isEmpty()) return null;
+    String nomNormSquash = nomNorm.replace(" ", "");
+    if (tokens.isEmpty() && nomNormSquash.isEmpty()) return null;
 
     List<String> tokensList = new ArrayList<>(tokens);
     StringBuilder sbWhere = new StringBuilder("(");
@@ -311,13 +315,15 @@ public class ReconciliateurSalles {
       if (i > 0) sbWhere.append(" OR ");
       sbWhere.append("nom_norm LIKE :t").append(i);
     }
-    sbWhere.append(")");
+    if (!tokensList.isEmpty()) sbWhere.append(" OR ");
+    sbWhere.append("replace(nom_norm, ' ', '') = :nomNormSquash)");
     String whereTokens = sbWhere.toString();
 
     MapSqlParameterSource params = new MapSqlParameterSource();
     for (int i = 0; i < tokensList.size(); i++) {
       params.addValue("t" + i, "%" + tokensList.get(i) + "%");
     }
+    params.addValue("nomNormSquash", nomNormSquash);
     params.addValue("dept", dept, Types.VARCHAR);
 
     List<Map<String, Object>> lignes =
