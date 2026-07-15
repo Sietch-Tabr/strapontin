@@ -43,6 +43,7 @@ class SalleServiceTest {
   void setUp() {
     salleRepository = mock(SalleRepository.class);
     salleService = new SalleService(salleRepository, mock(ConfigService.class), new ObjectMapper());
+    salleService.setSelf(salleService);
   }
 
   @Test
