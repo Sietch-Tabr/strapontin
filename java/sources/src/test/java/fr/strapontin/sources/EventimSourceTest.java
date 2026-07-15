@@ -248,6 +248,32 @@ class EventimSourceTest {
     assertEquals("eventim", source.nom());
   }
 
+  // #904 — régression : un User-Agent de navigateur (Mozilla/5.0...) déclenche un blocage 403
+  // Akamai depuis le 09/07/2026 ; un Accept-Encoding explicite fait échouer la désérialisation
+  // JSON (SimpleClientHttpRequestFactory ne décompresse pas la réponse gzip lui-même, #887).
+  @Test
+  void builderAvecHeadersParDefaut_headersReels_userAgentHonneteEtAucunAcceptEncoding() {
+    RestClient.Builder builder = EventimSource.builderAvecHeadersParDefaut();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andExpect(header("User-Agent", EventimSource.USER_AGENT))
+        .andExpect(headerDoesNotExist("Accept-Encoding"))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    new EventimSource(restClient).fetchArtiste("Test");
+
+    serveur.verify();
+    assertFalse(EventimSource.USER_AGENT.startsWith("Mozilla"));
+  }
+
   // --- Tests HTTP ---
 
   @Test
