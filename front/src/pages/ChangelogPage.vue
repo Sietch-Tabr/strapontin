@@ -26,6 +26,12 @@
               <li>Sur mobile, un appui sur un lien du menu « plus » pouvait parfois refermer le menu au lieu de naviguer — corrigé.</li>
             </ul>
           </div>
+          <div>
+            <p class="changelog-categorie">Concerts</p>
+            <ul>
+              <li>Certains concerts d'une salle suivie via plusieurs sources (billetteries) n'apparaissaient plus en double lorsque l'orthographe du nom variait légèrement d'une source à l'autre.</li>
+            </ul>
+          </div>
         </div>
       </section>
 

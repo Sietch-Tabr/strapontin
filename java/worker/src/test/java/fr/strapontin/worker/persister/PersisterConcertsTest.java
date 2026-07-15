@@ -104,6 +104,13 @@ class PersisterConcertsTest {
   }
 
   @Test
+  void estDoublonSalle_apostropheOmiseParUneSource_retourneTrue() {
+    // #902 : "L'Olympia" (TM) normalisé "l olympia" vs "LOlympia" (Eventim, sans apostrophe)
+    // normalisé "lolympia" — aucun token commun, mais identiques une fois les espaces retirés.
+    assertTrue(PersisterConcerts.estDoublonSalle("l olympia", "lolympia"));
+  }
+
+  @Test
   void estDoublonSalle_villesDistinctes_retourneFalse() {
     // sim 0.61 < 0.75, pas de containment commun — deux zéniths différents
     assertFalse(PersisterConcerts.estDoublonSalle("zenith de bordeaux", "zenith de caen"));

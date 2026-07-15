@@ -83,12 +83,16 @@ public final class CorrespondanceSalle {
 
   /// Vérifie si deux noms de salle normalisés désignent la même salle.
   ///
-  /// <p>Trois critères en union :
+  /// <p>Quatre critères en union :
   /// <ol>
   ///   <li>Levenshtein ≥ 0.75 ou containment (via {@link Normalisation#similarite})</li>
   ///   <li>Jaccard tokens strict {@code > 0.5} — insensible à l'ordre des mots</li>
   ///   <li>Token pivot — token commun ≥ {@value #LONGUEUR_MIN_PIVOT} chars et Jaccard
   ///       {@code > }{@value #SEUIL_JACCARD_PIVOT}</li>
+  ///   <li>Égalité sans espaces (#902) — {@link Normalisation#normaliserTexte} remplace
+  ///       l'apostrophe par une espace ("L'Olympia" → "l olympia"), mais une source qui omet
+  ///       totalement l'apostrophe ("LOlympia") ne produit aucune espace à substituer
+  ///       ("lolympia") : sans ce critère, les deux formes ne partagent aucun token commun</li>
   /// </ol>
   ///
   /// @param a premier nom normalisé
@@ -98,6 +102,7 @@ public final class CorrespondanceSalle {
     if (estDoublonTexte(
         a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE, RATIO_MIN_CONTAINMENT_SALLE))
       return true;
+    if (a.replace(" ", "").equals(b.replace(" ", ""))) return true;
     Set<String> tokA = tokensSignificatifs(a);
     Set<String> tokB = tokensSignificatifs(b);
     Set<String> intersection = new HashSet<>(tokA);

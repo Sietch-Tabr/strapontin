@@ -98,27 +98,27 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
       await expect(page.locator("main")).toBeVisible();
     } finally {
       // 5. Cleanup robuste : un admin réinitialise la 2FA de e2euser (sans code TOTP).
-      //    Garantit que le compte partagé reste sans TOTP même si le test échoue.
-      if (secret) {
-        const adminCtx = await browser.newContext({
-          storageState: FICHIER_AUTH_ADMIN,
-        });
-        try {
-          const liste = await adminCtx.request.get("/api/admin/utilisateurs");
-          const users = await liste.json();
-          const u = users.find(
-            (x: { username: string }) => x.username === USER,
+      //    Inconditionnel (pas de garde sur `secret`) : si /api/totp/setup échoue parce que
+      //    le compte a déjà une 2FA active (résidu d'un run précédent interrompu avant son
+      //    propre cleanup), `secret` reste vide et un cleanup gardé par `if (secret)` ne se
+      //    déclencherait jamais — l'échec s'auto-perpétuerait indéfiniment sur tous les runs
+      //    suivants au lieu de se corriger de lui-même dès la prochaine exécution.
+      const adminCtx = await browser.newContext({
+        storageState: FICHIER_AUTH_ADMIN,
+      });
+      try {
+        const liste = await adminCtx.request.get("/api/admin/utilisateurs");
+        const users = await liste.json();
+        const u = users.find((x: { username: string }) => x.username === USER);
+        if (u) {
+          await adminCtx.request.post(
+            `/api/admin/utilisateurs/${u.id}/reset-totp`,
           );
-          if (u) {
-            await adminCtx.request.post(
-              `/api/admin/utilisateurs/${u.id}/reset-totp`,
-            );
-          }
-        } catch {
-          /* best-effort */
         }
-        await adminCtx.close();
+      } catch {
+        /* best-effort */
       }
+      await adminCtx.close();
       await ctx.close();
     }
   });
@@ -213,26 +213,25 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
       await expect(page).not.toHaveURL(/login|auth\/totp/, { timeout: 10000 });
       await expect(page.locator("main")).toBeVisible();
     } finally {
-      if (secret) {
-        const adminCtx = await browser.newContext({
-          storageState: FICHIER_AUTH_ADMIN,
-        });
-        try {
-          const liste = await adminCtx.request.get("/api/admin/utilisateurs");
-          const users = await liste.json();
-          const u = users.find(
-            (x: { username: string }) => x.username === USER,
+      // Cleanup inconditionnel — même raison que le test précédent : sans lui, un run interrompu
+      // avant d'atteindre ce point laisse le compte partagé bloqué en 2FA active pour tous les
+      // runs suivants, sans rien pour se corriger de lui-même.
+      const adminCtx = await browser.newContext({
+        storageState: FICHIER_AUTH_ADMIN,
+      });
+      try {
+        const liste = await adminCtx.request.get("/api/admin/utilisateurs");
+        const users = await liste.json();
+        const u = users.find((x: { username: string }) => x.username === USER);
+        if (u) {
+          await adminCtx.request.post(
+            `/api/admin/utilisateurs/${u.id}/reset-totp`,
           );
-          if (u) {
-            await adminCtx.request.post(
-              `/api/admin/utilisateurs/${u.id}/reset-totp`,
-            );
-          }
-        } catch {
-          /* best-effort */
         }
-        await adminCtx.close();
+      } catch {
+        /* best-effort */
       }
+      await adminCtx.close();
       await ctx.close();
     }
   });

@@ -17,6 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.sources.EventimSource;
+import fr.strapontin.sources.EventimSource.BilanFetch;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
@@ -67,6 +68,7 @@ class WorkerServiceTest {
         new WorkerService(
             sources,
             tm,
+            eventim,
             resolveur,
             persisterConcerts,
             recalculerMatchesService,
@@ -75,6 +77,79 @@ class WorkerServiceTest {
             jdbc,
             suiviSanteSourcesService,
             reconciliationNocturneService);
+  }
+
+  // #901 : bilan Eventim remonté via remonterBilanEventim (appelé depuis enregistrerStatJob à
+  // chaque job "fetch:"). executerFetchArtistesBatch (chemin "aucun artiste suivi") est le plus
+  // simple à exercer : le finally d'enregistrerStatJob s'exécute même sur ce retour anticipé.
+  private void stuberFetchArtistesBatchMinimal() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+  }
+
+  @Test
+  void executerFetchArtistesBatch_eventimPanneTotale_insereLogsAdminNiveauError() {
+    stuberFetchArtistesBatchMinimal();
+    when(eventim.preleverBilan()).thenReturn(new BilanFetch(5, 5));
+
+    workerService.executerFetchArtistesBatch();
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    "error".equals(params.get("niveau"))
+                        && params.get("message").toString().contains("Eventim")));
+  }
+
+  @Test
+  void executerFetchArtistesBatch_eventimEchecPartiel_insereLogsAdminNiveauWarn() {
+    stuberFetchArtistesBatchMinimal();
+    when(eventim.preleverBilan()).thenReturn(new BilanFetch(5, 2));
+
+    workerService.executerFetchArtistesBatch();
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    "warn".equals(params.get("niveau"))
+                        && params.get("message").toString().contains("Eventim")));
+  }
+
+  @Test
+  void executerFetchArtistesBatch_eventimPanneTotaleSousLeSeuil_resteEnWarn() {
+    // 100% d'échecs mais sous le seuil de 3 appels : pas d'alerte error, juste un warn.
+    stuberFetchArtistesBatchMinimal();
+    when(eventim.preleverBilan()).thenReturn(new BilanFetch(2, 2));
+
+    workerService.executerFetchArtistesBatch();
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    "warn".equals(params.get("niveau"))
+                        && params.get("message").toString().contains("Eventim")));
+  }
+
+  @Test
+  void executerFetchArtistesBatch_eventimAucunAppel_nInsereAucunLogEventim() {
+    stuberFetchArtistesBatchMinimal();
+    when(eventim.preleverBilan()).thenReturn(new BilanFetch(0, 0));
+
+    workerService.executerFetchArtistesBatch();
+
+    verify(jdbc, never())
+        .update(
+            anyString(),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    params.get("message") != null
+                        && params.get("message").toString().contains("Eventim")));
   }
 
   @Test

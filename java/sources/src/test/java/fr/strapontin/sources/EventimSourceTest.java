@@ -571,4 +571,92 @@ class EventimSourceTest {
     assertNull(
         resultat.salleSourceId(), "salleSourceId doit être null quand la salle est inconnue");
   }
+
+  // --- BilanFetch (#901) ---
+
+  @Test
+  void preleverBilan_appelReussi_compteUnAppelSansErreur() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    EventimSource source = new EventimSource(restClient);
+    source.fetchArtiste("Artiste Inconnu");
+
+    EventimSource.BilanFetch bilan = source.preleverBilan();
+    assertEquals(1, bilan.appels());
+    assertEquals(0, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_erreurHttpSurAttractions_compteUneErreur() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(withServerError());
+
+    EventimSource source = new EventimSource(restClient);
+    source.fetchArtiste("Julien Clerc");
+
+    EventimSource.BilanFetch bilan = source.preleverBilan();
+    assertEquals(1, bilan.appels());
+    assertEquals(1, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_erreurHttpSurProducts_compteAppelEtErreurSepares() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-1","name":"Julien Clerc"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
+        .andRespond(withServerError());
+
+    EventimSource source = new EventimSource(restClient);
+    source.fetchArtiste("Julien Clerc");
+
+    EventimSource.BilanFetch bilan = source.preleverBilan();
+    assertEquals(2, bilan.appels(), "un appel /attractions + un appel /products");
+    assertEquals(1, bilan.erreursHttp(), "seul l'appel /products a échoué");
+  }
+
+  @Test
+  void preleverBilan_apresPrelevement_remetLesCompteursAZero() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(withServerError());
+
+    EventimSource source = new EventimSource(restClient);
+    source.fetchArtiste("Julien Clerc");
+    source.preleverBilan();
+
+    EventimSource.BilanFetch second = source.preleverBilan();
+    assertEquals(0, second.appels());
+    assertEquals(0, second.erreursHttp());
+  }
 }

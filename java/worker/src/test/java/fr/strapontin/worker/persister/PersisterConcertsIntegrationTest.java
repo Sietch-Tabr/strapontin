@@ -444,6 +444,74 @@ class PersisterConcertsIntegrationTest {
   }
 
   @Test
+  void persisterConcerts_salleSansApostropheAutreSource_reutiliseSalleExistanteSansDoublon() {
+    // #902 : TM persiste d'abord "L'Olympia" (nom_norm="l olympia"), puis un cycle Eventim
+    // ultérieur rencontre la même salle sous "LOlympia" (sans apostrophe, salleSourceId inconnu
+    // de salle_sources — comme un vrai fetch Eventim). Sans le critère squash de
+    // CorrespondanceSalle + le préfiltre élargi de chercherSalleParTokens, upsertSalleSource
+    // créerait une deuxième salle distincte au lieu de rattacher au salle_uuid existant.
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Stromae",
+                DATE_RECENTE,
+                "20:30",
+                "L'Olympia",
+                "Paris",
+                "75",
+                "https://example.com/stromae-tm",
+                "ticketmaster",
+                "music",
+                "Pop",
+                "onsale",
+                null,
+                null,
+                "ticketmaster:KovZOlympia",
+                null)));
+
+    java.util.UUID uuidOriginal =
+        jdbc.queryForObject(
+            "SELECT id FROM salles WHERE salle_cle = 'l olympia'",
+            Map.of(),
+            (rs, _) -> rs.getObject("id", java.util.UUID.class));
+    assertNotNull(uuidOriginal, "la salle TM doit être créée avec la salle_cle normalisée");
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Stromae",
+                "2026-11-21",
+                "20:30",
+                "LOlympia",
+                "Paris",
+                "75",
+                "https://example.com/stromae-eventim",
+                "eventim",
+                "music",
+                "Pop",
+                "onsale",
+                null,
+                null,
+                "eventim:internal:lolympia",
+                null)));
+
+    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    assertEquals(
+        1L, nbSalles, "aucune salle dupliquée ne doit être créée pour la variante sans apostrophe");
+
+    java.util.UUID uuidConcertEventim =
+        jdbc.queryForObject(
+            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'stromae' AND date ="
+                + " '2026-11-21'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+    assertEquals(
+        uuidOriginal,
+        uuidConcertEventim,
+        "le concert Eventim doit pointer vers la salle TM existante, pas une nouvelle salle");
+  }
+
+  @Test
   void persisterConcerts_sallesEnChaineTransitive_retourneUnSeulConcert() {
     // "olympia" ≈ "l olympia" ≈ "l olympia paris" — A≈B et B≈C mais A≢C directement.
     // Sans résolution de chaîne : "olympia" → "l olympia" (1 hop) au lieu de "l olympia paris"
