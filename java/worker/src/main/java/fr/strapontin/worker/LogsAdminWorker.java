@@ -15,9 +15,10 @@ import org.springframework.stereotype.Service;
 /// Écriture dans `logs_admin` depuis le worker (#706/#711/#716).
 ///
 /// Le worker n'a pas accès au `LogAdminService` du module web (deux applications Spring Boot
-/// séparées, ports 8080/8081) — il écrit déjà directement en SQL ailleurs dans
-/// {@link WorkerService} (voir `executerRevoquerAdmins`, `remonterBilanTm`). Ce service ne
-/// factorise que les nouveaux appelants du jalon 2.6.0, sans toucher au code existant.
+/// séparées, ports 8080/8081). Point d'insertion générique utilisé par le bilan de panne
+/// mutualisé de {@link WorkerService#remonterBilan} et {@code NotificationDigestService}
+/// (#909/#912) — {@link WorkerService} écrit encore directement en SQL pour certains cas
+/// spécifiques non couverts par cette abstraction (ex. `executerRevoquerAdmins`).
 ///
 /// @since 2.6.0
 /// @author Kwaite

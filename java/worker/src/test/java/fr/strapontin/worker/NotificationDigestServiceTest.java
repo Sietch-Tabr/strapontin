@@ -32,12 +32,28 @@ class NotificationDigestServiceTest {
 
   @Mock private ConfigServiceWorker configService;
   @Mock private NamedParameterJdbcTemplate jdbc;
+  @Mock private LogsAdminWorker logsAdminWorker;
 
   private NotificationDigestService service;
 
   @BeforeEach
   void init() {
-    service = new NotificationDigestService(configService, jdbc, new ObjectMapper());
+    service =
+        new NotificationDigestService(configService, jdbc, new ObjectMapper(), logsAdminWorker);
+  }
+
+  // #912 : push totalement ignoré (VAPID absent) — aucun appel tenté, aucune remontée de bilan.
+  @Test
+  @SuppressWarnings("unchecked")
+  void executerDigest_vapidAbsent_nInsereAucunBilanPush() {
+    when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of(ligneTest("u1")));
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
+    when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
+    when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
+
+    service.executerDigest("quotidien");
+
+    verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), any());
   }
 
   @Test

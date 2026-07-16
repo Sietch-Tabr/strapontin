@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
+import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import java.util.HashMap;
 import java.util.List;
@@ -618,7 +619,7 @@ class EventimSourceTest {
     EventimSource source = new EventimSource(restClient);
     source.fetchArtiste("Artiste Inconnu");
 
-    EventimSource.BilanFetch bilan = source.preleverBilan();
+    BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
     assertEquals(0, bilan.erreursHttp());
   }
@@ -636,7 +637,7 @@ class EventimSourceTest {
     EventimSource source = new EventimSource(restClient);
     source.fetchArtiste("Julien Clerc");
 
-    EventimSource.BilanFetch bilan = source.preleverBilan();
+    BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
     assertEquals(1, bilan.erreursHttp());
   }
@@ -662,7 +663,7 @@ class EventimSourceTest {
     EventimSource source = new EventimSource(restClient);
     source.fetchArtiste("Julien Clerc");
 
-    EventimSource.BilanFetch bilan = source.preleverBilan();
+    BilanFetch bilan = source.preleverBilan();
     assertEquals(2, bilan.appels(), "un appel /attractions + un appel /products");
     assertEquals(1, bilan.erreursHttp(), "seul l'appel /products a échoué");
   }
@@ -681,7 +682,7 @@ class EventimSourceTest {
     source.fetchArtiste("Julien Clerc");
     source.preleverBilan();
 
-    EventimSource.BilanFetch second = source.preleverBilan();
+    BilanFetch second = source.preleverBilan();
     assertEquals(0, second.appels());
     assertEquals(0, second.erreursHttp());
   }

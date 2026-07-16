@@ -10,6 +10,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.ResolveurNomCanonique.ResultatResolution;
 import fr.strapontin.sources.ResolveurNomCanonique.SourceResolution;
 import org.junit.jupiter.api.Test;
@@ -154,5 +155,83 @@ class ResolveurNomCanoniqueTest {
     assertEquals("Accor Arena", resultat.nom());
     assertEquals(SourceResolution.INCHANGE, resultat.source());
     serveur.verify();
+  }
+
+  // --- BilanFetch (#912) ---
+
+  @Test
+  void preleverBilan_appelReussi_compteUnAppelSansErreur() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist")))
+        .andRespond(
+            withSuccess(
+                """
+                {"data":[{"name":"Daft Punk"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    ResolveurNomCanonique resolveur = resolveurAvecServeur(serveur, restClient);
+    resolveur.resoudreNomCanonique("artiste", "daft punk");
+
+    BilanFetch bilan = resolveur.preleverBilan();
+    assertEquals(1, bilan.appels());
+    assertEquals(0, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_erreurHttp_compteUneErreur() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist")))
+        .andRespond(withServerError());
+
+    ResolveurNomCanonique resolveur = resolveurAvecServeur(serveur, restClient);
+    resolveur.resoudreNomCanonique("artiste", "Daft Punk");
+
+    BilanFetch bilan = resolveur.preleverBilan();
+    assertEquals(1, bilan.appels());
+    assertEquals(1, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_resultatEnCache_neCompteAucunAppel() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    Cache<String, ResultatResolution> cache = Caffeine.newBuilder().build();
+    cache.put("artiste:daft punk", new ResultatResolution("Daft Punk", SourceResolution.DEEZER));
+
+    ResolveurNomCanonique resolveur = new ResolveurNomCanonique(restClient, cache);
+    resolveur.resoudreNomCanonique("artiste", "daft punk");
+
+    BilanFetch bilan = resolveur.preleverBilan();
+    assertEquals(0, bilan.appels());
+  }
+
+  @Test
+  void preleverBilan_apresPrelevement_remetLesCompteursAZero() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist")))
+        .andRespond(withServerError());
+
+    ResolveurNomCanonique resolveur = resolveurAvecServeur(serveur, restClient);
+    resolveur.resoudreNomCanonique("artiste", "Daft Punk");
+    resolveur.preleverBilan();
+
+    BilanFetch second = resolveur.preleverBilan();
+    assertEquals(0, second.appels());
+    assertEquals(0, second.erreursHttp());
   }
 }

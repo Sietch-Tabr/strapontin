@@ -9,10 +9,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
 /// Tests unitaires pour {@link DigitickSource}.
 ///
@@ -195,5 +202,72 @@ class DigitickSourceTest {
   @Test
   void normaliserCasse_nomAvecTiret_capitaliseApresLeTiret() {
     assertEquals("Black Star-Riders", DigitickSource.normaliserCasse("BLACK STAR-RIDERS"));
+  }
+
+  // --- BilanFetch (#912) ---
+
+  @Test
+  void preleverBilan_appelReussi_compteUnAppelSansErreur() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("site=lempreinte")))
+        .andRespond(withSuccess(HTML_CONCERTS, MediaType.TEXT_HTML));
+
+    DigitickSource source = new DigitickSource(restClient);
+    source.fetchSalle("digitick:lempreinte");
+
+    BilanFetch bilan = source.preleverBilan();
+    assertEquals(1, bilan.appels());
+    assertEquals(0, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_erreurHttp_compteUneErreur() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("site=lempreinte")))
+        .andRespond(withServerError());
+
+    DigitickSource source = new DigitickSource(restClient);
+    source.fetchSalle("digitick:lempreinte");
+
+    BilanFetch bilan = source.preleverBilan();
+    assertEquals(1, bilan.appels());
+    assertEquals(1, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_slugVide_neCompteAucunAppel() {
+    DigitickSource source = new DigitickSource(RestClient.create());
+    source.fetchSalle("digitick:");
+
+    BilanFetch bilan = source.preleverBilan();
+    assertEquals(0, bilan.appels());
+    assertEquals(0, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_apresPrelevement_remetLesCompteursAZero() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("site=lempreinte")))
+        .andRespond(withServerError());
+
+    DigitickSource source = new DigitickSource(restClient);
+    source.fetchSalle("digitick:lempreinte");
+    source.preleverBilan();
+
+    BilanFetch second = source.preleverBilan();
+    assertEquals(0, second.appels());
+    assertEquals(0, second.erreursHttp());
   }
 }

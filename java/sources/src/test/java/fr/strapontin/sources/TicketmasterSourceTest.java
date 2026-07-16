@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
+import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
 import java.util.HashMap;
@@ -837,5 +838,113 @@ class TicketmasterSourceTest {
     TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     assertEquals(0, source.compterEventsVenue("rZ7abc"));
     serveur.verify();
+  }
+
+  // --- BilanFetch (#909) ---
+
+  @Test
+  void preleverBilan_appelReussi_compteUnAppelSansErreur() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "0"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    source.fetchArtiste("Julien Clerc");
+
+    BilanFetch bilan = source.preleverBilan();
+    assertEquals(1, bilan.appels());
+    assertEquals(0, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_erreurHttp_compteUneErreur() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withServerError());
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    source.fetchArtiste("Julien Clerc");
+
+    BilanFetch bilan = source.preleverBilan();
+    assertEquals(1, bilan.appels());
+    assertEquals(1, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_apresPrelevement_remetLesCompteursAZero() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withServerError());
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    source.fetchArtiste("Julien Clerc");
+    source.preleverBilan();
+
+    BilanFetch second = source.preleverBilan();
+    assertEquals(0, second.appels());
+    assertEquals(0, second.erreursHttp());
+  }
+
+  // concertsManques reste une métrique TM spécifique, distincte du bilan appels/erreurs commun
+  // (#909) : pagination plafonnée à NB_PAGES_MAX (6) pages de 200 événements, totalElements=1300
+  // déclenche un plafonnement (7 pages nécessaires) laissant 1300 - 6 = 1294 concerts non
+  // récupérés (6 pages fetchées, 1 événement par page dans la fixture).
+  @Test
+  void preleverConcertsManques_paginationPlafonnee_compteLesConcertsNonRecuperes() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    for (int i = 0; i < 6; i++) {
+      serveur
+          .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+          .andRespond(
+              withSuccess(reponsePageTMJson(1300, true), MediaType.APPLICATION_JSON)
+                  .header("Rate-Limit-Available", "9800")
+                  .header("Rate-Limit", "10000")
+                  .header("Rate-Limit-Reset", "0"));
+    }
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    source.fetchSalle("tm:venue-123");
+
+    assertEquals(1294, source.preleverConcertsManques());
+    serveur.verify();
+  }
+
+  @Test
+  void preleverConcertsManques_aucunePaginationPlafonnee_retourneZero() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON)
+                .header("Rate-Limit-Available", "9800")
+                .header("Rate-Limit", "10000")
+                .header("Rate-Limit-Reset", "0"));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    source.fetchSalle("tm:venue-123");
+
+    assertEquals(0, source.preleverConcertsManques());
   }
 }

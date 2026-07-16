@@ -4,6 +4,8 @@
  */
 package fr.strapontin.sources;
 
+import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
 import java.time.Duration;
@@ -12,7 +14,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
@@ -25,7 +26,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 ///
 /// @since 2.0.0
 /// @author Kwaite
-public class EventimSource implements SourceConcerts {
+public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(EventimSource.class);
 
@@ -51,9 +52,9 @@ public class EventimSource implements SourceConcerts {
   static final String USER_AGENT = "StrapontinBot/1.0 (+https://strapontin.kwaite.fr)";
 
   private final RestClient restClient;
-  // Compteurs cumulés depuis le dernier prélèvement (remontés dans logs_admin par le worker, #901).
-  private final AtomicInteger appelsCumules = new AtomicInteger();
-  private final AtomicInteger erreursHttpCumulees = new AtomicInteger();
+  // Compteur cumulé depuis le dernier prélèvement (remonté dans logs_admin par le worker, #901,
+  // factorisé en composant partagé par #909).
+  private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
   /// Crée une instance avec un RestClient par défaut incluant les headers Eventim et un timeout
   /// explicite (connexion 10s, lecture 30s — #887).
@@ -107,17 +108,13 @@ public class EventimSource implements SourceConcerts {
     return "eventim";
   }
 
-  /// Bilan agrégé des appels HTTP Eventim depuis le dernier prélèvement (#901).
+  /// Retourne le bilan agrégé des appels HTTP Eventim depuis le dernier prélèvement (#901) et
+  /// remet les compteurs à zéro.
   ///
-  /// @param appels     nombre total d'appels HTTP tentés
-  /// @param erreursHttp nombre d'appels HTTP en échec
-  public record BilanFetch(int appels, int erreursHttp) {}
-
-  /// Retourne le bilan cumulé des appels HTTP et remet les compteurs à zéro.
-  ///
-  /// @return le bilan depuis le dernier appel
+  /// @return le bilan depuis le dernier prélèvement
+  @Override
   public BilanFetch preleverBilan() {
-    return new BilanFetch(appelsCumules.getAndSet(0), erreursHttpCumulees.getAndSet(0));
+    return compteurBilan.preleverBilan();
   }
 
   /// Extrait le code département depuis un code postal français.
@@ -256,12 +253,12 @@ public class EventimSource implements SourceConcerts {
   @SuppressWarnings("unchecked")
   private ResultatPageEventim chargerPageProduits(
       String uri, String artisteFallback, String deptFiltre, String artisteSourceId) {
-    appelsCumules.incrementAndGet();
+    compteurBilan.enregistrerAppel();
     try {
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       return parserReponseProduits(data, artisteFallback, deptFiltre, artisteSourceId);
     } catch (Exception e) {
-      erreursHttpCumulees.incrementAndGet();
+      compteurBilan.enregistrerErreur();
       log.warn("Eventim erreur HTTP", e);
       return ResultatPageEventim.VIDE;
     }
@@ -270,12 +267,12 @@ public class EventimSource implements SourceConcerts {
   @SuppressWarnings("unchecked")
   private ResultatPageEventim chargerPageProduits(
       java.net.URI uri, String artisteFallback, String deptFiltre) {
-    appelsCumules.incrementAndGet();
+    compteurBilan.enregistrerAppel();
     try {
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       return parserReponseProduits(data, artisteFallback, deptFiltre, null);
     } catch (Exception e) {
-      erreursHttpCumulees.incrementAndGet();
+      compteurBilan.enregistrerErreur();
       log.warn("Eventim erreur HTTP", e);
       return ResultatPageEventim.VIDE;
     }
@@ -374,7 +371,7 @@ public class EventimSource implements SourceConcerts {
             .build()
             .toUriString();
 
-    appelsCumules.incrementAndGet();
+    compteurBilan.enregistrerAppel();
     try {
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return null;
@@ -419,7 +416,7 @@ public class EventimSource implements SourceConcerts {
       if (id == null) id = exact.get("id");
       return id != null ? String.valueOf(id) : null;
     } catch (Exception e) {
-      erreursHttpCumulees.incrementAndGet();
+      compteurBilan.enregistrerErreur();
       log.warn("Eventim attractions erreur terme={}", terme, e);
       return null;
     }

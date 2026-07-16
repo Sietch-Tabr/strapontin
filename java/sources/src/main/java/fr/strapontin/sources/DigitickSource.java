@@ -4,6 +4,8 @@
  */
 package fr.strapontin.sources;
 
+import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import java.nio.charset.Charset;
 import java.time.Duration;
@@ -29,7 +31,7 @@ import org.springframework.web.client.RestClient;
 ///
 /// @since 2.4.0
 /// @author Kwaite
-public class DigitickSource implements SourceConcerts {
+public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(DigitickSource.class);
 
@@ -49,6 +51,8 @@ public class DigitickSource implements SourceConcerts {
   private static final String SEL_URL = "a.evenementReserver";
 
   private final RestClient restClient;
+  // Bilan de panne agrégé, remonté dans logs_admin par le worker (#912).
+  private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
   /// Crée une instance avec User-Agent navigateur standard et HTTP/1.1 forcé.
   public DigitickSource() {
@@ -98,6 +102,7 @@ public class DigitickSource implements SourceConcerts {
       log.warn("Digitick fetchSalle — slug vide pour identifiant={}", identifiant);
       return List.of();
     }
+    compteurBilan.enregistrerAppel();
     try {
       byte[] octets = restClient.get().uri(URL_BILLETTERIE, slug).retrieve().body(byte[].class);
       if (octets == null || octets.length == 0) {
@@ -109,9 +114,19 @@ public class DigitickSource implements SourceConcerts {
       log.info("Digitick fetchSalle slug={} total={}", slug, concerts.size());
       return concerts;
     } catch (Exception e) {
+      compteurBilan.enregistrerErreur();
       log.warn("Digitick fetchSalle erreur slug={} : {}", slug, e.getMessage());
       return List.of();
     }
+  }
+
+  /// Retourne le bilan agrégé des appels HTTP Digitick depuis le dernier prélèvement (#912) et
+  /// remet les compteurs à zéro.
+  ///
+  /// @return le bilan depuis le dernier prélèvement
+  @Override
+  public BilanFetch preleverBilan() {
+    return compteurBilan.preleverBilan();
   }
 
   /// Parse le HTML Digitick et extrait les concerts.

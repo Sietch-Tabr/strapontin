@@ -16,8 +16,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.core.BilanFetch;
+import fr.strapontin.sources.DigitickSource;
 import fr.strapontin.sources.EventimSource;
-import fr.strapontin.sources.EventimSource.BilanFetch;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
@@ -41,6 +43,7 @@ class WorkerServiceTest {
 
   private TicketmasterSource tm;
   private EventimSource eventim;
+  private ResolveurNomCanonique resolveur;
   private List<SourceConcerts> sources;
   private PersisterConcerts persisterConcerts;
   private RecalculerMatchesService recalculerMatchesService;
@@ -49,14 +52,17 @@ class WorkerServiceTest {
   private NamedParameterJdbcTemplate jdbc;
   private SuiviSanteSourcesService suiviSanteSourcesService;
   private ReconciliationNocturneService reconciliationNocturneService;
+  private LogsAdminWorker logsAdminWorker;
   private WorkerService workerService;
 
   @BeforeEach
   void setUp() {
     tm = mock(TicketmasterSource.class);
     eventim = mock(EventimSource.class);
+    when(tm.nom()).thenReturn("ticketmaster");
+    when(eventim.nom()).thenReturn("eventim");
     sources = List.of(tm, eventim);
-    ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
+    resolveur = mock(ResolveurNomCanonique.class);
     persisterConcerts = mock(PersisterConcerts.class);
     recalculerMatchesService = mock(RecalculerMatchesService.class);
     gestionQuotaTM = mock(GestionQuotaTM.class);
@@ -64,6 +70,9 @@ class WorkerServiceTest {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     suiviSanteSourcesService = mock(SuiviSanteSourcesService.class);
     reconciliationNocturneService = mock(ReconciliationNocturneService.class);
+    // Instance réelle adossée au jdbc mocké : les assertions verify(jdbc)... existantes
+    // continuent de fonctionner sans changer de cible (#909).
+    logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
     workerService =
         new WorkerService(
             sources,
@@ -76,7 +85,8 @@ class WorkerServiceTest {
             notificationDigestService,
             jdbc,
             suiviSanteSourcesService,
-            reconciliationNocturneService);
+            reconciliationNocturneService,
+            logsAdminWorker);
   }
 
   // #901 : bilan Eventim remonté via remonterBilanEventim (appelé depuis enregistrerStatJob à
@@ -150,6 +160,92 @@ class WorkerServiceTest {
                 params ->
                     params.get("message") != null
                         && params.get("message").toString().contains("Eventim")));
+  }
+
+  // #909 : le bilan de panne n'est plus limité à Eventim — Digitick en bénéficie via la boucle
+  // générique sur `sources` (instanceof SourceAvecBilanFetch), sans méthode dédiée.
+  @Test
+  void executerFetchArtistesBatch_digitickPanneTotale_insereLogsAdminNiveauError() {
+    DigitickSource digitick = mock(DigitickSource.class);
+    when(digitick.nom()).thenReturn("digitick");
+    WorkerService service =
+        new WorkerService(
+            List.of(tm, eventim, digitick),
+            tm,
+            eventim,
+            resolveur,
+            persisterConcerts,
+            recalculerMatchesService,
+            gestionQuotaTM,
+            notificationDigestService,
+            jdbc,
+            suiviSanteSourcesService,
+            reconciliationNocturneService,
+            logsAdminWorker);
+    stuberFetchArtistesBatchMinimal();
+    when(digitick.preleverBilan()).thenReturn(new BilanFetch(4, 4));
+
+    service.executerFetchArtistesBatch();
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    "error".equals(params.get("niveau"))
+                        && params.get("message").toString().contains("Digitick")));
+  }
+
+  // #912 : même bilan de panne étendu à Deezer (ResolveurNomCanonique, hors liste `sources` car
+  // pas un SourceConcerts — remonté explicitement par WorkerService).
+  @Test
+  void executerFetchArtistesBatch_deezerPanneTotale_insereLogsAdminNiveauError() {
+    stuberFetchArtistesBatchMinimal();
+    when(resolveur.preleverBilan()).thenReturn(new BilanFetch(3, 3));
+
+    workerService.executerFetchArtistesBatch();
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    "error".equals(params.get("niveau"))
+                        && params.get("message").toString().contains("Deezer")));
+  }
+
+  // #909 : concertsManques reste une métrique TM spécifique, remontée séparément du bilan
+  // appels/erreurs commun.
+  @Test
+  void executerFetchArtistesBatch_tmConcertsManques_insereLogsAdminNiveauWarn() {
+    stuberFetchArtistesBatchMinimal();
+    when(tm.preleverConcertsManques()).thenReturn(7);
+
+    workerService.executerFetchArtistesBatch();
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    "warn".equals(params.get("niveau"))
+                        && params.get("message").toString().contains("7 concert(s) TM")));
+  }
+
+  @Test
+  void executerFetchArtistesBatch_tmAucunConcertManque_nInsereAucunLog() {
+    stuberFetchArtistesBatchMinimal();
+    when(tm.preleverConcertsManques()).thenReturn(0);
+
+    workerService.executerFetchArtistesBatch();
+
+    verify(jdbc, never())
+        .update(
+            anyString(),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    params.get("message") != null
+                        && params.get("message").toString().contains("concert(s) TM")));
   }
 
   @Test
