@@ -4,6 +4,8 @@
  */
 package fr.strapontin.sources;
 
+import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.QuotaTM;
@@ -35,7 +37,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 ///
 /// @since 2.0.0
 /// @author Kwaite
-public class TicketmasterSource implements SourceAvecFetchLot {
+public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(TicketmasterSource.class);
 
@@ -172,9 +174,10 @@ public class TicketmasterSource implements SourceAvecFetchLot {
   private final String apiKey;
   private final RestClient restClient;
   private final AtomicReference<QuotaTM> dernierQuota = new AtomicReference<>();
-  // Compteurs cumulés depuis le dernier prélèvement (remontés dans logs_admin par le worker).
+  // concertsManques reste spécifique à TM (pagination plafonnée), séparé du tronc commun
+  // appels/erreurs porté par compteurBilan (#909).
   private final AtomicInteger concertsManquesCumules = new AtomicInteger();
-  private final AtomicInteger erreursHttpCumulees = new AtomicInteger();
+  private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
   private final AtomicLong dernierAppelMs = new AtomicLong(0);
 
   /// Crée une instance avec la clé API fournie et un RestClient par défaut (timeout connexion
@@ -208,17 +211,23 @@ public class TicketmasterSource implements SourceAvecFetchLot {
     return dernierQuota.get();
   }
 
-  /// Bilan agrégé des fetchs Ticketmaster depuis le dernier prélèvement.
+  /// Retourne le bilan agrégé appels/erreurs HTTP depuis le dernier prélèvement (#909) et remet
+  /// les compteurs à zéro. Le nombre de concerts manqués (pagination plafonnée) reste distinct,
+  /// voir {@link #preleverConcertsManques()}.
   ///
-  /// @param concertsManques concerts non récupérés (pagination plafonnée à {@code NB_PAGES_MAX})
-  /// @param erreursHttp      nombre de réponses HTTP Ticketmaster en erreur
-  public record BilanFetch(int concertsManques, int erreursHttp) {}
-
-  /// Retourne le bilan cumulé des fetchs et remet les compteurs à zéro.
-  ///
-  /// @return le bilan depuis le dernier appel
+  /// @return le bilan depuis le dernier prélèvement
+  @Override
   public BilanFetch preleverBilan() {
-    return new BilanFetch(concertsManquesCumules.getAndSet(0), erreursHttpCumulees.getAndSet(0));
+    return compteurBilan.preleverBilan();
+  }
+
+  /// Retourne le nombre cumulé de concerts non récupérés par plafonnement de la pagination
+  /// (pagination bornée à {@code NB_PAGES_MAX}) depuis le dernier prélèvement, et remet le
+  /// compteur à zéro. Métrique spécifique à TM, distincte du bilan appels/erreurs commun (#909).
+  ///
+  /// @return le nombre de concerts manqués depuis le dernier prélèvement
+  public int preleverConcertsManques() {
+    return concertsManquesCumules.getAndSet(0);
   }
 
   /// Indique si un horodatage ISO 8601 (avec offset ou {@code Z}) est dans le futur.
@@ -500,6 +509,7 @@ public class TicketmasterSource implements SourceAvecFetchLot {
             .build()
             .toUriString();
 
+    compteurBilan.enregistrerAppel();
     try {
       var response = restClient.get().uri(uri).retrieve().toEntity(Map.class);
 
@@ -537,7 +547,7 @@ public class TicketmasterSource implements SourceAvecFetchLot {
     } catch (Exception e) {
       String uriSafe = uri.replaceAll("apikey=[^&]+", "apikey=***");
       log.warn("erreur HTTP Ticketmaster url={}", uriSafe, e);
-      erreursHttpCumulees.incrementAndGet();
+      compteurBilan.enregistrerErreur();
       return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null);
     }
   }

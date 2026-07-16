@@ -6,6 +6,8 @@ package fr.strapontin.sources;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.Normalisation;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +24,7 @@ import org.springframework.web.client.RestClient;
 ///
 /// @since 2.0.0
 /// @author Kwaite
-public class ResolveurNomCanonique {
+public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(ResolveurNomCanonique.class);
 
@@ -43,6 +45,8 @@ public class ResolveurNomCanonique {
 
   private final RestClient restClient;
   private final Cache<String, ResultatResolution> cache;
+  // Bilan de panne agrégé, remonté dans logs_admin par le worker (#912).
+  private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
   /// Crée une instance avec les URLs distantes et un cache TTL 7 jours.
   public ResolveurNomCanonique() {
@@ -63,6 +67,7 @@ public class ResolveurNomCanonique {
   @SuppressWarnings("unchecked")
   private String rechercherDeezerArtiste(String nom) {
     String uri = DEEZER_BASE + "/search/artist?q=" + encode(nom) + "&limit=1";
+    compteurBilan.enregistrerAppel();
     try {
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return null;
@@ -80,9 +85,19 @@ public class ResolveurNomCanonique {
       }
       return resultat;
     } catch (Exception e) {
+      compteurBilan.enregistrerErreur();
       log.warn("Deezer erreur artiste='{}' : {}", nom, e.getMessage());
       return null;
     }
+  }
+
+  /// Retourne le bilan agrégé des appels Deezer depuis le dernier prélèvement (#912) et remet
+  /// les compteurs à zéro.
+  ///
+  /// @return le bilan depuis le dernier prélèvement
+  @Override
+  public BilanFetch preleverBilan() {
+    return compteurBilan.preleverBilan();
   }
 
   private static String encode(String s) {

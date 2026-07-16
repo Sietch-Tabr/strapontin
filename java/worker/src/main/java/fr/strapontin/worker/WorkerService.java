@@ -4,10 +4,12 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Dedoublonner;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
+import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceAvecFetchLot;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
@@ -45,10 +47,6 @@ public class WorkerService {
   private static final int TAILLE_LOT_TM = 20;
   private static final int TAILLE_LOT_DEPTS = 5;
   private static final int TAILLE_LOT_SALLES = 20;
-  // Nombre minimal d'appels HTTP Eventim sur un cycle pour qu'un taux d'échec de 100% déclenche
-  // une alerte niveau error plutôt qu'un simple warn — évite une fausse alerte sur un
-  // FetchArtisteJob mono-artiste victime d'un aléa réseau isolé (#901).
-  private static final int SEUIL_APPELS_MIN_ALERTE_EVENTIM = 3;
 
   private final List<SourceConcerts> sources;
   private final TicketmasterSource tm;
@@ -61,6 +59,7 @@ public class WorkerService {
   private final NamedParameterJdbcTemplate jdbc;
   private final SuiviSanteSourcesService suiviSanteSourcesService;
   private final ReconciliationNocturneService reconciliationNocturneService;
+  private final LogsAdminWorker logsAdminWorker;
 
   public WorkerService(
       List<SourceConcerts> sources,
@@ -73,7 +72,8 @@ public class WorkerService {
       NotificationDigestService notificationDigestService,
       NamedParameterJdbcTemplate jdbc,
       SuiviSanteSourcesService suiviSanteSourcesService,
-      ReconciliationNocturneService reconciliationNocturneService) {
+      ReconciliationNocturneService reconciliationNocturneService,
+      LogsAdminWorker logsAdminWorker) {
     this.sources = sources;
     this.tm = tm;
     this.eventim = eventim;
@@ -85,6 +85,7 @@ public class WorkerService {
     this.jdbc = jdbc;
     this.suiviSanteSourcesService = suiviSanteSourcesService;
     this.reconciliationNocturneService = reconciliationNocturneService;
+    this.logsAdminWorker = logsAdminWorker;
   }
 
   /// Fetch global de tous les artistes suivis (TM par attraction ID + Eventim individuel).
@@ -838,7 +839,14 @@ public class WorkerService {
       log.warn("Impossible d'enregistrer stat job {} : {}", typeJob, e.getMessage());
     }
     if (typeJob.startsWith("fetch:")) {
-      boolean bilanLoggue = remonterBilanTm(typeJob) | remonterBilanEventim(typeJob);
+      boolean bilanLoggue = false;
+      for (SourceConcerts source : sources) {
+        if (source instanceof SourceAvecBilanFetch avecBilan) {
+          bilanLoggue |= remonterBilan(typeJob, source.nom(), avecBilan.preleverBilan());
+        }
+      }
+      bilanLoggue |= remonterBilan(typeJob, "deezer", resolveur.preleverBilan());
+      bilanLoggue |= remonterBilanConcertsManquesTm(typeJob);
       if (!bilanLoggue
           && erreur == null
           && resultat.nbInseres() == 0
@@ -848,96 +856,48 @@ public class WorkerService {
     }
   }
 
-  /// Remonte dans `logs_admin` le bilan agrégé des fetchs Ticketmaster (concerts manqués
-  /// par plafonnement de pagination, erreurs HTTP) pour le cycle qui vient de se terminer.
+  /// Remonte dans `logs_admin` le bilan agrégé d'appels/erreurs d'une source pour le cycle qui
+  /// vient de se terminer (#909/#912) — mécanisme générique remplaçant les anciennes méthodes
+  /// dédiées `remonterBilanTm`/`remonterBilanEventim` : une panne totale (100% d'échecs sur un
+  /// nombre suffisant d'appels — voir {@link BilanFetch#SEUIL_APPELS_MIN_ALERTE_DEFAUT}) est
+  /// remontée en niveau {@code error}, captée automatiquement par {@code AlerteLogsAdminService}
+  /// (digest niveau erreur) ; un échec partiel reste en {@code warn}.
   ///
-  /// Une seule entrée par cycle de fetch, et uniquement si quelque chose est à signaler.
+  /// @param typeJob   le type de job de fetch (préfixe `fetch:`)
+  /// @param nomSource nom de la source (ex. {@code "eventim"}, capitalisé pour l'affichage)
+  /// @param bilan     bilan prélevé pour cette source depuis le dernier cycle
+  /// @return {@code true} si une entrée a été insérée dans {@code logs_admin}
+  private boolean remonterBilan(String typeJob, String nomSource, BilanFetch bilan) {
+    if (bilan == null) return false;
+    return bilan
+        .evaluer(typeJob, capitaliser(nomSource), BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT)
+        .map(
+            entree -> {
+              logsAdminWorker.inserer(entree.niveau(), "worker", entree.message(), entree.meta());
+              return true;
+            })
+        .orElse(false);
+  }
+
+  private static String capitaliser(String nom) {
+    return nom.isEmpty() ? nom : Character.toUpperCase(nom.charAt(0)) + nom.substring(1);
+  }
+
+  /// Remonte dans `logs_admin` le nombre de concerts TM non récupérés par plafonnement de la
+  /// pagination pour le cycle qui vient de se terminer. Métrique spécifique à TM, distincte du
+  /// bilan appels/erreurs commun porté par {@link #remonterBilan} (#909).
   ///
   /// @param typeJob le type de job de fetch (préfixe `fetch:`)
   /// @return {@code true} si un warn a été inséré dans {@code logs_admin}
-  private boolean remonterBilanTm(String typeJob) {
-    var bilan = tm.preleverBilan();
-    if (bilan == null || (bilan.concertsManques() == 0 && bilan.erreursHttp() == 0)) return false;
-    try {
-      Map<String, Object> params = new LinkedHashMap<>();
-      params.put("ts", System.currentTimeMillis());
-      params.put("niveau", "warn");
-      params.put("source", "worker");
-      params.put(
-          "message",
-          typeJob
-              + " — "
-              + bilan.concertsManques()
-              + " concert(s) TM non récupéré(s), "
-              + bilan.erreursHttp()
-              + " erreur(s) HTTP");
-      params.put(
-          "meta",
-          "{\"manques\":"
-              + bilan.concertsManques()
-              + ",\"erreursHttp\":"
-              + bilan.erreursHttp()
-              + "}");
-      jdbc.update(
-          """
-          INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
-          """,
-          params);
-      return true;
-    } catch (Exception e) {
-      log.warn("Impossible de remonter le bilan TM : {}", e.getMessage());
-      return false;
-    }
-  }
-
-  /// Remonte dans `logs_admin` le bilan agrégé des appels HTTP Eventim pour le cycle qui vient
-  /// de se terminer (#901).
-  ///
-  /// <p>Une panne totale de la source (100% d'échecs sur au moins {@value
-  /// #SEUIL_APPELS_MIN_ALERTE_EVENTIM} appels — évite une fausse alerte sur un cycle mono-appel)
-  /// est remontée en niveau {@code error}, captée automatiquement par
-  /// {@code AlerteLogsAdminService} (digest niveau erreur). Un échec partiel reste en {@code
-  /// warn}, comme le bilan Ticketmaster.
-  ///
-  /// @param typeJob le type de job de fetch (préfixe `fetch:`)
-  /// @return {@code true} si une entrée a été insérée dans {@code logs_admin}
-  private boolean remonterBilanEventim(String typeJob) {
-    var bilan = eventim.preleverBilan();
-    if (bilan == null || bilan.appels() == 0) return false;
-    boolean panneTotale =
-        bilan.appels() >= SEUIL_APPELS_MIN_ALERTE_EVENTIM && bilan.erreursHttp() == bilan.appels();
-    if (!panneTotale && bilan.erreursHttp() == 0) return false;
-    try {
-      String niveau = panneTotale ? "error" : "warn";
-      Map<String, Object> params = new LinkedHashMap<>();
-      params.put("ts", System.currentTimeMillis());
-      params.put("niveau", niveau);
-      params.put("source", "worker");
-      params.put(
-          "message",
-          typeJob
-              + " — Eventim "
-              + (panneTotale ? "intégralement en échec" : "en échec partiel")
-              + " sur ce cycle ("
-              + bilan.erreursHttp()
-              + "/"
-              + bilan.appels()
-              + " appels HTTP)");
-      params.put(
-          "meta",
-          "{\"appels\":" + bilan.appels() + ",\"erreursHttp\":" + bilan.erreursHttp() + "}");
-      jdbc.update(
-          """
-          INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
-          """,
-          params);
-      return true;
-    } catch (Exception e) {
-      log.warn("Impossible de remonter le bilan Eventim : {}", e.getMessage());
-      return false;
-    }
+  private boolean remonterBilanConcertsManquesTm(String typeJob) {
+    int concertsManques = tm.preleverConcertsManques();
+    if (concertsManques == 0) return false;
+    logsAdminWorker.inserer(
+        "warn",
+        "worker",
+        typeJob + " — " + concertsManques + " concert(s) TM non récupéré(s) (pagination plafonnée)",
+        Map.of("manques", concertsManques));
+    return true;
   }
 
   /// Remonte dans `logs_admin` un warn de résultat vide (nb_inseres + nb_mis_a_jour = 0)

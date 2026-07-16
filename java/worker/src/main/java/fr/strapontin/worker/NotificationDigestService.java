@@ -7,6 +7,8 @@ package fr.strapontin.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
 import com.resend.services.emails.model.CreateEmailOptions;
+import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.UtilitairesChaine;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -53,12 +55,19 @@ public class NotificationDigestService {
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
+  private final LogsAdminWorker logsAdminWorker;
+  // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans logs_admin (#912).
+  private final CompteurBilanFetch compteurPush = new CompteurBilanFetch();
 
   public NotificationDigestService(
-      ConfigServiceWorker configService, NamedParameterJdbcTemplate jdbc, ObjectMapper jackson) {
+      ConfigServiceWorker configService,
+      NamedParameterJdbcTemplate jdbc,
+      ObjectMapper jackson,
+      LogsAdminWorker logsAdminWorker) {
     this.configService = configService;
     this.jdbc = jdbc;
     this.jackson = jackson;
+    this.logsAdminWorker = logsAdminWorker;
   }
 
   /// Données d'un concert pour le digest.
@@ -267,8 +276,22 @@ public class NotificationDigestService {
     } finally {
       enregistrerStat(System.currentTimeMillis() - debut, nbMatchesNotifies, erreur);
       logAdminDigest(nbEmailsOk, nbPushOk, nbErreurs);
+      remonterBilanPush();
       log.info("notifier:digest terminé users={} concerts={}", nbUtilisateurs, nbMatchesNotifies);
     }
+  }
+
+  /// Remonte dans `logs_admin` le bilan agrégé des envois push pour le cycle de digest qui vient
+  /// de se terminer (#912), même mécanisme générique que le bilan de panne des sources de
+  /// concerts (voir {@code WorkerService#remonterBilan}).
+  private void remonterBilanPush() {
+    BilanFetch bilan = compteurPush.preleverBilan();
+    bilan
+        .evaluer("notifier:digest", "Push", BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT)
+        .ifPresent(
+            entree ->
+                logsAdminWorker.inserer(
+                    entree.niveau(), "worker", entree.message(), entree.meta()));
   }
 
   private ResultatDigest envoyerDigest(
@@ -379,6 +402,7 @@ public class NotificationDigestService {
     String payload = construirePayloadPush(concerts, baseUrl);
     int nbEnvoyes = 0;
     for (Map<String, Object> ab : abonnements) {
+      compteurPush.enregistrerAppel();
       try {
         String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
         String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
@@ -389,18 +413,22 @@ public class NotificationDigestService {
         int status = response.getStatusLine().getStatusCode();
         switch (interpreterStatutPush(status)) {
           case ABONNEMENT_MORT -> {
+            // Abonnement mort (410/404) : nettoyage attendu, pas une panne du canal push —
+            // n'entre pas dans le bilan de panne (#912).
             jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
             log.info("Abonnement push révoqué : {} — {}", userId, ab.get("endpoint"));
           }
           case SUCCES -> nbEnvoyes++;
-          case ECHEC ->
-              // #795 : tout statut hors 2xx/404/410 (400, 429, 5xx...) est un échec, pas un
-              // succès implicite — sans cette branche, un push jamais délivré était compté
-              // comme réussi.
-              log.warn(
-                  "Push: statut inattendu {} pour {} — {}", status, userId, ab.get("endpoint"));
+          case ECHEC -> {
+            // #795 : tout statut hors 2xx/404/410 (400, 429, 5xx...) est un échec, pas un
+            // succès implicite — sans cette branche, un push jamais délivré était compté
+            // comme réussi.
+            compteurPush.enregistrerErreur();
+            log.warn("Push: statut inattendu {} pour {} — {}", status, userId, ab.get("endpoint"));
+          }
         }
       } catch (Exception e) {
+        compteurPush.enregistrerErreur();
         log.warn("Push: échec envoi pour {} — {}", userId, ab.get("endpoint"), e);
       }
     }
