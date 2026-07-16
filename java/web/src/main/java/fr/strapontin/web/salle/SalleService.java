@@ -29,8 +29,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /// Service de gestion des salles suivies.
@@ -66,6 +69,7 @@ public class SalleService {
   private final ConfigService configService;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
+  private SalleService self;
 
   /// @param salleRepository accès aux données salles
   /// @param configService   lecture de la clé API Ticketmaster
@@ -76,6 +80,18 @@ public class SalleService {
     this.configService = configService;
     this.objectMapper = objectMapper;
     this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+  }
+
+  /// Injection par setter de la référence proxifiée de ce bean — nécessaire pour que
+  /// {@link #mettreAJourWikidataIdEnSavepoint} bénéficie réellement de la propagation
+  /// {@code NESTED} (l'appel doit passer par le proxy AOP Spring, un appel direct via
+  /// {@code this} l'ignorerait silencieusement). En dehors d'un contexte Spring (tests
+  /// unitaires), {@code self} peut être positionné manuellement.
+  ///
+  /// @param self référence proxifiée de ce bean ({@code @Lazy})
+  @Autowired
+  public void setSelf(@Lazy SalleService self) {
+    this.self = self;
   }
 
   /// Liste les salles suivies, avec suggestions si {@code q} est fourni.
@@ -235,7 +251,7 @@ public class SalleService {
     }
     if (wikidataId != null && !wikidataId.isBlank()) {
       try {
-        salleRepository.mettreAJourWikidataId(salleUuid, wikidataId);
+        self.mettreAJourWikidataIdEnSavepoint(salleUuid, wikidataId);
       } catch (DuplicateKeyException e) {
         log.warn(
             "wikidataId déjà attribué à une autre salle — conflit ignoré salle={} wikidataId={}",
@@ -246,6 +262,29 @@ public class SalleService {
     salleRepository.ajouterPourUtilisateur(userId, salleUuid);
 
     declencherWorkerParSources(salleUuid);
+  }
+
+  /// Met à jour le wikidataId d'une salle sous savepoint (#718, conflit possible sur l'index
+  /// unique {@code idx_salles_wikidata_id} si le Q-ID est déjà porté par une autre salle).
+  ///
+  /// <p>{@code Propagation.NESTED} isole ce conflit du reste de {@link #ajouter} via un
+  /// savepoint sur la connexion existante (pas une nouvelle transaction/connexion, contrairement
+  /// à {@code REQUIRES_NEW}) : sans ce savepoint, PostgreSQL marque toute la transaction
+  /// englobante « annulée » dès la violation de contrainte, faisant échouer le
+  /// {@code INSERT INTO user_salles} suivant même si l'exception est capturée côté Java
+  /// (constaté en E2E réel — invisible en test unitaire, `salleRepository` y étant mocké).
+  ///
+  /// <p>L'exception doit se propager en dehors de cette méthode (pas de try/catch ici) pour que
+  /// l'intercepteur transactionnel Spring exécute un {@code ROLLBACK TO SAVEPOINT} — la capturer
+  /// ici ferait au contraire tenter une <em>libération</em> du savepoint sur une connexion déjà en
+  /// échec, provoquant un second échec (`TransactionSystemException`). Capturée par l'appelant.
+  ///
+  /// @param salleUuid  UUID de la salle
+  /// @param wikidataId Q-ID Wikidata à attribuer
+  /// @throws DuplicateKeyException si le wikidataId est déjà attribué à une autre salle
+  @Transactional(propagation = Propagation.NESTED)
+  void mettreAJourWikidataIdEnSavepoint(UUID salleUuid, String wikidataId) {
+    salleRepository.mettreAJourWikidataId(salleUuid, wikidataId);
   }
 
   /// Résout l'UUID d'une salle dans le référentiel global, en réutilisant une salle existante
