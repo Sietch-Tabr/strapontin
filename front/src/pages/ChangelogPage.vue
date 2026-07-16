@@ -34,6 +34,12 @@
               <li>Les concerts Eventim, indisponibles depuis plusieurs jours suite à une panne technique côté billetterie, sont de nouveau détectés.</li>
             </ul>
           </div>
+          <div>
+            <p class="changelog-categorie">Notifications</p>
+            <ul>
+              <li>Les notifications email de nouveaux concerts pouvaient échouer silencieusement à chaque cycle — corrigé.</li>
+            </ul>
+          </div>
         </div>
       </section>
 
