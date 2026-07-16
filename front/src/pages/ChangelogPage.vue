@@ -40,6 +40,12 @@
               <li>Ajouter une salle dont l'identifiant Wikidata était déjà associé à une autre salle provoquait une erreur au lieu de l'ajouter normalement — corrigé.</li>
             </ul>
           </div>
+          <div>
+            <p class="changelog-categorie">Notifications</p>
+            <ul>
+              <li>Les notifications email de nouveaux concerts pouvaient échouer silencieusement à chaque cycle — corrigé.</li>
+            </ul>
+          </div>
         </div>
       </section>
 
