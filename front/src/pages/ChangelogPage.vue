@@ -34,6 +34,12 @@
               <li>Les concerts Eventim, indisponibles depuis plusieurs jours suite à une panne technique côté billetterie, sont de nouveau détectés.</li>
             </ul>
           </div>
+          <div>
+            <p class="changelog-categorie">Salles</p>
+            <ul>
+              <li>Ajouter une salle dont l'identifiant Wikidata était déjà associé à une autre salle provoquait une erreur au lieu de l'ajouter normalement — corrigé.</li>
+            </ul>
+          </div>
         </div>
       </section>
 
