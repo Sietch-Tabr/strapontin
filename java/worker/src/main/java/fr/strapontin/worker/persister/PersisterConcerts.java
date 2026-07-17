@@ -10,6 +10,7 @@ import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -178,6 +179,12 @@ public class PersisterConcerts {
   /// <p>Pour les salles TM dont le {@code salleSourceId} est absent de {@code salle_sources},
   /// effectue un upsert dans {@code salles} et {@code salle_sources}.
   ///
+  /// <p>Pour les concerts sans {@code salleSourceId} du tout (#965 — TM omet parfois
+  /// {@code venue.id} pour un événement donné, sans identifiant source exploitable), tente un
+  /// repli par correspondance floue ({@link ReconciliateurSalles#chercherSalleParTokens}) plutôt
+  /// que de laisser {@code salle_id} indéfiniment {@code null} — sans identifiant source fiable,
+  /// aucune salle n'est créée si le repli échoue (pas de salle fantôme).
+  ///
   /// <p>Pour les concerts sans {@code artiste_id} après résolution par source (y compris
   /// les concerts Digitick sans {@code artisteSourceId}), effectue un lookup batch par
   /// {@code nom_norm} dans la table {@code artistes}.
@@ -196,12 +203,22 @@ public class PersisterConcerts {
       }
     }
 
+    Map<String, UUID> cachesSallesParNom = new HashMap<>();
+    for (ValeurConcert c : concerts) {
+      if (c.salleSourceId() == null && !cachesSallesParNom.containsKey(c.salleNorm())) {
+        cachesSallesParNom.put(
+            c.salleNorm(), reconciliateurSalles.chercherSalleParTokens(c.salle(), c.dept()));
+      }
+    }
+
     List<ValeurConcert> resolus =
         concerts.stream()
             .map(
                 c -> {
                   UUID salleId =
-                      c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
+                      c.salleSourceId() != null
+                          ? cachesSalles.get(c.salleSourceId())
+                          : cachesSallesParNom.get(c.salleNorm());
                   UUID artisteId =
                       c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
                   if (salleId == null && artisteId == null) return c;
