@@ -43,6 +43,13 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   /// Classifications Ticketmaster filtrées lors des fetchs (musique, opéra, comédie musicale).
   /// Valeur canonique partagée — référencée par le worker plutôt que redéfinie.
   public static final List<String> CLASSIFICATIONS = List.of("music", "opera", "musical");
+
+  /// Préfixe abrégé attendu par {@link #accepteIdentifiantSalle}/{@link #fetchSalle}, distinct
+  /// de {@link #nom()} ({@code "ticketmaster"}, valeur canonique stockée dans
+  /// {@code salle_sources.source}). Référencée par les appelants qui construisent l'identifiant
+  /// préfixé à partir de cette colonne (#966) — sans cette traduction, {@code fetchSalle} n'est
+  /// jamais invoqué (mismatch de préfixe silencieux, aucune exception).
+  public static final String PREFIXE_IDENTIFIANT = "tm";
   private static final int TAILLE_PAGE_REGION = 200;
   // TM refuse offset > 1000 : avec size=200, page 6 → offset 1000 (ok), page 7 → 1200 (HTTP 400)
   private static final int NB_PAGES_MAX = 6;
@@ -524,7 +531,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
   @Override
   public boolean accepteIdentifiantSalle(String identifiant) {
-    return identifiant != null && identifiant.startsWith("tm:");
+    return identifiant != null && identifiant.startsWith(PREFIXE_IDENTIFIANT + ":");
   }
 
   /// Récupère les concerts d'un artiste par mot-clé (une seule page TM).
@@ -557,7 +564,10 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   /// @return liste des concerts à venir dans cette salle
   @Override
   public List<ConcertBrut> fetchSalle(String identifiant) {
-    String venueId = identifiant.startsWith("tm:") ? identifiant.substring(3) : identifiant;
+    String venueId =
+        identifiant.startsWith(PREFIXE_IDENTIFIANT + ":")
+            ? identifiant.substring(PREFIXE_IDENTIFIANT.length() + 1)
+            : identifiant;
     FenetreTemps fenetre = obtenirFenetreTemps();
     var uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)

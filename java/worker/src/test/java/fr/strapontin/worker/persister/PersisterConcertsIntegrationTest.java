@@ -512,6 +512,57 @@ class PersisterConcertsIntegrationTest {
   }
 
   @Test
+  void persisterConcerts_salleSourceIdNull_rattacheParTokensASalleExistante() {
+    // #965 : TM omet parfois venue.id pour un événement donné — sans identifiant source du tout
+    // (contrairement à #902 ci-dessus, où un identifiant existait mais restait inconnu de
+    // salle_sources). resoudreIdentitesSources doit alors se rabattre sur
+    // chercherSalleParTokens plutôt que de laisser salle_id indéfiniment null.
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
+            + " VALUES ('l olympia', 'L''Olympia', 'l olympia', '75')",
+        Map.of());
+    java.util.UUID uuidOriginal =
+        jdbc.queryForObject(
+            "SELECT id FROM salles WHERE salle_cle = 'l olympia'",
+            Map.of(),
+            (rs, _) -> rs.getObject("id", java.util.UUID.class));
+
+    persisterConcerts.persisterConcerts(
+        List.of(concertAvecSourceId("AC/DC", "2026-11-25", "LOlympia", null, null)));
+
+    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    assertEquals(1L, nbSalles, "aucune salle dupliquée ne doit être créée sans identifiant source");
+
+    java.util.UUID uuidConcert =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'ac dc'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
+    assertEquals(
+        uuidOriginal, uuidConcert, "le concert sans salleSourceId doit être rattaché par tokens");
+  }
+
+  @Test
+  void persisterConcerts_salleSourceIdNullSansCorrespondance_salleIdResteNull() {
+    // Sans salleSourceId et sans salle existante correspondante, aucune salle fantôme ne doit
+    // être créée — salle_id reste null (contrairement à upsertSalleSource, qui crée la salle
+    // quand un identifiant source fiable est disponible).
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId("Angele", "2026-11-26", "Salle Totalement Inconnue", null, null)));
+
+    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    assertEquals(0L, nbSalles, "aucune salle ne doit être créée sans identifiant source fiable");
+
+    java.util.UUID salleId =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'angele'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
+    assertNull(salleId, "salle_id doit rester null sans correspondance trouvée");
+  }
+
+  @Test
   void persisterConcerts_sallesEnChaineTransitive_retourneUnSeulConcert() {
     // "olympia" ≈ "l olympia" ≈ "l olympia paris" — A≈B et B≈C mais A≢C directement.
     // Sans résolution de chaîne : "olympia" → "l olympia" (1 hop) au lieu de "l olympia paris"

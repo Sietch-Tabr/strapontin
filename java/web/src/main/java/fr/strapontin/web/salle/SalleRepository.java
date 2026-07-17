@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.salle;
 
+import fr.strapontin.sources.TicketmasterSource;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -232,7 +233,12 @@ class SalleRepository {
 
   /// Retourne les identifiants préfixés de toutes les sources d'une salle, séparés par une virgule.
   ///
-  /// <p>Ex. : {@code "digitick:lempreinte"} ou {@code "tm:rZFSnyZdFvA,digitick:lempreinte"}.
+  /// <p>Ex. : {@code "digitick:lempreinte"} ou {@code "tm:rZFSnyZdFvA,digitick:lempreinte"}. Le
+  /// préfixe Ticketmaster est abrégé ({@code "tm"}, pas {@code "ticketmaster"}, la valeur
+  /// canonique de {@code salle_sources.source}) — {@link
+  // TicketmasterSource#accepteIdentifiantSalle}
+  /// n'accepte que ce préfixe court (#966), sans quoi le fetch déclenché à l'ajout d'une salle
+  /// TM ne fait jamais rien (mismatch silencieux, aucune exception).
   ///
   /// @param salleId UUID de la salle
   /// @return CSV d'identifiants ou {@code null} si aucune source connue
@@ -249,7 +255,10 @@ class SalleRepository {
     if (lignes.isEmpty()) return null;
     List<String> ids = new ArrayList<>();
     for (Map<String, Object> l : lignes) {
-      ids.add(l.get("source") + ":" + l.get("identifiant_externe"));
+      String source = (String) l.get("source");
+      String prefixe =
+          "ticketmaster".equals(source) ? TicketmasterSource.PREFIXE_IDENTIFIANT : source;
+      ids.add(prefixe + ":" + l.get("identifiant_externe"));
     }
     return String.join(",", ids);
   }

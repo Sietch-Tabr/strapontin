@@ -69,7 +69,13 @@ class WorkerFetchServiceTest {
     // WorkerStatsServiceTest.
     LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
     WorkerStatsService workerStatsService =
-        new WorkerStatsService(sources, tm, resolveur, jdbc, logsAdminWorker, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+        new WorkerStatsService(
+            sources,
+            tm,
+            resolveur,
+            jdbc,
+            logsAdminWorker,
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
     fetchService =
         new WorkerFetchService(
             sources,
@@ -238,6 +244,27 @@ class WorkerFetchServiceTest {
 
     verify(tm).fetchSalle("tm:venue-99");
     verify(persisterConcerts).persisterConcerts(any());
+  }
+
+  // #966 : la requête SQL réelle agrège salle_sources.source ("ticketmaster", la valeur
+  // canonique), jamais l'abréviation "tm" — sans traduction, TicketmasterSource.fetchSalle
+  // n'est jamais invoqué (accepteIdentifiantSalle rejette silencieusement le préfixe long).
+  @Test
+  @SuppressWarnings("unchecked")
+  void executerFetchSallesAll_identifiantSourceTicketmaster_traduitEnPrefixeTmAvantFetch() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
+        .thenReturn(List.of("ticketmaster:venue-99"));
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+    when(tm.accepteIdentifiantSalle("tm:venue-99")).thenReturn(true);
+    when(tm.fetchSalle("tm:venue-99")).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+    when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
+
+    fetchService.executerFetchSallesAll();
+
+    verify(tm).fetchSalle("tm:venue-99");
+    verify(tm, never()).fetchSalle("ticketmaster:venue-99");
   }
 
   @Test
