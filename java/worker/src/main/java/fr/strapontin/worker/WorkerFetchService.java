@@ -414,12 +414,25 @@ public class WorkerFetchService {
         return;
       }
 
+      // #966 : le préfixe emis ici doit correspondre à celui attendu par
+      // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique "ticketmaster"
+      // de salle_sources.source) — sans cette traduction, fetchSalle n'est jamais invoqué pour
+      // aucune salle TM (mismatch silencieux, aucune exception, aucun log d'erreur).
       List<String> identifiantsParSalle =
-          jdbc.queryForList(
-              "SELECT string_agg(ss.source || ':' || ss.identifiant_externe, ',')"
-                  + " FROM salle_sources ss GROUP BY ss.salle_id",
-              Map.of(),
-              String.class);
+          jdbc
+              .queryForList(
+                  "SELECT string_agg(ss.source || ':' || ss.identifiant_externe, ',')"
+                      + " FROM salle_sources ss GROUP BY ss.salle_id",
+                  Map.of(),
+                  String.class)
+              .stream()
+              .map(
+                  csv ->
+                      csv == null
+                          ? null
+                          : csv.replace(
+                              "ticketmaster:", TicketmasterSource.PREFIXE_IDENTIFIANT + ":"))
+              .toList();
 
       if (identifiantsParSalle.isEmpty()) {
         log.info("fetch:salles:all — aucune salle avec source configurée");
