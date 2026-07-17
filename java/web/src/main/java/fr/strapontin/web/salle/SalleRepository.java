@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.salle;
 
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.TicketmasterSource;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -167,7 +168,7 @@ class SalleRepository {
     Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
     params.put("nom", nom);
-    params.put("nomNorm", salleCle);
+    params.put("nomNorm", Normalisation.normaliserTexte(nom));
     return jdbc.queryForObject(
         """
         INSERT INTO salles (salle_cle, nom, nom_norm)
@@ -192,7 +193,7 @@ class SalleRepository {
     Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
     params.put("nom", nom);
-    params.put("nomNorm", salleCle);
+    params.put("nomNorm", Normalisation.normaliserTexte(nom));
     params.put("ville", ville);
     params.put("dept", dept);
     return jdbc.queryForObject(
