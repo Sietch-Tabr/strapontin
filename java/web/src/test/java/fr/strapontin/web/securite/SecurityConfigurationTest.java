@@ -5,8 +5,20 @@
 package fr.strapontin.web.securite;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent;
+import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.session.web.http.CookieSerializer;
@@ -23,6 +35,49 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 class SecurityConfigurationTest {
 
   private final SecurityConfiguration config = new SecurityConfiguration();
+
+  // --- authenticationManager (#964 — publication des événements d'authentification) ---
+
+  @Test
+  void authenticationManager_credentialsValides_publieAuthenticationSuccessEvent() {
+    PasswordEncoder encodeur = new BCryptPasswordEncoder();
+    UserDetails utilisateur =
+        User.withUsername("alice")
+            .password(encodeur.encode("motdepasse12345"))
+            .roles("USER")
+            .build();
+    UserDetailsService userDetailsService = id -> utilisateur;
+    ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+
+    AuthenticationManager authenticationManager =
+        config.authenticationManager(userDetailsService, encodeur, eventPublisher);
+    authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken("alice", "motdepasse12345"));
+
+    verify(eventPublisher).publishEvent(any(AuthenticationSuccessEvent.class));
+  }
+
+  @Test
+  void authenticationManager_credentialsInvalides_publieAuthenticationFailureEvent() {
+    PasswordEncoder encodeur = new BCryptPasswordEncoder();
+    UserDetails utilisateur =
+        User.withUsername("alice")
+            .password(encodeur.encode("motdepasse12345"))
+            .roles("USER")
+            .build();
+    UserDetailsService userDetailsService = id -> utilisateur;
+    ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+
+    AuthenticationManager authenticationManager =
+        config.authenticationManager(userDetailsService, encodeur, eventPublisher);
+
+    assertThrows(
+        BadCredentialsException.class,
+        () ->
+            authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken("alice", "mauvais-mot-de-passe")));
+    verify(eventPublisher).publishEvent(any(AbstractAuthenticationFailureEvent.class));
+  }
 
   // --- cookieSerializer ---
 

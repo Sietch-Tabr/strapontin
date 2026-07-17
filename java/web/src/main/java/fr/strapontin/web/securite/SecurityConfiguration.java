@@ -9,10 +9,12 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -236,15 +238,27 @@ public class SecurityConfiguration {
 
   /// Gestionnaire d'authentification avec chargement depuis la base de données.
   ///
+  /// <p>Attache un {@link AuthenticationEventPublisher} explicitement (#964) : un
+  /// {@link ProviderManager} construit à la main, hors du chemin d'auto-configuration Spring Boot
+  /// standard, n'en reçoit aucun par défaut — sans lui, {@code AuthenticationSuccessEvent}/
+  /// {@code AbstractAuthenticationFailureEvent} ne sont jamais publiés et {@link
+  /// AuthEvenementListener} reste du code mort.
+  ///
   /// @param userDetailsService le service de chargement des utilisateurs
   /// @param passwordEncoder    l'encodeur de mots de passe
+  /// @param eventPublisher     l'éditeur d'événements applicatif Spring
   /// @return l'AuthenticationManager configuré
   @Bean
   AuthenticationManager authenticationManager(
-      UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+      UserDetailsService userDetailsService,
+      PasswordEncoder passwordEncoder,
+      ApplicationEventPublisher eventPublisher) {
     DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
     provider.setPasswordEncoder(passwordEncoder);
-    return new ProviderManager(provider);
+    ProviderManager providerManager = new ProviderManager(provider);
+    providerManager.setAuthenticationEventPublisher(
+        new DefaultAuthenticationEventPublisher(eventPublisher));
+    return providerManager;
   }
 
   /// Force le timeout d'inactivité des sessions JDBC à 30 jours.
