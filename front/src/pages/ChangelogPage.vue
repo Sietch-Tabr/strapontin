@@ -12,7 +12,21 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.7.0 — 8 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.7.1 — 17 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Concerts</p>
+            <ul>
+              <li>Certains concerts d'une salle suivie restaient bloqués sur un statut ou un prix ancien sans jamais se mettre à jour — corrigé.</li>
+              <li>Certains concerts (ex. AC/DC au Metronum, Dorothée au Palais des Congrès de Paris) n'étaient jamais rattachés à leur salle malgré un nom bien identifiable — corrigé.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.7.0 — 8 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Administration</p>
@@ -53,7 +67,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.6.5 — 5 juillet 2026</h2></summary>
