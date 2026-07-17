@@ -315,7 +315,9 @@
   transform: translateY(-50%);
 }
 
-/* #820 : point simple (pas de compteur) — indique une nouveauté changelog non lue */
+/* #820 : point simple (pas de compteur) — indique une nouveauté changelog non lue.
+   #985 : doré (--warning) plutôt que --danger, réservé partout ailleurs au code couleur
+   "problème" (suppression, badge annulé) — un point rouge disait à tort "il y a une erreur". */
 .nav-badge--point {
   position: absolute;
   top: 50%;
@@ -324,8 +326,41 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 9999px;
-  background: var(--danger);
+  background: var(--warning);
   pointer-events: none;
+}
+
+/* #985 : repositionné en coin d'icône dans le bouton "Plus" mobile (bottom-nav-badge-wrapper) —
+   le positionnement par défaut ci-dessus vise un lien de nav pleine largeur (sidebar/drawer). */
+.bottom-nav-badge-wrapper .nav-badge--point {
+  top: -0.125rem;
+  right: -0.25rem;
+  transform: none;
+}
+
+/* #985 : quelques cycles de pulse à l'apparition d'une nouveauté, pas un clignotement
+   permanent entre deux mises à jour — neutralisé par prefers-reduced-motion (base.css). */
+.nav-badge--point-pulse {
+  animation: nouveaute-pulse 1.6s ease-in-out 3;
+}
+
+/* rgba figée (pas de syntaxe couleur relative CSS — support navigateur inégal, hors E2E
+   webkit/firefox du projet) : #ca8a04 = --warning, valeur unique quel que soit le thème. */
+@keyframes nouveaute-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 0.3rem rgba(202, 138, 4, 0);
+  }
+}
+
+/* #985 : icône "Nouveautés" (sparkles) elle-même teintée dorée + léger halo quand une
+   nouveauté est non lue — pas besoin d'un second symbole, celui existant change d'état. */
+.icon--nouveaute-actif {
+  color: var(--warning);
+  filter: drop-shadow(0 0 3px rgba(202, 138, 4, 0.6));
 }
 
 /* Fix view-transition : isoler la bottom nav de la transition root */
