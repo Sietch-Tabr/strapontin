@@ -4,10 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import fr.strapontin.core.QuotaTM;
 import fr.strapontin.web.ErreurMetier;
-import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.GenerateurSecrets;
 import fr.strapontin.web.securite.VerificationRepository;
@@ -18,8 +15,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -28,7 +23,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,13 +36,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestClient;
 
-/// Service d'administration : gestion des utilisateurs, jobs et configuration applicative.
+/// Service d'administration : gestion des comptes utilisateurs.
 ///
-/// <p>Contient la logique métier et l'accès aux données pour le domaine admin.
-/// {@link AdminController#creerUtilisateur} est atomique ({@code @Transactional}).
-/// La gestion des clés VAPID est déléguée à {@link VapidService}.
+/// <p>Contient la logique métier et l'accès aux données pour la gestion des utilisateurs.
+/// {@link AdminController#creerUtilisateur} est atomique ({@code @Transactional}). La gestion des
+/// clés VAPID est déléguée à {@link VapidService}, la configuration applicative à
+/// {@link ConfigAdminService} et les statistiques de jobs à {@link JobsAdminService} (#916).
 ///
 /// @since 2.1.0
 /// @author Kwaite
@@ -57,74 +51,32 @@ public class AdminService {
 
   private static final Logger log = LoggerFactory.getLogger(AdminService.class);
   private static final Pattern FORMAT_EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
-  private static final List<String> CLES_AUTORISEES =
-      List.of(
-          "TICKETMASTER_API_KEY",
-          "RESEND_API_KEY",
-          "RESEND_WEBHOOK_SECRET",
-          "CONTACT_EMAIL",
-          "ADMIN_ALERT_EMAIL",
-          "PUBLIC_BASE_URL",
-          "SIGNAL_LIEN",
-          "VAPID_PUBLIC_KEY",
-          "VAPID_PRIVATE_KEY");
-  private static final Set<String> CLES_EN_CLAIR =
-      Set.of("CONTACT_EMAIL", "ADMIN_ALERT_EMAIL", "PUBLIC_BASE_URL", "SIGNAL_LIEN");
-  private static final Set<String> CLES_OBLIGATOIRES = Set.of("CONTACT_EMAIL", "PUBLIC_BASE_URL");
-  private static final Pattern FORMAT_TM_KEY = Pattern.compile("^[A-Za-z0-9]{16,64}$");
-  private static final Pattern FORMAT_RESEND_KEY = Pattern.compile("^re_[A-Za-z0-9_-]{10,}$");
-  private static final Pattern FORMAT_WEBHOOK_SECRET =
-      Pattern.compile("^whsec_[A-Za-z0-9+/=]{16,}$");
-  // Base64 URL-safe sans padding d'une clé EC P-256 : 65 octets (point non compressé, clé
-  // publique) ou 32 octets (scalaire, clé privée) — voir VapidService.genererVapid().
-  private static final Pattern FORMAT_VAPID_PUBLIC_KEY = Pattern.compile("^[A-Za-z0-9_-]{87}$");
-  private static final Pattern FORMAT_VAPID_PRIVATE_KEY = Pattern.compile("^[A-Za-z0-9_-]{43}$");
   private static final Set<String> ROLES_VALIDES = Set.of("user", "admin");
   private static final int MAX_TENTATIVES_REVOCATION = 3;
 
-  private static final String TM_URL_TEST =
-      "https://app.ticketmaster.com/discovery/v2/events.json"
-          + "?apikey={cle}&size=1&countryCode=FR&classificationName=music";
-
   private final NamedParameterJdbcTemplate jdbc;
-  private final ConfigService configService;
   private final EmailService emailService;
   private final LogAdminService logAdminService;
-  private final ObjectMapper objectMapper;
   private final VerificationRepository verificationRepository;
-  private final RestClient restClient;
-  private final WorkerProxyService workerProxyService;
   private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
   private AdminService self;
 
   /// @param jdbc                   accès JDBC
-  /// @param configService          lecture/écriture de la configuration applicative
   /// @param emailService           service d'envoi d'emails
   /// @param logAdminService        service de logs admin
-  /// @param objectMapper           désérialiseur JSON (quota TM)
   /// @param verificationRepository accès aux tokens de vérification
-  /// @param restClient             client HTTP pour les tests d'API externes
-  /// @param workerProxyService     proxy HTTP vers le worker (jobs en cours, prochaines exécutions)
   /// @param sessionRepository      dépôt de sessions JDBC (révocation après changement de rôle)
   public AdminService(
       NamedParameterJdbcTemplate jdbc,
-      ConfigService configService,
       EmailService emailService,
       LogAdminService logAdminService,
-      ObjectMapper objectMapper,
       VerificationRepository verificationRepository,
-      RestClient restClient,
-      WorkerProxyService workerProxyService,
       FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
     this.jdbc = jdbc;
-    this.configService = configService;
     this.emailService = emailService;
     this.logAdminService = logAdminService;
-    this.objectMapper = objectMapper;
     this.verificationRepository = verificationRepository;
-    this.restClient = restClient;
-    this.workerProxyService = workerProxyService;
     this.sessionRepository = sessionRepository;
   }
 
@@ -140,21 +92,6 @@ public class AdminService {
     this.self = self;
   }
 
-  /// Teste la validité de la clé Ticketmaster API en effectuant un appel minimal.
-  ///
-  /// @return {@code true} si la clé est configurée et acceptée par l'API TM (HTTP 200)
-  public boolean testerApiTm() {
-    Optional<String> cle = configService.lireConfig("TICKETMASTER_API_KEY");
-    if (cle.isEmpty()) return false;
-    try {
-      restClient.get().uri(TM_URL_TEST, cle.get()).retrieve().toBodilessEntity();
-      return true;
-    } catch (Exception e) {
-      log.warn("Test clé TM : réponse invalide — {}", e.getMessage());
-      return false;
-    }
-  }
-
   /// Retourne la liste des utilisateurs avec leur dernière activité et compteurs de suivi.
   ///
   /// @return utilisateurs triés par date de création
@@ -164,7 +101,7 @@ public class AdminService {
             """
             SELECT u.id, u.email, u.role::text, u.username, u.display_username,
                    u.must_change_credentials, u.created_at, u.revocation_admin_le,
-                   COUNT(DISTINCT us.salle_uuid) AS nb_salles,
+                   COUNT(DISTINCT us.salle_id) AS nb_salles,
                    COUNT(DISTINCT ua.artiste_id) AS nb_artistes
             FROM users u
             LEFT JOIN user_salles us ON us.user_id = u.id
@@ -320,6 +257,18 @@ public class AdminService {
       String roleActuel =
           roleActuelRows.isEmpty() ? null : (String) roleActuelRows.get(0).get("role");
       retrogradationAdmin = "user".equals(role) && "admin".equals(roleActuel);
+    }
+    // #940 : initierRevocationAdmin délègue à initierRevocationAdminTransactionnel
+    // (REQUIRES_NEW + SERIALIZABLE) — appelée depuis cette méthode déjà @Transactional, elle
+    // consommerait une seconde connexion HikariCP suspendue. Rejeter la combinaison en un seul
+    // PATCH force l'appelant à séquencer deux requêtes distinctes (déjà fait côté front depuis
+    // l'incident v2.6.4), plutôt que de rendre initierRevocationAdminTransactionnel sûr en
+    // imbrication : NESTED perdrait l'isolation SERIALIZABLE nécessaire à la garde anti-concurrence
+    // (#811), la transaction imbriquée héritant de l'isolation de la transaction englobante.
+    if (retrogradationAdmin && (!nom.isEmpty() || !email.isEmpty())) {
+      throw new ErreurMetier(
+          "Impossible de combiner une rétrogradation admin avec une modification de nom/email en"
+              + " une seule requête. Envoyer deux requêtes distinctes.");
     }
 
     Map<String, Object> miseAJour = new HashMap<>();
@@ -536,194 +485,6 @@ public class AdminService {
     logAdminService.logAdmin(
         "warn", "admin", "TOTP réinitialisé", Map.of("userId", userId, "parAdmin", adminId));
     return true;
-  }
-
-  /// Retourne le statut des clés de configuration autorisées.
-  ///
-  /// @return statuts de configuration
-  public List<ConfigStatut> lireConfigStatuts() {
-    Set<String> presentes = configService.lireConfigsPresentes();
-    List<ConfigStatut> statuts = new ArrayList<>();
-    for (String cle : CLES_AUTORISEES) {
-      boolean presente = presentes.contains(cle);
-      String valeur =
-          (presente && CLES_EN_CLAIR.contains(cle))
-              ? configService.lireConfig(cle).orElse(null)
-              : null;
-      statuts.add(new ConfigStatut(cle, presente, valeur, !CLES_EN_CLAIR.contains(cle)));
-    }
-    return statuts;
-  }
-
-  /// Valide et sauvegarde une clé de configuration.
-  ///
-  /// @param cle     clé à mettre à jour
-  /// @param valeur  nouvelle valeur (null pour effacer)
-  /// @param adminId identifiant de l'admin
-  /// @throws ErreurMetier si la clé est non autorisée ou le format invalide
-  public void sauvegarderConfig(String cle, String valeur, String adminId) {
-    if (!CLES_AUTORISEES.contains(cle)) {
-      throw new ErreurMetier("Clé de configuration invalide.");
-    }
-    if (valeur != null && valeur.isEmpty() && CLES_OBLIGATOIRES.contains(cle)) {
-      throw new ErreurMetier("La valeur ne peut pas être vide pour " + cle + ".");
-    }
-    if (valeur != null && !valeur.isEmpty()) {
-      String erreur = validerFormatConfig(cle, valeur);
-      if (erreur != null) throw new ErreurMetier(erreur);
-    }
-    configService.sauvegarderConfig(cle, valeur == null || valeur.isEmpty() ? null : valeur);
-    logAdminService.logAdmin("info", "admin", "Config sauvegardée : " + cle, Map.of("cle", cle));
-  }
-
-  /// Retourne les statistiques des jobs Quartz et le quota TM.
-  ///
-  /// @return map contenant statsJobs, quotaTM, etatQuota, workerLastSuccess, jobsEnCours
-  public Map<String, Object> lireJobs() {
-    List<StatJob> statsJobs =
-        jdbc.query(
-            """
-            SELECT type_job, derniere_exec, duree_ms, nb_inseres, nb_mis_a_jour, erreur
-            FROM fetch_jobs
-            ORDER BY type_job
-            """,
-            Map.of(),
-            (rs, _) ->
-                new StatJob(
-                    rs.getString("type_job"),
-                    rs.getTimestamp("derniere_exec") != null
-                        ? rs.getTimestamp("derniere_exec").toInstant()
-                        : null,
-                    rs.getObject("duree_ms", Integer.class),
-                    rs.getObject("nb_inseres", Integer.class),
-                    rs.getObject("nb_mis_a_jour", Integer.class),
-                    rs.getString("erreur"),
-                    null));
-
-    QuotaTM quotaTM = null;
-    List<String> quotaJson =
-        jdbc.queryForList(
-            "SELECT valeur_chiffree FROM app_config WHERE cle = 'TM_QUOTA_JSON'",
-            Map.of(),
-            String.class);
-    if (!quotaJson.isEmpty()) {
-      try {
-        quotaTM = objectMapper.readValue(quotaJson.get(0), QuotaTM.class);
-      } catch (Exception _) {
-        log.warn("Quota TM malformé — ignoré");
-      }
-    }
-
-    Instant workerLastSuccess = null;
-    try {
-      java.sql.Timestamp ts =
-          jdbc.queryForObject(
-              "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE (erreur IS NULL OR erreur = '')",
-              Map.of(),
-              java.sql.Timestamp.class);
-      workerLastSuccess = ts != null ? ts.toInstant() : null;
-    } catch (Exception _) {
-      log.debug("Impossible de lire le dernier job réussi");
-    }
-
-    List<String> jobsEnCours = workerProxyService.obtenirJobsEnCours();
-    Map<String, Instant> prochainesExec = workerProxyService.obtenirProchainesExec();
-
-    QuotaTM quotaFinal = quotaTM;
-    List<StatJob> statsConnus =
-        statsJobs.stream()
-            .map(
-                j ->
-                    new StatJob(
-                        j.typeJob(),
-                        j.derniereExec(),
-                        j.dureeMs(),
-                        j.nbInseres(),
-                        j.nbMisAJour(),
-                        j.erreur(),
-                        prochainesExec.get(j.typeJob())))
-            .toList();
-
-    List<StatJob> statsComplets = completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
-
-    String etatQuota = "ok";
-    if (quotaFinal != null && quotaFinal.total() > 0) {
-      int pct = quotaFinal.dispo() * 100 / quotaFinal.total();
-      etatQuota = pct < 10 ? "critique" : pct < 20 ? "attention" : "ok";
-    }
-
-    Map<String, Object> reponse = new HashMap<>();
-    reponse.put("statsJobs", statsComplets);
-    reponse.put("quotaTM", quotaFinal);
-    reponse.put("etatQuota", etatQuota);
-    reponse.put("workerLastSuccess", workerLastSuccess);
-    reponse.put("jobsEnCours", jobsEnCours);
-    return reponse;
-  }
-
-  /// Complète les statistiques de jobs avec une entrée synthétique pour tout job Quartz planifié
-  /// ({@code prochainesExec}) mais n'ayant jamais écrit de ligne dans {@code fetch_jobs}.
-  ///
-  /// <p>Sans cette complétion, un job de maintenance tout juste ajouté (ex. {@code
-  /// reconciliation:nocturne}, cron 3h) reste invisible et non déclenchable manuellement depuis
-  /// l'admin tant que son premier passage cron automatique n'a pas eu lieu (#762).
-  ///
-  /// @param statsConnus    statistiques déjà présentes en base, triées ou non
-  /// @param prochainesExec prochaines exécutions planifiées par {@code typeJob} (source de vérité
-  ///                       du worker sur les jobs existants)
-  /// @return statistiques triées par {@code typeJob}, complétées des jobs jamais exécutés
-  static List<StatJob> completerAvecJobsJamaisExecutes(
-      List<StatJob> statsConnus, Map<String, Instant> prochainesExec) {
-    Set<String> typesConnus =
-        statsConnus.stream().map(StatJob::typeJob).collect(Collectors.toSet());
-    List<StatJob> statsJamaisExecutes =
-        prochainesExec.keySet().stream()
-            .filter(typeJob -> !typesConnus.contains(typeJob))
-            .map(
-                typeJob ->
-                    new StatJob(typeJob, null, null, null, null, null, prochainesExec.get(typeJob)))
-            .toList();
-
-    List<StatJob> statsComplets = new ArrayList<>(statsConnus);
-    statsComplets.addAll(statsJamaisExecutes);
-    statsComplets.sort(Comparator.comparing(StatJob::typeJob));
-    return statsComplets;
-  }
-
-  private String validerFormatConfig(String cle, String valeur) {
-    if ("TICKETMASTER_API_KEY".equals(cle) && !FORMAT_TM_KEY.matcher(valeur).matches()) {
-      return "Format de clé Ticketmaster invalide (16 à 64 caractères alphanumériques).";
-    }
-    if ("RESEND_API_KEY".equals(cle) && !FORMAT_RESEND_KEY.matcher(valeur).matches()) {
-      return "La clé Resend doit commencer par re_ suivi de caractères alphanumériques.";
-    }
-    if ("RESEND_WEBHOOK_SECRET".equals(cle) && !FORMAT_WEBHOOK_SECRET.matcher(valeur).matches()) {
-      return "La clé webhook Resend doit commencer par whsec_ suivi de caractères base64.";
-    }
-    if ("VAPID_PUBLIC_KEY".equals(cle) && !FORMAT_VAPID_PUBLIC_KEY.matcher(valeur).matches()) {
-      return "La clé publique VAPID doit être une clé EC P-256 encodée en Base64 URL-safe"
-          + " (87 caractères).";
-    }
-    if ("VAPID_PRIVATE_KEY".equals(cle) && !FORMAT_VAPID_PRIVATE_KEY.matcher(valeur).matches()) {
-      return "La clé privée VAPID doit être une clé EC P-256 encodée en Base64 URL-safe"
-          + " (43 caractères).";
-    }
-    if ("PUBLIC_BASE_URL".equals(cle)) {
-      try {
-        java.net.URI uri = java.net.URI.create(valeur);
-        String host = uri.getHost();
-        boolean estIp =
-            "localhost".equals(host)
-                || (host != null && host.matches("(\\d{1,3}\\.){3}\\d{1,3}"))
-                || (host != null && host.contains(":") && host.matches("[0-9a-fA-F:]+"));
-        if (!estIp && !"https".equals(uri.getScheme())) {
-          return "L'URL doit commencer par https:// pour un domaine public.";
-        }
-      } catch (Exception _) {
-        return "Format d'URL invalide.";
-      }
-    }
-    return null;
   }
 
   /// Retourne les N derniers logs admin.

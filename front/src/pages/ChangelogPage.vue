@@ -1128,6 +1128,8 @@ import { onMounted } from 'vue'
 onMounted(async () => {
   try {
     await fetch('/api/changelog/marquer-vue', { method: 'POST' })
-  } catch {}
+  } catch (e) {
+    console.error('Échec marquage changelog vu', e)
+  }
 })
 </script>

@@ -58,16 +58,11 @@ const props = defineProps({
 defineEmits(['ouvrirDrawer'])
 
 const route = useRoute()
-const { naviguer } = useNavigation()
+const { naviguer, estActif } = useNavigation()
 
 const pagesDrawer = ['/artistes', '/salles', '/parametres', '/admin', '/aide', '/changelog']
 
 const estDansDrawer = computed(() =>
   pagesDrawer.some((p) => route.path === p || route.path.startsWith(p + '/')),
 )
-
-function estActif(href) {
-  if (href === '/') return route.path === '/'
-  return route.path === href || route.path.startsWith(href + '/')
-}
 </script>

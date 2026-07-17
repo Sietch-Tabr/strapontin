@@ -65,7 +65,6 @@
 defineOptions({ name: 'DrawerNav' })
 
 import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
 import { useNavigation } from '../../composables/useNavigation.js'
 
 const props = defineProps({
@@ -80,8 +79,7 @@ const emit = defineEmits(['fermer'])
 
 const dialogRef = ref(null)
 const handleRef = ref(null)
-const route = useRoute()
-const { naviguer } = useNavigation()
+const { naviguer, estActif } = useNavigation()
 
 watch(
   () => props.ouvert,
@@ -95,11 +93,6 @@ watch(
     }
   },
 )
-
-function estActif(href) {
-  if (href === '/') return route.path === '/'
-  return route.path === href || route.path.startsWith(href + '/')
-}
 
 // Fermeture synchrone, avant naviguer() : un close() différé par setTimeout(0) s'exécute
 // pendant la capture d'état de document.startViewTransition (utilisé par naviguer() sur les

@@ -118,7 +118,7 @@ public class EnrichissementSallesService {
         """
         SELECT s.id, s.nom, s.nom_norm, s.ville, s.dept
         FROM salles s
-        LEFT JOIN concerts c ON c.salle_uuid = s.id AND c.date >= CURRENT_DATE
+        LEFT JOIN concerts c ON c.salle_id = s.id AND c.date >= CURRENT_DATE
         WHERE s.wikidata_id IS NULL
         GROUP BY s.id, s.nom, s.nom_norm, s.ville, s.dept
         ORDER BY COUNT(c.id) DESC

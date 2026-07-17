@@ -13,7 +13,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailAlerteService;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -24,7 +24,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Tests unitaires pour {@link WatchdogWorkerService}.
 ///
-/// <p>Couvre la résolution du destinataire via {@link EmailService#obtenirDestinataireAlerte()}
+/// <p>Couvre la résolution du destinataire via {@link EmailAlerteService#obtenirDestinataireAlerte()}
 /// (#907, plus de lecture directe de CONTACT_EMAIL).
 ///
 /// @since 2.7.0
@@ -32,34 +32,34 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 class WatchdogWorkerServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
-  private EmailService emailService;
+  private EmailAlerteService emailAlerteService;
   private WatchdogWorkerService service;
 
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    emailService = mock(EmailService.class);
-    service = new WatchdogWorkerService(jdbc, emailService);
+    emailAlerteService = mock(EmailAlerteService.class);
+    service = new WatchdogWorkerService(jdbc, emailAlerteService);
   }
 
   @Test
   void verifier_workerInactifEtDestinataireDisponible_envoieAlerte() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
-    when(emailService.obtenirDestinataireAlerte()).thenReturn(Optional.of("alerte@exemple.fr"));
+    when(emailAlerteService.obtenirDestinataireAlerte()).thenReturn(Optional.of("alerte@exemple.fr"));
 
     service.verifier();
 
-    verify(emailService).envoyerAlerteWorkerInactif(eq("alerte@exemple.fr"), any());
+    verify(emailAlerteService).envoyerAlerteWorkerInactif(eq("alerte@exemple.fr"), any());
   }
 
   @Test
   void verifier_aucunDestinataireDisponible_neFaitRien() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
-    when(emailService.obtenirDestinataireAlerte()).thenReturn(Optional.empty());
+    when(emailAlerteService.obtenirDestinataireAlerte()).thenReturn(Optional.empty());
 
     service.verifier();
 
-    verify(emailService, never()).envoyerAlerteWorkerInactif(anyString(), any());
+    verify(emailAlerteService, never()).envoyerAlerteWorkerInactif(anyString(), any());
   }
 
   @Test
@@ -69,6 +69,6 @@ class WatchdogWorkerServiceTest {
 
     service.verifier();
 
-    verify(emailService, never()).obtenirDestinataireAlerte();
+    verify(emailAlerteService, never()).obtenirDestinataireAlerte();
   }
 }

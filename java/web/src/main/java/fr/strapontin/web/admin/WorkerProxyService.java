@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -28,6 +29,8 @@ public class WorkerProxyService {
 
   private static final Logger log = LoggerFactory.getLogger(WorkerProxyService.class);
   private static final String WORKER_BASE_URL = "http://localhost:8081";
+  private static final String CLE_MDC_CORRELATION_ID = "correlationId";
+  private static final String HEADER_CORRELATION_ID = "X-Correlation-ID";
 
   private final RestClient restClient;
   private final ObjectMapper objectMapper;
@@ -43,13 +46,27 @@ public class WorkerProxyService {
     this.logAdminService = logAdminService;
   }
 
+  /// Ajoute le header {@code X-Correlation-ID} porté par le MDC de la requête entrante
+  /// courante (#952) — pose par {@code CorrelationIdFilter}, absent si l'appel a lieu hors
+  /// contexte de requête HTTP (ex. depuis un thread Quartz).
+  ///
+  /// @param requete requête en cours de construction
+  /// @return la même requête, avec le header ajouté si un correlationId est disponible
+  private RestClient.RequestHeadersSpec<?> ajouterCorrelationId(
+      RestClient.RequestHeadersSpec<?> requete) {
+    String correlationId = MDC.get(CLE_MDC_CORRELATION_ID);
+    return correlationId != null ? requete.header(HEADER_CORRELATION_ID, correlationId) : requete;
+  }
+
   /// Retourne les identifiants des jobs Quartz actuellement en cours d'exécution.
   ///
   /// @return la liste des jobs actifs, ou une liste vide si le worker est inaccessible
   public List<String> obtenirJobsEnCours() {
     try {
       String corps =
-          restClient.get().uri(WORKER_BASE_URL + "/trigger/actif").retrieve().body(String.class);
+          ajouterCorrelationId(restClient.get().uri(WORKER_BASE_URL + "/trigger/actif"))
+              .retrieve()
+              .body(String.class);
       @SuppressWarnings("unchecked")
       Map<String, Object> data = objectMapper.readValue(corps, Map.class);
       Object actifs = data.get("actifs");
@@ -68,9 +85,7 @@ public class WorkerProxyService {
   public Map<String, Instant> obtenirProchainesExec() {
     try {
       String corps =
-          restClient
-              .get()
-              .uri(WORKER_BASE_URL + "/trigger/prochaines-exec")
+          ajouterCorrelationId(restClient.get().uri(WORKER_BASE_URL + "/trigger/prochaines-exec"))
               .retrieve()
               .body(String.class);
       @SuppressWarnings("unchecked")
@@ -93,9 +108,10 @@ public class WorkerProxyService {
   /// @return {@code true} si planifié, {@code false} si le worker est inaccessible
   public boolean relancerSalle(String identifiants) {
     try {
-      restClient
-          .post()
-          .uri(WORKER_BASE_URL + "/trigger/salle?identifiants={ids}", identifiants)
+      ajouterCorrelationId(
+              restClient
+                  .post()
+                  .uri(WORKER_BASE_URL + "/trigger/salle?identifiants={ids}", identifiants))
           .retrieve()
           .toBodilessEntity();
       logAdminService.logAdmin(
@@ -113,7 +129,9 @@ public class WorkerProxyService {
   ///     #837)
   public ResultatRelance relancerFetches() {
     try {
-      restClient.post().uri(WORKER_BASE_URL + "/trigger/tout").retrieve().toBodilessEntity();
+      ajouterCorrelationId(restClient.post().uri(WORKER_BASE_URL + "/trigger/tout"))
+          .retrieve()
+          .toBodilessEntity();
       logAdminService.logAdmin("info", "admin", "Fetches relancés manuellement");
       return new ResultatRelance(true, null, 200);
     } catch (RestClientResponseException e) {
@@ -138,9 +156,8 @@ public class WorkerProxyService {
   /// @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause)
   public ResultatRelance relancerJob(String typeJob) {
     try {
-      restClient
-          .post()
-          .uri(WORKER_BASE_URL + "/trigger/job?typeJob={typeJob}", typeJob)
+      ajouterCorrelationId(
+              restClient.post().uri(WORKER_BASE_URL + "/trigger/job?typeJob={typeJob}", typeJob))
           .retrieve()
           .toBodilessEntity();
       logAdminService.logAdmin(

@@ -7,6 +7,7 @@ package fr.strapontin.sources;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.Normalisation;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -176,7 +177,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
 
     // Département depuis code postal
     String cp = cpEl.text().trim();
-    String dept = EventimSource.extraireDept(cp);
+    String dept = Normalisation.extraireDeptFrancais(cp);
 
     // URL d'achat
     Element urlEl = ev.selectFirst(SEL_URL);

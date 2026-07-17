@@ -12,13 +12,8 @@ import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.admin.LogAdminService;
-import java.net.URI;
 import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.client.RestClient;
 
 /// Service de gestion des artistes suivis.
 ///
@@ -61,20 +57,23 @@ public class ArtisteService {
 
   private final ArtisteRepository artisteRepository;
   private final ObjectMapper objectMapper;
-  private final HttpClient httpClient;
+  private final RestClient restClient;
   private final LogAdminService logAdminService;
 
   /// @param artisteRepository accès aux données artistes
   /// @param objectMapper      désérialiseur JSON (pour l'API Deezer)
+  /// @param restClient        client HTTP partagé (#923, timeout 5s/10s défini dans
+  ///                          {@link fr.strapontin.web.WebConfiguration})
   /// @param logAdminService   journalisation des actions admin
   public ArtisteService(
       ArtisteRepository artisteRepository,
       ObjectMapper objectMapper,
+      RestClient restClient,
       LogAdminService logAdminService) {
     this.artisteRepository = artisteRepository;
     this.objectMapper = objectMapper;
+    this.restClient = restClient;
     this.logAdminService = logAdminService;
-    this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
   }
 
   /// Liste les artistes suivis, avec suggestions si {@code q} est fourni.
@@ -340,23 +339,19 @@ public class ArtisteService {
               + "?action=wbsearchentities&search="
               + URLEncoder.encode(terme, StandardCharsets.UTF_8)
               + "&language=fr&format=json&type=item&limit=6";
-      HttpRequest request =
-          HttpRequest.newBuilder()
-              .uri(URI.create(url))
+      ReponseHttp reponse =
+          restClient
+              .get()
+              .uri(url)
               .header("User-Agent", WIKIDATA_USER_AGENT)
-              .timeout(Duration.ofSeconds(5))
-              .GET()
-              .build();
-      HttpResponse<String> response =
-          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() != 200) {
-        log.warn("Wikidata Search erreur HTTP {} pour '{}'", response.statusCode(), terme);
+              .exchange(
+                  (req, resp) ->
+                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+      if (reponse.statut() != 200) {
+        log.warn("Wikidata Search erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
       }
-      return parseWikidataResultats(response.body());
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return List.of();
+      return parseWikidataResultats(reponse.corps());
     } catch (Exception e) {
       log.warn("Wikidata Search échouée pour '{}'", terme, e);
       return List.of();
@@ -403,18 +398,17 @@ public class ArtisteService {
               + "?action=wbgetentities&ids="
               + URLEncoder.encode(wikidataId, StandardCharsets.UTF_8)
               + "&props=claims&format=json";
-      HttpRequest request =
-          HttpRequest.newBuilder()
-              .uri(URI.create(url))
+      ReponseHttp reponse =
+          restClient
+              .get()
+              .uri(url)
               .header("User-Agent", WIKIDATA_USER_AGENT)
-              .timeout(Duration.ofSeconds(5))
-              .GET()
-              .build();
-      HttpResponse<String> response =
-          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() != 200) return null;
+              .exchange(
+                  (req, resp) ->
+                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+      if (reponse.statut() != 200) return null;
 
-      Map<String, Object> root = objectMapper.readValue(response.body(), Map.class);
+      Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
       Map<String, Object> entities = (Map<String, Object>) root.get("entities");
       if (entities == null) return null;
       Map<String, Object> entite = (Map<String, Object>) entities.get(wikidataId);
@@ -426,9 +420,6 @@ public class ArtisteService {
       Map<String, Object> mainsnak = (Map<String, Object>) p2722.get(0).get("mainsnak");
       Map<String, Object> datavalue = (Map<String, Object>) mainsnak.get("datavalue");
       return (String) datavalue.get("value");
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return null;
     } catch (Exception e) {
       log.warn("Wikidata wbgetentities échoué pour '{}'", wikidataId, e);
       return null;
@@ -439,22 +430,18 @@ public class ArtisteService {
     try {
       String url =
           DEEZER_URL + "?q=" + URLEncoder.encode(terme, StandardCharsets.UTF_8) + "&limit=6";
-      HttpRequest request =
-          HttpRequest.newBuilder()
-              .uri(URI.create(url))
-              .timeout(Duration.ofSeconds(5))
-              .GET()
-              .build();
-      HttpResponse<String> response =
-          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() != 200) {
-        log.warn("Deezer erreur HTTP {} pour '{}'", response.statusCode(), terme);
+      ReponseHttp reponse =
+          restClient
+              .get()
+              .uri(url)
+              .exchange(
+                  (req, resp) ->
+                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+      if (reponse.statut() != 200) {
+        log.warn("Deezer erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
       }
-      return parseDeezerResultats(response.body());
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return List.of();
+      return parseDeezerResultats(reponse.corps());
     } catch (Exception e) {
       log.warn("Deezer recherche artiste échouée pour '{}'", terme, e);
       return List.of();
@@ -485,19 +472,27 @@ public class ArtisteService {
     return resultats;
   }
 
+  /// Déclenche le worker en fire-and-forget, sur un thread virtuel (#923) — {@link RestClient}
+  /// est bloquant (contrairement à l'ancien {@code HttpClient.sendAsync}), le thread virtuel
+  /// évite de bloquer l'appelant sans avoir à gérer le cycle de vie d'un executor dédié pour un
+  /// appel ponctuel.
   private void declencherWorkerArtiste() {
-    httpClient
-        .sendAsync(
-            HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:8081/trigger/artiste"))
-                .POST(HttpRequest.BodyPublishers.noBody())
-                .timeout(Duration.ofSeconds(5))
-                .build(),
-            HttpResponse.BodyHandlers.discarding())
-        .exceptionally(
-            e -> {
-              log.warn("Déclenchement worker artiste impossible", e);
-              return null;
-            });
+    Thread.startVirtualThread(
+        () -> {
+          try {
+            restClient
+                .post()
+                .uri("http://localhost:8081/trigger/artiste")
+                .retrieve()
+                .toBodilessEntity();
+          } catch (Exception e) {
+            log.warn("Déclenchement worker artiste impossible", e);
+          }
+        });
   }
+
+  /// Réponse HTTP brute (statut + corps), utilisée pour reproduire avec {@link RestClient} le
+  /// comportement de l'ancien {@code java.net.http.HttpClient} : lire le statut sans lever
+  /// d'exception sur les codes non-2xx (contrairement à {@code retrieve()} par défaut).
+  private record ReponseHttp(int statut, String corps) {}
 }

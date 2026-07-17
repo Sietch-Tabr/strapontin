@@ -24,7 +24,9 @@ function enregistrerTheme(valeur) {
     "; SameSite=Strict";
   try {
     localStorage.setItem("strapontin-theme", valeur);
-  } catch (_) {}
+  } catch (e) {
+    console.error("Échec écriture localStorage theme", e);
+  }
   appliquerTheme(valeur);
 }
 
@@ -35,7 +37,9 @@ export function useTheme() {
     const theme = lireThemeCookie();
     try {
       localStorage.setItem("strapontin-theme", theme);
-    } catch (_) {}
+    } catch (e) {
+      console.error("Échec écriture localStorage theme", e);
+    }
     appliquerTheme(theme);
 
     if (theme === "auto") {

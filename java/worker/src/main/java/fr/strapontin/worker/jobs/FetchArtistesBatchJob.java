@@ -4,7 +4,7 @@
  */
 package fr.strapontin.worker.jobs;
 
-import fr.strapontin.worker.WorkerService;
+import fr.strapontin.worker.WorkerFetchService;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
@@ -21,17 +21,17 @@ public class FetchArtistesBatchJob extends QuartzJobBean {
 
   private static final Logger log = LoggerFactory.getLogger(FetchArtistesBatchJob.class);
 
-  private WorkerService workerService;
+  private WorkerFetchService workerFetchService;
 
   @Autowired
-  public void setWorkerService(WorkerService workerService) {
-    this.workerService = workerService;
+  public void setWorkerFetchService(WorkerFetchService workerFetchService) {
+    this.workerFetchService = workerFetchService;
   }
 
   @Override
   protected void executeInternal(JobExecutionContext context) {
     try {
-      workerService.executerFetchArtistesBatch();
+      workerFetchService.executerFetchArtistesBatch();
     } catch (Exception e) {
       log.error("fetch:artistes:batch échoué", e);
       throw e;

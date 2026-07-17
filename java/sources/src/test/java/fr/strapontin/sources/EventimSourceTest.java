@@ -46,27 +46,6 @@ class EventimSourceTest {
     return base;
   }
 
-  // --- extraireDept (Eventim) ---
-
-  @Test
-  void extraireDept_codePostalAbsent_retourneNull() {
-    assertNull(EventimSource.extraireDept(null));
-    assertNull(EventimSource.extraireDept(""));
-    assertNull(EventimSource.extraireDept("   "));
-  }
-
-  @Test
-  void extraireDept_metropole_retourneDeuxChiffres() {
-    assertEquals("75", EventimSource.extraireDept("75012"));
-    assertEquals("69", EventimSource.extraireDept("69001"));
-    assertEquals("13", EventimSource.extraireDept("13001"));
-  }
-
-  @Test
-  void extraireDept_DOM_retourneTroisChiffres() {
-    assertEquals("972", EventimSource.extraireDept("97200"));
-  }
-
   // --- corrigerVilleEventim ---
 
   @Test

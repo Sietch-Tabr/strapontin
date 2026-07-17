@@ -4,7 +4,7 @@
  */
 package fr.strapontin.worker.jobs;
 
-import fr.strapontin.worker.WorkerService;
+import fr.strapontin.worker.WorkerPurgeService;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,17 +23,17 @@ public class PurgerArtistesJob extends QuartzJobBean {
 
   private static final Logger log = LoggerFactory.getLogger(PurgerArtistesJob.class);
 
-  private WorkerService workerService;
+  private WorkerPurgeService workerPurgeService;
 
   @Autowired
-  public void setWorkerService(WorkerService workerService) {
-    this.workerService = workerService;
+  public void setWorkerPurgeService(WorkerPurgeService workerPurgeService) {
+    this.workerPurgeService = workerPurgeService;
   }
 
   @Override
   protected void executeInternal(JobExecutionContext context) {
     try {
-      workerService.executerPurgerArtistes();
+      workerPurgeService.executerPurgerArtistes();
     } catch (Exception e) {
       log.error("purger:artistes échoué", e);
       throw e;

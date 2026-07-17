@@ -30,12 +30,13 @@ class ParametresServiceTest {
   @Mock private NamedParameterJdbcTemplate jdbc;
   @Mock private EmailService emailService;
   @Mock private UtilisateurDetails details;
+  @Mock private UtilisateurRepository utilisateurRepository;
 
   private ParametresService service;
 
   @BeforeEach
   void setUp() {
-    service = new ParametresService(jdbc, emailService);
+    service = new ParametresService(jdbc, emailService, utilisateurRepository);
   }
 
   @Test
@@ -185,5 +186,12 @@ class ParametresServiceTest {
     assertEquals("u1", res.userId());
     verify(jdbc).update(contains("UPDATE users SET email ="), anyMap());
     verify(jdbc).update(contains("DELETE FROM verifications"), anyMap());
+  }
+
+  @Test
+  void compterNouveauxMatchesArtistes_delegueAuRepository() {
+    when(utilisateurRepository.compterNouveauxMatchesArtistes("u1")).thenReturn(7);
+
+    assertEquals(7, service.compterNouveauxMatchesArtistes("u1"));
   }
 }

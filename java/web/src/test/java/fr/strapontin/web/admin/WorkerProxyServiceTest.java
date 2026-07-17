@@ -11,7 +11,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
@@ -24,6 +26,26 @@ import org.springframework.web.client.RestClient;
 /// @since 2.6.0
 /// @author Kwaite
 class WorkerProxyServiceTest {
+
+  @AfterEach
+  void nettoyerMdc() {
+    MDC.clear();
+  }
+
+  // #952 : le correlationId posé en MDC par CorrelationIdFilter côté requête entrante doit être
+  // propagé au worker, pour relier une action admin aux logs du job réellement exécuté.
+  @Test
+  void relancerFetches_correlationIdPresentDansMdc_estTransmisEnHeader() {
+    RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+    MDC.put("correlationId", "corr-test-123");
+
+    WorkerProxyService service =
+        new WorkerProxyService(restClient, new ObjectMapper(), mock(LogAdminService.class));
+    service.relancerFetches();
+
+    org.mockito.Mockito.verify(restClient.post().uri(anyString()))
+        .header("X-Correlation-ID", "corr-test-123");
+  }
 
   @Test
   void relancerJob_workerInaccessible_retourneEchecAvecStatut503() {

@@ -205,7 +205,7 @@ class SpectacleServiceTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void listerSpectacles_sourceSallesSeules_filtreParSalleUuids() {
+  void listerSpectacles_sourceSallesSeules_filtreParSalleIds() {
     UUID id1 = UUID.randomUUID();
     when(userConfigService.lireFiltreDisponibles("u1")).thenReturn(false);
     when(jdbc.queryForList(contains("user_salles WHERE user_id"), anyMap(), eq(UUID.class)))

@@ -27,15 +27,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class BackupAlerteController {
 
-  private final EmailService emailService;
+  private final EmailAlerteService emailAlerteService;
   private final LogAdminService logAdminService;
   private final String backupSecret;
 
   public BackupAlerteController(
-      EmailService emailService,
+      EmailAlerteService emailAlerteService,
       LogAdminService logAdminService,
       @Value("${BACKUP_INTERNAL_SECRET:}") String backupSecret) {
-    this.emailService = emailService;
+    this.emailAlerteService = emailAlerteService;
     this.logAdminService = logAdminService;
     this.backupSecret = backupSecret;
   }
@@ -74,7 +74,7 @@ public class BackupAlerteController {
     } else {
       logAdminService.logAdmin(
           "warn", "web", "backup local échoué", Map.of("horodatage", horodatage, "raison", raison));
-      emailService.envoyerAlerteBackup(horodatage, raison);
+      emailAlerteService.envoyerAlerteBackup(horodatage, raison);
     }
     return ResponseEntity.ok(Map.of("ok", true));
   }

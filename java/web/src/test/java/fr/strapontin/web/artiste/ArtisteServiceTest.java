@@ -23,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.web.client.RestClient;
 
 /// Tests unitaires de {@link ArtisteService}.
 ///
@@ -35,13 +36,14 @@ class ArtisteServiceTest {
 
   @Mock private ArtisteRepository artisteRepository;
   @Mock private ObjectMapper objectMapper;
+  @Mock private RestClient restClient;
   @Mock private LogAdminService logAdminService;
 
   private ArtisteService service;
 
   @BeforeEach
   void setUp() {
-    service = new ArtisteService(artisteRepository, objectMapper, logAdminService);
+    service = new ArtisteService(artisteRepository, objectMapper, restClient, logAdminService);
   }
 
   @Test

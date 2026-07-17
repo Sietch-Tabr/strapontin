@@ -1,0 +1,82 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.web.email;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import fr.strapontin.web.config.ConfigService;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+/// Tests unitaires pour {@link EmailSender} (#925, extrait d'{@code EmailService}).
+///
+/// <p>Couvre {@link EmailSender#obtenirDestinataireAlerte()} (#907 — ne se replie jamais sur
+/// l'expéditeur/CONTACT_EMAIL).
+///
+/// @since 2.7.0
+/// @author Kwaite
+class EmailSenderTest {
+
+  private ConfigService configService;
+  private JdbcTemplate jdbcTemplate;
+  private EmailSender emailSender;
+
+  @BeforeEach
+  void setUp() {
+    configService = mock(ConfigService.class);
+    jdbcTemplate = mock(JdbcTemplate.class);
+    emailSender = new EmailSender(configService, jdbcTemplate);
+  }
+
+  @Test
+  void obtenirDestinataireAlerte_adminAlertEmailConfigure_retourneCetteAdresse() {
+    when(configService.lireConfig("ADMIN_ALERT_EMAIL"))
+        .thenReturn(Optional.of("alerte@exemple.fr"));
+
+    Optional<String> resultat = emailSender.obtenirDestinataireAlerte();
+
+    assertEquals(Optional.of("alerte@exemple.fr"), resultat);
+    verify(jdbcTemplate, never()).queryForObject(anyString(), eq(String.class));
+  }
+
+  @Test
+  void obtenirDestinataireAlerte_adminAlertEmailAbsent_replieSurPremierAdmin() {
+    when(configService.lireConfig("ADMIN_ALERT_EMAIL")).thenReturn(Optional.empty());
+    when(jdbcTemplate.queryForObject(anyString(), eq(String.class)))
+        .thenReturn("premier-admin@exemple.fr");
+
+    Optional<String> resultat = emailSender.obtenirDestinataireAlerte();
+
+    assertEquals(Optional.of("premier-admin@exemple.fr"), resultat);
+  }
+
+  @Test
+  void obtenirDestinataireAlerte_niConfigNiAdmin_retourneVide() {
+    when(configService.lireConfig("ADMIN_ALERT_EMAIL")).thenReturn(Optional.empty());
+    when(jdbcTemplate.queryForObject(anyString(), eq(String.class)))
+        .thenThrow(new EmptyResultDataAccessException(1));
+
+    Optional<String> resultat = emailSender.obtenirDestinataireAlerte();
+
+    assertTrue(resultat.isEmpty());
+  }
+
+  @Test
+  void obtenirContexte_resendApiKeyAbsent_retourneVide() {
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
+
+    assertTrue(emailSender.obtenirContexte().isEmpty());
+  }
+}

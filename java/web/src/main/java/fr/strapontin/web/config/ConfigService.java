@@ -6,15 +6,9 @@ package fr.strapontin.web.config;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-import java.security.SecureRandom;
+import fr.strapontin.core.ConfigCipher;
 import java.time.Duration;
 import java.util.*;
-import javax.crypto.Cipher;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import org.bouncycastle.crypto.generators.SCrypt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,29 +32,14 @@ import org.springframework.stereotype.Service;
 public class ConfigService {
 
   private static final Logger log = LoggerFactory.getLogger(ConfigService.class);
-  private static final SecureRandom rng = new SecureRandom();
 
-  // Paramètres scrypt pour la dérivation de clé AES (Node.js crypto.scryptSync defaults)
-  // DIFFÉRENT de BetterAuthPasswordEncoder : r=8 (Node.js default), r=16 (Better-Auth)
-  private static final int N = 16384;
-  private static final int R = 8;
-  private static final int P = 1;
-  private static final int DK_LEN = 32;
-
-  private final byte[] cleChiffrement;
+  private final ConfigCipher cipher;
   private final NamedParameterJdbcTemplate jdbc;
   private final Cache<String, Optional<String>> cache;
 
   public ConfigService(
       @Value("${app.config.secret}") String secret, NamedParameterJdbcTemplate jdbc) {
-    this.cleChiffrement =
-        SCrypt.generate(
-            secret.getBytes(StandardCharsets.UTF_8),
-            "strapontin-app-config".getBytes(StandardCharsets.UTF_8),
-            N,
-            R,
-            P,
-            DK_LEN);
+    this.cipher = new ConfigCipher(secret);
     this.jdbc = jdbc;
     this.cache =
         Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(5)).maximumSize(200).build();
@@ -89,7 +68,7 @@ public class ConfigService {
       log.info("config supprimée cle={}", cle);
       return;
     }
-    String valeurChiffree = chiffrer(valeur);
+    String valeurChiffree = cipher.chiffrer(valeur);
     String sql =
         """
         INSERT INTO app_config (cle, valeur_chiffree)
@@ -120,65 +99,10 @@ public class ConfigService {
       return Optional.empty();
     }
     try {
-      return Optional.of(dechiffrer(lignes.get(0)));
+      return Optional.of(cipher.dechiffrer(lignes.get(0)));
     } catch (Exception e) {
       log.error("Échec déchiffrement config '{}' — APP_CONFIG_SECRET modifié ?", cle, e);
       return Optional.empty();
-    }
-  }
-
-  /// Chiffre une valeur en AES-256-GCM.
-  ///
-  /// Format de sortie : `base64(IV(12) || TAG(16) || données_chiffrées)`
-  private String chiffrer(String valeur) {
-    try {
-      byte[] iv = new byte[12];
-      rng.nextBytes(iv);
-
-      Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-      cipher.init(
-          Cipher.ENCRYPT_MODE,
-          new SecretKeySpec(cleChiffrement, "AES"),
-          new GCMParameterSpec(128, iv));
-      // doFinal retourne : données_chiffrées || TAG(16)
-      byte[] resultat = cipher.doFinal(valeur.getBytes(StandardCharsets.UTF_8));
-      int donneesLen = resultat.length - 16;
-
-      // Réordonne en IV(12) || TAG(16) || données_chiffrées pour correspondre au format Node.js
-      byte[] stocke = new byte[12 + 16 + donneesLen];
-      System.arraycopy(iv, 0, stocke, 0, 12);
-      System.arraycopy(resultat, donneesLen, stocke, 12, 16);
-      System.arraycopy(resultat, 0, stocke, 28, donneesLen);
-
-      return Base64.getEncoder().encodeToString(stocke);
-    } catch (GeneralSecurityException e) {
-      throw new IllegalStateException("Erreur de chiffrement de configuration", e);
-    }
-  }
-
-  /// Déchiffre une valeur AES-256-GCM.
-  ///
-  /// Format attendu : `base64(IV(12) || TAG(16) || données_chiffrées)`
-  private String dechiffrer(String chiffre) {
-    try {
-      byte[] buf = Base64.getDecoder().decode(chiffre);
-      byte[] iv = Arrays.copyOf(buf, 12);
-      byte[] tag = Arrays.copyOfRange(buf, 12, 28);
-      byte[] donnees = Arrays.copyOfRange(buf, 28, buf.length);
-
-      // AES/GCM attend données_chiffrées || TAG
-      byte[] donneesAvecTag = new byte[donnees.length + 16];
-      System.arraycopy(donnees, 0, donneesAvecTag, 0, donnees.length);
-      System.arraycopy(tag, 0, donneesAvecTag, donnees.length, 16);
-
-      Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-      cipher.init(
-          Cipher.DECRYPT_MODE,
-          new SecretKeySpec(cleChiffrement, "AES"),
-          new GCMParameterSpec(128, iv));
-      return new String(cipher.doFinal(donneesAvecTag), StandardCharsets.UTF_8);
-    } catch (GeneralSecurityException e) {
-      throw new IllegalStateException("Erreur de déchiffrement de configuration", e);
     }
   }
 }

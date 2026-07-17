@@ -263,6 +263,8 @@ onMounted(async () => {
   try {
     const rep = await fetch('/api/aide/config')
     if (rep.ok) config.value = await rep.json()
-  } catch {}
+  } catch (e) {
+    console.error('Échec chargement config aide', e)
+  }
 })
 </script>

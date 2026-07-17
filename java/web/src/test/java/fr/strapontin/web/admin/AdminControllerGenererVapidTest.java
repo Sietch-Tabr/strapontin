@@ -31,6 +31,8 @@ class AdminControllerGenererVapidTest {
     controller =
         new AdminController(
             mock(AdminService.class),
+            mock(ConfigAdminService.class),
+            mock(JobsAdminService.class),
             mock(BanniereService.class),
             mock(WorkerProxyService.class),
             mock(EmailService.class),

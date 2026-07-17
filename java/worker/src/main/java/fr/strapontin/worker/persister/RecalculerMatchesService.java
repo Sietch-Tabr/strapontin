@@ -111,13 +111,13 @@ public class RecalculerMatchesService {
             Map.of(CLE_USER_ID, userId),
             UUID.class);
 
-    List<UUID> salleUuids =
+    List<UUID> salleIds =
         jdbc.queryForList(
-            "SELECT salle_uuid FROM user_salles WHERE user_id = :userId",
+            "SELECT salle_id FROM user_salles WHERE user_id = :userId",
             Map.of(CLE_USER_ID, userId),
             UUID.class);
 
-    if (artisteIds.isEmpty() && salleUuids.isEmpty()) return;
+    if (artisteIds.isEmpty() && salleIds.isEmpty()) return;
 
     List<String> departements = obtenirDepartementsUser(userId);
     Set<UUID> concertIds = new LinkedHashSet<>();
@@ -126,8 +126,8 @@ public class RecalculerMatchesService {
       concertIds.addAll(rechercherConcertsParArtistes(artisteIds, departements, aujourdhui));
     }
 
-    if (!salleUuids.isEmpty()) {
-      concertIds.addAll(rechercherConcertsParSalles(salleUuids, aujourdhui));
+    if (!salleIds.isEmpty()) {
+      concertIds.addAll(rechercherConcertsParSalles(salleIds, aujourdhui));
     }
 
     if (concertIds.isEmpty()) {
@@ -178,11 +178,11 @@ public class RecalculerMatchesService {
     return jdbc.queryForList(sql, params, UUID.class);
   }
 
-  private List<UUID> rechercherConcertsParSalles(List<UUID> salleUuids, String aujourdhui) {
+  private List<UUID> rechercherConcertsParSalles(List<UUID> salleIds, String aujourdhui) {
     return jdbc.queryForList(
         "SELECT DISTINCT id FROM concerts"
-            + " WHERE salle_uuid IN (:salleUuids) AND date >= :aujourdhui",
-        Map.of("salleUuids", salleUuids, "aujourdhui", LocalDate.parse(aujourdhui)),
+            + " WHERE salle_id IN (:salleIds) AND date >= :aujourdhui",
+        Map.of("salleIds", salleIds, "aujourdhui", LocalDate.parse(aujourdhui)),
         UUID.class);
   }
 

@@ -93,7 +93,9 @@ onMounted(async () => {
         router.replace('/login')
       }
     }
-  } catch {}
+  } catch (e) {
+    console.error('Échec vérification statut setup', e)
+  }
 })
 
 async function soumettre() {

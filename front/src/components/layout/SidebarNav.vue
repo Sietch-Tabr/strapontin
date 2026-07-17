@@ -79,7 +79,6 @@
 <script setup>
 defineOptions({ name: 'SidebarNav' })
 
-import { useRoute } from 'vue-router'
 import { useNavigation } from '../../composables/useNavigation.js'
 
 const props = defineProps({
@@ -91,13 +90,7 @@ const props = defineProps({
   estAdmin: { type: Boolean, default: false },
 })
 
-const route = useRoute()
-const { naviguer } = useNavigation()
-
-function estActif(href) {
-  if (href === '/') return route.path === '/'
-  return route.path === href || route.path.startsWith(href + '/')
-}
+const { naviguer, estActif } = useNavigation()
 
 async function deconnecter() {
   await fetch('/logout', { method: 'POST' })

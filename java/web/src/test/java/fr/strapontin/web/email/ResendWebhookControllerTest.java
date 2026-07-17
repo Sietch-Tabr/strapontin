@@ -29,18 +29,18 @@ import org.springframework.http.ResponseEntity;
 class ResendWebhookControllerTest {
 
   private ConfigService configService;
-  private EmailService emailService;
+  private EmailAlerteService emailAlerteService;
   private LogAdminService logAdminService;
   private ResendWebhookController controller;
 
   @BeforeEach
   void setUp() {
     configService = mock(ConfigService.class);
-    emailService = mock(EmailService.class);
+    emailAlerteService = mock(EmailAlerteService.class);
     logAdminService = mock(LogAdminService.class);
     controller =
         new ResendWebhookController(
-            configService, emailService, new ObjectMapper(), logAdminService);
+            configService, emailAlerteService, new ObjectMapper(), logAdminService);
   }
 
   @Test
@@ -92,7 +92,7 @@ class ResendWebhookControllerTest {
     ArgumentCaptor<Map<String, Object>> details = ArgumentCaptor.forClass(Map.class);
     verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), details.capture());
     assertEquals(String.valueOf("victime@exemple.fr".hashCode()), details.getValue().get("email"));
-    verify(emailService).envoyerNotificationBounce("victime@exemple.fr");
+    verify(emailAlerteService).envoyerNotificationBounce("victime@exemple.fr");
   }
 
   // #832 : une plainte spam (email.complained) reçoit désormais le même traitement qu'un
@@ -110,7 +110,7 @@ class ResendWebhookControllerTest {
     verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), details.capture());
     assertEquals(
         String.valueOf("plaignant@exemple.fr".hashCode()), details.getValue().get("email"));
-    verify(emailService).envoyerNotificationPlainteSpam("plaignant@exemple.fr");
-    verify(emailService, never()).envoyerNotificationBounce(anyString());
+    verify(emailAlerteService).envoyerNotificationPlainteSpam("plaignant@exemple.fr");
+    verify(emailAlerteService, never()).envoyerNotificationBounce(anyString());
   }
 }

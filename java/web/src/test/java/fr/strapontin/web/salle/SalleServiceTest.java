@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.client.RestClient;
 
 /// Tests unitaires pour les méthodes Digitick de {@link SalleService}.
 ///
@@ -42,7 +43,9 @@ class SalleServiceTest {
   @BeforeEach
   void setUp() {
     salleRepository = mock(SalleRepository.class);
-    salleService = new SalleService(salleRepository, mock(ConfigService.class), new ObjectMapper());
+    salleService =
+        new SalleService(
+            salleRepository, mock(ConfigService.class), new ObjectMapper(), mock(RestClient.class));
     salleService.setSelf(salleService);
   }
 

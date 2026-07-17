@@ -4,7 +4,7 @@
  */
 package fr.strapontin.worker.jobs;
 
-import fr.strapontin.worker.WorkerService;
+import fr.strapontin.worker.WorkerRevocationService;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,17 +19,17 @@ public class RevoquerAdminsJob extends QuartzJobBean {
 
   private static final Logger log = LoggerFactory.getLogger(RevoquerAdminsJob.class);
 
-  private WorkerService workerService;
+  private WorkerRevocationService workerRevocationService;
 
   @Autowired
-  public void setWorkerService(WorkerService workerService) {
-    this.workerService = workerService;
+  public void setWorkerRevocationService(WorkerRevocationService workerRevocationService) {
+    this.workerRevocationService = workerRevocationService;
   }
 
   @Override
   protected void executeInternal(JobExecutionContext context) {
     try {
-      workerService.executerRevoquerAdmins();
+      workerRevocationService.executerRevoquerAdmins();
     } catch (Exception e) {
       log.error("revoquer:admins échoué", e);
       throw e;

@@ -76,10 +76,10 @@ public class SourcesService {
 
   /// Construit la chaîne d'identifiants préfixés pour une salle (ex. {@code "tm:rZFSnyZdFvA"}).
   ///
-  /// @param salleUuid UUID de la salle
+  /// @param salleId UUID de la salle
   /// @return identifiants CSV ou {@code null} si aucun identifiant connu
-  public String obtenirIdentifiantsSalle(UUID salleUuid) {
-    return salleService.lireIdentifiantsSources(salleUuid);
+  public String obtenirIdentifiantsSalle(UUID salleId) {
+    return salleService.lireIdentifiantsSources(salleId);
   }
 
   /// Crée une salle Digitick dans le référentiel et déclenche immédiatement un fetch.
@@ -95,20 +95,20 @@ public class SourcesService {
 
   /// Met à jour les métadonnées d'une salle Digitick (nom, ville, CP).
   ///
-  /// @param salleUuid UUID de la salle
+  /// @param salleId UUID de la salle
   /// @param nom       nouveau nom (null = inchangé)
   /// @param ville     nouvelle ville (null = inchangée)
   /// @param cp        nouveau code postal (null = inchangé)
-  public void modifierSalleDigitick(UUID salleUuid, String nom, String ville, String cp) {
-    salleService.mettreAJourSalle(salleUuid, nom, ville, cp);
+  public void modifierSalleDigitick(UUID salleId, String nom, String ville, String cp) {
+    salleService.mettreAJourSalle(salleId, nom, ville, cp);
   }
 
   /// Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
   ///
-  /// @param salleUuid UUID de la salle
+  /// @param salleId UUID de la salle
   /// @return {@code true} si supprimée, {@code false} si des contraintes bloquent la suppression
-  public boolean supprimerSalleDigitick(UUID salleUuid) {
-    return salleService.supprimerSalleDigitick(salleUuid);
+  public boolean supprimerSalleDigitick(UUID salleId) {
+    return salleService.supprimerSalleDigitick(salleId);
   }
 
   /// Met à jour le slug Digitick d'une salle dans {@code salle_sources}.
@@ -118,20 +118,20 @@ public class SourcesService {
   /// (#830) — le conflit est vérifié avant toute suppression pour ne pas perdre la configuration
   /// existante si l'opération échoue.
   ///
-  /// @param salleUuid UUID de la salle
+  /// @param salleId UUID de la salle
   /// @param slug      nouveau slug Digitick (peut être vide pour supprimer)
   /// @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
-  public void mettreAJourDigitickSlug(UUID salleUuid, String slug) {
+  public void mettreAJourDigitickSlug(UUID salleId, String slug) {
     String slugStrip = slug == null ? "" : slug.strip();
     if (!slugStrip.isEmpty()) {
-      verifierSlugDigitickLibre(salleUuid, slugStrip);
+      verifierSlugDigitickLibre(salleId, slugStrip);
     }
     jdbc.update(
         """
         DELETE FROM salle_sources
         WHERE salle_id = CAST(:uuid AS uuid) AND source = 'digitick'
         """,
-        Map.of("uuid", salleUuid.toString()));
+        Map.of("uuid", salleId.toString()));
     if (!slugStrip.isEmpty()) {
       jdbc.update(
           """
@@ -139,16 +139,16 @@ public class SourcesService {
           VALUES (CAST(:uuid AS uuid), 'digitick', :slug)
           ON CONFLICT (source, identifiant_externe) DO UPDATE SET salle_id = EXCLUDED.salle_id
           """,
-          Map.of("uuid", salleUuid.toString(), "slug", slugStrip));
+          Map.of("uuid", salleId.toString(), "slug", slugStrip));
     }
   }
 
-  /// Vérifie qu'un slug Digitick n'est pas déjà attribué à une autre salle que {@code salleUuid}.
+  /// Vérifie qu'un slug Digitick n'est pas déjà attribué à une autre salle que {@code salleId}.
   ///
-  /// @param salleUuid salle pour laquelle le slug est en cours d'attribution
+  /// @param salleId salle pour laquelle le slug est en cours d'attribution
   /// @param slug      slug à vérifier
   /// @throws ErreurMetier 409 si le slug est déjà utilisé par une autre salle
-  private void verifierSlugDigitickLibre(UUID salleUuid, String slug) {
+  private void verifierSlugDigitickLibre(UUID salleId, String slug) {
     List<Map<String, Object>> conflits =
         jdbc.queryForList(
             """
@@ -158,7 +158,7 @@ public class SourcesService {
             WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
               AND ss.salle_id != CAST(:uuid AS uuid)
             """,
-            Map.of("slug", slug, "uuid", salleUuid.toString()));
+            Map.of("slug", slug, "uuid", salleId.toString()));
     if (!conflits.isEmpty()) {
       throw new ErreurMetier(
           "Slug déjà utilisé par la salle " + conflits.get(0).get("nom") + ".", 409);

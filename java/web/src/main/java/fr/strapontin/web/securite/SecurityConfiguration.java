@@ -41,7 +41,8 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 /// <p>Sessions persistantes JDBC (survivent aux redémarrages). Rate limiting login
 /// via {@link RateLimitingLoginFilter} (intercepte {@code /api/auth/login}).
 /// Accès direct par IP bloqué via {@link BloquerAccesDirectIpFilter}.
-/// CSRF désactivé (sessions {@code SameSite=Strict} + {@code form-action 'self'} en CSP).
+/// CSRF désactivé (sessions {@code SameSite=Lax} — pas {@code Strict}, compatibilité Safari sur
+/// navigation entrante, voir {@link #cookieSerializer} — + {@code form-action 'self'} en CSP).
 /// Login via {@code POST /api/auth/login}, logout via {@code POST /api/auth/logout}.
 ///
 /// @since 2.0.0

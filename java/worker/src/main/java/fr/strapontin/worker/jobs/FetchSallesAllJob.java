@@ -4,7 +4,7 @@
  */
 package fr.strapontin.worker.jobs;
 
-import fr.strapontin.worker.WorkerService;
+import fr.strapontin.worker.WorkerFetchService;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,15 +21,15 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
 @DisallowConcurrentExecution
 public class FetchSallesAllJob extends QuartzJobBean {
 
-  private WorkerService workerService;
+  private WorkerFetchService workerFetchService;
 
   @Autowired
-  public void setWorkerService(WorkerService workerService) {
-    this.workerService = workerService;
+  public void setWorkerFetchService(WorkerFetchService workerFetchService) {
+    this.workerFetchService = workerFetchService;
   }
 
   @Override
   protected void executeInternal(JobExecutionContext context) {
-    workerService.executerFetchSallesAll();
+    workerFetchService.executerFetchSallesAll();
   }
 }

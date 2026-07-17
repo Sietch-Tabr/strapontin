@@ -35,6 +35,8 @@ class AdminControllerAnnulerRevocationTest {
     controller =
         new AdminController(
             adminService,
+            mock(ConfigAdminService.class),
+            mock(JobsAdminService.class),
             mock(BanniereService.class),
             mock(WorkerProxyService.class),
             mock(EmailService.class),

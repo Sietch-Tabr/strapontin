@@ -117,18 +117,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     return compteurBilan.preleverBilan();
   }
 
-  /// Extrait le code département depuis un code postal français.
-  ///
-  /// @param codePostal code postal (peut être null ou vide)
-  /// @return code département à 2 ou 3 chiffres, ou null si absent/invalide
-  public static String extraireDept(String codePostal) {
-    if (codePostal == null || codePostal.isBlank()) return null;
-    String cp = codePostal.trim();
-    if (cp.startsWith("97")) return cp.substring(0, 3);
-    String dept = cp.substring(0, Math.min(2, cp.length()));
-    return dept.isEmpty() ? null : dept;
-  }
-
   /// Corrige la ville Eventim pour les salles de la région parisienne hors Paris intra-muros.
   ///
   /// Eventim utilise parfois "Paris" comme libellé régional/marketing au lieu de la commune
@@ -325,10 +313,12 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       String artisteSourceId) {
     String salle =
         location != null && location.get("name") != null
-            ? TicketmasterSource.normaliserCasse((String) location.get("name"))
+            ? Normalisation.normaliserCasse((String) location.get("name"))
             : "Salle inconnue";
     String ville = location != null ? (String) location.get("city") : null;
-    String dept = extraireDept(location != null ? (String) location.get("postalCode") : null);
+    String dept =
+        Normalisation.extraireDeptFrancais(
+            location != null ? (String) location.get("postalCode") : null);
     ville = corrigerVilleEventim(ville, dept, salle);
 
     String url = extraireUrlProduit(produit);

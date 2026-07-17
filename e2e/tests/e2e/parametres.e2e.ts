@@ -150,12 +150,12 @@ test.describe("Scénario: API paramètres — stats et TOTP", () => {
     expect(typeof corps.nbSalles).toBe("number");
   });
 
-  test("api_parametres_stats_sans_session_retourne_401_ou_302", async ({
+  test("api_parametres_stats_sans_session_retourne401", async ({
     browser,
   }) => {
     const ctx = await browser.newContext({ storageState: undefined });
     const rep = await ctx.request.get("/api/parametres/stats");
-    expect([401, 302, 403]).toContain(rep.status());
+    expect(rep.status()).toBe(401);
     await ctx.close();
   });
 
@@ -165,7 +165,9 @@ test.describe("Scénario: API paramètres — stats et TOTP", () => {
     const rep = await request.patch("/api/user/profile", {
       data: { email: "nouveau@exemple.fr" },
     });
-    expect([404, 405]).toContain(rep.status());
+    // GET /api/user/profile existe toujours (UserController) : le chemin est mappé mais pas
+    // pour PATCH, donc HttpRequestMethodNotSupportedException -> 405 (GlobalExceptionHandler).
+    expect(rep.status()).toBe(405);
   });
 
   test("api_totp_setup_retourne_qr_et_secret", async ({ request }) => {
@@ -205,7 +207,7 @@ test.describe("Scénario: export préférences JSON", () => {
   test("api_preferences_non_accessible_sans_session", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: undefined });
     const rep = await ctx.request.get("/api/preferences");
-    expect([401, 302, 403]).toContain(rep.status());
+    expect(rep.status()).toBe(401);
     await ctx.close();
   });
 });
@@ -234,7 +236,7 @@ test.describe("Scénario: import préférences — validation", () => {
     expect(rep.status()).toBe(400);
   });
 
-  test("api_preferences_importer_sans_session_retourne_401_ou_302", async ({
+  test("api_preferences_importer_sans_session_retourne401", async ({
     browser,
   }) => {
     const ctx = await browser.newContext({ storageState: undefined });
@@ -248,7 +250,7 @@ test.describe("Scénario: import préférences — validation", () => {
         mode: "fusionner",
       },
     });
-    expect([401, 302, 403]).toContain(rep.status());
+    expect(rep.status()).toBe(401);
     await ctx.close();
   });
 });
@@ -270,7 +272,7 @@ test.describe("Scénario: API push — VAPID et validation", () => {
     expect(corps).toHaveProperty("erreur");
   });
 
-  test("push_abonner_sans_session_retourne_401_ou_302", async ({ browser }) => {
+  test("push_abonner_sans_session_retourne401", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: undefined });
     const rep = await ctx.request.post("/api/push", {
       data: {
@@ -278,7 +280,7 @@ test.describe("Scénario: API push — VAPID et validation", () => {
         keys: { p256dh: "cle-test", auth: "auth-test" },
       },
     });
-    expect([401, 302, 403]).toContain(rep.status());
+    expect(rep.status()).toBe(401);
     await ctx.close();
   });
 });

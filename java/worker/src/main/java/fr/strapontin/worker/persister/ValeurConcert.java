@@ -17,7 +17,7 @@ import java.util.UUID;
 /// (ex. {@code "tm:rZFSnyZdFvA"}) utilisés par {@code PersisteurConcertsDb} pour la
 /// résolution UUID-first via {@code salle_sources} / {@code artiste_sources}.
 ///
-/// `salleUuid` et `artisteId` sont remplis par la résolution des identités sources ;
+/// `salleId` et `artisteId` sont remplis par la résolution des identités sources ;
 /// null si aucune correspondance trouvée.
 ///
 /// @since 2.0.0
@@ -40,7 +40,7 @@ public record ValeurConcert(
     String presaleNom,
     String salleSourceId,
     String artisteSourceId,
-    UUID salleUuid,
+    UUID salleId,
     UUID artisteId) {
 
   /// Retourne un nouveau concert avec le {@code salleNorm} remplacé.
@@ -66,15 +66,15 @@ public record ValeurConcert(
         presaleNom,
         salleSourceId,
         artisteSourceId,
-        salleUuid,
+        salleId,
         artisteId);
   }
 
-  /// Retourne un nouveau concert avec le {@code salleUuid} remplacé.
+  /// Retourne un nouveau concert avec le {@code salleId} remplacé.
   ///
-  /// @param nouvelleSalleUuid nouveau UUID de salle
+  /// @param nouvelleSalleId nouveau UUID de salle
   /// @return nouveau record avec le champ modifié
-  public ValeurConcert avecSalleUuid(UUID nouvelleSalleUuid) {
+  public ValeurConcert avecSalleId(UUID nouvelleSalleId) {
     return new ValeurConcert(
         artiste,
         artisteNorm,
@@ -93,7 +93,7 @@ public record ValeurConcert(
         presaleNom,
         salleSourceId,
         artisteSourceId,
-        nouvelleSalleUuid,
+        nouvelleSalleId,
         artisteId);
   }
 
@@ -120,7 +120,7 @@ public record ValeurConcert(
         presaleNom,
         salleSourceId,
         artisteSourceId,
-        salleUuid,
+        salleId,
         artisteId);
   }
 
@@ -147,16 +147,16 @@ public record ValeurConcert(
         presaleNom,
         salleSourceId,
         artisteSourceId,
-        salleUuid,
+        salleId,
         nouvelArtisteId);
   }
 
-  /// Retourne un nouveau concert avec le {@code salleUuid} et l'{@code artisteId} remplacés.
+  /// Retourne un nouveau concert avec le {@code salleId} et l'{@code artisteId} remplacés.
   ///
-  /// @param nouvelleSalleUuid nouveau UUID de salle (null conserve l'existant)
+  /// @param nouvelleSalleId nouveau UUID de salle (null conserve l'existant)
   /// @param nouvelArtisteId   nouveau UUID d'artiste (null conserve l'existant)
   /// @return nouveau record avec les champs modifiés
-  public ValeurConcert avecUuids(UUID nouvelleSalleUuid, UUID nouvelArtisteId) {
+  public ValeurConcert avecUuids(UUID nouvelleSalleId, UUID nouvelArtisteId) {
     return new ValeurConcert(
         artiste,
         artisteNorm,
@@ -175,7 +175,7 @@ public record ValeurConcert(
         presaleNom,
         salleSourceId,
         artisteSourceId,
-        nouvelleSalleUuid,
+        nouvelleSalleId,
         nouvelArtisteId);
   }
 
@@ -203,7 +203,7 @@ public record ValeurConcert(
         presaleNom,
         salleSourceId,
         artisteSourceId,
-        salleUuid,
+        salleId,
         nouvelArtisteId);
   }
 }

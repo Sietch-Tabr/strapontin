@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.securite;
 
-import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -33,8 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
 /// Endpoints d'authentification de l'API REST.
 ///
 /// <p>HTTP pur — délègue les flux reset MDP à {@link AuthService} et la vérification TOTP
-/// à {@link TotpService}. Gère le login, logout, challenge TOTP, récupération de l'utilisateur
-/// courant et la réinitialisation de mot de passe.
+/// (code + compteur d'échecs + verrouillage) à {@link TotpChallengeService}. Gère le login,
+/// logout, challenge TOTP, récupération de l'utilisateur courant et la réinitialisation de mot
+/// de passe.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -42,35 +41,26 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
   private static final Logger log = LoggerFactory.getLogger(AuthController.class);
-  private static final int MAX_ECHECS_TOTP = 5;
   private static final Pattern FORMAT_IDENTIFIANT = Pattern.compile("^[a-zA-Z0-9._-]+$");
 
   private final AuthenticationManager authenticationManager;
   private final AuthService authService;
-  private final TotpService totpService;
-  private final NamedParameterJdbcTemplate jdbc;
+  private final TotpChallengeService totpChallengeService;
   private final ConfigService configService;
-  private final LogAdminService logAdminService;
 
   /// @param authenticationManager gestionnaire d'authentification Spring Security
   /// @param authService           service de réinitialisation de mot de passe
-  /// @param totpService           service de vérification des codes TOTP
-  /// @param jdbc                  accès JDBC pour récupérer le secret TOTP de l'utilisateur
+  /// @param totpChallengeService  vérification du challenge TOTP (code + compteur d'échecs)
   /// @param configService         service de configuration pour lire PUBLIC_BASE_URL
-  /// @param logAdminService       journalisation des échecs TOTP dans logs_admin
   public AuthController(
       AuthenticationManager authenticationManager,
       AuthService authService,
-      TotpService totpService,
-      NamedParameterJdbcTemplate jdbc,
-      ConfigService configService,
-      LogAdminService logAdminService) {
+      TotpChallengeService totpChallengeService,
+      ConfigService configService) {
     this.authenticationManager = authenticationManager;
     this.authService = authService;
-    this.totpService = totpService;
-    this.jdbc = jdbc;
+    this.totpChallengeService = totpChallengeService;
     this.configService = configService;
-    this.logAdminService = logAdminService;
   }
 
   /// Authentifie un utilisateur et crée une session persistante.
@@ -141,9 +131,8 @@ public class AuthController {
 
   /// Vérifie le code TOTP soumis pendant le challenge post-login.
   ///
-  /// <p>Le compteur d'échecs est persisté en base ({@code users.totp_failure_count}).
-  /// Après {@value MAX_ECHECS_TOTP} échecs consécutifs, le compte est verrouillé de façon
-  /// persistante et la session est invalidée. Un admin peut débloquer via
+  /// <p>Le compteur d'échecs et la logique de verrouillage sont délégués à
+  /// {@link TotpChallengeService}. Un admin peut débloquer via
   /// {@code POST /api/admin/utilisateurs/{id}/reset-totp}.
   ///
   /// @param req         le corps contenant le code à 6 chiffres
@@ -167,56 +156,35 @@ public class AuthController {
           .body(Map.of("erreur", "Authentification requise"));
     }
 
-    Map<String, Object> utilisateur =
-        jdbc.queryForMap(
-            "SELECT two_factor_secret, totp_failure_count FROM users WHERE id = :id",
-            Map.of("id", principal.id()));
+    ResultatTotp resultat =
+        totpChallengeService.verifier(
+            principal.id(), principal.identifiant(), req.code(), httpRequest.getRemoteAddr());
 
-    int echecsCourants = ((Number) utilisateur.get("totp_failure_count")).intValue();
-    if (echecsCourants >= MAX_ECHECS_TOTP) {
-      session.invalidate();
-      log.debug("Compte TOTP verrouillé, session invalidée : {}", principal.identifiant());
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(Map.of("erreur", "Compte verrouillé. Contactez un administrateur."));
-    }
-
-    String secret = (String) utilisateur.get("two_factor_secret");
-    if (totpService.verifierCode(secret, req.code())) {
-      jdbc.update(
-          "UPDATE users SET totp_failure_count = 0 WHERE id = :id", Map.of("id", principal.id()));
-      session.removeAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE);
-      log.debug("Challenge TOTP validé : {}", principal.identifiant());
-      logAdminService.logAdmin(
-          "info",
-          "auth",
-          "TOTP validé : " + principal.identifiant(),
-          Map.of("identifiant", principal.identifiant(), "ip", httpRequest.getRemoteAddr()));
-      return ResponseEntity.ok(Map.of("succes", true));
-    }
-
-    int nouveauxEchecs = echecsCourants + 1;
-    jdbc.update(
-        "UPDATE users SET totp_failure_count = totp_failure_count + 1 WHERE id = :id",
-        Map.of("id", principal.id()));
-    logAdminService.logAdmin(
-        "warn",
-        "auth",
-        "Échec TOTP : " + principal.identifiant(),
-        Map.of(
-            "identifiant", principal.identifiant(),
-            "ip", httpRequest.getRemoteAddr(),
-            "essais", nouveauxEchecs));
-
-    if (nouveauxEchecs >= MAX_ECHECS_TOTP) {
-      session.invalidate();
-      log.debug("Trop de tentatives TOTP, session invalidée : {}", principal.identifiant());
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(Map.of("erreur", "Trop de tentatives. Compte verrouillé."));
-    }
-
-    int restants = MAX_ECHECS_TOTP - nouveauxEchecs;
-    return ResponseEntity.status(422)
-        .body(Map.of("erreur", "Code incorrect. " + restants + " essai(s) restant(s)."));
+    return switch (resultat.statut()) {
+      case DEJA_VERROUILLE -> {
+        session.invalidate();
+        log.debug("Compte TOTP verrouillé, session invalidée : {}", principal.identifiant());
+        yield ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(Map.of("erreur", "Compte verrouillé. Contactez un administrateur."));
+      }
+      case SUCCES -> {
+        session.removeAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE);
+        log.debug("Challenge TOTP validé : {}", principal.identifiant());
+        yield ResponseEntity.ok(Map.of("succes", true));
+      }
+      case VERROUILLE_MAINTENANT -> {
+        session.invalidate();
+        log.debug("Trop de tentatives TOTP, session invalidée : {}", principal.identifiant());
+        yield ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(Map.of("erreur", "Trop de tentatives. Compte verrouillé."));
+      }
+      case ECHEC ->
+          ResponseEntity.status(422)
+              .body(
+                  Map.of(
+                      "erreur",
+                      "Code incorrect. " + resultat.essaisRestants() + " essai(s) restant(s)."));
+    };
   }
 
   /// Retourne l'utilisateur actuellement authentifié.

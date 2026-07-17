@@ -44,13 +44,13 @@ class SalleRepository {
   List<SalleUtilisateur> listerPourUtilisateur(String userId) {
     return jdbc.query(
         """
-        SELECT us.salle_uuid AS id, s.nom, us.created_at,
+        SELECT us.salle_id AS id, s.nom, us.created_at,
                EXISTS (
                    SELECT 1 FROM salle_sources ss
                    WHERE ss.salle_id = s.id AND ss.source = 'digitick'
                ) AS a_digitick
         FROM user_salles us
-        JOIN salles s ON s.id = us.salle_uuid
+        JOIN salles s ON s.id = us.salle_id
         WHERE us.user_id = :userId
         ORDER BY lower(s.nom)
         """,
@@ -70,7 +70,7 @@ class SalleRepository {
   /// <ol>
   ///   <li>Concerts en base sans UUID — {@code salle_norm} nettoyé LIKE :pattern</li>
   ///   <li>Salles configurées Digitick — {@code salles.nom_norm} nettoyé LIKE :pattern</li>
-  ///   <li>Salles connues avec concerts ({@code salle_uuid IS NOT NULL}) — évite un appel TM
+  ///   <li>Salles connues avec concerts ({@code salle_id IS NOT NULL}) — évite un appel TM
   ///       inutile et permet à {@code estMemeSalle} de filtrer les doublons de venueId</li>
   /// </ol>
   ///
@@ -83,7 +83,7 @@ class SalleRepository {
             SELECT DISTINCT salle, ville, null::text AS digitick_slug
             FROM concerts
             WHERE regexp_replace(salle_norm, '[^a-z0-9]', '', 'g') LIKE :pattern
-              AND salle_uuid IS NULL
+              AND salle_id IS NULL
             UNION
             SELECT DISTINCT s.nom AS salle, s.ville AS ville, ss.identifiant_externe AS digitick_slug
             FROM salles s
@@ -92,7 +92,7 @@ class SalleRepository {
             UNION
             SELECT DISTINCT s.nom AS salle, s.ville AS ville, null::text AS digitick_slug
             FROM salles s
-            WHERE EXISTS (SELECT 1 FROM concerts c WHERE c.salle_uuid = s.id)
+            WHERE EXISTS (SELECT 1 FROM concerts c WHERE c.salle_id = s.id)
               AND regexp_replace(s.nom_norm, '[^a-z0-9]', '', 'g') LIKE :pattern
         ) t
         ORDER BY salle
@@ -104,15 +104,15 @@ class SalleRepository {
   /// Vérifie si une salle est déjà suivie par l'utilisateur.
   ///
   /// @param userId    identifiant de l'utilisateur
-  /// @param salleUuid UUID stable de la salle
+  /// @param salleId UUID stable de la salle
   /// @return {@code true} si déjà présente
-  boolean existePourUtilisateur(String userId, UUID salleUuid) {
+  boolean existePourUtilisateur(String userId, UUID salleId) {
     return !jdbc.queryForList(
             """
             SELECT 1 FROM user_salles
-            WHERE user_id = :userId AND salle_uuid = CAST(:salleUuid AS uuid)
+            WHERE user_id = :userId AND salle_id = CAST(:salleId AS uuid)
             """,
-            Map.of(CLE_USER_ID, userId, "salleUuid", salleUuid.toString()),
+            Map.of(CLE_USER_ID, userId, "salleId", salleId.toString()),
             Integer.class)
         .isEmpty();
   }
@@ -210,11 +210,11 @@ class SalleRepository {
 
   /// Met à jour le nom, la ville et le CP d'une salle existante.
   ///
-  /// @param salleUuid UUID de la salle
+  /// @param salleId UUID de la salle
   /// @param nom       nouveau nom (null = inchangé)
   /// @param ville     nouvelle ville (null = inchangée)
   /// @param dept      nouveau numéro de département (null = inchangé)
-  void mettreAJourSalle(UUID salleUuid, String nom, String ville, String dept) {
+  void mettreAJourSalle(UUID salleId, String nom, String ville, String dept) {
     jdbc.update(
         """
         UPDATE salles
@@ -224,7 +224,7 @@ class SalleRepository {
         WHERE id = CAST(:uuid AS uuid)
         """,
         Map.of(
-            "uuid", salleUuid.toString(),
+            "uuid", salleId.toString(),
             "nom", (Object) nom,
             "ville", (Object) ville,
             "dept", (Object) dept));
@@ -234,9 +234,9 @@ class SalleRepository {
   ///
   /// <p>Ex. : {@code "digitick:lempreinte"} ou {@code "tm:rZFSnyZdFvA,digitick:lempreinte"}.
   ///
-  /// @param salleUuid UUID de la salle
+  /// @param salleId UUID de la salle
   /// @return CSV d'identifiants ou {@code null} si aucune source connue
-  String lireIdentifiantsSources(UUID salleUuid) {
+  String lireIdentifiantsSources(UUID salleId) {
     List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
@@ -245,7 +245,7 @@ class SalleRepository {
             WHERE salle_id = CAST(:uuid AS uuid)
             ORDER BY source
             """,
-            Map.of("uuid", salleUuid.toString()));
+            Map.of("uuid", salleId.toString()));
     if (lignes.isEmpty()) return null;
     List<String> ids = new ArrayList<>();
     for (Map<String, Object> l : lignes) {
@@ -256,20 +256,20 @@ class SalleRepository {
 
   /// Supprime une salle uniquement si aucun utilisateur ne la suit et si elle n'a pas de concerts.
   ///
-  /// @param salleUuid UUID de la salle
+  /// @param salleId UUID de la salle
   /// @return {@code true} si supprimée, {@code false} si des contraintes empêchent la suppression
-  boolean supprimerSalleDigitick(UUID salleUuid) {
+  boolean supprimerSalleDigitick(UUID salleId) {
     int nb =
         jdbc.update(
             """
             DELETE FROM salles
             WHERE id = CAST(:uuid AS uuid)
               AND NOT EXISTS (
-                  SELECT 1 FROM user_salles WHERE salle_uuid = CAST(:uuid AS uuid))
+                  SELECT 1 FROM user_salles WHERE salle_id = CAST(:uuid AS uuid))
               AND NOT EXISTS (
-                  SELECT 1 FROM concerts WHERE salle_uuid = CAST(:uuid AS uuid))
+                  SELECT 1 FROM concerts WHERE salle_id = CAST(:uuid AS uuid))
             """,
-            Map.of("uuid", salleUuid.toString()));
+            Map.of("uuid", salleId.toString()));
     return nb > 0;
   }
 
@@ -278,25 +278,25 @@ class SalleRepository {
   /// {@link org.springframework.dao.DuplicateKeyException} ({@code idx_salles_wikidata_id}) — à
   /// la charge de l'appelant (même piège qu'{@code EnrichissementSallesService}, jalon 2.6.0).
   ///
-  /// @param salleUuid  UUID stable de la salle
+  /// @param salleId  UUID stable de la salle
   /// @param wikidataId Q-ID Wikidata
-  void mettreAJourWikidataId(UUID salleUuid, String wikidataId) {
+  void mettreAJourWikidataId(UUID salleId, String wikidataId) {
     jdbc.update(
         """
         UPDATE salles SET wikidata_id = COALESCE(wikidata_id, :wikidataId)
         WHERE id = CAST(:uuid AS uuid)
         """,
-        Map.of("uuid", salleUuid.toString(), "wikidataId", wikidataId));
+        Map.of("uuid", salleId.toString(), "wikidataId", wikidataId));
   }
 
-  /// Recherche une salle différente de {@code exclureSalleUuid} déjà associée à un slug Digitick
+  /// Recherche une salle différente de {@code exclureSalleId} déjà associée à un slug Digitick
   /// (#830) — permet de détecter un conflit avant l'attribution plutôt que d'échouer
   /// silencieusement sur {@code ON CONFLICT DO NOTHING}.
   ///
   /// @param slug             slug Digitick à vérifier
-  /// @param exclureSalleUuid salle en cours d'attribution, exclue de la recherche
+  /// @param exclureSalleId salle en cours d'attribution, exclue de la recherche
   /// @return le nom affiché de la salle en conflit, si elle existe
-  Optional<String> trouverConflitDigitickSlug(String slug, UUID exclureSalleUuid) {
+  Optional<String> trouverConflitDigitickSlug(String slug, UUID exclureSalleId) {
     List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
@@ -306,24 +306,24 @@ class SalleRepository {
             WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
               AND ss.salle_id != CAST(:uuid AS uuid)
             """,
-            Map.of("slug", slug, "uuid", exclureSalleUuid.toString()));
+            Map.of("slug", slug, "uuid", exclureSalleId.toString()));
     return lignes.isEmpty() ? Optional.empty() : Optional.of((String) lignes.get(0).get("nom"));
   }
 
   /// Enregistre une correspondance source externe → salle interne.
   ///
-  /// @param salleUuid           UUID stable de la salle
+  /// @param salleId           UUID stable de la salle
   /// @param source              nom de la source (ex. {@code "ticketmaster"})
   /// @param identifiantExterne  identifiant dans la source externe
-  void enregistrerSalleSource(UUID salleUuid, String source, String identifiantExterne) {
+  void enregistrerSalleSource(UUID salleId, String source, String identifiantExterne) {
     jdbc.update(
         """
         INSERT INTO salle_sources (salle_id, source, identifiant_externe)
-        VALUES (CAST(:salleUuid AS uuid), :source, :identifiantExterne)
+        VALUES (CAST(:salleId AS uuid), :source, :identifiantExterne)
         ON CONFLICT DO NOTHING
         """,
         Map.of(
-            "salleUuid", salleUuid.toString(),
+            "salleId", salleId.toString(),
             "source", source,
             "identifiantExterne", identifiantExterne));
   }
@@ -331,26 +331,26 @@ class SalleRepository {
   /// Lie une salle à un utilisateur.
   ///
   /// @param userId    identifiant de l'utilisateur
-  /// @param salleUuid UUID stable de la salle
-  void ajouterPourUtilisateur(String userId, UUID salleUuid) {
+  /// @param salleId UUID stable de la salle
+  void ajouterPourUtilisateur(String userId, UUID salleId) {
     jdbc.update(
         """
-        INSERT INTO user_salles (user_id, salle_uuid)
-        VALUES (:userId, CAST(:salleUuid AS uuid))
+        INSERT INTO user_salles (user_id, salle_id)
+        VALUES (:userId, CAST(:salleId AS uuid))
         """,
-        Map.of(CLE_USER_ID, userId, "salleUuid", salleUuid.toString()));
+        Map.of(CLE_USER_ID, userId, "salleId", salleId.toString()));
   }
 
   /// Supprime la relation utilisateur–salle.
   ///
   /// @param userId    identifiant de l'utilisateur
-  /// @param salleUuid UUID stable de la salle
-  void supprimerPourUtilisateur(String userId, UUID salleUuid) {
+  /// @param salleId UUID stable de la salle
+  void supprimerPourUtilisateur(String userId, UUID salleId) {
     jdbc.update(
         """
         DELETE FROM user_salles
-        WHERE user_id = :userId AND salle_uuid = CAST(:salleUuid AS uuid)
+        WHERE user_id = :userId AND salle_id = CAST(:salleId AS uuid)
         """,
-        Map.of(CLE_USER_ID, userId, "salleUuid", salleUuid.toString()));
+        Map.of(CLE_USER_ID, userId, "salleId", salleId.toString()));
   }
 }

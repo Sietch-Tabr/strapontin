@@ -38,17 +38,17 @@ public class ResendWebhookController {
   private static final Logger log = LoggerFactory.getLogger(ResendWebhookController.class);
 
   private final ConfigService configService;
-  private final EmailService emailService;
+  private final EmailAlerteService emailAlerteService;
   private final ObjectMapper objectMapper;
   private final LogAdminService logAdminService;
 
   public ResendWebhookController(
       ConfigService configService,
-      EmailService emailService,
+      EmailAlerteService emailAlerteService,
       ObjectMapper objectMapper,
       LogAdminService logAdminService) {
     this.configService = configService;
-    this.emailService = emailService;
+    this.emailAlerteService = emailAlerteService;
     this.objectMapper = objectMapper;
     this.logAdminService = logAdminService;
   }
@@ -118,10 +118,10 @@ public class ResendWebhookController {
       // une plainte spam menace la réputation d'envoi du domaine au moins autant qu'un bounce.
       if ("email.bounced".equals(type)) {
         traiterIncidentEmail("Bounce", "bounce email reçu", emailDestinataire);
-        emailService.envoyerNotificationBounce(emailDestinataire);
+        emailAlerteService.envoyerNotificationBounce(emailDestinataire);
       } else if ("email.complained".equals(type)) {
         traiterIncidentEmail("Plainte spam", "plainte spam email reçue", emailDestinataire);
-        emailService.envoyerNotificationPlainteSpam(emailDestinataire);
+        emailAlerteService.envoyerNotificationPlainteSpam(emailDestinataire);
       }
     } catch (Exception e) {
       log.error("Erreur lors du traitement du webhook Resend", e);

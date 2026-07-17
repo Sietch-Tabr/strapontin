@@ -211,12 +211,12 @@ public class ReconciliateurSalles {
     Map<UUID, Integer> meilleurScore = new HashMap<>();
     for (ValeurConcert c : concerts) {
       if (c.salleSourceId() == null) continue;
-      UUID salleUuid = cachesSalles.get(c.salleSourceId());
-      if (salleUuid == null) continue;
+      UUID salleId = cachesSalles.get(c.salleSourceId());
+      if (salleId == null) continue;
       int score = scoreSalle(c.salle());
-      if (!meilleurNom.containsKey(salleUuid) || score > meilleurScore.get(salleUuid)) {
-        meilleurNom.put(salleUuid, c.salle());
-        meilleurScore.put(salleUuid, score);
+      if (!meilleurNom.containsKey(salleId) || score > meilleurScore.get(salleId)) {
+        meilleurNom.put(salleId, c.salle());
+        meilleurScore.put(salleId, score);
       }
     }
     for (var entree : meilleurNom.entrySet()) {
@@ -226,7 +226,7 @@ public class ReconciliateurSalles {
               Map.of("nom", entree.getValue(), "uuid", entree.getKey().toString()));
       if (modifies > 0) {
         log.info(
-            "renommage salle absorbé salleUuid={} nouveauNom={}",
+            "renommage salle absorbé salleId={} nouveauNom={}",
             entree.getKey(),
             entree.getValue());
       }
@@ -253,41 +253,41 @@ public class ReconciliateurSalles {
             "SELECT id FROM salles WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
             Map.of("nom", c.salle()),
             (rs, _) -> rs.getObject("id", UUID.class));
-    UUID salleUuid = existants.isEmpty() ? null : existants.get(0);
+    UUID salleId = existants.isEmpty() ? null : existants.get(0);
 
-    if (salleUuid == null) {
-      salleUuid = chercherSalleParTokens(c.salle(), c.dept());
+    if (salleId == null) {
+      salleId = chercherSalleParTokens(c.salle(), c.dept());
     }
 
-    if (salleUuid == null) {
+    if (salleId == null) {
       String salleCle = Normalisation.normaliserTexte(c.salle());
       jdbc.update(
           "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
               + " VALUES (:salleCle, :nom, :nomNorm, :dept)"
               + " ON CONFLICT (salle_cle) DO NOTHING",
           Map.of("salleCle", salleCle, "nom", c.salle(), "nomNorm", salleCle, "dept", c.dept()));
-      salleUuid =
+      salleId =
           jdbc.queryForObject(
               "SELECT id FROM salles WHERE salle_cle = :salleCle",
               Map.of("salleCle", salleCle),
               UUID.class);
     }
 
-    if (salleUuid == null) return null;
+    if (salleId == null) return null;
 
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
             + " VALUES (CAST(:uuid AS uuid), :source, :identifiant)"
             + " ON CONFLICT DO NOTHING",
-        Map.of("uuid", salleUuid.toString(), "source", source, "identifiant", identifiant));
+        Map.of("uuid", salleId.toString(), "source", source, "identifiant", identifiant));
 
     log.info(
         "salle upsert source salle={} source={} identifiant={} uuid={}",
         c.salle(),
         source,
         identifiant,
-        salleUuid);
-    return salleUuid;
+        salleId);
+    return salleId;
   }
 
   /// Cherche une salle existante dont le {@code nom_norm} est un doublon du nom fourni.
@@ -347,15 +347,15 @@ public class ReconciliateurSalles {
     return null;
   }
 
-  /// Rattache les concerts sans {@code salleUuid} à leur salle via correspondance exacte
+  /// Rattache les concerts sans {@code salleId} à leur salle via correspondance exacte
   /// sur {@code salle_norm} / {@code nom_norm}.
   ///
   /// @param concerts concerts après déduplication
-  /// @return liste enrichie avec les {@code salleUuid} résolus par nom_norm
+  /// @return liste enrichie avec les {@code salleId} résolus par nom_norm
   List<ValeurConcert> raccrocherSallesParNomNorm(List<ValeurConcert> concerts) {
     List<String> sallesNormsSansUuid =
         concerts.stream()
-            .filter(c -> c.salleUuid() == null)
+            .filter(c -> c.salleId() == null)
             .map(ValeurConcert::salleNorm)
             .distinct()
             .toList();
@@ -370,9 +370,9 @@ public class ReconciliateurSalles {
     return concerts.stream()
         .map(
             c -> {
-              if (c.salleUuid() != null) return c;
+              if (c.salleId() != null) return c;
               UUID uuid = cache.get(c.salleNorm());
-              return uuid != null ? c.avecSalleUuid(uuid) : c;
+              return uuid != null ? c.avecSalleId(uuid) : c;
             })
         .toList();
   }

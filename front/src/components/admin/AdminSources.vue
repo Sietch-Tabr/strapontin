@@ -151,7 +151,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="salle in sallesFiltrees" :key="salle.salleUuid">
+              <tr v-for="salle in sallesFiltrees" :key="salle.salleId">
                 <td class="source-salle-nom">{{ salle.nom }}</td>
                 <td v-if="vueDigitick" class="source-salle-loc">
                   <span v-if="salle.ville || salle.dept">{{ [salle.ville, salle.dept].filter(Boolean).join(' ') }}</span>
@@ -160,7 +160,7 @@
                 <td>
                   <div class="source-slug-inline">
                     <input
-                      :value="slugsEdites[salle.salleUuid]"
+                      :value="slugsEdites[salle.salleId]"
                       type="text"
                       class="source-slug-input"
                       :placeholder="slugDeduit(salle.nom)"
@@ -169,12 +169,12 @@
                       @keydown.enter="sauvegarderSlug(salle)"
                     />
                     <span
-                      v-if="statutTester[salle.salleUuid]"
+                      v-if="statutTester[salle.salleId]"
                       class="source-test-statut"
-                      :class="statutTester[salle.salleUuid]?.startsWith('ok') ? 'source-test-ok' : 'source-test-ko'"
+                      :class="statutTester[salle.salleId]?.startsWith('ok') ? 'source-test-ok' : 'source-test-ko'"
                       aria-live="polite"
                     >
-                      {{ formatStatutTest(statutTester[salle.salleUuid]) }}
+                      {{ formatStatutTest(statutTester[salle.salleId]) }}
                     </span>
                   </div>
                 </td>
@@ -182,14 +182,14 @@
                   <button
                     type="button"
                     class="btn btn-secondary btn-sm"
-                    :disabled="enCours[salle.salleUuid + ':slug']"
+                    :disabled="enCours[salle.salleId + ':slug']"
                     @click="sauvegarderSlug(salle)"
                     :aria-label="'Enregistrer le slug pour ' + salle.nom"
                   >Enregistrer</button>
                   <button
                     type="button"
                     class="btn btn-secondary btn-sm"
-                    :disabled="enCours[salle.salleUuid + ':test'] || !slugCourant(salle)"
+                    :disabled="enCours[salle.salleId + ':test'] || !slugCourant(salle)"
                     @click="testerSlug(salle)"
                     :aria-label="'Tester le slug Digitick de ' + salle.nom"
                   >Tester</button>
@@ -197,7 +197,7 @@
                     <button
                       type="button"
                       class="btn btn-secondary btn-sm"
-                      :disabled="enCours[salle.salleUuid + ':fetch'] || !slugCourant(salle)"
+                      :disabled="enCours[salle.salleId + ':fetch'] || !slugCourant(salle)"
                       @click="fetchSalle(salle)"
                       :aria-label="'Déclencher un fetch pour ' + salle.nom"
                     >Fetch</button>
@@ -210,7 +210,7 @@
                     <button
                       type="button"
                       class="btn btn-danger-texte btn-sm"
-                      :disabled="enCours[salle.salleUuid + ':suppr']"
+                      :disabled="enCours[salle.salleId + ':suppr']"
                       @click="demanderSuppression(salle)"
                       :aria-label="'Supprimer ' + salle.nom"
                     >Supprimer</button>
@@ -301,7 +301,7 @@
     </div>
     <p>Supprimer « <strong>{{ salleASupprimer?.nom }}</strong> » et son slug Digitick ?<br>Cette action est irréversible si la salle n'a pas de concerts.</p>
     <div class="dialog-pied">
-      <button type="button" class="btn btn-danger" :disabled="enCours[salleASupprimer?.salleUuid + ':suppr']" @click="confirmerSuppression">Supprimer</button>
+      <button type="button" class="btn btn-danger" :disabled="enCours[salleASupprimer?.salleId + ':suppr']" @click="confirmerSuppression">Supprimer</button>
       <button type="button" class="btn btn-texte" @click="dialogSupprRef.close()">Annuler</button>
     </div>
   </dialog>
@@ -330,7 +330,7 @@ const enCours         = reactive({})
 
 const ajout           = reactive({ nom: '', slug: '', ville: '', dept: '' })
 const ajoutSlugStatut = ref(null)
-const edition         = reactive({ salleUuid: null, nom: '', ville: '', dept: '' })
+const edition         = reactive({ salleId: null, nom: '', ville: '', dept: '' })
 const salleASupprimer = ref(null)
 
 const dialogAjoutRef  = ref(null)
@@ -367,7 +367,7 @@ function slugDeduit(nom) {
 }
 
 function slugCourant(salle) {
-  const edite = slugsEdites[salle.salleUuid]
+  const edite = slugsEdites[salle.salleId]
   return edite !== undefined ? edite : (salle.digitickSlug ?? '')
 }
 
@@ -380,8 +380,8 @@ async function charger() {
     salles.value         = d.salles         ?? []
     sallesDigitick.value = d.sallesDigitick ?? []
     for (const s of [...salles.value, ...sallesDigitick.value]) {
-      if (slugsEdites[s.salleUuid] === undefined) {
-        slugsEdites[s.salleUuid] = s.digitickSlug ?? ''
+      if (slugsEdites[s.salleId] === undefined) {
+        slugsEdites[s.salleId] = s.digitickSlug ?? ''
       }
     }
   } catch (e) {
@@ -404,21 +404,21 @@ function extraireSlugDepuisUrl(valeur) {
 }
 
 function mettreAJourSlug(salle, valeur) {
-  slugsEdites[salle.salleUuid] = extraireSlugDepuisUrl(valeur)
+  slugsEdites[salle.salleId] = extraireSlugDepuisUrl(valeur)
 }
 
 async function sauvegarderSlug(salle) {
-  const cle = salle.salleUuid + ':slug'
+  const cle = salle.salleId + ':slug'
   enCours[cle] = true
   try {
-    const rep = await fetch(`/api/admin/salles/${salle.salleUuid}/digitick-slug`, {
+    const rep = await fetch(`/api/admin/salles/${salle.salleId}/digitick-slug`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: slugsEdites[salle.salleUuid] ?? '' }),
+      body: JSON.stringify({ slug: slugsEdites[salle.salleId] ?? '' }),
       signal: controleur.signal,
     })
     if (rep.ok) {
-      salle.digitickSlug = slugsEdites[salle.salleUuid] || null
+      salle.digitickSlug = slugsEdites[salle.salleId] || null
       afficherToast('Slug mis à jour.', 'succes')
       await charger()
     } else {
@@ -434,11 +434,11 @@ async function sauvegarderSlug(salle) {
 async function testerSlug(salle) {
   const slug = slugCourant(salle)
   if (!slug) return
-  const cle = salle.salleUuid + ':test'
+  const cle = salle.salleId + ':test'
   enCours[cle] = true
-  statutTester[salle.salleUuid] = null
+  statutTester[salle.salleId] = null
   try {
-    const rep = await fetch(`/api/admin/salles/${salle.salleUuid}/tester-digitick`, {
+    const rep = await fetch(`/api/admin/salles/${salle.salleId}/tester-digitick`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slug }),
@@ -446,13 +446,13 @@ async function testerSlug(salle) {
     })
     if (rep.ok) {
       const data = await rep.json().catch(() => ({}))
-      statutTester[salle.salleUuid] = data.nbConcerts > 0 ? `ok:${data.nbConcerts}` : 'ok:0'
+      statutTester[salle.salleId] = data.nbConcerts > 0 ? `ok:${data.nbConcerts}` : 'ok:0'
     } else {
-      statutTester[salle.salleUuid] = 'ko'
+      statutTester[salle.salleId] = 'ko'
     }
   } catch (e) {
     if (e.name !== 'AbortError') {
-      statutTester[salle.salleUuid] = 'ko'
+      statutTester[salle.salleId] = 'ko'
     }
   } finally {
     enCours[cle] = false
@@ -467,10 +467,10 @@ function formatStatutTest(statut) {
 }
 
 async function fetchSalle(salle) {
-  const cle = salle.salleUuid + ':fetch'
+  const cle = salle.salleId + ':fetch'
   enCours[cle] = true
   try {
-    const rep = await fetch(`/api/admin/salles/${salle.salleUuid}/fetch`, {
+    const rep = await fetch(`/api/admin/salles/${salle.salleId}/fetch`, {
       method: 'POST',
       signal: controleur.signal,
     })
@@ -547,7 +547,7 @@ async function creerSalleDigitick() {
 }
 
 function ouvrirEdition(salle) {
-  edition.salleUuid = salle.salleUuid
+  edition.salleId = salle.salleId
   edition.nom = salle.nom ?? ''
   edition.ville = salle.ville ?? ''
   edition.dept = salle.dept ?? ''
@@ -558,7 +558,7 @@ async function sauvegarderEdition() {
   if (enCours.edition) return
   enCours.edition = true
   try {
-    const rep = await fetch(`/api/admin/digitick-salles/${edition.salleUuid}`, {
+    const rep = await fetch(`/api/admin/digitick-salles/${edition.salleId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -591,10 +591,10 @@ function demanderSuppression(salle) {
 async function confirmerSuppression() {
   const salle = salleASupprimer.value
   if (!salle) return
-  const cle = salle.salleUuid + ':suppr'
+  const cle = salle.salleId + ':suppr'
   enCours[cle] = true
   try {
-    const rep = await fetch(`/api/admin/digitick-salles/${salle.salleUuid}`, {
+    const rep = await fetch(`/api/admin/digitick-salles/${salle.salleId}`, {
       method: 'DELETE',
       signal: controleur.signal,
     })
