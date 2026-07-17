@@ -31,6 +31,28 @@ public final class CorrespondanceSalle {
   // Couvre les variantes Eventim "grand kursaal"/"kursaal besancon" (Jaccard=0.33, pivot≥7).
   private static final int LONGUEUR_MIN_PIVOT = 7;
   private static final double SEUIL_JACCARD_PIVOT = 0.3;
+  // #974 : mots-types de salle génériques en français dépassant LONGUEUR_MIN_PIVOT par
+  // coïncidence lexicale sans rien prouver sur l'identité de la salle — a fait matcher à tort
+  // "Theatre Rive Gauche Paris 14"/"Theatre le Bout Paris 09" (theatre, 7 car.) et "Carre
+  // D'Argent - Pont Chateau"/"Chateau de Sollies Pont" (chateau, 7 car.), #971. Restent
+  // éligibles au Jaccard global (critère 2) — seulement exclus du rôle de pivot isolé. "casino"
+  // inclus par prudence (cité dans l'investigation #971 comme motif suspect) même si le cas
+  // concret "Casino - Barriere" Toulouse/Lille de #971 relève en réalité du critère Levenshtein
+  // (similarité 0.75, hors scope de ce critère pivot) — protégé par le filtre dept de #973, pas
+  // par cette exclusion.
+  private static final Set<String> MOTS_GENERIQUES_SALLE =
+      Set.of(
+          "theatre",
+          "chateau",
+          "casino",
+          "palais",
+          "centre",
+          "congres",
+          "espace",
+          "salle",
+          "arena",
+          "forum",
+          "complexe");
 
   private CorrespondanceSalle() {}
 
@@ -88,7 +110,8 @@ public final class CorrespondanceSalle {
   ///   <li>Levenshtein ≥ 0.75 ou containment (via {@link Normalisation#similarite})</li>
   ///   <li>Jaccard tokens strict {@code > 0.5} — insensible à l'ordre des mots</li>
   ///   <li>Token pivot — token commun ≥ {@value #LONGUEUR_MIN_PIVOT} chars et Jaccard
-  ///       {@code > }{@value #SEUIL_JACCARD_PIVOT}</li>
+  ///       {@code > }{@value #SEUIL_JACCARD_PIVOT}, hors mots-types génériques (#974 —
+  ///       "theatre"/"chateau"/"casino"… ne prouvent rien seuls sur l'identité de la salle)</li>
   ///   <li>Égalité sans espaces (#902) — {@link Normalisation#normaliserTexte} remplace
   ///       l'apostrophe par une espace ("L'Olympia" → "l olympia"), mais une source qui omet
   ///       totalement l'apostrophe ("LOlympia") ne produit aucune espace à substituer
@@ -115,10 +138,12 @@ public final class CorrespondanceSalle {
             : (double) intersection.size() / union.size();
     if (jaccard > SEUIL_JACCARD_SALLE) return true;
     // Critère pivot : requiert ≥ 2 tokens dans chaque nom pour éviter les faux positifs
-    // de type "galaxie" (1 token) vs "le galaxie amneville".
+    // de type "galaxie" (1 token) vs "le galaxie amneville". Les mots-types génériques (#974)
+    // sont exclus du rôle de pivot : leur longueur ne prouve rien sur l'identité de la salle.
     return tokA.size() >= 2
         && tokB.size() >= 2
         && jaccard > SEUIL_JACCARD_PIVOT
-        && intersection.stream().anyMatch(t -> t.length() >= LONGUEUR_MIN_PIVOT);
+        && intersection.stream()
+            .anyMatch(t -> t.length() >= LONGUEUR_MIN_PIVOT && !MOTS_GENERIQUES_SALLE.contains(t));
   }
 }
