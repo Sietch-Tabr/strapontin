@@ -8,7 +8,7 @@ import java.util.UUID;
 
 /// Salle pour la gestion admin des sources Digitick.
 ///
-/// @param salleUuid    UUID stable de la salle
+/// @param salleId    UUID stable de la salle
 /// @param nom          nom affiché
 /// @param digitickSlug slug Digitick (null si non configuré)
 /// @param ville        ville (null si non renseignée)
@@ -16,4 +16,4 @@ import java.util.UUID;
 /// @since 2.3.0
 /// @author Kwaite
 public record SalleSourceAdmin(
-    UUID salleUuid, String nom, String digitickSlug, String ville, String dept) {}
+    UUID salleId, String nom, String digitickSlug, String ville, String dept) {}

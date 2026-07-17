@@ -8,23 +8,24 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 
 /// Tests unitaires pour {@link AuthController} — challenge TOTP et réinitialisation de mot de
 /// passe.
+///
+/// <p>Depuis #917, le compteur d'échecs/verrouillage TOTP est délégué à
+/// {@link TotpChallengeService} (testé séparément dans {@code TotpChallengeServiceTest}) — ce
+/// fichier vérifie uniquement la traduction HTTP de chaque {@link ResultatTotp}.
 ///
 /// @since 2.2.5
 /// @author Kwaite
@@ -33,22 +34,17 @@ class AuthControllerTest {
   private AuthController authController;
   private AuthenticationManager authenticationManager;
   private AuthService authService;
-  private TotpService totpService;
-  private NamedParameterJdbcTemplate jdbc;
+  private TotpChallengeService totpChallengeService;
   private ConfigService configService;
-  private LogAdminService logAdminService;
 
   @BeforeEach
   void setUp() {
     authenticationManager = mock(AuthenticationManager.class);
     authService = mock(AuthService.class);
-    totpService = mock(TotpService.class);
-    jdbc = mock(NamedParameterJdbcTemplate.class);
+    totpChallengeService = mock(TotpChallengeService.class);
     configService = mock(ConfigService.class);
-    logAdminService = mock(LogAdminService.class);
     authController =
-        new AuthController(
-            authenticationManager, authService, totpService, jdbc, configService, logAdminService);
+        new AuthController(authenticationManager, authService, totpChallengeService, configService);
   }
 
   // --- verifierTotp ---
@@ -91,7 +87,6 @@ class AuthControllerTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void verifierTotp_codeCorrect_retourne200() {
     HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     HttpSession session = mock(HttpSession.class);
@@ -104,20 +99,17 @@ class AuthControllerTest {
     Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
-
-    when(jdbc.queryForMap(anyString(), anyMap()))
-        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 0));
-    when(totpService.verifierCode("SECRETBASE32", "123456")).thenReturn(true);
+    when(totpChallengeService.verifier("u1", "alice", "123456", "127.0.0.1"))
+        .thenReturn(ResultatTotp.succes());
 
     var reponse =
         authController.verifierTotp(new TotpChallengeRequest("123456"), httpRequest, auth);
 
     assertEquals(200, reponse.getStatusCode().value());
-    verify(jdbc).update(contains("totp_failure_count = 0"), anyMap());
+    verify(session).removeAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE);
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void verifierTotp_codeIncorrect_retourne422() {
     HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     HttpSession session = mock(HttpSession.class);
@@ -130,20 +122,17 @@ class AuthControllerTest {
     Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
-
-    when(jdbc.queryForMap(anyString(), anyMap()))
-        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 0));
-    when(totpService.verifierCode("SECRETBASE32", "000000")).thenReturn(false);
+    when(totpChallengeService.verifier("u1", "alice", "000000", "127.0.0.1"))
+        .thenReturn(ResultatTotp.echec(3));
 
     var reponse =
         authController.verifierTotp(new TotpChallengeRequest("000000"), httpRequest, auth);
 
     assertEquals(422, reponse.getStatusCode().value());
-    verify(jdbc).update(contains("totp_failure_count + 1"), anyMap());
+    assertEquals("Code incorrect. 3 essai(s) restant(s).", reponse.getBody().get("erreur"));
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void verifierTotp_tropDEchecs_invalideSessionEtRetourne401() {
     HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     HttpSession session = mock(HttpSession.class);
@@ -156,11 +145,8 @@ class AuthControllerTest {
     Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
-
-    // 4 échecs déjà enregistrés → le 5e déclenche le verrouillage
-    when(jdbc.queryForMap(anyString(), anyMap()))
-        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 4));
-    when(totpService.verifierCode("SECRETBASE32", "000000")).thenReturn(false);
+    when(totpChallengeService.verifier("u1", "alice", "000000", "127.0.0.1"))
+        .thenReturn(ResultatTotp.verrouilleMaintenant());
 
     var reponse =
         authController.verifierTotp(new TotpChallengeRequest("000000"), httpRequest, auth);
@@ -170,7 +156,6 @@ class AuthControllerTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void verifierTotp_compteurDejaVerrouille_invalideSessionEtRetourne401() {
     HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     HttpSession session = mock(HttpSession.class);
@@ -183,17 +168,14 @@ class AuthControllerTest {
     Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
-
-    // Compte déjà verrouillé en base (≥ MAX_ECHECS_TOTP) — aucun code ne doit être vérifié
-    when(jdbc.queryForMap(anyString(), anyMap()))
-        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 5));
+    when(totpChallengeService.verifier("u1", "alice", "000000", "127.0.0.1"))
+        .thenReturn(ResultatTotp.dejaVerrouille());
 
     var reponse =
         authController.verifierTotp(new TotpChallengeRequest("000000"), httpRequest, auth);
 
     assertEquals(HttpStatus.UNAUTHORIZED.value(), reponse.getStatusCode().value());
     verify(session).invalidate();
-    verify(totpService, never()).verifierCode(anyString(), anyString());
   }
 
   // --- reinitialiserMotDePasse ---

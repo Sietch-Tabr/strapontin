@@ -5,31 +5,31 @@
 package fr.strapontin.web.securite;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.Map;
+import fr.strapontin.web.utilisateur.ParametresService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
 
 /// Tests unitaires de {@link SessionController}.
+///
+/// <p>Depuis #918, le COUNT SQL est délégué à {@link ParametresService} (extrait vers
+/// {@code UtilisateurRepository}) — ce contrôleur redevient HTTP pur, conforme au pattern
+/// Controller → Service → Repository.
 ///
 /// @since 2.6.6
 /// @author Kwaite
 class SessionControllerTest {
 
-  private NamedParameterJdbcTemplate jdbc;
+  private ParametresService parametresService;
   private SessionController controller;
 
   @BeforeEach
   void setUp() {
-    jdbc = mock(NamedParameterJdbcTemplate.class);
-    controller = new SessionController(jdbc);
+    parametresService = mock(ParametresService.class);
+    controller = new SessionController(parametresService);
   }
 
   @Test
@@ -70,26 +70,11 @@ class SessionControllerTest {
     Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(ud);
-    when(jdbc.queryForObject(anyString(), eq(Map.of("userId", "user-1")), eq(Integer.class)))
-        .thenReturn(5);
+    when(parametresService.compterNouveauxMatchesArtistes("user-1")).thenReturn(5);
 
     SessionController.SessionDto dto = controller.session(auth);
 
     assertEquals("admin", dto.role());
     assertEquals(5, dto.nbNouveau());
-  }
-
-  @Test
-  void session_compteNull_retourneZero() {
-    UtilisateurDetails ud =
-        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
-    Authentication auth = mock(Authentication.class);
-    when(auth.isAuthenticated()).thenReturn(true);
-    when(auth.getPrincipal()).thenReturn(ud);
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(null);
-
-    SessionController.SessionDto dto = controller.session(auth);
-
-    assertEquals(0, dto.nbNouveau());
   }
 }

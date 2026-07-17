@@ -194,7 +194,7 @@ class ReferentielArtistesServiceTest {
                         && sql.contains("USING concerts c2")
                         && sql.contains("c1.artiste_id = CAST(:source AS uuid)")
                         && sql.contains("c2.artiste_id = CAST(:cible AS uuid)")
-                        && sql.contains("c1.salle_uuid = c2.salle_uuid")
+                        && sql.contains("c1.salle_id = c2.salle_id")
                         && sql.contains("c1.date = c2.date")),
             anyMap());
   }

@@ -1,0 +1,24 @@
+<configuration>
+  <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="strapontin-worker"/>
+
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %-5level [%X{correlationId:--}] %logger{36} — %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <springProfile name="!prod">
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+    <logger name="fr.strapontin" level="DEBUG"/>
+    <logger name="org.quartz" level="WARN"/>
+  </springProfile>
+
+  <springProfile name="prod">
+    <root level="WARN">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+    <logger name="fr.strapontin" level="INFO"/>
+  </springProfile>
+</configuration>

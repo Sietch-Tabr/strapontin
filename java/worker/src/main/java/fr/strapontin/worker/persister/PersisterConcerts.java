@@ -38,7 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 ///   <li>Déduplication sur la clé de conflit finale</li>
 ///   <li>Rattachement des salles par {@code nom_norm} exact</li>
 ///   <li>Upsert ON CONFLICT avec préférence pour les diacritiques et la casse mixte</li>
-///   <li>Suppression des doublons par URL et par {@code salle_uuid}</li>
+///   <li>Suppression des doublons par URL et par {@code salle_id}</li>
 /// </ol>
 ///
 /// @since 2.0.0
@@ -135,22 +135,22 @@ public class PersisterConcerts {
     return new ArrayList<>(parCle.values());
   }
 
-  /// Dédoublonne un lot réconcilié par {@code (artisteNorm, date, heure, salleUuid)}.
+  /// Dédoublonne un lot réconcilié par {@code (artisteNorm, date, heure, salleId)}.
   ///
-  /// <p>La contrainte {@code uq_concerts_artiste_date_heure_salle} porte sur {@code salle_uuid}
+  /// <p>La contrainte {@code uq_concerts_artiste_date_heure_salle} porte sur {@code salle_id}
   /// (NULLS NOT DISTINCT) depuis la migration V37/V14. Deux concerts TM/Eventim nommant la même
-  /// salle différemment ont le même {@code salle_uuid} après résolution — ils conflicteraient au
+  /// salle différemment ont le même {@code salle_id} après résolution — ils conflicteraient au
   /// sein d'un même INSERT ON CONFLICT DO UPDATE. Ce dedup les élimine en amont.
   ///
   /// <p>Doit être appelé APRÈS {@link ReconciliateurSalles#raccrocherSallesParNomNorm} afin que
-  /// tous les {@code salle_uuid} soient résolus.
+  /// tous les {@code salle_id} soient résolus.
   ///
   /// @param lot valeurs de concerts après réconciliation complète des salles
   /// @return lot sans doublons
   public static List<ValeurConcert> deduplicerLotReconcilie(List<ValeurConcert> lot) {
     Map<String, ValeurConcert> parCle = new LinkedHashMap<>();
     for (ValeurConcert v : lot) {
-      String salleId = v.salleUuid() != null ? v.salleUuid().toString() : v.salleNorm();
+      String salleId = v.salleId() != null ? v.salleId().toString() : v.salleNorm();
       String cle =
           v.artisteNorm()
               + "|"
@@ -200,13 +200,13 @@ public class PersisterConcerts {
         concerts.stream()
             .map(
                 c -> {
-                  UUID salleUuid =
+                  UUID salleId =
                       c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
                   UUID artisteId =
                       c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
-                  if (salleUuid == null && artisteId == null) return c;
+                  if (salleId == null && artisteId == null) return c;
                   return c.avecUuids(
-                      salleUuid != null ? salleUuid : c.salleUuid(),
+                      salleId != null ? salleId : c.salleId(),
                       artisteId != null ? artisteId : c.artisteId());
                 })
             .toList();
@@ -293,7 +293,7 @@ public class PersisterConcerts {
     }
 
     db.supprimerDoublonsParUrl();
-    db.supprimerDoublonsParSalleUuid();
+    db.supprimerDoublonsParSalleId();
 
     log.info(
         "concerts persistés total={} inserts={} updates={}",

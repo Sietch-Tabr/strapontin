@@ -77,34 +77,6 @@ class TicketmasterSourceTest {
         .formatted(events, totalElements, totalPages);
   }
 
-  // --- extraireDept ---
-
-  @Test
-  void extraireDept_codePostalAbsent_retourneNull() {
-    assertNull(TicketmasterSource.extraireDept(null));
-    assertNull(TicketmasterSource.extraireDept(""));
-    assertNull(TicketmasterSource.extraireDept("   "));
-  }
-
-  @Test
-  void extraireDept_metropole_retourneDeuxChiffres() {
-    assertEquals("75", TicketmasterSource.extraireDept("75012"));
-    assertEquals("13", TicketmasterSource.extraireDept("13001"));
-    assertEquals("01", TicketmasterSource.extraireDept("01000"));
-  }
-
-  @Test
-  void extraireDept_DOM_retourneTroisChiffres() {
-    assertEquals("971", TicketmasterSource.extraireDept("97100"));
-    assertEquals("972", TicketmasterSource.extraireDept("97200"));
-    assertEquals("976", TicketmasterSource.extraireDept("97600"));
-  }
-
-  @Test
-  void extraireDept_codePostalCourt_retourneChaine() {
-    assertEquals("75", TicketmasterSource.extraireDept("75"));
-  }
-
   // --- parseDateTM ---
 
   @Test
@@ -132,28 +104,6 @@ class TicketmasterSourceTest {
     String[] resultat = TicketmasterSource.parseDateTM("2025-09-15T20:30:00Z", "20:30:00");
     assertEquals("2025-09-15", resultat[0]);
     assertEquals("20:30", resultat[1]);
-  }
-
-  // --- normaliserCasse ---
-
-  @Test
-  void normaliserCasse_nomToutMajuscule_retourneTitleCase() {
-    assertEquals("Accor Arena", TicketmasterSource.normaliserCasse("ACCOR ARENA"));
-  }
-
-  @Test
-  void normaliserCasse_nomAvecCasseMixte_retourneInchange() {
-    assertEquals("Accor Arena", TicketmasterSource.normaliserCasse("Accor Arena"));
-  }
-
-  @Test
-  void normaliserCasse_nomAvecApostrophe_capitaliseApresApostrophe() {
-    assertEquals("L'Olympia", TicketmasterSource.normaliserCasse("L'OLYMPIA"));
-  }
-
-  @Test
-  void normaliserCasse_articleEnMinuscule_conserveMinuscule() {
-    assertEquals("Orchestre de Paris", TicketmasterSource.normaliserCasse("ORCHESTRE DE PARIS"));
   }
 
   // --- mapEvenement ---

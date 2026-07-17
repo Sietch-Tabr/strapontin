@@ -1,9 +1,8 @@
-import { test, expect, request as playwrightRequest } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
+import { creerContexteAdmin } from "./helpers/admin.js";
 
 test.use({ storageState: FICHIER_AUTH_ADMIN });
-
-const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
 
 test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () => {
   test("admin_desktop_section_salles_visible", async ({ page, isMobile }) => {
@@ -171,10 +170,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
     const suffixe = Date.now();
     const nomA = `ZZTestFusionIhmA-${suffixe}`;
     const nomB = `ZZTestFusionIhmB-${suffixe}`;
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
+    const ctx = await creerContexteAdmin();
     let salleRestante: string | null = null;
     try {
       const repA = await ctx.post("/api/admin/digitick-salles", {
@@ -310,11 +306,8 @@ test.describe("Scénario: admin — API référentiel salles", () => {
   });
 
   test("api_admin_salles_reinitialiserEnrichissement_fluxComplet_effaceWikidataId", async () => {
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
-    let salleUuid: string | null = null;
+    const ctx = await creerContexteAdmin();
+    let salleId: string | null = null;
     try {
       const repCreation = await ctx.post("/api/admin/digitick-salles", {
         data: {
@@ -323,18 +316,18 @@ test.describe("Scénario: admin — API référentiel salles", () => {
         },
       });
       expect(repCreation.status()).toBe(201);
-      salleUuid = (await repCreation.json()).salleUuid;
+      salleId = (await repCreation.json()).salleId;
 
       // La réinitialisation est un no-op sûr même sans wikidata_id préexistant : vérifie
       // uniquement que l'endpoint répond 200 sur une salle existante.
       const repReinit = await ctx.post(
-        `/api/admin/salles/${salleUuid}/reinitialiser-enrichissement`,
+        `/api/admin/salles/${salleId}/reinitialiser-enrichissement`,
       );
       expect(repReinit.status()).toBe(200);
     } finally {
-      if (salleUuid) {
+      if (salleId) {
         await ctx
-          .delete(`/api/admin/digitick-salles/${salleUuid}`)
+          .delete(`/api/admin/digitick-salles/${salleId}`)
           .catch(() => {});
       }
       await ctx.dispose();
@@ -381,10 +374,7 @@ test.describe("Scénario: admin — API référentiel salles", () => {
   });
 
   test("api_admin_salles_modifierEtFusionner_fluxComplet", async () => {
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
+    const ctx = await creerContexteAdmin();
     let salleA: string | null = null;
     let salleB: string | null = null;
     try {
@@ -395,7 +385,7 @@ test.describe("Scénario: admin — API référentiel salles", () => {
         },
       });
       expect(repA.status()).toBe(201);
-      salleA = (await repA.json()).salleUuid;
+      salleA = (await repA.json()).salleId;
 
       const repB = await ctx.post("/api/admin/digitick-salles", {
         data: {
@@ -404,7 +394,7 @@ test.describe("Scénario: admin — API référentiel salles", () => {
         },
       });
       expect(repB.status()).toBe(201);
-      salleB = (await repB.json()).salleUuid;
+      salleB = (await repB.json()).salleId;
 
       const repPatch = await ctx.patch(`/api/admin/salles/${salleA}`, {
         data: { nomAffiche: "Nom Canonique Test" },
@@ -458,10 +448,7 @@ test.describe("Scénario: admin — API référentiel salles", () => {
   // et le second POST échoue en 409, contrairement aux salles (créées via /digitick-salles, un
   // flux admin CRUD indépendant sans dédup de suivi).
   test("api_admin_artistes_modifierEtFusionner_fluxComplet", async () => {
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
+    const ctx = await creerContexteAdmin();
     const nomA = `Zzargonautfusiontest${Date.now()}`;
     const nomB = `Zzbaobabchinookwomble${Date.now()}`;
     let artisteA: string | null = null;
@@ -525,12 +512,9 @@ test.describe("Scénario: admin — API référentiel salles", () => {
   // #879 : intégrité post-fusion avec chevauchement réel de données préexistant — l'utilisateur
   // admin suit les deux salles (user_salles en conflit potentiel) avant la fusion ; après fusion,
   // le suivi doit être préservé sur la cible sans doublon ni exception (contrainte unique
-  // (user_id, salle_uuid)).
+  // (user_id, salle_id)).
   test("api_admin_salles_fusion_chevauchementUserSalles_preserveLeSuiviSansDoublon", async () => {
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
+    const ctx = await creerContexteAdmin();
     const suffixe = Date.now();
     const nomA = `ZZTestChevauchementA-${suffixe}`;
     const nomB = `ZZTestChevauchementB-${suffixe}`;
@@ -540,12 +524,12 @@ test.describe("Scénario: admin — API référentiel salles", () => {
         data: { nom: nomA, slug: `zztest-chevauchement-a-${suffixe}` },
       });
       expect(repA.status()).toBe(201);
-      salleA = (await repA.json()).salleUuid;
+      salleA = (await repA.json()).salleId;
       const repB = await ctx.post("/api/admin/digitick-salles", {
         data: { nom: nomB, slug: `zztest-chevauchement-b-${suffixe}` },
       });
       expect(repB.status()).toBe(201);
-      const salleB = (await repB.json()).salleUuid;
+      const salleB = (await repB.json()).salleId;
 
       // L'admin (utilisateur) suit les deux salles avant la fusion — chevauchement réel.
       const repSuiviA = await ctx.post("/api/salles", { data: { nom: nomA } });
@@ -586,10 +570,7 @@ test.describe("Scénario: admin — API référentiel salles", () => {
   // répondait 201 sans source Digitick fonctionnelle (échec silencieux) et l'édition volait le
   // mapping à l'autre salle sans avertissement.
   test("api_admin_digitickSalles_slugDejaAttribue_creationEtEditionRetournent409", async () => {
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
+    const ctx = await creerContexteAdmin();
     let salleExistante: string | null = null;
     let salleAutre: string | null = null;
     try {
@@ -598,7 +579,7 @@ test.describe("Scénario: admin — API référentiel salles", () => {
         data: { nom: "Salle Slug Existante", slug: slugPartage },
       });
       expect(repExistante.status()).toBe(201);
-      salleExistante = (await repExistante.json()).salleUuid;
+      salleExistante = (await repExistante.json()).salleId;
 
       // Chemin création : POST /digitick-salles avec un slug déjà attribué.
       const repCreationConflit = await ctx.post("/api/admin/digitick-salles", {
@@ -615,7 +596,7 @@ test.describe("Scénario: admin — API référentiel salles", () => {
         },
       });
       expect(repAutre.status()).toBe(201);
-      salleAutre = (await repAutre.json()).salleUuid;
+      salleAutre = (await repAutre.json()).salleId;
 
       const repEditionConflit = await ctx.put(
         `/api/admin/salles/${salleAutre}/digitick-slug`,

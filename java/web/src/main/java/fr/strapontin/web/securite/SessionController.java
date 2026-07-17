@@ -4,8 +4,7 @@
  */
 package fr.strapontin.web.securite;
 
-import java.util.Map;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import fr.strapontin.web.utilisateur.ParametresService;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,10 +16,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class SessionController {
 
-  private final NamedParameterJdbcTemplate jdbc;
+  private final ParametresService parametresService;
 
-  public SessionController(NamedParameterJdbcTemplate jdbc) {
-    this.jdbc = jdbc;
+  public SessionController(ParametresService parametresService) {
+    this.parametresService = parametresService;
   }
 
   /// Retourne les données de navigation de l'utilisateur courant.
@@ -34,23 +33,7 @@ public class SessionController {
         || !(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
       return new SessionDto("user", 0);
     }
-    Integer count =
-        jdbc.queryForObject(
-            """
-            SELECT COUNT(*) FROM user_matches um
-            JOIN concerts c ON c.id = um.concert_id
-            WHERE um.user_id = :userId
-              AND um.vu_le IS NULL
-              AND um.masque_le IS NULL
-              AND EXISTS (
-                SELECT 1 FROM user_artistes ua
-                WHERE ua.user_id = :userId
-                  AND c.artiste_id = ua.artiste_id
-              )
-            """,
-            Map.of("userId", ud.id()),
-            Integer.class);
-    return new SessionDto(ud.role(), count != null ? count : 0);
+    return new SessionDto(ud.role(), parametresService.compterNouveauxMatchesArtistes(ud.id()));
   }
 
   /// DTO de session pour le layout Vue.

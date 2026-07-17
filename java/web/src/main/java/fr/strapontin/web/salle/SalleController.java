@@ -102,13 +102,13 @@ public class SalleController {
 
   /// Supprime une salle de la liste de suivi.
   ///
-  /// @param salleUuid UUID stable de la salle
+  /// @param salleId UUID stable de la salle
   /// @param auth      contexte d'authentification
   /// @return 204 si supprimée
-  @DeleteMapping("/{salleUuid}")
-  public ResponseEntity<Void> supprimerSalle(@PathVariable UUID salleUuid, Authentication auth) {
+  @DeleteMapping("/{salleId}")
+  public ResponseEntity<Void> supprimerSalle(@PathVariable UUID salleId, Authentication auth) {
     String userId = utilisateur(auth).id();
-    salleService.supprimer(userId, salleUuid);
+    salleService.supprimer(userId, salleId);
     return ResponseEntity.noContent().build();
   }
 

@@ -9,12 +9,21 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.resend.Resend;
+import com.resend.services.emails.Emails;
+import com.resend.services.emails.model.CreateEmailOptions;
 import java.lang.reflect.Method;
+import java.security.Security;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import nl.martijndwars.webpush.Notification;
+import nl.martijndwars.webpush.PushService;
+import org.apache.http.HttpResponse;
+import org.apache.http.StatusLine;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +38,15 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 /// @author Kwaite
 @ExtendWith(MockitoExtension.class)
 class NotificationDigestServiceTest {
+
+  static {
+    // Le provider BouncyCastle est normalement enregistré par WorkerApplication#main au
+    // démarrage réel — jamais exécuté dans ce test unitaire pur, alors que la construction
+    // réelle d'un Notification (#943, chemin nominal push) en a besoin pour parser p256dh.
+    if (Security.getProvider("BC") == null) {
+      Security.addProvider(new BouncyCastleProvider());
+    }
+  }
 
   @Mock private ConfigServiceWorker configService;
   @Mock private NamedParameterJdbcTemplate jdbc;
@@ -271,6 +289,93 @@ class NotificationDigestServiceTest {
 
     verify(jdbc, never())
         .update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
+  }
+
+  // #943 : Resend/PushService n'étaient pas injectables (instanciation en dur dans
+  // envoyerEmail/envoyerPush), rendant le chemin nominal de succès impossible à exercer.
+  @Test
+  @SuppressWarnings("unchecked")
+  void executerDigest_emailEnvoyeAvecSucces_marqueLeConcertNotifie() throws Exception {
+    when(jdbc.queryForList(contains("FROM user_matches"), any(Map.class)))
+        .thenReturn(List.of(ligneTest("u1")));
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.of("re_test123"));
+    when(configService.lireConfig("CONTACT_EMAIL"))
+        .thenReturn(Optional.of("contact@strapontin.fr"));
+    when(configService.lireConfig("PUBLIC_BASE_URL"))
+        .thenReturn(Optional.of("https://strapontin.fr"));
+    when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
+    when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
+    when(jdbc.update(anyString(), any(SqlParameterSource.class))).thenReturn(1);
+
+    Resend resendMock = mock(Resend.class);
+    Emails emailsMock = mock(Emails.class);
+    when(resendMock.emails()).thenReturn(emailsMock);
+
+    NotificationDigestService serviceAvecFabriques =
+        new NotificationDigestService(
+            configService,
+            jdbc,
+            new ObjectMapper(),
+            logsAdminWorker,
+            cle -> resendMock,
+            (clePublique, clePrivee, sujet) -> {
+              throw new java.security.GeneralSecurityException("VAPID non configuré en test");
+            });
+
+    serviceAvecFabriques.executerDigest("quotidien");
+
+    verify(emailsMock).send(any(CreateEmailOptions.class));
+    verify(jdbc).update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void executerDigest_pushEnvoyeAvecSucces_marqueLeConcertNotifie() throws Exception {
+    when(jdbc.queryForList(contains("FROM user_matches"), any(Map.class)))
+        .thenReturn(List.of(ligneTest("u2")));
+    Map<String, Object> abonnement = new HashMap<>();
+    abonnement.put("id", 1);
+    abonnement.put("endpoint", "https://push.exemple.test/abonnement-xyz");
+    // Vraie clé publique EC P-256 (point non compressé, base64url) — le constructeur
+    // Notification(Subscription, String) parse réellement p256dh en ECPublicKey, une valeur
+    // arbitraire lève InvalidKeySpecException avant même l'appel à pushService.send().
+    abonnement.put(
+        "p256dh",
+        "BPKi4XnOYaPYQWcKZsUfMxTQZV0JyJA-zx65BGYqeHJ8KDlO2AL5lhoFUCXC1iFMUlTzt_sgos9GiYMxFEgCDQE");
+    abonnement.put("auth", "RZIK8q0lRcIbLO9VyII_4Q");
+    when(jdbc.queryForList(contains("push_abonnements"), any(Map.class)))
+        .thenReturn(List.of(abonnement));
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
+    when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.of("cle-publique"));
+    when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.of("cle-privee"));
+    when(configService.lireConfig("PUBLIC_BASE_URL"))
+        .thenReturn(Optional.of("https://strapontin.fr"));
+    when(configService.lireConfig("CONTACT_EMAIL"))
+        .thenReturn(Optional.of("contact@strapontin.fr"));
+    when(jdbc.update(anyString(), any(SqlParameterSource.class))).thenReturn(1);
+
+    PushService pushServiceMock = mock(PushService.class);
+    HttpResponse reponseMock = mock(HttpResponse.class);
+    StatusLine statusLineMock = mock(StatusLine.class);
+    when(statusLineMock.getStatusCode()).thenReturn(201);
+    when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
+    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+
+    NotificationDigestService serviceAvecFabriques =
+        new NotificationDigestService(
+            configService,
+            jdbc,
+            new ObjectMapper(),
+            logsAdminWorker,
+            cle -> {
+              throw new IllegalStateException("Resend non configuré en test");
+            },
+            (clePublique, clePrivee, sujet) -> pushServiceMock);
+
+    serviceAvecFabriques.executerDigest("quotidien");
+
+    verify(pushServiceMock).send(any(Notification.class));
+    verify(jdbc).update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
   private static Map<String, Object> ligneTest(String userId) {

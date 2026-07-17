@@ -46,6 +46,12 @@
               <li>Les notifications email de nouveaux concerts pouvaient échouer silencieusement à chaque cycle — corrigé.</li>
             </ul>
           </div>
+          <div>
+            <p class="changelog-categorie">Application installée (PWA)</p>
+            <ul>
+              <li>La page affichée lors d'un tout premier lancement hors ligne respecte désormais le thème sombre au lieu d'afficher un flash blanc.</li>
+            </ul>
+          </div>
         </div>
       </section>
 
@@ -1128,6 +1134,8 @@ import { onMounted } from 'vue'
 onMounted(async () => {
   try {
     await fetch('/api/changelog/marquer-vue', { method: 'POST' })
-  } catch {}
+  } catch (e) {
+    console.error('Échec marquage changelog vu', e)
+  }
 })
 </script>

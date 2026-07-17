@@ -193,7 +193,7 @@ public class ReferentielArtistesService {
         USING concerts c2
         WHERE c1.artiste_id = CAST(:source AS uuid)
           AND c2.artiste_id = CAST(:cible AS uuid)
-          AND c1.salle_uuid = c2.salle_uuid
+          AND c1.salle_id = c2.salle_id
           AND c1.date = c2.date
           AND c1.heure IS NOT DISTINCT FROM c2.heure
         """,

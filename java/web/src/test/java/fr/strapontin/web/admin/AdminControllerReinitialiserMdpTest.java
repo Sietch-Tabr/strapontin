@@ -47,6 +47,8 @@ class AdminControllerReinitialiserMdpTest {
     controller =
         new AdminController(
             adminService,
+            mock(ConfigAdminService.class),
+            mock(JobsAdminService.class),
             mock(BanniereService.class),
             mock(WorkerProxyService.class),
             emailService,

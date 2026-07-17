@@ -33,7 +33,7 @@
         <caffeine.version>3.2.4</caffeine.version>
         <postgresql.version>42.7.13</postgresql.version>
         <!-- Versions non gérées par le BOM -->
-        <bouncycastle.version>1.84</bouncycastle.version>
+        <bouncycastle.version>1.85</bouncycastle.version>
         <webpush.version>5.1.2</webpush.version>
         <!-- v4.15.0/v4.16.0 tirent com.squareup.okhttp3:okhttp:5.4.0, dont l'artefact Maven
              publié est volontairement vide côté JVM depuis okhttp 5.0.0 (square/okhttp#8913) :
@@ -41,7 +41,7 @@
              automatiquement mais Maven doit choisir explicitement okhttp-jvm. Exclu ci-dessous
              et remplacé par une dépendance directe sur okhttp-jvm (jar JVM complet, contient
              bien okhttp3.RequestBody). -->
-        <resend.version>v4.16.0</resend.version>
+        <resend.version>v4.17.0</resend.version>
         <okhttp-jvm.version>5.4.0</okhttp-jvm.version>
         <springdoc.version>3.0.3</springdoc.version>
         <bucket4j.version>8.19.0</bucket4j.version>

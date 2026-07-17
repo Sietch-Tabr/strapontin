@@ -26,6 +26,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /// Service d'import/export des préférences utilisateur.
 ///
@@ -170,7 +172,7 @@ public class PreferencesService {
             """
             SELECT s.salle_cle AS salle_id, s.nom
             FROM user_salles us
-            JOIN salles s ON s.id = us.salle_uuid
+            JOIN salles s ON s.id = us.salle_id
             WHERE us.user_id = :userId ORDER BY s.salle_cle
             """,
             Map.of(CLE_USER_ID, userId),
@@ -248,7 +250,7 @@ public class PreferencesService {
     return new int[] {traites, rejetes};
   }
 
-  // #824 : résolution de l'UUID salle via SalleService.resoudreSalleUuid — même dédup floue
+  // #824 : résolution de l'UUID salle via SalleService.resoudreSalleId — même dédup floue
   // (CorrespondanceSalle.estDoublonSalle) que l'ajout interactif, plutôt qu'un ON CONFLICT exact
   // sur salle_cle. Le salleId de l'export JSON n'est volontairement pas utilisé pour retrouver
   // une salle existante (comportement inchangé) — le nom est toujours re-normalisé.
@@ -275,14 +277,14 @@ public class PreferencesService {
         rejetes++;
         continue;
       }
-      UUID salleUuid = salleService.resoudreSalleUuid(nomSalle, salleCle);
+      UUID salleId = salleService.resoudreSalleId(nomSalle, salleCle);
       jdbc.update(
           """
-          INSERT INTO user_salles (user_id, salle_uuid)
-          VALUES (:userId, CAST(:salleUuid AS uuid))
-          ON CONFLICT (user_id, salle_uuid) DO NOTHING
+          INSERT INTO user_salles (user_id, salle_id)
+          VALUES (:userId, CAST(:salleId AS uuid))
+          ON CONFLICT (user_id, salle_id) DO NOTHING
           """,
-          Map.of(CLE_USER_ID, userId, "salleUuid", salleUuid.toString()));
+          Map.of(CLE_USER_ID, userId, "salleId", salleId.toString()));
       traites++;
     }
     return new int[] {traites, rejetes};
@@ -351,15 +353,37 @@ public class PreferencesService {
   private static final java.util.regex.Pattern VENUE_ID_PATTERN =
       java.util.regex.Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
 
+  /// Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction
+  /// d'import (#932, même pattern que {@code ArtisteService.executerApresCommit}).
+  ///
+  /// <p>Sans cela, le worker pouvait être sollicité avant que les artistes/salles importés ne
+  /// soient visibles en base (isolation {@code READ COMMITTED}), faisant manquer l'import tout
+  /// juste effectué au cycle de fetch qu'il vient lui-même de déclencher.
+  ///
+  /// @param salles salles de l'export, utilisées pour cibler les déclenchements par salle
   private void declencherWorkerApresImport(List<SalleExport> salles) {
-    envoyerPostWorker(WORKER_URL + "/artiste");
-    if (salles == null) return;
-    salles.stream()
-        .filter(s -> s.tmVenueId() != null && !s.tmVenueId().isBlank())
-        .map(SalleExport::tmVenueId)
-        .filter(venueId -> VENUE_ID_PATTERN.matcher(venueId).matches())
-        .distinct()
-        .forEach(venueId -> envoyerPostWorker(WORKER_URL + "/salle/" + venueId));
+    Runnable action =
+        () -> {
+          envoyerPostWorker(WORKER_URL + "/artiste");
+          if (salles == null) return;
+          salles.stream()
+              .filter(s -> s.tmVenueId() != null && !s.tmVenueId().isBlank())
+              .map(SalleExport::tmVenueId)
+              .filter(venueId -> VENUE_ID_PATTERN.matcher(venueId).matches())
+              .distinct()
+              .forEach(venueId -> envoyerPostWorker(WORKER_URL + "/salle/" + venueId));
+        };
+    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              action.run();
+            }
+          });
+    } else {
+      action.run();
+    }
   }
 
   private void envoyerPostWorker(String url) {

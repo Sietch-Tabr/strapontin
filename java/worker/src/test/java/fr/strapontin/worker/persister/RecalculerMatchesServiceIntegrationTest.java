@@ -83,15 +83,15 @@ class RecalculerMatchesServiceIntegrationTest {
         (rs, _) -> rs.getObject("id", UUID.class));
   }
 
-  private void insererUserSalle(String userId, UUID salleUuid) {
+  private void insererUserSalle(String userId, UUID salleId) {
     jdbc.update(
-        "INSERT INTO user_salles (user_id, salle_uuid)"
-            + " VALUES (:userId, CAST(:salleUuid AS uuid))",
-        Map.of("userId", userId, "salleUuid", salleUuid.toString()));
+        "INSERT INTO user_salles (user_id, salle_id)"
+            + " VALUES (:userId, CAST(:salleId AS uuid))",
+        Map.of("userId", userId, "salleId", salleId.toString()));
   }
 
   private void insererConcert(
-      String artiste, String norm, String date, String salleNorm, UUID artisteId, UUID salleUuid) {
+      String artiste, String norm, String date, String salleNorm, UUID artisteId, UUID salleId) {
     Map<String, Object> params = new HashMap<>();
     params.put("artiste", artiste);
     params.put("norm", norm);
@@ -99,12 +99,12 @@ class RecalculerMatchesServiceIntegrationTest {
     params.put("salle", salleNorm);
     params.put("salleNorm", salleNorm);
     params.put("artisteId", artisteId != null ? artisteId.toString() : null);
-    params.put("salleUuid", salleUuid != null ? salleUuid.toString() : null);
+    params.put("salleId", salleId != null ? salleId.toString() : null);
     jdbc.update(
         """
-        INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source, artiste_id, salle_uuid)
-        VALUES (:artiste, :norm, :date::date, :salle, :salleNorm,
-                CAST('ticketmaster' AS source_concert), CAST(:artisteId AS uuid), CAST(:salleUuid AS uuid))
+        INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source, artiste_id, salle_id)
+        VALUES (:artiste, :norm, CAST(:date AS date), :salle, :salleNorm,
+                CAST('ticketmaster' AS source_concert), CAST(:artisteId AS uuid), CAST(:salleId AS uuid))
         """,
         params);
   }
@@ -214,41 +214,41 @@ class RecalculerMatchesServiceIntegrationTest {
   }
 
   @Test
-  void recalculerMatches_salleAvecUuid_matcheViaSalleUuid() {
+  void recalculerMatches_salleAvecUuid_matcheViaSalleId() {
     insererUser("u20");
-    UUID salleUuid = insererSalle("plenitude arena");
-    insererUserSalle("u20", salleUuid);
-    insererConcert("Coldplay", "coldplay", DATE_FUTURE, "plenitude arena renomme", null, salleUuid);
+    UUID salleId = insererSalle("plenitude arena");
+    insererUserSalle("u20", salleId);
+    insererConcert("Coldplay", "coldplay", DATE_FUTURE, "plenitude arena renomme", null, salleId);
 
     service.recalculerMatches(List.of("u20"));
 
     assertEquals(
-        1, compterMatches("u20"), "match attendu via salle_uuid même si salle_cle différent");
+        1, compterMatches("u20"), "match attendu via salle_id même si salle_cle différent");
   }
 
   @Test
   void recalculerMatches_salleRenommee_matcheViaUuidApresRenommage() {
     insererUser("u21");
-    UUID salleUuid = insererSalle("paris la defense arena");
-    insererUserSalle("u21", salleUuid);
-    insererConcert("Dua Lipa", "dua lipa", DATE_FUTURE, "plenitude arena", null, salleUuid);
+    UUID salleId = insererSalle("paris la defense arena");
+    insererUserSalle("u21", salleId);
+    insererConcert("Dua Lipa", "dua lipa", DATE_FUTURE, "plenitude arena", null, salleId);
 
     service.recalculerMatches(List.of("u21"));
 
-    assertEquals(1, compterMatches("u21"), "match attendu via salle_uuid après renommage de salle");
+    assertEquals(1, compterMatches("u21"), "match attendu via salle_id après renommage de salle");
   }
 
   @Test
-  void recalculerMatches_salleUuidIdentiqueSalleNormDifferente_matchUniqueParUuid() {
+  void recalculerMatches_salleIdIdentiqueSalleNormDifferente_matchUniqueParUuid() {
     insererUser("u30");
-    UUID salleUuid = insererSalle("lempreinte");
-    insererUserSalle("u30", salleUuid);
-    // Migration V14 garantit l'unicité par salle_uuid — un seul concert doit exister
-    insererConcert("KrashKarma", "krashkarma", DATE_FUTURE, "lempreinte savigny", null, salleUuid);
+    UUID salleId = insererSalle("lempreinte");
+    insererUserSalle("u30", salleId);
+    // Migration V14 garantit l'unicité par salle_id — un seul concert doit exister
+    insererConcert("KrashKarma", "krashkarma", DATE_FUTURE, "lempreinte savigny", null, salleId);
 
     service.recalculerMatches(List.of("u30"));
 
-    assertEquals(1, compterMatches("u30"), "Un seul match attendu via salle_uuid unique");
+    assertEquals(1, compterMatches("u30"), "Un seul match attendu via salle_id unique");
   }
 
   @Test
@@ -259,7 +259,7 @@ class RecalculerMatchesServiceIntegrationTest {
     String concertId =
         jdbc.queryForObject("SELECT id::text FROM concerts LIMIT 1", Map.of(), String.class);
     jdbc.update(
-        "INSERT INTO user_matches (user_id, concert_id) VALUES (:userId, :concertId::uuid)",
+        "INSERT INTO user_matches (user_id, concert_id) VALUES (:userId, CAST(:concertId AS uuid))",
         Map.of("userId", "u8", "concertId", concertId));
 
     assertEquals(1, compterMatches("u8"));

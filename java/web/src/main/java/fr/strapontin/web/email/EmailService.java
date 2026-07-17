@@ -4,13 +4,7 @@
  */
 package fr.strapontin.web.email;
 
-import com.resend.Resend;
-import com.resend.core.exception.ResendException;
-import com.resend.services.emails.model.CreateEmailOptions;
-import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
-import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -19,8 +13,6 @@ import java.util.Locale;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /// Service d'email transactionnel via Resend.
@@ -28,7 +20,9 @@ import org.springframework.stereotype.Service;
 /// <p>Si `RESEND_API_KEY` est absent de la configuration, toutes les méthodes
 /// retournent silencieusement sans erreur.
 ///
-/// <p>Les corps HTML sont générés par {@link EmailTemplates}.
+/// <p>Les corps HTML sont générés par {@link EmailTemplates}. Les alertes système
+/// (bounce/spam/backup/watchdog/logs-admin) sont dans {@link EmailAlerteService} (#925) ;
+/// l'infrastructure d'envoi Resend partagée par les deux est dans {@link EmailSender}.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -37,20 +31,12 @@ public class EmailService {
 
   private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
-  // Garde-fou anti-boucle (#907) : au plus une notification de bounce/plainte spam par heure,
-  // persisté en app_config pour survivre aux redéploiements (même pattern que
-  // AlerteLogsAdminService.CLE_CURSEUR) — sans ça, un problème de délivrabilité sur le nouveau
-  // destinataire d'alerte pourrait recréer une boucle du même type que celle du 15/07/2026.
-  private static final String CLE_DERNIERE_ALERTE_BOUNCE = "DERNIERE_ALERTE_BOUNCE_ENVOYEE";
-  private static final String CLE_DERNIERE_ALERTE_SPAM = "DERNIERE_ALERTE_SPAM_ENVOYEE";
-  private static final Duration INTERVALLE_MIN_ALERTE = Duration.ofMinutes(60);
-
   private final ConfigService configService;
-  private final JdbcTemplate jdbcTemplate;
+  private final EmailSender emailSender;
 
-  public EmailService(ConfigService configService, JdbcTemplate jdbcTemplate) {
+  EmailService(ConfigService configService, EmailSender emailSender) {
     this.configService = configService;
-    this.jdbcTemplate = jdbcTemplate;
+    this.emailSender = emailSender;
   }
 
   /// Paramètres d'un concert pour le digest email.
@@ -63,84 +49,12 @@ public class EmailService {
   public record ConcertDigest(
       String artiste, String date, String salle, String ville, String url) {}
 
-  private record ContexteEmail(Resend client, String expediteur, String baseUrl) {}
-
-  private Optional<ContexteEmail> obtenirContexte() {
-    Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
-    if (cle.isEmpty()) {
-      return Optional.empty();
-    }
-    String expediteur =
-        configService.lireConfig("CONTACT_EMAIL").or(this::obtenirEmailPremierAdmin).orElse("");
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
-    return Optional.of(new ContexteEmail(new Resend(cle.get()), expediteur, baseUrl));
-  }
-
-  private Optional<String> obtenirEmailPremierAdmin() {
-    try {
-      return Optional.ofNullable(
-          jdbcTemplate.queryForObject(
-              "SELECT email FROM users WHERE role = 'admin' ORDER BY created_at LIMIT 1",
-              String.class));
-    } catch (EmptyResultDataAccessException e) {
-      return Optional.empty();
-    }
-  }
-
-  /// Retourne l'adresse destinataire des alertes système (bounce, plainte spam, worker inactif,
-  /// digest logs_admin) — distincte de l'expéditeur (#907).
-  ///
-  /// <p>Priorité à `ADMIN_ALERT_EMAIL` si configurée, sinon repli sur le premier admin. Ne se
-  /// replie volontairement jamais sur `CONTACT_EMAIL`/l'expéditeur : c'est cette confusion qui a
-  /// provoqué la boucle de bounces du 15/07/2026 (une adresse `noreply` sans boîte de réception
-  /// réutilisée comme destinataire).
-  ///
-  /// @return l'adresse à notifier, vide si ni `ADMIN_ALERT_EMAIL` ni aucun admin n'existe
-  public Optional<String> obtenirDestinataireAlerte() {
-    return configService.lireConfig("ADMIN_ALERT_EMAIL").or(this::obtenirEmailPremierAdmin);
-  }
-
-  /// Indique si une alerte du type donné a déjà été envoyée il y a moins de
-  /// {@link #INTERVALLE_MIN_ALERTE} — garde-fou anti-boucle (#907).
-  private boolean alerteRecente(String cleConfig) {
-    return configService
-        .lireConfig(cleConfig)
-        .map(Instant::parse)
-        .map(
-            derniere ->
-                Duration.between(derniere, Instant.now()).compareTo(INTERVALLE_MIN_ALERTE) < 0)
-        .orElse(false);
-  }
-
-  private void envoyer(
-      ContexteEmail ctx,
-      String destinataire,
-      String replyTo,
-      String sujet,
-      String corps,
-      String texte) {
-    try {
-      CreateEmailOptions options =
-          CreateEmailOptions.builder()
-              .from(ctx.expediteur())
-              .replyTo(replyTo)
-              .to(List.of(destinataire))
-              .subject(sujet)
-              .html(corps)
-              .text(texte)
-              .build();
-      ctx.client().emails().send(options);
-    } catch (ResendException e) {
-      throw new IllegalStateException("Erreur d'envoi email", e);
-    }
-  }
-
   /// Envoie un email d'invitation à un nouvel utilisateur.
   ///
   /// @param email     l'adresse email du destinataire
   /// @param lienReset le lien de création de compte (valable 7 jours)
   public void envoyerInvitation(String email, String lienReset) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email invitation non envoyé");
       return;
@@ -164,7 +78,7 @@ public class EmailService {
             .formatted(lienReset);
 
     try {
-      envoyer(
+      emailSender.envoyer(
           ctx.get(), email, ctx.get().expediteur(), "Votre invitation Strapontin", corps, texte);
       log.info("Invitation envoyée : emailHash={}", email.hashCode());
     } catch (Exception e) {
@@ -177,7 +91,7 @@ public class EmailService {
   /// @param email     l'adresse email du destinataire
   /// @param lienReset le lien de réinitialisation (valable 1 heure)
   public void envoyerResetMotDePasse(String email, String lienReset) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email reset non envoyé");
       return;
@@ -198,7 +112,7 @@ public class EmailService {
             .formatted(lienReset);
 
     try {
-      envoyer(
+      emailSender.envoyer(
           ctx.get(),
           email,
           ctx.get().expediteur(),
@@ -215,7 +129,7 @@ public class EmailService {
   ///
   /// @param email l'adresse de l'utilisateur concerné
   public void envoyer2faReinitialisee(String email) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email reset 2FA non envoyé");
       return;
@@ -237,7 +151,7 @@ public class EmailService {
             .formatted(ctx.get().baseUrl());
 
     try {
-      envoyer(
+      emailSender.envoyer(
           ctx.get(),
           email,
           ctx.get().expediteur(),
@@ -255,7 +169,7 @@ public class EmailService {
   /// @param email le nouvel email destinataire
   /// @param lien  le lien de confirmation (valable 24 heures)
   public void envoyerConfirmationEmail(String email, String lien) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — confirmation email non envoyée");
       return;
@@ -276,7 +190,7 @@ public class EmailService {
             .formatted(lien);
 
     try {
-      envoyer(
+      emailSender.envoyer(
           ctx.get(),
           email,
           ctx.get().expediteur(),
@@ -305,7 +219,7 @@ public class EmailService {
   /// @param emailUtilisateur l'adresse email de l'utilisateur connecté
   public void envoyerSignalementSalleManquante(
       String nom, String ville, String urlSite, String commentaire, String emailUtilisateur) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — signalement salle manquante non envoyé");
       return;
@@ -319,7 +233,7 @@ public class EmailService {
             .formatted(emailUtilisateur, nom, ville, urlSite, commentaire);
 
     try {
-      envoyer(
+      emailSender.envoyer(
           ctx.get(),
           ctx.get().expediteur(),
           emailUtilisateur,
@@ -338,7 +252,7 @@ public class EmailService {
         "Votre signalement pour « %s » a été transmis à l'administrateur.".formatted(nom);
 
     try {
-      envoyer(
+      emailSender.envoyer(
           ctx.get(),
           emailUtilisateur,
           ctx.get().expediteur(),
@@ -361,7 +275,7 @@ public class EmailService {
   /// @param message         le message
   /// @param expediteurEmail l'email de l'expéditeur
   public void envoyerSignalement(String type, String message, String expediteurEmail) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — signalement non envoyé");
       return;
@@ -382,7 +296,7 @@ public class EmailService {
         "Signalement — %s%n%nEmail : %s%n%n%s".formatted(typeLabel, expediteurEmail, message);
 
     try {
-      envoyer(
+      emailSender.envoyer(
           ctx.get(),
           ctx.get().expediteur(),
           expediteurEmail,
@@ -403,7 +317,7 @@ public class EmailService {
   public boolean envoyerDigestConcerts(String email, List<ConcertDigest> concerts) {
     if (concerts.isEmpty()) return false;
 
-    Optional<ContexteEmail> ctx = obtenirContexte();
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — digest concerts non envoyé");
       return false;
@@ -428,7 +342,7 @@ public class EmailService {
     String corps = EmailTemplates.digestConcerts(sujet, lignes, ctx.get().baseUrl());
 
     try {
-      envoyer(ctx.get(), email, ctx.get().expediteur(), sujet, corps, sujet);
+      emailSender.envoyer(ctx.get(), email, ctx.get().expediteur(), sujet, corps, sujet);
       log.info("Digest envoyé : emailHash={} ({} concert(s))", email.hashCode(), nb);
       return true;
     } catch (Exception e) {
@@ -441,7 +355,7 @@ public class EmailService {
   ///
   /// @param email l'adresse de l'utilisateur supprimé
   public void envoyerSuppressionCompte(String email) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email suppression compte non envoyé");
       return;
@@ -460,7 +374,7 @@ public class EmailService {
         """;
 
     try {
-      envoyer(
+      emailSender.envoyer(
           ctx.get(),
           email,
           ctx.get().expediteur(),
@@ -473,143 +387,18 @@ public class EmailService {
     }
   }
 
-  /// Envoie une notification à l'admin quand un email Strapontin est rejeté en bounce.
-  ///
-  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907 — c'est
-  /// cette confusion qui a provoqué la boucle de bounces du 15/07/2026). Throttlée à une
-  /// notification par heure maximum.
-  ///
-  /// @param emailBouncee l'adresse email qui a produit le bounce
-  public void envoyerNotificationBounce(String emailBouncee) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
-    if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — notification bounce non envoyée");
-      return;
-    }
-    if (alerteRecente(CLE_DERNIERE_ALERTE_BOUNCE)) {
-      log.debug("Notification bounce déjà envoyée récemment — ignorée (garde-fou anti-boucle)");
-      return;
-    }
-    Optional<String> destinataire = obtenirDestinataireAlerte();
-    if (destinataire.isEmpty()) {
-      log.warn("Aucun destinataire d'alerte disponible — notification bounce non envoyée");
-      return;
-    }
-
-    String corps = EmailTemplates.alerteBounce(emailBouncee, ctx.get().baseUrl());
-
-    try {
-      envoyer(
-          ctx.get(),
-          destinataire.get(),
-          ctx.get().expediteur(),
-          "Strapontin — bounce email : " + emailBouncee,
-          corps,
-          "Bounce détecté sur : "
-              + emailBouncee
-              + ". Consultez l'administration : "
-              + ctx.get().baseUrl()
-              + "/admin");
-      configService.sauvegarderConfig(CLE_DERNIERE_ALERTE_BOUNCE, Instant.now().toString());
-      log.info("Notification bounce envoyée : emailHash={}", emailBouncee.hashCode());
-    } catch (Exception e) {
-      log.error("Échec envoi notification bounce", e);
-    }
-  }
-
-  /// Envoie une notification à l'admin quand un destinataire signale un email Strapontin comme
-  /// spam (#832) — même traitement que le bounce, une plainte spam menaçant la réputation
-  /// d'envoi du domaine au moins autant qu'un rejet définitif.
-  ///
-  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907).
-  /// Throttlée à une notification par heure maximum.
-  ///
-  /// @param emailPlaignant l'adresse email à l'origine de la plainte
-  public void envoyerNotificationPlainteSpam(String emailPlaignant) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
-    if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — notification plainte spam non envoyée");
-      return;
-    }
-    if (alerteRecente(CLE_DERNIERE_ALERTE_SPAM)) {
-      log.debug(
-          "Notification plainte spam déjà envoyée récemment — ignorée (garde-fou anti-boucle)");
-      return;
-    }
-    Optional<String> destinataire = obtenirDestinataireAlerte();
-    if (destinataire.isEmpty()) {
-      log.warn("Aucun destinataire d'alerte disponible — notification plainte spam non envoyée");
-      return;
-    }
-
-    String corps = EmailTemplates.alertePlainteSpam(emailPlaignant, ctx.get().baseUrl());
-
-    try {
-      envoyer(
-          ctx.get(),
-          destinataire.get(),
-          ctx.get().expediteur(),
-          "Strapontin — plainte spam : " + emailPlaignant,
-          corps,
-          "Plainte spam signalée sur : "
-              + emailPlaignant
-              + ". Consultez l'administration : "
-              + ctx.get().baseUrl()
-              + "/admin");
-      configService.sauvegarderConfig(CLE_DERNIERE_ALERTE_SPAM, Instant.now().toString());
-      log.info("Notification plainte spam envoyée : emailHash={}", emailPlaignant.hashCode());
-    } catch (Exception e) {
-      log.error("Échec envoi notification plainte spam", e);
-    }
-  }
-
-  /// Envoie une alerte à l'admin quand le backup nocturne a échoué.
-  ///
-  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907).
-  ///
-  /// @param horodatage l'horodatage du backup (format YYYYMMDD_HHMMSS), ou chaîne vide
-  /// @param raison     la commande bash ayant déclenché l'échec, ou chaîne vide
-  public void envoyerAlerteBackup(String horodatage, String raison) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
-    if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — alerte backup non envoyée");
-      return;
-    }
-    Optional<String> destinataire = obtenirDestinataireAlerte();
-    if (destinataire.isEmpty()) {
-      log.warn("Aucun destinataire d'alerte disponible — alerte backup non envoyée");
-      return;
-    }
-
-    String corps = EmailTemplates.alerteBackup(horodatage, raison, ctx.get().baseUrl());
-
-    String sujet = "Strapontin — échec backup nocturne";
-    String texte =
-        "Échec du backup nocturne. Horodatage : %s.%s Consultez l'administration : %s/admin"
-            .formatted(
-                horodatage.isBlank() ? "inconnu" : horodatage,
-                raison.isBlank() ? "" : " Raison : " + raison + ".",
-                ctx.get().baseUrl());
-    try {
-      envoyer(ctx.get(), destinataire.get(), ctx.get().expediteur(), sujet, corps, texte);
-      log.info("Alerte backup envoyée");
-    } catch (Exception e) {
-      log.error("Échec envoi alerte backup", e);
-    }
-  }
-
   /// Envoie un email de test pour vérifier la configuration Resend.
   ///
   /// @param emailAdmin l'adresse email de l'administrateur destinataire
   /// @return {@code true} si l'email a été envoyé avec succès
   public boolean envoyerEmailTest(String emailAdmin) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email de test non envoyé");
       return false;
     }
     try {
-      envoyer(
+      emailSender.envoyer(
           ctx.get(),
           emailAdmin,
           ctx.get().expediteur(),
@@ -629,7 +418,7 @@ public class EmailService {
   ///
   /// @param email l'adresse de l'utilisateur promu
   public void envoyerPromotionAdmin(String email) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email promotion admin non envoyé");
       return;
@@ -647,7 +436,7 @@ public class EmailService {
             .formatted(ctx.get().baseUrl());
 
     try {
-      envoyer(
+      emailSender.envoyer(
           ctx.get(),
           email,
           ctx.get().expediteur(),
@@ -665,7 +454,7 @@ public class EmailService {
   /// @param email         l'adresse de l'administrateur concerné
   /// @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
   public void envoyerPreavisRevocationAdmin(String email, String dateEffective) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email préavis révocation admin non envoyé");
       return;
@@ -683,7 +472,7 @@ public class EmailService {
             .formatted(dateEffective);
 
     try {
-      envoyer(
+      emailSender.envoyer(
           ctx.get(),
           email,
           ctx.get().expediteur(),
@@ -693,76 +482,6 @@ public class EmailService {
       log.info("Email préavis révocation admin envoyé : emailHash={}", email.hashCode());
     } catch (Exception e) {
       log.error("Échec envoi préavis révocation admin : emailHash={}", email.hashCode(), e);
-    }
-  }
-
-  /// Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3 heures.
-  ///
-  /// @param email               l'adresse email de l'administrateur
-  /// @param derniereActiviteIso la date ISO du dernier job complété, ou null
-  public void envoyerAlerteWorkerInactif(String email, String derniereActiviteIso) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
-    if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — alerte worker non envoyée");
-      return;
-    }
-
-    String detail =
-        derniereActiviteIso != null
-            ? "Dernier job complété : %s.".formatted(derniereActiviteIso)
-            : "Aucun job complété enregistré.";
-
-    String corps = EmailTemplates.alerteWorker(detail, ctx.get().baseUrl());
-
-    String sujet = "Strapontin — worker inactif";
-    try {
-      envoyer(
-          ctx.get(),
-          email,
-          ctx.get().expediteur(),
-          sujet,
-          corps,
-          "Worker inactif — %s Consultez l'administration : %s/admin"
-              .formatted(detail, ctx.get().baseUrl()));
-      log.info("Alerte worker envoyée : emailHash={}", email.hashCode());
-    } catch (Exception e) {
-      log.error("Échec envoi alerte worker", e);
-    }
-  }
-
-  /// Envoie un digest des nouvelles entrées {@code logs_admin} de niveau erreur (#765).
-  ///
-  /// @param email   l'adresse email de l'administrateur
-  /// @param erreurs les entrées d'erreur à inclure dans le digest (non vide)
-  /// @return {@code true} si l'email a effectivement été envoyé, {@code false} sinon
-  ///     (RESEND_API_KEY absent ou échec d'envoi) — dans ce cas le curseur ne doit pas avancer
-  ///     côté appelant, pour ne perdre aucune erreur en cas de panne temporaire de Resend
-  public boolean envoyerAlerteLogsAdmin(
-      String email, List<LogAdminService.EntreeLogAdmin> erreurs) {
-    Optional<ContexteEmail> ctx = obtenirContexte();
-    if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — alerte logs admin non envoyée");
-      return false;
-    }
-
-    String corps = EmailTemplates.alerteLogsAdmin(erreurs, ctx.get().baseUrl());
-    String sujet = "Strapontin — " + erreurs.size() + " nouvelle(s) erreur(s) admin";
-    try {
-      envoyer(
-          ctx.get(),
-          email,
-          ctx.get().expediteur(),
-          sujet,
-          corps,
-          erreurs.size()
-              + " nouvelle(s) erreur(s) dans logs_admin. Consultez l'administration : "
-              + ctx.get().baseUrl()
-              + "/admin");
-      log.info("Alerte logs admin envoyée : emailHash={} nb={}", email.hashCode(), erreurs.size());
-      return true;
-    } catch (Exception e) {
-      log.error("Échec envoi alerte logs admin", e);
-      return false;
     }
   }
 

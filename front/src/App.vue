@@ -102,7 +102,9 @@ async function chargerChangelogNonVu() {
   try {
     const rep = await fetch('/api/changelog/nouveaute')
     if (rep.ok) changelogNonVu.value = (await rep.json()).nonVu
-  } catch {}
+  } catch (e) {
+    console.error('Échec chargement statut changelog', e)
+  }
 }
 
 watch(() => route.path, (chemin) => {

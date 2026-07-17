@@ -18,9 +18,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.ErreurMetier;
-import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.util.HashMap;
@@ -32,16 +30,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.session.FindByIndexNameSessionRepository;
-import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour {@link AdminService} (logique métier admin, dépendances mockées).
+/// Tests unitaires pour {@link AdminService} (logique métier de gestion des utilisateurs,
+/// dépendances mockées).
+///
+/// <p>Depuis #916, la configuration applicative et les statistiques de jobs sont testées dans
+/// {@code ConfigAdminServiceTest}/{@code JobsAdminServiceTest}.
 ///
 /// @since 2.2.3
 /// @author Kwaite
 class AdminServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
-  private ConfigService configService;
   private EmailService emailService;
   private LogAdminService logAdminService;
   private VerificationRepository verificationRepository;
@@ -50,20 +50,15 @@ class AdminServiceTest {
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    configService = mock(ConfigService.class);
     emailService = mock(EmailService.class);
     logAdminService = mock(LogAdminService.class);
     verificationRepository = mock(VerificationRepository.class);
     adminService =
         new AdminService(
             jdbc,
-            configService,
             emailService,
             logAdminService,
-            new ObjectMapper(),
             verificationRepository,
-            mock(RestClient.class),
-            mock(WorkerProxyService.class),
             mock(FindByIndexNameSessionRepository.class));
     adminService.setSelf(adminService);
   }
@@ -188,8 +183,7 @@ class AdminServiceTest {
     verify(emailService, never()).envoyerPromotionAdmin(anyString());
   }
 
-  // #807 : le seul admin restant ne peut pas être rétrogradé via PATCH, même combiné à un
-  // changement de nom dans la même requête.
+  // #807 : le seul admin restant ne peut pas être rétrogradé via PATCH.
   @Test
   void modifierUtilisateur_retrogradeSeulAdmin_leveErreurMetier409() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
@@ -206,6 +200,26 @@ class AdminServiceTest {
             () -> adminService.modifierUtilisateur("admin-cible", requete, "admin-1"));
 
     assertEquals(409, ex.getStatus());
+  }
+
+  // #940 : combiner une rétrogradation admin avec nom/email en un seul PATCH imbriquerait un
+  // appel REQUIRES_NEW+SERIALIZABLE (initierRevocationAdminTransactionnel) dans la transaction
+  // déjà ouverte de modifierUtilisateur — risque d'épuisement du pool HikariCP (incident v2.6.4).
+  @Test
+  void modifierUtilisateur_nomEtRetrogradationCombines_leveErreurMetierSansAppelerJdbcUpdate() {
+    Map<String, Object> ligneAdminCible = new HashMap<>();
+    ligneAdminCible.put("role", "admin");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneAdminCible));
+
+    RequeteModifierUtilisateur requete =
+        new RequeteModifierUtilisateur("Nouveau Nom", null, "user");
+    ErreurMetier ex =
+        assertThrows(
+            ErreurMetier.class,
+            () -> adminService.modifierUtilisateur("admin-cible", requete, "admin-1"));
+
+    assertEquals(400, ex.getStatus());
+    verify(jdbc, never()).update(anyString(), anyMap());
   }
 
   @Test
@@ -315,67 +329,6 @@ class AdminServiceTest {
   }
 
   @Test
-  void sauvegarderConfig_cleNonAutorisee_leveErreurMetier() {
-    assertThrows(
-        ErreurMetier.class,
-        () -> adminService.sauvegarderConfig("CLE_INCONNUE", "valeur", "admin-1"));
-  }
-
-  @Test
-  void sauvegarderConfig_valeurVidePourCleObligatoire_leveErreurMetier() {
-    assertThrows(
-        ErreurMetier.class, () -> adminService.sauvegarderConfig("CONTACT_EMAIL", "", "admin-1"));
-  }
-
-  @Test
-  void sauvegarderConfig_formatTicketmasterInvalide_leveErreurMetier() {
-    assertThrows(
-        ErreurMetier.class,
-        () -> adminService.sauvegarderConfig("TICKETMASTER_API_KEY", "trop court", "admin-1"));
-  }
-
-  @Test
-  void sauvegarderConfig_valeurValide_sauvegardeEtLogue() {
-    adminService.sauvegarderConfig("CONTACT_EMAIL", "contact@strapontin.fr", "admin-1");
-    verify(configService).sauvegarderConfig("CONTACT_EMAIL", "contact@strapontin.fr");
-    verify(logAdminService).logAdmin(eq("info"), eq("admin"), anyString(), anyMap());
-  }
-
-  @Test
-  void sauvegarderConfig_adminAlertEmail_sauvegarde() {
-    adminService.sauvegarderConfig("ADMIN_ALERT_EMAIL", "alerte@strapontin.fr", "admin-1");
-    verify(configService).sauvegarderConfig("ADMIN_ALERT_EMAIL", "alerte@strapontin.fr");
-  }
-
-  @Test
-  void sauvegarderConfig_formatVapidPublicInvalide_leveErreurMetier() {
-    assertThrows(
-        ErreurMetier.class,
-        () -> adminService.sauvegarderConfig("VAPID_PUBLIC_KEY", "n'importe-quoi", "admin-1"));
-  }
-
-  @Test
-  void sauvegarderConfig_formatVapidPrivateInvalide_leveErreurMetier() {
-    assertThrows(
-        ErreurMetier.class,
-        () -> adminService.sauvegarderConfig("VAPID_PRIVATE_KEY", "n'importe-quoi", "admin-1"));
-  }
-
-  @Test
-  void sauvegarderConfig_formatVapidPublicValide_sauvegarde() {
-    String clePublique = "A".repeat(87);
-    adminService.sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique, "admin-1");
-    verify(configService).sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique);
-  }
-
-  @Test
-  void sauvegarderConfig_formatVapidPrivateValide_sauvegarde() {
-    String clePrivee = "A".repeat(43);
-    adminService.sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee, "admin-1");
-    verify(configService).sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee);
-  }
-
-  @Test
   void reinitialiserMdp_utilisateurInexistant_retourneEmpty() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
@@ -426,40 +379,5 @@ class AdminServiceTest {
     assertFalse(resultat);
     verify(emailService, never()).envoyer2faReinitialisee(anyString());
     verify(logAdminService, never()).logAdmin(anyString(), anyString(), anyString(), anyMap());
-  }
-
-  @Test
-  void completerAvecJobsJamaisExecutes_jobPlanifieSansHistorique_ajouteEntreeSynthetique() {
-    List<StatJob> statsConnus =
-        List.of(new StatJob("purger:concerts", java.time.Instant.EPOCH, 10, 1, 2, null, null));
-    Map<String, java.time.Instant> prochainesExec =
-        Map.of(
-            "purger:concerts", java.time.Instant.EPOCH,
-            "reconciliation:nocturne", java.time.Instant.MAX);
-
-    List<StatJob> resultat =
-        AdminService.completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
-
-    assertEquals(2, resultat.size());
-    StatJob jamaisExecute =
-        resultat.stream()
-            .filter(s -> s.typeJob().equals("reconciliation:nocturne"))
-            .findFirst()
-            .orElseThrow();
-    assertEquals(null, jamaisExecute.derniereExec());
-    assertEquals(java.time.Instant.MAX, jamaisExecute.prochaineExec());
-  }
-
-  @Test
-  void completerAvecJobsJamaisExecutes_tousLesJobsConnus_neDupliquePas() {
-    List<StatJob> statsConnus =
-        List.of(new StatJob("purger:concerts", java.time.Instant.EPOCH, 10, 1, 2, null, null));
-    Map<String, java.time.Instant> prochainesExec =
-        Map.of("purger:concerts", java.time.Instant.EPOCH);
-
-    List<StatJob> resultat =
-        AdminService.completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
-
-    assertEquals(1, resultat.size());
   }
 }

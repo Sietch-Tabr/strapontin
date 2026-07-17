@@ -1,26 +1,15 @@
 import { test, expect, request as playwrightRequest } from "@playwright/test";
-import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
+import { FICHIER_AUTH_ADMIN, FICHIER_AUTH_USER } from "./global-setup.js";
+import {
+  BASE_URL,
+  creerContexteAdmin,
+  supprimerUtilisateurParEmail,
+  naviguerVersUtilisateurs,
+} from "./helpers/admin.js";
 
 test.use({ storageState: FICHIER_AUTH_ADMIN });
 
-const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
 const emailsANettoyer: string[] = [];
-
-async function supprimerUtilisateurParEmail(email: string): Promise<void> {
-  const ctx = await playwrightRequest.newContext({
-    baseURL: BASE_URL,
-    storageState: FICHIER_AUTH_ADMIN,
-  });
-  try {
-    const reps = await ctx.get("/api/admin/utilisateurs");
-    if (!reps.ok()) return;
-    const users = await reps.json();
-    const cible = users.find((u: { email: string }) => u.email === email);
-    if (cible) await ctx.delete(`/api/admin/utilisateurs/${cible.id}`);
-  } finally {
-    await ctx.dispose();
-  }
-}
 
 test.afterEach(async () => {
   const copies = emailsANettoyer.splice(0);
@@ -32,18 +21,6 @@ test.afterEach(async () => {
     }
   }
 });
-
-async function naviguerVersUtilisateurs(
-  page: import("@playwright/test").Page,
-  isMobile: boolean,
-) {
-  if (isMobile) {
-    await page.selectOption("select.param-onglets-mobile", "#utilisateurs");
-  } else {
-    await page.locator('a[href="#utilisateurs"]').click();
-  }
-  await expect(page.locator("section#utilisateurs")).toBeVisible();
-}
 
 test.describe("Scénario: admin — sections et contenus", () => {
   test("admin_h1_visible", async ({ page }) => {
@@ -505,10 +482,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     test.describe.configure({ retries: 1 });
 
     test("admin_sources_api_tester_slug_valide", async () => {
-      const ctx = await playwrightRequest.newContext({
-        baseURL: BASE_URL,
-        storageState: FICHIER_AUTH_ADMIN,
-      });
+      const ctx = await creerContexteAdmin();
       try {
         const uuid = "00000000-0000-0000-0000-000000000001";
         const rep = await ctx.post(
@@ -527,10 +501,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
   });
 
   test("admin_sources_api_tester_slug_invalide", async () => {
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
+    const ctx = await creerContexteAdmin();
     try {
       const uuid = "00000000-0000-0000-0000-000000000001";
       const rep = await ctx.post(`/api/admin/salles/${uuid}/tester-digitick`, {
@@ -545,10 +516,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
   });
 
   test("admin_sources_api_modifier_slug_uuid_invalide_retourne_400", async () => {
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
+    const ctx = await creerContexteAdmin();
     try {
       const rep = await ctx.put("/api/admin/salles/pas-un-uuid/digitick-slug", {
         data: { slug: "lempreinte" },
@@ -628,11 +596,8 @@ test.describe("Scénario: admin — onglet Sources", () => {
   });
 
   test("admin_sources_digitick_api_creerEtSupprimerSalle", async () => {
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
-    let salleUuid: string | null = null;
+    const ctx = await creerContexteAdmin();
+    let salleId: string | null = null;
     try {
       const repCreation = await ctx.post("/api/admin/digitick-salles", {
         data: {
@@ -644,8 +609,8 @@ test.describe("Scénario: admin — onglet Sources", () => {
       });
       expect(repCreation.status()).toBe(201);
       const corps = await repCreation.json();
-      salleUuid = corps.salleUuid;
-      expect(salleUuid).toBeTruthy();
+      salleId = corps.salleId;
+      expect(salleId).toBeTruthy();
 
       const repSources = await ctx.get("/api/admin/sources");
       expect(repSources.ok()).toBe(true);
@@ -655,25 +620,22 @@ test.describe("Scénario: admin — onglet Sources", () => {
         sallesDigitick.some((s) => s.nom === "Salle Test E2E Digitick"),
       ).toBe(true);
     } finally {
-      if (salleUuid) {
-        await ctx.delete(`/api/admin/digitick-salles/${salleUuid}`);
+      if (salleId) {
+        await ctx.delete(`/api/admin/digitick-salles/${salleId}`);
       }
       await ctx.dispose();
     }
   });
 
   test("admin_sources_digitick_api_supprimer_salleAvecContrainte_retourne409", async () => {
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
-    let salleUuid: string | null = null;
+    const ctx = await creerContexteAdmin();
+    let salleId: string | null = null;
     try {
       const repCreation = await ctx.post("/api/admin/digitick-salles", {
         data: { nom: "Salle Test Contrainte", slug: "salle-contrainte-e2e" },
       });
       expect(repCreation.status()).toBe(201);
-      salleUuid = (await repCreation.json()).salleUuid;
+      salleId = (await repCreation.json()).salleId;
 
       const repSuivi = await ctx.post("/api/salles", {
         data: { nom: "Salle Test Contrainte", tmVenueId: null },
@@ -681,14 +643,14 @@ test.describe("Scénario: admin — onglet Sources", () => {
       expect([200, 201, 409].includes(repSuivi.status())).toBe(true);
 
       const repSuppression = await ctx.delete(
-        `/api/admin/digitick-salles/${salleUuid}`,
+        `/api/admin/digitick-salles/${salleId}`,
       );
       expect(repSuppression.status()).toBe(409);
     } finally {
-      if (salleUuid) {
-        await ctx.delete(`/api/salles/${salleUuid}`).catch(() => {});
+      if (salleId) {
+        await ctx.delete(`/api/salles/${salleId}`).catch(() => {});
         await ctx
-          .delete(`/api/admin/digitick-salles/${salleUuid}`)
+          .delete(`/api/admin/digitick-salles/${salleId}`)
           .catch(() => {});
       }
       await ctx.dispose();
@@ -696,17 +658,14 @@ test.describe("Scénario: admin — onglet Sources", () => {
   });
 
   test("admin_sources_digitick_api_rechercheSalleAvecSlug", async () => {
-    const ctx = await playwrightRequest.newContext({
-      baseURL: BASE_URL,
-      storageState: FICHIER_AUTH_ADMIN,
-    });
-    let salleUuid: string | null = null;
+    const ctx = await creerContexteAdmin();
+    let salleId: string | null = null;
     try {
       const repCreation = await ctx.post("/api/admin/digitick-salles", {
         data: { nom: "Zenith E2E Digitick", slug: "zenith-e2e" },
       });
       expect(repCreation.status()).toBe(201);
-      salleUuid = (await repCreation.json()).salleUuid;
+      salleId = (await repCreation.json()).salleId;
 
       const repRecherche = await ctx.get("/api/salles?q=Zenith+E2E");
       expect(repRecherche.ok()).toBe(true);
@@ -717,8 +676,8 @@ test.describe("Scénario: admin — onglet Sources", () => {
       expect(trouvee).toBeTruthy();
       expect(trouvee?.digitickSlug).toBe("zenith-e2e");
     } finally {
-      if (salleUuid) {
-        await ctx.delete(`/api/admin/digitick-salles/${salleUuid}`);
+      if (salleId) {
+        await ctx.delete(`/api/admin/digitick-salles/${salleId}`);
       }
       await ctx.dispose();
     }
@@ -809,8 +768,24 @@ test.describe("Scénario: admin — API endpoints", () => {
   test("api_admin_non_accessible_sans_session", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: undefined });
     const rep = await ctx.request.get("/api/admin/jobs");
-    expect([401, 302, 403]).toContain(rep.status());
+    expect(rep.status()).toBe(401);
     await ctx.close();
+  });
+
+  // #941 : aucun test ne vérifiait qu'un utilisateur authentifié mais non-admin (rôle
+  // insuffisant, distinct de l'absence totale de session) reçoit bien 403 sur /api/admin/**
+  // (SecurityConfiguration.java, .requestMatchers("/api/admin/**").hasRole("ADMIN")).
+  test("api_admin_non_accessible_avec_role_utilisateur", async () => {
+    const ctx = await playwrightRequest.newContext({
+      baseURL: BASE_URL,
+      storageState: FICHIER_AUTH_USER,
+    });
+    try {
+      const rep = await ctx.get("/api/admin/jobs");
+      expect(rep.status()).toBe(403);
+    } finally {
+      await ctx.dispose();
+    }
   });
 
   test("api_admin_sources_retourne_200", async ({ request }) => {

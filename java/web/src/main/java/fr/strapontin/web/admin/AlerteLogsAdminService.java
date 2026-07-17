@@ -5,7 +5,7 @@
 package fr.strapontin.web.admin;
 
 import fr.strapontin.web.config.ConfigService;
-import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailAlerteService;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -31,16 +31,18 @@ public class AlerteLogsAdminService {
 
   private final LogAdminService logAdminService;
   private final ConfigService configService;
-  private final EmailService emailService;
+  private final EmailAlerteService emailAlerteService;
 
-  /// @param logAdminService lecture des entrées d'erreur depuis le curseur
-  /// @param configService   lecture/écriture du curseur
-  /// @param emailService    envoi du digest et résolution du destinataire d'alerte (#907)
+  /// @param logAdminService   lecture des entrées d'erreur depuis le curseur
+  /// @param configService     lecture/écriture du curseur
+  /// @param emailAlerteService envoi du digest et résolution du destinataire d'alerte (#907)
   public AlerteLogsAdminService(
-      LogAdminService logAdminService, ConfigService configService, EmailService emailService) {
+      LogAdminService logAdminService,
+      ConfigService configService,
+      EmailAlerteService emailAlerteService) {
     this.logAdminService = logAdminService;
     this.configService = configService;
-    this.emailService = emailService;
+    this.emailAlerteService = emailAlerteService;
   }
 
   /// Vérifie les nouvelles erreurs toutes les 15 minutes et envoie un digest agrégé.
@@ -53,7 +55,7 @@ public class AlerteLogsAdminService {
     List<LogAdminService.EntreeLogAdmin> erreurs = logAdminService.lireErreursDepuis(curseur);
     if (erreurs.isEmpty()) return;
 
-    Optional<String> email = emailService.obtenirDestinataireAlerte();
+    Optional<String> email = emailAlerteService.obtenirDestinataireAlerte();
     if (email.isEmpty()) {
       log.warn(
           "alerteLogsAdmin: aucun destinataire d'alerte disponible — {} erreur(s) en attente,"
@@ -62,7 +64,7 @@ public class AlerteLogsAdminService {
       return;
     }
 
-    boolean envoye = emailService.envoyerAlerteLogsAdmin(email.get(), erreurs);
+    boolean envoye = emailAlerteService.envoyerAlerteLogsAdmin(email.get(), erreurs);
     if (!envoye) {
       log.warn(
           "alerteLogsAdmin: échec d'envoi — {} erreur(s) en attente, curseur non avancé",

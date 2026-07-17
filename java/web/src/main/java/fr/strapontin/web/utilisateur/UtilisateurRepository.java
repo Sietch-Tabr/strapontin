@@ -137,6 +137,33 @@ class UtilisateurRepository {
     jdbc.update("DELETE FROM users WHERE id = :userId", Map.of(CLE_USER_ID, userId));
   }
 
+  /// Compte les concerts non vus/masqués pour un artiste suivi (badge "nouveau" de navigation).
+  ///
+  /// <p>Extrait de {@code securite.SessionController} (#918) — le contrôleur exécutait ce SQL
+  /// directement, en violation du pattern Controller (HTTP pur) → Service → Repository.
+  ///
+  /// @param userId identifiant de l'utilisateur
+  /// @return nombre de concerts non vus pour les artistes suivis
+  int compterNouveauxMatchesArtistes(String userId) {
+    Integer count =
+        jdbc.queryForObject(
+            """
+            SELECT COUNT(*) FROM user_matches um
+            JOIN concerts c ON c.id = um.concert_id
+            WHERE um.user_id = :userId
+              AND um.vu_le IS NULL
+              AND um.masque_le IS NULL
+              AND EXISTS (
+                SELECT 1 FROM user_artistes ua
+                WHERE ua.user_id = :userId
+                  AND c.artiste_id = ua.artiste_id
+              )
+            """,
+            Map.of(CLE_USER_ID, userId),
+            Integer.class);
+    return count != null ? count : 0;
+  }
+
   /// Données email lues depuis la base (utilisées pour construire {@link ProfilUtilisateur}).
   record EmailsUtilisateur(String email, String pendingEmail) {}
 }

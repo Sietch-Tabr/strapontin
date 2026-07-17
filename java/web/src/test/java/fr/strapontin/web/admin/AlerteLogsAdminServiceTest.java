@@ -13,7 +13,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin;
 import fr.strapontin.web.config.ConfigService;
-import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailAlerteService;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,15 +31,15 @@ class AlerteLogsAdminServiceTest {
 
   private LogAdminService logAdminService;
   private ConfigService configService;
-  private EmailService emailService;
+  private EmailAlerteService emailAlerteService;
   private AlerteLogsAdminService service;
 
   @BeforeEach
   void setUp() {
     logAdminService = mock(LogAdminService.class);
     configService = mock(ConfigService.class);
-    emailService = mock(EmailService.class);
-    service = new AlerteLogsAdminService(logAdminService, configService, emailService);
+    emailAlerteService = mock(EmailAlerteService.class);
+    service = new AlerteLogsAdminService(logAdminService, configService, emailAlerteService);
   }
 
   @Test
@@ -49,7 +49,7 @@ class AlerteLogsAdminServiceTest {
 
     service.verifier();
 
-    verify(emailService, never()).envoyerAlerteLogsAdmin(anyString(), anyList());
+    verify(emailAlerteService, never()).envoyerAlerteLogsAdmin(anyString(), anyList());
     verify(configService, never()).sauvegarderConfig(eq(CLE_CURSEUR), anyString());
   }
 
@@ -61,8 +61,8 @@ class AlerteLogsAdminServiceTest {
             new EntreeLogAdmin(200L, "error", "worker", "échec job 2", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);
-    when(emailService.obtenirDestinataireAlerte()).thenReturn(Optional.of("admin@exemple.fr"));
-    when(emailService.envoyerAlerteLogsAdmin("admin@exemple.fr", erreurs)).thenReturn(true);
+    when(emailAlerteService.obtenirDestinataireAlerte()).thenReturn(Optional.of("admin@exemple.fr"));
+    when(emailAlerteService.envoyerAlerteLogsAdmin("admin@exemple.fr", erreurs)).thenReturn(true);
 
     service.verifier();
 
@@ -75,11 +75,11 @@ class AlerteLogsAdminServiceTest {
         List.of(new EntreeLogAdmin(100L, "error", "worker", "échec", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);
-    when(emailService.obtenirDestinataireAlerte()).thenReturn(Optional.empty());
+    when(emailAlerteService.obtenirDestinataireAlerte()).thenReturn(Optional.empty());
 
     service.verifier();
 
-    verify(emailService, never()).envoyerAlerteLogsAdmin(anyString(), anyList());
+    verify(emailAlerteService, never()).envoyerAlerteLogsAdmin(anyString(), anyList());
     verify(configService, never()).sauvegarderConfig(eq(CLE_CURSEUR), anyString());
   }
 
@@ -89,8 +89,8 @@ class AlerteLogsAdminServiceTest {
         List.of(new EntreeLogAdmin(100L, "error", "worker", "échec", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);
-    when(emailService.obtenirDestinataireAlerte()).thenReturn(Optional.of("admin@exemple.fr"));
-    when(emailService.envoyerAlerteLogsAdmin("admin@exemple.fr", erreurs)).thenReturn(false);
+    when(emailAlerteService.obtenirDestinataireAlerte()).thenReturn(Optional.of("admin@exemple.fr"));
+    when(emailAlerteService.envoyerAlerteLogsAdmin("admin@exemple.fr", erreurs)).thenReturn(false);
 
     service.verifier();
 

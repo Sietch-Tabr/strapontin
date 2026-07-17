@@ -41,13 +41,17 @@ public class AdminController {
   private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
   private final AdminService adminService;
+  private final ConfigAdminService configAdminService;
+  private final JobsAdminService jobsAdminService;
   private final BanniereService banniereService;
   private final WorkerProxyService workerProxyService;
   private final EmailService emailService;
   private final VapidService vapidService;
   private final ConfigService configService;
 
-  /// @param adminService       service d'administration
+  /// @param adminService       service d'administration (gestion utilisateurs)
+  /// @param configAdminService service de configuration applicative (#916)
+  /// @param jobsAdminService   service de statistiques des jobs Quartz (#916)
   /// @param banniereService    service de gestion de la bannière système
   /// @param workerProxyService proxy HTTP vers le worker (relance des fetches)
   /// @param emailService       service d'envoi d'emails
@@ -55,12 +59,16 @@ public class AdminController {
   /// @param configService      service de configuration pour lire PUBLIC_BASE_URL
   public AdminController(
       AdminService adminService,
+      ConfigAdminService configAdminService,
+      JobsAdminService jobsAdminService,
       BanniereService banniereService,
       WorkerProxyService workerProxyService,
       EmailService emailService,
       VapidService vapidService,
       ConfigService configService) {
     this.adminService = adminService;
+    this.configAdminService = configAdminService;
+    this.jobsAdminService = jobsAdminService;
     this.banniereService = banniereService;
     this.workerProxyService = workerProxyService;
     this.emailService = emailService;
@@ -242,7 +250,7 @@ public class AdminController {
   /// @return la liste des statuts de configuration
   @GetMapping("/config")
   public ResponseEntity<List<ConfigStatut>> lireConfigStatuts() {
-    return ResponseEntity.ok(adminService.lireConfigStatuts());
+    return ResponseEntity.ok(configAdminService.lireConfigStatuts());
   }
 
   /// Sauvegarde une valeur de configuration applicative.
@@ -257,7 +265,7 @@ public class AdminController {
     String cle = requete.cle() == null ? "" : requete.cle().strip();
     String valeur = requete.valeur() == null ? "" : requete.valeur().strip();
 
-    adminService.sauvegarderConfig(cle, valeur, adminId);
+    configAdminService.sauvegarderConfig(cle, valeur, adminId);
     return ResponseEntity.ok(Map.of("succes", true, "action", "sauvegarderConfig", "cle", cle));
   }
 
@@ -289,7 +297,7 @@ public class AdminController {
   /// @return 200 si la clé est valide, 400 sinon
   @PostMapping("/config/tester-tm")
   public ResponseEntity<Map<String, Object>> testerApiTm() {
-    boolean valide = adminService.testerApiTm();
+    boolean valide = configAdminService.testerApiTm();
     return valide
         ? ResponseEntity.ok(Map.of("valide", true))
         : erreur(400, "Clé Ticketmaster invalide ou absente.");
@@ -343,7 +351,7 @@ public class AdminController {
   /// @return les stats de jobs et le quota TM
   @GetMapping("/jobs")
   public ResponseEntity<Map<String, Object>> lireJobs() {
-    return ResponseEntity.ok(adminService.lireJobs());
+    return ResponseEntity.ok(jobsAdminService.lireJobs());
   }
 
   /// Déclenche immédiatement les fetches via le worker.

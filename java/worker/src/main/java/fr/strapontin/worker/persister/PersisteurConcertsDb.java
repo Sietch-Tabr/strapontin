@@ -21,8 +21,8 @@ import org.springframework.stereotype.Service;
 /// Service de persistance SQL pur pour les concerts.
 ///
 /// <p>Effectue l'upsert par lot en base avec la stratégie ON CONFLICT sur
-/// {@code (artiste_norm, date, heure, salle_uuid)} (NULLS NOT DISTINCT, migration V37). Gère
-/// la suppression des doublons par URL et par {@code salle_uuid} (TM+Eventim).
+/// {@code (artiste_norm, date, heure, salle_id)} (NULLS NOT DISTINCT, migration V37). Gère
+/// la suppression des doublons par URL et par {@code salle_id} (TM+Eventim).
 ///
 /// <p>Résout les UUIDs internes depuis les identifiants sources préfixés
 /// ({@code salle_sources}, {@code artiste_sources}).
@@ -39,7 +39,7 @@ public class PersisteurConcertsDb {
       INSERT INTO concerts
           (artiste, artiste_norm, date, heure, salle, salle_norm, ville, dept,
            url, source, classification, genre, statut,
-           presale_debut, presale_nom, salle_uuid, artiste_id)
+           presale_debut, presale_nom, salle_id, artiste_id)
       VALUES
       """;
 
@@ -65,7 +65,7 @@ public class PersisteurConcertsDb {
                              ELSE EXCLUDED.statut END,
           presale_debut  = COALESCE(EXCLUDED.presale_debut, concerts.presale_debut),
           presale_nom    = COALESCE(EXCLUDED.presale_nom, concerts.presale_nom),
-          salle_uuid     = COALESCE(EXCLUDED.salle_uuid, concerts.salle_uuid),
+          salle_id     = COALESCE(EXCLUDED.salle_id, concerts.salle_id),
           artiste_id     = COALESCE(EXCLUDED.artiste_id, concerts.artiste_id),
           updated_at     = now()
       RETURNING (xmax = 0) AS est_insertion
@@ -259,7 +259,7 @@ public class PersisteurConcertsDb {
         + " AS timestamptz)"
         + ", :presaleNom_"
         + i
-        + ", CAST(:salleUuid_"
+        + ", CAST(:salleId_"
         + i
         + " AS uuid)"
         + ", CAST(:artisteId_"
@@ -284,7 +284,7 @@ public class PersisteurConcertsDb {
     params.addValue("statut_" + i, v.statut());
     params.addValue("presaleDebut_" + i, v.presaleDebut());
     params.addValue("presaleNom_" + i, v.presaleNom());
-    params.addValue("salleUuid_" + i, v.salleUuid() != null ? v.salleUuid().toString() : null);
+    params.addValue("salleId_" + i, v.salleId() != null ? v.salleId().toString() : null);
     params.addValue("artisteId_" + i, v.artisteId() != null ? v.artisteId().toString() : null);
   }
 
@@ -301,7 +301,7 @@ public class PersisteurConcertsDb {
     return 0;
   }
 
-  /// Priorité de source (plus petit = conservé) pour {@link #supprimerDoublonsParSalleUuid}.
+  /// Priorité de source (plus petit = conservé) pour {@link #supprimerDoublonsParSalleId}.
   private static final String SQL_PRIORITE_SOURCE =
       "CASE %s::text"
           + " WHEN 'ticketmaster' THEN 1"
@@ -312,13 +312,13 @@ public class PersisteurConcertsDb {
   /// Supprime les doublons cross-sources non fusionnés par {@link ReconciliateurSalles}.
   ///
   /// <p>Quand deux sources nomment la même salle différemment, deux lignes peuvent coexister
-  /// malgré un {@code salle_uuid} identique. Généralisé à toutes les paires de sources — pas
+  /// malgré un {@code salle_id} identique. Généralisé à toutes les paires de sources — pas
   /// seulement TM/Eventim (#790) — via une priorité TM &gt; Eventim &gt; Digitick : la ligne de
   /// la source la moins prioritaire est supprimée, celle de la source la plus prioritaire est
   /// conservée comme référence.
   ///
   /// @return nombre de concerts supprimés
-  int supprimerDoublonsParSalleUuid() {
+  int supprimerDoublonsParSalleId() {
     int nbSupprimees =
         jdbc.update(
             "DELETE FROM concerts WHERE id IN ("
@@ -328,10 +328,10 @@ public class PersisteurConcertsDb {
                 + "    ON c1.artiste_id = c2.artiste_id"
                 + "    AND c1.date = c2.date"
                 + "    AND c1.heure IS NOT DISTINCT FROM c2.heure"
-                + "    AND c1.salle_uuid = c2.salle_uuid"
+                + "    AND c1.salle_id = c2.salle_id"
                 + "    AND c1.id != c2.id"
                 + "  WHERE c1.artiste_id IS NOT NULL"
-                + "    AND c1.salle_uuid IS NOT NULL"
+                + "    AND c1.salle_id IS NOT NULL"
                 + "    AND "
                 + SQL_PRIORITE_SOURCE.formatted("c1.source")
                 + "    < "
@@ -339,7 +339,7 @@ public class PersisteurConcertsDb {
                 + ")",
             Map.of());
     if (nbSupprimees > 0)
-      log.info("doublons cross-sources (salle_uuid) supprimés count={}", nbSupprimees);
+      log.info("doublons cross-sources (salle_id) supprimés count={}", nbSupprimees);
     return nbSupprimees;
   }
 }

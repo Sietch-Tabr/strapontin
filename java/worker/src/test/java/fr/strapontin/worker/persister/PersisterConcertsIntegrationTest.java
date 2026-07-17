@@ -257,13 +257,13 @@ class PersisterConcertsIntegrationTest {
   }
 
   @Test
-  void persisterConcerts_salleSourceIdConnu_reutiliseSalleUuid() {
+  void persisterConcerts_salleSourceIdConnu_reutiliseSalleId() {
     // Pré-condition : salle déjà en base avec son UUID source TM
     jdbc.update(
         "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor"
             + " arena')",
         Map.of());
-    java.util.UUID salleUuid =
+    java.util.UUID salleId =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'accor arena'",
             Map.of(),
@@ -271,7 +271,7 @@ class PersisterConcertsIntegrationTest {
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe) VALUES"
             + " (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpaZGFe')",
-        Map.of("uuid", salleUuid.toString()));
+        Map.of("uuid", salleId.toString()));
 
     persisterConcerts.persisterConcerts(
         List.of(
@@ -280,21 +280,21 @@ class PersisterConcertsIntegrationTest {
 
     java.util.UUID uuidEnBase =
         jdbc.queryForObject(
-            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'stromae'",
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'stromae'",
             Map.of(),
-            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
-    assertEquals(salleUuid, uuidEnBase);
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
+    assertEquals(salleId, uuidEnBase);
   }
 
   @Test
-  void persisterConcerts_salleRenommee_metAJourNomConserveSalleUuid() {
+  void persisterConcerts_salleRenommee_metAJourNomConserveSalleId() {
     // Scénario Plenitude Arena : même venueId TM, nom différent entre deux fetches
     jdbc.update(
         "INSERT INTO salles (salle_cle, nom, nom_norm)"
             + " VALUES ('paris la defense arena', 'Paris La Défense Arena',"
             + " 'paris la defense arena')",
         Map.of());
-    java.util.UUID salleUuid =
+    java.util.UUID salleId =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'paris la defense arena'",
             Map.of(),
@@ -302,7 +302,7 @@ class PersisterConcertsIntegrationTest {
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe) VALUES"
             + " (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpbFGFe')",
-        Map.of("uuid", salleUuid.toString()));
+        Map.of("uuid", salleId.toString()));
 
     // Fetch avec le nouveau nom
     persisterConcerts.persisterConcerts(
@@ -312,27 +312,27 @@ class PersisterConcertsIntegrationTest {
 
     java.util.UUID uuidEnBase =
         jdbc.queryForObject(
-            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'dua lipa'",
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'dua lipa'",
             Map.of(),
-            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
-    assertEquals(salleUuid, uuidEnBase, "le salle_uuid doit être stable après renommage");
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
+    assertEquals(salleId, uuidEnBase, "le salle_id doit être stable après renommage");
 
     String nomMisAJour =
         jdbc.queryForObject(
             "SELECT nom FROM salles WHERE id = CAST(:uuid AS uuid)",
-            Map.of("uuid", salleUuid.toString()),
+            Map.of("uuid", salleId.toString()),
             String.class);
     assertEquals("Plenitude Arena", nomMisAJour, "le nom de la salle doit être mis à jour");
   }
 
   @Test
-  void persisterConcerts_reconciliationSalle_conserveSalleUuid() {
-    // ticket #632 — le salleUuid ne doit pas être effacé lors de la réconciliation salle
+  void persisterConcerts_reconciliationSalle_conserveSalleId() {
+    // ticket #632 — le salleId ne doit pas être effacé lors de la réconciliation salle
     jdbc.update(
         "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('zenith paris', 'Zénith Paris',"
             + " 'zenith paris')",
         Map.of());
-    java.util.UUID salleUuid =
+    java.util.UUID salleId =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'zenith paris'",
             Map.of(),
@@ -340,7 +340,7 @@ class PersisterConcertsIntegrationTest {
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
             + " VALUES (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpZenith')",
-        Map.of("uuid", salleUuid.toString()));
+        Map.of("uuid", salleId.toString()));
 
     // Premier fetch — UUID résolu via salle_sources
     persisterConcerts.persisterConcerts(
@@ -359,11 +359,11 @@ class PersisterConcertsIntegrationTest {
 
     java.util.UUID uuidEnBase =
         jdbc.queryForObject(
-            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'mika'",
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'mika'",
             Map.of(),
-            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
     assertEquals(
-        salleUuid, uuidEnBase, "le salle_uuid ne doit pas être perdu lors de la réconciliation");
+        salleId, uuidEnBase, "le salle_id ne doit pas être perdu lors de la réconciliation");
   }
 
   @Test
@@ -389,10 +389,10 @@ class PersisterConcertsIntegrationTest {
 
     java.util.UUID uuidEnBase =
         jdbc.queryForObject(
-            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'stromae'",
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'stromae'",
             Map.of(),
-            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
-    assertNotNull(uuidEnBase, "concerts.salle_uuid doit être rempli après upsert");
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
+    assertNotNull(uuidEnBase, "concerts.salle_id doit être rempli après upsert");
   }
 
   @Test
@@ -428,9 +428,9 @@ class PersisterConcertsIntegrationTest {
 
     java.util.UUID uuidConcert =
         jdbc.queryForObject(
-            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'billie eilish'",
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'billie eilish'",
             Map.of(),
-            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
     assertEquals(uuidOriginal, uuidConcert, "le concert doit pointer vers la salle originale");
 
     Long nbSources =
@@ -449,7 +449,7 @@ class PersisterConcertsIntegrationTest {
     // ultérieur rencontre la même salle sous "LOlympia" (sans apostrophe, salleSourceId inconnu
     // de salle_sources — comme un vrai fetch Eventim). Sans le critère squash de
     // CorrespondanceSalle + le préfiltre élargi de chercherSalleParTokens, upsertSalleSource
-    // créerait une deuxième salle distincte au lieu de rattacher au salle_uuid existant.
+    // créerait une deuxième salle distincte au lieu de rattacher au salle_id existant.
     persisterConcerts.persisterConcerts(
         List.of(
             new ConcertBrut(
@@ -501,10 +501,10 @@ class PersisterConcertsIntegrationTest {
 
     java.util.UUID uuidConcertEventim =
         jdbc.queryForObject(
-            "SELECT salle_uuid FROM concerts WHERE artiste_norm = 'stromae' AND date ="
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'stromae' AND date ="
                 + " '2026-11-21'",
             Map.of(),
-            (rs, _) -> rs.getObject("salle_uuid", java.util.UUID.class));
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
     assertEquals(
         uuidOriginal,
         uuidConcertEventim,
@@ -539,7 +539,7 @@ class PersisterConcertsIntegrationTest {
         "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor"
             + " arena')",
         Map.of());
-    java.util.UUID salleUuid =
+    java.util.UUID salleId =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'accor arena'",
             Map.of(),
@@ -547,7 +547,7 @@ class PersisterConcertsIntegrationTest {
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
             + " VALUES (CAST(:uuid AS uuid), 'ticketmaster', 'KovZpAccor')",
-        Map.of("uuid", salleUuid.toString()));
+        Map.of("uuid", salleId.toString()));
 
     // Bon nom en premier, mauvais nom en dernier → sans fix, "ACCOR ARENA" aurait gagné.
     List<ConcertBrut> liste =
@@ -562,7 +562,7 @@ class PersisterConcertsIntegrationTest {
     String nomEnBase =
         jdbc.queryForObject(
             "SELECT nom FROM salles WHERE id = CAST(:uuid AS uuid)",
-            Map.of("uuid", salleUuid.toString()),
+            Map.of("uuid", salleId.toString()),
             String.class);
     assertEquals("Accor Aréna", nomEnBase, "le nom avec diacritiques doit être préféré");
   }
@@ -696,27 +696,27 @@ class PersisterConcertsIntegrationTest {
   @Test
   void persisterConcerts_memeArtisteMemeDateSalleNormsDifferentsMemeUuid_neLancePasBadSqlGrammar() {
     // Régression #738/#745 — la contrainte uq_concerts_artiste_date_heure_salle porte sur
-    // salle_uuid depuis V37. TM et Eventim nommant la même salle différemment mais résolvant
-    // au même salle_uuid produisaient un "ON CONFLICT DO UPDATE command cannot affect row a
+    // salle_id depuis V37. TM et Eventim nommant la même salle différemment mais résolvant
+    // au même salle_id produisaient un "ON CONFLICT DO UPDATE command cannot affect row a
     // second time" si deduplicerLotReconcilie utilisait salle_norm comme clé.
-    java.util.UUID salleUuid = java.util.UUID.randomUUID();
-    String salleCle = "salle-test-" + salleUuid;
+    java.util.UUID salleId = java.util.UUID.randomUUID();
+    String salleCle = "salle-test-" + salleId;
     jdbc.update(
         "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept)"
             + " VALUES (CAST(:id AS uuid), :salleCle, :nom, :nomNorm, '75')",
         new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
-            .addValue("id", salleUuid.toString())
+            .addValue("id", salleId.toString())
             .addValue("salleCle", salleCle)
             .addValue("nom", "Zénith Paris La Villette")
             .addValue("nomNorm", "zenith paris la villette"));
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
             + " VALUES (CAST(:salleId AS uuid), 'ticketmaster', 'TM_VENUE_001')",
-        Map.of("salleId", salleUuid.toString()));
+        Map.of("salleId", salleId.toString()));
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
             + " VALUES (CAST(:salleId AS uuid), 'eventim', 'eventim:internal:zenith de paris')",
-        Map.of("salleId", salleUuid.toString()));
+        Map.of("salleId", salleId.toString()));
 
     List<ConcertBrut> liste =
         List.of(
@@ -756,20 +756,20 @@ class PersisterConcertsIntegrationTest {
     assertDoesNotThrow(
         () -> persisterConcerts.persisterConcerts(liste),
         "persisterConcerts ne doit pas lever BadSqlGrammarException quand deux concerts ont"
-            + " le même salle_uuid mais des salle_norm différents");
+            + " le même salle_id mais des salle_norm différents");
 
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
-    assertEquals(1L, count, "les deux concerts doivent fusionner en un seul via salle_uuid");
+    assertEquals(1L, count, "les deux concerts doivent fusionner en un seul via salle_id");
   }
 
-  // #790 — supprimerDoublonsParSalleUuid ne couvrait que les paires TM/Eventim codées en dur.
-  // Ce test simule un doublon résiduel TM+Digitick (même artiste_id/date/heure/salle_uuid mais
+  // #790 — supprimerDoublonsParSalleId ne couvrait que les paires TM/Eventim codées en dur.
+  // Ce test simule un doublon résiduel TM+Digitick (même artiste_id/date/heure/salle_id mais
   // artiste_norm distinct — la contrainte unique porte sur artiste_norm, pas artiste_id, donc les
   // deux lignes peuvent légitimement coexister en base malgré une résolution UUID identique).
   @Test
   void persisterConcerts_doublonResiduelTicketmasterDigitick_supprimeLaLigneDigitick() {
     java.util.UUID artisteId = java.util.UUID.randomUUID();
-    java.util.UUID salleUuid = java.util.UUID.randomUUID();
+    java.util.UUID salleId = java.util.UUID.randomUUID();
     jdbc.update(
         "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
         new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
@@ -780,18 +780,18 @@ class PersisterConcertsIntegrationTest {
         "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept)"
             + " VALUES (CAST(:id AS uuid), :salleCle, :nom, :nomNorm, '75')",
         new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
-            .addValue("id", salleUuid.toString())
-            .addValue("salleCle", "salle-test-" + salleUuid)
+            .addValue("id", salleId.toString())
+            .addValue("salleCle", "salle-test-" + salleId)
             .addValue("nom", "Accor Arena")
             .addValue("nomNorm", "accor arena"));
 
     String sqlInsertConcert =
         """
         INSERT INTO concerts
-            (artiste, artiste_norm, date, heure, salle, salle_norm, source, artiste_id, salle_uuid)
+            (artiste, artiste_norm, date, heure, salle, salle_norm, source, artiste_id, salle_id)
         VALUES
             (:artiste, :artisteNorm, '2026-12-05', '20:00', :salle, 'accor arena',
-             CAST(:source AS source_concert), CAST(:artisteId AS uuid), CAST(:salleUuid AS uuid))
+             CAST(:source AS source_concert), CAST(:artisteId AS uuid), CAST(:salleId AS uuid))
         """;
     jdbc.update(
         sqlInsertConcert,
@@ -801,7 +801,7 @@ class PersisterConcertsIntegrationTest {
             .addValue("salle", "Accor Arena")
             .addValue("source", "ticketmaster")
             .addValue("artisteId", artisteId.toString())
-            .addValue("salleUuid", salleUuid.toString()));
+            .addValue("salleId", salleId.toString()));
     jdbc.update(
         sqlInsertConcert,
         new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
@@ -810,10 +810,10 @@ class PersisterConcertsIntegrationTest {
             .addValue("salle", "Accor Arena Digitick")
             .addValue("source", "digitick")
             .addValue("artisteId", artisteId.toString())
-            .addValue("salleUuid", salleUuid.toString()));
+            .addValue("salleId", salleId.toString()));
 
     // Un concert sans rapport déclenche le passage de persisterConcerts (et donc le nettoyage
-    // supprimerDoublonsParSalleUuid) sans interagir avec les deux lignes insérées ci-dessus.
+    // supprimerDoublonsParSalleId) sans interagir avec les deux lignes insérées ci-dessus.
     persisterConcerts.persisterConcerts(
         List.of(concert("Artiste Sans Rapport", "2026-12-06", "Autre Salle", "ticketmaster")));
 

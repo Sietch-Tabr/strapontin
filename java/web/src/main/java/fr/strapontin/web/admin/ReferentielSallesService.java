@@ -123,7 +123,7 @@ public class ReferentielSallesService {
                  ELSE 'a_verifier'
                END AS statut
         FROM salles s
-        LEFT JOIN concerts c ON c.salle_uuid = s.id
+        LEFT JOIN concerts c ON c.salle_id = s.id
         LEFT JOIN salle_sources ss ON ss.salle_id = s.id
         GROUP BY s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id
       )
@@ -193,8 +193,8 @@ public class ReferentielSallesService {
         """
         DELETE FROM concerts c1
         USING concerts c2
-        WHERE c1.salle_uuid = CAST(:source AS uuid)
-          AND c2.salle_uuid = CAST(:cible AS uuid)
+        WHERE c1.salle_id = CAST(:source AS uuid)
+          AND c2.salle_id = CAST(:cible AS uuid)
           AND c1.artiste_norm = c2.artiste_norm
           AND c1.date = c2.date
           AND c1.heure IS NOT DISTINCT FROM c2.heure
@@ -203,7 +203,7 @@ public class ReferentielSallesService {
 
     // 2. Réassigner les concerts restants
     jdbc.update(
-        "UPDATE concerts SET salle_uuid = CAST(:cible AS uuid) WHERE salle_uuid = CAST(:source AS"
+        "UPDATE concerts SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source AS"
             + " uuid)",
         ids);
 
@@ -211,15 +211,15 @@ public class ReferentielSallesService {
     jdbc.update(
         """
         DELETE FROM user_salles
-        WHERE salle_uuid = CAST(:source AS uuid)
+        WHERE salle_id = CAST(:source AS uuid)
           AND EXISTS (
             SELECT 1 FROM user_salles u2
-            WHERE u2.user_id = user_salles.user_id AND u2.salle_uuid = CAST(:cible AS uuid)
+            WHERE u2.user_id = user_salles.user_id AND u2.salle_id = CAST(:cible AS uuid)
           )
         """,
         ids);
     jdbc.update(
-        "UPDATE user_salles SET salle_uuid = CAST(:cible AS uuid) WHERE salle_uuid = CAST(:source"
+        "UPDATE user_salles SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source"
             + " AS uuid)",
         ids);
 

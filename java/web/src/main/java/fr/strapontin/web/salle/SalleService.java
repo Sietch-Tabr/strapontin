@@ -7,18 +7,12 @@ package fr.strapontin.web.salle;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.config.ConfigService;
-import java.net.URI;
 import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,6 +29,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
 /// Service de gestion des salles suivies.
 ///
@@ -68,18 +63,23 @@ public class SalleService {
   private final SalleRepository salleRepository;
   private final ConfigService configService;
   private final ObjectMapper objectMapper;
-  private final HttpClient httpClient;
+  private final RestClient restClient;
   private SalleService self;
 
   /// @param salleRepository accès aux données salles
   /// @param configService   lecture de la clé API Ticketmaster
   /// @param objectMapper    désérialiseur JSON (pour l'API Ticketmaster)
+  /// @param restClient      client HTTP partagé (#923, timeout 5s/10s défini dans
+  ///                        {@link fr.strapontin.web.WebConfiguration})
   public SalleService(
-      SalleRepository salleRepository, ConfigService configService, ObjectMapper objectMapper) {
+      SalleRepository salleRepository,
+      ConfigService configService,
+      ObjectMapper objectMapper,
+      RestClient restClient) {
     this.salleRepository = salleRepository;
     this.configService = configService;
     this.objectMapper = objectMapper;
-    this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+    this.restClient = restClient;
   }
 
   /// Injection par setter de la référence proxifiée de ce bean — nécessaire pour que
@@ -154,10 +154,10 @@ public class SalleService {
   /// Fusionne un candidat externe avec une suggestion déjà présente désignant la même salle
   /// ({@link CorrespondanceSalle#estDoublonSalle}), ou l'ajoute comme nouvelle suggestion sinon.
   ///
-  /// <p>Utilise le même algorithme que {@link #resoudreSalleUuid} (#835) — avant correctif,
+  /// <p>Utilise le même algorithme que {@link #resoudreSalleId} (#835) — avant correctif,
   /// {@code fusionnerOuAjouter} utilisait sa propre implémentation Levenshtein locale
   /// ({@code estMemeSalle}), ce qui pouvait afficher deux suggestions distinctes dans l'UI alors
-  /// qu'un clic sur l'une ou l'autre aurait résolu vers le même UUID via {@code resoudreSalleUuid}
+  /// qu'un clic sur l'une ou l'autre aurait résolu vers le même UUID via {@code resoudreSalleId}
   /// — un seul algorithme de dédoublonnage salle dans tout le projet.
   ///
   /// <p>Permet à Nominatim et Ticketmaster de contribuer chacun leurs identifiants (osmId,
@@ -193,7 +193,7 @@ public class SalleService {
   ///
   /// <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation. La
   /// résolution de la salle dans le référentiel global tolère les variantes orthographiques
-  /// mineures (voir {@link #resoudreSalleUuid}) pour éviter de créer un doublon d'UUID pour une
+  /// mineures (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une
   /// salle déjà présente sous une graphie légèrement différente.
   ///
   /// @param userId    identifiant de l'utilisateur
@@ -210,7 +210,7 @@ public class SalleService {
   ///
   /// <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation. La
   /// résolution de la salle dans le référentiel global tolère les variantes orthographiques
-  /// mineures (voir {@link #resoudreSalleUuid}) pour éviter de créer un doublon d'UUID pour une
+  /// mineures (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une
   /// salle déjà présente sous une graphie légèrement différente.
   ///
   /// <p>Si {@code osmId}/{@code wikidataId} sont fournis (l'utilisateur a choisi une suggestion
@@ -235,8 +235,8 @@ public class SalleService {
       throw new ErreurMetier("Nom de salle invalide.");
     }
 
-    UUID salleUuid = resoudreSalleUuid(nom, salleCle);
-    if (salleRepository.existePourUtilisateur(userId, salleUuid)) {
+    UUID salleId = resoudreSalleId(nom, salleCle);
+    if (salleRepository.existePourUtilisateur(userId, salleId)) {
       throw new RessourceDejaExistante("Cette salle est déjà dans votre liste.");
     }
     if (salleRepository.compterPourUtilisateur(userId) >= CAP_SALLES) {
@@ -244,14 +244,14 @@ public class SalleService {
     }
 
     if (tmVenueId != null) {
-      salleRepository.enregistrerSalleSource(salleUuid, "ticketmaster", tmVenueId);
+      salleRepository.enregistrerSalleSource(salleId, "ticketmaster", tmVenueId);
     }
     if (osmId != null && !osmId.isBlank()) {
-      salleRepository.enregistrerSalleSource(salleUuid, "osm", osmId);
+      salleRepository.enregistrerSalleSource(salleId, "osm", osmId);
     }
     if (wikidataId != null && !wikidataId.isBlank()) {
       try {
-        self.mettreAJourWikidataIdEnSavepoint(salleUuid, wikidataId);
+        self.mettreAJourWikidataIdEnSavepoint(salleId, wikidataId);
       } catch (DuplicateKeyException e) {
         log.warn(
             "wikidataId déjà attribué à une autre salle — conflit ignoré salle={} wikidataId={}",
@@ -259,9 +259,9 @@ public class SalleService {
             wikidataId);
       }
     }
-    salleRepository.ajouterPourUtilisateur(userId, salleUuid);
+    salleRepository.ajouterPourUtilisateur(userId, salleId);
 
-    declencherWorkerParSources(salleUuid);
+    declencherWorkerParSources(salleId);
   }
 
   /// Met à jour le wikidataId d'une salle sous savepoint (#718, conflit possible sur l'index
@@ -279,12 +279,12 @@ public class SalleService {
   /// ici ferait au contraire tenter une <em>libération</em> du savepoint sur une connexion déjà en
   /// échec, provoquant un second échec (`TransactionSystemException`). Capturée par l'appelant.
   ///
-  /// @param salleUuid  UUID de la salle
+  /// @param salleId  UUID de la salle
   /// @param wikidataId Q-ID Wikidata à attribuer
   /// @throws DuplicateKeyException si le wikidataId est déjà attribué à une autre salle
   @Transactional(propagation = Propagation.NESTED)
-  void mettreAJourWikidataIdEnSavepoint(UUID salleUuid, String wikidataId) {
-    salleRepository.mettreAJourWikidataId(salleUuid, wikidataId);
+  void mettreAJourWikidataIdEnSavepoint(UUID salleId, String wikidataId) {
+    salleRepository.mettreAJourWikidataId(salleId, wikidataId);
   }
 
   /// Résout l'UUID d'une salle dans le référentiel global, en réutilisant une salle existante
@@ -305,7 +305,7 @@ public class SalleService {
   /// @param nom      nom affiché tel que saisi
   /// @param salleCle clé normalisée ({@link #normaliserSalleCle})
   /// @return UUID de la salle existante ou nouvellement créée
-  public UUID resoudreSalleUuid(String nom, String salleCle) {
+  public UUID resoudreSalleId(String nom, String salleCle) {
     Set<String> tokens =
         Arrays.stream(nom.split("\\s+"))
             .map(SalleService::normaliserSalleCle)
@@ -331,9 +331,9 @@ public class SalleService {
   /// <p>Lit toutes les sources configurées dans {@code salle_sources} (TM, Digitick…)
   /// et les transmet au worker en une seule requête.
   ///
-  /// @param salleUuid UUID de la salle
-  public void declencherWorkerParSources(UUID salleUuid) {
-    String identifiants = salleRepository.lireIdentifiantsSources(salleUuid);
+  /// @param salleId UUID de la salle
+  public void declencherWorkerParSources(UUID salleId) {
+    String identifiants = salleRepository.lireIdentifiantsSources(salleId);
     if (identifiants != null) {
       declencherWorkerSalle(identifiants);
     }
@@ -342,9 +342,9 @@ public class SalleService {
   /// Supprime une salle de la liste de suivi.
   ///
   /// @param userId    identifiant de l'utilisateur
-  /// @param salleUuid UUID stable de la salle
-  public void supprimer(String userId, UUID salleUuid) {
-    salleRepository.supprimerPourUtilisateur(userId, salleUuid);
+  /// @param salleId UUID stable de la salle
+  public void supprimer(String userId, UUID salleId) {
+    salleRepository.supprimerPourUtilisateur(userId, salleId);
   }
 
   /// Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
@@ -366,43 +366,43 @@ public class SalleService {
   @Transactional
   public UUID creerSalleDigitick(String nom, String slug, String ville, String dept) {
     String salleCle = normaliserSalleCle(nom);
-    UUID salleUuid = salleRepository.upsertSalleAvecLoc(salleCle, nom, ville, dept);
+    UUID salleId = salleRepository.upsertSalleAvecLoc(salleCle, nom, ville, dept);
     salleRepository
-        .trouverConflitDigitickSlug(slug, salleUuid)
+        .trouverConflitDigitickSlug(slug, salleId)
         .ifPresent(
             nomConflit -> {
               throw new ErreurMetier("Slug déjà utilisé par la salle " + nomConflit + ".", 409);
             });
-    salleRepository.enregistrerSalleSource(salleUuid, "digitick", slug);
-    declencherWorkerParSources(salleUuid);
-    return salleUuid;
+    salleRepository.enregistrerSalleSource(salleId, "digitick", slug);
+    declencherWorkerParSources(salleId);
+    return salleId;
   }
 
   /// Met à jour les métadonnées d'une salle (nom, ville, département).
   ///
-  /// @param salleUuid UUID de la salle
+  /// @param salleId UUID de la salle
   /// @param nom       nouveau nom (null = inchangé)
   /// @param ville     nouvelle ville (null = inchangée)
   /// @param dept      nouveau numéro de département (null = inchangé)
-  public void mettreAJourSalle(UUID salleUuid, String nom, String ville, String dept) {
-    salleRepository.mettreAJourSalle(salleUuid, nom, ville, dept);
+  public void mettreAJourSalle(UUID salleId, String nom, String ville, String dept) {
+    salleRepository.mettreAJourSalle(salleId, nom, ville, dept);
   }
 
   /// Retourne les identifiants sources CSV d'une salle (ex. {@code
   // "digitick:lempreinte,tm:rZ..."}).
   ///
-  /// @param salleUuid UUID de la salle
+  /// @param salleId UUID de la salle
   /// @return CSV d'identifiants ou {@code null} si aucun
-  public String lireIdentifiantsSources(UUID salleUuid) {
-    return salleRepository.lireIdentifiantsSources(salleUuid);
+  public String lireIdentifiantsSources(UUID salleId) {
+    return salleRepository.lireIdentifiantsSources(salleId);
   }
 
   /// Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
   ///
-  /// @param salleUuid UUID de la salle
+  /// @param salleId UUID de la salle
   /// @return {@code true} si supprimée, {@code false} si des contraintes bloquent
-  public boolean supprimerSalleDigitick(UUID salleUuid) {
-    return salleRepository.supprimerSalleDigitick(salleUuid);
+  public boolean supprimerSalleDigitick(UUID salleId) {
+    return salleRepository.supprimerSalleDigitick(salleId);
   }
 
   /// Normalise un nom de salle en retirant accents, ponctuation et espaces (clé stable).
@@ -447,23 +447,19 @@ public class SalleService {
               + "?q="
               + URLEncoder.encode(terme, StandardCharsets.UTF_8)
               + "&format=json&limit=6&extratags=1&addressdetails=1&countrycodes=fr";
-      HttpRequest request =
-          HttpRequest.newBuilder()
-              .uri(URI.create(url))
+      ReponseHttp reponse =
+          restClient
+              .get()
+              .uri(url)
               .header("User-Agent", "Strapontin/2.6.3 (contact: " + contact + ")")
-              .timeout(Duration.ofSeconds(3))
-              .GET()
-              .build();
-      HttpResponse<String> response =
-          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() != 200) {
-        log.warn("Nominatim erreur HTTP {} pour '{}'", response.statusCode(), terme);
+              .exchange(
+                  (req, resp) ->
+                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+      if (reponse.statut() != 200) {
+        log.warn("Nominatim erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
       }
-      return parseNominatimResultats(response.body());
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return List.of();
+      return parseNominatimResultats(reponse.corps());
     } catch (Exception e) {
       log.warn("Nominatim recherche salle échouée pour '{}'", terme, e);
       return List.of();
@@ -539,17 +535,16 @@ public class SalleService {
               + "&countryCode=FR&size=6&apikey="
               + URLEncoder.encode(tmKey.get(), StandardCharsets.UTF_8);
 
-      HttpRequest request =
-          HttpRequest.newBuilder()
-              .uri(URI.create(url))
-              .timeout(Duration.ofSeconds(3))
-              .GET()
-              .build();
-      HttpResponse<String> response =
-          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() != 200) return List.of();
+      ReponseHttp reponse =
+          restClient
+              .get()
+              .uri(url)
+              .exchange(
+                  (req, resp) ->
+                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+      if (reponse.statut() != 200) return List.of();
 
-      Map<String, Object> root = objectMapper.readValue(response.body(), Map.class);
+      Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
       Map<String, Object> embedded = (Map<String, Object>) root.get("_embedded");
       if (embedded == null) return List.of();
 
@@ -562,7 +557,7 @@ public class SalleService {
                 String nomBrut = (String) v.get("name");
                 if (nomBrut == null)
                   return new ResultatSalle(null, null, null, null, "ticketmaster");
-                String nom = TicketmasterSource.normaliserCasse(nomBrut);
+                String nom = Normalisation.normaliserCasse(nomBrut);
                 if (nomBrut.contains("??")) {
                   log.warn("TM salle nom corrompu id={} nom='{}'", v.get("id"), nomBrut);
                 }
@@ -580,22 +575,28 @@ public class SalleService {
     }
   }
 
+  /// Déclenche le worker en fire-and-forget, sur un thread virtuel (#923) — voir
+  /// {@link fr.strapontin.web.artiste.ArtisteService#declencherWorkerArtiste} pour la même
+  /// justification (RestClient est bloquant, contrairement à l'ancien HttpClient.sendAsync).
   private void declencherWorkerSalle(String identifiants) {
-    httpClient
-        .sendAsync(
-            HttpRequest.newBuilder()
+    Thread.startVirtualThread(
+        () -> {
+          try {
+            restClient
+                .post()
                 .uri(
-                    URI.create(
-                        "http://localhost:8081/trigger/salle?identifiants="
-                            + URLEncoder.encode(identifiants, StandardCharsets.UTF_8)))
-                .POST(HttpRequest.BodyPublishers.noBody())
-                .timeout(Duration.ofSeconds(5))
-                .build(),
-            HttpResponse.BodyHandlers.discarding())
-        .exceptionally(
-            e -> {
-              log.warn("Déclenchement worker salle impossible identifiants={}", identifiants, e);
-              return null;
-            });
+                    "http://localhost:8081/trigger/salle?identifiants="
+                        + URLEncoder.encode(identifiants, StandardCharsets.UTF_8))
+                .retrieve()
+                .toBodilessEntity();
+          } catch (Exception e) {
+            log.warn("Déclenchement worker salle impossible identifiants={}", identifiants, e);
+          }
+        });
   }
+
+  /// Réponse HTTP brute (statut + corps), utilisée pour reproduire avec {@link RestClient} le
+  /// comportement de l'ancien {@code java.net.http.HttpClient} : lire le statut sans lever
+  /// d'exception sur les codes non-2xx (contrairement à {@code retrieve()} par défaut).
+  private record ReponseHttp(int statut, String corps) {}
 }

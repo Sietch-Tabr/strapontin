@@ -1,8 +1,9 @@
 import { nextTick } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 export function useNavigation() {
   const router = useRouter();
+  const route = useRoute();
 
   function naviguer(href) {
     if (router.resolve(href).matched.length === 0) {
@@ -19,5 +20,10 @@ export function useNavigation() {
     });
   }
 
-  return { naviguer };
+  function estActif(href) {
+    if (href === "/") return route.path === "/";
+    return route.path === href || route.path.startsWith(href + "/");
+  }
+
+  return { naviguer, estActif };
 }

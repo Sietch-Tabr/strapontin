@@ -182,4 +182,60 @@ class NormalisationTest {
     assertTrue(Normalisation.jaro("radiohead", "coldplay") < 0.95);
     assertTrue(Normalisation.jaro("mika", "coldplay") < 0.95);
   }
+
+  // --- extraireDeptFrancais (#920, ex-TicketmasterSource/EventimSource.extraireDept) ---
+
+  @Test
+  void extraireDeptFrancais_codePostalAbsent_retourneNull() {
+    assertNull(Normalisation.extraireDeptFrancais(null));
+    assertNull(Normalisation.extraireDeptFrancais(""));
+    assertNull(Normalisation.extraireDeptFrancais("   "));
+  }
+
+  @Test
+  void extraireDeptFrancais_metropole_retourneDeuxChiffres() {
+    assertEquals("75", Normalisation.extraireDeptFrancais("75012"));
+    assertEquals("69", Normalisation.extraireDeptFrancais("69001"));
+    assertEquals("13", Normalisation.extraireDeptFrancais("13001"));
+    assertEquals("01", Normalisation.extraireDeptFrancais("01000"));
+  }
+
+  @Test
+  void extraireDeptFrancais_DOM_retourneTroisChiffres() {
+    assertEquals("971", Normalisation.extraireDeptFrancais("97100"));
+    assertEquals("972", Normalisation.extraireDeptFrancais("97200"));
+    assertEquals("976", Normalisation.extraireDeptFrancais("97600"));
+  }
+
+  @Test
+  void extraireDeptFrancais_codePostalCourt_retourneChaine() {
+    assertEquals("75", Normalisation.extraireDeptFrancais("75"));
+  }
+
+  @Test
+  void extraireDeptFrancais_avecEspacesSuperflus_ignoreLesEspaces() {
+    assertEquals("75", Normalisation.extraireDeptFrancais("  75012  "));
+  }
+
+  // --- normaliserCasse (#921, ex-TicketmasterSource.normaliserCasse) ---
+
+  @Test
+  void normaliserCasse_nomToutMajuscule_retourneTitleCase() {
+    assertEquals("Accor Arena", Normalisation.normaliserCasse("ACCOR ARENA"));
+  }
+
+  @Test
+  void normaliserCasse_nomAvecCasseMixte_retourneInchange() {
+    assertEquals("Accor Arena", Normalisation.normaliserCasse("Accor Arena"));
+  }
+
+  @Test
+  void normaliserCasse_nomAvecApostrophe_capitaliseApresApostrophe() {
+    assertEquals("L'Olympia", Normalisation.normaliserCasse("L'OLYMPIA"));
+  }
+
+  @Test
+  void normaliserCasse_articleEnMinuscule_conserveMinuscule() {
+    assertEquals("Orchestre de Paris", Normalisation.normaliserCasse("ORCHESTRE DE PARIS"));
+  }
 }

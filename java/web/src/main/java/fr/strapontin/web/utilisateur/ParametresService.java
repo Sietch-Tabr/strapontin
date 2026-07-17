@@ -28,12 +28,26 @@ public class ParametresService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final EmailService emailService;
+  private final UtilisateurRepository utilisateurRepository;
 
-  /// @param jdbc         accès JDBC
-  /// @param emailService service d'envoi d'emails
-  public ParametresService(NamedParameterJdbcTemplate jdbc, EmailService emailService) {
+  /// @param jdbc                  accès JDBC
+  /// @param emailService          service d'envoi d'emails
+  /// @param utilisateurRepository accès aux données utilisateur (#918)
+  public ParametresService(
+      NamedParameterJdbcTemplate jdbc,
+      EmailService emailService,
+      UtilisateurRepository utilisateurRepository) {
     this.jdbc = jdbc;
     this.emailService = emailService;
+    this.utilisateurRepository = utilisateurRepository;
+  }
+
+  /// Compte les concerts non vus/masqués pour un artiste suivi (badge "nouveau" de navigation).
+  ///
+  /// @param userId identifiant de l'utilisateur
+  /// @return nombre de concerts non vus pour les artistes suivis
+  public int compterNouveauxMatchesArtistes(String userId) {
+    return utilisateurRepository.compterNouveauxMatchesArtistes(userId);
   }
 
   /// Retourne le nombre d'artistes et de salles suivis par l'utilisateur.

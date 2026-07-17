@@ -178,9 +178,9 @@ class ReferentielSallesServiceTest {
 
     assertTrue(fusionnee);
     verify(jdbc, times(1)).update(contains("DELETE FROM concerts c1"), anyMap());
-    verify(jdbc, times(1)).update(contains("UPDATE concerts SET salle_uuid"), anyMap());
+    verify(jdbc, times(1)).update(contains("UPDATE concerts SET salle_id"), anyMap());
     verify(jdbc, times(1)).update(contains("DELETE FROM user_salles"), anyMap());
-    verify(jdbc, times(1)).update(contains("UPDATE user_salles SET salle_uuid"), anyMap());
+    verify(jdbc, times(1)).update(contains("UPDATE user_salles SET salle_id"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE salle_sources SET salle_id"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE salles SET"), anyMap());
     verify(jdbc, times(1)).update(contains("DELETE FROM salles WHERE"), anyMap());

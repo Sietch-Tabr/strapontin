@@ -29,6 +29,7 @@ public class ClientController {
 
   private static final int LONGUEUR_MAX_MESSAGE = 1000;
   private static final int LONGUEUR_MAX_URL = 500;
+  private static final int MAX_CLES_META = 20;
   private static final Set<String> TYPES_VALIDES = Set.of("js-error", "promise-rejection");
 
   private final LogAdminService logAdminService;
@@ -52,8 +53,6 @@ public class ClientController {
       type = "js-error";
     }
     String url = tronquer(String.valueOf(corps.getOrDefault("url", "")), LONGUEUR_MAX_URL);
-    Object ligne = corps.get("ligne");
-    Object colonne = corps.get("colonne");
     String userAgent = tronquer(request.getHeader("User-Agent"), LONGUEUR_MAX_URL);
 
     if (message.isBlank()) {
@@ -61,14 +60,20 @@ public class ClientController {
     }
 
     Map<String, Object> meta = new HashMap<>();
+    meta.put("url", url != null ? url : "");
+    meta.put("userAgent", userAgent != null ? userAgent : "");
     for (var entree : corps.entrySet()) {
+      if (meta.size() >= MAX_CLES_META) {
+        break;
+      }
       String cle = entree.getKey();
-      if (!"message".equals(cle) && !"type".equals(cle)) {
+      if (!"message".equals(cle)
+          && !"type".equals(cle)
+          && !"url".equals(cle)
+          && !"userAgent".equals(cle)) {
         meta.put(cle, entree.getValue() != null ? entree.getValue() : "");
       }
     }
-    meta.put("url", url != null ? url : "");
-    meta.put("userAgent", userAgent != null ? userAgent : "");
 
     logAdminService.logAdmin("error", "client-js", "[" + type + "] " + message, meta);
 

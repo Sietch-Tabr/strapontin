@@ -16,9 +16,10 @@ import org.springframework.stereotype.Service;
 ///
 /// Le worker n'a pas accès au `LogAdminService` du module web (deux applications Spring Boot
 /// séparées, ports 8080/8081). Point d'insertion générique utilisé par le bilan de panne
-/// mutualisé de {@link WorkerService#remonterBilan} et {@code NotificationDigestService}
-/// (#909/#912) — {@link WorkerService} écrit encore directement en SQL pour certains cas
-/// spécifiques non couverts par cette abstraction (ex. `executerRevoquerAdmins`).
+/// mutualisé de {@code WorkerStatsService#remonterBilan} et {@code NotificationDigestService}
+/// (#909/#912) — plusieurs services `worker.Worker*Service` écrivent encore directement en SQL
+/// pour certains cas spécifiques non couverts par cette abstraction (ex.
+/// {@code WorkerRevocationService#executerRevoquerAdmins}).
 ///
 /// @since 2.6.0
 /// @author Kwaite

@@ -4,7 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
-import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailAlerteService;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 ///
 /// <p>Si aucun job réussi n'est enregistré depuis {@value #SEUIL_HEURES} heures,
 /// un email d'alerte est envoyé à l'adresse retournée par
-/// {@link EmailService#obtenirDestinataireAlerte()} (#907).
+/// {@link EmailAlerteService#obtenirDestinataireAlerte()} (#907).
 /// Une nouvelle alerte ne peut être envoyée qu'après {@value #SEUIL_HEURES} heures
 /// depuis la dernière, pour éviter le spam en cas de panne prolongée.
 ///
@@ -34,13 +34,14 @@ public class WatchdogWorkerService {
   private static final Duration SEUIL_INACTIVITE = Duration.ofHours(SEUIL_HEURES);
 
   private final NamedParameterJdbcTemplate jdbc;
-  private final EmailService emailService;
+  private final EmailAlerteService emailAlerteService;
 
   private volatile Instant derniereAlerte;
 
-  public WatchdogWorkerService(NamedParameterJdbcTemplate jdbc, EmailService emailService) {
+  public WatchdogWorkerService(
+      NamedParameterJdbcTemplate jdbc, EmailAlerteService emailAlerteService) {
     this.jdbc = jdbc;
-    this.emailService = emailService;
+    this.emailAlerteService = emailAlerteService;
   }
 
   /// Vérifie l'activité du worker toutes les heures et envoie une alerte si inactif.
@@ -61,11 +62,11 @@ public class WatchdogWorkerService {
     String detailIso = derniereExec != null ? derniereExec.toString() : null;
     log.warn("watchdog: worker inactif depuis {} — envoi alerte", detailIso);
 
-    emailService
+    emailAlerteService
         .obtenirDestinataireAlerte()
         .ifPresentOrElse(
             email -> {
-              emailService.envoyerAlerteWorkerInactif(email, detailIso);
+              emailAlerteService.envoyerAlerteWorkerInactif(email, detailIso);
               derniereAlerte = Instant.now();
             },
             () ->

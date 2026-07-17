@@ -183,12 +183,12 @@ public class SpectacleService {
     } else if (sourceSalles && !sourceArtistes) {
       List<UUID> ids =
           jdbc.queryForList(
-              "SELECT salle_uuid FROM user_salles WHERE user_id = :u",
+              "SELECT salle_id FROM user_salles WHERE user_id = :u",
               Map.of("u", userId),
               UUID.class);
       if (ids.isEmpty()) where.append(" AND false");
       else {
-        where.append(" AND c.salle_uuid IN (:salleIds)");
+        where.append(" AND c.salle_id IN (:salleIds)");
         params.put("salleIds", ids);
       }
     }

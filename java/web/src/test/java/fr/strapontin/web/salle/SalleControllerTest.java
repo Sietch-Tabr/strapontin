@@ -106,11 +106,11 @@ class SalleControllerTest {
 
   @Test
   void supprimerSalle_delegueAuServiceEtRetourne204() {
-    UUID salleUuid = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    UUID salleId = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-    ResponseEntity<Void> rep = controller.supprimerSalle(salleUuid, auth);
+    ResponseEntity<Void> rep = controller.supprimerSalle(salleId, auth);
 
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
-    verify(salleService).supprimer("user-1", salleUuid);
+    verify(salleService).supprimer("user-1", salleId);
   }
 }

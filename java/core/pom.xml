@@ -14,6 +14,12 @@
     <artifactId>core</artifactId>
 
     <dependencies>
+        <!-- Dérivation de clé pour ConfigCipher (#922) -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

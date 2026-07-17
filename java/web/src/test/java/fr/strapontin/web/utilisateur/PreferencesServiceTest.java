@@ -80,12 +80,12 @@ class PreferencesServiceTest {
         .update(org.mockito.ArgumentMatchers.contains("INSERT INTO artistes"), anyMap());
   }
 
-  // #824 : même principe côté salles — SalleService.resoudreSalleUuid plutôt qu'un ON CONFLICT
+  // #824 : même principe côté salles — SalleService.resoudreSalleId plutôt qu'un ON CONFLICT
   // exact sur salle_cle.
   @Test
   void importerSalles_doublonFlou_reutiliseUuidResoluParSalleService() {
     UUID salleExistante = UUID.randomUUID();
-    when(salleService.resoudreSalleUuid(eq("Zenith Paris"), anyString()))
+    when(salleService.resoudreSalleId(eq("Zenith Paris"), anyString()))
         .thenReturn(salleExistante);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
@@ -97,7 +97,7 @@ class PreferencesServiceTest {
         service.importer("u1", export, false, false);
 
     assertEquals(1, resultat.salles());
-    verify(salleService).resoudreSalleUuid(eq("Zenith Paris"), anyString());
+    verify(salleService).resoudreSalleId(eq("Zenith Paris"), anyString());
     verify(jdbc, never())
         .update(org.mockito.ArgumentMatchers.contains("INSERT INTO salles"), anyMap());
   }
@@ -133,7 +133,7 @@ class PreferencesServiceTest {
     when(jdbc.queryForObject(
             org.mockito.ArgumentMatchers.contains("user_salles"), anyMap(), eq(Integer.class)))
         .thenReturn(199);
-    when(salleService.resoudreSalleUuid(anyString(), anyString())).thenReturn(UUID.randomUUID());
+    when(salleService.resoudreSalleId(anyString(), anyString())).thenReturn(UUID.randomUUID());
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     ExportComplet export =
@@ -161,7 +161,7 @@ class PreferencesServiceTest {
 
     assertEquals(0, resultat.salles());
     assertEquals(1, resultat.rejetes());
-    verify(salleService, never()).resoudreSalleUuid(anyString(), anyString());
+    verify(salleService, never()).resoudreSalleId(anyString(), anyString());
   }
 
   @Test
@@ -246,7 +246,7 @@ class PreferencesServiceTest {
 
     when(artisteService.resoudreArtisteId(eq("Radiohead"), anyString()))
         .thenReturn(UUID.randomUUID());
-    when(salleService.resoudreSalleUuid(eq("Zenith Paris"), anyString()))
+    when(salleService.resoudreSalleId(eq("Zenith Paris"), anyString()))
         .thenReturn(UUID.randomUUID());
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 

@@ -17,12 +17,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
@@ -55,11 +52,6 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   private static final String CHEMIN_EVENTS = "/events.json";
   private static final String TRI_DATE_ASC = "date,asc";
   private static final String CLE_EMBEDDED = "_embedded";
-
-  private static final Set<String> ARTICLES_FR =
-      Set.of(
-          "de", "du", "des", "d'", "le", "la", "les", "l'", "en", "au", "aux", "et", "à", "sur",
-          "sous");
 
   private static final Map<String, String> CLASSIFICATION_MAP =
       Map.of(
@@ -242,19 +234,6 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     }
   }
 
-  /// Extrait le code département depuis un code postal français.
-  ///
-  /// Les DOM-TOM commençant par 97 retournent les 3 premiers chiffres. La Corse (2A/2B) est
-  /// déjà normalisée en "20" à la saisie.
-  ///
-  /// @param codePostal code postal (peut être null)
-  /// @return code département à 2 ou 3 chiffres, ou null si absent/invalide
-  public static String extraireDept(String codePostal) {
-    if (codePostal == null || codePostal.isBlank()) return null;
-    if (codePostal.startsWith("97")) return codePostal.substring(0, 3);
-    return codePostal.substring(0, 2);
-  }
-
   /// Extrait la date et l'heure d'un événement TM depuis les champs localDate / localTime.
   ///
   /// L'heure "00:00" est considérée comme absente — TM utilise minuit par défaut pour les
@@ -268,67 +247,6 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     if (heureStr == null) return new String[] {date, null};
     String heure = heureStr.substring(0, 5);
     return new String[] {date, "00:00".equals(heure) ? null : heure};
-  }
-
-  /// Convertit un nom tout-majuscule en title case français.
-  ///
-  /// Les articles courants restent en minuscules sauf en début de chaîne. Si la chaîne
-  /// n'est pas entièrement en majuscules, elle est retournée sans modification.
-  ///
-  /// @param nom nom à normaliser
-  /// @return nom en title case ou nom inchangé
-  private static final Pattern SEP_NORMALISER_CASSE = Pattern.compile("\\s+|-");
-
-  public static String normaliserCasse(String nom) {
-    if (!nom.equals(nom.toUpperCase())) return nom;
-    Matcher m = SEP_NORMALISER_CASSE.matcher(nom);
-    StringBuilder sb = new StringBuilder();
-    boolean debutPhrase = true;
-    int dernier = 0;
-    while (m.find()) {
-      String mot = nom.substring(dernier, m.start());
-      if (!mot.isEmpty()) {
-        String bas = mot.toLowerCase();
-        if (!debutPhrase && ARTICLES_FR.contains(bas)) {
-          sb.append(bas);
-        } else {
-          sb.append(capitaliserAvecApostrophe(bas));
-        }
-      }
-      String sep = m.group();
-      sb.append(sep);
-      debutPhrase = sep.equals("-");
-      dernier = m.end();
-    }
-    String fin = nom.substring(dernier);
-    if (!fin.isEmpty()) {
-      String bas = fin.toLowerCase();
-      if (!debutPhrase && ARTICLES_FR.contains(bas)) {
-        sb.append(bas);
-      } else {
-        sb.append(capitaliserAvecApostrophe(bas));
-      }
-    }
-    return sb.toString();
-  }
-
-  private static String capitaliserAvecApostrophe(String mot) {
-    if (mot.isEmpty()) return mot;
-    StringBuilder sb = new StringBuilder();
-    boolean majSuivante = true;
-    for (int i = 0; i < mot.length(); i++) {
-      char c = mot.charAt(i);
-      if (c == '\'' || c == '’') {
-        sb.append(c);
-        majSuivante = true;
-      } else if (majSuivante) {
-        sb.append(Character.toUpperCase(c));
-        majSuivante = false;
-      } else {
-        sb.append(c);
-      }
-    }
-    return sb.toString();
   }
 
   private static String normaliserClassification(String nom) {
@@ -368,7 +286,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
               .equals(Normalisation.normaliserTexte(artisteFallback))) {
         return null;
       }
-      return normaliserCasse(nomAttraction);
+      return Normalisation.normaliserCasse(nomAttraction);
     }
     if (artisteFallback == null) return null;
     String nomEvenement = (String) evt.get("name");
@@ -418,13 +336,14 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
         embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
     Map<String, Object> venue = venues != null && !venues.isEmpty() ? venues.get(0) : null;
     String salle =
-        normaliserCasse(
+        Normalisation.normaliserCasse(
             venue != null && venue.get("name") != null
                 ? (String) venue.get("name")
                 : "Salle inconnue");
     Map<String, String> cityMap = venue != null ? (Map<String, String>) venue.get("city") : null;
     String ville = cityMap != null ? cityMap.get("name") : null;
-    String dept = extraireDept(venue != null ? (String) venue.get("postalCode") : null);
+    String dept =
+        Normalisation.extraireDeptFrancais(venue != null ? (String) venue.get("postalCode") : null);
 
     Object venueIdObj = venue != null ? venue.get("id") : null;
     String salleSourceId = venueIdObj != null ? "ticketmaster:" + venueIdObj : null;
