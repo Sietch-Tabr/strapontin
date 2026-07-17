@@ -307,6 +307,40 @@ final class EmailTemplates {
     return enveloppErreur("Worker inactif", corps, baseUrl);
   }
 
+  /// Alerte de seuil (80%) sur le quota d'envoi Resend jour et/ou mois (#981, suite de
+  /// l'incident #907).
+  ///
+  /// @param envoyesJour nombre d'envois comptabilisés pour le jour courant
+  /// @param limiteJour  limite journalière Resend (tier gratuit : 100)
+  /// @param envoyesMois nombre d'envois comptabilisés pour le mois courant
+  /// @param limiteMois  limite mensuelle Resend (tier gratuit : 3000)
+  /// @param baseUrl     l'URL publique de base de l'application
+  /// @return le HTML de l'alerte quota Resend
+  static String alerteQuotaResend(
+      int envoyesJour, int limiteJour, int envoyesMois, int limiteMois, String baseUrl) {
+    String corps =
+        """
+        <p style="color: %s; font-size: 14px; margin: 0 0 8px">
+          Le quota d'envoi Resend approche de sa limite.
+        </p>
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+          Jour : %d / %d envois. Mois : %d / %d envois. Au-delà, les emails
+          transactionnels et notifications sont bloqués avant tout appel réseau
+          (garde-fou #981).
+        </p>
+        <p style="margin-top: 24px">%s</p>
+        """
+            .formatted(
+                C_TEXTE,
+                C_TEXTE,
+                envoyesJour,
+                limiteJour,
+                envoyesMois,
+                limiteMois,
+                bouton(baseUrl + "/admin", "Aller à l'administration →"));
+    return enveloppErreur("Quota Resend proche de la limite", corps, baseUrl);
+  }
+
   /// Digest d'alerte pour les nouvelles entrées {@code logs_admin} de niveau erreur (#765).
   ///
   /// @param erreurs liste des entrées d'erreur à afficher (non vide)

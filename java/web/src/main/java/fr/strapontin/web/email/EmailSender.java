@@ -10,6 +10,8 @@ import com.resend.services.emails.model.CreateEmailOptions;
 import fr.strapontin.web.config.ConfigService;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -19,17 +21,29 @@ import org.springframework.stereotype.Component;
 /// éviter de dupliquer le contexte Resend (client, expéditeur, URL de base) et la résolution du
 /// destinataire d'alerte entre les deux classes.
 ///
+/// <p>Choke-point unique des envois Resend côté web (#981) : {@link #envoyer} vérifie le quota
+/// jour/mois ({@link GestionQuotaResend}) avant tout appel réseau — bloque silencieusement (log
+/// {@code warn}, pas d'exception) comme le fait déjà l'absence de {@code RESEND_API_KEY} en amont
+/// dans {@link #obtenirContexte()}.
+///
 /// @since 2.7.0
 /// @author Kwaite
 @Component
 class EmailSender {
 
+  private static final Logger log = LoggerFactory.getLogger(EmailSender.class);
+
   private final ConfigService configService;
   private final JdbcTemplate jdbcTemplate;
+  private final GestionQuotaResend gestionQuotaResend;
 
-  EmailSender(ConfigService configService, JdbcTemplate jdbcTemplate) {
+  EmailSender(
+      ConfigService configService,
+      JdbcTemplate jdbcTemplate,
+      GestionQuotaResend gestionQuotaResend) {
     this.configService = configService;
     this.jdbcTemplate = jdbcTemplate;
+    this.gestionQuotaResend = gestionQuotaResend;
   }
 
   record ContexteEmail(Resend client, String expediteur, String baseUrl) {}
@@ -76,6 +90,10 @@ class EmailSender {
       String sujet,
       String corps,
       String texte) {
+    if (!gestionQuotaResend.reserverEnvoi()) {
+      log.warn("quota Resend atteint — envoi ignoré destinataireHash={}", destinataire.hashCode());
+      return;
+    }
     try {
       CreateEmailOptions options =
           CreateEmailOptions.builder()
