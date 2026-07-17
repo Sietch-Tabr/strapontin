@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
 /// Tests unitaires pour {@link AuthController} — challenge TOTP et réinitialisation de mot de
@@ -248,6 +249,32 @@ class AuthControllerTest {
         "alice.dupont-2 doit passer la validation de format et atteindre activerCompteInvite");
   }
 
+  @Test
+  void reinitialiserMotDePasse_activationInvitation_peupleWebAuthenticationDetailsSurLeToken() {
+    when(authService.activerCompteInvite("token", "alice", "motdepasse12345")).thenReturn("alice");
+    UtilisateurDetails principal =
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
+    Authentication auth = mock(Authentication.class);
+    when(auth.getPrincipal()).thenReturn(principal);
+    when(authenticationManager.authenticate(any())).thenReturn(auth);
+
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    when(httpRequest.getRemoteAddr()).thenReturn("203.0.113.7");
+    when(httpRequest.getSession(false)).thenReturn(null);
+    when(httpRequest.getSession(true)).thenReturn(mock(HttpSession.class));
+
+    authController.reinitialiserMotDePasse(
+        new ResetPasswordRequest("token", "motdepasse12345", "alice"), httpRequest);
+
+    ArgumentCaptor<UsernamePasswordAuthenticationToken> tokenCaptor =
+        ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
+    verify(authenticationManager).authenticate(tokenCaptor.capture());
+    assertNotNull(tokenCaptor.getValue().getDetails());
+    assertInstanceOf(
+        org.springframework.security.web.authentication.WebAuthenticationDetails.class,
+        tokenCaptor.getValue().getDetails());
+  }
+
   // --- logout ---
 
   @Test
@@ -349,6 +376,30 @@ class AuthControllerTest {
 
     assertTrue(reponse.getBody().totpRequis());
     verify(session).setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
+  }
+
+  @Test
+  void login_credentialsValides_peupleWebAuthenticationDetailsSurLeToken() {
+    UtilisateurDetails principal =
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
+    Authentication auth = mock(Authentication.class);
+    when(auth.getPrincipal()).thenReturn(principal);
+    when(authenticationManager.authenticate(any())).thenReturn(auth);
+
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    when(httpRequest.getRemoteAddr()).thenReturn("203.0.113.7");
+    when(httpRequest.getSession(false)).thenReturn(null);
+    when(httpRequest.getSession(true)).thenReturn(mock(HttpSession.class));
+
+    authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
+
+    ArgumentCaptor<UsernamePasswordAuthenticationToken> tokenCaptor =
+        ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
+    verify(authenticationManager).authenticate(tokenCaptor.capture());
+    assertNotNull(tokenCaptor.getValue().getDetails());
+    assertInstanceOf(
+        org.springframework.security.web.authentication.WebAuthenticationDetails.class,
+        tokenCaptor.getValue().getDetails());
   }
 
   @Test
