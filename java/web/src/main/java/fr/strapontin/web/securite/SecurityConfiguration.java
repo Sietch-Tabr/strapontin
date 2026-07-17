@@ -129,6 +129,7 @@ public class SecurityConfiguration {
                         "/manifest.json",
                         "/sw.js",
                         "/offline.html",
+                        "/offline-fallback.js",
                         "/index.html")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/push")

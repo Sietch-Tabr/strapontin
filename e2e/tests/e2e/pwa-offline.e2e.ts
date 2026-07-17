@@ -53,3 +53,20 @@ test.describe("Scénario: PWA — démarrage alors que l'appareil est déjà hor
     ).toBeVisible({ timeout: 3000 });
   });
 });
+
+// #983 : /offline-fallback.js tombait dans .anyRequest().authenticated() (absent de la liste
+// permitAll de SecurityConfiguration), redirigeant tout visiteur non authentifié vers /login au
+// lieu de servir le script — précisément le cas où ce filet de secours serait le plus utile
+// (premier lancement PWA hors-ligne, avant toute connexion). Contexte de requête non authentifié
+// (playwright.config.ts), sans storageState — reproduit le visiteur anonyme sans navigation
+// complète (pattern déjà utilisé dans auth.e2e.ts pour /api/auth/me).
+test.describe("Scénario: offline-fallback.js accessible sans authentification (#983)", () => {
+  test("offlineFallback_visiteurNonAuthentifie_accessiblePubliquement", async ({
+    request,
+  }) => {
+    const rep = await request.get("/offline-fallback.js");
+
+    expect(rep.status()).toBe(200);
+    expect(rep.headers()["content-type"]).toMatch(/javascript/);
+  });
+});
