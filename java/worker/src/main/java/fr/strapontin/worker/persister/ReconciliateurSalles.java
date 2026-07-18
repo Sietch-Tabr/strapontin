@@ -369,6 +369,14 @@ public class ReconciliateurSalles {
   /// Rattache les concerts sans {@code salleId} à leur salle via correspondance exacte
   /// sur {@code salle_norm} / {@code nom_norm}.
   ///
+  /// <p>#973 (rattrapage) : une simple égalité de {@code nom_norm} ignorait le département,
+  /// défaisant silencieusement le filtre dept de {@link #chercherSalleParTokens} pour deux
+  /// salles homonymes au texte strictement identique (ex. "Casino - Barriere" Toulouse/Lille,
+  /// #971 — {@code chercherSalleParTokens} rejette correctement le candidat en amont, mais ce
+  /// repli par égalité exacte le retrouvait quand même en aval, sans filtre). Même repli sur le
+  /// département d'un concert déjà rattaché que {@link #chercherSalleParTokens} quand
+  /// {@code salles.dept} est vide.
+  ///
   /// @param concerts concerts après déduplication
   /// @return liste enrichie avec les {@code salleId} résolus par nom_norm
   List<ValeurConcert> raccrocherSallesParNomNorm(List<ValeurConcert> concerts) {
@@ -380,18 +388,33 @@ public class ReconciliateurSalles {
             .toList();
     if (sallesNormsSansUuid.isEmpty()) return concerts;
 
-    Map<String, UUID> cache = new HashMap<>();
+    Map<String, List<Map<String, Object>>> candidatsParNomNorm = new HashMap<>();
     jdbc.queryForList(
-            "SELECT nom_norm, id FROM salles WHERE nom_norm IN (:normsNoms)",
+            "SELECT s.nom_norm AS nom_norm, s.id AS id,"
+                + " COALESCE(s.dept, (SELECT c.dept FROM concerts c"
+                + "                   WHERE c.salle_id = s.id AND c.dept IS NOT NULL LIMIT 1))"
+                + "   AS dept_effectif"
+                + " FROM salles s WHERE s.nom_norm IN (:normsNoms)",
             Map.of("normsNoms", sallesNormsSansUuid))
-        .forEach(r -> cache.put((String) r.get("nom_norm"), (UUID) r.get("id")));
+        .forEach(
+            r ->
+                candidatsParNomNorm
+                    .computeIfAbsent((String) r.get("nom_norm"), _ -> new ArrayList<>())
+                    .add(r));
 
     return concerts.stream()
         .map(
             c -> {
               if (c.salleId() != null) return c;
-              UUID uuid = cache.get(c.salleNorm());
-              return uuid != null ? c.avecSalleId(uuid) : c;
+              List<Map<String, Object>> candidats = candidatsParNomNorm.get(c.salleNorm());
+              if (candidats == null) return c;
+              for (Map<String, Object> candidat : candidats) {
+                String deptEffectif = (String) candidat.get("dept_effectif");
+                if (c.dept() == null || deptEffectif == null || deptEffectif.equals(c.dept())) {
+                  return c.avecSalleId((UUID) candidat.get("id"));
+                }
+              }
+              return c;
             })
         .toList();
   }

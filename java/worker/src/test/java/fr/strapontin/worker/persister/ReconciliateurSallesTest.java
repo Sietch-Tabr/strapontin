@@ -158,4 +158,87 @@ class ReconciliateurSallesTest {
     assertEquals(
         Normalisation.normaliserTexte("L'Olympia"), paramsCaptor.getValue().get("nomNorm"));
   }
+
+  // #973 (rattrapage) : raccrocherSallesParNomNorm faisait un rattachement par égalité exacte de
+  // nom_norm sans aucun filtre dept, défaisant silencieusement le filtre dept ajouté à
+  // chercherSalleParTokens — deux salles homonymes au texte strictement identique (ex. "Casino -
+  // Barriere" Toulouse/Lille, #971) se faisaient quand même fusionner via ce repli en aval.
+  @Test
+  void raccrocherSallesParNomNorm_candidatDeptDifferent_neRattachePas() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+
+    Map<String, Object> candidatLille = new HashMap<>();
+    candidatLille.put("nom_norm", "casino barriere");
+    candidatLille.put("id", UUID.randomUUID());
+    candidatLille.put("dept_effectif", "59");
+
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(candidatLille));
+
+    ValeurConcert entrant =
+        new ValeurConcert(
+            "Artiste Toulouse",
+            "artiste toulouse",
+            LocalDate.of(2026, 11, 28),
+            null,
+            "Casino - Barriere",
+            "casino barriere",
+            "Toulouse",
+            "31",
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+    List<ValeurConcert> resultat = reconciliateur.raccrocherSallesParNomNorm(List.of(entrant));
+
+    assertNull(resultat.get(0).salleId());
+  }
+
+  @Test
+  void raccrocherSallesParNomNorm_candidatDeptCorrespondant_rattache() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    UUID uuidToulouse = UUID.randomUUID();
+
+    Map<String, Object> candidatToulouse = new HashMap<>();
+    candidatToulouse.put("nom_norm", "casino barriere");
+    candidatToulouse.put("id", uuidToulouse);
+    candidatToulouse.put("dept_effectif", "31");
+
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(candidatToulouse));
+
+    ValeurConcert entrant =
+        new ValeurConcert(
+            "Artiste Toulouse",
+            "artiste toulouse",
+            LocalDate.of(2026, 11, 28),
+            null,
+            "Casino - Barriere",
+            "casino barriere",
+            "Toulouse",
+            "31",
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+    List<ValeurConcert> resultat = reconciliateur.raccrocherSallesParNomNorm(List.of(entrant));
+
+    assertEquals(uuidToulouse, resultat.get(0).salleId());
+  }
 }

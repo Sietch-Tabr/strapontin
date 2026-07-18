@@ -560,9 +560,9 @@ class PersisterConcertsIntegrationTest {
     jdbc.update(
         "INSERT INTO concerts (artiste, artiste_norm, date, heure, salle, salle_norm, dept,"
             + " source, salle_id)"
-            + " VALUES ('Artiste Lille', 'artiste lille', :date, '20:30', 'Casino Barriere',"
-            + " 'casino barriere', '59', CAST('ticketmaster' AS source_concert),"
-            + " CAST(:salleId AS uuid))",
+            + " VALUES ('Artiste Lille', 'artiste lille', CAST(:date AS date), '20:30',"
+            + " 'Casino Barriere', 'casino barriere', '59',"
+            + " CAST('ticketmaster' AS source_concert), CAST(:salleId AS uuid))",
         Map.of("date", DATE_RECENTE, "salleId", salleLille.toString()));
 
     // Nouveau concert homonyme, sans salleSourceId (déclenche chercherSalleParTokens), dept
