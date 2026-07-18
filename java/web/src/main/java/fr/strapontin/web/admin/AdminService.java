@@ -30,8 +30,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.session.FindByIndexNameSessionRepository;
-import org.springframework.session.Session;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -58,7 +56,6 @@ public class AdminService {
   private final EmailService emailService;
   private final LogAdminService logAdminService;
   private final VerificationRepository verificationRepository;
-  private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
   private AdminService self;
 
@@ -66,18 +63,15 @@ public class AdminService {
   /// @param emailService           service d'envoi d'emails
   /// @param logAdminService        service de logs admin
   /// @param verificationRepository accès aux tokens de vérification
-  /// @param sessionRepository      dépôt de sessions JDBC (révocation après changement de rôle)
   public AdminService(
       NamedParameterJdbcTemplate jdbc,
       EmailService emailService,
       LogAdminService logAdminService,
-      VerificationRepository verificationRepository,
-      FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
+      VerificationRepository verificationRepository) {
     this.jdbc = jdbc;
     this.emailService = emailService;
     this.logAdminService = logAdminService;
     this.verificationRepository = verificationRepository;
-    this.sessionRepository = sessionRepository;
   }
 
   /// Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour

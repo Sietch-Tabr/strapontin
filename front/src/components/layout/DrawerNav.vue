@@ -43,13 +43,17 @@
         :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguerEtFermer(item.href)"
       >
-        <svg class="icon" aria-hidden="true">
+        <svg
+          class="icon"
+          :class="{ 'icon--nouveaute-actif': item.href === '/changelog' && changelogNonVu }"
+          aria-hidden="true"
+        >
           <use :href="'/icons/lucide-sprite.svg#' + item.icone" />
         </svg>
         <span>{{ item.label }}</span>
         <span
           v-if="item.href === '/changelog' && changelogNonVu"
-          class="nav-badge--point"
+          class="nav-badge--point nav-badge--point-pulse"
           aria-label="Nouveautés non lues"
         ></span>
       </a>

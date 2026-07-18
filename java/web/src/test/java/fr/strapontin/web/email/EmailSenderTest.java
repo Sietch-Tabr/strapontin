@@ -13,6 +13,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.resend.Resend;
+import com.resend.services.emails.Emails;
 import fr.strapontin.web.config.ConfigService;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,13 +33,16 @@ class EmailSenderTest {
 
   private ConfigService configService;
   private JdbcTemplate jdbcTemplate;
+  private GestionQuotaResend gestionQuotaResend;
   private EmailSender emailSender;
 
   @BeforeEach
   void setUp() {
     configService = mock(ConfigService.class);
     jdbcTemplate = mock(JdbcTemplate.class);
-    emailSender = new EmailSender(configService, jdbcTemplate);
+    gestionQuotaResend = mock(GestionQuotaResend.class);
+    when(gestionQuotaResend.reserverEnvoi()).thenReturn(true);
+    emailSender = new EmailSender(configService, jdbcTemplate, gestionQuotaResend);
   }
 
   @Test
@@ -78,5 +83,36 @@ class EmailSenderTest {
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
 
     assertTrue(emailSender.obtenirContexte().isEmpty());
+  }
+
+  // --- envoyer (#981 : garde-fou quota Resend) ---
+
+  @Test
+  void envoyer_quotaResendAtteint_neContactePasResend() {
+    when(gestionQuotaResend.reserverEnvoi()).thenReturn(false);
+    Resend client = mock(Resend.class);
+    EmailSender.ContexteEmail ctx =
+        new EmailSender.ContexteEmail(client, "contact@exemple.fr", "https://exemple.fr");
+
+    emailSender.envoyer(
+        ctx, "dest@exemple.fr", "contact@exemple.fr", "Sujet", "<p>corps</p>", "texte");
+
+    verify(client, never()).emails();
+  }
+
+  @Test
+  void envoyer_quotaResendDisponible_contacteResend()
+      throws com.resend.core.exception.ResendException {
+    when(gestionQuotaResend.reserverEnvoi()).thenReturn(true);
+    Resend client = mock(Resend.class);
+    Emails emails = mock(Emails.class);
+    when(client.emails()).thenReturn(emails);
+    EmailSender.ContexteEmail ctx =
+        new EmailSender.ContexteEmail(client, "contact@exemple.fr", "https://exemple.fr");
+
+    emailSender.envoyer(
+        ctx, "dest@exemple.fr", "contact@exemple.fr", "Sujet", "<p>corps</p>", "texte");
+
+    verify(emails).send(org.mockito.ArgumentMatchers.any());
   }
 }

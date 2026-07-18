@@ -4,13 +4,18 @@
  */
 package fr.strapontin.web.email;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.core.CompteurEnvoisResend;
 import fr.strapontin.web.config.ConfigService;
 import java.time.Instant;
 import java.util.Optional;
@@ -85,5 +90,54 @@ class EmailAlerteServiceTest {
     service.envoyerNotificationPlainteSpam("plaignant@exemple.fr");
 
     verify(emailSender, never()).obtenirDestinataireAlerte();
+  }
+
+  // --- envoyerAlerteQuotaResend (#981) ---
+
+  private static final CompteurEnvoisResend COMPTEUR_SEUIL_JOUR =
+      new CompteurEnvoisResend("2026-07-18", 85, "2026-07", 200, false, false);
+
+  @Test
+  void envoyerAlerteQuotaResend_resendApiKeyAbsent_retourneFalse() {
+    when(emailSender.obtenirContexte()).thenReturn(Optional.empty());
+
+    boolean resultat = service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
+
+    assertFalse(resultat);
+  }
+
+  @Test
+  void envoyerAlerteQuotaResend_envoiReussi_retourneTrue() {
+    when(emailSender.obtenirContexte())
+        .thenReturn(
+            Optional.of(
+                new EmailSender.ContexteEmail(null, "noreply@exemple.fr", "https://exemple.fr")));
+
+    boolean resultat = service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
+
+    assertTrue(resultat);
+    verify(emailSender)
+        .envoyer(
+            any(),
+            eq("admin@exemple.fr"),
+            eq("noreply@exemple.fr"),
+            anyString(),
+            anyString(),
+            anyString());
+  }
+
+  @Test
+  void envoyerAlerteQuotaResend_echecEnvoi_retourneFalse() {
+    when(emailSender.obtenirContexte())
+        .thenReturn(
+            Optional.of(
+                new EmailSender.ContexteEmail(null, "noreply@exemple.fr", "https://exemple.fr")));
+    doThrow(new IllegalStateException("échec Resend"))
+        .when(emailSender)
+        .envoyer(any(), anyString(), anyString(), anyString(), anyString(), anyString());
+
+    boolean resultat = service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
+
+    assertFalse(resultat);
   }
 }

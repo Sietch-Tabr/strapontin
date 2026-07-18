@@ -220,15 +220,20 @@ public class ReconciliateurSalles {
       }
     }
     for (var entree : meilleurNom.entrySet()) {
+      String nouveauNom = entree.getValue();
       int modifies =
           jdbc.update(
-              "UPDATE salles SET nom = :nom WHERE id = CAST(:uuid AS uuid) AND nom <> :nom",
-              Map.of("nom", entree.getValue(), "uuid", entree.getKey().toString()));
+              "UPDATE salles SET nom = :nom, nom_norm = :nomNorm"
+                  + " WHERE id = CAST(:uuid AS uuid) AND nom <> :nom",
+              Map.of(
+                  "nom",
+                  nouveauNom,
+                  "nomNorm",
+                  Normalisation.normaliserTexte(nouveauNom),
+                  "uuid",
+                  entree.getKey().toString()));
       if (modifies > 0) {
-        log.info(
-            "renommage salle absorbé salleId={} nouveauNom={}",
-            entree.getKey(),
-            entree.getValue());
+        log.info("renommage salle absorbé salleId={} nouveauNom={}", entree.getKey(), nouveauNom);
       }
     }
   }
@@ -298,7 +303,10 @@ public class ReconciliateurSalles {
   /// entre deux sources ("l olympia" vs "lolympia") ne partage aucun token substantiel et le
   /// candidat n'est jamais récupéré, quand bien même {@link #estDoublonSalle} le détecterait.
   /// Le filtre {@code dept} élimine les salles homonymes de départements distincts, réduisant le
-  /// risque de faux positif du critère pivot dans {@link #estDoublonSalle}.
+  /// risque de faux positif du critère pivot dans {@link #estDoublonSalle}. Repli sur le
+  /// département d'un concert déjà rattaché à la salle candidate quand {@code salles.dept} est
+  /// vide (#973) — cette colonne n'est écrite qu'à la création et jamais mise à jour ensuite,
+  /// contrairement à {@code concerts.dept}.
   ///
   /// @param nom  nom brut de la salle à créer
   /// @param dept département connu du concert (nullable — désactive le filtre si absent)
@@ -326,12 +334,23 @@ public class ReconciliateurSalles {
     params.addValue("nomNormSquash", nomNormSquash);
     params.addValue("dept", dept, Types.VARCHAR);
 
+    // #973 : salles.dept n'est écrit qu'à la création et n'est jamais mis à jour ensuite,
+    // contrairement à concerts.dept (fiablement renseigné à chaque ingestion) — un simple
+    // "dept IS NULL" désactivait le filtre pour la quasi-totalité des salles existantes. Repli
+    // sur le département d'un concert déjà rattaché à la salle candidate quand salles.dept est
+    // vide.
     List<Map<String, Object>> lignes =
         jdbc.queryForList(
-            "SELECT id, nom_norm FROM salles"
+            "SELECT s.id AS id, s.nom_norm AS nom_norm FROM salles s"
                 + " WHERE "
                 + whereTokens
-                + " AND (:dept IS NULL OR dept IS NULL OR dept = :dept)"
+                + " AND (:dept IS NULL"
+                + "      OR COALESCE(s.dept, (SELECT c.dept FROM concerts c"
+                + "                           WHERE c.salle_id = s.id AND c.dept IS NOT NULL"
+                + "                           LIMIT 1)) IS NULL"
+                + "      OR COALESCE(s.dept, (SELECT c.dept FROM concerts c"
+                + "                           WHERE c.salle_id = s.id AND c.dept IS NOT NULL"
+                + "                           LIMIT 1)) = :dept)"
                 + " LIMIT 50",
             params);
 
@@ -350,6 +369,14 @@ public class ReconciliateurSalles {
   /// Rattache les concerts sans {@code salleId} à leur salle via correspondance exacte
   /// sur {@code salle_norm} / {@code nom_norm}.
   ///
+  /// <p>#973 (rattrapage) : une simple égalité de {@code nom_norm} ignorait le département,
+  /// défaisant silencieusement le filtre dept de {@link #chercherSalleParTokens} pour deux
+  /// salles homonymes au texte strictement identique (ex. "Casino - Barriere" Toulouse/Lille,
+  /// #971 — {@code chercherSalleParTokens} rejette correctement le candidat en amont, mais ce
+  /// repli par égalité exacte le retrouvait quand même en aval, sans filtre). Même repli sur le
+  /// département d'un concert déjà rattaché que {@link #chercherSalleParTokens} quand
+  /// {@code salles.dept} est vide.
+  ///
   /// @param concerts concerts après déduplication
   /// @return liste enrichie avec les {@code salleId} résolus par nom_norm
   List<ValeurConcert> raccrocherSallesParNomNorm(List<ValeurConcert> concerts) {
@@ -361,18 +388,33 @@ public class ReconciliateurSalles {
             .toList();
     if (sallesNormsSansUuid.isEmpty()) return concerts;
 
-    Map<String, UUID> cache = new HashMap<>();
+    Map<String, List<Map<String, Object>>> candidatsParNomNorm = new HashMap<>();
     jdbc.queryForList(
-            "SELECT nom_norm, id FROM salles WHERE nom_norm IN (:normsNoms)",
+            "SELECT s.nom_norm AS nom_norm, s.id AS id,"
+                + " COALESCE(s.dept, (SELECT c.dept FROM concerts c"
+                + "                   WHERE c.salle_id = s.id AND c.dept IS NOT NULL LIMIT 1))"
+                + "   AS dept_effectif"
+                + " FROM salles s WHERE s.nom_norm IN (:normsNoms)",
             Map.of("normsNoms", sallesNormsSansUuid))
-        .forEach(r -> cache.put((String) r.get("nom_norm"), (UUID) r.get("id")));
+        .forEach(
+            r ->
+                candidatsParNomNorm
+                    .computeIfAbsent((String) r.get("nom_norm"), _ -> new ArrayList<>())
+                    .add(r));
 
     return concerts.stream()
         .map(
             c -> {
               if (c.salleId() != null) return c;
-              UUID uuid = cache.get(c.salleNorm());
-              return uuid != null ? c.avecSalleId(uuid) : c;
+              List<Map<String, Object>> candidats = candidatsParNomNorm.get(c.salleNorm());
+              if (candidats == null) return c;
+              for (Map<String, Object> candidat : candidats) {
+                String deptEffectif = (String) candidat.get("dept_effectif");
+                if (c.dept() == null || deptEffectif == null || deptEffectif.equals(c.dept())) {
+                  return c.avecSalleId((UUID) candidat.get("id"));
+                }
+              }
+              return c;
             })
         .toList();
   }

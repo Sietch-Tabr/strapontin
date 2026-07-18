@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -61,7 +62,8 @@ class AlerteLogsAdminServiceTest {
             new EntreeLogAdmin(200L, "error", "worker", "échec job 2", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);
-    when(emailAlerteService.obtenirDestinataireAlerte()).thenReturn(Optional.of("admin@exemple.fr"));
+    when(emailAlerteService.obtenirDestinataireAlerte())
+        .thenReturn(Optional.of("admin@exemple.fr"));
     when(emailAlerteService.envoyerAlerteLogsAdmin("admin@exemple.fr", erreurs)).thenReturn(true);
 
     service.verifier();
@@ -89,7 +91,8 @@ class AlerteLogsAdminServiceTest {
         List.of(new EntreeLogAdmin(100L, "error", "worker", "échec", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);
-    when(emailAlerteService.obtenirDestinataireAlerte()).thenReturn(Optional.of("admin@exemple.fr"));
+    when(emailAlerteService.obtenirDestinataireAlerte())
+        .thenReturn(Optional.of("admin@exemple.fr"));
     when(emailAlerteService.envoyerAlerteLogsAdmin("admin@exemple.fr", erreurs)).thenReturn(false);
 
     service.verifier();
@@ -106,10 +109,5 @@ class AlerteLogsAdminServiceTest {
 
     verify(logAdminService).lireErreursDepuis(150L);
     verify(logAdminService, never()).lireErreursDepuis(0L);
-  }
-
-  @SuppressWarnings("unchecked")
-  private static List<EntreeLogAdmin> anyList() {
-    return org.mockito.ArgumentMatchers.any(List.class);
   }
 }

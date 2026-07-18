@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.email;
 
+import fr.strapontin.core.CompteurEnvoisResend;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.time.Duration;
@@ -221,6 +222,55 @@ public class EmailAlerteService {
       log.info("Alerte worker envoyée : emailHash={}", email.hashCode());
     } catch (Exception e) {
       log.error("Échec envoi alerte worker", e);
+    }
+  }
+
+  /// Envoie une alerte à l'admin quand le quota d'envoi Resend jour ou mois approche de sa
+  /// limite (80%, #981, suite de l'incident #907).
+  ///
+  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907). Ne
+  /// consomme volontairement pas le garde-fou {@code GestionQuotaResend.reserverEnvoi()} avant
+  /// son propre envoi — au seuil de 80%, il reste toujours de la marge sous la limite dure.
+  ///
+  /// @param email    l'adresse email de l'administrateur
+  /// @param compteur le compteur courant ayant déclenché le seuil
+  /// @return {@code true} si l'email a effectivement été envoyé, {@code false} sinon
+  ///     (RESEND_API_KEY absent ou échec d'envoi) — dans ce cas l'appelant ne doit pas marquer
+  ///     l'alerte comme signalée, pour ne pas la perdre en cas de panne temporaire de Resend
+  public boolean envoyerAlerteQuotaResend(String email, CompteurEnvoisResend compteur) {
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — alerte quota Resend non envoyée");
+      return false;
+    }
+
+    String corps =
+        EmailTemplates.alerteQuotaResend(
+            compteur.envoyesJour(),
+            GestionQuotaResend.LIMITE_JOUR,
+            compteur.envoyesMois(),
+            GestionQuotaResend.LIMITE_MOIS,
+            ctx.get().baseUrl());
+    String sujet = "Strapontin — quota Resend proche de la limite";
+    try {
+      emailSender.envoyer(
+          ctx.get(),
+          email,
+          ctx.get().expediteur(),
+          sujet,
+          corps,
+          "Quota Resend : jour %d/%d, mois %d/%d. Consultez l'administration : %s/admin"
+              .formatted(
+                  compteur.envoyesJour(),
+                  GestionQuotaResend.LIMITE_JOUR,
+                  compteur.envoyesMois(),
+                  GestionQuotaResend.LIMITE_MOIS,
+                  ctx.get().baseUrl()));
+      log.info("Alerte quota Resend envoyée : emailHash={}", email.hashCode());
+      return true;
+    } catch (Exception e) {
+      log.error("Échec envoi alerte quota Resend", e);
+      return false;
     }
   }
 

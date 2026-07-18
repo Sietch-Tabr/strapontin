@@ -40,7 +40,8 @@
   #dialog-nav-plus,
   .banniere-overlay,
   .banniere-progression,
-  .job-en-cours .spinner {
+  .job-en-cours .spinner,
+  .nav-badge--point-pulse {
     animation: none;
     transition: none;
   }

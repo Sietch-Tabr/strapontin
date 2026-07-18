@@ -12,7 +12,32 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.7.1 — 17 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.7.2 — 18 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Navigation</p>
+            <ul>
+              <li>L'indicateur de nouveauté sur « Nouveautés » est désormais un point doré discret plutôt qu'un point rouge, moins associé à une erreur qu'à une actualité.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Salles</p>
+            <ul>
+              <li>Deux salles portant le même nom mais situées dans des villes différentes pouvaient être fusionnées à tort, mélangeant leurs concerts — corrigé.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Application installée (PWA)</p>
+            <ul>
+              <li>Le filet de secours affiché en cas de problème de chargement pouvait ne jamais apparaître pour un visiteur non encore connecté — corrigé.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.7.1 — 17 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Concerts</p>
@@ -22,7 +47,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.7.0 — 8 juillet 2026</h2></summary>

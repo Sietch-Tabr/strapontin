@@ -188,6 +188,7 @@ class SpectacleServiceTest {
   // #818 : filtre désormais sur artiste_id (référentiel, stable) plutôt qu'artiste_norm (texte
   // par source, pouvant diverger entre concerts d'un même artiste réel).
   @Test
+  @SuppressWarnings("unchecked")
   void masquerArtiste_executeMiseAJourAvecArtisteId() {
     java.util.UUID artisteId = java.util.UUID.randomUUID();
 
@@ -377,6 +378,7 @@ class SpectacleServiceTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   void demasquerArtiste_executeMiseAJourAvecArtisteId() {
     java.util.UUID artisteId = java.util.UUID.randomUUID();
 

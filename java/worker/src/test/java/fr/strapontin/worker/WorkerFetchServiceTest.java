@@ -188,7 +188,6 @@ class WorkerFetchServiceTest {
   // Régression : même motif que fetch:artistes:batch — persistance par lot de départements
   // (taille 5), pas en un seul bloc final.
   @Test
-  @SuppressWarnings("unchecked")
   void executerFetchRegion_plusDeCinqDepartements_persisteParLotDeCinq() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
@@ -208,7 +207,6 @@ class WorkerFetchServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void executerFetchSallesAll_quotaInsuffisant_neFetchPas() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(false);
 
@@ -218,7 +216,6 @@ class WorkerFetchServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void executerFetchSallesAll_aucuneSalle_nePersiste() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
@@ -229,7 +226,6 @@ class WorkerFetchServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void executerFetchSallesAll_avecSalle_fetchEtPersiste() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
@@ -250,7 +246,6 @@ class WorkerFetchServiceTest {
   // canonique), jamais l'abréviation "tm" — sans traduction, TicketmasterSource.fetchSalle
   // n'est jamais invoqué (accepteIdentifiantSalle rejette silencieusement le préfixe long).
   @Test
-  @SuppressWarnings("unchecked")
   void executerFetchSallesAll_identifiantSourceTicketmaster_traduitEnPrefixeTmAvantFetch() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
@@ -268,7 +263,6 @@ class WorkerFetchServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void executerFetchSallesAll_appelleSuiviSanteSourcesAvecLeResultat() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
@@ -286,7 +280,6 @@ class WorkerFetchServiceTest {
 
   // Régression : même motif que fetch:artistes:batch — persistance par lot de salles (taille 20).
   @Test
-  @SuppressWarnings("unchecked")
   void executerFetchSallesAll_plusDeVingtSalles_persisteParLotDeVingt() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     java.util.List<String> identifiants = new java.util.ArrayList<>();

@@ -56,6 +56,7 @@ class NotificationPushServiceTest {
 
   // #826 : endpoint fourni → cible précisément cet abonnement plutôt que le plus récent par id.
   @Test
+  @SuppressWarnings("unchecked")
   void envoyerNotificationTest_avecEndpoint_requeteFiltreParEndpoint() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
@@ -64,7 +65,7 @@ class NotificationPushServiceTest {
 
     assertFalse(resultat);
     ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Map> paramsCaptor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     verify(jdbc).queryForList(sqlCaptor.capture(), paramsCaptor.capture());
     assertFalse(sqlCaptor.getValue().contains("ORDER BY id DESC"));
     assertTrue(sqlCaptor.getValue().contains("endpoint = :endpoint"));

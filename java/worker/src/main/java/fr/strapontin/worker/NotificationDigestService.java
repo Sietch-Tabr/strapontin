@@ -10,6 +10,7 @@ import com.resend.services.emails.model.CreateEmailOptions;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.UtilitairesChaine;
+import fr.strapontin.worker.quota.GestionQuotaResendWorker;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
@@ -43,7 +44,9 @@ import org.springframework.stereotype.Service;
 /// email via Resend et push VAPID, puis met à jour `notifie_le`.
 ///
 /// Si `RESEND_API_KEY` ou les clés VAPID sont absentes de `app_config`,
-/// la notification correspondante est ignorée sans erreur.
+/// la notification correspondante est ignorée sans erreur. Depuis #981, le canal email est de
+/// même ignoré sans erreur si le quota d'envoi Resend jour/mois est atteint
+/// ({@link GestionQuotaResendWorker}, compteur partagé avec le module web).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -56,6 +59,7 @@ public class NotificationDigestService {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
   private final LogsAdminWorker logsAdminWorker;
+  private final GestionQuotaResendWorker gestionQuotaResendWorker;
   private final FabriqueResend fabriqueResend;
   private final FabriquePushService fabriquePushService;
   // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans logs_admin (#912).
@@ -83,8 +87,16 @@ public class NotificationDigestService {
       ConfigServiceWorker configService,
       NamedParameterJdbcTemplate jdbc,
       ObjectMapper jackson,
-      LogsAdminWorker logsAdminWorker) {
-    this(configService, jdbc, jackson, logsAdminWorker, Resend::new, PushService::new);
+      LogsAdminWorker logsAdminWorker,
+      GestionQuotaResendWorker gestionQuotaResendWorker) {
+    this(
+        configService,
+        jdbc,
+        jackson,
+        logsAdminWorker,
+        gestionQuotaResendWorker,
+        Resend::new,
+        PushService::new);
   }
 
   /// Constructeur de test (#943) — permet d'injecter des fabriques Resend/PushService
@@ -94,12 +106,14 @@ public class NotificationDigestService {
       NamedParameterJdbcTemplate jdbc,
       ObjectMapper jackson,
       LogsAdminWorker logsAdminWorker,
+      GestionQuotaResendWorker gestionQuotaResendWorker,
       FabriqueResend fabriqueResend,
       FabriquePushService fabriquePushService) {
     this.configService = configService;
     this.jdbc = jdbc;
     this.jackson = jackson;
     this.logsAdminWorker = logsAdminWorker;
+    this.gestionQuotaResendWorker = gestionQuotaResendWorker;
     this.fabriqueResend = fabriqueResend;
     this.fabriquePushService = fabriquePushService;
   }
@@ -377,6 +391,12 @@ public class NotificationDigestService {
     Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) {
       log.debug("RESEND_API_KEY absent — digest email ignoré");
+      return false;
+    }
+    if (!gestionQuotaResendWorker.reserverEnvoi()) {
+      // #981 : notification_envoyee_le n'est pas marquée pour ce canal (comportement déjà
+      // existant, cf. clé "RESEND_API_KEY absent" ci-dessus) — retenté au prochain cycle de
+      // digest plutôt que perdu.
       return false;
     }
     String expediteur = configService.lireConfig("CONTACT_EMAIL").orElse("");

@@ -29,7 +29,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.session.FindByIndexNameSessionRepository;
 
 /// Tests unitaires pour {@link AdminService} (logique métier de gestion des utilisateurs,
 /// dépendances mockées).
@@ -53,13 +52,7 @@ class AdminServiceTest {
     emailService = mock(EmailService.class);
     logAdminService = mock(LogAdminService.class);
     verificationRepository = mock(VerificationRepository.class);
-    adminService =
-        new AdminService(
-            jdbc,
-            emailService,
-            logAdminService,
-            verificationRepository,
-            mock(FindByIndexNameSessionRepository.class));
+    adminService = new AdminService(jdbc, emailService, logAdminService, verificationRepository);
     adminService.setSelf(adminService);
   }
 

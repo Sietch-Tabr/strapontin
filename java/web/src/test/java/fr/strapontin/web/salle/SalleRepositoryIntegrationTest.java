@@ -119,4 +119,31 @@ class SalleRepositoryIntegrationTest {
 
     assertNull(repository.lireIdentifiantsSources(salleId));
   }
+
+  // #970 : upsertSalle/upsertSalleAvecLoc écrivaient nom_norm = salleCle (fonction
+  // normaliserSalleCle, sans espaces — ex. "lempreinte"), incompatible avec la tokenisation par
+  // espaces qu'attend CorrespondanceSalle.tokensSignificatifs, cassant le matching Wikidata pour
+  // toute salle ajoutée via le flux interactif (recherche Nominatim).
+  @Test
+  void upsertSalle_nomAvecApostropheEtEspaces_nomNormConserveLesEspaces() {
+    UUID salleId = repository.upsertSalle("lempreinte", "L'Empreinte");
+
+    String nomNorm =
+        jdbc.queryForObject(
+            "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
+
+    assertEquals("l empreinte", nomNorm);
+  }
+
+  @Test
+  void upsertSalleAvecLoc_nomAvecEspaces_nomNormConserveLesEspaces() {
+    UUID salleId =
+        repository.upsertSalleAvecLoc("accorhotelsarena", "Accorhotels Arena", "Paris", "75");
+
+    String nomNorm =
+        jdbc.queryForObject(
+            "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
+
+    assertEquals("accorhotels arena", nomNorm);
+  }
 }

@@ -232,7 +232,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private ResultatPageEventim chargerPageProduits(
       String uri, String artisteFallback, String deptFiltre) {
     return chargerPageProduits(uri, artisteFallback, deptFiltre, null);
@@ -302,7 +301,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     return null;
   }
 
-  @SuppressWarnings("unchecked")
   private static ConcertBrut construireConcertEventim(
       Map<String, Object> produit,
       Map<String, Object> liveEnt,

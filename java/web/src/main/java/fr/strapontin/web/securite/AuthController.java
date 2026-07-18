@@ -21,6 +21,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -74,10 +75,10 @@ public class AuthController {
     Objects.requireNonNull(req.identifiant(), "L'identifiant est requis");
     Objects.requireNonNull(req.motDePasse(), "Le mot de passe est requis");
 
-    Authentication auth =
-        authenticationManager.authenticate(
-            UsernamePasswordAuthenticationToken.unauthenticated(
-                req.identifiant(), req.motDePasse()));
+    UsernamePasswordAuthenticationToken tokenNonAuthentifie =
+        UsernamePasswordAuthenticationToken.unauthenticated(req.identifiant(), req.motDePasse());
+    tokenNonAuthentifie.setDetails(new WebAuthenticationDetails(httpRequest));
+    Authentication auth = authenticationManager.authenticate(tokenNonAuthentifie);
 
     HttpSession sessionExistante = httpRequest.getSession(false);
     if (sessionExistante != null) sessionExistante.invalidate();
@@ -282,9 +283,10 @@ public class AuthController {
       }
       String identFinal = authService.activerCompteInvite(req.token(), ident, req.motDePasse());
 
-      Authentication auth =
-          authenticationManager.authenticate(
-              UsernamePasswordAuthenticationToken.unauthenticated(identFinal, req.motDePasse()));
+      UsernamePasswordAuthenticationToken tokenNonAuthentifie =
+          UsernamePasswordAuthenticationToken.unauthenticated(identFinal, req.motDePasse());
+      tokenNonAuthentifie.setDetails(new WebAuthenticationDetails(httpRequest));
+      Authentication auth = authenticationManager.authenticate(tokenNonAuthentifie);
 
       HttpSession sessionExistante = httpRequest.getSession(false);
       if (sessionExistante != null) sessionExistante.invalidate();

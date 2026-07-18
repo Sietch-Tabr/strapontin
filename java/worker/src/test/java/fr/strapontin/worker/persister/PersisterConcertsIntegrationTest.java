@@ -543,6 +543,62 @@ class PersisterConcertsIntegrationTest {
   }
 
   @Test
+  void
+      persisterConcerts_salleHomonymeDeptNullMaisConcertAttacheDeptDifferent_neFusionnePasParTokens() {
+    // #973 : salles.dept n'est écrit qu'à la création et jamais mis à jour ensuite, contrairement
+    // à concerts.dept (fiablement renseigné à chaque ingestion). Un simple "dept IS NULL OR dept
+    // = :dept" désactivait donc le filtre pour la quasi-totalité des salles réelles, laissant
+    // fusionner à tort des salles homonymes de villes différentes (ex. Casino Barrière
+    // Toulouse/Lille, cas confirmé #971). Ici : salle existante "Casino Barriere" avec
+    // salles.dept NULL, mais un concert déjà rattaché révèle sa vraie localisation (59, Lille).
+    java.util.UUID salleLille = java.util.UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept)"
+            + " VALUES (CAST(:id AS uuid), 'casino barriere', 'Casino - Barriere',"
+            + " 'casino barriere', NULL)",
+        Map.of("id", salleLille.toString()));
+    jdbc.update(
+        "INSERT INTO concerts (artiste, artiste_norm, date, heure, salle, salle_norm, dept,"
+            + " source, salle_id)"
+            + " VALUES ('Artiste Lille', 'artiste lille', CAST(:date AS date), '20:30',"
+            + " 'Casino Barriere', 'casino barriere', '59',"
+            + " CAST('ticketmaster' AS source_concert), CAST(:salleId AS uuid))",
+        Map.of("date", DATE_RECENTE, "salleId", salleLille.toString()));
+
+    // Nouveau concert homonyme, sans salleSourceId (déclenche chercherSalleParTokens), dept
+    // Toulouse (31) — doit être rejeté par le filtre plutôt que fusionné à tort avec Lille.
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Artiste Toulouse",
+                "2026-11-28",
+                "20:30",
+                "Casino - Barriere",
+                "Toulouse",
+                "31",
+                "https://example.com/artiste-toulouse",
+                "ticketmaster",
+                "music",
+                "Pop",
+                "onsale",
+                null,
+                null,
+                null,
+                null)));
+
+    java.util.UUID salleIdConcertToulouse =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'artiste toulouse'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
+    assertNotEquals(
+        salleLille,
+        salleIdConcertToulouse,
+        "le concert de Toulouse ne doit pas être rattaché à la salle de Lille malgré"
+            + " l'homonymie");
+  }
+
+  @Test
   void persisterConcerts_salleSourceIdNullSansCorrespondance_salleIdResteNull() {
     // Sans salleSourceId et sans salle existante correspondante, aucune salle fantôme ne doit
     // être créée — salle_id reste null (contrairement à upsertSalleSource, qui crée la salle

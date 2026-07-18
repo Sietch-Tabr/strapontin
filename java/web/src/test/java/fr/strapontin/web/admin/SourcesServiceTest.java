@@ -100,7 +100,7 @@ class SourcesServiceTest {
   void lireSources_comptesParSource_interrogeTicketmasterEtEventim() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
     when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
-    ArgumentCaptor<Map> paramsCaptor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     when(jdbc.queryForObject(anyString(), paramsCaptor.capture(), eq(Integer.class))).thenReturn(0);
     when(jdbc.query(
             anyString(),
@@ -202,7 +202,6 @@ class SourcesServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void lireSources_requetesSalles_excluenTMEtEventim() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
     when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
@@ -238,7 +237,6 @@ class SourcesServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void lireSources_requetesSalles_utilisentColonneId_pasSlleUuid() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
     when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
