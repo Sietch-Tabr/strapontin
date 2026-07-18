@@ -22,7 +22,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.session.FindByIndexNameSessionRepository;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /// Test d'intégration de {@link AdminService} avec PostgreSQL réel (Testcontainers, #940).
@@ -71,8 +70,7 @@ class AdminServiceIntegrationTest {
             jdbc,
             mock(EmailService.class),
             mock(LogAdminService.class),
-            mock(VerificationRepository.class),
-            mock(FindByIndexNameSessionRepository.class));
+            mock(VerificationRepository.class));
     s.setSelf(s);
     service = s;
   }

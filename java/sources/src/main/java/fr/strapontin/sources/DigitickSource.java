@@ -44,7 +44,6 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   private static final String SEL_EVENEMENTS = "dl[class~=evenement\\d+]";
   private static final String SEL_NOM = "a.evenementNom";
   private static final String SEL_DATETIME = "time[datetime]";
-  private static final String SEL_HEURE = "span.evenementHeure";
   private static final String SEL_GENRE = "div[itemprop=eventType]";
   private static final String SEL_SALLE_NOM = "span.evenementSalleNom";
   private static final String SEL_VILLE = "span.evenementSalleVille";

@@ -203,7 +203,10 @@ class ResolveurNomCanoniqueTest {
   @Test
   void preleverBilan_resultatEnCache_neCompteAucunAppel() {
     RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    // Aucune expectation configurée : un appel HTTP réel ferait échouer le test (assertion
+    // MockRestServiceServer), ce qui est précisément le comportement attendu ici (résultat en
+    // cache, aucun appel ne doit être tenté).
+    MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
 
     Cache<String, ResultatResolution> cache = Caffeine.newBuilder().build();

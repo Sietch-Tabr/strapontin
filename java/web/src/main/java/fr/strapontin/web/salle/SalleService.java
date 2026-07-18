@@ -430,7 +430,6 @@ public class SalleService {
     return clesNorm.stream().anyMatch(cle -> cle.contains(rechercheNorm));
   }
 
-  @SuppressWarnings("unchecked")
   /// Recherche des salles par nom via Nominatim (OSM, #718).
   ///
   /// <p>Sans clé API — couvre les salles hors référentiel Ticketmaster. User-Agent obligatoire
@@ -523,6 +522,7 @@ public class SalleService {
     return null;
   }
 
+  @SuppressWarnings("unchecked")
   private List<ResultatSalle> rechercherSallesTM(String terme) {
     Optional<String> tmKey = configService.lireConfig("TICKETMASTER_API_KEY");
     if (tmKey.isEmpty()) return List.of();

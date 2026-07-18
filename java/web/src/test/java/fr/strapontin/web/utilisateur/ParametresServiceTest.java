@@ -118,7 +118,6 @@ class ParametresServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void confirmerEmail_tokenExpire_retourneLienExpire() {
     when(jdbc.queryForList(contains("SELECT identifier"), anyMap())).thenReturn(List.of());
 
@@ -128,7 +127,6 @@ class ParametresServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void confirmerEmail_mauvaisUtilisateur_retourneMauvaisUtilisateur() {
     when(jdbc.queryForList(contains("SELECT identifier"), anyMap()))
         .thenReturn(List.of(Map.of("identifier", "email-change:autreUser")));
@@ -139,7 +137,6 @@ class ParametresServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void confirmerEmail_aucunPendingEmail_retourneAucunChangement() {
     when(jdbc.queryForList(contains("SELECT identifier"), anyMap()))
         .thenReturn(List.of(Map.of("identifier", "email-change:u1")));
@@ -152,7 +149,6 @@ class ParametresServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void confirmerEmail_emailDejaPris_retourneEmailDejaUtilise() {
     when(jdbc.queryForList(contains("SELECT identifier"), anyMap()))
         .thenReturn(List.of(Map.of("identifier", "email-change:u1")));
@@ -170,7 +166,6 @@ class ParametresServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void confirmerEmail_ok_metsAJourEmailEtSupprimeVerification() {
     when(jdbc.queryForList(contains("SELECT identifier"), anyMap()))
         .thenReturn(List.of(Map.of("identifier", "email-change:u1")));

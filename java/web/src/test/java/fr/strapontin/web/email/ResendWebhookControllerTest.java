@@ -81,6 +81,7 @@ class ResendWebhookControllerTest {
   // #831 : l'email ne doit jamais apparaître en clair dans logs_admin, cohérent avec le hachage
   // déjà appliqué côté SLF4J juste au-dessus dans le code.
   @Test
+  @SuppressWarnings("unchecked")
   void traiterEvenement_bounce_journaliseEmailHacheEtNotifieAdmin() {
     String corps =
         """
@@ -98,6 +99,7 @@ class ResendWebhookControllerTest {
   // #832 : une plainte spam (email.complained) reçoit désormais le même traitement qu'un
   // bounce — logs_admin + notification admin — plutôt qu'un simple log SLF4J invisible.
   @Test
+  @SuppressWarnings("unchecked")
   void traiterEvenement_complained_journaliseEtNotifieAdminCommeUnBounce() {
     String corps =
         """

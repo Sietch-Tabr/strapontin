@@ -5,7 +5,7 @@
 package fr.strapontin.worker.sante;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -39,11 +39,10 @@ class SourcesHealthIndicatorTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void health_quotaSuffisantEtAucuneErreur_retourneUp() {
     when(gestionQuotaTM.lireQuota())
         .thenReturn(Optional.of(new QuotaTM(4000, 5000, 0L, "2026-07-17T00:00:00Z")));
-    when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
     Health health = indicator.health();
 
@@ -52,11 +51,10 @@ class SourcesHealthIndicatorTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void health_quotaEpuise_retourneDown() {
     when(gestionQuotaTM.lireQuota())
         .thenReturn(Optional.of(new QuotaTM(10, 5000, 0L, "2026-07-17T00:00:00Z")));
-    when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
     Health health = indicator.health();
 
@@ -72,7 +70,7 @@ class SourcesHealthIndicatorTest {
     Map<String, Object> ligne = new HashMap<>();
     ligne.put("type_job", "fetch:region");
     ligne.put("erreur", "Worker inaccessible");
-    when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of(ligne));
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
 
     Health health = indicator.health();
 
@@ -83,10 +81,9 @@ class SourcesHealthIndicatorTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void health_aucunQuotaEnBase_retourneUpSansDetailQuota() {
     when(gestionQuotaTM.lireQuota()).thenReturn(Optional.empty());
-    when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
     Health health = indicator.health();
 

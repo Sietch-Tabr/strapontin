@@ -79,7 +79,6 @@ class DecouverteServiceTest {
     org.junit.jupiter.api.Assertions.assertFalse(params.containsKey("moisFin"));
   }
 
-  @SuppressWarnings("unchecked")
   private static void invoquerConstruireFiltresWhere(
       DecouverteService svc, String mois, Map<String, Object> params) throws Exception {
     var m =
@@ -98,7 +97,6 @@ class DecouverteServiceTest {
 
   // --- decouvrir() ---
 
-  @SuppressWarnings("unchecked")
   private void stubRequetesCommunes(List<String> deptsUtilisateur) {
     stubRequetesCommunes(deptsUtilisateur, 0);
   }
@@ -128,7 +126,6 @@ class DecouverteServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void decouvrir_deptsNullDansFiltre_utiliseDepartementsUtilisateur() {
     stubRequetesCommunes(List.of("75", "92"));
     FiltreConcerts filtre =
@@ -194,7 +191,6 @@ class DecouverteServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void decouvrir_pageNegative_estRameneeAZero() {
     stubRequetesCommunes(List.of());
     FiltreConcerts filtre =
