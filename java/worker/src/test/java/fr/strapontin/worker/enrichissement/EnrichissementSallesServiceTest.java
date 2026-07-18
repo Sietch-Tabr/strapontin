@@ -184,7 +184,6 @@ class EnrichissementSallesServiceTest {
   // isolé à la salle concernée, loggé, et ne jamais interrompre le reste du lot ni les lots
   // suivants.
   @Test
-  @SuppressWarnings("unchecked")
   void enrichir_wikidataIdDejaAttribueAUneAutreSalle_loggeLeConflitEtContinueLesAutresSalles() {
     UUID salleEnConflit = UUID.randomUUID();
     UUID salleOk = UUID.randomUUID();

@@ -35,7 +35,6 @@ class ReferentielSallesServiceTest {
   private ReferentielSallesService service;
 
   @BeforeEach
-  @SuppressWarnings("unchecked")
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     logAdminService = mock(LogAdminService.class);

@@ -34,7 +34,6 @@ class ReferentielArtistesServiceTest {
   private ReferentielArtistesService service;
 
   @BeforeEach
-  @SuppressWarnings("unchecked")
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     logAdminService = mock(LogAdminService.class);

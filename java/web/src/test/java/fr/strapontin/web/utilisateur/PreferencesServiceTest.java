@@ -85,8 +85,7 @@ class PreferencesServiceTest {
   @Test
   void importerSalles_doublonFlou_reutiliseUuidResoluParSalleService() {
     UUID salleExistante = UUID.randomUUID();
-    when(salleService.resoudreSalleId(eq("Zenith Paris"), anyString()))
-        .thenReturn(salleExistante);
+    when(salleService.resoudreSalleId(eq("Zenith Paris"), anyString())).thenReturn(salleExistante);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     ExportComplet export =
@@ -193,6 +192,7 @@ class PreferencesServiceTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   void importer_fusionDepartements_sansEcraserNiImporterConfig() {
     ConfigExport config =
         new ConfigExport(List.of("75", "92"), true, "jamais", false, false, false, false, "auto");
