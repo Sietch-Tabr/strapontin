@@ -51,20 +51,22 @@ class NotificationDigestServiceTest {
   @Mock private ConfigServiceWorker configService;
   @Mock private NamedParameterJdbcTemplate jdbc;
   @Mock private LogsAdminWorker logsAdminWorker;
+  @Mock private fr.strapontin.worker.quota.GestionQuotaResendWorker gestionQuotaResendWorker;
 
   private NotificationDigestService service;
 
   @BeforeEach
   void init() {
+    lenient().when(gestionQuotaResendWorker.reserverEnvoi()).thenReturn(true);
     service =
-        new NotificationDigestService(configService, jdbc, new ObjectMapper(), logsAdminWorker);
+        new NotificationDigestService(
+            configService, jdbc, new ObjectMapper(), logsAdminWorker, gestionQuotaResendWorker);
   }
 
   // #912 : push totalement ignoré (VAPID absent) — aucun appel tenté, aucune remontée de bilan.
   @Test
-  @SuppressWarnings("unchecked")
   void executerDigest_vapidAbsent_nInsereAucunBilanPush() {
-    when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of(ligneTest("u1")));
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneTest("u1")));
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
     when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
     when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
@@ -75,9 +77,8 @@ class NotificationDigestServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void executerDigest_sansMatches_nAppellePasConfigService() {
-    when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
     service.executerDigest("quotidien");
 
@@ -86,13 +87,12 @@ class NotificationDigestServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void executerDigest_resendAbsent_emailIgnore() {
-    when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of(ligneTest("u1")));
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneTest("u1")));
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
     when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
     when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
-    when(jdbc.update(anyString(), any(Map.class))).thenReturn(1);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     assertDoesNotThrow(() -> service.executerDigest("quotidien"));
 
@@ -100,13 +100,12 @@ class NotificationDigestServiceTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void executerDigest_vapidAbsent_pushIgnore() {
-    when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of(ligneTest("u2")));
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneTest("u2")));
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
     when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
     when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
-    when(jdbc.update(anyString(), any(Map.class))).thenReturn(1);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     assertDoesNotThrow(() -> service.executerDigest("quotidien"));
 
@@ -278,9 +277,8 @@ class NotificationDigestServiceTest {
   // --- #791 : marquage notification_envoyee_le uniquement si un canal a réellement réussi ---
 
   @Test
-  @SuppressWarnings("unchecked")
   void executerDigest_toutEchoue_neMarqueAucunConcertNotifie() {
-    when(jdbc.queryForList(anyString(), any(Map.class))).thenReturn(List.of(ligneTest("u3")));
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneTest("u3")));
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
     when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
     when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
@@ -294,9 +292,8 @@ class NotificationDigestServiceTest {
   // #943 : Resend/PushService n'étaient pas injectables (instanciation en dur dans
   // envoyerEmail/envoyerPush), rendant le chemin nominal de succès impossible à exercer.
   @Test
-  @SuppressWarnings("unchecked")
   void executerDigest_emailEnvoyeAvecSucces_marqueLeConcertNotifie() throws Exception {
-    when(jdbc.queryForList(contains("FROM user_matches"), any(Map.class)))
+    when(jdbc.queryForList(contains("FROM user_matches"), anyMap()))
         .thenReturn(List.of(ligneTest("u1")));
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.of("re_test123"));
     when(configService.lireConfig("CONTACT_EMAIL"))
@@ -317,6 +314,7 @@ class NotificationDigestServiceTest {
             jdbc,
             new ObjectMapper(),
             logsAdminWorker,
+            gestionQuotaResendWorker,
             cle -> resendMock,
             (clePublique, clePrivee, sujet) -> {
               throw new java.security.GeneralSecurityException("VAPID non configuré en test");
@@ -328,10 +326,26 @@ class NotificationDigestServiceTest {
     verify(jdbc).update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
+  // #981 : quota Resend atteint — le canal email doit être ignoré sans jamais contacter la
+  // fabrique Resend, comme le fait déjà l'absence de RESEND_API_KEY.
   @Test
-  @SuppressWarnings("unchecked")
+  void executerDigest_quotaResendAtteint_ignoreLeCanalEmailSansContacterResend() {
+    when(jdbc.queryForList(contains("FROM user_matches"), anyMap()))
+        .thenReturn(List.of(ligneTest("u1")));
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.of("re_test123"));
+    when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
+    when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
+    when(gestionQuotaResendWorker.reserverEnvoi()).thenReturn(false);
+
+    service.executerDigest("quotidien");
+
+    verify(jdbc, never())
+        .update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
+  }
+
+  @Test
   void executerDigest_pushEnvoyeAvecSucces_marqueLeConcertNotifie() throws Exception {
-    when(jdbc.queryForList(contains("FROM user_matches"), any(Map.class)))
+    when(jdbc.queryForList(contains("FROM user_matches"), anyMap()))
         .thenReturn(List.of(ligneTest("u2")));
     Map<String, Object> abonnement = new HashMap<>();
     abonnement.put("id", 1);
@@ -343,7 +357,7 @@ class NotificationDigestServiceTest {
         "p256dh",
         "BPKi4XnOYaPYQWcKZsUfMxTQZV0JyJA-zx65BGYqeHJ8KDlO2AL5lhoFUCXC1iFMUlTzt_sgos9GiYMxFEgCDQE");
     abonnement.put("auth", "RZIK8q0lRcIbLO9VyII_4Q");
-    when(jdbc.queryForList(contains("push_abonnements"), any(Map.class)))
+    when(jdbc.queryForList(contains("push_abonnements"), anyMap()))
         .thenReturn(List.of(abonnement));
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
     when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.of("cle-publique"));
@@ -367,6 +381,7 @@ class NotificationDigestServiceTest {
             jdbc,
             new ObjectMapper(),
             logsAdminWorker,
+            gestionQuotaResendWorker,
             cle -> {
               throw new IllegalStateException("Resend non configuré en test");
             },
@@ -397,7 +412,6 @@ class NotificationDigestServiceTest {
     return ligne;
   }
 
-  @SuppressWarnings("unchecked")
   private static String invoquerPayloadPush(
       List<NotificationDigestService.ConcertNotif> concerts, String baseUrl) throws Exception {
     Method m =
@@ -407,7 +421,6 @@ class NotificationDigestServiceTest {
     return (String) m.invoke(null, concerts, baseUrl);
   }
 
-  @SuppressWarnings("unchecked")
   private static String invoquerCorpsEmail(
       String sujet, List<NotificationDigestService.ConcertNotif> concerts, String baseUrl)
       throws Exception {

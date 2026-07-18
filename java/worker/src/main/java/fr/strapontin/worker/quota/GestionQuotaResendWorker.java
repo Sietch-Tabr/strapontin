@@ -1,0 +1,155 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.worker.quota;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.core.CompteurEnvoisResend;
+import fr.strapontin.worker.LogsAdminWorker;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.Map;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Service;
+
+/// Garde-fou quota d'envoi Resend jour/mois côté worker (#981, suite de l'incident #907).
+///
+/// <p>Lecture/écriture SQL brute non chiffrée dans {@code app_config} (clé
+/// {@code RESEND_QUOTA_JSON}) — même clé que {@code web.email.GestionQuotaResend}, même pattern
+/// que {@link fr.strapontin.worker.quota.GestionQuotaTM}/{@code TM_QUOTA_JSON}. Contournement
+/// nécessaire : {@code ConfigServiceWorker} est explicitement en lecture seule. L'alerte de seuil
+/// (80%) est portée exclusivement côté web ({@code AlerteQuotaResendService}, polling 15 min sur
+/// le même compteur partagé) — le blocage effectif ici insère directement un {@code logs_admin}
+/// niveau {@code error}, capté par l'{@code AlerteLogsAdminService} existant, sans nouveau canal
+/// d'envoi.
+///
+/// @since 2.7.2
+/// @author Kwaite
+@Service
+public class GestionQuotaResendWorker {
+
+  private static final Logger log = LoggerFactory.getLogger(GestionQuotaResendWorker.class);
+
+  static final int LIMITE_JOUR = 100;
+  static final int LIMITE_MOIS = 3000;
+  private static final String CLE_QUOTA = "RESEND_QUOTA_JSON";
+
+  private final NamedParameterJdbcTemplate jdbc;
+  private final ObjectMapper objectMapper;
+  private final LogsAdminWorker logsAdminWorker;
+
+  public GestionQuotaResendWorker(
+      NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper, LogsAdminWorker logsAdminWorker) {
+    this.jdbc = jdbc;
+    this.objectMapper = objectMapper;
+    this.logsAdminWorker = logsAdminWorker;
+  }
+
+  private Optional<CompteurEnvoisResend> lireCompteurBrut() {
+    try {
+      String json =
+          jdbc.queryForObject(
+              "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
+              Map.of("cle", CLE_QUOTA),
+              String.class);
+      if (json == null) return Optional.empty();
+      return Optional.of(objectMapper.readValue(json, CompteurEnvoisResend.class));
+    } catch (EmptyResultDataAccessException e) {
+      return Optional.empty();
+    } catch (JsonProcessingException e) {
+      log.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
+      return Optional.empty();
+    }
+  }
+
+  private void ecrireCompteur(CompteurEnvoisResend compteur) {
+    try {
+      String json = objectMapper.writeValueAsString(compteur);
+      jdbc.update(
+          "INSERT INTO app_config (cle, valeur_chiffree) VALUES (:cle, :json)"
+              + " ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()",
+          Map.of("cle", CLE_QUOTA, "json", json));
+    } catch (JsonProcessingException e) {
+      log.error("impossible de sérialiser le compteur Resend", e);
+    }
+  }
+
+  private static String jourCourant() {
+    return LocalDate.now(ZoneOffset.UTC).toString();
+  }
+
+  private static String moisCourant(String jour) {
+    return jour.substring(0, 7);
+  }
+
+  private static CompteurEnvoisResend appliquerRollover(
+      CompteurEnvoisResend c, String jour, String mois) {
+    boolean jourChange = !jour.equals(c.jour());
+    boolean moisChange = !mois.equals(c.mois());
+    if (!jourChange && !moisChange) return c;
+    return new CompteurEnvoisResend(
+        jour,
+        jourChange ? 0 : c.envoyesJour(),
+        mois,
+        moisChange ? 0 : c.envoyesMois(),
+        jourChange ? false : c.alerteJourEnvoyee(),
+        moisChange ? false : c.alerteMoisEnvoyee());
+  }
+
+  private CompteurEnvoisResend lireCompteurCourant() {
+    String jour = jourCourant();
+    String mois = moisCourant(jour);
+    return lireCompteurBrut()
+        .map(c -> appliquerRollover(c, jour, mois))
+        .orElse(new CompteurEnvoisResend(jour, 0, mois, 0, false, false));
+  }
+
+  /// Réserve un envoi si le quota jour/mois le permet — bloque avant l'appel réseau Resend.
+  ///
+  /// <p>Sur blocage, insère un {@code logs_admin} niveau {@code error} (capté par
+  /// {@code AlerteLogsAdminService}, digest 15 min).
+  ///
+  /// @return {@code true} si l'envoi est autorisé (compteur incrémenté et persisté),
+  ///     {@code false} si le quota jour ou mois est atteint
+  public boolean reserverEnvoi() {
+    CompteurEnvoisResend actuel = lireCompteurCourant();
+    if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {
+      ecrireCompteur(actuel);
+      log.error(
+          "quota Resend atteint — envoi digest bloqué jour={}/{} mois={}/{}",
+          actuel.envoyesJour(),
+          LIMITE_JOUR,
+          actuel.envoyesMois(),
+          LIMITE_MOIS);
+      logsAdminWorker.inserer(
+          "error",
+          "worker",
+          "Quota Resend proche de la limite — envois digest email suspendus",
+          Map.of(
+              "envoyesJour",
+              actuel.envoyesJour(),
+              "limiteJour",
+              LIMITE_JOUR,
+              "envoyesMois",
+              actuel.envoyesMois(),
+              "limiteMois",
+              LIMITE_MOIS));
+      return false;
+    }
+    ecrireCompteur(
+        new CompteurEnvoisResend(
+            actuel.jour(),
+            actuel.envoyesJour() + 1,
+            actuel.mois(),
+            actuel.envoyesMois() + 1,
+            actuel.alerteJourEnvoyee(),
+            actuel.alerteMoisEnvoyee()));
+    return true;
+  }
+}
