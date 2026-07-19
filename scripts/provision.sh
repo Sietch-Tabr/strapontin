@@ -177,7 +177,7 @@ pct exec "$VMID" -- bash -c "
     apt-get upgrade -y -qq
     apt-get install -y \
         curl wget gnupg2 ca-certificates lsb-release \
-        unattended-upgrades aide
+        unattended-upgrades
 "
 
 echo "[4] Nettoyage systemd (Debian 13 LXC)..."
@@ -413,11 +413,22 @@ WantedBy=timers.target
 UNIT"
 
 echo "[7] Contrôle d'intégrité AIDE (#976)..."
+# Le paquet Debian aide embarque son propre timer (dailyaidecheck.timer, scan complet de l'OS +
+# alerte par mail local root, jamais lu sur cette infra) et l'active automatiquement à
+# l'installation — désactivé au profit du timer/périmètre dédiés ci-dessous (redondant sinon,
+# deux mécanismes de contrôle d'intégrité indépendants sur la même base AIDE).
+pct exec "$VMID" -- bash -c "
+    export LC_ALL=C LANG=C DEBIAN_FRONTEND=noninteractive
+    apt-get install -y -qq aide
+    systemctl disable --now dailyaidecheck.timer
+    systemctl mask dailyaidecheck.timer
+"
 pct exec "$VMID" -- bash -c "mkdir -p /etc/aide /var/lib/aide
 cat > /etc/aide/aide.conf << 'UNIT'
 # Strapontin — périmètre restreint (pas de scan complet de l'OS, cf. #976) :
 # JARs, .env, scripts d'exploitation, units systemd web/worker (vecteur de persistance classique).
-database=file:/var/lib/aide/aide.db
+# database (sans suffixe) supprimé en AIDE v0.19 — database_in/database_out obligatoires.
+database_in=file:/var/lib/aide/aide.db
 database_out=file:/var/lib/aide/aide.db.new
 gzip_dbout=no
 
