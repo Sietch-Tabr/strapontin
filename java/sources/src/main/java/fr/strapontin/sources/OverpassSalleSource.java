@@ -4,6 +4,8 @@
  */
 package fr.strapontin.sources;
 
+import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.Normalisation;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -47,9 +49,22 @@ import org.springframework.web.client.RestClient;
 ///
 /// @since 2.6.0
 /// @author Kwaite
-public class OverpassSalleSource implements SourceEnrichissementSalle {
+public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(OverpassSalleSource.class);
+
+  private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
+
+  /// Retourne le bilan agrégé des appels HTTP Overpass depuis le dernier prélèvement (#993) et
+  /// remet les compteurs à zéro — panne de 3+ mois de l'instance publique (#990) jusque-là
+  /// invisible dans {@code logs_admin}, seul un grep manuel de journalctl permettait de la
+  /// constater.
+  ///
+  /// @return le bilan depuis le dernier prélèvement
+  @Override
+  public BilanFetch preleverBilan() {
+    return compteurBilan.preleverBilan();
+  }
 
   // #990 (19/07/2026) : overpass-api.de en panne 3+ mois (504 systématique), overpass.osm.ch seul
   // miroir public répondant correctement au test en direct — voir Javadoc de la classe.
@@ -114,6 +129,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle {
 
   private Map<UUID, EnrichissementSalle> enrichirUnLot(List<SalleAEnrichir> lot) {
     String requete = construireRequeteOverpassQL(lot);
+    compteurBilan.enregistrerAppel();
     try {
       @SuppressWarnings("unchecked")
       Map<String, Object> data =
@@ -128,6 +144,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle {
               .body(Map.class);
       return mapperReponse(data, lot);
     } catch (Exception e) {
+      compteurBilan.enregistrerErreur();
       log.warn("Overpass erreur lot taille={} : {}", lot.size(), e.getMessage());
       return Map.of();
     }

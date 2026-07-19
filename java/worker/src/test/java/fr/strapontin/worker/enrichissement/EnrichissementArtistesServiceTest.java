@@ -249,4 +249,60 @@ class EnrichissementArtistesServiceTest {
             anyString(),
             anyMap());
   }
+
+  // #993 : bilan de panne absent jusqu'ici sur les sources d'enrichissement artiste.
+  @Test
+  void enrichir_sourceAvecBilanFetchPanneTotale_loggeErreurDansLogsAdmin() {
+    UUID artisteId = UUID.randomUUID();
+    ArtisteAEnrichir candidat =
+        new ArtisteAEnrichir(artisteId, "Daft Punk", "daft punk", null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
+
+    SourceEnrichissementArtiste source =
+        mock(
+            SourceEnrichissementArtiste.class,
+            org.mockito.Mockito.withSettings()
+                .extraInterfaces(fr.strapontin.sources.SourceAvecBilanFetch.class));
+    when(source.enrichirLot(any())).thenReturn(Map.of());
+    when(source.nom()).thenReturn("wikidata");
+    when(((fr.strapontin.sources.SourceAvecBilanFetch) source).preleverBilan())
+        .thenReturn(new fr.strapontin.core.BilanFetch(3, 3));
+    LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
+
+    EnrichissementArtistesService service =
+        new EnrichissementArtistesService(jdbc, List.of(source), logsAdminWorker);
+    service.enrichir();
+
+    verify(logsAdminWorker)
+        .inserer(
+            org.mockito.ArgumentMatchers.eq("error"),
+            org.mockito.ArgumentMatchers.eq("worker"),
+            anyString(),
+            anyMap());
+  }
+
+  @Test
+  void enrichir_sourceAvecBilanFetchAucunAppel_neLoggeAucunBilan() {
+    UUID artisteId = UUID.randomUUID();
+    ArtisteAEnrichir candidat =
+        new ArtisteAEnrichir(artisteId, "Daft Punk", "daft punk", null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
+
+    SourceEnrichissementArtiste source =
+        mock(
+            SourceEnrichissementArtiste.class,
+            org.mockito.Mockito.withSettings()
+                .extraInterfaces(fr.strapontin.sources.SourceAvecBilanFetch.class));
+    when(source.enrichirLot(any())).thenReturn(Map.of());
+    when(source.nom()).thenReturn("wikidata");
+    when(((fr.strapontin.sources.SourceAvecBilanFetch) source).preleverBilan())
+        .thenReturn(new fr.strapontin.core.BilanFetch(0, 0));
+    LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
+
+    EnrichissementArtistesService service =
+        new EnrichissementArtistesService(jdbc, List.of(source), logsAdminWorker);
+    service.enrichir();
+
+    verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
+  }
 }

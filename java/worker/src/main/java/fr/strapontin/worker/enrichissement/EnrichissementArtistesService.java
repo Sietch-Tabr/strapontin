@@ -4,8 +4,10 @@
  */
 package fr.strapontin.worker.enrichissement;
 
+import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.ArtisteAEnrichir;
 import fr.strapontin.sources.EnrichissementArtiste;
+import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementArtiste;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.HashMap;
@@ -82,7 +84,32 @@ public class EnrichissementArtistesService {
       nbEnrichis += enrichirEtPersisterLot(lot);
     }
     log.info("enrichissement:artistes candidats={} enrichis={}", candidats.size(), nbEnrichis);
+    remonterBilans();
     return nbEnrichis;
+  }
+
+  /// Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source
+  /// implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer (#993) —
+  /// même mécanisme générique que {@code WorkerStatsService.remonterBilan} et
+  /// {@link EnrichissementSallesService#remonterBilans}.
+  private void remonterBilans() {
+    for (SourceEnrichissementArtiste source : sources) {
+      if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
+      BilanFetch bilan = avecBilan.preleverBilan();
+      bilan
+          .evaluer(
+              "reconciliation:nocturne",
+              capitaliser(source.nom()),
+              BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT)
+          .ifPresent(
+              entree ->
+                  logsAdminWorker.inserer(
+                      entree.niveau(), "worker", entree.message(), entree.meta()));
+    }
+  }
+
+  private static String capitaliser(String nom) {
+    return nom.isEmpty() ? nom : Character.toUpperCase(nom.charAt(0)) + nom.substring(1);
   }
 
   private static void attendreEntreLots() {

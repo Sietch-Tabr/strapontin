@@ -4,8 +4,10 @@
  */
 package fr.strapontin.worker.enrichissement;
 
+import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
+import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementSalle;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.HashMap;
@@ -82,7 +84,33 @@ public class EnrichissementSallesService {
       nbEnrichis += enrichirEtPersisterLot(lot);
     }
     log.info("enrichissement:salles candidats={} enrichis={}", candidats.size(), nbEnrichis);
+    remonterBilans();
     return nbEnrichis;
+  }
+
+  /// Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source
+  /// implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer (#993) —
+  /// même mécanisme générique que {@code WorkerStatsService.remonterBilan}, absent jusqu'ici sur
+  /// les sources d'enrichissement : la panne Overpass de 3+ mois (#990) n'avait ainsi jamais généré
+  /// la moindre entrée {@code logs_admin}.
+  private void remonterBilans() {
+    for (SourceEnrichissementSalle source : sources) {
+      if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
+      BilanFetch bilan = avecBilan.preleverBilan();
+      bilan
+          .evaluer(
+              "reconciliation:nocturne",
+              capitaliser(source.nom()),
+              BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT)
+          .ifPresent(
+              entree ->
+                  logsAdminWorker.inserer(
+                      entree.niveau(), "worker", entree.message(), entree.meta()));
+    }
+  }
+
+  private static String capitaliser(String nom) {
+    return nom.isEmpty() ? nom : Character.toUpperCase(nom.charAt(0)) + nom.substring(1);
   }
 
   private static void attendreEntreLots() {

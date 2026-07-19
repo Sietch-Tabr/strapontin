@@ -40,9 +40,17 @@ import org.springframework.web.client.RestClient;
 ///
 /// @since 2.6.0
 /// @author Kwaite
-public class WikidataArtisteSource implements SourceEnrichissementArtiste {
+public class WikidataArtisteSource implements SourceEnrichissementArtiste, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(WikidataArtisteSource.class);
+
+  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement (#993).
+  ///
+  /// @return le bilan depuis le dernier prélèvement
+  @Override
+  public fr.strapontin.core.BilanFetch preleverBilan() {
+    return client.preleverBilan();
+  }
 
   private static final int TAILLE_LOT_MAX = 50;
   private static final int DELAI_MIN_ENTRE_APPELS_MS = 500;

@@ -35,6 +35,8 @@ final class ClientSparqlWikidata {
   private static final Duration TIMEOUT_LECTURE = Duration.ofSeconds(60);
 
   private final RestClient restClient;
+  private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
+      new fr.strapontin.core.CompteurBilanFetch();
 
   /// Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture 60s).
   ClientSparqlWikidata() {
@@ -75,6 +77,9 @@ final class ClientSparqlWikidata {
   /// @param sparql corps de la requête SPARQL
   /// @return corps JSON désérialisé, ou null en cas d'échec définitif
   java.util.Map<String, Object> executer(String sparql) {
+    // #993 : un appel logique = un executer(), quel que soit le nombre de retries internes —
+    // seul un échec définitif (retries épuisés) compte comme erreur pour le bilan de panne.
+    compteurBilan.enregistrerAppel();
     int tentative = 0;
     int tentatives503 = 0;
     while (tentative < RETRY_TOTAL_MAX) {
@@ -89,16 +94,29 @@ final class ClientSparqlWikidata {
         tentatives503++;
         if (tentatives503 >= RETRY_503_MAX) {
           log.warn("Wikidata 503 après {} tentatives, abandon", RETRY_503_MAX);
+          compteurBilan.enregistrerErreur();
           return null;
         }
         dormir(1000L * tentatives503);
       } catch (Exception e) {
+        compteurBilan.enregistrerErreur();
         log.warn("Wikidata SPARQL erreur : {}", e.getMessage());
         return null;
       }
     }
+    compteurBilan.enregistrerErreur();
     log.warn("Wikidata SPARQL abandon après {} tentatives", RETRY_TOTAL_MAX);
     return null;
+  }
+
+  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement (#993) et
+  /// remet les compteurs à zéro — client partagé entre {@link WikidataSalleSource} et
+  /// {@link WikidataArtisteSource}, mais une instance par source (non partagée) : chacune
+  /// prélève son propre bilan sans interférer avec l'autre.
+  ///
+  /// @return le bilan depuis le dernier prélèvement
+  fr.strapontin.core.BilanFetch preleverBilan() {
+    return compteurBilan.preleverBilan();
   }
 
   private static Optional<Long> extraireRetryAfterMs(HttpHeaders headers) {
