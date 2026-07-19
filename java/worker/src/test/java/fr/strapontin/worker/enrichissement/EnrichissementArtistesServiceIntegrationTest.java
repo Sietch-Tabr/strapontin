@@ -15,6 +15,7 @@ import fr.strapontin.sources.ArtisteAEnrichir;
 import fr.strapontin.sources.DeezerArtisteSource;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.sources.WikidataArtisteSource;
+import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -22,12 +23,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /// Tests d'intégration de [EnrichissementArtistesService] avec PostgreSQL réel (Testcontainers) —
 /// couvre spécifiquement la rotation hebdomadaire par {@code jour_batch} (#994), symétrique à
@@ -35,16 +32,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 ///
 /// @since 2.7.3
 /// @author Kwaite
-@SpringBootTest
-@ActiveProfiles("test")
-class EnrichissementArtistesServiceIntegrationTest {
-
-  @ServiceConnection
-  static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
-
-  static {
-    postgres.start();
-  }
+class EnrichissementArtistesServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @MockitoBean private WikidataArtisteSource wikidataArtisteSource;
   @MockitoBean private DeezerArtisteSource deezerArtisteSource;

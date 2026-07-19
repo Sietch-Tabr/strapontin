@@ -17,12 +17,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /// Tests d'intégration de [WorkerFetchService] avec PostgreSQL réel (Testcontainers).
 ///
@@ -34,16 +30,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 ///
 /// @since 2.7.3
 /// @author Kwaite
-@SpringBootTest
-@ActiveProfiles("test")
-class WorkerFetchServiceIntegrationTest {
-
-  @ServiceConnection
-  static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
-
-  static {
-    postgres.start();
-  }
+class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @MockitoBean private TicketmasterSource ticketmasterSource;
 
