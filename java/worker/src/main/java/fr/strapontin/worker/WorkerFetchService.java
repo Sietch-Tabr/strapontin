@@ -396,12 +396,18 @@ public class WorkerFetchService {
     log.info("fetch:salle terminé identifiants={}", identifiantsStr);
   }
 
-  /// Fetch périodique de toutes les salles ayant des sources configurées dans {@code
-  // salle_sources}.
+  /// Fetch périodique des salles suivies (`user_salles`) ayant des sources configurées dans
+  /// {@code salle_sources}.
   ///
-  /// Boucle sur toutes les salles du référentiel et exécute le même pipeline que
-  /// {@link #executerFetchSalle} en agrégeant les concerts avant persistance.
-  /// Suspendu si le quota TM est insuffisant.
+  /// Restreint aux salles réellement suivies par un utilisateur depuis #996 — jusque-là toutes
+  /// les salles du référentiel (255 avec source TM en prod le 18/07/2026) étaient refetchées à
+  /// chaque cycle, épuisant le quota TM en une journée dès que #966 a débloqué cet appel pour de
+  /// vrai. Les salles non suivies n'apportent aucune valeur ici : un artiste suivi qui y jouerait
+  /// est de toute façon déjà détecté par {@code fetch:artistes:batch} (recherche nationale par
+  /// nom, indépendante du département).
+  ///
+  /// Boucle sur les salles suivies et exécute le même pipeline que {@link #executerFetchSalle} en
+  /// agrégeant les concerts avant persistance. Suspendu si le quota TM est insuffisant.
   public void executerFetchSallesAll() {
     log.info("fetch:salles:all démarré");
     long debut = System.currentTimeMillis();
@@ -418,11 +424,15 @@ public class WorkerFetchService {
       // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique "ticketmaster"
       // de salle_sources.source) — sans cette traduction, fetchSalle n'est jamais invoqué pour
       // aucune salle TM (mismatch silencieux, aucune exception, aucun log d'erreur).
+      // #996 : restreint aux salles suivies (user_salles) — voir Javadoc de la méthode.
       List<String> identifiantsParSalle =
           jdbc
               .queryForList(
                   "SELECT string_agg(ss.source || ':' || ss.identifiant_externe, ',')"
-                      + " FROM salle_sources ss GROUP BY ss.salle_id",
+                      + " FROM salle_sources ss"
+                      + " WHERE EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id ="
+                      + " ss.salle_id)"
+                      + " GROUP BY ss.salle_id",
                   Map.of(),
                   String.class)
               .stream()
@@ -435,7 +445,7 @@ public class WorkerFetchService {
               .toList();
 
       if (identifiantsParSalle.isEmpty()) {
-        log.info("fetch:salles:all — aucune salle avec source configurée");
+        log.info("fetch:salles:all — aucune salle suivie avec source configurée");
         return;
       }
 
