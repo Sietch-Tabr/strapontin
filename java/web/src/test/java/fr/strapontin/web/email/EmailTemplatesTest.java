@@ -148,6 +148,21 @@ class EmailTemplatesTest {
     assertThat(html).doesNotContain("border-left: 3px solid #c00");
   }
 
+  // ---- alerteIntegrite() ----
+
+  @Test
+  void alerteIntegrite_afficheLeDetailEtTitreRouge() {
+    String html = EmailTemplates.alerteIntegrite("web.jar : md5 modifié", "https://app.fr");
+    assertThat(html).contains("web.jar : md5 modifié");
+    assertThat(html).contains("color: #c00");
+  }
+
+  @Test
+  void alerteIntegrite_detailAvecCaracteresSpeciaux_estEchappe() {
+    String html = EmailTemplates.alerteIntegrite("<script>alert(1)</script>", "https://app.fr");
+    assertThat(html).doesNotContain("<script>alert(1)</script>");
+  }
+
   // ---- alerteBounce() ----
 
   @Test
@@ -276,11 +291,13 @@ class EmailTemplatesTest {
         .contains(baseUrl + "/parametres");
     assertThat(EmailTemplates.alerteBackup("ts", "raison", baseUrl))
         .contains(baseUrl + "/parametres");
+    assertThat(EmailTemplates.alerteIntegrite("detail", baseUrl)).contains(baseUrl + "/parametres");
   }
 
   @Test
   void emailsAlerte_ontTitreRouge() {
     assertThat(EmailTemplates.alerteBackup("ts", "", "https://app.fr")).contains("color: #c00");
+    assertThat(EmailTemplates.alerteIntegrite("detail", "https://app.fr")).contains("color: #c00");
     assertThat(EmailTemplates.alerteBounce("x@y.fr", "https://app.fr")).contains("color: #c00");
     assertThat(EmailTemplates.alerteWorker("detail", "https://app.fr")).contains("color: #c00");
   }
