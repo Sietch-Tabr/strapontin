@@ -78,6 +78,100 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // #991 : la recherche mwapi échoue quasi systématiquement sur les noms à suffixe de sous-salle
+  // ("Zenith Toulouse Metropole" → 0 résultat en direct, "Zenith de Toulouse" trouvé aussitôt).
+  // Ici : nom avec séparateur "-", premier appel (nom complet) sans résultat, repli sur le nom
+  // tronqué au séparateur qui, lui, trouve un candidat.
+  @Test
+  void enrichirLot_rechercheCompleteEchoue_replieSurNomTronqueAuSeparateur() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    String nomComplet = "Zenith Toulouse - Metropole";
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id,
+            nomComplet,
+            fr.strapontin.core.Normalisation.normaliserTexte(nomComplet),
+            null,
+            null,
+            null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q3576489"},
+                   "itemLabel":{"type":"literal","value":"Zenith Toulouse"},
+                   "communeLabel":{"type":"literal","value":"Toulouse"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertEquals(1, resultat.size());
+    assertEquals("Q3576489", resultat.get(id).wikidataId());
+    serveur.verify();
+  }
+
+  // Les deux recherches (nom complet, nom tronqué) peuvent échouer : aucun candidat, mais aucune
+  // exception, résultat vide.
+  @Test
+  void enrichirLot_rechercheCompleteEtTronqueeEchouent_retourneVide() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    String nomComplet = "Zenith Toulouse - Metropole";
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id,
+            nomComplet,
+            fr.strapontin.core.Normalisation.normaliserTexte(nomComplet),
+            null,
+            null,
+            null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertEquals(0, resultat.size());
+    serveur.verify();
+  }
+
   // Régression : un nom propre français perd son identité après suppression des accents et peut
   // coïncider avec un nom anglais sans rapport — constaté en production : "Orléans Arena" (salle
   // française) normalisé en "orleans arena", strictement identique à "Orleans Arena" (Q3356467,
