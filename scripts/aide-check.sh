@@ -32,7 +32,11 @@ if [ "$CODE" -eq 0 ]; then
     _appel_statut "ok" ""
     echo "aide-check : aucune modification détectée"
 else
-    DETAIL=$(echo "$SORTIE" | grep -E "^(added|removed|changed)" | head -20 || true)
+    # Le regex précédent (^(added|removed|changed)) ne matchait jamais la sortie réelle d'AIDE
+    # (en-têtes de section capitalisés "Added entries:", lignes de fichier au format
+    # "f++++++++++++++++++: /chemin", jamais en minuscule en début de ligne) — DETAIL restait
+    # toujours vide, l'email d'alerte n'indiquait jamais quel fichier était concerné.
+    DETAIL=$(echo "$SORTIE" | grep -E "entries:|: /opt/strapontin|: /etc/systemd" | head -30 || true)
     _appel_statut "modifie" "$DETAIL"
     echo "aide-check : modification détectée (code $CODE)" >&2
     echo "$SORTIE" >&2
