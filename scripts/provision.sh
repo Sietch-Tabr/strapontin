@@ -81,6 +81,9 @@ fi
 # Secret partagé protégeant l'endpoint interne /api/interne/backup-statut.
 BACKUP_INTERNAL_SECRET=$(openssl rand -hex 32)
 
+# Secret partagé protégeant l'endpoint interne /api/interne/integrite-statut (#976).
+INTEGRITY_INTERNAL_SECRET=$(openssl rand -hex 32)
+
 # ---------------------------------------------------------------
 # 1. Template Debian 13
 # ---------------------------------------------------------------
@@ -279,11 +282,13 @@ pct push "$VMID" "$(dirname "$0")/update.sh"        "$APP_DIR/scripts/update.sh"
 pct push "$VMID" "$(dirname "$0")/backup.sh"        "$APP_DIR/scripts/backup.sh"
 pct push "$VMID" "$(dirname "$0")/backup-local.sh"  "$APP_DIR/scripts/backup-local.sh"
 pct push "$VMID" "$(dirname "$0")/restore.sh"       "$APP_DIR/scripts/restore.sh"
+pct push "$VMID" "$(dirname "$0")/aide-check.sh"    "$APP_DIR/scripts/aide-check.sh"
 pct exec "$VMID" -- chmod +x \
     "$APP_DIR/scripts/update.sh" \
     "$APP_DIR/scripts/backup.sh" \
     "$APP_DIR/scripts/backup-local.sh" \
-    "$APP_DIR/scripts/restore.sh"
+    "$APP_DIR/scripts/restore.sh" \
+    "$APP_DIR/scripts/aide-check.sh"
 
 echo "[7] Fichier de configuration .env..."
 if [ "$PROFIL" = "dev" ]; then
@@ -293,6 +298,7 @@ SPRING_DATASOURCE_USERNAME=$APP_USER
 SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
 APP_CONFIG_SECRET=$APP_CONFIG_SECRET
 BACKUP_INTERNAL_SECRET=$BACKUP_INTERNAL_SECRET
+INTEGRITY_INTERNAL_SECRET=$INTEGRITY_INTERNAL_SECRET
 SPRING_PROFILES_ACTIVE=dev
 ENVFILE
 chown $APP_USER:$APP_USER $APP_DIR/.env
@@ -305,6 +311,7 @@ SPRING_DATASOURCE_USERNAME=$APP_USER
 SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
 APP_CONFIG_SECRET=$APP_CONFIG_SECRET
 BACKUP_INTERNAL_SECRET=$BACKUP_INTERNAL_SECRET
+INTEGRITY_INTERNAL_SECRET=$INTEGRITY_INTERNAL_SECRET
 SPRING_PROFILES_ACTIVE=prod
 ENVFILE
 chown $APP_USER:$APP_USER $APP_DIR/.env
@@ -405,7 +412,63 @@ Persistent=true
 WantedBy=timers.target
 UNIT"
 
-pct exec "$VMID" -- bash -c "systemctl daemon-reload && systemctl enable strapontin-web strapontin-worker strapontin-backup.timer strapontin-backup-local.timer && systemctl start strapontin-backup.timer strapontin-backup-local.timer"
+echo "[7] Contrôle d'intégrité AIDE (#976)..."
+# Le paquet Debian aide embarque son propre timer (dailyaidecheck.timer, scan complet de l'OS +
+# alerte par mail local root, jamais lu sur cette infra) et l'active automatiquement à
+# l'installation — désactivé au profit du timer/périmètre dédiés ci-dessous (redondant sinon,
+# deux mécanismes de contrôle d'intégrité indépendants sur la même base AIDE).
+pct exec "$VMID" -- bash -c "
+    export LC_ALL=C LANG=C DEBIAN_FRONTEND=noninteractive
+    apt-get install -y -qq aide
+    systemctl disable --now dailyaidecheck.timer
+    systemctl mask dailyaidecheck.timer
+"
+pct exec "$VMID" -- bash -c "mkdir -p /etc/aide /var/lib/aide
+cat > /etc/aide/aide.conf << 'UNIT'
+# Strapontin — périmètre restreint (pas de scan complet de l'OS, cf. #976) :
+# JARs, .env, scripts d'exploitation, units systemd web/worker (vecteur de persistance classique).
+# database (sans suffixe) supprimé en AIDE v0.19 — database_in/database_out obligatoires.
+database_in=file:/var/lib/aide/aide.db
+database_out=file:/var/lib/aide/aide.db.new
+gzip_dbout=no
+
+Checksums = p+i+n+u+g+s+m+c+sha256
+
+/opt/strapontin/web.jar Checksums
+/opt/strapontin/worker.jar Checksums
+/opt/strapontin/.env Checksums
+/opt/strapontin/scripts Checksums
+/etc/systemd/system/strapontin-web.service Checksums
+/etc/systemd/system/strapontin-worker.service Checksums
+UNIT
+aide --config=/etc/aide/aide.conf --init
+mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+"
+
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-integrity.service << 'UNIT'
+[Unit]
+Description=Strapontin — contrôle d'intégrité AIDE
+After=network.target strapontin-web.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/strapontin/scripts/aide-check.sh
+UNIT"
+
+pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-integrity.timer << 'UNIT'
+[Unit]
+Description=Contrôle d'intégrité AIDE quotidien Strapontin
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+UNIT"
+
+pct exec "$VMID" -- bash -c "systemctl daemon-reload && systemctl enable strapontin-web strapontin-worker strapontin-backup.timer strapontin-backup-local.timer strapontin-integrity.timer && systemctl start strapontin-backup.timer strapontin-backup-local.timer strapontin-integrity.timer"
 
 # ---------------------------------------------------------------
 # 8. SSH développeur

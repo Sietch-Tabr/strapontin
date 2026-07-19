@@ -191,6 +191,44 @@ public class EmailAlerteService {
     }
   }
 
+  /// Envoie une alerte à l'admin quand le contrôle d'intégrité AIDE détecte une modification de
+  /// fichier hors déploiement légitime sur un LXC prod/dev (#976).
+  ///
+  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907).
+  ///
+  /// @param detail sortie résumée d'{@code aide --check}
+  public void envoyerAlerteIntegrite(String detail) {
+    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+    if (ctx.isEmpty()) {
+      log.warn("RESEND_API_KEY absent — alerte intégrité non envoyée");
+      return;
+    }
+    Optional<String> destinataire = obtenirDestinataireAlerte();
+    if (destinataire.isEmpty()) {
+      log.warn("Aucun destinataire d'alerte disponible — alerte intégrité non envoyée");
+      return;
+    }
+
+    String corps = EmailTemplates.alerteIntegrite(detail, ctx.get().baseUrl());
+    String sujet = "Strapontin — alerte contrôle d'intégrité";
+    try {
+      emailSender.envoyer(
+          ctx.get(),
+          destinataire.get(),
+          ctx.get().expediteur(),
+          sujet,
+          corps,
+          "Modification de fichier détectée hors déploiement légitime : "
+              + detail
+              + ". Consultez l'administration : "
+              + ctx.get().baseUrl()
+              + "/admin");
+      log.info("Alerte intégrité envoyée");
+    } catch (Exception e) {
+      log.error("Échec envoi alerte intégrité", e);
+    }
+  }
+
   /// Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3 heures.
   ///
   /// @param email               l'adresse email de l'administrateur

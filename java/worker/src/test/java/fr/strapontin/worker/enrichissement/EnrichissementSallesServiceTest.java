@@ -16,8 +16,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
+import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementSalle;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
@@ -212,5 +214,52 @@ class EnrichissementSallesServiceTest {
     assertEquals(1, nb);
     verify(logsAdminWorker)
         .inserer(eq("warn"), eq("enrichissement-wikidata"), anyString(), anyMap());
+  }
+
+  // #993 : bilan de panne absent jusqu'ici sur les sources d'enrichissement — panne Overpass de
+  // 3+ mois jamais remontée dans logs_admin. Panne totale (3 appels, 3 erreurs) doit escalader en
+  // niveau error.
+  @Test
+  void enrichir_sourceAvecBilanFetchPanneTotale_loggeErreurDansLogsAdmin() {
+    UUID salleId = UUID.randomUUID();
+    SalleAEnrichir candidat = new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
+
+    SourceEnrichissementSalle source =
+        mock(
+            SourceEnrichissementSalle.class,
+            org.mockito.Mockito.withSettings().extraInterfaces(SourceAvecBilanFetch.class));
+    when(source.enrichirLot(any())).thenReturn(Map.of());
+    when(source.nom()).thenReturn("overpass");
+    when(((SourceAvecBilanFetch) source).preleverBilan()).thenReturn(new BilanFetch(3, 3));
+    LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
+
+    EnrichissementSallesService service =
+        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+    service.enrichir();
+
+    verify(logsAdminWorker).inserer(eq("error"), eq("worker"), anyString(), anyMap());
+  }
+
+  @Test
+  void enrichir_sourceAvecBilanFetchAucunAppel_neLoggeAucunBilan() {
+    UUID salleId = UUID.randomUUID();
+    SalleAEnrichir candidat = new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
+
+    SourceEnrichissementSalle source =
+        mock(
+            SourceEnrichissementSalle.class,
+            org.mockito.Mockito.withSettings().extraInterfaces(SourceAvecBilanFetch.class));
+    when(source.enrichirLot(any())).thenReturn(Map.of());
+    when(source.nom()).thenReturn("overpass");
+    when(((SourceAvecBilanFetch) source).preleverBilan()).thenReturn(new BilanFetch(0, 0));
+    LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
+
+    EnrichissementSallesService service =
+        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+    service.enrichir();
+
+    verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
   }
 }

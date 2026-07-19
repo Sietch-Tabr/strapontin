@@ -30,8 +30,12 @@ import org.springframework.context.annotation.Configuration;
 ///
 /// - `fetch:artistes:batch` — 11 cycles/jour : 01h, 05h, puis toutes les 2h de 07h à 23h
 ///   (cf. `worker.cron.fetch-artistes`)
-/// - `fetch:region` — mêmes heures + 30 min (cf. `worker.cron.fetch-region`)
-/// - `fetch:salles:all` — mêmes heures que fetch:region (cf. `worker.cron.fetch-salles`)
+/// - `fetch:region` — 1 batch nocturne unique à 02h (cf. `worker.cron.fetch-region`) — restreint
+///   à ce seul consommateur ([DecouverteService], browse-only, fraîcheur non critique) depuis
+///   #996, l'ancien cron adaptatif 11x/jour n'apportant aucune valeur aux artistes/salles suivis
+///   (couverts indépendamment par `fetch:artistes:batch`/`fetch:salles:all`)
+/// - `fetch:salles:all` — mêmes heures que fetch:artistes + 30 min (cf. `worker.cron.fetch-salles`,
+///   fréquence inchangée), restreint aux salles suivies (`user_salles`) depuis #996
 /// - `recalculer:matches` — mêmes heures que fetch:artistes (cf. `worker.cron.recalculer-matches`)
 /// - `purger:concerts` — tous les jours à minuit
 /// - `purger:salles` — tous les jours à 0h05 (après purge concerts)
@@ -53,7 +57,11 @@ public class Planificateur {
   @Value("${worker.cron.fetch-artistes:0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronFetchArtistes;
 
-  @Value("${worker.cron.fetch-region:0 30 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
+  // #996 : cron adaptatif (11x/jour) → 1 batch nocturne unique. DecouverteService est l'unique
+  // consommateur de fetch:region (browse-only, sans notification associée) — les artistes/salles
+  // suivis ont leurs propres mécanismes indépendants (fetch:artistes:batch, fetch:salles:all),
+  // non affectés par cette fréquence.
+  @Value("${worker.cron.fetch-region:0 0 2 * * ?}")
   private String cronFetchRegion;
 
   @Value("${worker.cron.fetch-salles:0 30 1,5,7,9,11,13,15,17,19,21,23 * * ?}")

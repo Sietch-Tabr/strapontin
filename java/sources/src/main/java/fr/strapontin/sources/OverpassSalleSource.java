@@ -4,6 +4,8 @@
  */
 package fr.strapontin.sources;
 
+import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.Normalisation;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -30,35 +32,51 @@ import org.springframework.web.client.RestClient;
 /// service indisponible) restent éligibles à la recherche Wikidata directe par nom, voir
 /// {@link WikidataSalleSource} — Overpass n'est donc plus un passage obligé.
 ///
-/// ⚠️ L'instance publique Overpass (`overpass-api.de`, alias de `gall`/`lambert.openstreetmap.de`)
-/// traverse un incident de surcharge documenté depuis avril 2026 — durée annoncée ~8 semaines
-/// (wiki.openstreetmap.org/wiki/Overpass_API/status) : trafic massif depuis des IPs Azure/AWS,
-/// désormais partiellement bloquées. Conséquence observée en juillet 2026 : les requêtes
-/// utilisant `area["ISO3166-1"="FR"]` (calcul de polygone administratif, coûteux) restent
-/// bloquées bien au-delà de leur propre timeout déclaré, d'où l'usage d'une bounding box
-/// (nettement moins chère) à la place. Même avec cette optimisation, des échecs 504/timeout
-/// restent attendus tant que l'incident n'est pas résorbé, et sont non bloquants : le lot échoué
-/// revient simplement vide, sans retry (l'étiquette Overpass demande de la retenue plutôt que des
-/// re-tentatives agressives sur un service public déjà saturé). Les salles non enrichies restent
-/// candidates pour les cycles nocturnes suivants.
+/// ⚠️ L'instance publique de référence (`overpass-api.de`, alias de
+/// `gall`/`lambert.openstreetmap.de`) a traversé un incident de surcharge documenté depuis avril
+/// 2026 (wiki.openstreetmap.org/wiki/Overpass_API/status) — 504 systématiques pendant plus de 3
+/// mois, aucune contribution du cycle nocturne pendant tout cet incident. `overpass.karte.io`
+/// (cité dans le ticket #711) n'existe pas (résolution DNS en échec). #990 (19/07/2026) : test en
+/// direct de tous les miroirs publics officiels — seul `overpass.osm.ch` (SOSM, association OSM
+/// suisse) a répondu correctement (HTTP 200 en 1,7s sur une requête représentative du trafic
+/// Strapontin, `kumi.systems`/`openstreetmap.fr`/`private.coffee`/`maps.mail.ru` tous injoignables
+/// ou instables au moment du test) — bascule effectuée. Aucune politique de rate-limit publiée sur
+/// cette instance (contrairement à `overpass-api.de` ou `private.coffee`) — délai entre appels
+/// porté à {@value #DELAI_MIN_ENTRE_APPELS_MS}ms par prudence, sans contrainte de temps réel
+/// (cycle nocturne unique, coût d'un cycle un peu plus long négligeable). Les échecs 504/timeout
+/// restent non bloquants : le lot échoué revient simplement vide, sans retry. Les salles non
+/// enrichies restent candidates pour les cycles nocturnes suivants.
 ///
 /// @since 2.6.0
 /// @author Kwaite
-public class OverpassSalleSource implements SourceEnrichissementSalle {
+public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(OverpassSalleSource.class);
 
-  // "overpass.karte.io" (cité dans le ticket #711) n'existe pas — vérifié par résolution DNS
-  // (échec depuis le LXC dev ET en dehors) et absent de toute liste de miroirs Overpass connue.
-  // overpass-api.de est l'instance de référence officielle
-  // (wiki.openstreetmap.org/wiki/Overpass_API).
-  private static final String BASE_URL = "https://overpass-api.de/api/interpreter";
+  private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
+
+  /// Retourne le bilan agrégé des appels HTTP Overpass depuis le dernier prélèvement (#993) et
+  /// remet les compteurs à zéro — panne de 3+ mois de l'instance publique (#990) jusque-là
+  /// invisible dans {@code logs_admin}, seul un grep manuel de journalctl permettait de la
+  /// constater.
+  ///
+  /// @return le bilan depuis le dernier prélèvement
+  @Override
+  public BilanFetch preleverBilan() {
+    return compteurBilan.preleverBilan();
+  }
+
+  // #990 (19/07/2026) : overpass-api.de en panne 3+ mois (504 systématique), overpass.osm.ch seul
+  // miroir public répondant correctement au test en direct — voir Javadoc de la classe.
+  private static final String BASE_URL = "https://overpass.osm.ch/api/interpreter";
   // Identification obligatoire côté serveur (User-Agent générique/absent → 406 sur l'instance
   // principale, cf. wiki.openstreetmap.org/wiki/Overpass_API).
   private static final String USER_AGENT =
       "Strapontin/2.6.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr) SpringBoot/4.1";
   private static final int TAILLE_LOT = 25;
-  private static final int DELAI_MIN_ENTRE_APPELS_MS = 500;
+  // #990 : porté de 500ms à 1750ms — overpass.osm.ch ne publie aucune politique de rate-limit,
+  // contrairement à overpass-api.de ; prudence sans coût réel (cycle nocturne unique, 3h du matin).
+  private static final int DELAI_MIN_ENTRE_APPELS_MS = 1750;
   // Le timeout serveur ([timeout:...] dans la requête OverpassQL) doit rester strictement
   // inférieur au timeout de lecture HTTP client pour laisser le temps à Overpass de renvoyer sa
   // propre réponse d'erreur "Query timed out" plutôt que de couper la connexion en premier.
@@ -111,6 +129,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle {
 
   private Map<UUID, EnrichissementSalle> enrichirUnLot(List<SalleAEnrichir> lot) {
     String requete = construireRequeteOverpassQL(lot);
+    compteurBilan.enregistrerAppel();
     try {
       @SuppressWarnings("unchecked")
       Map<String, Object> data =
@@ -125,6 +144,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle {
               .body(Map.class);
       return mapperReponse(data, lot);
     } catch (Exception e) {
+      compteurBilan.enregistrerErreur();
       log.warn("Overpass erreur lot taille={} : {}", lot.size(), e.getMessage());
       return Map.of();
     }

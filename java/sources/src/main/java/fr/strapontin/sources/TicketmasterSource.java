@@ -488,7 +488,16 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     return new FenetreTemps(fmt.format(maintenant), fmt.format(dans6Mois));
   }
 
-  private List<ConcertBrut> fetchToutesPages(UriComponentsBuilder uriBase, String artisteFallback) {
+  /// Récupère toutes les pages disponibles (bornées à {@link #NB_PAGES_MAX}) pour une requête TM.
+  ///
+  /// @param uriBase         URI de base de la requête, sans pagination
+  /// @param artisteFallback nom de l'artiste cherché (fetch:artiste uniquement), peut être null
+  /// @param contexte        identifiant du centre de recherche (ex. {@code "dept=75"}) inclus
+  ///     dans le log de plafonnement de pagination (#995), pour distinguer les départements/salles
+  ///     chroniquement affectés
+  /// @return les concerts récupérés sur toutes les pages parcourues
+  private List<ConcertBrut> fetchToutesPages(
+      UriComponentsBuilder uriBase, String artisteFallback, String contexte) {
     List<ConcertBrut> tousLesEvents = new ArrayList<>();
     int borneMax = NB_PAGES_MAX;
     int totalElements = 0;
@@ -513,8 +522,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     if (nbPagesTotal > NB_PAGES_MAX) {
       concertsManquesCumules.addAndGet(Math.max(0, totalElements - tousLesEvents.size()));
       log.warn(
-          "NB_PAGES_MAX atteint — concerts manqués total={} recuperes={} pagesFetched={}"
-              + " pagesTotal={}",
+          "NB_PAGES_MAX atteint contexte={} — concerts manqués total={} recuperes={}"
+              + " pagesFetched={} pagesTotal={}",
+          contexte,
           totalElements,
           tousLesEvents.size(),
           NB_PAGES_MAX,
@@ -577,7 +587,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             .queryParam("startDateTime", fenetre.debut())
             .queryParam("endDateTime", fenetre.fin());
 
-    List<ConcertBrut> concerts = fetchToutesPages(uriBase, null);
+    List<ConcertBrut> concerts = fetchToutesPages(uriBase, null, "salle=" + venueId);
     log.info("TM fetchSalle venueId={} total={}", venueId, concerts.size());
     return concerts;
   }
@@ -638,7 +648,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             .queryParam("sort", TRI_DATE_ASC)
             .queryParam("startDateTime", fenetre.debut());
 
-    List<ConcertBrut> concerts = fetchToutesPages(uriBase, null);
+    List<ConcertBrut> concerts = fetchToutesPages(uriBase, null, "lot");
     if (dernierQuota.get() != null) {
       log.info("TM fetchArtistesLot ids={} total={}", attractionIds.size(), concerts.size());
     }
@@ -776,7 +786,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
                 .queryParam("startDateTime", fenetre.debut())
                 .queryParam("endDateTime", fenetre.fin());
 
-        List<ConcertBrut> concerts = fetchToutesPages(uriBase, null);
+        List<ConcertBrut> concerts = fetchToutesPages(uriBase, null, "dept=" + dept);
         tous.addAll(concerts);
       }
     }

@@ -4,8 +4,10 @@
  */
 package fr.strapontin.worker.enrichissement;
 
+import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.ArtisteAEnrichir;
 import fr.strapontin.sources.EnrichissementArtiste;
+import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementArtiste;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.HashMap;
@@ -42,7 +44,6 @@ public class EnrichissementArtistesService {
 
   private static final Logger log = LoggerFactory.getLogger(EnrichissementArtistesService.class);
 
-  static final int PLAFOND_NOCTURNE = 500;
   static final int TAILLE_LOT_PERSISTANCE = 25;
   // Délai entre deux lots de persistance, en plus du délai intra-source (500ms/appel côté
   // WikidataArtisteSource en mode découverte) — laisse Wikidata respirer entre deux lots plutôt
@@ -62,9 +63,10 @@ public class EnrichissementArtistesService {
     this.logsAdminWorker = logsAdminWorker;
   }
 
-  /// Enrichit jusqu'à {@link #PLAFOND_NOCTURNE} artistes sans {@code wikidata_id}, priorisés par
-  /// nombre de concerts liés. N'écrase jamais un {@code nom_affiche} déjà présent (override
-  /// manuel admin #710).
+  /// Enrichit les artistes sans {@code wikidata_id} dont {@code jour_batch} correspond au jour
+  /// ISO courant (rotation hebdomadaire, #994 — remplace l'ancien plafond fixe de 500/nuit),
+  /// priorisés par nombre de concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un
+  /// {@code nom_affiche} déjà présent (override manuel admin #710).
   ///
   /// @return nombre d'artistes effectivement mis à jour
   public int enrichir() {
@@ -82,7 +84,32 @@ public class EnrichissementArtistesService {
       nbEnrichis += enrichirEtPersisterLot(lot);
     }
     log.info("enrichissement:artistes candidats={} enrichis={}", candidats.size(), nbEnrichis);
+    remonterBilans();
     return nbEnrichis;
+  }
+
+  /// Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source
+  /// implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer (#993) —
+  /// même mécanisme générique que {@code WorkerStatsService.remonterBilan} et
+  /// {@link EnrichissementSallesService#remonterBilans}.
+  private void remonterBilans() {
+    for (SourceEnrichissementArtiste source : sources) {
+      if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
+      BilanFetch bilan = avecBilan.preleverBilan();
+      bilan
+          .evaluer(
+              "reconciliation:nocturne",
+              capitaliser(source.nom()),
+              BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT)
+          .ifPresent(
+              entree ->
+                  logsAdminWorker.inserer(
+                      entree.niveau(), "worker", entree.message(), entree.meta()));
+    }
+  }
+
+  private static String capitaliser(String nom) {
+    return nom.isEmpty() ? nom : Character.toUpperCase(nom.charAt(0)) + nom.substring(1);
   }
 
   private static void attendreEntreLots() {
@@ -125,12 +152,11 @@ public class EnrichissementArtistesService {
         SELECT a.id, a.nom, a.nom_norm, a.deezer_id
         FROM artistes a
         LEFT JOIN concerts c ON c.artiste_id = a.id AND c.date >= CURRENT_DATE
-        WHERE a.wikidata_id IS NULL
+        WHERE a.wikidata_id IS NULL AND a.jour_batch = EXTRACT(ISODOW FROM CURRENT_DATE)
         GROUP BY a.id, a.nom, a.nom_norm, a.deezer_id
         ORDER BY COUNT(c.id) DESC
-        LIMIT :plafond
         """,
-        Map.of("plafond", PLAFOND_NOCTURNE),
+        Map.of(),
         (rs, _) ->
             new ArtisteAEnrichir(
                 rs.getObject("id", UUID.class),

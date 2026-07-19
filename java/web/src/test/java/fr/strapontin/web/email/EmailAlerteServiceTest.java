@@ -97,6 +97,49 @@ class EmailAlerteServiceTest {
   private static final CompteurEnvoisResend COMPTEUR_SEUIL_JOUR =
       new CompteurEnvoisResend("2026-07-18", 85, "2026-07", 200, false, false);
 
+  // --- envoyerAlerteIntegrite (#976) ---
+
+  @Test
+  void envoyerAlerteIntegrite_resendApiKeyAbsent_neResoutPasLeDestinataire() {
+    when(emailSender.obtenirContexte()).thenReturn(Optional.empty());
+
+    service.envoyerAlerteIntegrite("web.jar modifié");
+
+    verify(emailSender, never()).obtenirDestinataireAlerte();
+  }
+
+  @Test
+  void envoyerAlerteIntegrite_aucunDestinataireDisponible_neLeveAucuneException() {
+    when(emailSender.obtenirContexte())
+        .thenReturn(Optional.of(new EmailSender.ContexteEmail(null, "noreply@exemple.fr", "")));
+    when(emailSender.obtenirDestinataireAlerte()).thenReturn(Optional.empty());
+
+    service.envoyerAlerteIntegrite("web.jar modifié");
+
+    verify(emailSender, never())
+        .envoyer(any(), anyString(), anyString(), anyString(), anyString(), anyString());
+  }
+
+  @Test
+  void envoyerAlerteIntegrite_destinataireDisponible_envoie() {
+    when(emailSender.obtenirContexte())
+        .thenReturn(
+            Optional.of(
+                new EmailSender.ContexteEmail(null, "noreply@exemple.fr", "https://exemple.fr")));
+    when(emailSender.obtenirDestinataireAlerte()).thenReturn(Optional.of("admin@exemple.fr"));
+
+    service.envoyerAlerteIntegrite("web.jar modifié");
+
+    verify(emailSender)
+        .envoyer(
+            any(),
+            eq("admin@exemple.fr"),
+            eq("noreply@exemple.fr"),
+            anyString(),
+            anyString(),
+            anyString());
+  }
+
   @Test
   void envoyerAlerteQuotaResend_resendApiKeyAbsent_retourneFalse() {
     when(emailSender.obtenirContexte()).thenReturn(Optional.empty());

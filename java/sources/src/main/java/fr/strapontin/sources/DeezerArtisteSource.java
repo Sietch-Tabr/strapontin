@@ -33,13 +33,23 @@ import org.springframework.web.client.RestClient;
 ///
 /// @since 2.6.0
 /// @author Kwaite
-public class DeezerArtisteSource implements SourceEnrichissementArtiste {
+public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(DeezerArtisteSource.class);
 
   private static final String DEEZER_BASE = "https://api.deezer.com";
 
   private final RestClient restClient;
+  private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
+      new fr.strapontin.core.CompteurBilanFetch();
+
+  /// Retourne le bilan agrégé des appels HTTP Deezer depuis le dernier prélèvement (#993).
+  ///
+  /// @return le bilan depuis le dernier prélèvement
+  @Override
+  public fr.strapontin.core.BilanFetch preleverBilan() {
+    return compteurBilan.preleverBilan();
+  }
 
   /// Crée une instance avec un RestClient par défaut.
   public DeezerArtisteSource() {
@@ -71,6 +81,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste {
 
   @SuppressWarnings("unchecked")
   private Optional<EnrichissementArtiste> decouvrirParNom(ArtisteAEnrichir artiste) {
+    compteurBilan.enregistrerAppel();
     try {
       String uri = DEEZER_BASE + "/search/artist?q=" + encode(artiste.nom()) + "&limit=5";
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
@@ -92,6 +103,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste {
       }
       return Optional.empty();
     } catch (Exception e) {
+      compteurBilan.enregistrerErreur();
       log.warn("Deezer découverte erreur nom={} : {}", artiste.nom(), e.getMessage());
       return Optional.empty();
     }
@@ -103,6 +115,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste {
 
   @SuppressWarnings("unchecked")
   private Optional<EnrichissementArtiste> confirmerNom(ArtisteAEnrichir artiste) {
+    compteurBilan.enregistrerAppel();
     try {
       Map<String, Object> data =
           restClient
@@ -117,6 +130,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste {
       return Optional.of(
           new EnrichissementArtiste(artiste.wikidataId(), nomCanonique, artiste.deezerId(), null));
     } catch (Exception e) {
+      compteurBilan.enregistrerErreur();
       log.warn("Deezer erreur artistId={} : {}", artiste.deezerId(), e.getMessage());
       return Optional.empty();
     }

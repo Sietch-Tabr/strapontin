@@ -86,7 +86,7 @@ class OverpassSalleSourceTest {
   }
 
   private static org.hamcrest.Matcher<String> OverpassSalleSourceTestUrl() {
-    return org.hamcrest.Matchers.containsString("overpass-api.de");
+    return org.hamcrest.Matchers.containsString("overpass.osm.ch");
   }
 
   @Test

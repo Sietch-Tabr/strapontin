@@ -62,4 +62,19 @@ if ! systemctl is-active --quiet strapontin-worker; then
 fi
 echo "[update] Service worker UP"
 
+echo "[update] Régénération de la baseline AIDE..."
+if command -v aide >/dev/null 2>&1 && [ -f /etc/aide/aide.conf ]; then
+    # #976 : sans cette régénération, chaque déploiement légitime (web.jar/worker.jar modifiés)
+    # déclencherait une fausse alerte d'intégrité au prochain contrôle quotidien.
+    aide --config=/etc/aide/aide.conf --init >/dev/null 2>&1 || true
+    if [ -f /var/lib/aide/aide.db.new ]; then
+        mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+        echo "[update] Baseline AIDE régénérée"
+    else
+        echo "[update] AVERTISSEMENT : régénération de la baseline AIDE échouée" >&2
+    fi
+else
+    echo "[update] AIDE non installé — étape ignorée"
+fi
+
 echo "[update] Déploiement terminé."

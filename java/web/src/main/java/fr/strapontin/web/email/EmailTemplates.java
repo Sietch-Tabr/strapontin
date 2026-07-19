@@ -228,6 +228,27 @@ final class EmailTemplates {
     return enveloppErreur("Échec du backup nocturne", corps, baseUrl);
   }
 
+  /// Alerte de contrôle d'intégrité (AIDE) — modification détectée hors déploiement légitime sur
+  /// un LXC prod/dev (#976).
+  ///
+  /// @param detail  sortie résumée d'{@code aide --check} (fichiers modifiés/ajoutés/supprimés)
+  /// @param baseUrl l'URL publique de base de l'application
+  /// @return le HTML de l'alerte
+  static String alerteIntegrite(String detail, String baseUrl) {
+    String corps =
+        """
+        <p style="color: %s; font-size: 14px; margin: 0 0 16px; font-family: monospace;\
+        white-space: pre-wrap; background: #f5f5f5; border-left: 3px solid %s; padding: 8px 12px">\
+        %s</p>
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+          Une modification de fichier a été détectée hors d'un déploiement légitime
+          (JARs, .env, scripts/, units systemd). Vérifiez l'origine sur le serveur.
+        </p>
+        """
+            .formatted(C_ERREUR, C_ERREUR, e(detail), C_TEXTE);
+    return enveloppErreur("Alerte contrôle d'intégrité", corps, baseUrl);
+  }
+
   /// Alerte de bounce email (rejet définitif par le serveur destinataire).
   ///
   /// @param emailBouncee l'adresse email ayant produit le bounce

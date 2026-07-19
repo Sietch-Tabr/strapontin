@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,9 +72,17 @@ import org.springframework.web.client.RestClient;
 ///
 /// @since 2.6.0
 /// @author Kwaite
-public class WikidataSalleSource implements SourceEnrichissementSalle {
+public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(WikidataSalleSource.class);
+
+  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement (#993).
+  ///
+  /// @return le bilan depuis le dernier prélèvement
+  @Override
+  public fr.strapontin.core.BilanFetch preleverBilan() {
+    return client.preleverBilan();
+  }
 
   private static final int TAILLE_LOT_MAX = 50;
   private static final int DELAI_MIN_ENTRE_APPELS_MS = 500;
@@ -198,8 +207,34 @@ public class WikidataSalleSource implements SourceEnrichissementSalle {
 
   // --- Mode découverte (Q-ID inconnu) ---
 
+  /// Sépare le premier séparateur significatif de sous-salle/qualificatif (`-`, `/`, `(`) d'un
+  /// nom de salle, le cas échéant.
+  private static final Pattern SEPARATEUR_SOUS_SALLE = Pattern.compile("[-/(]");
+
   private Optional<EnrichissementSalle> decouvrir(SalleAEnrichir salle) {
-    String sparql = construireRequeteDecouverte(salle.nom());
+    Optional<EnrichissementSalle> resultat = decouvrirParNom(salle, salle.nom());
+    if (resultat.isPresent()) return resultat;
+
+    // #991 : la recherche mwapi:search échoue quasi systématiquement dès que le nom Strapontin
+    // porte un suffixe de sous-salle/qualificatif ("Zenith Toulouse Metropole" → 0 résultat,
+    // "Zenith de Toulouse" trouvé immédiatement), alors que l'entité existe bien sur Wikidata —
+    // l'échec se produit dans l'appel mwapi, avant même la comparaison des candidats. La
+    // validation du candidat reste faite contre salle.nomNorm() (nom complet), inchangée — seule
+    // la requête de recherche envoyée à Wikidata utilise le nom tronqué.
+    var matcher = SEPARATEUR_SOUS_SALLE.matcher(salle.nom());
+    if (!matcher.find() || matcher.start() == 0) return Optional.empty();
+    String nomTronque = salle.nom().substring(0, matcher.start()).trim();
+    if (nomTronque.isEmpty()) return Optional.empty();
+
+    log.info(
+        "Wikidata découverte salle — repli sur nom tronqué nom={} tronque={}",
+        salle.nom(),
+        nomTronque);
+    return decouvrirParNom(salle, nomTronque);
+  }
+
+  private Optional<EnrichissementSalle> decouvrirParNom(SalleAEnrichir salle, String nomRecherche) {
+    String sparql = construireRequeteDecouverte(nomRecherche);
     Map<String, Object> data = client.executer(sparql);
     if (data == null) return Optional.empty();
 
@@ -222,7 +257,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle {
       cache.put(qid, enrichissement);
       return Optional.of(enrichissement);
     }
-    log.info("Wikidata découverte salle — aucun candidat exact nom={}", salle.nom());
+    log.info("Wikidata découverte salle — aucun candidat exact nom={}", nomRecherche);
     return Optional.empty();
   }
 
