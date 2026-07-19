@@ -280,6 +280,16 @@ public class ReconciliateurSalles {
 
     if (salleId == null) return null;
 
+    // #992 : salles.dept n'était écrit qu'à la création puis jamais mis à jour — 281/284 salles
+    // sans dept en prod avaient pourtant l'info via un concert déjà lié. COALESCE : n'écrase
+    // jamais une valeur déjà connue, même pattern que wikidata_id/nom_affiche
+    // (EnrichissementSallesService).
+    if (c.dept() != null) {
+      jdbc.update(
+          "UPDATE salles SET dept = COALESCE(dept, :dept) WHERE id = CAST(:uuid AS uuid)",
+          Map.of("dept", c.dept(), "uuid", salleId.toString()));
+    }
+
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
             + " VALUES (CAST(:uuid AS uuid), :source, :identifiant)"

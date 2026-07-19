@@ -599,6 +599,62 @@ class PersisterConcertsIntegrationTest {
   }
 
   @Test
+  void persisterConcerts_salleExistanteSansDeptNouvelleSourceAvecDept_backfilleLeDept() {
+    // #992 : salles.dept n'était écrit qu'à la création puis jamais mis à jour — une salle créée
+    // sans code postal exploitable restait figée à dept=NULL même quand une source ultérieure
+    // apportait l'information (ici : upsertSalleSource, déclenché par un salleSourceId inconnu
+    // de salle_sources sur une salle déjà résolue par nom).
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
+            + " VALUES ('accor arena', 'Accor Arena', 'accor arena', NULL)",
+        Map.of());
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Julien Clerc", "2026-12-01", "Accor Arena", "ticketmaster:venue-aa", null)));
+
+    String dept =
+        jdbc.queryForObject(
+            "SELECT dept FROM salles WHERE salle_cle = 'accor arena'", Map.of(), String.class);
+    assertEquals("75", dept, "le dept du concert doit être propagé à la salle existante sans dept");
+  }
+
+  @Test
+  void persisterConcerts_salleExistanteAvecDeptNouvelleSourceDeptDifferent_neLEcrasePas() {
+    // COALESCE : ne doit jamais écraser une valeur déjà connue, même si une source ultérieure
+    // apporte un dept différent (concert erroné, salle multi-adresses...).
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
+            + " VALUES ('accor arena', 'Accor Arena', 'accor arena', '75')",
+        Map.of());
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Julien Clerc",
+                "2026-12-01",
+                "20:30",
+                "Accor Arena",
+                "Lyon",
+                "69",
+                "https://example.com/julien-clerc",
+                "ticketmaster",
+                "music",
+                "Pop",
+                "onsale",
+                null,
+                null,
+                "ticketmaster:venue-aa",
+                null)));
+
+    String dept =
+        jdbc.queryForObject(
+            "SELECT dept FROM salles WHERE salle_cle = 'accor arena'", Map.of(), String.class);
+    assertEquals("75", dept, "un dept déjà connu ne doit jamais être écrasé");
+  }
+
+  @Test
   void persisterConcerts_salleSourceIdNullSansCorrespondance_salleIdResteNull() {
     // Sans salleSourceId et sans salle existante correspondante, aucune salle fantôme ne doit
     // être créée — salle_id reste null (contrairement à upsertSalleSource, qui crée la salle
