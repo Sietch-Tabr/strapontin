@@ -44,7 +44,6 @@ public class EnrichissementSallesService {
 
   private static final Logger log = LoggerFactory.getLogger(EnrichissementSallesService.class);
 
-  static final int PLAFOND_NOCTURNE = 500;
   static final int TAILLE_LOT_PERSISTANCE = 25;
   // Délai entre deux lots de persistance, en plus du délai intra-source (500ms/appel côté
   // OverpassSalleSource et WikidataSalleSource) — laisse Overpass et Wikidata respirer entre deux
@@ -64,9 +63,11 @@ public class EnrichissementSallesService {
     this.logsAdminWorker = logsAdminWorker;
   }
 
-  /// Enrichit jusqu'à {@link #PLAFOND_NOCTURNE} salles sans {@code wikidata_id}, priorisées par
-  /// nombre de concerts liés. N'écrase jamais un {@code nom_affiche} déjà présent (override
-  /// manuel admin #710).
+  /// Enrichit les salles sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
+  /// courant (rotation hebdomadaire, #994 — remplace l'ancien plafond fixe de 500/nuit, qui
+  /// laissait une entité en échec systématique éternellement prioritaire, cf. #991), priorisées
+  /// par nombre de concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un
+  /// {@code nom_affiche} déjà présent (override manuel admin #710).
   ///
   /// @return nombre de salles effectivement mises à jour
   public int enrichir() {
@@ -147,12 +148,11 @@ public class EnrichissementSallesService {
         SELECT s.id, s.nom, s.nom_norm, s.ville, s.dept
         FROM salles s
         LEFT JOIN concerts c ON c.salle_id = s.id AND c.date >= CURRENT_DATE
-        WHERE s.wikidata_id IS NULL
+        WHERE s.wikidata_id IS NULL AND s.jour_batch = EXTRACT(ISODOW FROM CURRENT_DATE)
         GROUP BY s.id, s.nom, s.nom_norm, s.ville, s.dept
         ORDER BY COUNT(c.id) DESC
-        LIMIT :plafond
         """,
-        Map.of("plafond", PLAFOND_NOCTURNE),
+        Map.of(),
         (rs, _) ->
             new SalleAEnrichir(
                 rs.getObject("id", UUID.class),
