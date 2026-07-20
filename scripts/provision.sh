@@ -50,6 +50,7 @@ APP_USER="strapontin"
 DB_NAME="strapontin"
 JAVA_VERSION="25"
 PG_VERSION="18"
+NAS_MOUNT_PATH="/mnt/synology/backup/Strapontin"
 
 echo "=== Provisionnement LXC $VMID ($HOSTNAME) — stack Java v2.0.0 ==="
 
@@ -129,7 +130,7 @@ pct create "$VMID" "$TEMPLATE_PATH" \
 
 if [ "$PROFIL" = "prod" ]; then
     echo "[2] Montage NAS /mnt/backup..."
-    pct set "$VMID" --mp0 "/mnt/synology/backup/Strapontin,mp=/mnt/backup"
+    pct set "$VMID" --mp0 "$NAS_MOUNT_PATH,mp=/mnt/backup"
 fi
 
 echo "[2] Protection contre la suppression accidentelle..."
