@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import fr.strapontin.web.AbstractWebIntegrationTest;
 import java.util.Map;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
@@ -16,7 +17,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /// Test d'intégration de {@link SalleRepository} avec PostgreSQL réel (Testcontainers).
 ///
@@ -28,13 +28,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 ///
 /// @since 2.7.1
 /// @author Kwaite
-class SalleRepositoryIntegrationTest {
-
-  static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
-
-  static {
-    postgres.start();
-  }
+class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
 
   private static NamedParameterJdbcTemplate jdbc;
 

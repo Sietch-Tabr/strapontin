@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
+import fr.strapontin.web.AbstractWebIntegrationTest;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.VerificationRepository;
@@ -22,7 +23,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /// Test d'intégration de {@link AdminService} avec PostgreSQL réel (Testcontainers, #940).
 ///
@@ -38,13 +38,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 ///
 /// @since 2.7.0
 /// @author Kwaite
-class AdminServiceIntegrationTest {
-
-  static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
-
-  static {
-    postgres.start();
-  }
+class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   private static NamedParameterJdbcTemplate jdbc;
 

@@ -8,39 +8,27 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /// Tests d'intégration de [PersisterConcerts] avec PostgreSQL réel (Testcontainers).
 ///
 /// @since 2.0.0
 /// @author Kwaite
-@SpringBootTest
-@ActiveProfiles("test")
-class PersisterConcertsIntegrationTest {
+class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   // Date relative à "aujourd'hui" (comme RecalculerMatchesServiceIntegrationTest#DATE_FUTURE) —
   // ReconciliateurArtistes.reconcilierArtistes ne charge que les concerts des 7 derniers jours
   // pour la réconciliation inter-jobs ; une date figée finit toujours par sortir de cette
   // fenêtre au fil du temps (constaté sur "2026-06-28", devenu invalide après le 5 juillet).
   private static final String DATE_RECENTE = LocalDate.now().toString();
-
-  @ServiceConnection
-  static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
-
-  static {
-    postgres.start();
-  }
 
   @MockitoBean
   @SuppressWarnings("unused")
