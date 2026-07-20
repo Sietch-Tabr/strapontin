@@ -356,6 +356,89 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // #1002 : constaté en production — le repli sur nom tronqué peut retenir un candidat au nom
+  // générique partagé par plusieurs communes ("Collegiale Saint" → "collégiale Saint-Agricol
+  // d'Avignon" en rang 0, alors que la salle recherchée "Collegiale Saint-Mexme Chinon" est à
+  // Chinon). Vérifié en direct sur l'API Wikidata (mwapi:search "Collegiale Saint") : ce candidat
+  // existe réellement et passe la correspondance de nom (tokens "collegiale"+"saint" communs).
+  @Test
+  void enrichirLot_decouverte_rejetteCandidatVilleIncompatible() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    String nomComplet = "Collegiale Saint-Mexme Chinon";
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id,
+            nomComplet,
+            fr.strapontin.core.Normalisation.normaliserTexte(nomComplet),
+            "Chinon",
+            "37",
+            null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q2983940"},
+                   "itemLabel":{"type":"literal","value":"collégiale Saint-Agricol d'Avignon"},
+                   "communeLabel":{"type":"literal","value":"Avignon"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void enrichirLot_decouverte_villeConnueEtCorrespondante_accepteCandidat() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Accor Arena", "accor arena", "Paris", "75", null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q537720"},
+                   "itemLabel":{"type":"literal","value":"Accor Arena"},
+                   "communeLabel":{"type":"literal","value":"Paris"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertEquals(1, resultat.size());
+    assertEquals("Q537720", resultat.get(id).wikidataId());
+    serveur.verify();
+  }
+
   @Test
   void enrichirLot_decouverteNomDifferent_ignoreCandidat() {
     RestClient.Builder builder = RestClient.builder();

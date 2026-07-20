@@ -12,7 +12,26 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.7.2 — 18 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.7.4 — 20 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Navigation</p>
+            <ul>
+              <li>Un clic sur un lien juste après une mise à jour de l'application, sans avoir rechargé la page, pouvait bloquer la navigation sur la page en cours — corrigé.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Salles</p>
+            <ul>
+              <li>Plusieurs grandes salles bien connues (Palais Garnier, Accor Arena, Le Bataclan…) ne pouvaient jamais afficher leur lien Wikidata dans le référentiel — corrigé.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.7.2 — 18 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Navigation</p>
@@ -33,7 +52,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.7.1 — 17 juillet 2026</h2></summary>

@@ -212,24 +212,31 @@ class SalleRepository {
 
   /// Met à jour le nom, la ville et le CP d'une salle existante.
   ///
+  /// <p>Recalcule {@code nom_norm} depuis le nouveau nom (#1001) — sans cela, un renommage via
+  /// cette méthode laisse {@code nom_norm} désynchronisé de {@code nom}, cassant le matching
+  /// Wikidata/Overpass pour cette salle.
+  ///
   /// @param salleId UUID de la salle
   /// @param nom       nouveau nom (null = inchangé)
   /// @param ville     nouvelle ville (null = inchangée)
   /// @param dept      nouveau numéro de département (null = inchangé)
   void mettreAJourSalle(UUID salleId, String nom, String ville, String dept) {
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    params.addValue("uuid", salleId.toString());
+    params.addValue("nom", nom);
+    params.addValue("nomNorm", nom != null ? Normalisation.normaliserTexte(nom) : null);
+    params.addValue("ville", ville);
+    params.addValue("dept", dept);
     jdbc.update(
         """
         UPDATE salles
-        SET nom   = COALESCE(:nom, nom),
-            ville = COALESCE(:ville, ville),
-            dept  = COALESCE(:dept, dept)
+        SET nom      = COALESCE(:nom, nom),
+            nom_norm = COALESCE(:nomNorm, nom_norm),
+            ville    = COALESCE(:ville, ville),
+            dept     = COALESCE(:dept, dept)
         WHERE id = CAST(:uuid AS uuid)
         """,
-        Map.of(
-            "uuid", salleId.toString(),
-            "nom", (Object) nom,
-            "ville", (Object) ville,
-            "dept", (Object) dept));
+        params);
   }
 
   /// Retourne les identifiants préfixés de toutes les sources d'une salle, séparés par une virgule.
