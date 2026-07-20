@@ -146,4 +146,33 @@ class SalleRepositoryIntegrationTest {
 
     assertEquals("accorhotels arena", nomNorm);
   }
+
+  // #1001 : mettreAJourSalle mettait à jour nom sans jamais recalculer nom_norm, laissant les
+  // deux colonnes désynchronisées après un renommage (ex. correction admin Digitick) — cassant
+  // le matching Wikidata/Overpass exactement comme #969.
+  @Test
+  void mettreAJourSalle_nouveauNom_recalculeNomNorm() {
+    UUID salleId = repository.upsertSalle("elyseemontmartre", "Elysee Montmartre");
+
+    repository.mettreAJourSalle(salleId, "Élysée Montmartre", null, null);
+
+    String nomNorm =
+        jdbc.queryForObject(
+            "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
+
+    assertEquals("elysee montmartre", nomNorm);
+  }
+
+  @Test
+  void mettreAJourSalle_nomNull_conserveNomNormExistant() {
+    UUID salleId = repository.upsertSalle("elyseemontmartre", "Élysée Montmartre");
+
+    repository.mettreAJourSalle(salleId, null, "Paris", "75");
+
+    String nomNorm =
+        jdbc.queryForObject(
+            "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
+
+    assertEquals("elysee montmartre", nomNorm);
+  }
 }
