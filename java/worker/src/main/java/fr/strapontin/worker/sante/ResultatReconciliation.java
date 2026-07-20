@@ -12,6 +12,8 @@ package fr.strapontin.worker.sante;
 ///     de correction manuelle via #710
 /// @param enrichissementsSalle   nombre de salles enrichies (Wikidata/OSM, #711)
 /// @param enrichissementsArtiste nombre d'artistes enrichis (Wikidata/Deezer, #711/#716)
+/// @param incoherencesWikidata   nombre de salles dont le {@code wikidata_id} déjà connu
+///     contredit la {@code ville} connue (#1005)
 /// @since 2.6.0
 /// @author Kwaite
 public record ResultatReconciliation(
@@ -19,4 +21,5 @@ public record ResultatReconciliation(
     int sallesRedecouvertes,
     int ambigues,
     int enrichissementsSalle,
-    int enrichissementsArtiste) {}
+    int enrichissementsArtiste,
+    int incoherencesWikidata) {}
