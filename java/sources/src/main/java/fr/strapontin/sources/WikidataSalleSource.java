@@ -246,19 +246,47 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       String labelCorrespondant = trouverLabelCorrespondant(salle.nomNorm(), itemLabel, aliases);
       if (labelCorrespondant == null) continue;
 
+      String communeLabel = ClientSparqlWikidata.valeurBinding(binding, "communeLabel");
+      if (villeIncompatible(salle.ville(), communeLabel)) {
+        log.info(
+            "Wikidata découverte salle — rejet commune incompatible nom={} villeSalle={}"
+                + " communeCandidat={}",
+            nomRecherche,
+            salle.ville(),
+            communeLabel);
+        continue;
+      }
+
       String qid = itemUri.substring(itemUri.lastIndexOf('/') + 1);
       EnrichissementSalle enrichissement =
-          new EnrichissementSalle(
-              qid,
-              labelCorrespondant,
-              ClientSparqlWikidata.valeurBinding(binding, "communeLabel"),
-              null,
-              null);
+          new EnrichissementSalle(qid, labelCorrespondant, communeLabel, null, null);
       cache.put(qid, enrichissement);
       return Optional.of(enrichissement);
     }
     log.info("Wikidata découverte salle — aucun candidat exact nom={}", nomRecherche);
     return Optional.empty();
+  }
+
+  /// Vérifie que la commune du candidat Wikidata ne contredit pas la ville connue de la salle
+  /// Strapontin (#1002).
+  ///
+  /// <p>Constaté en production : le repli sur nom tronqué (#991) peut retenir en rang 0 un
+  /// candidat au nom générique partagé par plusieurs communes (ex. "Collegiale Saint" →
+  /// "collégiale Saint-Agricol d'Avignon", alors que la salle recherchée est à Chinon) —
+  /// aucune des désambiguïsations de {@link #trouverLabelCorrespondant} ne porte sur la
+  /// localisation. Ce garde-fou n'écarte que les cas où les deux villes sont connues et
+  /// diffèrent ; une ville inconnue d'un côté ou de l'autre ne bloque rien (reste au niveau de
+  /// risque actuel, pas de régression sur les cas déjà couverts).
+  ///
+  /// @param villeSalle   ville connue de la salle Strapontin ({@link SalleAEnrichir#ville}),
+  ///     peut être {@code null}
+  /// @param communeLabel commune du candidat Wikidata (P131), peut être {@code null}
+  /// @return {@code true} si les deux villes sont connues et ne correspondent pas
+  private static boolean villeIncompatible(String villeSalle, String communeLabel) {
+    if (villeSalle == null || villeSalle.isBlank()) return false;
+    if (communeLabel == null || communeLabel.isBlank()) return false;
+    return !Normalisation.normaliserVille(villeSalle)
+        .equals(Normalisation.normaliserVille(communeLabel));
   }
 
   // Nombre minimal de tokens significatifs cibles pour appliquer le containment asymétrique
