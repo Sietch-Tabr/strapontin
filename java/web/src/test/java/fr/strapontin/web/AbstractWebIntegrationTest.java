@@ -4,6 +4,11 @@
  */
 package fr.strapontin.web;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+import org.junit.jupiter.api.BeforeEach;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /// Base commune pour **tous** les tests d'intégration Testcontainers du module web — un seul
@@ -25,6 +30,13 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 /// éviter la complexité d'un contexte web complet non nécessaire à leur test ciblé — cette classe
 /// ne fait que porter le conteneur partagé, sans imposer de contexte Spring.
 ///
+/// <p>Nettoyage commun (#1005) : une base partagée entre sous-classes exécutées dans un ordre non
+/// garanti rend le nettoyage local de chaque sous-classe insuffisant (même mécanisme que côté
+/// worker, voir {@code AbstractWorkerIntegrationTest}). `nettoyerBaseCommune` s'exécute avant le
+/// `@BeforeEach`/`@BeforeAll` de chaque sous-classe (ordre garanti par JUnit 5) et vide toutes les
+/// tables via `TRUNCATE ... CASCADE` — connexion JDBC directe, indépendante de celle que chaque
+/// sous-classe monte elle-même dans son propre `@BeforeAll`.
+///
 /// @since 2.7.5
 /// @author Kwaite
 public abstract class AbstractWebIntegrationTest {
@@ -33,5 +45,15 @@ public abstract class AbstractWebIntegrationTest {
 
   static {
     postgres.start();
+  }
+
+  @BeforeEach
+  void nettoyerBaseCommune() throws SQLException {
+    try (Connection connexion =
+            DriverManager.getConnection(
+                postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+        Statement statement = connexion.createStatement()) {
+      statement.execute("TRUNCATE TABLE users, salles RESTART IDENTITY CASCADE");
+    }
   }
 }

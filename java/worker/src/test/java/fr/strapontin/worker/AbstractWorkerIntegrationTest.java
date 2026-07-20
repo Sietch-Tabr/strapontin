@@ -4,8 +4,11 @@
  */
 package fr.strapontin.worker;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
@@ -24,6 +27,18 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 /// étendre cette classe** — ne jamais déclarer un `@ServiceConnection static final
 /// PostgreSQLContainer` local.
 ///
+/// <p>Nettoyage commun (#1005) : un conteneur partagé signifie une base partagée entre toutes
+/// les sous-classes du module, exécutées dans un ordre non garanti — le `@BeforeEach` local de
+/// chaque sous-classe (souvent incomplet, ex. `DELETE FROM artistes` sans jamais toucher
+/// `user_artistes`) ne suffit plus à garantir l'isolement une fois plusieurs classes en jeu sur
+/// la même instance PostgreSQL (constaté en CI : une ligne `user_artistes` laissée par une classe
+/// fait échouer le `DELETE FROM artistes` d'une classe suivante, `user_artistes.artiste_id` étant
+/// `NOT NULL` malgré une FK `ON DELETE SET NULL` jamais alignée en V24 — incohérence sans impact
+/// prod, le code applicatif nettoyant toujours `user_artistes` avant de supprimer un artiste).
+/// `nettoyerBaseCommune` s'exécute avant le `@BeforeEach` de chaque sous-classe (ordre garanti par
+/// JUnit 5 : superclasse puis sous-classe) et vide toutes les tables via `TRUNCATE ... CASCADE`,
+/// insensible à ce type d'incohérence de FK (contrairement à `DELETE`).
+///
 /// @since 2.7.3
 /// @author Kwaite
 @SpringBootTest
@@ -35,5 +50,16 @@ public abstract class AbstractWorkerIntegrationTest {
 
   static {
     postgres.start();
+  }
+
+  @Autowired private NamedParameterJdbcTemplate jdbcNettoyage;
+
+  @BeforeEach
+  void nettoyerBaseCommune() {
+    jdbcNettoyage
+        .getJdbcTemplate()
+        .execute(
+            "TRUNCATE TABLE users, artistes, salles, concerts, fetch_jobs,"
+                + " fetch_jobs_historique, logs_admin RESTART IDENTITY CASCADE");
   }
 }
