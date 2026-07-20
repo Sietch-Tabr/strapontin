@@ -47,18 +47,21 @@ public class ReconciliationNocturneService {
   private final LogsAdminWorker logsAdminWorker;
   private final EnrichissementSallesService enrichissementSalles;
   private final EnrichissementArtistesService enrichissementArtistes;
+  private final CoherenceWikidataSalleService coherenceWikidataSalle;
 
   public ReconciliationNocturneService(
       NamedParameterJdbcTemplate jdbc,
       TicketmasterSource tm,
       LogsAdminWorker logsAdminWorker,
       EnrichissementSallesService enrichissementSalles,
-      EnrichissementArtistesService enrichissementArtistes) {
+      EnrichissementArtistesService enrichissementArtistes,
+      CoherenceWikidataSalleService coherenceWikidataSalle) {
     this.jdbc = jdbc;
     this.tm = tm;
     this.logsAdminWorker = logsAdminWorker;
     this.enrichissementSalles = enrichissementSalles;
     this.enrichissementArtistes = enrichissementArtistes;
+    this.coherenceWikidataSalle = coherenceWikidataSalle;
   }
 
   /// Exécute les deux phases du job nocturne.
@@ -77,9 +80,15 @@ public class ReconciliationNocturneService {
 
     int enrichisArtistes = enrichissementArtistes.enrichir();
     int enrichisSalles = enrichissementSalles.enrichir();
+    int incoherencesWikidata = coherenceWikidataSalle.verifier();
 
     return new ResultatReconciliation(
-        bilanSalles[0], bilanSalles[1], bilanSalles[2], enrichisSalles, enrichisArtistes);
+        bilanSalles[0],
+        bilanSalles[1],
+        bilanSalles[2],
+        enrichisSalles,
+        enrichisArtistes,
+        incoherencesWikidata);
   }
 
   /// @return tableau {@code [verifiees, redecouvertes, ambigues]}

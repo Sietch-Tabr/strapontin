@@ -51,7 +51,13 @@ class WorkerServiceTest {
     ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
     LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
     WorkerStatsService workerStatsService =
-        new WorkerStatsService(List.<SourceConcerts>of(), tm, resolveur, jdbc, logsAdminWorker, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+        new WorkerStatsService(
+            List.<SourceConcerts>of(),
+            tm,
+            resolveur,
+            jdbc,
+            logsAdminWorker,
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
     workerService =
         new WorkerService(
             recalculerMatchesService,
@@ -83,7 +89,7 @@ class WorkerServiceTest {
   @Test
   void executerReconciliationNocturne_nominal_appelleLeServiceEtEnregistreLaStat() {
     when(reconciliationNocturneService.executer())
-        .thenReturn(new ResultatReconciliation(2, 1, 0, 3, 4));
+        .thenReturn(new ResultatReconciliation(2, 1, 0, 3, 4, 0));
 
     workerService.executerReconciliationNocturne();
 
