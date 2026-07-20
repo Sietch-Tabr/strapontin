@@ -7,6 +7,7 @@ package fr.strapontin.worker.persister;
 import static org.junit.jupiter.api.Assertions.*;
 
 import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -15,27 +16,14 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /// Tests d'intégration de [RecalculerMatchesService] avec PostgreSQL réel (Testcontainers).
 ///
 /// @since 2.0.1
 /// @author Kwaite
-@SpringBootTest
-@ActiveProfiles("test")
-class RecalculerMatchesServiceIntegrationTest {
-
-  @ServiceConnection
-  static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
-
-  static {
-    postgres.start();
-  }
+class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @MockitoBean
   @SuppressWarnings("unused")
@@ -85,8 +73,7 @@ class RecalculerMatchesServiceIntegrationTest {
 
   private void insererUserSalle(String userId, UUID salleId) {
     jdbc.update(
-        "INSERT INTO user_salles (user_id, salle_id)"
-            + " VALUES (:userId, CAST(:salleId AS uuid))",
+        "INSERT INTO user_salles (user_id, salle_id)" + " VALUES (:userId, CAST(:salleId AS uuid))",
         Map.of("userId", userId, "salleId", salleId.toString()));
   }
 
