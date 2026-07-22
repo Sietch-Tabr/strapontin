@@ -701,6 +701,30 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     }
   }
 
+  /// Récupère le nom actuel d'une attraction TM (#1012, health-check du rattachement — distinct
+  /// de {@link #verifierAttraction}, qui ne vérifie que la vivacité HTTP de l'identifiant, jamais
+  /// que le nom retourné correspond toujours à l'artiste suivi).
+  ///
+  /// @param attractionId identifiant TM de l'attraction
+  /// @return nom actuel retourné par TM, ou {@code null} si introuvable ou en cas d'erreur réseau
+  @SuppressWarnings("unchecked")
+  public String recupererNomAttraction(String attractionId) {
+    String uri =
+        UriComponentsBuilder.fromUriString(BASE_URL + "/attractions/" + attractionId + ".json")
+            .queryParam("apikey", apiKey)
+            .build()
+            .toUriString();
+    attendreRateLimitGlobal();
+    try {
+      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      return data != null ? (String) data.get("name") : null;
+    } catch (Exception e) {
+      log.warn(
+          "recupererNomAttraction TM échoué attractionId={} : {}", attractionId, e.getMessage());
+      return null;
+    }
+  }
+
   /// Recherche des salles TM candidates par nom (redécouverte active, #706 phase 1).
   ///
   /// @param nom nom de la salle recherchée

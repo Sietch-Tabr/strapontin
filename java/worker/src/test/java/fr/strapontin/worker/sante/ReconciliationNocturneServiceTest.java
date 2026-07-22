@@ -251,4 +251,61 @@ class ReconciliationNocturneServiceTest {
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 p -> artisteId.toString().equals(p.get("id"))));
   }
+
+  private static Map<String, Object> ligneArtisteLieTM(
+      UUID artisteId, String attractionId, String nom) {
+    Map<String, Object> ligne = new HashMap<>();
+    ligne.put("artiste_id", artisteId);
+    ligne.put("identifiant_externe", attractionId);
+    ligne.put("nom", nom);
+    return ligne;
+  }
+
+  // #1012 : le nom retourné par TM peut diverger de l'artiste suivi (tribute, homonyme) sans que
+  // l'identifiant soit jamais marqué "suspect" (le tribute a des événements à venir).
+  @Test
+  void executer_nomTMDivergeDeLArtisteSuivi_poseNecessiteInterventionLeEtJournalise() {
+    UUID artisteId = UUID.randomUUID();
+    when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
+        .thenReturn(List.of(ligneArtisteLieTM(artisteId, "K8vZ9174y30", "U2")));
+    when(tm.recupererNomAttraction("K8vZ9174y30")).thenReturn("U2 Experience");
+
+    ResultatReconciliation resultat = service.executer();
+
+    assertEquals(1, resultat.nomsIncoherentsTM());
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.matches(
+                "(?s).*UPDATE artiste_sources.*necessite_intervention_le = now\\(\\).*"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> artisteId.toString().equals(p.get("artisteId"))));
+    verify(logsAdminWorker)
+        .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("nom TM incohérent"), any());
+  }
+
+  @Test
+  void executer_nomTMCoherentAvecLArtisteSuivi_neJournalieRien() {
+    UUID artisteId = UUID.randomUUID();
+    when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
+        .thenReturn(List.of(ligneArtisteLieTM(artisteId, "attractionOk", "Angele")));
+    when(tm.recupererNomAttraction("attractionOk")).thenReturn("Angèle");
+
+    ResultatReconciliation resultat = service.executer();
+
+    assertEquals(0, resultat.nomsIncoherentsTM());
+    verify(logsAdminWorker, never())
+        .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("nom TM incohérent"), any());
+  }
+
+  @Test
+  void executer_nomAttractionIntrouvable_ignoreSansErreur() {
+    UUID artisteId = UUID.randomUUID();
+    when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
+        .thenReturn(List.of(ligneArtisteLieTM(artisteId, "idMort", "Furies")));
+    when(tm.recupererNomAttraction("idMort")).thenReturn(null);
+
+    ResultatReconciliation resultat = service.executer();
+
+    assertEquals(0, resultat.nomsIncoherentsTM());
+  }
 }
