@@ -254,6 +254,37 @@ class WorkerStatsServiceTest {
     assertEquals(2.0, compteur.count(), 0.001);
   }
 
+  // #1013 : les correspondances Eventim par containment (invisibles jusque-là, log SLF4J INFO
+  // uniquement) sont remontées dans logs_admin au niveau warn à chaque cycle fetch.
+  @Test
+  void enregistrerStatJob_eventimContainmentsAcceptes_insereLogsAdminNiveauWarn() {
+    when(eventim.preleverContainmentsAcceptes())
+        .thenReturn(List.of("terme=Furies → resultat=Love & Furies"));
+
+    service.enregistrerStatJob("fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    "warn".equals(params.get("niveau"))
+                        && params.get("message").toString().contains("Furies")));
+  }
+
+  @Test
+  void enregistrerStatJob_eventimAucunContainment_nInsereAucunLogContainment() {
+    service.enregistrerStatJob("fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
+
+    verify(jdbc, never())
+        .update(
+            anyString(),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    params.get("message") != null
+                        && params.get("message").toString().contains("containment")));
+  }
+
   @Test
   void enregistrerStatJob_typeJobHorsFetch_neRemontePasDeBilan() {
     // "purger:concerts" n'a pas le préfixe "fetch:" : la boucle de bilan de panne ne s'exécute

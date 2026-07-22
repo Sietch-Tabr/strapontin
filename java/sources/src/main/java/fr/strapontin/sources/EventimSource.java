@@ -55,6 +55,12 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   // Compteur cumulé depuis le dernier prélèvement (remonté dans logs_admin par le worker, #901,
   // factorisé en composant partagé par #909).
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
+  // #1013 : correspondances par containment acceptées depuis le dernier prélèvement — un
+  // containment n'est pas nécessairement une erreur (ex. "-M-" → "-M- Matthieu Chedid" est
+  // correct) mais reste un signal à vérifier manuellement, jusque-là invisible (log SLF4J niveau
+  // INFO uniquement, jamais dans logs_admin).
+  private final List<String> containmentsAcceptes =
+      java.util.Collections.synchronizedList(new java.util.ArrayList<>());
 
   /// Crée une instance avec un RestClient par défaut incluant les headers Eventim et un timeout
   /// explicite (connexion 10s, lecture 30s — #887).
@@ -115,6 +121,21 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   @Override
   public BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
+  }
+
+  /// Retourne les correspondances par containment acceptées depuis le dernier prélèvement (#1013)
+  /// et vide la liste — contrairement à {@link #preleverBilan}, ce n'est pas un bilan de panne :
+  /// Eventim ne persiste aucun identifiant ({@link #rechercherAttractionId} est rappelé à chaque
+  /// cycle), donc un containment mal résolu peut réapparaître à chaque fetch tant qu'il n'est pas
+  /// corrigé manuellement.
+  ///
+  /// @return messages décrivant chaque containment accepté depuis le dernier prélèvement
+  public List<String> preleverContainmentsAcceptes() {
+    synchronized (containmentsAcceptes) {
+      List<String> copie = List.copyOf(containmentsAcceptes);
+      containmentsAcceptes.clear();
+      return copie;
+    }
   }
 
   /// Corrige la ville Eventim pour les salles de la région parisienne hors Paris intra-muros.
@@ -390,6 +411,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
             "Eventim: correspondance par containment pour terme={} — résultat={} accepté",
             terme,
             nomRetourne);
+        containmentsAcceptes.add("terme=" + terme + " → resultat=" + nomRetourne);
         exact = parContainment;
       }
       if (exact == null) {

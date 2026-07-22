@@ -311,6 +311,13 @@ class EventimSourceTest {
     // Liste vide car products vide, mais l'ID a bien été utilisé (verify passe)
     assertTrue(resultats.isEmpty());
     serveur.verify();
+
+    // #1013 — le containment accepté doit être exposé pour remontée dans logs_admin
+    List<String> containments = source.preleverContainmentsAcceptes();
+    assertEquals(1, containments.size());
+    assertTrue(containments.get(0).contains("-M-"));
+    assertTrue(containments.get(0).contains("-M- Matthieu Chedid"));
+    assertTrue(source.preleverContainmentsAcceptes().isEmpty());
   }
 
   @Test
@@ -334,6 +341,7 @@ class EventimSourceTest {
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
+    assertTrue(source.preleverContainmentsAcceptes().isEmpty());
   }
 
   @Test
