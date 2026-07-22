@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -156,6 +157,66 @@ class WorkerFetchServiceTest {
 
     verify(tm).fetchSalle("tm:venue-42");
     verify(persisterConcerts).persisterConcerts(any());
+  }
+
+  // #1014 : Deezer ne référence pas les humoristes — la résolution de nom canonique ne doit
+  // jamais être appliquée à un concert classification="theatre" (ex. Deezer renverrait "Fabrice
+  // Aboulker" pour la recherche "Fabrice Éboué").
+  @Test
+  void executerFetchSalle_concertClassificationTheatre_nAppliquePasLaResolutionDeezer() {
+    when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
+    when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
+    fr.strapontin.core.ConcertBrut concertHumoriste =
+        new fr.strapontin.core.ConcertBrut(
+            "Fabrice Eboue",
+            "2026-09-01",
+            "20:00",
+            "Salle",
+            "Paris",
+            "75",
+            "http://x",
+            "ticketmaster",
+            "theatre",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    fr.strapontin.core.ConcertBrut concertMusique =
+        new fr.strapontin.core.ConcertBrut(
+            "Indila",
+            "2026-09-02",
+            "20:00",
+            "Salle",
+            "Paris",
+            "75",
+            "http://y",
+            "ticketmaster",
+            "music",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of(concertHumoriste, concertMusique));
+    when(resolveur.resoudreNomCanonique("artiste", "Indila"))
+        .thenReturn(
+            new ResolveurNomCanonique.ResultatResolution(
+                "Indila Officiel", ResolveurNomCanonique.SourceResolution.DEEZER));
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchSalle("tm:venue-42");
+
+    verify(resolveur, never()).resoudreNomCanonique(eq("artiste"), eq("Fabrice Eboue"));
+    verify(resolveur).resoudreNomCanonique("artiste", "Indila");
+    org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
+        org.mockito.ArgumentCaptor.forClass(List.class);
+    verify(persisterConcerts).persisterConcerts(captor.capture());
+    List<fr.strapontin.core.ConcertBrut> persistes = captor.getValue();
+    assertTrue(persistes.stream().anyMatch(c -> "Fabrice Eboue".equals(c.artiste())));
+    assertTrue(persistes.stream().anyMatch(c -> "Indila Officiel".equals(c.artiste())));
   }
 
   @Test
