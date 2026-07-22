@@ -12,7 +12,27 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.7.4 — 20 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.7.5 — 22 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Salles</p>
+            <ul>
+              <li>Plusieurs salles enregistrées deux fois sous des noms légèrement différents (avec ou sans le nom de la ville) faisaient apparaître leurs concerts en double — fusionnées.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Concerts</p>
+            <ul>
+              <li>Certains artistes suivis pouvaient afficher les concerts d'un spectacle hommage ou d'un homonyme plutôt que les leurs — corrigé.</li>
+              <li>Des spectacles d'humour pouvaient s'afficher sous le nom d'un musicien sans rapport — corrigé.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.7.4 — 20 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Navigation</p>
@@ -27,7 +47,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.7.2 — 18 juillet 2026</h2></summary>
