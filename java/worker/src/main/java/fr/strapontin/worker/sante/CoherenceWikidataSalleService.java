@@ -9,9 +9,13 @@ import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.WikidataSalleSource;
 import fr.strapontin.worker.LogsAdminWorker;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -73,15 +77,64 @@ public class CoherenceWikidataSalleService {
       if (enrichissement == null) continue;
       String communeWikidata = enrichissement.ville();
       if (communeWikidata == null || communeWikidata.isBlank()) continue;
-      if (Normalisation.normaliserVille(salle.ville())
-          .equals(Normalisation.normaliserVille(communeWikidata))) {
-        continue;
-      }
+      if (villesCoherentes(salle.ville(), communeWikidata)) continue;
       incoherences++;
       loggerIncoherence(salle, communeWikidata);
     }
     log.info("coherence:wikidata candidats={} incoherences={}", candidats.size(), incoherences);
     return incoherences;
+  }
+
+  // #1009 : une comparaison texte-à-texte stricte ville/commune Wikidata génère du bruit quasi
+  // systématique sur toute salle parisienne/lyonnaise/marseillaise (arrondissement ≠ ville mère),
+  // en zone urbaine dense (quartiers/districts informels sans commune propre, ex. Bercy, La
+  // Défense) ou sur une commune fusionnée/intercommunalité (Wikidata garde parfois l'ancien nom
+  // d'une des communes d'origine, ou référence l'intercommunalité). Cette normalisation est
+  // volontairement locale à ce contrôle *a posteriori* : {@link
+  // WikidataSalleSource#villeIncompatible}
+  // (#1002) reste inchangé, il bloque le matching *au moment de l'enrichissement* où une
+  // comparaison plus permissive réduirait la couverture.
+  private static final Pattern ARRONDISSEMENT =
+      Pattern.compile("^(\\d{1,2})(?:e|er|eme|ieme)? +arrondissement de (paris|lyon|marseille)$");
+
+  // Quartiers/districts informels ne correspondant à aucune commune administrative, rattachés à
+  // une ou plusieurs communes possibles (ex. La Défense chevauche Nanterre/Puteaux/Courbevoie).
+  private static final Map<String, Set<String>> QUARTIERS_EQUIVALENTS =
+      Map.of(
+          "bercy", Set.of("paris"),
+          "la defense", Set.of("nanterre", "puteaux", "courbevoie", "paris"),
+          "st germain l auxerrois", Set.of("paris"),
+          "notre dame", Set.of("paris"),
+          "chaussee d antin", Set.of("paris"));
+
+  // Longueur minimale pour le repli par containment (commune fusionnée/intercommunalité, ex.
+  // « Pierre-Bénite » ⊂ « Oullins-Pierre-Bénite », « Orange » ⊂ « communauté de communes du Pays
+  // d'Orange en Provence ») — évite un containment trivial sur un token court.
+  private static final int LONGUEUR_MIN_CONTAINMENT = 5;
+
+  private static boolean villesCoherentes(String villeSalle, String communeWikidata) {
+    String villeSalleNorm = Normalisation.normaliserVille(villeSalle);
+    String communeNorm = Normalisation.normaliserVille(communeWikidata);
+    if (villeSalleNorm.equals(communeNorm)) return true;
+    if (!Collections.disjoint(canonicaliser(villeSalleNorm), canonicaliser(communeNorm))) {
+      return true;
+    }
+    return containmentCoherent(villeSalleNorm, communeNorm);
+  }
+
+  private static Set<String> canonicaliser(String villeNorm) {
+    Matcher matcher = ARRONDISSEMENT.matcher(villeNorm);
+    if (matcher.matches()) return Set.of(matcher.group(2));
+    Set<String> quartier = QUARTIERS_EQUIVALENTS.get(villeNorm);
+    if (quartier != null) return quartier;
+    return Set.of(villeNorm);
+  }
+
+  private static boolean containmentCoherent(String a, String b) {
+    if (a.length() < LONGUEUR_MIN_CONTAINMENT || b.length() < LONGUEUR_MIN_CONTAINMENT) {
+      return false;
+    }
+    return a.contains(b) || b.contains(a);
   }
 
   private void loggerIncoherence(SalleAEnrichir salle, String communeWikidata) {

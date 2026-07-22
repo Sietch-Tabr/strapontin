@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.BilanFetch;
+import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceConcerts;
@@ -113,6 +114,9 @@ public class WorkerStatsService {
         if (source instanceof SourceAvecBilanFetch avecBilan) {
           bilanLoggue |= remonterBilan(typeJob, source.nom(), avecBilan.preleverBilan());
         }
+        if (source instanceof EventimSource eventimSource) {
+          bilanLoggue |= remonterContainmentsEventim(typeJob, eventimSource);
+        }
       }
       bilanLoggue |= remonterBilan(typeJob, "deezer", resolveur.preleverBilan());
       bilanLoggue |= remonterBilanConcertsManquesTm(typeJob);
@@ -171,6 +175,31 @@ public class WorkerStatsService {
         "worker",
         typeJob + " — " + concertsManques + " concert(s) TM non récupéré(s) (pagination plafonnée)",
         Map.of("manques", concertsManques));
+    return true;
+  }
+
+  /// Remonte dans `logs_admin` les correspondances Eventim par containment acceptées pour le
+  /// cycle qui vient de se terminer (#1013) — un containment n'est pas nécessairement une erreur
+  /// (Eventim ne persiste aucun identifiant, {@code rechercherAttractionId} est rappelé à chaque
+  /// cycle) mais reste invisible jusque-là (log SLF4J niveau INFO uniquement) : signalé en
+  /// {@code warn} pour permettre une vérification manuelle rapide plutôt qu'une acceptation
+  /// silencieuse.
+  ///
+  /// @param typeJob le type de job de fetch (préfixe `fetch:`)
+  /// @param eventim  la source Eventim dont on prélève les containments acceptés
+  /// @return {@code true} si un warn a été inséré dans {@code logs_admin}
+  private boolean remonterContainmentsEventim(String typeJob, EventimSource eventim) {
+    List<String> containments = eventim.preleverContainmentsAcceptes();
+    if (containments.isEmpty()) return false;
+    logsAdminWorker.inserer(
+        "warn",
+        "worker",
+        typeJob
+            + " — "
+            + containments.size()
+            + " correspondance(s) Eventim par containment (#1013) : "
+            + String.join("; ", containments),
+        Map.of("containments", containments));
     return true;
   }
 

@@ -38,6 +38,13 @@ public class WorkerFetchService {
   private static final Logger log = LoggerFactory.getLogger(WorkerFetchService.class);
 
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
+  // #1014 : Deezer ne référence pas les humoristes — toute recherche pour un humoriste renvoie le
+  // musicien le plus proche textuellement (ex. "Fabrice Éboué" → "Fabrice Aboulker"), jamais
+  // détecté par le seuil de similarité seul. La classification "theatre" (TM : segment "arts et
+  // théâtre") est le seul signal fiable disponible pour distinguer un spectacle d'humour d'un
+  // concert — Digitick filtre déjà en amont sur le genre "Concert" (jamais de classification
+  // "theatre"), Eventim n'a pas de classification (toujours music de fait).
+  private static final String CLASSIFICATION_THEATRE = "theatre";
   private static final int TAILLE_LOT_TM = 20;
   private static final int TAILLE_LOT_DEPTS = 5;
   private static final int TAILLE_LOT_SALLES = 20;
@@ -505,7 +512,12 @@ public class WorkerFetchService {
     List<ConcertBrut> dedoublonnes = Dedoublonner.dedoublonner(concerts);
 
     Map<String, String> tableauResolution = new LinkedHashMap<>();
-    List<String> noms = dedoublonnes.stream().map(ConcertBrut::artiste).distinct().toList();
+    List<String> noms =
+        dedoublonnes.stream()
+            .filter(c -> !CLASSIFICATION_THEATRE.equals(c.classification()))
+            .map(ConcertBrut::artiste)
+            .distinct()
+            .toList();
 
     for (String nom : noms) {
       ResolveurNomCanonique.ResultatResolution resultat =
@@ -516,6 +528,7 @@ public class WorkerFetchService {
     return dedoublonnes.stream()
         .map(
             c -> {
+              if (CLASSIFICATION_THEATRE.equals(c.classification())) return c;
               String nomResolu = tableauResolution.getOrDefault(c.artiste(), c.artiste());
               if (nomResolu.equals(c.artiste())) return c;
               return new ConcertBrut(

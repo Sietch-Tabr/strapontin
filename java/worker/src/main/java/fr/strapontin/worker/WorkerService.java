@@ -83,12 +83,13 @@ public class WorkerService {
                   + bilan.enrichissementsArtiste());
       log.info(
           "reconciliation:nocturne terminé sallesVerifiees={} redecouvertes={} ambigues={}"
-              + " enrichissementsSalle={} enrichissementsArtiste={}",
+              + " enrichissementsSalle={} enrichissementsArtiste={} nomsIncoherentsTM={}",
           bilan.sallesVerifiees(),
           bilan.sallesRedecouvertes(),
           bilan.ambigues(),
           bilan.enrichissementsSalle(),
-          bilan.enrichissementsArtiste());
+          bilan.enrichissementsArtiste(),
+          bilan.nomsIncoherentsTM());
     } catch (Exception e) {
       erreur = e.getMessage();
       log.error("reconciliation:nocturne échoué", e);

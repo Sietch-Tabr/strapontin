@@ -287,14 +287,24 @@ test.describe("Scénario: indicateur de chargement (#644)", () => {
     test(`${nom}_etat_chargement_visible_pendant_fetch_puis_absent`, async ({
       page,
     }) => {
+      let requeteInterceptee: () => void;
+      const interception = new Promise<void>((resolve) => {
+        requeteInterceptee = resolve;
+      });
       await page.route(`**${api}**`, async (route) => {
+        requeteInterceptee();
         await new Promise<void>((r) => setTimeout(r, 1500));
         await route.continue();
       });
 
       const gotoPromise = page.goto(url);
-      // Ne pas attendre domcontentloaded : en Firefox, cet événement peut se déclencher
-      // après que Vue a déjà monté et traité la réponse retardée, ce qui fait manquer l'état.
+      // Synchronisation sur l'interception réseau elle-même plutôt qu'un événement de
+      // cycle de vie de page (domcontentloaded/load) : Firefox et webkit ordonnancent ces
+      // événements différemment par rapport au montage Vue + à l'appel fetch (chargement.value
+      // = true est déjà positionné avant l'appel réseau), ce qui rendait cette synchronisation
+      // fragile dans un sens ou dans l'autre selon le navigateur (#644, récidive webkit après
+      // le fix Firefox du 29/06).
+      await interception;
       await expect(page.locator(".etat-chargement")).toBeVisible({
         timeout: 5000,
       });
@@ -312,13 +322,19 @@ test.describe("Scénario: indicateur de chargement admin (#644)", () => {
   test("admin_jobs_etat_chargement_visible_pendant_fetch_puis_absent", async ({
     page,
   }) => {
+    let requeteInterceptee: () => void;
+    const interception = new Promise<void>((resolve) => {
+      requeteInterceptee = resolve;
+    });
     await page.route("**/api/admin/**", async (route) => {
+      requeteInterceptee();
       await new Promise<void>((r) => setTimeout(r, 1500));
       await route.continue();
     });
 
     const gotoPromise = page.goto("/admin");
-    // Ne pas attendre domcontentloaded (race condition Firefox — voir tests pages ci-dessus).
+    // Synchronisation sur l'interception réseau — voir commentaire ci-dessus (#644).
+    await interception;
     await expect(page.locator(".etat-chargement").first()).toBeVisible({
       timeout: 5000,
     });

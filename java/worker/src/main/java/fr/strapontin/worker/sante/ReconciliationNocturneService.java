@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.sante;
 
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.sources.TicketmasterSource.CandidatVenueTM;
 import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
@@ -76,6 +77,7 @@ public class ReconciliationNocturneService {
   public ResultatReconciliation executer() {
     int[] bilanSalles = healthCheckSallesTM();
     healthCheckArtistesTM();
+    int nomsIncoherentsTM = healthCheckNomsArtistesTM();
     alerterDigitickSuspect();
 
     int enrichisArtistes = enrichissementArtistes.enrichir();
@@ -88,7 +90,65 @@ public class ReconciliationNocturneService {
         bilanSalles[2],
         enrichisSalles,
         enrichisArtistes,
-        incoherencesWikidata);
+        incoherencesWikidata,
+        nomsIncoherentsTM);
+  }
+
+  /// Vérifie que le nom retourné par TM pour chaque attractionId lié correspond toujours à
+  /// l'artiste suivi (#1012) — contrôle distinct du health-check de vivacité
+  /// ({@link #healthCheckArtistesTM}), qui ne détecte qu'un identifiant mort (HTTP 404), jamais
+  /// un identifiant vivant mais rattaché à la mauvaise entité (tribute, homonyme). S'applique à
+  /// **tous** les artistes liés TM, pas seulement les `suspect_depuis` : un tribute/homonyme a des
+  /// événements à venir, il ne déclenche donc jamais le compteur passif `nb_zero_consecutifs`.
+  ///
+  /// @return nombre d'incohérences détectées
+  private int healthCheckNomsArtistesTM() {
+    List<Map<String, Object>> lies =
+        jdbc.queryForList(
+            """
+            SELECT asrc.artiste_id, asrc.identifiant_externe, a.nom
+            FROM artistes a JOIN artiste_sources asrc ON asrc.artiste_id = a.id
+            WHERE asrc.source = 'ticketmaster'
+            """,
+            Map.of());
+
+    int incoherences = 0;
+    for (var ligne : lies) {
+      UUID artisteId = (UUID) ligne.get("artiste_id");
+      String attractionId = (String) ligne.get("identifiant_externe");
+      String nom = (String) ligne.get("nom");
+      String nomAttraction = tm.recupererNomAttraction(attractionId);
+      if (nomAttraction == null) continue;
+      if (Normalisation.normaliserTexte(nom).equals(Normalisation.normaliserTexte(nomAttraction))) {
+        continue;
+      }
+      incoherences++;
+      signalerNomIncoherent(artisteId, attractionId, nom, nomAttraction);
+    }
+    return incoherences;
+  }
+
+  private void signalerNomIncoherent(
+      UUID artisteId, String attractionId, String nom, String nomAttraction) {
+    jdbc.update(
+        """
+        UPDATE artiste_sources SET necessite_intervention_le = now()
+        WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
+        """,
+        Map.of("artisteId", artisteId.toString()));
+    logsAdminWorker.inserer(
+        "warn",
+        "reconciliation-nocturne",
+        "nom TM incohérent avec l'artiste suivi artiste="
+            + nom
+            + " nomTM="
+            + nomAttraction
+            + " attractionId="
+            + attractionId,
+        Map.of(
+            "artisteId", artisteId.toString(),
+            "attractionId", attractionId,
+            "nomTM", nomAttraction));
   }
 
   /// @return tableau {@code [verifiees, redecouvertes, ambigues]}

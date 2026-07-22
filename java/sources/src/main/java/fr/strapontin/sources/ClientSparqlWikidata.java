@@ -8,6 +8,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -33,10 +34,17 @@ final class ClientSparqlWikidata {
   private static final int RETRY_503_MAX = 3;
   private static final int RETRY_TOTAL_MAX = 5;
   private static final Duration TIMEOUT_LECTURE = Duration.ofSeconds(60);
+  // #1010 : espacement proactif entre appels, sur le même principe que
+  // OverpassSalleSource.DELAI_MIN_ENTRE_APPELS_MS — le retry réactif sur 429 (Retry-After 120s
+  // constaté) a fait perdre ~4 des 5 minutes d'un cycle nocturne. Aucune politique de rate-limit
+  // publiée par Wikidata pour l'endpoint SPARQL ; valeur calibrée empiriquement, sans contrainte
+  // de temps réel (cycle nocturne unique).
+  private static final int DELAI_MIN_ENTRE_APPELS_MS = 2000;
 
   private final RestClient restClient;
   private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
       new fr.strapontin.core.CompteurBilanFetch();
+  private final AtomicLong dernierAppelMs = new AtomicLong(0);
 
   /// Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture 60s).
   ClientSparqlWikidata() {
@@ -80,6 +88,7 @@ final class ClientSparqlWikidata {
     // #993 : un appel logique = un executer(), quel que soit le nombre de retries internes —
     // seul un échec définitif (retries épuisés) compte comme erreur pour le bilan de panne.
     compteurBilan.enregistrerAppel();
+    attendreRateLimitGlobal();
     int tentative = 0;
     int tentatives503 = 0;
     while (tentative < RETRY_TOTAL_MAX) {
@@ -136,6 +145,17 @@ final class ClientSparqlWikidata {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
+  }
+
+  /// Espace proactivement les appels SPARQL Wikidata (#1010), sur le même principe que
+  /// {@code OverpassSalleSource.attendreRateLimitGlobal}.
+  private synchronized void attendreRateLimitGlobal() {
+    long maintenant = System.currentTimeMillis();
+    long prochainAppel = dernierAppelMs.get() + DELAI_MIN_ENTRE_APPELS_MS;
+    if (maintenant < prochainAppel) {
+      dormir(prochainAppel - maintenant);
+    }
+    dernierAppelMs.set(System.currentTimeMillis());
   }
 
   /// Extrait la valeur d'une variable SPARQL dans un binding de résultat.

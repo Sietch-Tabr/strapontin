@@ -14,6 +14,8 @@ package fr.strapontin.worker.sante;
 /// @param enrichissementsArtiste nombre d'artistes enrichis (Wikidata/Deezer, #711/#716)
 /// @param incoherencesWikidata   nombre de salles dont le {@code wikidata_id} déjà connu
 ///     contredit la {@code ville} connue (#1005)
+/// @param nomsIncoherentsTM      nombre d'artistes suivis dont le nom retourné par TM diverge de
+///     l'artiste suivi (tribute/homonyme rattaché par erreur, #1012)
 /// @since 2.6.0
 /// @author Kwaite
 public record ResultatReconciliation(
@@ -22,4 +24,5 @@ public record ResultatReconciliation(
     int ambigues,
     int enrichissementsSalle,
     int enrichissementsArtiste,
-    int incoherencesWikidata) {}
+    int incoherencesWikidata,
+    int nomsIncoherentsTM) {}
