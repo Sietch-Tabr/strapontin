@@ -185,12 +185,15 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
 
   private static final int TAILLE_CANDIDATS_DECOUVERTE = 5;
 
-  /// Filtre de découverte par nom : humain de profession musicien ou humoriste (#767 — un
-  /// humoriste, ex. Pierre-Emmanuel Barré, n'entrait dans aucune des deux branches d'origine), ou
-  /// groupe musical. Les deux occupations humaines partagent le même {@code ?typeMatch} («
-  /// humain ») car elles exigent toutes deux {@code wdt:P31 wd:Q5} — seule la branche « groupe »
-  /// (organisation, jamais une personne physique) peut produire un {@code ?typeMatch} distinct
-  /// pour la même recherche, cf. {@link #decouvrir}.
+  /// Filtre de découverte par nom : humain de profession musicien, humoriste ou auteur comique
+  /// (#767 — un humoriste, ex. Pierre-Emmanuel Barré, n'entrait dans aucune des deux branches
+  /// d'origine ; #1018 — sa fiche réelle porte en fait `Q12406482` « auteur comique », dont la
+  /// fermeture transitive P279* ne remonte jamais vers `Q245068`, un troisième branchement est
+  /// donc nécessaire plutôt qu'une correction du premier), ou groupe musical. Les trois
+  /// occupations humaines partagent le même {@code ?typeMatch} (« humain ») car elles exigent
+  /// toutes {@code wdt:P31 wd:Q5} — seule la branche « groupe » (organisation, jamais une
+  /// personne physique) peut produire un {@code ?typeMatch} distinct pour la même recherche, cf.
+  /// {@link #decouvrir}.
   private static String construireRequeteDecouverte(String nom) {
     return """
     SELECT ?item ?itemLabel ?deezerId ?tmId ?num ?typeMatch WHERE {
@@ -204,7 +207,9 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
       }
       {
         ?item wdt:P31 wd:Q5 .
-        { ?item wdt:P106/wdt:P279* wd:Q639669 . } UNION { ?item wdt:P106/wdt:P279* wd:Q245068 . }
+        { ?item wdt:P106/wdt:P279* wd:Q639669 . }
+        UNION { ?item wdt:P106/wdt:P279* wd:Q245068 . }
+        UNION { ?item wdt:P106/wdt:P279* wd:Q12406482 . }
         BIND("humain" AS ?typeMatch)
       } UNION {
         ?item wdt:P31/wdt:P279* wd:Q215380 .

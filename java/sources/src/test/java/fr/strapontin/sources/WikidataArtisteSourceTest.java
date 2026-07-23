@@ -194,6 +194,43 @@ class WikidataArtisteSourceTest {
     serveur.verify();
   }
 
+  // #1018 : un auteur comique (P106 = Q12406482, ex. Pierre-Emmanuel Barré dont la fiche réelle
+  // porte cette occupation plutôt que Q245068) doit aussi être rapprochable — la fermeture
+  // transitive P279* de Q12406482 ne remonte jamais vers Q245068/Q639669, un troisième
+  // branchement du filtre était nécessaire.
+  @Test
+  void enrichirLot_decouverteAuteurComique_estRapproche() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    ArtisteAEnrichir artiste =
+        new ArtisteAEnrichir(id, "Auteur Comique Inconnu", "auteur comique inconnu", null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q12406482")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q17350457"},
+                   "itemLabel":{"type":"literal","value":"Auteur Comique Inconnu"},
+                   "typeMatch":{"type":"literal","value":"humain"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+
+    assertEquals("Q17350457", resultat.get(id).wikidataId());
+    serveur.verify();
+  }
+
   // #772 : homonymie groupe/personne (ex. Van Halen, groupe nommé du vrai nom de famille de son
   // fondateur) — deux entités distinctes de types différents parmi les meilleurs candidats
   // doivent bloquer tout rapprochement plutôt que de deviner celle en tête.
