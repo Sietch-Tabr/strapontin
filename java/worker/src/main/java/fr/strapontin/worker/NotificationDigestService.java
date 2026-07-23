@@ -634,13 +634,6 @@ public class NotificationDigestService {
               .addValue("source", "worker")
               .addValue("message", message)
               .addValue("meta", metaJson));
-      jdbc.update(
-          """
-          DELETE FROM logs_admin WHERE id NOT IN (
-            SELECT id FROM logs_admin ORDER BY ts DESC LIMIT 200
-          )
-          """,
-          Map.of());
     } catch (Exception e) {
       log.warn("Impossible d'écrire log admin digest : {}", e.getMessage());
     }
