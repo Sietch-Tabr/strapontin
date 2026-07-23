@@ -127,13 +127,34 @@ class WorkerFetchServiceTest {
     }
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(rows);
     when(tm.fetchArtistesLot(any())).thenReturn(List.of());
-    when(eventim.fetchArtiste(anyString())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchArtistesBatch();
 
     verify(persisterConcerts, times(2)).persisterConcerts(any());
     verify(tm, times(2)).fetchArtistesLot(any());
+  }
+
+  // #1022 : deezer_id/wikidata_id doivent être transmis à fetchArtiste(nom, deezerId,
+  // wikidataId) — condition nécessaire pour qu'EventimSource puisse désactiver le repli par
+  // containment dès qu'une identité indépendante est déjà connue.
+  @Test
+  void executerFetchArtistesBatch_artisteAvecDeezerIdConnu_transmisAFetchArtiste() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    row.put("artiste_id_str", "artiste-furies");
+    row.put("artiste_affiche", "Furies");
+    row.put("attraction_id", "attractionIdFuries");
+    row.put("deezer_id", "656219");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
+    when(tm.fetchArtistesLot(any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchArtistesBatch();
+
+    verify(eventim).fetchArtiste("Furies", "656219", null);
   }
 
   @Test

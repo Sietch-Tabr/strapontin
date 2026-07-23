@@ -225,7 +225,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
       String[] datHeure = parseDateEventim(dateStr);
       String artiste = artisteFallback != null ? artisteFallback : extraireNomArtiste(titre);
-      @SuppressWarnings("unchecked")
       var location = (Map<String, Object>) liveEnt.get("location");
       return construireConcertEventim(
           produit, liveEnt, location, artiste, datHeure[0], datHeure[1], artisteSourceId);
@@ -251,11 +250,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       Thread.currentThread().interrupt();
       return false;
     }
-  }
-
-  private ResultatPageEventim chargerPageProduits(
-      String uri, String artisteFallback, String deptFiltre) {
-    return chargerPageProduits(uri, artisteFallback, deptFiltre, null);
   }
 
   @SuppressWarnings("unchecked")
@@ -369,8 +363,15 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
         artisteSourceId);
   }
 
+  /// Recherche l'attractionId Eventim correspondant à un terme de recherche.
+  ///
+  /// @param terme             nom de l'artiste cherché
+  /// @param identiteConfirmee {@code true} si l'artiste a déjà une identité confirmée par une
+  ///     source indépendante (#1022) — désactive le repli par containment, n'accepte plus qu'une
+  ///     correspondance exacte
+  /// @return attractionId trouvé, ou {@code null} si aucune correspondance acceptable
   @SuppressWarnings("unchecked")
-  private String rechercherAttractionId(String terme) {
+  private String rechercherAttractionId(String terme, boolean identiteConfirmee) {
     String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/v1/attractions")
             .queryParam(PARAM_WEB_ID, WEB_ID)
@@ -396,9 +397,13 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
           exact = a;
           break;
         }
-        // Accepte "terme" contenu dans le nom Eventim (ex. "-M-" dans "-M- Matthieu Chedid").
-        // Seuil sur la longueur brute pour éviter les faux positifs sur un seul caractère.
-        if (parContainment == null
+        // Accepte "terme" contenu dans le nom Eventim (ex. "-M-" dans "-M- Matthieu Chedid") —
+        // seulement si l'identité n'est pas déjà confirmée par ailleurs (#1022) : sinon ce repli
+        // approximatif a fini par accepter à répétition un mauvais rapprochement (ex. "Furies"
+        // dans "Love & Furies", deux entités distinctes). Seuil sur la longueur brute pour éviter
+        // les faux positifs sur un seul caractère.
+        if (!identiteConfirmee
+            && parContainment == null
             && terme.length() >= 2
             && !termeNorm.isEmpty()
             && nomNorm.contains(termeNorm)) {
@@ -499,13 +504,37 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   /// Récupère les concerts d'un artiste via l'API Eventim.
   ///
-  /// <p>Recherche d'abord l'attractionId Eventim par le nom, puis pagine les produits.
+  /// <p>Recherche d'abord l'attractionId Eventim par le nom, puis pagine les produits. Identité
+  /// non confirmée par une source indépendante : le repli par containment reste autorisé (#1022).
   ///
   /// @param nom nom de l'artiste
   /// @return liste des concerts trouvés, vide si l'artiste n'est pas référencé sur Eventim
   @Override
   public List<ConcertBrut> fetchArtiste(String nom) {
-    String attractionId = rechercherAttractionId(nom);
+    return fetchArtiste(nom, null, null);
+  }
+
+  /// Récupère les concerts d'un artiste via l'API Eventim, en tenant compte de son identité déjà
+  /// confirmée par une source indépendante si connue.
+  ///
+  /// <p>#1022 : le repli par containment de {@link #rechercherAttractionId} (ex. "Furies" trouvé
+  /// dans "Love & Furies") s'est révélé actif et récurrent — chaque cycle de fetch réacceptait le
+  /// même mauvais rapprochement, défaisant silencieusement tout nettoyage de données fait à la
+  /// main. Dès que l'artiste a déjà un {@code deezerId} ou un {@code wikidataId} connu (identité
+  /// confirmée indépendamment), seule une correspondance exacte est acceptée — le repli par
+  /// containment reste réservé aux artistes dont l'identité n'est pas encore confirmée, cas pour
+  /// lequel il a été introduit (ex. {@code "-M-"} → {@code "-M- Matthieu Chedid"}).
+  ///
+  /// @param nom        nom de l'artiste
+  /// @param deezerId   identifiant Deezer déjà connu, ou {@code null} si l'identité n'est pas
+  ///     confirmée
+  /// @param wikidataId identifiant Wikidata déjà connu, ou {@code null} si l'identité n'est pas
+  ///     confirmée
+  /// @return liste des concerts trouvés, vide si l'artiste n'est pas référencé sur Eventim
+  @Override
+  public List<ConcertBrut> fetchArtiste(String nom, String deezerId, String wikidataId) {
+    boolean identiteConfirmee = deezerId != null || wikidataId != null;
+    String attractionId = rechercherAttractionId(nom, identiteConfirmee);
     if (attractionId == null) {
       log.info("Eventim: artiste non trouvé artiste={}", nom);
       return List.of();
