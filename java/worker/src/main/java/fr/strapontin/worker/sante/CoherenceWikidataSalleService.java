@@ -9,7 +9,9 @@ import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.WikidataSalleSource;
 import fr.strapontin.worker.LogsAdminWorker;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -37,6 +40,14 @@ import org.springframework.stereotype.Service;
 /// base pour un examen manuel ultérieur, en réutilisant la commune déjà récupérée par le mode
 /// batch de {@link WikidataSalleSource} (aucune requête SPARQL supplémentaire par rapport à un
 /// enrichissement classique à `wikidata_id` connu).
+///
+/// <p>#1021 : la comparaison initiale contre `salles.ville` seule est aveugle par construction
+/// quand le mauvais rapprochement a corrompu `ville` en même temps que `wikidata_id` (la mauvaise
+/// entité écrase les deux au même moment) — les deux valeurs corrompues sont alors toujours
+/// cohérentes entre elles. `concerts.ville`, dérivée du code postal brut de la source et jamais
+/// touchée par l'enrichissement, sert désormais de référence prioritaire quand elle est
+/// disponible ; `salles.ville` reste le repli pour une salle sans concert avec ville connue (ex.
+/// tous ses concerts passés déjà purgés).
 ///
 /// @since 2.7.5
 /// @author Kwaite
@@ -70,6 +81,8 @@ public class CoherenceWikidataSalleService {
     }
 
     Map<UUID, EnrichissementSalle> resultats = wikidata.enrichirLot(candidats);
+    Map<UUID, List<String>> villesConcertsReelles =
+        chargerVillesConcertsReelles(candidats.stream().map(SalleAEnrichir::id).toList());
 
     int incoherences = 0;
     for (SalleAEnrichir salle : candidats) {
@@ -77,12 +90,57 @@ public class CoherenceWikidataSalleService {
       if (enrichissement == null) continue;
       String communeWikidata = enrichissement.ville();
       if (communeWikidata == null || communeWikidata.isBlank()) continue;
-      if (villesCoherentes(salle.ville(), communeWikidata)) continue;
+      if (coherentAvecSourceIndependante(
+          salle, communeWikidata, villesConcertsReelles.get(salle.id()))) {
+        continue;
+      }
       incoherences++;
       loggerIncoherence(salle, communeWikidata);
     }
     log.info("coherence:wikidata candidats={} incoherences={}", candidats.size(), incoherences);
     return incoherences;
+  }
+
+  /// Charge, pour chaque salle candidate, les villes réelles distinctes de ses concerts
+  /// (`concerts.ville`) — dérivées du code postal brut de la source, jamais touchées par
+  /// l'enrichissement Wikidata, contrairement à `salles.ville` (#1021).
+  ///
+  /// @param salleIds identifiants des salles candidates
+  /// @return villes réelles par salle, absente si la salle n'a aucun concert avec une ville
+  ///     connue (ex. tous les concerts passés déjà purgés)
+  private Map<UUID, List<String>> chargerVillesConcertsReelles(List<UUID> salleIds) {
+    if (salleIds.isEmpty()) return Map.of();
+    Map<UUID, List<String>> parSalle = new HashMap<>();
+    jdbc.query(
+        "SELECT DISTINCT salle_id, ville FROM concerts"
+            + " WHERE salle_id IN (:ids) AND ville IS NOT NULL AND ville != ''",
+        Map.of("ids", salleIds),
+        (RowCallbackHandler)
+            rs ->
+                parSalle
+                    .computeIfAbsent(rs.getObject("salle_id", UUID.class), _ -> new ArrayList<>())
+                    .add(rs.getString("ville")));
+    return parSalle;
+  }
+
+  /// Compare la commune Wikidata contre une source de vérité indépendante (#1021) : si le
+  /// mauvais rapprochement a corrompu `salles.ville` en même temps que `wikidata_id` (constaté
+  /// systématiquement dans les 3 cas confirmés), une comparaison contre `salles.ville` seule
+  /// trouve toujours les deux cohérents entre eux — angle mort total, silencieux.
+  /// `concerts.ville` sert de référence prioritaire quand elle est disponible ; repli sur
+  /// `salles.ville` uniquement pour une salle sans concert avec ville connue.
+  ///
+  /// @param salle                 salle candidate
+  /// @param communeWikidata       commune Wikidata (P131) du `wikidata_id` déjà associé
+  /// @param villesConcertsReelles villes réelles des concerts rattachés, ou {@code null}/vide si
+  ///     aucune
+  /// @return {@code true} si la commune Wikidata est cohérente avec la source disponible
+  private static boolean coherentAvecSourceIndependante(
+      SalleAEnrichir salle, String communeWikidata, List<String> villesConcertsReelles) {
+    if (villesConcertsReelles != null && !villesConcertsReelles.isEmpty()) {
+      return villesConcertsReelles.stream().anyMatch(v -> villesCoherentes(v, communeWikidata));
+    }
+    return villesCoherentes(salle.ville(), communeWikidata);
   }
 
   // #1009 : une comparaison texte-à-texte stricte ville/commune Wikidata génère du bruit quasi
