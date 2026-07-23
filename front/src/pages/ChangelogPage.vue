@@ -12,7 +12,27 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.7.5 — 22 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.7.6 — 23 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Concerts</p>
+            <ul>
+              <li>Un artiste suivi ("Furies") pouvait réafficher les concerts d'un homonyme même après correction manuelle — corrigé durablement, plus seulement en surface.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Certains humoristes ne pouvaient jamais recevoir de lien Wikidata dans le référentiel Artistes — corrigé.</li>
+              <li>Fusionner deux salles ou artistes ayant chacun un identifiant du même type de billetterie ne laissait plus qu'un seul identifiant, plutôt que de les faire coexister indéfiniment.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.7.5 — 22 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Salles</p>
@@ -28,7 +48,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.7.4 — 20 juillet 2026</h2></summary>

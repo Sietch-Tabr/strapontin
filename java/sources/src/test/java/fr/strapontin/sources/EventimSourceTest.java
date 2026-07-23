@@ -320,6 +320,91 @@ class EventimSourceTest {
     assertTrue(source.preleverContainmentsAcceptes().isEmpty());
   }
 
+  // #1022 — régression #1013 : "Furies" trouvé par containment dans "Love & Furies" (deux
+  // entités distinctes) réapparaissait à chaque cycle de fetch. Dès que l'artiste a déjà un
+  // deezerId ou un wikidataId connu (identité confirmée indépendamment), le repli par
+  // containment doit être désactivé — seule une correspondance exacte est acceptée.
+  @Test
+  void fetchArtiste_identiteConfirmeeParDeezerId_rejetteLeContainment() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-love-furies","name":"Love & Furies"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    EventimSource source = new EventimSource(restClient);
+    List<ConcertBrut> resultats = source.fetchArtiste("Furies", "656219", null);
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+    assertTrue(source.preleverContainmentsAcceptes().isEmpty());
+  }
+
+  // Symétrique côté wikidataId : même comportement attendu qu'avec un deezerId connu.
+  @Test
+  void fetchArtiste_identiteConfirmeeParWikidataId_rejetteLeContainment() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-love-furies","name":"Love & Furies"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    EventimSource source = new EventimSource(restClient);
+    List<ConcertBrut> resultats = source.fetchArtiste("Furies", null, "Q3106253");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+    assertTrue(source.preleverContainmentsAcceptes().isEmpty());
+  }
+
+  // Identité non confirmée (ni deezerId ni wikidataId) : comportement historique inchangé, le
+  // containment reste autorisé — non-régression du cas "-M-" ci-dessus via la nouvelle signature.
+  @Test
+  void fetchArtiste_identiteNonConfirmee_autoriseLeContainment() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-m","name":"-M- Matthieu Chedid"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-m")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[],"totalResults":0}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    EventimSource source = new EventimSource(restClient);
+    List<ConcertBrut> resultats = source.fetchArtiste("-M-", null, null);
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+    assertEquals(1, source.preleverContainmentsAcceptes().size());
+  }
+
   @Test
   void fetchArtiste_termeUnCaractereBrut_pasDeContainment() {
     // ticket #661 — terme d'un seul caractère brut (ex. "M") ne déclenche pas le containment

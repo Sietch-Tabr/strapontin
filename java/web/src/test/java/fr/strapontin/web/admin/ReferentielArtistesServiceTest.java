@@ -17,6 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -196,5 +197,46 @@ class ReferentielArtistesServiceTest {
                         && sql.contains("c1.salle_id = c2.salle_id")
                         && sql.contains("c1.date = c2.date")),
             anyMap());
+  }
+
+  // #1019 : deux identifiants du même type de source (ex. deux ticketmaster) sur cible et source
+  // ne doivent pas coexister après fusion — la ligne la moins saine (suspecte) doit être
+  // supprimée avant la réassignation en masse.
+  @Test
+  void fusionner_conflitSourceCommune_supprimeLaLigneSuspecte() {
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
+    UUID cible = UUID.randomUUID();
+    UUID source = UUID.randomUUID();
+
+    Map<String, Object> conflit =
+        Map.of(
+            "source",
+            "ticketmaster",
+            "id_source",
+            "tm-source-mort",
+            "id_cible",
+            "tm-cible-sain",
+            "sante_source",
+            5,
+            "sante_cible",
+            0,
+            "suspect_source",
+            true,
+            "suspect_cible",
+            false);
+    when(jdbc.queryForList(contains("FROM artiste_sources src"), anyMap()))
+        .thenReturn(List.of(conflit));
+
+    boolean fusionne = service.fusionner(cible, source);
+
+    assertTrue(fusionne);
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.argThat(
+                (String sql) -> sql.contains("DELETE FROM artiste_sources WHERE artiste_id")),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p ->
+                    p.get("artisteId").equals(source.toString())
+                        && p.get("identifiantExterne").equals("tm-source-mort")));
   }
 }

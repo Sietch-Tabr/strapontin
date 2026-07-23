@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -18,6 +19,7 @@ import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.WikidataSalleSource;
 import fr.strapontin.worker.LogsAdminWorker;
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -27,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Tests unitaires pour {@link CoherenceWikidataSalleService} (#1005).
@@ -55,6 +58,31 @@ class CoherenceWikidataSalleServiceTest {
             any(Map.class),
             any(org.springframework.jdbc.core.RowMapper.class)))
         .thenReturn(candidats);
+  }
+
+  /// Simule le résultat de `chargerVillesConcertsReelles` en pilotant directement le
+  /// {@link RowCallbackHandler} avec un {@link ResultSet} mocké — sans ce stub, l'appel réel
+  /// n'est jamais déclenché en test (Mockito no-op par défaut sur un `void`), ce qui correspond
+  /// au cas « aucun concert réel connu » (repli sur `salles.ville`, comportement historique).
+  private void simulerVillesConcertsReelles(Map<UUID, List<String>> villesParSalle) {
+    doAnswer(
+            invocation -> {
+              RowCallbackHandler handler = invocation.getArgument(2);
+              for (Map.Entry<UUID, List<String>> entree : villesParSalle.entrySet()) {
+                for (String ville : entree.getValue()) {
+                  ResultSet rs = mock(ResultSet.class);
+                  when(rs.getObject("salle_id", UUID.class)).thenReturn(entree.getKey());
+                  when(rs.getString("ville")).thenReturn(ville);
+                  handler.processRow(rs);
+                }
+              }
+              return null;
+            })
+        .when(jdbc)
+        .query(
+            org.mockito.ArgumentMatchers.anyString(),
+            any(Map.class),
+            any(RowCallbackHandler.class));
   }
 
   @Test
@@ -194,5 +222,56 @@ class CoherenceWikidataSalleServiceTest {
             eq("coherence-wikidata"),
             org.mockito.ArgumentMatchers.contains("Le Bikini"),
             any());
+  }
+
+  // #1021 : le mauvais rapprochement a corrompu salles.ville en même temps que wikidata_id (les
+  // deux valeurs pointent vers la même mauvaise entité) — une comparaison contre salles.ville
+  // seule trouve alors toujours les deux cohérents entre eux, angle mort total. concerts.ville
+  // (indépendante, jamais touchée par l'enrichissement) doit prendre le dessus et révéler
+  // l'incohérence que salles.ville masquait.
+  @Test
+  void verifier_villeSalleCorrompueMaisConcertsReelsDivergents_journaliseIncoherence() {
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id, "Espace Saint-Exupéry", "espace saint exupery", "Rubelles", "95", "Q120266538");
+    simulerCandidats(List.of(salle));
+    simulerVillesConcertsReelles(Map.of(id, List.of("Franconville-la-Garenne")));
+    when(wikidata.enrichirLot(anyList()))
+        .thenReturn(
+            Map.of(
+                id,
+                new EnrichissementSalle(
+                    "Q120266538", "Espace Saint-Exupéry", "Rubelles", null, null)));
+
+    int resultat = service.verifier();
+
+    assertEquals(1, resultat);
+    verify(logsAdminWorker)
+        .inserer(
+            eq("warn"),
+            eq("coherence-wikidata"),
+            org.mockito.ArgumentMatchers.contains("Espace Saint-Exupéry"),
+            any());
+  }
+
+  // #1021 : à l'inverse, si salles.ville diverge textuellement de la commune Wikidata mais que
+  // les concerts réels (source indépendante) confirment la même ville, ce n'est pas une vraie
+  // incohérence — concerts.ville doit primer sur salles.ville plutôt que de générer un faux
+  // positif.
+  @Test
+  void verifier_concertsReelsCoherentsMalgreVilleSalleDivergente_neJournalisePasDIncoherence() {
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Zenith", "zenith", "Ancienne Ville Erronee", "59", "Q1");
+    simulerCandidats(List.of(salle));
+    simulerVillesConcertsReelles(Map.of(id, List.of("Lille")));
+    when(wikidata.enrichirLot(anyList()))
+        .thenReturn(Map.of(id, new EnrichissementSalle("Q1", "Zenith", "Lille", null, null)));
+
+    int resultat = service.verifier();
+
+    assertEquals(0, resultat);
+    verify(logsAdminWorker, never()).inserer(any(), any(), any(), any());
   }
 }

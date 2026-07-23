@@ -105,8 +105,11 @@ public class WorkerFetchService {
           jdbc.queryForList(
               "SELECT ua.artiste_id::text AS artiste_id_str,"
                   + " MAX(ua.artiste_affiche) AS artiste_affiche,"
-                  + " MAX(asm.identifiant_externe) AS attraction_id"
+                  + " MAX(asm.identifiant_externe) AS attraction_id,"
+                  + " MAX(a.deezer_id) AS deezer_id,"
+                  + " MAX(a.wikidata_id) AS wikidata_id"
                   + " FROM user_artistes ua"
+                  + " JOIN artistes a ON a.id = ua.artiste_id"
                   + " LEFT JOIN artiste_sources asm"
                   + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
                   + " GROUP BY ua.artiste_id",
@@ -161,8 +164,10 @@ public class WorkerFetchService {
     for (SourceConcerts source : sourcesSimples) {
       for (Map<String, Object> row : lot) {
         String nom = (String) row.get("artiste_affiche");
+        String deezerId = (String) row.get("deezer_id");
+        String wikidataId = (String) row.get("wikidata_id");
         try {
-          concertsAutresSources.addAll(source.fetchArtiste(nom));
+          concertsAutresSources.addAll(source.fetchArtiste(nom, deezerId, wikidataId));
         } catch (Exception e) {
           log.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
         }

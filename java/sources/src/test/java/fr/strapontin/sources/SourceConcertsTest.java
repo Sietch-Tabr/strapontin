@@ -32,9 +32,36 @@ class SourceConcertsTest {
         };
 
     assertTrue(source.fetchArtiste("artiste").isEmpty());
+    assertTrue(source.fetchArtiste("artiste", "deezer-1", "Q1").isEmpty());
     assertTrue(source.fetchSalle("id").isEmpty());
     assertTrue(source.fetchRegion(List.of("75"), List.of("music")).isEmpty());
     assertFalse(source.accepteIdentifiantSalle("id"));
+  }
+
+  // #1022 : le défaut à 3 paramètres délègue à fetchArtiste(nom) pour toute source qui ne
+  // surcharge pas explicitement le repli identité — seule EventimSource en a besoin.
+  @Test
+  void fetchArtisteAvecIdentite_parDefaut_delegueAFetchArtisteSansIdentite() {
+    SourceConcerts source =
+        new SourceConcerts() {
+          @Override
+          public String nom() {
+            return "test";
+          }
+
+          @Override
+          public List<ConcertBrut> fetchArtiste(String nom) {
+            return List.of(
+                new ConcertBrut(
+                    nom, null, null, null, null, null, null, null, null, null, null, null, null,
+                    null, null));
+          }
+        };
+
+    List<ConcertBrut> resultat = source.fetchArtiste("artiste", "deezer-1", "Q1");
+
+    assertEquals(1, resultat.size());
+    assertEquals("artiste", resultat.get(0).artiste());
   }
 
   @Test
