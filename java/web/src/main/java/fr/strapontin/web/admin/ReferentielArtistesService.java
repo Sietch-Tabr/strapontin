@@ -220,6 +220,10 @@ public class ReferentielArtistesService {
             + " AS uuid)",
         ids);
 
+    // Dédoublonnage préalable des conflits par type de source (#1019 : sans lui, deux
+    // identifiants du même type, ex. deux ticketmaster, coexistent indéfiniment sur l'artiste
+    // fusionné).
+    dedupliquerArtisteSourcesAvantFusion(cibleId, sourceId);
     jdbc.update(
         "UPDATE artiste_sources SET artiste_id = CAST(:cible AS uuid) WHERE artiste_id ="
             + " CAST(:source AS uuid)",
@@ -247,5 +251,45 @@ public class ReferentielArtistesService {
     logAdminService.logAdmin(
         "info", "admin", "fusion artiste cible=" + cibleId + " source=" + sourceId);
     return true;
+  }
+
+  /// Supprime, avant réassignation, les doublons d'{@code artiste_sources} qu'une fusion créerait
+  /// sinon silencieusement (#1019) : la PK {@code (source, identifiant_externe)} est indépendante
+  /// de {@code artiste_id}, donc deux lignes portant le même {@code source} (ex. deux
+  /// identifiants {@code ticketmaster} différents) peuvent coexister indéfiniment sur l'artiste
+  /// fusionné sans jamais entrer en conflit de PK. Garde la ligne la plus saine (non suspecte
+  /// prioritaire, puis {@code nb_zero_consecutifs} le plus bas) et supprime l'autre.
+  ///
+  /// @param cibleId  UUID de l'artiste à conserver
+  /// @param sourceId UUID de l'artiste à absorber
+  private void dedupliquerArtisteSourcesAvantFusion(UUID cibleId, UUID sourceId) {
+    List<Map<String, Object>> conflits =
+        jdbc.queryForList(
+            """
+            SELECT src.source AS source,
+                   src.identifiant_externe AS id_source,
+                   dst.identifiant_externe AS id_cible,
+                   src.nb_zero_consecutifs AS sante_source,
+                   dst.nb_zero_consecutifs AS sante_cible,
+                   (src.suspect_depuis IS NOT NULL) AS suspect_source,
+                   (dst.suspect_depuis IS NOT NULL) AS suspect_cible
+            FROM artiste_sources src
+            JOIN artiste_sources dst ON dst.source = src.source AND dst.artiste_id = CAST(:cible AS uuid)
+            WHERE src.artiste_id = CAST(:source AS uuid)
+            """,
+            Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
+
+    for (Map<String, Object> conflit : conflits) {
+      boolean garderSource = ReferentielSallesService.laSourceEstPlusSaine(conflit);
+      Map<String, Object> paramsSuppression = new HashMap<>();
+      paramsSuppression.put("source", conflit.get("source"));
+      paramsSuppression.put("artisteId", garderSource ? cibleId.toString() : sourceId.toString());
+      paramsSuppression.put(
+          "identifiantExterne", conflit.get(garderSource ? "id_cible" : "id_source"));
+      jdbc.update(
+          "DELETE FROM artiste_sources WHERE artiste_id = CAST(:artisteId AS uuid) AND source ="
+              + " :source AND identifiant_externe = :identifiantExterne",
+          paramsSuppression);
+    }
   }
 }

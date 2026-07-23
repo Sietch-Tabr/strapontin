@@ -185,4 +185,54 @@ class ReferentielSallesServiceTest {
     verify(jdbc, times(1)).update(contains("DELETE FROM salles WHERE"), anyMap());
     verify(logAdminService).logAdmin(eq("info"), eq("admin"), any());
   }
+
+  // #1019 : deux identifiants du même type de source (ex. deux ticketmaster) sur cible et source
+  // ne doivent pas coexister après fusion — la ligne la moins saine (suspecte) doit être
+  // supprimée avant la réassignation en masse.
+  @Test
+  void fusionner_conflitSourceCommune_supprimeLaLigneSuspecte() {
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
+    UUID cible = UUID.randomUUID();
+    UUID source = UUID.randomUUID();
+
+    Map<String, Object> conflit =
+        Map.of(
+            "source",
+            "ticketmaster",
+            "id_source",
+            "tm-source-mort",
+            "id_cible",
+            "tm-cible-sain",
+            "sante_source",
+            5,
+            "sante_cible",
+            0,
+            "suspect_source",
+            true,
+            "suspect_cible",
+            false);
+    when(jdbc.queryForList(contains("FROM salle_sources src"), anyMap()))
+        .thenReturn(List.of(conflit));
+
+    boolean fusionnee = service.fusionner(cible, source);
+
+    assertTrue(fusionnee);
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.argThat(
+                (String sql) -> sql.contains("DELETE FROM salle_sources WHERE salle_id")),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p ->
+                    p.get("salleId").equals(source.toString())
+                        && p.get("identifiantExterne").equals("tm-source-mort")));
+  }
+
+  @Test
+  void laSourceEstPlusSaine_statutsIdentiquesEgaliteSante_gardeLaSource() {
+    Map<String, Object> conflit =
+        Map.of(
+            "sante_source", 2, "sante_cible", 2, "suspect_source", false, "suspect_cible", false);
+
+    assertTrue(ReferentielSallesService.laSourceEstPlusSaine(conflit));
+  }
 }

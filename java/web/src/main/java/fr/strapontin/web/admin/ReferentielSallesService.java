@@ -223,7 +223,11 @@ public class ReferentielSallesService {
             + " AS uuid)",
         ids);
 
-    // 4. Sources externes réassignées (PK indépendante de salle_id, pas de conflit possible)
+    // 4. Sources externes réassignées (PK indépendante de salle_id, pas de conflit de PK
+    // possible) — dédoublonnage préalable des conflits par type de source (#1019 : sans lui, deux
+    // identifiants du même type, ex. deux ticketmaster, coexistent indéfiniment sur la salle
+    // fusionnée).
+    dedupliquerSallesSourcesAvantFusion(cibleId, sourceId);
     jdbc.update(
         "UPDATE salle_sources SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source AS"
             + " uuid)",
@@ -245,5 +249,63 @@ public class ReferentielSallesService {
     logAdminService.logAdmin(
         "info", "admin", "fusion salle cible=" + cibleId + " source=" + sourceId);
     return true;
+  }
+
+  /// Supprime, avant réassignation, les doublons de {@code salle_sources} qu'une fusion créerait
+  /// sinon silencieusement (#1019) : la PK {@code (source, identifiant_externe)} est indépendante
+  /// de {@code salle_id}, donc deux lignes portant le même {@code source} (ex. deux identifiants
+  /// {@code ticketmaster} différents) peuvent coexister indéfiniment sur la salle fusionnée sans
+  /// jamais entrer en conflit de PK. Garde la ligne la plus saine (non suspecte prioritaire, puis
+  /// {@code nb_zero_consecutifs} le plus bas) et supprime l'autre.
+  ///
+  /// @param cibleId  UUID de la salle à conserver
+  /// @param sourceId UUID de la salle à absorber
+  private void dedupliquerSallesSourcesAvantFusion(UUID cibleId, UUID sourceId) {
+    List<Map<String, Object>> conflits =
+        jdbc.queryForList(
+            """
+            SELECT src.source AS source,
+                   src.identifiant_externe AS id_source,
+                   dst.identifiant_externe AS id_cible,
+                   src.nb_zero_consecutifs AS sante_source,
+                   dst.nb_zero_consecutifs AS sante_cible,
+                   (src.suspect_depuis IS NOT NULL) AS suspect_source,
+                   (dst.suspect_depuis IS NOT NULL) AS suspect_cible
+            FROM salle_sources src
+            JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
+            WHERE src.salle_id = CAST(:source AS uuid)
+            """,
+            Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
+
+    for (Map<String, Object> conflit : conflits) {
+      boolean garderSource = laSourceEstPlusSaine(conflit);
+      Map<String, Object> paramsSuppression = new HashMap<>();
+      paramsSuppression.put("source", conflit.get("source"));
+      paramsSuppression.put("salleId", garderSource ? cibleId.toString() : sourceId.toString());
+      paramsSuppression.put(
+          "identifiantExterne", conflit.get(garderSource ? "id_cible" : "id_source"));
+      jdbc.update(
+          "DELETE FROM salle_sources WHERE salle_id = CAST(:salleId AS uuid) AND source ="
+              + " :source AND identifiant_externe = :identifiantExterne",
+          paramsSuppression);
+    }
+  }
+
+  /// Compare la santé de deux lignes {@code salle_sources} (ou {@code artiste_sources}) en
+  /// conflit lors d'une fusion : une ligne non suspecte l'emporte toujours sur une ligne suspecte,
+  /// à égalité de statut la ligne avec le moins d'échecs consécutifs l'emporte.
+  ///
+  /// @param conflit ligne agrégée contenant {@code suspect_source}/{@code suspect_cible} et
+  ///     {@code sante_source}/{@code sante_cible}
+  /// @return {@code true} si la ligne côté source doit être conservée
+  static boolean laSourceEstPlusSaine(Map<String, Object> conflit) {
+    boolean suspectSource = (boolean) conflit.get("suspect_source");
+    boolean suspectCible = (boolean) conflit.get("suspect_cible");
+    if (suspectSource != suspectCible) {
+      return !suspectSource;
+    }
+    int santeSource = ((Number) conflit.get("sante_source")).intValue();
+    int santeCible = ((Number) conflit.get("sante_cible")).intValue();
+    return santeSource <= santeCible;
   }
 }
