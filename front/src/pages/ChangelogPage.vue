@@ -12,7 +12,27 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.7.6 — 23 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.7.7 — 30 juillet 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Application installée (PWA)</p>
+            <ul>
+              <li>Un message d'erreur pouvait rester caché derrière la barre de navigation en bas d'écran sur mobile — corrigé.</li>
+              <li>Après un redémarrage de l'application hors connexion, un clic sur le menu pouvait vous déconnecter à tort alors que votre session restait valide — corrigé.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Un artiste mal rattaché à un lien de billetterie erroné peut désormais être corrigé directement, sans passer par une fusion.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.7.6 — 23 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Concerts</p>
@@ -28,7 +48,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.7.5 — 22 juillet 2026</h2></summary>
