@@ -5,10 +5,13 @@
 package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,8 +20,12 @@ import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Tests unitaires pour {@link WorkerPurgeService} (#915, extrait de {@code WorkerService}).
@@ -37,7 +44,13 @@ class WorkerPurgeServiceTest {
     ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
     LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
     WorkerStatsService workerStatsService =
-        new WorkerStatsService(List.<SourceConcerts>of(), tm, resolveur, jdbc, logsAdminWorker, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+        new WorkerStatsService(
+            List.<SourceConcerts>of(),
+            tm,
+            resolveur,
+            jdbc,
+            logsAdminWorker,
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
     service = new WorkerPurgeService(jdbc, workerStatsService);
   }
 
@@ -54,13 +67,57 @@ class WorkerPurgeServiceTest {
 
   @Test
   void executerPurgerSalles_supprimeSallesOrphelinesEtEnregistreStat() {
-    when(jdbc.update(anyString(), anyMap())).thenReturn(3);
+    List<UUID> candidats = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    when(jdbc.query(contains("SELECT id FROM salles"), anyMap(), any(RowMapper.class)))
+        .thenReturn(candidats);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     service.executerPurgerSalles();
 
-    verify(jdbc).update(contains("DELETE FROM salles"), anyMap());
+    verify(jdbc, times(3)).update(contains("DELETE FROM salles"), anyMap());
     verify(jdbc).update(contains("INSERT INTO fetch_jobs (type_job"), anyMap());
     verify(jdbc).update(contains("INSERT INTO fetch_jobs_historique"), anyMap());
+  }
+
+  @Test
+  void executerPurgerSalles_conflitSurUneSalle_continueLesAutresEtCompteCorrectement() {
+    UUID bloquee = UUID.randomUUID();
+    UUID libre1 = UUID.randomUUID();
+    UUID libre2 = UUID.randomUUID();
+    when(jdbc.query(contains("SELECT id FROM salles"), anyMap(), any(RowMapper.class)))
+        .thenReturn(List.of(bloquee, libre1, libre2));
+    when(jdbc.update(
+            contains("DELETE FROM salles"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> bloquee.equals(p.get("id")))))
+        .thenThrow(new DuplicateKeyException("clé dupliquée"));
+    when(jdbc.update(
+            contains("DELETE FROM salles"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> !bloquee.equals(p.get("id")))))
+        .thenReturn(1);
+    when(jdbc.update(contains("INSERT INTO fetch_jobs"), anyMap())).thenReturn(1);
+
+    service.executerPurgerSalles();
+
+    verify(jdbc, times(3)).update(contains("DELETE FROM salles"), anyMap());
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO fetch_jobs (type_job"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> Integer.valueOf(2).equals(p.get("nbMisAJour"))));
+  }
+
+  @Test
+  void executerPurgerSalles_aucuneSalleOrpheline_neSupprimeRien() {
+    when(jdbc.query(contains("SELECT id FROM salles"), anyMap(), any(RowMapper.class)))
+        .thenReturn(List.of());
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    service.executerPurgerSalles();
+
+    verify(jdbc, never()).update(contains("DELETE FROM salles"), anyMap());
+    verify(jdbc).update(contains("INSERT INTO fetch_jobs (type_job"), anyMap());
   }
 
   @Test
