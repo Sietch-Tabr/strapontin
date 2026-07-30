@@ -1,5 +1,9 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { sessionRef, sessionInitialisee } from "../composables/useSession.js";
+import {
+  sessionRef,
+  sessionInitialisee,
+  sessionErreurReseau,
+} from "../composables/useSession.js";
 import LoginPage from "../pages/auth/LoginPage.vue";
 import TotpChallengePage from "../pages/auth/TotpChallengePage.vue";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage.vue";
@@ -54,7 +58,15 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   if (to.meta.authPage && sessionRef.value) return "/";
-  if (!to.meta.authPage && sessionInitialisee.value && !sessionRef.value)
+  // #1030 : ne redirige vers /login que sur un 401 confirmé — pas quand la session n'a jamais pu
+  // être vérifiée faute de réseau (redémarrage PWA hors-ligne depuis le cache SW), où le cookie
+  // de session reste potentiellement valide.
+  if (
+    !to.meta.authPage &&
+    sessionInitialisee.value &&
+    !sessionRef.value &&
+    !sessionErreurReseau.value
+  )
     return "/login";
 });
 

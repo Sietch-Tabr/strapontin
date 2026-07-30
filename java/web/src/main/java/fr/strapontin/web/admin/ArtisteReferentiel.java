@@ -18,6 +18,9 @@ import java.util.UUID;
 ///     {@code necessite_intervention_le}, #706, #778, #888)
 /// @param wikidataId Q-ID Wikidata si présent
 /// @param deezerId   identifiant Deezer si présent
+/// @param identifiantTmExterne identifiant Ticketmaster (attractionId) si une source
+///     {@code ticketmaster} est liée, {@code null} sinon (#1026 — affiché pour permettre sa
+///     correction directe depuis l'admin sans passer par une fusion)
 /// @since 2.6.0
 /// @author Kwaite
 public record ArtisteReferentiel(
@@ -28,4 +31,5 @@ public record ArtisteReferentiel(
     List<String> sources,
     String statut,
     String wikidataId,
-    String deezerId) {}
+    String deezerId,
+    String identifiantTmExterne) {}

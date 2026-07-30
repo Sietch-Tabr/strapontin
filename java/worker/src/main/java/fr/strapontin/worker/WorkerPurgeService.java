@@ -8,9 +8,12 @@ import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -71,14 +74,22 @@ public class WorkerPurgeService {
   ///
   /// Doit s'exécuter après {@link #executerPurgerConcerts()} pour travailler
   /// sur un jeu de données cohérent (cf. `PurgerSallesJob`).
+  ///
+  /// <p>Supprime les candidates une par une plutôt qu'en un seul `DELETE` en masse (#1025) : la
+  /// suppression d'une salle peut déclencher en cascade (FK `ON DELETE SET NULL`) un
+  /// `UPDATE concerts SET salle_id = NULL` qui entre en conflit avec la contrainte unique
+  /// {@code uq_concerts_artiste_date_heure_salle} si un doublon TM/Eventim du même concert existe
+  /// déjà avec `salle_id = NULL` — un seul cas de ce type faisait jusqu'ici échouer toute la
+  /// transaction du `DELETE` en masse, bloquant la purge de **toutes** les salles orphelines
+  /// légitimes, pas seulement celle en cause.
   public void executerPurgerSalles() {
     log.info("purger:salles démarré");
     long debut = System.currentTimeMillis();
     try {
-      int supprimes =
-          jdbc.update(
+      List<UUID> candidats =
+          jdbc.query(
               """
-              DELETE FROM salles
+              SELECT id FROM salles
               WHERE NOT EXISTS (
                   SELECT 1 FROM concerts WHERE salle_id = salles.id AND date >= CURRENT_DATE)
                 AND NOT EXISTS (
@@ -86,7 +97,22 @@ public class WorkerPurgeService {
                 AND NOT EXISTS (
                   SELECT 1 FROM salle_sources WHERE salle_id = salles.id AND source = 'digitick')
               """,
-              Map.of());
+              Map.of(),
+              (rs, _) -> rs.getObject("id", UUID.class));
+
+      int supprimes = 0;
+      for (UUID id : candidats) {
+        try {
+          jdbc.update("DELETE FROM salles WHERE id = CAST(:id AS uuid)", Map.of("id", id));
+          supprimes++;
+        } catch (DuplicateKeyException e) {
+          log.warn(
+              "purger:salles suppression bloquée salleId={} — probable doublon TM/Eventim jamais"
+                  + " fusionné (cf. #1025)",
+              id);
+        }
+      }
+
       log.info("purger:salles terminé supprimes={}", supprimes);
       workerStatsService.enregistrerStatJob(
           "purger:salles",

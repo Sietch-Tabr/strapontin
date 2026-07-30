@@ -98,7 +98,8 @@ public class ReferentielArtistesService {
                     lireSources(rs.getString("sources")),
                     rs.getString("statut"),
                     rs.getString("wikidata_id"),
-                    rs.getString("deezer_id")));
+                    rs.getString("deezer_id"),
+                    rs.getString("tm_identifiant_externe")));
 
     int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_DEFAUT));
     return new ReponseReferentielArtistes(artistes, pageNum, totalPages, total);
@@ -118,7 +119,9 @@ public class ReferentielArtistesService {
                CASE
                  WHEN MIN(asrc.necessite_intervention_le) IS NULL THEN 'a_jour'
                  ELSE 'invalide'
-               END AS statut
+               END AS statut,
+               MAX(CASE WHEN asrc.source = 'ticketmaster' THEN asrc.identifiant_externe END)
+                 AS tm_identifiant_externe
         FROM artistes a
         LEFT JOIN concerts c ON c.artiste_id = a.id
         LEFT JOIN artiste_sources asrc ON asrc.artiste_id = a.id
@@ -147,6 +150,59 @@ public class ReferentielArtistesService {
           "admin",
           "enrichissement artiste réinitialisé",
           Map.of("artisteId", artisteId.toString()));
+    }
+    return nb > 0;
+  }
+
+  /// Efface {@code necessite_intervention_le} sur toutes les sources d'un artiste sans fusion ni
+  /// changement d'identifiant (#1026) — action minimale pour un admin qui juge la divergence de
+  /// nom TM acceptable (ex. convention d'affichage différente, cf. -M-/Matthieu Chédid).
+  ///
+  /// @param artisteId UUID de l'artiste
+  /// @return {@code true} si au moins une ligne {@code artiste_sources} a été mise à jour
+  public boolean ignorerIntervention(UUID artisteId) {
+    int nb =
+        jdbc.update(
+            "UPDATE artiste_sources SET necessite_intervention_le = NULL WHERE artiste_id ="
+                + " CAST(:id AS uuid)",
+            Map.of("id", artisteId.toString()));
+    if (nb > 0) {
+      logAdminService.logAdmin(
+          "info",
+          "admin",
+          "intervention ignorée artiste=" + artisteId,
+          Map.of("artisteId", artisteId.toString()));
+    }
+    return nb > 0;
+  }
+
+  /// Corrige directement l'identifiant Ticketmaster d'un artiste (#1026) — alternative à la
+  /// fusion pour un simple mauvais lien (attractionId erroné plutôt qu'un doublon de référentiel).
+  /// Réinitialise le compteur de santé et efface {@code necessite_intervention_le} : un admin qui
+  /// corrige manuellement l'identifiant confirme lui-même la nouvelle identité, il n'y a rien de
+  /// plus à revérifier. Un conflit sur la PK {@code (source, identifiant_externe)} (identifiant
+  /// déjà attribué à un autre artiste) remonte {@code DuplicateKeyException} vers l'appelant,
+  /// traduite en 409 par {@code GlobalExceptionHandler}.
+  ///
+  /// @param artisteId          UUID de l'artiste
+  /// @param identifiantExterne nouvel attractionId Ticketmaster (non vide)
+  /// @return {@code true} si l'artiste a une source {@code ticketmaster} et a été mis à jour
+  public boolean corrigerIdentifiantTm(UUID artisteId, String identifiantExterne) {
+    int nb =
+        jdbc.update(
+            """
+            UPDATE artiste_sources
+            SET identifiant_externe = :identifiant, nb_zero_consecutifs = 0,
+                suspect_depuis = NULL, necessite_intervention_le = NULL
+            WHERE artiste_id = CAST(:id AS uuid) AND source = 'ticketmaster'
+            """,
+            Map.of("id", artisteId.toString(), "identifiant", identifiantExterne.strip()));
+    if (nb > 0) {
+      logAdminService.logAdmin(
+          "info",
+          "admin",
+          "identifiant TM corrigé artiste=" + artisteId,
+          Map.of("artisteId", artisteId.toString(), "identifiantExterne", identifiantExterne));
     }
     return nb > 0;
   }

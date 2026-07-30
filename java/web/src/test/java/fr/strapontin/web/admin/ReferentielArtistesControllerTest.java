@@ -97,6 +97,90 @@ class ReferentielArtistesControllerTest {
   }
 
   @Test
+  void ignorerIntervention_uuidInvalide_retourne400() {
+    ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention("pas-un-uuid");
+
+    assertEquals(400, reponse.getStatusCode().value());
+    verify(service, never()).ignorerIntervention(any());
+  }
+
+  @Test
+  void ignorerIntervention_artisteInconnu_retourne404() {
+    UUID id = UUID.randomUUID();
+    when(service.ignorerIntervention(id)).thenReturn(false);
+
+    ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention(id.toString());
+
+    assertEquals(404, reponse.getStatusCode().value());
+  }
+
+  @Test
+  void ignorerIntervention_nominal_retourne200() {
+    UUID id = UUID.randomUUID();
+    when(service.ignorerIntervention(id)).thenReturn(true);
+
+    ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention(id.toString());
+
+    assertEquals(200, reponse.getStatusCode().value());
+  }
+
+  @Test
+  void corrigerIdentifiantTm_uuidInvalide_retourne400() {
+    ResponseEntity<Map<String, Object>> reponse =
+        controller.corrigerIdentifiantTm(
+            "pas-un-uuid", Map.of("identifiantExterne", "K8vZ917G1B7"));
+
+    assertEquals(400, reponse.getStatusCode().value());
+    verify(service, never()).corrigerIdentifiantTm(any(), any());
+  }
+
+  @Test
+  void corrigerIdentifiantTm_identifiantVide_retourne400() {
+    UUID id = UUID.randomUUID();
+
+    ResponseEntity<Map<String, Object>> reponse =
+        controller.corrigerIdentifiantTm(id.toString(), Map.of("identifiantExterne", "  "));
+
+    assertEquals(400, reponse.getStatusCode().value());
+    verify(service, never()).corrigerIdentifiantTm(any(), any());
+  }
+
+  @Test
+  void corrigerIdentifiantTm_identifiantAbsent_retourne400() {
+    UUID id = UUID.randomUUID();
+
+    ResponseEntity<Map<String, Object>> reponse =
+        controller.corrigerIdentifiantTm(id.toString(), Map.of());
+
+    assertEquals(400, reponse.getStatusCode().value());
+    verify(service, never()).corrigerIdentifiantTm(any(), any());
+  }
+
+  @Test
+  void corrigerIdentifiantTm_artisteSansSourceTicketmaster_retourne404() {
+    UUID id = UUID.randomUUID();
+    when(service.corrigerIdentifiantTm(eq(id), any())).thenReturn(false);
+
+    ResponseEntity<Map<String, Object>> reponse =
+        controller.corrigerIdentifiantTm(
+            id.toString(), Map.of("identifiantExterne", "K8vZ917G1B7"));
+
+    assertEquals(404, reponse.getStatusCode().value());
+  }
+
+  @Test
+  void corrigerIdentifiantTm_nominal_retourne200() {
+    UUID id = UUID.randomUUID();
+    when(service.corrigerIdentifiantTm(id, "K8vZ917G1B7")).thenReturn(true);
+
+    ResponseEntity<Map<String, Object>> reponse =
+        controller.corrigerIdentifiantTm(
+            id.toString(), Map.of("identifiantExterne", "K8vZ917G1B7"));
+
+    assertEquals(200, reponse.getStatusCode().value());
+  }
+
+  @Test
   void fusionner_uuidIdentiques_retourne400() {
     String id = UUID.randomUUID().toString();
 

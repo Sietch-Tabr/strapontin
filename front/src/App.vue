@@ -107,8 +107,17 @@ async function chargerChangelogNonVu() {
   }
 }
 
+// La toute première résolution de route (depuis START_LOCATION, "/") déclenche déjà ce
+// watcher — pas seulement les navigations réelles de l'utilisateur. Si un composant de page lazy
+// (ex. SpectaclesPage) met du temps à charger, cette résolution initiale peut arriver après qu'un
+// clic sur "Plus" ait déjà ouvert le drawer (drawerOuvert = true), le refermant aussitôt sans
+// qu'aucune navigation réelle n'ait eu lieu — reproductible sur mobile-chrome (CPU throttling
+// d'émulation mobile, course plus fréquente). Le premier appel n'est jamais une navigation
+// utilisateur : il ne doit pas réinitialiser drawerOuvert.
+let navigationInitiale = true
 watch(() => route.path, (chemin) => {
-  drawerOuvert.value = false
+  if (!navigationInitiale) drawerOuvert.value = false
+  navigationInitiale = false
   if (chemin === '/changelog') changelogNonVu.value = false
 })
 

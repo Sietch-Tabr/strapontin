@@ -56,7 +56,8 @@ class ReferentielArtistesServiceTest {
                     List.of("ticketmaster"),
                     "a_jour",
                     "Q3161164",
-                    null)));
+                    null,
+                    "K8vZ917G1B7")));
 
     ReponseReferentielArtistes reponse = service.lister(0, "Jain", null, false);
 
@@ -128,6 +129,72 @@ class ReferentielArtistesServiceTest {
     when(jdbc.update(anyString(), anyMap())).thenReturn(0);
 
     assertFalse(service.reinitialiserEnrichissement(UUID.randomUUID()));
+  }
+
+  // #1026 : action minimale pour un admin qui juge la divergence de nom TM acceptable, sans
+  // passer par une fusion.
+  @Test
+  void ignorerIntervention_artisteAvecSourceFlaggee_effaceEtLogueEtRetourneTrue() {
+    UUID id = UUID.randomUUID();
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    boolean maj = service.ignorerIntervention(id);
+
+    assertTrue(maj);
+    verify(jdbc)
+        .update(contains("UPDATE artiste_sources SET necessite_intervention_le = NULL"), anyMap());
+    verify(logAdminService).logAdmin(eq("info"), eq("admin"), anyString(), anyMap());
+  }
+
+  @Test
+  void ignorerIntervention_artisteInconnu_retourneFalseSansLog() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
+
+    assertFalse(service.ignorerIntervention(UUID.randomUUID()));
+    verify(logAdminService, never()).logAdmin(anyString(), anyString(), anyString(), anyMap());
+  }
+
+  // #1026 : alternative à la fusion pour un simple mauvais lien (attractionId erroné).
+  @Test
+  void corrigerIdentifiantTm_artisteAvecSourceTicketmaster_metAJourEtReinitialiseLaSante() {
+    UUID id = UUID.randomUUID();
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    boolean maj = service.corrigerIdentifiantTm(id, "K8vZ917G1B7");
+
+    assertTrue(maj);
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.argThat(
+                (String sql) ->
+                    sql.contains("identifiant_externe = :identifiant")
+                        && sql.contains("nb_zero_consecutifs = 0")
+                        && sql.contains("suspect_depuis = NULL")
+                        && sql.contains("necessite_intervention_le = NULL")
+                        && sql.contains("source = 'ticketmaster'")),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> "K8vZ917G1B7".equals(p.get("identifiant"))));
+    verify(logAdminService).logAdmin(eq("info"), eq("admin"), anyString(), anyMap());
+  }
+
+  @Test
+  void corrigerIdentifiantTm_identifiantAvecEspaces_estTrimmeAvantEcriture() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    service.corrigerIdentifiantTm(UUID.randomUUID(), "  K8vZ917G1B7  ");
+
+    verify(jdbc)
+        .update(
+            anyString(),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> "K8vZ917G1B7".equals(p.get("identifiant"))));
+  }
+
+  @Test
+  void corrigerIdentifiantTm_artisteSansSourceTicketmaster_retourneFalse() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
+
+    assertFalse(service.corrigerIdentifiantTm(UUID.randomUUID(), "K8vZ917G1B7"));
   }
 
   @Test

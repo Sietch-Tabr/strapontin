@@ -907,7 +907,8 @@ tr:hover td {
 }
 
 @media (max-width: 1024px) {
-  [popover].alerte {
+  [popover].alerte,
+  .toast-conteneur .alerte {
     right: 1rem;
     left: 1rem;
     width: auto;
