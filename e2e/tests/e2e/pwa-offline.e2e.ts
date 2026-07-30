@@ -54,6 +54,39 @@ test.describe("Scénario: PWA — démarrage alors que l'appareil est déjà hor
   });
 });
 
+// #1027 : le toast (offline persistant ou toute autre alerte) restait masqué derrière la bottom
+// nav sur mobile — le sélecteur de la media query mobile de components.css ne ciblait que
+// [popover].alerte, jamais matché par le composant réel (.toast-conteneur .alerte).
+test.describe("Scénario: PWA — toast visible au-dessus de la bottom nav sur mobile (#1027)", () => {
+  test("pwa_toastHorsLigneMobile_positionneAuDessusDeLaBottomNav", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+
+    await page.addInitScript(() => {
+      Object.defineProperty(window.navigator, "onLine", {
+        get: () => false,
+        configurable: true,
+      });
+    });
+
+    await page.goto("/");
+    const toast = page
+      .locator(".toast-conteneur .alerte")
+      .filter({ hasText: "Vous êtes hors ligne" });
+    await expect(toast).toBeVisible({ timeout: 3000 });
+    const bottomNav = page.locator("#bottom-nav");
+    await expect(bottomNav).toBeVisible();
+
+    const toastBox = await toast.boundingBox();
+    const bottomNavBox = await bottomNav.boundingBox();
+    expect(toastBox).not.toBeNull();
+    expect(bottomNavBox).not.toBeNull();
+    expect(toastBox!.y + toastBox!.height).toBeLessThanOrEqual(bottomNavBox!.y);
+  });
+});
+
 // #983 : /offline-fallback.js tombait dans .anyRequest().authenticated() (absent de la liste
 // permitAll de SecurityConfiguration), redirigeant tout visiteur non authentifié vers /login au
 // lieu de servir le script — précisément le cas où ce filet de secours serait le plus utile
