@@ -82,6 +82,41 @@ public class ReferentielArtistesController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
+  /// Efface {@code necessite_intervention_le} sans fusion (#1026) — l'admin juge la divergence de
+  /// nom TM acceptable.
+  ///
+  /// @param uuid UUID de l'artiste
+  /// @return 200 si mis à jour, 400 si UUID invalide, 404 si artiste inconnu/sans intervention
+  @PostMapping("/artistes/{uuid}/ignorer-intervention")
+  public ResponseEntity<Map<String, Object>> ignorerIntervention(@PathVariable String uuid) {
+    UUID id = parseUuid(uuid);
+    if (id == null) return erreur(400, "UUID d'artiste invalide.");
+    boolean maj = service.ignorerIntervention(id);
+    if (!maj) return erreur(404, "Artiste inconnu.");
+    return ResponseEntity.ok(Map.of("succes", true));
+  }
+
+  /// Corrige directement l'identifiant Ticketmaster d'un artiste (#1026) — alternative à la
+  /// fusion pour un simple mauvais lien.
+  ///
+  /// @param uuid  UUID de l'artiste
+  /// @param corps corps JSON avec {@code identifiantExterne} (non vide)
+  /// @return 200 si mis à jour, 400 si UUID invalide ou identifiant vide, 404 si l'artiste n'a pas
+  ///     de source Ticketmaster, 409 si l'identifiant est déjà attribué à un autre artiste
+  @PatchMapping("/artistes/{uuid}/identifiant-tm")
+  public ResponseEntity<Map<String, Object>> corrigerIdentifiantTm(
+      @PathVariable String uuid, @RequestBody Map<String, String> corps) {
+    UUID id = parseUuid(uuid);
+    if (id == null) return erreur(400, "UUID d'artiste invalide.");
+    String identifiantExterne = corps.get("identifiantExterne");
+    if (identifiantExterne == null || identifiantExterne.isBlank()) {
+      return erreur(400, "Identifiant Ticketmaster requis.");
+    }
+    boolean maj = service.corrigerIdentifiantTm(id, identifiantExterne);
+    if (!maj) return erreur(404, "Artiste inconnu ou sans source Ticketmaster.");
+    return ResponseEntity.ok(Map.of("succes", true));
+  }
+
   /// Fusionne deux artistes (la source est absorbée par la cible puis supprimée).
   ///
   /// @param uuid      UUID de l'artiste source

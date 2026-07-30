@@ -93,6 +93,21 @@
                       title="Effacer wikidata_id/deezer_id/nom affiché pour redécouvrir au prochain cycle"
                       @click="reinitialiserEnrichissement(artiste)"
                     >Réinitialiser</button>
+                    <template v-if="artiste.statut === 'invalide'">
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-sm"
+                        title="Effacer le signal d'intervention sans fusion (divergence de nom jugée acceptable)"
+                        @click="ignorerIntervention(artiste)"
+                      >Ignorer</button>
+                      <button
+                        v-if="artiste.identifiantTmExterne"
+                        type="button"
+                        class="btn btn-secondary btn-sm"
+                        title="Corriger directement l'identifiant Ticketmaster"
+                        @click="ouvrirCorrectionTm(artiste)"
+                      >Identifiant TM</button>
+                    </template>
                   </td>
                 </tr>
                 <tr v-if="items.length === 0">
@@ -151,13 +166,33 @@
       <button type="button" class="btn btn-texte" @click="fermerFusion">Annuler</button>
     </div>
   </dialog>
+
+  <dialog ref="dialogIdentifiantTmRef" aria-labelledby="titre-identifiant-tm" aria-modal="true">
+    <div class="dialog-entete">
+      <h2 id="titre-identifiant-tm" class="dialog-titre">Corriger l'identifiant Ticketmaster</h2>
+    </div>
+    <form @submit.prevent="sauvegarderIdentifiantTm">
+      <div class="champ">
+        <label for="edit-identifiant-tm" class="champ-label">Identifiant Ticketmaster (attractionId)</label>
+        <input id="edit-identifiant-tm" v-model="identifiantTm.valeur" type="text" maxlength="200" autocomplete="off" required />
+        <p class="param-aide">Remplace le lien vers l'artiste Ticketmaster suivi et efface le signal d'intervention.</p>
+      </div>
+      <div class="dialog-pied">
+        <button type="submit" class="btn btn-secondary" :disabled="enCoursIdentifiantTm">Enregistrer</button>
+        <button type="button" class="btn btn-texte" @click="fermerCorrectionTm">Annuler</button>
+      </div>
+    </form>
+  </dialog>
 </template>
 
 <script setup>
 defineOptions({ name: 'AdminArtistes' })
 
+import { reactive, ref } from 'vue'
 import EtatChargement from '../EtatChargement.vue'
 import { useReferentielAdmin } from '../../composables/useReferentielAdmin.js'
+import { useDialog } from '../../composables/useDialog.js'
+import { useToasts } from '../../composables/useToasts.js'
 import { classeStatut, libelleStatut } from '../../utils/statutReferentiel.js'
 
 const {
@@ -178,6 +213,7 @@ const {
   itemB,
   cibleChoisie,
   enCoursFusion,
+  charger,
   rechargerPage0,
   allerPage,
   basculerSelection,
@@ -195,4 +231,62 @@ const {
   messageFusionne: 'Artistes fusionnés.',
   libellePluriel: 'artistes',
 })
+
+const { afficherToast } = useToasts()
+
+// #1026 : actions propres aux artistes (necessite_intervention_le n'existe pas sur salle_sources)
+// — implémentées localement plutôt que dans useReferentielAdmin.js, partagé avec AdminSalles.vue.
+async function ignorerIntervention(artiste) {
+  try {
+    const rep = await fetch(`/api/admin/artistes/${artiste.id}/ignorer-intervention`, {
+      method: 'POST',
+    })
+    if (rep.ok) {
+      afficherToast('Intervention ignorée.', 'succes')
+      await charger()
+    } else {
+      afficherToast('Erreur lors de l’ignorance de l’intervention.', 'erreur')
+    }
+  } catch {
+    afficherToast('Erreur réseau.', 'erreur')
+  }
+}
+
+const {
+  dialogRef: dialogIdentifiantTmRef,
+  ouvrir: ouvrirDialogIdentifiantTm,
+  fermer: fermerCorrectionTm,
+} = useDialog()
+const identifiantTm = reactive({ artisteId: null, valeur: '' })
+const enCoursIdentifiantTm = ref(false)
+
+function ouvrirCorrectionTm(artiste) {
+  identifiantTm.artisteId = artiste.id
+  identifiantTm.valeur = artiste.identifiantTmExterne ?? ''
+  ouvrirDialogIdentifiantTm()
+}
+
+async function sauvegarderIdentifiantTm() {
+  if (enCoursIdentifiantTm.value || !identifiantTm.valeur.trim()) return
+  enCoursIdentifiantTm.value = true
+  try {
+    const rep = await fetch(`/api/admin/artistes/${identifiantTm.artisteId}/identifiant-tm`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifiantExterne: identifiantTm.valeur }),
+    })
+    if (rep.ok) {
+      fermerCorrectionTm()
+      afficherToast('Identifiant Ticketmaster corrigé.', 'succes')
+      await charger()
+    } else {
+      const data = await rep.json().catch(() => ({}))
+      afficherToast(data.erreur || 'Erreur lors de la correction.', 'erreur')
+    }
+  } catch {
+    afficherToast('Erreur réseau.', 'erreur')
+  } finally {
+    enCoursIdentifiantTm.value = false
+  }
+}
 </script>

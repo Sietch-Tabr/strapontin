@@ -5,6 +5,8 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.Normalisation;
+import fr.strapontin.sources.TicketmasterSource;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -42,9 +44,11 @@ public class SuiviSanteSourcesService {
   private static final Map<String, String> PREFIXES_ABREGES = Map.of("tm", "ticketmaster");
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final TicketmasterSource tm;
 
-  public SuiviSanteSourcesService(NamedParameterJdbcTemplate jdbc) {
+  public SuiviSanteSourcesService(NamedParameterJdbcTemplate jdbc, TicketmasterSource tm) {
     this.jdbc = jdbc;
+    this.tm = tm;
   }
 
   /// Enregistre le résultat d'un fetch pour une salle identifiée par son identifiant préfixé
@@ -84,11 +88,12 @@ public class SuiviSanteSourcesService {
   private void mettreAJourCompteur(
       String table, String source, String identifiant, boolean succes) {
     // necessite_intervention_le n'existe que sur artiste_sources (#888) — résolution naturelle
-    // dès qu'un fetch redevient positif, sans attendre le prochain cycle nocturne.
+    // dès qu'un fetch redevient positif ET que le nom TM revérifié reste cohérent (#1026).
+    boolean estArtisteSources = "artiste_sources".equals(table);
     String colonneInterventionResolue =
-        "artiste_sources".equals(table)
-            ? ", necessite_intervention_le = CASE WHEN :succes THEN NULL ELSE"
-                  + " necessite_intervention_le END"
+        estArtisteSources
+            ? ", necessite_intervention_le = CASE WHEN :effacerIntervention THEN NULL ELSE"
+                + " necessite_intervention_le END"
             : "";
     String sql =
         "UPDATE "
@@ -99,13 +104,16 @@ public class SuiviSanteSourcesService {
             + colonneInterventionResolue
             + " WHERE source = :source AND identifiant_externe = :identifiant";
     try {
+      boolean effacerIntervention =
+          estArtisteSources && succes ? peutEffacerIntervention(source, identifiant) : succes;
       jdbc.update(
           sql,
           Map.of(
               "succes", succes,
               "seuil", SEUIL_SUSPECT,
               "source", source,
-              "identifiant", identifiant));
+              "identifiant", identifiant,
+              "effacerIntervention", effacerIntervention));
     } catch (Exception e) {
       log.warn(
           "Impossible de mettre à jour la santé source={} identifiant={} : {}",
@@ -113,5 +121,32 @@ public class SuiviSanteSourcesService {
           identifiant,
           e.getMessage());
     }
+  }
+
+  /// N'autorise l'effacement de {@code necessite_intervention_le} que si le nom TM revérifié
+  /// correspond toujours à l'artiste suivi (#1026) — un fetch positif seul (au moins un concert
+  /// renvoyé pour cet {@code identifiant_externe}) ne suffit pas à confirmer l'identité : un
+  /// tribute/homonyme mal rattaché peut se remettre à programmer des concerts sans que le mauvais
+  /// rapprochement soit corrigé. N'appelle l'API TM (coût/quota) que si le flag est réellement
+  /// posé — sinon rien à revérifier, comportement inchangé.
+  ///
+  /// @param source      source de l'{@code artiste_sources} concerné
+  /// @param identifiant identifiant externe (TM : attractionId brut, sans préfixe)
+  /// @return {@code true} si l'effacement peut avoir lieu
+  private boolean peutEffacerIntervention(String source, String identifiant) {
+    if (!"ticketmaster".equals(source)) return true;
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            """
+            SELECT asrc.necessite_intervention_le, a.nom
+            FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
+            WHERE asrc.source = :source AND asrc.identifiant_externe = :identifiant
+            """,
+            Map.of("source", source, "identifiant", identifiant));
+    if (lignes.isEmpty() || lignes.get(0).get("necessite_intervention_le") == null) return true;
+    String nomAttraction = tm.recupererNomAttraction(identifiant);
+    if (nomAttraction == null) return false;
+    return Normalisation.normaliserTexte((String) lignes.get(0).get("nom"))
+        .equals(Normalisation.normaliserTexte(nomAttraction));
   }
 }
