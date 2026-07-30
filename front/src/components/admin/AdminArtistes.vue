@@ -245,7 +245,7 @@ async function ignorerIntervention(artiste) {
       afficherToast('Intervention ignorée.', 'succes')
       await charger()
     } else {
-      afficherToast('Erreur lors de l’ignorance de l’intervention.', 'erreur')
+      afficherToast('Erreur lors de la mise à jour.', 'erreur')
     }
   } catch {
     afficherToast('Erreur réseau.', 'erreur')
