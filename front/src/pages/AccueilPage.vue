@@ -162,6 +162,10 @@ async function charger() {
     if (filtreIndisponibles.value) params.set('indisponibles', '1')
     if (filtreMasques.value) params.set('masques', 'true')
     const rep = await fetch('/api/accueil?' + params)
+    // #1028 : au démarrage PWA (shell servi depuis le cache SW), cet appel peut partir avant que
+    // la session ne soit confirmée côté serveur (401 transitoire, pas une vraie panne) — pas de
+    // toast dans ce cas, comme le fait déjà App.vue pour ses propres appels de montage.
+    if (rep.status === 401) return
     if (!rep.ok) throw new Error()
     donnees.value = await rep.json()
   } catch {

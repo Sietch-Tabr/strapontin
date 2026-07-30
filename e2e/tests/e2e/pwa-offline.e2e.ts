@@ -103,3 +103,31 @@ test.describe("Scénario: offline-fallback.js accessible sans authentification (
     expect(rep.headers()["content-type"]).toMatch(/javascript/);
   });
 });
+
+// #1028/#1030 : shell PWA servi depuis le cache SW alors que l'API est inatteignable (réseau
+// coupé juste après un redémarrage) — /api/session ne répond jamais, indiscernable d'un 401 côté
+// router sans sessionErreurReseau (#1030). Le même redémarrage déclenchait aussi un toast
+// d'erreur générique sur AccueilPage.vue pour un 401 transitoire de session pas encore confirmée
+// (#1028) — non reproduit ici (401 confirmé, pas un abort réseau), couvert par le fait qu'aucun
+// toast n'apparaît dans ce scénario réseau-coupé non plus (AccueilPage ne lève que sur un vrai
+// échec, cf. charger()).
+test.describe("Scénario: PWA — navigation interne pendant un redémarrage hors-ligne (#1028, #1030)", () => {
+  test("navigation_apiSessionInatteignable_neRedirigePasVersLogin", async ({
+    page,
+  }) => {
+    await page.route("**/api/session", (route) => route.abort());
+
+    await page.goto("/");
+    await expect(page.locator("main")).toBeVisible();
+
+    await page.locator('a[href="/spectacles"]').click();
+
+    await page.waitForTimeout(500);
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(
+      page
+        .locator(".toast-conteneur .alerte")
+        .filter({ hasText: "Impossible de charger les concerts" }),
+    ).toHaveCount(0);
+  });
+});
