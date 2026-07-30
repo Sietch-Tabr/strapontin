@@ -41,11 +41,11 @@
              automatiquement mais Maven doit choisir explicitement okhttp-jvm. Exclu ci-dessous
              et remplacé par une dépendance directe sur okhttp-jvm (jar JVM complet, contient
              bien okhttp3.RequestBody). -->
-        <resend.version>v4.17.0</resend.version>
+        <resend.version>v4.18.0</resend.version>
         <okhttp-jvm.version>5.4.0</okhttp-jvm.version>
         <springdoc.version>3.0.3</springdoc.version>
         <bucket4j.version>8.19.0</bucket4j.version>
-        <jsoup.version>1.22.2</jsoup.version>
+        <jsoup.version>1.23.1</jsoup.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
     </properties>
