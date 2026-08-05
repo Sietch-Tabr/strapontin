@@ -32,8 +32,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Tests unitaires pour {@link WorkerFetchService} (extrait de {@code WorkerService}).
 ///
-/// <p>Les tests du bilan de panne (Eventim/Digitick/Deezer/TM concerts manqués) sont dans
-/// {@code WorkerStatsServiceTest}, testés directement au niveau où cette logique vit désormais.
+/// <p>Les tests du bilan de panne (Eventim/Digitick/Deezer/TM concerts manqués) sont dans {@code
+/// WorkerStatsServiceTest}, testés directement au niveau où cette logique vit désormais.
 ///
 /// @since 2.2.3 (extrait dans sa forme actuelle en 2.7.0)
 /// @author Kwaite
@@ -238,6 +238,40 @@ class WorkerFetchServiceTest {
     List<fr.strapontin.core.ConcertBrut> persistes = captor.getValue();
     assertTrue(persistes.stream().anyMatch(c -> "Fabrice Eboue".equals(c.artiste())));
     assertTrue(persistes.stream().anyMatch(c -> "Indila Officiel".equals(c.artiste())));
+  }
+
+  // Contrairement à Digitick (classification toujours vide, mais filtré en amont sur de vrais
+  // concerts), Eventim omet fréquemment sa classification y compris pour des spectacles non
+  // musicaux (ex. "Paris is Magique", comédie musicale) — la résolution Deezer ne doit pas
+  // s'appliquer à un concert Eventim sans classification.
+  @Test
+  void executerFetchSalle_concertEventimSansClassification_nAppliquePasLaResolutionDeezer() {
+    when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
+    when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(false);
+    when(eventim.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
+    fr.strapontin.core.ConcertBrut concertEventimSansClassification =
+        new fr.strapontin.core.ConcertBrut(
+            "Paris is Magique",
+            "2026-09-01",
+            "20:00",
+            "Salle",
+            "Paris",
+            "75",
+            "http://x",
+            "eventim",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    when(eventim.fetchSalle("tm:venue-42")).thenReturn(List.of(concertEventimSansClassification));
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchSalle("tm:venue-42");
+
+    verify(resolveur, never()).resoudreNomCanonique(eq("artiste"), eq("Paris is Magique"));
   }
 
   @Test
