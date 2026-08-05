@@ -41,6 +41,7 @@
               <button type="button" class="btn btn-sm btn-secondary" @click="ouvrirModif(u.id)">Modifier</button>
               <button type="button" class="btn btn-sm btn-secondary" @click="reinitMdp(u)">Réinit. MDP</button>
               <button type="button" class="btn btn-sm btn-secondary" @click="reinitTotp(u)">Réinit. 2FA</button>
+              <button type="button" class="btn btn-sm btn-secondary" @click="revoquerSessions(u)">Révoquer sessions</button>
               <button
                 v-if="u.revocationAdminLe"
                 type="button"
@@ -96,6 +97,15 @@
     </div>
   </dialog>
 
+  <dialog ref="dialogRevoquerSessionsRef" id="dialog-revoquer-sessions">
+    <p class="dialog-titre">Révoquer toutes les sessions ?</p>
+    <p class="dialog-corps">Toutes les sessions actives de <strong>{{ userARevoquerSessions?.email }}</strong> seront déconnectées.</p>
+    <div class="dialog-pied">
+      <button type="button" id="dialog-revoquer-sessions-confirmer" class="btn btn-secondary" @click="confirmerRevoquerSessions">Révoquer</button>
+      <button type="button" id="dialog-revoquer-sessions-annuler" class="btn btn-secondary" @click="fermerDialogRevoquerSessions">Annuler</button>
+    </div>
+  </dialog>
+
   <dialog ref="dialogConfirmerRoleRef" id="dialog-confirmer-role">
     <p class="dialog-titre">Confirmer le changement de rôle ?</p>
     <p class="dialog-corps" id="dialog-confirmer-role-texte">{{ texteConfirmationRole }}</p>
@@ -142,6 +152,7 @@ const { dialogRef: dialogSupprimerUserRef, ouvrir: ouvrirDialogSupprimerModal, f
 const { dialogRef: dialogInvitationRef, ouvrir: ouvrirDialogInvitationModal, fermer: fermerDialogInvitationModal } = useDialog()
 const { dialogRef: dialogReinitMdpRef, ouvrir: ouvrirDialogReinitMdpModal, fermer: fermerDialogReinitMdpModal } = useDialog()
 const { dialogRef: dialogReinitTotpRef, ouvrir: ouvrirDialogReinitTotpModal, fermer: fermerDialogReinitTotpModal } = useDialog()
+const { dialogRef: dialogRevoquerSessionsRef, ouvrir: ouvrirDialogRevoquerSessionsModal, fermer: fermerDialogRevoquerSessionsModal } = useDialog()
 const { dialogRef: dialogConfirmerRoleRef, ouvrir: ouvrirDialogConfirmerRoleModal, fermer: fermerDialogConfirmerRoleModal } = useDialog()
 
 const utilisateurs = shallowRef([])
@@ -154,6 +165,7 @@ const modifErreurs = reactive({})
 const userASupprimer = ref(null)
 const userAReinitMdp = ref(null)
 const userAReinitTotp = ref(null)
+const userARevoquerSessions = ref(null)
 const inviteEmail = ref('')
 const lienInvitation = ref('')
 const modifEnAttenteRole = ref(null)
@@ -399,6 +411,26 @@ async function confirmerReinitTotp() {
   const rep = await fetch('/api/admin/utilisateurs/' + userId + '/reset-totp', { method: 'POST' })
   const corps = await rep.json()
   if (rep.ok) afficherToast('2FA réinitialisée. L\'utilisateur pourra se reconnecter sans code.', 'succes')
+  else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+}
+
+function revoquerSessions(u) {
+  userARevoquerSessions.value = u
+  ouvrirDialogRevoquerSessionsModal()
+}
+
+function fermerDialogRevoquerSessions() {
+  fermerDialogRevoquerSessionsModal()
+  userARevoquerSessions.value = null
+}
+
+async function confirmerRevoquerSessions() {
+  if (!userARevoquerSessions.value) return
+  const userId = userARevoquerSessions.value.id
+  fermerDialogRevoquerSessions()
+  const rep = await fetch('/api/admin/utilisateurs/' + userId + '/revoquer-sessions', { method: 'POST' })
+  const corps = await rep.json()
+  if (rep.ok) afficherToast('Sessions révoquées.', 'succes')
   else afficherToast(corps.erreur || 'Erreur.', 'erreur')
 }
 
