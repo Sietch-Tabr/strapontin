@@ -208,6 +208,41 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // La recherche par nom peut retourner une entité administrative homonyme (région, département,
+  // commune) plutôt que le lieu physique recherché — la requête doit les exclure explicitement.
+  @Test
+  void construireRequeteDecouverte_excluLesEntitesAdministratives() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle = new SalleAEnrichir(id, "Summum", "summum", null, null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q3455524")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q6465")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q484170")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    src.enrichirLot(List.of(salle));
+
+    serveur.verify();
+  }
+
   // Régression : le label canonique Wikidata omet souvent l'article défini français porté par le
   // nom Strapontin (ex. salle "L'Olympia" ↔ Wikidata "Olympia", Q915451, vérifié en juillet 2026).
   // La correspondance floue (CorrespondanceSalle.estDoublonSalle, containment ratio) absorbe cet
