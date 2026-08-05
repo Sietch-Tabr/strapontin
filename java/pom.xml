@@ -46,7 +46,7 @@
              bien okhttp3.RequestBody). -->
         <resend.version>v4.18.0</resend.version>
         <okhttp-jvm.version>5.4.0</okhttp-jvm.version>
-        <springdoc.version>3.0.3</springdoc.version>
+        <springdoc.version>3.1.0</springdoc.version>
         <bucket4j.version>8.19.0</bucket4j.version>
         <jsoup.version>1.23.1</jsoup.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
