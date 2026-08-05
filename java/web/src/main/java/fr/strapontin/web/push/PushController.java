@@ -28,7 +28,7 @@ public class PushController {
   private final PushService pushService;
   private final NotificationPushService notificationPushService;
 
-  /// @param pushService             service de gestion des abonnements push
+  /// @param pushService service de gestion des abonnements push
   /// @param notificationPushService service d'envoi de notifications push
   public PushController(PushService pushService, NotificationPushService notificationPushService) {
     this.pushService = pushService;
@@ -46,7 +46,7 @@ public class PushController {
   /// Enregistre un nouvel abonnement push.
   ///
   /// @param requete corps JSON avec endpoint et clés
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 201 si créé — 400/429 si invalide/cap (via {@link GlobalExceptionHandler})
   @PostMapping
   public ResponseEntity<Map<String, Object>> abonner(
@@ -57,11 +57,11 @@ public class PushController {
 
   /// Envoie une notification de test à l'abonnement de l'utilisateur courant.
   ///
-  /// <p>Cible l'abonnement de l'appareil demandeur si {@code endpoint} est fourni, plutôt
-  /// que de sélectionner arbitrairement le plus récent.
+  /// <p>Cible l'abonnement de l'appareil demandeur si {@code endpoint} est fourni, plutôt que de
+  /// sélectionner arbitrairement le plus récent.
   ///
   /// @param requete corps JSON optionnel avec {@code endpoint}
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 200 si envoyée, 400 si aucun abonnement actif
   @PostMapping("/tester")
   public ResponseEntity<Map<String, Object>> tester(
@@ -77,7 +77,7 @@ public class PushController {
   /// Supprime un abonnement push.
   ///
   /// @param requete corps JSON avec l'endpoint à supprimer
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 200 si supprimé, 400 si endpoint manquant
   @DeleteMapping
   public ResponseEntity<Map<String, Object>> desabonner(
@@ -87,5 +87,16 @@ public class PushController {
     }
     pushService.desabonner(((UtilisateurDetails) auth.getPrincipal()).id(), requete.endpoint());
     return ResponseEntity.ok(Map.of("ok", true));
+  }
+
+  /// Liste les abonnements push de l'utilisateur courant, pour affichage dans /parametres.
+  ///
+  /// @param auth contexte d'authentification
+  /// @return les abonnements actifs
+  @GetMapping("/abonnements")
+  public ResponseEntity<java.util.List<PushService.AbonnementDto>> listerAbonnements(
+      Authentication auth) {
+    return ResponseEntity.ok(
+        pushService.listerAbonnements(((UtilisateurDetails) auth.getPrincipal()).id()));
   }
 }

@@ -33,8 +33,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 /// Tests unitaires pour {@link AdminService} (logique métier de gestion des utilisateurs,
 /// dépendances mockées).
 ///
-/// <p>Depuis, la configuration applicative et les statistiques de jobs sont testées dans
-/// {@code ConfigAdminServiceTest}/{@code JobsAdminServiceTest}.
+/// <p>Depuis, la configuration applicative et les statistiques de jobs sont testées dans {@code
+/// ConfigAdminServiceTest}/{@code JobsAdminServiceTest}.
 ///
 /// @since 2.2.3
 /// @author Kwaite
@@ -372,5 +372,30 @@ class AdminServiceTest {
     assertFalse(resultat);
     verify(emailService, never()).envoyer2faReinitialisee(anyString());
     verify(logAdminService, never()).logAdmin(anyString(), anyString(), anyString(), anyMap());
+  }
+
+  @Test
+  void revoquerToutesSessions_utilisateurExistant_supprimeSesSessionsEtLogue() {
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(Map.of("username", "user1")));
+    when(jdbc.update(anyString(), anyMap())).thenReturn(2);
+
+    boolean resultat = adminService.revoquerToutesSessions("user-1", "admin-1");
+
+    assertTrue(resultat);
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("DELETE FROM SPRING_SESSION"),
+            eq(Map.of("username", "user1")));
+    verify(logAdminService).logAdmin(eq("warn"), eq("admin"), eq("sessions révoquées"), anyMap());
+  }
+
+  @Test
+  void revoquerToutesSessions_utilisateurInexistant_retourneFalse() {
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    boolean resultat = adminService.revoquerToutesSessions("inconnu", "admin-1");
+
+    assertFalse(resultat);
+    verify(jdbc, never()).update(org.mockito.ArgumentMatchers.contains("SPRING_SESSION"), anyMap());
   }
 }

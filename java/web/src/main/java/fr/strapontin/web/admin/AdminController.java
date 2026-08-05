@@ -49,14 +49,14 @@ public class AdminController {
   private final VapidService vapidService;
   private final ConfigService configService;
 
-  /// @param adminService       service d'administration (gestion utilisateurs)
+  /// @param adminService service d'administration (gestion utilisateurs)
   /// @param configAdminService service de configuration applicative
   /// @param jobsAdminService service de statistiques des jobs Quartz
-  /// @param banniereService    service de gestion de la bannière système
+  /// @param banniereService service de gestion de la bannière système
   /// @param workerProxyService proxy HTTP vers le worker (relance des fetches)
-  /// @param emailService       service d'envoi d'emails
-  /// @param vapidService       service de gestion des clés VAPID
-  /// @param configService      service de configuration pour lire PUBLIC_BASE_URL
+  /// @param emailService service d'envoi d'emails
+  /// @param vapidService service de gestion des clés VAPID
+  /// @param configService service de configuration pour lire PUBLIC_BASE_URL
   public AdminController(
       AdminService adminService,
       ConfigAdminService configAdminService,
@@ -92,10 +92,10 @@ public class AdminController {
   /// seul canal de livraison possible : l'admin doit alors le transmettre manuellement.
   ///
   /// @param requete corps JSON avec l'email
-  /// @param auth    contexte d'authentification admin
+  /// @param auth contexte d'authentification admin
   /// @param request la requête HTTP (pour construire le lien d'invitation)
   /// @return 201 avec l'identifiant temporaire (et le lien si email indisponible), ou 400 si
-  ///     l'email est déjà pris
+  ///   l'email est déjà pris
   @PostMapping("/utilisateurs")
   public ResponseEntity<Map<String, Object>> creerUtilisateur(
       @Valid @RequestBody RequeteCreerUtilisateur requete,
@@ -127,9 +127,9 @@ public class AdminController {
 
   /// Modifie le nom et/ou l'email d'un utilisateur.
   ///
-  /// @param userId  identifiant de l'utilisateur à modifier
+  /// @param userId identifiant de l'utilisateur à modifier
   /// @param requete corps JSON avec {@code nom} et/ou {@code email}
-  /// @param auth    contexte d'authentification admin
+  /// @param auth contexte d'authentification admin
   /// @return 200 si modifié — 400 si invalide (via {@link GlobalExceptionHandler})
   @PatchMapping("/utilisateurs/{userId}")
   public ResponseEntity<Map<String, Object>> modifierUtilisateur(
@@ -147,7 +147,7 @@ public class AdminController {
   /// Supprime un compte utilisateur.
   ///
   /// @param userId identifiant de l'utilisateur à supprimer
-  /// @param auth   contexte d'authentification admin
+  /// @param auth contexte d'authentification admin
   /// @return 204 si supprimé, 400 si tentative d'auto-suppression
   @DeleteMapping("/utilisateurs/{userId}")
   public ResponseEntity<Map<String, Object>> supprimerUtilisateur(
@@ -162,12 +162,12 @@ public class AdminController {
 
   /// Envoie un email de réinitialisation de mot de passe à un utilisateur.
   ///
-  /// <p>Si Resend n'est pas disponible, inclut {@code lienReset} dans la réponse — comme
-  /// {@link #creerUtilisateur} — pour que l'admin puisse transmettre le lien manuellement à un
-  /// utilisateur bloqué, plutôt que de n'avoir aucun moyen de récupération.
+  /// <p>Si Resend n'est pas disponible, inclut {@code lienReset} dans la réponse — comme {@link
+  /// #creerUtilisateur} — pour que l'admin puisse transmettre le lien manuellement à un utilisateur
+  /// bloqué, plutôt que de n'avoir aucun moyen de récupération.
   ///
-  /// @param userId  identifiant de l'utilisateur
-  /// @param auth    contexte d'authentification admin
+  /// @param userId identifiant de l'utilisateur
+  /// @param auth contexte d'authentification admin
   /// @param request la requête HTTP
   /// @return 200 si envoyé, 400/404 en cas d'erreur
   @PostMapping("/utilisateurs/{userId}/reset-mdp")
@@ -197,7 +197,7 @@ public class AdminController {
   /// Initie la révocation différée du rôle admin (effective dans 7 jours).
   ///
   /// @param userId identifiant de l'administrateur à révoquer
-  /// @param auth   contexte d'authentification admin
+  /// @param auth contexte d'authentification admin
   /// @return 200 si initiée, 400 si déjà user, 404 si introuvable, 409 si seul admin
   @PostMapping("/utilisateurs/{userId}/revoquer-admin")
   public ResponseEntity<Map<String, Object>> initierRevocationAdmin(
@@ -213,7 +213,7 @@ public class AdminController {
   /// Annule une révocation admin en cours.
   ///
   /// @param userId identifiant de l'administrateur concerné
-  /// @param auth   contexte d'authentification admin
+  /// @param auth contexte d'authentification admin
   /// @return 200 si annulée, 400 si auto-annulation ou aucune révocation en cours
   @DeleteMapping("/utilisateurs/{userId}/revoquer-admin")
   public ResponseEntity<Map<String, Object>> annulerRevocationAdmin(
@@ -229,7 +229,7 @@ public class AdminController {
   /// Réinitialise la 2FA (TOTP) d'un utilisateur.
   ///
   /// @param userId identifiant de l'utilisateur
-  /// @param auth   contexte d'authentification admin
+  /// @param auth contexte d'authentification admin
   /// @return 200 si réinitialisé, 400 si compte admin courant, 404 si introuvable
   @PostMapping("/utilisateurs/{userId}/reset-totp")
   public ResponseEntity<Map<String, Object>> reinitialiserTotp(
@@ -245,6 +245,22 @@ public class AdminController {
     return erreur(404, "Utilisateur introuvable.");
   }
 
+  /// Révoque immédiatement toutes les sessions actives d'un utilisateur.
+  ///
+  /// @param userId identifiant de l'utilisateur cible
+  /// @param auth contexte d'authentification admin
+  /// @return 200 si révoqué, 404 si introuvable
+  @PostMapping("/utilisateurs/{userId}/revoquer-sessions")
+  public ResponseEntity<Map<String, Object>> revoquerSessions(
+      @PathVariable String userId, Authentication auth) {
+    String adminId = utilisateur(auth).id();
+    if (adminService.revoquerToutesSessions(userId, adminId)) {
+      return ResponseEntity.ok(
+          Map.<String, Object>of("succes", true, "action", "revoquerSessions"));
+    }
+    return erreur(404, "Utilisateur introuvable.");
+  }
+
   /// Retourne le statut des clés de configuration.
   ///
   /// @return la liste des statuts de configuration
@@ -256,7 +272,7 @@ public class AdminController {
   /// Sauvegarde une valeur de configuration applicative.
   ///
   /// @param requete corps JSON avec {@code cle} et {@code valeur}
-  /// @param auth    contexte d'authentification admin
+  /// @param auth contexte d'authentification admin
   /// @return 200 si sauvegardé — 400 si invalide (via {@link GlobalExceptionHandler})
   @PatchMapping("/config")
   public ResponseEntity<Map<String, Object>> sauvegarderConfig(
@@ -370,9 +386,9 @@ public class AdminController {
   /// Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible
   /// (v2.6.0) — bouton « Relancer » par job dans l'onglet admin Tableau de bord.
   ///
-  /// <p>Le code HTTP renvoyé distingue désormais le job inconnu (400) de l'erreur interne
-  /// worker (502) et du worker injoignable (503) — auparavant les trois étaient masqués sous un
-  /// 503 générique, ce qui égarait le diagnostic d'un admin.
+  /// <p>Le code HTTP renvoyé distingue désormais le job inconnu (400) de l'erreur interne worker
+  /// (502) et du worker injoignable (503) — auparavant les trois étaient masqués sous un 503
+  /// générique, ce qui égarait le diagnostic d'un admin.
   ///
   /// @param typeJob identifiant lisible du job (ex. {@code "purger:salles"})
   /// @return 200 si déclenché, 400 si le job est inconnu, 502/503 selon la cause de l'échec

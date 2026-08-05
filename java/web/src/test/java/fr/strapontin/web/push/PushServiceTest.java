@@ -76,4 +76,29 @@ class PushServiceTest {
     verify(jdbc, never())
         .update(org.mockito.ArgumentMatchers.contains("INSERT INTO push_abonnements"), anyMap());
   }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void listerAbonnements_delegueAuJdbcAvecLUserId() {
+    java.time.Instant creeLe = java.time.Instant.now();
+    java.sql.Timestamp ts = java.sql.Timestamp.from(creeLe);
+    when(jdbc.query(
+            anyString(),
+            anyMap(),
+            org.mockito.ArgumentMatchers.any(org.springframework.jdbc.core.RowMapper.class)))
+        .thenAnswer(
+            invocation -> {
+              org.springframework.jdbc.core.RowMapper<PushService.AbonnementDto> mapper =
+                  invocation.getArgument(2);
+              java.sql.ResultSet rs = mock(java.sql.ResultSet.class);
+              when(rs.getString("endpoint")).thenReturn("https://push.exemple/abc");
+              when(rs.getTimestamp("cree_le")).thenReturn(ts);
+              return java.util.List.of(mapper.mapRow(rs, 0));
+            });
+
+    var resultat = service.listerAbonnements("u1");
+
+    assertEquals(1, resultat.size());
+    assertEquals("https://push.exemple/abc", resultat.get(0).endpoint());
+  }
 }

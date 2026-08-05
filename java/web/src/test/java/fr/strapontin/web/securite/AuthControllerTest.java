@@ -24,9 +24,9 @@ import org.springframework.security.core.Authentication;
 /// Tests unitaires pour {@link AuthController} — challenge TOTP et réinitialisation de mot de
 /// passe.
 ///
-/// <p>Depuis, le compteur d'échecs/verrouillage TOTP est délégué à
-/// {@link TotpChallengeService} (testé séparément dans {@code TotpChallengeServiceTest}) — ce
-/// fichier vérifie uniquement la traduction HTTP de chaque {@link ResultatTotp}.
+/// <p>Depuis, le compteur d'échecs/verrouillage TOTP est délégué à {@link TotpChallengeService}
+/// (testé séparément dans {@code TotpChallengeServiceTest}) — ce fichier vérifie uniquement la
+/// traduction HTTP de chaque {@link ResultatTotp}.
 ///
 /// @since 2.2.5
 /// @author Kwaite
@@ -37,6 +37,7 @@ class AuthControllerTest {
   private AuthService authService;
   private TotpChallengeService totpChallengeService;
   private ConfigService configService;
+  private AppareilsService appareilsService;
 
   @BeforeEach
   void setUp() {
@@ -44,8 +45,14 @@ class AuthControllerTest {
     authService = mock(AuthService.class);
     totpChallengeService = mock(TotpChallengeService.class);
     configService = mock(ConfigService.class);
+    appareilsService = mock(AppareilsService.class);
     authController =
-        new AuthController(authenticationManager, authService, totpChallengeService, configService);
+        new AuthController(
+            authenticationManager,
+            authService,
+            totpChallengeService,
+            configService,
+            appareilsService);
   }
 
   // --- verifierTotp ---

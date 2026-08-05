@@ -37,10 +37,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 /// Service d'administration : gestion des comptes utilisateurs.
 ///
-/// <p>Contient la logique métier et l'accès aux données pour la gestion des utilisateurs.
-/// {@link AdminController#creerUtilisateur} est atomique ({@code @Transactional}). La gestion des
-/// clés VAPID est déléguée à {@link VapidService}, la configuration applicative à
-/// {@link ConfigAdminService} et les statistiques de jobs à {@link JobsAdminService}.
+/// <p>Contient la logique métier et l'accès aux données pour la gestion des utilisateurs. {@link
+/// AdminController#creerUtilisateur} est atomique ({@code @Transactional}). La gestion des clés
+/// VAPID est déléguée à {@link VapidService}, la configuration applicative à {@link
+/// ConfigAdminService} et les statistiques de jobs à {@link JobsAdminService}.
 ///
 /// @since 2.1.0
 /// @author Kwaite
@@ -59,9 +59,9 @@ public class AdminService {
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
   private AdminService self;
 
-  /// @param jdbc                   accès JDBC
-  /// @param emailService           service d'envoi d'emails
-  /// @param logAdminService        service de logs admin
+  /// @param jdbc accès JDBC
+  /// @param emailService service d'envoi d'emails
+  /// @param logAdminService service de logs admin
   /// @param verificationRepository accès aux tokens de vérification
   public AdminService(
       NamedParameterJdbcTemplate jdbc,
@@ -75,10 +75,10 @@ public class AdminService {
   }
 
   /// Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
-  /// éviter le problème d'auto-référence à la construction — l'appel à
-  /// {@link #initierRevocationAdminTransactionnel} passe ainsi par le proxy AOP Spring et
-  /// bénéficie de l'isolation {@code SERIALIZABLE}. En dehors d'un contexte Spring (tests
-  /// unitaires), {@code self} peut être positionné manuellement sur l'instance elle-même.
+  /// éviter le problème d'auto-référence à la construction — l'appel à {@link
+  /// #initierRevocationAdminTransactionnel} passe ainsi par le proxy AOP Spring et bénéficie de
+  /// l'isolation {@code SERIALIZABLE}. En dehors d'un contexte Spring (tests unitaires), {@code
+  /// self} peut être positionné manuellement sur l'instance elle-même.
   ///
   /// @param self référence proxifiée de ce bean ({@code @Lazy})
   @Autowired
@@ -144,9 +144,9 @@ public class AdminService {
 
   /// Crée un compte utilisateur et envoie un email d'invitation (atomique).
   ///
-  /// @param email    email du nouvel utilisateur
-  /// @param adminId  identifiant de l'admin demandeur
-  /// @param baseUrl  URL de base pour construire le lien d'invitation
+  /// @param email email du nouvel utilisateur
+  /// @param adminId identifiant de l'admin demandeur
+  /// @param baseUrl URL de base pour construire le lien d'invitation
   /// @return résultat de la création, ou {@link Optional#empty()} si l'email est déjà pris
   @Transactional
   public Optional<ResultatCreation> creerUtilisateur(String email, String adminId, String baseUrl) {
@@ -216,7 +216,7 @@ public class AdminService {
   /// @param adminId identifiant de l'admin demandeur
   /// @throws ErreurMetier si les données sont invalides, l'email est déjà utilisé, ou
   // (rétrogradation
-  ///     d'un admin) si c'est le seul admin restant (409)
+  /// d'un admin) si c'est le seul admin restant (409)
   @Transactional
   public void modifierUtilisateur(
       String userId, RequeteModifierUtilisateur requete, String adminId) {
@@ -314,14 +314,14 @@ public class AdminService {
   /// Initie une révocation différée du rôle admin (effective dans 7 jours).
   ///
   /// <p>Réessaie jusqu'à {@value MAX_TENTATIVES_REVOCATION} fois en cas d'échec de sérialisation
-  /// (deux révocations concurrentes détectées par PostgreSQL) — sans cela, deux admins se
-  /// révoquant mutuellement au même instant pourraient tous deux passer la garde « dernier admin »
-  /// avant qu'aucun des deux `UPDATE` ne soit committé.
+  /// (deux révocations concurrentes détectées par PostgreSQL) — sans cela, deux admins se révoquant
+  /// mutuellement au même instant pourraient tous deux passer la garde « dernier admin » avant
+  /// qu'aucun des deux `UPDATE` ne soit committé.
   ///
-  /// @param userId  identifiant de l'administrateur à révoquer
+  /// @param userId identifiant de l'administrateur à révoquer
   /// @param adminId identifiant de l'admin demandeur
-  /// @throws ErreurMetier si l'utilisateur est le seul admin restant (409)
-  ///                      ou si l'utilisateur n'est pas admin (400)
+  /// @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur
+  ///   n'est pas admin (400)
   public void initierRevocationAdmin(String userId, String adminId) {
     for (int tentative = 1; ; tentative++) {
       try {
@@ -339,15 +339,15 @@ public class AdminService {
 
   /// Partie transactionnelle et isolée de {@link #initierRevocationAdmin}.
   ///
-  /// <p>Envoie un email de préavis à l'administrateur concerné et loggue l'action.
-  /// {@code REQUIRES_NEW} garantit une transaction dédiée même si appelée depuis une transaction
-  /// déjà ouverte (ex. {@link #modifierUtilisateur}) — sans quoi l'isolation SERIALIZABLE
-  /// serait ignorée en cas d'imbrication dans une transaction moins stricte.
+  /// <p>Envoie un email de préavis à l'administrateur concerné et loggue l'action. {@code
+  /// REQUIRES_NEW} garantit une transaction dédiée même si appelée depuis une transaction déjà
+  /// ouverte (ex. {@link #modifierUtilisateur}) — sans quoi l'isolation SERIALIZABLE serait ignorée
+  /// en cas d'imbrication dans une transaction moins stricte.
   ///
-  /// @param userId  identifiant de l'administrateur à révoquer
+  /// @param userId identifiant de l'administrateur à révoquer
   /// @param adminId identifiant de l'admin demandeur
-  /// @throws ErreurMetier si l'utilisateur est le seul admin restant (409)
-  ///                      ou si l'utilisateur n'est pas admin (400)
+  /// @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur
+  ///   n'est pas admin (400)
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
   void initierRevocationAdminTransactionnel(String userId, String adminId) {
     List<Map<String, Object>> cible =
@@ -387,7 +387,7 @@ public class AdminService {
 
   /// Annule une révocation admin en cours (remet revocation_admin_le à NULL).
   ///
-  /// @param userId  identifiant de l'administrateur concerné
+  /// @param userId identifiant de l'administrateur concerné
   /// @param adminId identifiant de l'admin demandeur
   /// @throws ErreurMetier si l'utilisateur n'existe pas ou n'a pas de révocation en cours
   public void annulerRevocationAdmin(String userId, String adminId) {
@@ -405,7 +405,7 @@ public class AdminService {
 
   /// Supprime un compte utilisateur et notifie l'utilisateur par email.
   ///
-  /// @param userId  identifiant de l'utilisateur à supprimer
+  /// @param userId identifiant de l'utilisateur à supprimer
   /// @param adminId identifiant de l'admin demandeur
   @Transactional
   public void supprimerUtilisateur(String userId, String adminId) {
@@ -422,11 +422,11 @@ public class AdminService {
   /// Envoie un email de réinitialisation de mot de passe à un utilisateur.
   ///
   /// <p>Le lien de réinitialisation est toujours retourné dans {@link ResultatReset#lienReset()}
-  /// comme {@link #creerUtilisateur}, c'est au contrôleur de décider de l'exposer à
-  /// l'admin selon la disponibilité de Resend, pour garder un filet de secours si l'email
-  /// n'atteint jamais l'utilisateur.
+  /// comme {@link #creerUtilisateur}, c'est au contrôleur de décider de l'exposer à l'admin selon
+  /// la disponibilité de Resend, pour garder un filet de secours si l'email n'atteint jamais
+  /// l'utilisateur.
   ///
-  /// @param userId  identifiant de l'utilisateur cible
+  /// @param userId identifiant de l'utilisateur cible
   /// @param adminId identifiant de l'admin demandeur
   /// @param baseUrl URL de base pour construire le lien
   /// @return le résultat (email + lien) si l'utilisateur existe, {@link Optional#empty()} sinon
@@ -459,11 +459,10 @@ public class AdminService {
 
   /// Réinitialise la 2FA TOTP d'un utilisateur : efface le secret et désactive la 2FA.
   ///
-  /// <p>Utilisé quand un utilisateur perd l'accès à son application d'authentification
-  /// (ou que son secret est désynchronisé) : il pourra se reconnecter sans code, puis
-  /// ré-enrôler son TOTP.
+  /// <p>Utilisé quand un utilisateur perd l'accès à son application d'authentification (ou que son
+  /// secret est désynchronisé) : il pourra se reconnecter sans code, puis ré-enrôler son TOTP.
   ///
-  /// @param userId  identifiant de l'utilisateur cible
+  /// @param userId identifiant de l'utilisateur cible
   /// @param adminId identifiant de l'admin à l'origine de l'action
   /// @return {@code true} si l'utilisateur existait, {@code false} sinon
   public boolean reinitialiserTotp(String userId, String adminId) {
@@ -478,6 +477,31 @@ public class AdminService {
     emailService.envoyer2faReinitialisee((String) cible.get(0).get("email"));
     logAdminService.logAdmin(
         "warn", "admin", "TOTP réinitialisé", Map.of("userId", userId, "parAdmin", adminId));
+    return true;
+  }
+
+  /// Révoque immédiatement toutes les sessions actives d'un utilisateur (ex. compte compromis,
+  /// départ, demande explicite de l'utilisateur) — indépendant de la révocation admin ({@link
+  /// #initierRevocationAdmin}), qui ne concerne que la rétrogradation d'un rôle.
+  ///
+  /// @param userId identifiant de l'utilisateur cible
+  /// @param adminId identifiant de l'admin à l'origine de l'action
+  /// @return {@code true} si l'utilisateur existait, {@code false} sinon
+  public boolean revoquerToutesSessions(String userId, String adminId) {
+    List<Map<String, Object>> cible =
+        jdbc.queryForList(
+            "SELECT username FROM users WHERE id = :userId", Map.of("userId", userId));
+    if (cible.isEmpty()) return false;
+
+    int supprimees =
+        jdbc.update(
+            "DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME = :username",
+            Map.of("username", cible.get(0).get("username")));
+    logAdminService.logAdmin(
+        "warn",
+        "admin",
+        "sessions révoquées",
+        Map.of("userId", userId, "parAdmin", adminId, "sessionsSupprimees", supprimees));
     return true;
   }
 

@@ -31,10 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Endpoints d'authentification de l'API REST.
 ///
-/// <p>HTTP pur — délègue les flux reset MDP à {@link AuthService} et la vérification TOTP
-/// (code + compteur d'échecs + verrouillage) à {@link TotpChallengeService}. Gère le login,
-/// logout, challenge TOTP, récupération de l'utilisateur courant et la réinitialisation de mot
-/// de passe.
+/// <p>HTTP pur — délègue les flux reset MDP à {@link AuthService} et la vérification TOTP (code +
+/// compteur d'échecs + verrouillage) à {@link TotpChallengeService}. Gère le login, logout,
+/// challenge TOTP, récupération de l'utilisateur courant et la réinitialisation de mot de passe.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -48,25 +47,29 @@ public class AuthController {
   private final AuthService authService;
   private final TotpChallengeService totpChallengeService;
   private final ConfigService configService;
+  private final AppareilsService appareilsService;
 
   /// @param authenticationManager gestionnaire d'authentification Spring Security
-  /// @param authService           service de réinitialisation de mot de passe
-  /// @param totpChallengeService  vérification du challenge TOTP (code + compteur d'échecs)
-  /// @param configService         service de configuration pour lire PUBLIC_BASE_URL
+  /// @param authService service de réinitialisation de mot de passe
+  /// @param totpChallengeService vérification du challenge TOTP (code + compteur d'échecs)
+  /// @param configService service de configuration pour lire PUBLIC_BASE_URL
+  /// @param appareilsService capture de l'appareil à la connexion
   public AuthController(
       AuthenticationManager authenticationManager,
       AuthService authService,
       TotpChallengeService totpChallengeService,
-      ConfigService configService) {
+      ConfigService configService,
+      AppareilsService appareilsService) {
     this.authenticationManager = authenticationManager;
     this.authService = authService;
     this.totpChallengeService = totpChallengeService;
     this.configService = configService;
+    this.appareilsService = appareilsService;
   }
 
   /// Authentifie un utilisateur et crée une session persistante.
   ///
-  /// @param req         les credentials ({@code identifiant} + {@code motDePasse})
+  /// @param req les credentials ({@code identifiant} + {@code motDePasse})
   /// @param httpRequest la requête HTTP (pour créer la session)
   /// @return l'utilisateur authentifié ou 401 si les credentials sont invalides
   @PostMapping("/api/auth/login")
@@ -98,6 +101,8 @@ public class AuthController {
     if (totpRequis) {
       session.setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
     }
+    appareilsService.enregistrerAppareil(
+        session.getId(), details.id(), httpRequest.getHeader("User-Agent"));
     log.debug("Connexion réussie : {}", details.identifiant());
     return ResponseEntity.ok(
         new UtilisateurDto(
@@ -111,7 +116,7 @@ public class AuthController {
 
   /// Invalide la session courante, efface le cookie SESSION et déconnecte l'utilisateur.
   ///
-  /// @param httpRequest  la requête HTTP (pour invalider la session)
+  /// @param httpRequest la requête HTTP (pour invalider la session)
   /// @param httpResponse la réponse HTTP (pour supprimer le cookie SESSION)
   /// @return 204 No Content
   @PostMapping("/api/auth/logout")
@@ -132,15 +137,15 @@ public class AuthController {
 
   /// Vérifie le code TOTP soumis pendant le challenge post-login.
   ///
-  /// <p>Le compteur d'échecs et la logique de verrouillage sont délégués à
-  /// {@link TotpChallengeService}. Un admin peut débloquer via
-  /// {@code POST /api/admin/utilisateurs/{id}/reset-totp}.
+  /// <p>Le compteur d'échecs et la logique de verrouillage sont délégués à {@link
+  /// TotpChallengeService}. Un admin peut débloquer via {@code POST
+  /// /api/admin/utilisateurs/{id}/reset-totp}.
   ///
-  /// @param req         le corps contenant le code à 6 chiffres
+  /// @param req le corps contenant le code à 6 chiffres
   /// @param httpRequest la requête HTTP (pour lire et modifier la session)
-  /// @param auth        le contexte d'authentification Spring Security
-  /// @return 200 si valide — 422 si code incorrect — 409 si pas de challenge en attente —
-  ///     401 si trop d'échecs ou compte verrouillé
+  /// @param auth le contexte d'authentification Spring Security
+  /// @return 200 si valide — 422 si code incorrect — 409 si pas de challenge en attente — 401 si
+  ///   trop d'échecs ou compte verrouillé
   @PostMapping("/api/auth/totp")
   public ResponseEntity<Map<String, Object>> verifierTotp(
       @RequestBody TotpChallengeRequest req, HttpServletRequest httpRequest, Authentication auth) {
@@ -193,7 +198,7 @@ public class AuthController {
   /// <p>Le champ {@code totpRequis} est {@code true} si un challenge TOTP est encore en attente
   /// pour la session courante (l'utilisateur s'est connecté mais n'a pas encore validé le 2FA).
   ///
-  /// @param auth        l'authentification Spring Security (injectée automatiquement)
+  /// @param auth l'authentification Spring Security (injectée automatiquement)
   /// @param httpRequest la requête HTTP (pour lire l'état TOTP de la session)
   /// @return l'utilisateur courant ou 401 si non authentifié
   @GetMapping("/api/auth/me")
@@ -222,7 +227,7 @@ public class AuthController {
   ///
   /// <p>Retourne toujours 200 pour éviter l'énumération de comptes.
   ///
-  /// @param req        le corps contenant l'adresse email
+  /// @param req le corps contenant l'adresse email
   /// @param httpRequest la requête HTTP (pour construire l'URL de reset)
   /// @return 200 dans tous les cas
   @PostMapping("/api/auth/forgot-password")
