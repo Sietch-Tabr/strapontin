@@ -16,6 +16,8 @@ package fr.strapontin.worker.sante;
 ///   {@code ville} connue
 /// @param nomsIncoherentsTM nombre d'artistes suivis dont le nom retourné par TM diverge de
 ///   l'artiste suivi (tribute/homonyme rattaché par erreur)
+/// @param sallesOrphelinesResolues nombre de concerts sans {@code salle_id} résolus par une
+///   nouvelle tentative de correspondance floue (voir {@code ReconciliateurSalles})
 /// @since 2.6.0
 /// @author Kwaite
 public record ResultatReconciliation(
@@ -25,4 +27,5 @@ public record ResultatReconciliation(
     int enrichissementsSalle,
     int enrichissementsArtiste,
     int incoherencesWikidata,
-    int nomsIncoherentsTM) {}
+    int nomsIncoherentsTM,
+    int sallesOrphelinesResolues) {}

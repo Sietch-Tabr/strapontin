@@ -220,6 +220,51 @@ class ReconciliateurSallesTest {
     assertEquals(resultat.get(0).salleNorm(), resultat.get(1).salleNorm());
   }
 
+  // Un concert sans salle_id (TM a omis venue.id, aucune salle suffisamment proche au moment de
+  // l'insertion) doit pouvoir être résolu plus tard si une salle correspondante apparaît entre
+  // temps via une autre source.
+  @Test
+  void retenterSallesOrphelines_salleApparueEntreTemps_resoutLeConcert() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    UUID concertId = UUID.randomUUID();
+    UUID salleId = UUID.randomUUID();
+
+    Map<String, Object> orphelin = new HashMap<>();
+    orphelin.put("id", concertId);
+    orphelin.put("salle", "Le Zenith Toulouse Metropole");
+    orphelin.put("dept", "31");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(orphelin));
+
+    Map<String, Object> candidat = new HashMap<>();
+    candidat.put("id", salleId);
+    candidat.put("nom_norm", "zenith toulouse metropole");
+    when(jdbc.queryForList(anyString(), any(SqlParameterSource.class)))
+        .thenReturn(List.of(candidat));
+
+    int resolus = reconciliateur.retenterSallesOrphelines();
+
+    assertEquals(1, resolus);
+    verify(jdbc)
+        .update(
+            anyString(),
+            org.mockito.ArgumentMatchers.argThat(
+                (Map<String, Object> params) ->
+                    salleId.toString().equals(params.get("salleId"))
+                        && concertId.equals(params.get("id"))));
+  }
+
+  @Test
+  void retenterSallesOrphelines_aucunOrphelin_neQueryPasLesCandidats() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    int resolus = reconciliateur.retenterSallesOrphelines();
+
+    assertEquals(0, resolus);
+  }
+
   // (rattrapage) : raccrocherSallesParNomNorm faisait un rattachement par égalité exacte de
   // nom_norm sans aucun filtre dept, défaisant silencieusement le filtre dept ajouté à
   // chercherSalleParTokens — deux salles homonymes au texte strictement identique (ex. "Casino -

@@ -21,6 +21,7 @@ import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
+import fr.strapontin.worker.persister.ReconciliateurSalles;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,7 @@ class ReconciliationNocturneServiceTest {
   private EnrichissementSallesService enrichissementSalles;
   private EnrichissementArtistesService enrichissementArtistes;
   private CoherenceWikidataSalleService coherenceWikidataSalle;
+  private ReconciliateurSalles reconciliateurSalles;
   private ReconciliationNocturneService service;
 
   @BeforeEach
@@ -51,10 +53,12 @@ class ReconciliationNocturneServiceTest {
     enrichissementSalles = mock(EnrichissementSallesService.class);
     enrichissementArtistes = mock(EnrichissementArtistesService.class);
     coherenceWikidataSalle = mock(CoherenceWikidataSalleService.class);
+    reconciliateurSalles = mock(ReconciliateurSalles.class);
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
     when(enrichissementSalles.enrichir()).thenReturn(0);
     when(enrichissementArtistes.enrichir()).thenReturn(0);
     when(coherenceWikidataSalle.verifier()).thenReturn(0);
+    when(reconciliateurSalles.retenterSallesOrphelines()).thenReturn(0);
     service =
         new ReconciliationNocturneService(
             jdbc,
@@ -62,7 +66,8 @@ class ReconciliationNocturneServiceTest {
             logsAdminWorker,
             enrichissementSalles,
             enrichissementArtistes,
-            coherenceWikidataSalle);
+            coherenceWikidataSalle,
+            reconciliateurSalles);
   }
 
   private static Map<String, Object> ligneSalleSuspecte(UUID salleId, String venueId, String nom) {

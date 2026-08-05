@@ -467,4 +467,42 @@ public class ReconciliateurSalles {
             })
         .toList();
   }
+
+  /// Retente la résolution des concerts orphelins (`salle_id IS NULL`) déjà persistés.
+  ///
+  /// <p>Couvre le résidu structurel laissé par {@link #upsertSalleSource} : un concert sans {@code
+  /// salleSourceId} (TM omet parfois {@code venue.id}) et sans salle suffisamment proche par nom au
+  /// moment de son insertion reste orphelin indéfiniment, sans jamais être retenté — la salle
+  /// correspondante peut pourtant apparaître plus tard via une autre source (un autre événement TM
+  /// avec {@code venue.id} renseigné, Eventim, Digitick). Appelé une fois par nuit (voir {@code
+  /// ReconciliationNocturneService}) plutôt qu'à chaque cycle de fetch : le volume concerné reste
+  /// faible (quelques dizaines de concerts) et une résolution par nom n'a pas de raison de réussir
+  /// plusieurs fois par jour si elle a échoué la veille.
+  ///
+  /// @return nombre de concerts orphelins résolus
+  public int retenterSallesOrphelines() {
+    List<Map<String, Object>> orphelins =
+        jdbc.queryForList(
+            "SELECT id, salle, dept FROM concerts"
+                + " WHERE salle_id IS NULL AND date >= CURRENT_DATE",
+            Map.of());
+    if (orphelins.isEmpty()) return 0;
+
+    int resolus = 0;
+    for (Map<String, Object> orphelin : orphelins) {
+      String salle = (String) orphelin.get("salle");
+      String dept = (String) orphelin.get("dept");
+      UUID salleId = chercherSalleParTokens(salle, dept);
+      if (salleId == null) continue;
+      jdbc.update(
+          "UPDATE concerts SET salle_id = CAST(:salleId AS uuid) WHERE id = :id",
+          Map.of("salleId", salleId.toString(), "id", orphelin.get("id")));
+      resolus++;
+    }
+    if (resolus > 0) {
+      log.info(
+          "réconciliation salles orphelines candidats={} résolus={}", orphelins.size(), resolus);
+    }
+    return resolus;
+  }
 }

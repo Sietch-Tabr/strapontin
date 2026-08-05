@@ -27,9 +27,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerService} — depuis, ne porte plus que le recalcul de
-/// matches et la réconciliation nocturne (fetch, purge et révocation admin sont désormais dans
-/// leurs propres services, testés séparément).
+/// Tests unitaires pour {@link WorkerService} — depuis, ne porte plus que le recalcul de matches et
+/// la réconciliation nocturne (fetch, purge et révocation admin sont désormais dans leurs propres
+/// services, testés séparément).
 ///
 /// @since 2.2.3
 /// @author Kwaite
@@ -89,7 +89,7 @@ class WorkerServiceTest {
   @Test
   void executerReconciliationNocturne_nominal_appelleLeServiceEtEnregistreLaStat() {
     when(reconciliationNocturneService.executer())
-        .thenReturn(new ResultatReconciliation(2, 1, 0, 3, 4, 0, 0));
+        .thenReturn(new ResultatReconciliation(2, 1, 0, 3, 4, 0, 0, 0));
 
     workerService.executerReconciliationNocturne();
 

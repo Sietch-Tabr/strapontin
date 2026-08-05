@@ -11,6 +11,7 @@ import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
+import fr.strapontin.worker.persister.ReconciliateurSalles;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -49,6 +50,7 @@ public class ReconciliationNocturneService {
   private final EnrichissementSallesService enrichissementSalles;
   private final EnrichissementArtistesService enrichissementArtistes;
   private final CoherenceWikidataSalleService coherenceWikidataSalle;
+  private final ReconciliateurSalles reconciliateurSalles;
 
   public ReconciliationNocturneService(
       NamedParameterJdbcTemplate jdbc,
@@ -56,13 +58,15 @@ public class ReconciliationNocturneService {
       LogsAdminWorker logsAdminWorker,
       EnrichissementSallesService enrichissementSalles,
       EnrichissementArtistesService enrichissementArtistes,
-      CoherenceWikidataSalleService coherenceWikidataSalle) {
+      CoherenceWikidataSalleService coherenceWikidataSalle,
+      ReconciliateurSalles reconciliateurSalles) {
     this.jdbc = jdbc;
     this.tm = tm;
     this.logsAdminWorker = logsAdminWorker;
     this.enrichissementSalles = enrichissementSalles;
     this.enrichissementArtistes = enrichissementArtistes;
     this.coherenceWikidataSalle = coherenceWikidataSalle;
+    this.reconciliateurSalles = reconciliateurSalles;
   }
 
   /// Exécute les deux phases du job nocturne.
@@ -83,6 +87,7 @@ public class ReconciliationNocturneService {
     int enrichisArtistes = enrichissementArtistes.enrichir();
     int enrichisSalles = enrichissementSalles.enrichir();
     int incoherencesWikidata = coherenceWikidataSalle.verifier();
+    int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
 
     return new ResultatReconciliation(
         bilanSalles[0],
@@ -91,7 +96,8 @@ public class ReconciliationNocturneService {
         enrichisSalles,
         enrichisArtistes,
         incoherencesWikidata,
-        nomsIncoherentsTM);
+        nomsIncoherentsTM,
+        sallesOrphelinesResolues);
   }
 
   /// Vérifie que le nom retourné par TM pour chaque attractionId lié correspond toujours à
