@@ -20,7 +20,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Orchestrateur d'enrichissement des salles (#711 étapes 1-2).
+/// Orchestrateur d'enrichissement des salles (étapes 1-2).
 ///
 /// Boucle sur les {@link SourceEnrichissementSalle} injectées (une nouvelle source = un bean
 /// Spring, sans modification de ce service). L'ordre de déclaration des beans dans
@@ -64,10 +64,10 @@ public class EnrichissementSallesService {
   }
 
   /// Enrichit les salles sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
-  /// courant (rotation hebdomadaire, #994 — remplace l'ancien plafond fixe de 500/nuit, qui
-  /// laissait une entité en échec systématique éternellement prioritaire, cf. #991), priorisées
+  /// courant (rotation hebdomadaire, — remplace l'ancien plafond fixe de 500/nuit, qui
+  /// laissait une entité en échec systématique éternellement prioritaire, cf.), priorisées
   /// par nombre de concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un
-  /// {@code nom_affiche} déjà présent (override manuel admin #710).
+  /// {@code nom_affiche} déjà présent (override manuel admin).
   ///
   /// @return nombre de salles effectivement mises à jour
   public int enrichir() {
@@ -90,9 +90,9 @@ public class EnrichissementSallesService {
   }
 
   /// Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source
-  /// implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer (#993) —
+  /// implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer —
   /// même mécanisme générique que {@code WorkerStatsService.remonterBilan}, absent jusqu'ici sur
-  /// les sources d'enrichissement : la panne Overpass de 3+ mois (#990) n'avait ainsi jamais généré
+  /// les sources d'enrichissement : la panne Overpass de 3+ mois n'avait ainsi jamais généré
   /// la moindre entrée {@code logs_admin}.
   private void remonterBilans() {
     for (SourceEnrichissementSalle source : sources) {
@@ -186,7 +186,7 @@ public class EnrichissementSallesService {
 
   /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
   ///     découvert est déjà porté par une autre salle (contrainte {@code idx_salles_wikidata_id}) —
-  ///     signe d'un faux positif de correspondance ou d'un doublon non encore fusionné (#710) ; le
+  /// signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le
   ///     conflit est loggé plutôt que de faire échouer tout le cycle de réconciliation.
   private boolean mettreAJourSalle(UUID salleId, String nom, EnrichissementSalle e) {
     Map<String, Object> params = new HashMap<>();

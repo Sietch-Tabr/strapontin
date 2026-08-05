@@ -16,7 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires de {@link DecouverteController#fetcher} (#806) — rate-limite le
+/// Tests unitaires de {@link DecouverteController#fetcher} — rate-limite le
 /// déclenchement du fetch global, accessible à tout utilisateur authentifié sans garde-fou
 /// auparavant.
 ///

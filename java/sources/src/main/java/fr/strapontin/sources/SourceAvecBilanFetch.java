@@ -8,7 +8,7 @@ import fr.strapontin.core.BilanFetch;
 
 /// Capacité optionnelle d'une source ou d'un résolveur à exposer un bilan agrégé d'appels et
 /// d'erreurs depuis le dernier prélèvement, pour une détection de panne générique côté worker
-/// (#909).
+///.
 ///
 /// @since 2.7.0
 /// @author Kwaite

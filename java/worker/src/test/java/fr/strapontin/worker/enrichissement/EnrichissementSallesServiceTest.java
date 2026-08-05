@@ -216,7 +216,7 @@ class EnrichissementSallesServiceTest {
         .inserer(eq("warn"), eq("enrichissement-wikidata"), anyString(), anyMap());
   }
 
-  // #993 : bilan de panne absent jusqu'ici sur les sources d'enrichissement — panne Overpass de
+  // bilan de panne absent jusqu'ici sur les sources d'enrichissement — panne Overpass de
   // 3+ mois jamais remontée dans logs_admin. Panne totale (3 appels, 3 erreurs) doit escalader en
   // niveau error.
   @Test

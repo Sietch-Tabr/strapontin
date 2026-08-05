@@ -57,7 +57,7 @@ public class PushController {
 
   /// Envoie une notification de test à l'abonnement de l'utilisateur courant.
   ///
-  /// <p>Cible l'abonnement de l'appareil demandeur si {@code endpoint} est fourni (#826), plutôt
+  /// <p>Cible l'abonnement de l'appareil demandeur si {@code endpoint} est fourni, plutôt
   /// que de sélectionner arbitrairement le plus récent.
   ///
   /// @param requete corps JSON optionnel avec {@code endpoint}

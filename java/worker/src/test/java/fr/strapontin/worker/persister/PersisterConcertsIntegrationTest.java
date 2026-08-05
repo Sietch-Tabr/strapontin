@@ -204,7 +204,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_artisteRenommeAvecSuffixeNumerique_metsAJourPasInsertion() {
-    // ticket #619 — "Star Academy" -> "Star Academy 1" entre deux fetches TM, même salle/date
+    // ticket — "Star Academy" -> "Star Academy 1" entre deux fetches TM, même salle/date
     persisterConcerts.persisterConcerts(
         List.of(concert("Star Academy", DATE_RECENTE, "Accor Arena", "ticketmaster")));
     persisterConcerts.persisterConcerts(
@@ -216,7 +216,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_artisteRenommeAvecArticleAjoute_metsAJourPasInsertion() {
-    // ticket #619 — "Comédies Musicales" -> "Les Comédies Musicales" entre deux fetches TM
+    // ticket — "Comédies Musicales" -> "Les Comédies Musicales" entre deux fetches TM
     persisterConcerts.persisterConcerts(
         List.of(
             concert(
@@ -315,7 +315,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_reconciliationSalle_conserveSalleId() {
-    // ticket #632 — le salleId ne doit pas être effacé lors de la réconciliation salle
+    // ticket — le salleId ne doit pas être effacé lors de la réconciliation salle
     jdbc.update(
         "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('zenith paris', 'Zénith Paris',"
             + " 'zenith paris')",
@@ -356,7 +356,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_salleSourceIdInconnuDeSalleSources_upsertEtAttribueUuid() {
-    // ticket #633 — une salle absente de salle_sources doit être upsertée automatiquement
+    // ticket — une salle absente de salle_sources doit être upsertée automatiquement
     persisterConcerts.persisterConcerts(
         List.of(
             concertAvecSourceId(
@@ -433,7 +433,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_salleSansApostropheAutreSource_reutiliseSalleExistanteSansDoublon() {
-    // #902 : TM persiste d'abord "L'Olympia" (nom_norm="l olympia"), puis un cycle Eventim
+    // TM persiste d'abord "L'Olympia" (nom_norm="l olympia"), puis un cycle Eventim
     // ultérieur rencontre la même salle sous "LOlympia" (sans apostrophe, salleSourceId inconnu
     // de salle_sources — comme un vrai fetch Eventim). Sans le critère squash de
     // CorrespondanceSalle + le préfiltre élargi de chercherSalleParTokens, upsertSalleSource
@@ -501,8 +501,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_salleSourceIdNull_rattacheParTokensASalleExistante() {
-    // #965 : TM omet parfois venue.id pour un événement donné — sans identifiant source du tout
-    // (contrairement à #902 ci-dessus, où un identifiant existait mais restait inconnu de
+    // TM omet parfois venue.id pour un événement donné — sans identifiant source du tout
+    // (contrairement à ci-dessus, où un identifiant existait mais restait inconnu de
     // salle_sources). resoudreIdentitesSources doit alors se rabattre sur
     // chercherSalleParTokens plutôt que de laisser salle_id indéfiniment null.
     jdbc.update(
@@ -533,11 +533,11 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void
       persisterConcerts_salleHomonymeDeptNullMaisConcertAttacheDeptDifferent_neFusionnePasParTokens() {
-    // #973 : salles.dept n'est écrit qu'à la création et jamais mis à jour ensuite, contrairement
+    // salles.dept n'est écrit qu'à la création et jamais mis à jour ensuite, contrairement
     // à concerts.dept (fiablement renseigné à chaque ingestion). Un simple "dept IS NULL OR dept
     // = :dept" désactivait donc le filtre pour la quasi-totalité des salles réelles, laissant
     // fusionner à tort des salles homonymes de villes différentes (ex. Casino Barrière
-    // Toulouse/Lille, cas confirmé #971). Ici : salle existante "Casino Barriere" avec
+    // Toulouse/Lille, cas confirmé). Ici : salle existante "Casino Barriere" avec
     // salles.dept NULL, mais un concert déjà rattaché révèle sa vraie localisation (59, Lille).
     java.util.UUID salleLille = java.util.UUID.randomUUID();
     jdbc.update(
@@ -588,7 +588,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_salleExistanteSansDeptNouvelleSourceAvecDept_backfilleLeDept() {
-    // #992 : salles.dept n'était écrit qu'à la création puis jamais mis à jour — une salle créée
+    // salles.dept n'était écrit qu'à la création puis jamais mis à jour — une salle créée
     // sans code postal exploitable restait figée à dept=NULL même quand une source ultérieure
     // apportait l'information (ici : upsertSalleSource, déclenché par un salleSourceId inconnu
     // de salle_sources sur une salle déjà résolue par nom).
@@ -748,7 +748,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_deuxSeancesHeuresDifferentes_insereDeuxConcerts() {
-    // #640 — matinée + soirée du même artiste dans la même salle le même jour doivent coexister
+    // matinée + soirée du même artiste dans la même salle le même jour doivent coexister
     List<ConcertBrut> liste =
         List.of(
             concertAvecHeure(
@@ -764,7 +764,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_memeUrlArtistesDifferents_unifieArtisteNorm() {
-    // #719 — page festival Eventim : "Yael Naim" (batch H:00) puis "Solidays 2026" (region H:30)
+    // page festival Eventim : "Yael Naim" (batch H:00) puis "Solidays 2026" (region H:30)
     // ont la même URL source. resoudreParUrl doit forcer l'artiste_norm du 2ème fetch à celui
     // du 1er fetch déjà en base, évitant deux lignes et les notifications répétées.
     String urlFestival =
@@ -790,7 +790,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_digitickSansArtisteSourceId_resolutionParNomNorm() {
-    // #739 — Digitick ne fournit pas d'artisteSourceId : la résolution doit quand même
+    // Digitick ne fournit pas d'artisteSourceId : la résolution doit quand même
     // retrouver l'artiste_id en base via correspondance exacte sur artiste_norm.
     java.util.UUID artisteId = java.util.UUID.randomUUID();
     jdbc.update(
@@ -831,7 +831,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_deuxConcertsSansHeure_fusionne() {
-    // #640 — deux enregistrements sans heure pour le même (artiste, date, salle) → 1 seul concert
+    // deux enregistrements sans heure pour le même (artiste, date, salle) → 1 seul concert
     List<ConcertBrut> liste =
         List.of(
             concertAvecHeure("Muse", "2026-11-15", null, "Accor Arena", "ticketmaster"),
@@ -846,7 +846,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_memeArtisteMemeDateSalleNormsDifferentsMemeUuid_neLancePasBadSqlGrammar() {
-    // Régression #738/#745 — la contrainte uq_concerts_artiste_date_heure_salle porte sur
+    // Régression — la contrainte uq_concerts_artiste_date_heure_salle porte sur
     // salle_id depuis V37. TM et Eventim nommant la même salle différemment mais résolvant
     // au même salle_id produisaient un "ON CONFLICT DO UPDATE command cannot affect row a
     // second time" si deduplicerLotReconcilie utilisait salle_norm comme clé.
@@ -913,7 +913,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, count, "les deux concerts doivent fusionner en un seul via salle_id");
   }
 
-  // #790 — supprimerDoublonsParSalleId ne couvrait que les paires TM/Eventim codées en dur.
+  // supprimerDoublonsParSalleId ne couvrait que les paires TM/Eventim codées en dur.
   // Ce test simule un doublon résiduel TM+Digitick (même artiste_id/date/heure/salle_id mais
   // artiste_norm distinct — la contrainte unique porte sur artiste_norm, pas artiste_id, donc les
   // deux lignes peuvent légitimement coexister en base malgré une résolution UUID identique).

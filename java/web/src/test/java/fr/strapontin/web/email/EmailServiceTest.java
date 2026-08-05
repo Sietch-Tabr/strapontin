@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 
 /// Tests unitaires pour {@link EmailService} (emails transactionnels utilisateur).
 ///
-/// <p>Depuis #925, les alertes système (bounce/spam/backup/watchdog/logs-admin) sont testées dans
+/// <p>Depuis, les alertes système (bounce/spam/backup/watchdog/logs-admin) sont testées dans
 /// {@code EmailAlerteServiceTest}, et la résolution du destinataire d'alerte dans
 /// {@code EmailSenderTest}. Les méthodes d'envoi réel de ce service (dépendant du SDK Resend, non
 /// injectable) ne sont testées que sur leurs branches de retour anticipé (RESEND_API_KEY absent) —

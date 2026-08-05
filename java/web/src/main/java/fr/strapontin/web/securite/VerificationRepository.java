@@ -114,7 +114,7 @@ public class VerificationRepository {
   /// Définit l'identifiant et désactive le flag {@code must_change_credentials} par email.
   ///
   /// <p>Ne resynchronise {@code display_username} sur le nouvel identifiant que s'il n'a jamais
-  /// été personnalisé par un admin (#814), même garde que
+  /// été personnalisé par un admin, même garde que
   /// {@link fr.strapontin.web.utilisateur.UtilisateurRepository#majIdentifiant}.
   ///
   /// @param email      email de l'utilisateur

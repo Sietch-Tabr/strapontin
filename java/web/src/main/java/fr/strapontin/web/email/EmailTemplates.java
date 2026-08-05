@@ -229,7 +229,7 @@ final class EmailTemplates {
   }
 
   /// Alerte de contrôle d'intégrité (AIDE) — modification détectée hors déploiement légitime sur
-  /// un LXC prod/dev (#976).
+  /// un LXC prod/dev.
   ///
   /// @param detail  sortie résumée d'{@code aide --check} (fichiers modifiés/ajoutés/supprimés)
   /// @param baseUrl l'URL publique de base de l'application
@@ -328,8 +328,8 @@ final class EmailTemplates {
     return enveloppErreur("Worker inactif", corps, baseUrl);
   }
 
-  /// Alerte de seuil (80%) sur le quota d'envoi Resend jour et/ou mois (#981, suite de
-  /// l'incident #907).
+  /// Alerte de seuil (80%) sur le quota d'envoi Resend jour et/ou mois (suite de
+  /// l'incident).
   ///
   /// @param envoyesJour nombre d'envois comptabilisés pour le jour courant
   /// @param limiteJour  limite journalière Resend (tier gratuit : 100)
@@ -362,7 +362,7 @@ final class EmailTemplates {
     return enveloppErreur("Quota Resend proche de la limite", corps, baseUrl);
   }
 
-  /// Digest d'alerte pour les nouvelles entrées {@code logs_admin} de niveau erreur (#765).
+  /// Digest d'alerte pour les nouvelles entrées {@code logs_admin} de niveau erreur.
   ///
   /// @param erreurs liste des entrées d'erreur à afficher (non vide)
   /// @param baseUrl l'URL publique de base de l'application

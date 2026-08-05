@@ -175,7 +175,7 @@ public class ReconciliateurSalles {
   /// Réconcilie un concert contre les salles existantes d'une même clé (artiste, date).
   ///
   /// <p>Vérifie d'abord une correspondance exacte sur l'ensemble de la liste avant de retomber
-  /// sur une correspondance floue (#794) : sans cette priorité, l'absence de {@code ORDER BY}
+  /// sur une correspondance floue : sans cette priorité, l'absence de {@code ORDER BY}
   /// sur la requête source (voir {@link #reconcilierSalles}) peut placer un candidat flou avant
   /// un candidat exact, rattachant à tort le concert à la mauvaise salle alors qu'une
   /// correspondance exacte existait plus loin dans la même liste.
@@ -280,7 +280,7 @@ public class ReconciliateurSalles {
 
     if (salleId == null) return null;
 
-    // #992 : salles.dept n'était écrit qu'à la création puis jamais mis à jour — 281/284 salles
+    // salles.dept n'était écrit qu'à la création puis jamais mis à jour — 281/284 salles
     // sans dept en prod avaient pourtant l'info via un concert déjà lié. COALESCE : n'écrase
     // jamais une valeur déjà connue, même pattern que wikidata_id/nom_affiche
     // (EnrichissementSallesService).
@@ -309,13 +309,13 @@ public class ReconciliateurSalles {
   ///
   /// <p>Émet une seule requête SQL pour tous les tokens significatifs du nom (corrige
   /// le pattern N+1 antérieur où une requête était émise par token), complétée par une clause
-  /// sur le {@code nom_norm} sans espaces (#902) : sans elle, une variante d'apostrophe/article
+  /// sur le {@code nom_norm} sans espaces : sans elle, une variante d'apostrophe/article
   /// entre deux sources ("l olympia" vs "lolympia") ne partage aucun token substantiel et le
   /// candidat n'est jamais récupéré, quand bien même {@link #estDoublonSalle} le détecterait.
   /// Le filtre {@code dept} élimine les salles homonymes de départements distincts, réduisant le
   /// risque de faux positif du critère pivot dans {@link #estDoublonSalle}. Repli sur le
   /// département d'un concert déjà rattaché à la salle candidate quand {@code salles.dept} est
-  /// vide (#973) — cette colonne n'est écrite qu'à la création et jamais mise à jour ensuite,
+  /// vide — cette colonne n'est écrite qu'à la création et jamais mise à jour ensuite,
   /// contrairement à {@code concerts.dept}.
   ///
   /// @param nom  nom brut de la salle à créer
@@ -344,7 +344,7 @@ public class ReconciliateurSalles {
     params.addValue("nomNormSquash", nomNormSquash);
     params.addValue("dept", dept, Types.VARCHAR);
 
-    // #973 : salles.dept n'est écrit qu'à la création et n'est jamais mis à jour ensuite,
+    // salles.dept n'est écrit qu'à la création et n'est jamais mis à jour ensuite,
     // contrairement à concerts.dept (fiablement renseigné à chaque ingestion) — un simple
     // "dept IS NULL" désactivait le filtre pour la quasi-totalité des salles existantes. Repli
     // sur le département d'un concert déjà rattaché à la salle candidate quand salles.dept est
@@ -379,10 +379,10 @@ public class ReconciliateurSalles {
   /// Rattache les concerts sans {@code salleId} à leur salle via correspondance exacte
   /// sur {@code salle_norm} / {@code nom_norm}.
   ///
-  /// <p>#973 (rattrapage) : une simple égalité de {@code nom_norm} ignorait le département,
+  /// <p> (rattrapage) : une simple égalité de {@code nom_norm} ignorait le département,
   /// défaisant silencieusement le filtre dept de {@link #chercherSalleParTokens} pour deux
   /// salles homonymes au texte strictement identique (ex. "Casino - Barriere" Toulouse/Lille,
-  /// #971 — {@code chercherSalleParTokens} rejette correctement le candidat en amont, mais ce
+  /// {@code chercherSalleParTokens} rejette correctement le candidat en amont, mais ce
   /// repli par égalité exacte le retrouvait quand même en aval, sans filtre). Même repli sur le
   /// département d'un concert déjà rattaché que {@link #chercherSalleParTokens} quand
   /// {@code salles.dept} est vide.

@@ -13,7 +13,7 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteAjouter} (#787).
+/// Tests unitaires de validation Bean Validation de {@link RequeteAjouter}.
 ///
 /// <p>Le {@code wikidataId} est concaténé dans un appel API Wikidata sortant
 /// ({@link ArtisteService#resoudreDeezerId}) — sans contrainte de format, une valeur arbitraire
@@ -40,7 +40,7 @@ class RequeteAjouterValidationTest {
     assertTrue(violations.isEmpty());
   }
 
-  // #787 : une valeur arbitraire (ex. tentative d'injection dans la requête Wikidata sortante)
+  // une valeur arbitraire (ex. tentative d'injection dans la requête Wikidata sortante)
   // doit être rejetée par Bean Validation avant d'atteindre le service.
   @Test
   void wikidataId_formatInvalide_estRejete() {

@@ -9,7 +9,7 @@ package fr.strapontin.core;
 ///
 /// Type partagé entre les modules `web` et `worker` — les deux JVM envoient des emails via le
 /// même compte Resend (tier gratuit : 100/jour, 3000/mois) et doivent compter contre le même
-/// compteur (#981, suite de l'incident #907). {@code jour}/{@code mois} bornent la fenêtre de
+/// compteur (suite de l'incident). {@code jour}/{@code mois} bornent la fenêtre de
 /// comptage courante (rollover appliqué par l'appelant à leur changement) ;
 /// {@code alerteJourEnvoyee}/{@code alerteMoisEnvoyee} throttlent l'alerte de seuil à une fois
 /// par fenêtre, remises à {@code false} au rollover.

@@ -24,7 +24,7 @@ import org.springframework.security.core.Authentication;
 /// Tests unitaires pour {@link AuthController} — challenge TOTP et réinitialisation de mot de
 /// passe.
 ///
-/// <p>Depuis #917, le compteur d'échecs/verrouillage TOTP est délégué à
+/// <p>Depuis, le compteur d'échecs/verrouillage TOTP est délégué à
 /// {@link TotpChallengeService} (testé séparément dans {@code TotpChallengeServiceTest}) — ce
 /// fichier vérifie uniquement la traduction HTTP de chaque {@link ResultatTotp}.
 ///

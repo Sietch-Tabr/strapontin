@@ -158,7 +158,7 @@ class WikidataArtisteSourceTest {
     serveur.verify();
   }
 
-  // #767 : un humoriste (P106 humoriste, pas musicien) doit être rapprochable — avant correction,
+  // un humoriste (P106 humoriste, pas musicien) doit être rapprochable — avant correction,
   // le filtre de découverte n'acceptait que "humain+musicien" ou "groupe", excluant
   // structurellement des artistes légitimement suivis comme Pierre-Emmanuel Barré.
   @Test
@@ -194,7 +194,7 @@ class WikidataArtisteSourceTest {
     serveur.verify();
   }
 
-  // #1018 : un auteur comique (P106 = Q12406482, ex. Pierre-Emmanuel Barré dont la fiche réelle
+  // un auteur comique (P106 = Q12406482, ex. Pierre-Emmanuel Barré dont la fiche réelle
   // porte cette occupation plutôt que Q245068) doit aussi être rapprochable — la fermeture
   // transitive P279* de Q12406482 ne remonte jamais vers Q245068/Q639669, un troisième
   // branchement du filtre était nécessaire.
@@ -231,7 +231,7 @@ class WikidataArtisteSourceTest {
     serveur.verify();
   }
 
-  // #772 : homonymie groupe/personne (ex. Van Halen, groupe nommé du vrai nom de famille de son
+  // homonymie groupe/personne (ex. Van Halen, groupe nommé du vrai nom de famille de son
   // fondateur) — deux entités distinctes de types différents parmi les meilleurs candidats
   // doivent bloquer tout rapprochement plutôt que de deviner celle en tête.
   @Test

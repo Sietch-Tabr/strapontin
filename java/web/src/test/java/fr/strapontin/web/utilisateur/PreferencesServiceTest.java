@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link PreferencesService} — focus sur la dédup floue de l'import (#824).
+/// Tests unitaires pour {@link PreferencesService} — focus sur la dédup floue de l'import.
 ///
 /// @since 2.6.4
 /// @author Kwaite
@@ -49,7 +49,7 @@ class PreferencesServiceTest {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
   }
 
-  // #824 : importer un artiste dont le nom est un doublon flou d'un artiste déjà suivi
+  // importer un artiste dont le nom est un doublon flou d'un artiste déjà suivi
   // ("The Rolling Stones" vs "Rolling Stones" déjà présent) doit réutiliser le même UUID via
   // ArtisteService.resoudreArtisteId, plutôt qu'un ON CONFLICT exact sur nom_norm qui créerait un
   // second artiste distinct.
@@ -80,7 +80,7 @@ class PreferencesServiceTest {
         .update(org.mockito.ArgumentMatchers.contains("INSERT INTO artistes"), anyMap());
   }
 
-  // #824 : même principe côté salles — SalleService.resoudreSalleId plutôt qu'un ON CONFLICT
+  // même principe côté salles — SalleService.resoudreSalleId plutôt qu'un ON CONFLICT
   // exact sur salle_cle.
   @Test
   void importerSalles_doublonFlou_reutiliseUuidResoluParSalleService() {

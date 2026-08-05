@@ -29,7 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link ReconciliationNocturneService} (#706).
+/// Tests unitaires pour {@link ReconciliationNocturneService}.
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -261,7 +261,7 @@ class ReconciliationNocturneServiceTest {
     return ligne;
   }
 
-  // #1012 : le nom retourné par TM peut diverger de l'artiste suivi (tribute, homonyme) sans que
+  // le nom retourné par TM peut diverger de l'artiste suivi (tribute, homonyme) sans que
   // l'identifiant soit jamais marqué "suspect" (le tribute a des événements à venir).
   @Test
   void executer_nomTMDivergeDeLArtisteSuivi_poseNecessiteInterventionLeEtJournalise() {

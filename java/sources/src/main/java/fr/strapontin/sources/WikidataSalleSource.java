@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
-/// Client SPARQL Wikidata pour l'enrichissement des salles (#711 étape 2).
+/// Client SPARQL Wikidata pour l'enrichissement des salles (étape 2).
 ///
 /// Deux modes selon que le Q-ID est déjà connu :
 ///
@@ -76,7 +76,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
 
   private static final Logger log = LoggerFactory.getLogger(WikidataSalleSource.class);
 
-  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement (#993).
+  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement.
   ///
   /// @return le bilan depuis le dernier prélèvement
   @Override
@@ -215,7 +215,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     Optional<EnrichissementSalle> resultat = decouvrirParNom(salle, salle.nom());
     if (resultat.isPresent()) return resultat;
 
-    // #991 : la recherche mwapi:search échoue quasi systématiquement dès que le nom Strapontin
+    // la recherche mwapi:search échoue quasi systématiquement dès que le nom Strapontin
     // porte un suffixe de sous-salle/qualificatif ("Zenith Toulouse Metropole" → 0 résultat,
     // "Zenith de Toulouse" trouvé immédiatement), alors que l'entité existe bien sur Wikidata —
     // l'échec se produit dans l'appel mwapi, avant même la comparaison des candidats. La
@@ -268,9 +268,9 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   /// Vérifie que la commune du candidat Wikidata ne contredit pas la ville connue de la salle
-  /// Strapontin (#1002).
+  /// Strapontin.
   ///
-  /// <p>Constaté en production : le repli sur nom tronqué (#991) peut retenir en rang 0 un
+  /// <p>Constaté en production : le repli sur nom tronqué peut retenir en rang 0 un
   /// candidat au nom générique partagé par plusieurs communes (ex. "Collegiale Saint" →
   /// "collégiale Saint-Agricol d'Avignon", alors que la salle recherchée est à Chinon) —
   /// aucune des désambiguïsations de {@link #trouverLabelCorrespondant} ne porte sur la
@@ -290,7 +290,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   // Nombre minimal de tokens significatifs cibles pour appliquer le containment asymétrique
-  // (#769) — évite qu'un nom d'un seul mot ("galaxie") soit considéré contenu dans n'importe
+  // évite qu'un nom d'un seul mot ("galaxie") soit considéré contenu dans n'importe
   // quel candidat plus long au seul motif qu'il partage ce mot.
   private static final int TAILLE_MIN_TOKENS_CONTAINMENT = 2;
 
@@ -322,7 +322,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   /// Complète {@link CorrespondanceSalle#estDoublonSalle} par un containment de tokens
-  /// asymétrique (#769) : couvre le cas où Wikidata combine l'ancien et le nouveau nom dans un
+  /// asymétrique : couvre le cas où Wikidata combine l'ancien et le nouveau nom dans un
   /// seul alias (constaté en production : « Dôme de Paris » — nom Strapontin actuel — n'est
   /// rapproché d'aucun candidat mwapi malgré l'existence de l'entité correcte en rang 0, son
   /// libellé principal étant « Palais des sports » et son alias le plus proche « Dôme de Paris -

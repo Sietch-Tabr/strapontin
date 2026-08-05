@@ -76,7 +76,7 @@ public class PushService {
   /// Enregistre un nouvel abonnement push.
   ///
   /// <p>Le COUNT+INSERT est rendu atomique via une transaction {@code SERIALIZABLE} avec retry
-  /// (#827, même pattern que {@code AdminService.initierRevocationAdmin}) — sans cela, deux
+  /// (même pattern que {@code AdminService.initierRevocationAdmin}) — sans cela, deux
   /// abonnements concurrents lisant tous deux {@code count = 9 < 10} avant qu'aucun des deux
   /// {@code INSERT} ne soit committé pouvaient tous deux réussir, dépassant le cap documenté
   /// comme une limite dure.

@@ -62,7 +62,7 @@ class EventimSourceTest {
 
   @Test
   void corrigerVilleEventim_petiteCouronneAvecCommuneDansNomSalle_extraitCommune() {
-    // ticket #620 — La Seine Musicale - Boulogne Billancourt, dept=92, Eventim renvoie "Paris"
+    // ticket — La Seine Musicale - Boulogne Billancourt, dept=92, Eventim renvoie "Paris"
     assertEquals(
         "Boulogne Billancourt",
         EventimSource.corrigerVilleEventim(
@@ -71,7 +71,7 @@ class EventimSourceTest {
 
   @Test
   void corrigerVilleEventim_petiteCouronneSansCommuneDansNomSalle_conserveParisEtJournalise() {
-    // ticket #620 — Stade de France, dept=93, aucune commune extractible du nom de salle
+    // ticket — Stade de France, dept=93, aucune commune extractible du nom de salle
     assertEquals("Paris", EventimSource.corrigerVilleEventim("Paris", "93", "Stade De France"));
   }
 
@@ -186,7 +186,7 @@ class EventimSourceTest {
 
   @Test
   void mapProduit_salleSeineMusicaleVillePariseIncoherente_corrigeVilleEnBoulogne() {
-    // ticket #620
+    // ticket
     Map<String, Object> produit =
         produitEventimRaw(
             Map.of(
@@ -220,7 +220,7 @@ class EventimSourceTest {
     assertNull(resultat.dept());
   }
 
-  // #887 : timeout HTTP explicite (connexion 10s/lecture 30s) via ClientHttpFactory
+  // timeout HTTP explicite (connexion 10s/lecture 30s) via ClientHttpFactory
   @Test
   void constructeurParDefaut_neLancePasException_etExposeLeNomEventim() {
     EventimSource source = new EventimSource();
@@ -228,9 +228,9 @@ class EventimSourceTest {
     assertEquals("eventim", source.nom());
   }
 
-  // #904 — régression : un User-Agent de navigateur (Mozilla/5.0...) déclenche un blocage 403
+  // régression : un User-Agent de navigateur (Mozilla/5.0...) déclenche un blocage 403
   // Akamai depuis le 09/07/2026 ; un Accept-Encoding explicite fait échouer la désérialisation
-  // JSON (SimpleClientHttpRequestFactory ne décompresse pas la réponse gzip lui-même, #887).
+  // JSON (SimpleClientHttpRequestFactory ne décompresse pas la réponse gzip lui-même).
   @Test
   void builderAvecHeadersParDefaut_headersReels_userAgentHonneteEtAucunAcceptEncoding() {
     RestClient.Builder builder = EventimSource.builderAvecHeadersParDefaut();
@@ -258,7 +258,7 @@ class EventimSourceTest {
 
   @Test
   void fetchArtiste_nomSansCorrespondanceExacte_retourneListeVide() {
-    // ticket #626 — rechercherAttractionId ne doit pas prendre attractions.get(0) si pas d'exact
+    // ticket — rechercherAttractionId ne doit pas prendre attractions.get(0) si pas d'exact
     // match normalisé (ex: Shy'm → API retourne "Shy", normalisé différent)
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
@@ -282,7 +282,7 @@ class EventimSourceTest {
 
   @Test
   void fetchArtiste_termeContenuDansNomPlusVerbeux_retourneResultatsParContainment() {
-    // ticket #661 — "-M-" contenu dans "-M- Matthieu Chedid" → accepté par containment
+    // ticket — "-M-" contenu dans "-M- Matthieu Chedid" → accepté par containment
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
@@ -312,7 +312,7 @@ class EventimSourceTest {
     assertTrue(resultats.isEmpty());
     serveur.verify();
 
-    // #1013 — le containment accepté doit être exposé pour remontée dans logs_admin
+    // le containment accepté doit être exposé pour remontée dans logs_admin
     List<String> containments = source.preleverContainmentsAcceptes();
     assertEquals(1, containments.size());
     assertTrue(containments.get(0).contains("-M-"));
@@ -320,7 +320,7 @@ class EventimSourceTest {
     assertTrue(source.preleverContainmentsAcceptes().isEmpty());
   }
 
-  // #1022 — régression #1013 : "Furies" trouvé par containment dans "Love & Furies" (deux
+  // régression : "Furies" trouvé par containment dans "Love & Furies" (deux
   // entités distinctes) réapparaissait à chaque cycle de fetch. Dès que l'artiste a déjà un
   // deezerId ou un wikidataId connu (identité confirmée indépendamment), le repli par
   // containment doit être désactivé — seule une correspondance exacte est acceptée.
@@ -407,7 +407,7 @@ class EventimSourceTest {
 
   @Test
   void fetchArtiste_termeUnCaractereBrut_pasDeContainment() {
-    // ticket #661 — terme d'un seul caractère brut (ex. "M") ne déclenche pas le containment
+    // ticket — terme d'un seul caractère brut (ex. "M") ne déclenche pas le containment
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
@@ -601,7 +601,7 @@ class EventimSourceTest {
 
   @Test
   void fetchRegion_requete_inclutParamInStock() {
-    // #645 — le fetch région doit inclure in_stock=true pour exclure les sold out
+    // le fetch région doit inclure in_stock=true pour exclure les sold out
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
@@ -643,7 +643,7 @@ class EventimSourceTest {
     assertNull(concert.statut());
   }
 
-  // --- salleSourceId interne (#689) ---
+  // --- salleSourceId interne ---
 
   @Test
   void mapProduit_salleConnue_salleSourceIdGenere() {
@@ -671,7 +671,7 @@ class EventimSourceTest {
         resultat.salleSourceId(), "salleSourceId doit être null quand la salle est inconnue");
   }
 
-  // --- BilanFetch (#901) ---
+  // --- BilanFetch ---
 
   @Test
   void preleverBilan_appelReussi_compteUnAppelSansErreur() {

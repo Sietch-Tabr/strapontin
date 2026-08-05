@@ -31,7 +31,7 @@ public interface SourceConcerts {
   }
 
   /// Recherche les concerts d'un artiste par son nom, avec son identité déjà confirmée par une
-  /// source indépendante si connue (#1022).
+  /// source indépendante si connue.
   ///
   /// <p>Par défaut, délègue à {@link #fetchArtiste(String)} en ignorant `deezerId`/`wikidataId` —
   /// seule une source dont le matching par nom accepte un repli approximatif (ex. containment

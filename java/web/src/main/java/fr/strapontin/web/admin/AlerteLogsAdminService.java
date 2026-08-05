@@ -35,7 +35,7 @@ public class AlerteLogsAdminService {
 
   /// @param logAdminService   lecture des entrées d'erreur depuis le curseur
   /// @param configService     lecture/écriture du curseur
-  /// @param emailAlerteService envoi du digest et résolution du destinataire d'alerte (#907)
+  /// @param emailAlerteService envoi du digest et résolution du destinataire d'alerte
   public AlerteLogsAdminService(
       LogAdminService logAdminService,
       ConfigService configService,

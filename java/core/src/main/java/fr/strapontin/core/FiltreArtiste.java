@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 public final class FiltreArtiste {
 
   // Motifs "tribute/hommage" : une attraction TM/Eventim distincte de l'artiste original, qui
-  // ne peut jamais être rapprochée d'une entité Wikidata musicien/groupe (#768) et pollue le
+  // ne peut jamais être rapprochée d'une entité Wikidata musicien/groupe et pollue le
   // référentiel admin sans jamais accumuler de concerts légitimes.
   // UNICODE_CHARACTER_CLASS : sans ce flag, \b ne reconnaît pas "à" comme caractère de mot
   // (\w par défaut est ASCII-only), et le \b final de "hommage à\b" ne matche jamais.

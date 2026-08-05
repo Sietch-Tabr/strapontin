@@ -28,7 +28,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerPurgeService} (#915, extrait de {@code WorkerService}).
+/// Tests unitaires pour {@link WorkerPurgeService} (extrait de {@code WorkerService}).
 ///
 /// @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
 /// @author Kwaite

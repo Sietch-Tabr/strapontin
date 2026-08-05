@@ -18,7 +18,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 /// a été tué (`Killed`, conteneurs Postgres orphelins jamais nettoyés par Ryuk après le kill)
 /// quand le module worker en a fait tourner 5 simultanément (2.7.3).
 ///
-/// Étendu en 2.7.5 (#1005) à `PersisterConcertsIntegrationTest`/
+/// Étendu en 2.7.5 à `PersisterConcertsIntegrationTest`/
 /// `RecalculerMatchesServiceIntegrationTest` — jusque-là volontairement épargnées (stables en CI
 /// depuis des mois, périmètre restreint aux classes ajoutées en 2.7.3), mais un OOM équivalent
 /// constaté côté module `web` (2 conteneurs indépendants suffisent à saturer la même limite de
@@ -27,7 +27,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 /// étendre cette classe** — ne jamais déclarer un `@ServiceConnection static final
 /// PostgreSQLContainer` local.
 ///
-/// <p>Nettoyage commun (#1005) : un conteneur partagé signifie une base partagée entre toutes
+/// <p>Nettoyage commun : un conteneur partagé signifie une base partagée entre toutes
 /// les sous-classes du module, exécutées dans un ordre non garanti — le `@BeforeEach` local de
 /// chaque sous-classe (souvent incomplet, ex. `DELETE FROM artistes` sans jamais toucher
 /// `user_artistes`) ne suffit plus à garantir l'isolement une fois plusieurs classes en jeu sur

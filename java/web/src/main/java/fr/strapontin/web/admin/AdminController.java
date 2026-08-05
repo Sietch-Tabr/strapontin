@@ -50,8 +50,8 @@ public class AdminController {
   private final ConfigService configService;
 
   /// @param adminService       service d'administration (gestion utilisateurs)
-  /// @param configAdminService service de configuration applicative (#916)
-  /// @param jobsAdminService   service de statistiques des jobs Quartz (#916)
+  /// @param configAdminService service de configuration applicative
+  /// @param jobsAdminService service de statistiques des jobs Quartz
   /// @param banniereService    service de gestion de la bannière système
   /// @param workerProxyService proxy HTTP vers le worker (relance des fetches)
   /// @param emailService       service d'envoi d'emails
@@ -162,7 +162,7 @@ public class AdminController {
 
   /// Envoie un email de réinitialisation de mot de passe à un utilisateur.
   ///
-  /// <p>Si Resend n'est pas disponible, inclut {@code lienReset} dans la réponse (#815) — comme
+  /// <p>Si Resend n'est pas disponible, inclut {@code lienReset} dans la réponse — comme
   /// {@link #creerUtilisateur} — pour que l'admin puisse transmettre le lien manuellement à un
   /// utilisateur bloqué, plutôt que de n'avoir aucun moyen de récupération.
   ///
@@ -368,9 +368,9 @@ public class AdminController {
   }
 
   /// Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible
-  /// (v2.6.0, #706/#710) — bouton « Relancer » par job dans l'onglet admin Tableau de bord.
+  /// (v2.6.0) — bouton « Relancer » par job dans l'onglet admin Tableau de bord.
   ///
-  /// <p>Le code HTTP renvoyé distingue désormais (#837) le job inconnu (400) de l'erreur interne
+  /// <p>Le code HTTP renvoyé distingue désormais le job inconnu (400) de l'erreur interne
   /// worker (502) et du worker injoignable (503) — auparavant les trois étaient masqués sous un
   /// 503 générique, ce qui égarait le diagnostic d'un admin.
   ///

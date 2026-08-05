@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires ciblés pour {@link AdminController#reinitialiserMdp} (#815) — filet de
+/// Tests unitaires ciblés pour {@link AdminController#reinitialiserMdp} — filet de
 /// secours {@code lienReset} quand Resend n'est pas disponible, symétrique à
 /// {@link AdminController#creerUtilisateur}.
 ///

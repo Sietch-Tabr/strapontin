@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Contrôleur REST pour l'onglet admin « Salles » du référentiel (#710).
+/// Contrôleur REST pour l'onglet admin « Salles » du référentiel.
 ///
 /// <p>HTTP pur — délègue toute la logique métier à {@link ReferentielSallesService}.
 /// Accessible uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code

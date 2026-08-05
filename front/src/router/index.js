@@ -58,7 +58,7 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   if (to.meta.authPage && sessionRef.value) return "/";
-  // #1030 : ne redirige vers /login que sur un 401 confirmé — pas quand la session n'a jamais pu
+  // ne redirige vers /login que sur un 401 confirmé — pas quand la session n'a jamais pu
   // être vérifiée faute de réseau (redémarrage PWA hors-ligne depuis le cache SW), où le cookie
   // de session reste potentiellement valide.
   if (

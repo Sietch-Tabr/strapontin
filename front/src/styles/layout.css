@@ -315,7 +315,7 @@
   transform: translateY(-50%);
 }
 
-/* #820 : point simple (pas de compteur) — indique une nouveauté changelog non lue.
+/* point simple (pas de compteur) — indique une nouveauté changelog non lue.
    #985 : doré (--warning) plutôt que --danger, réservé partout ailleurs au code couleur
    "problème" (suppression, badge annulé) — un point rouge disait à tort "il y a une erreur". */
 .nav-badge--point {
@@ -330,7 +330,7 @@
   pointer-events: none;
 }
 
-/* #985 : repositionné en coin d'icône dans le bouton "Plus" mobile (bottom-nav-badge-wrapper) —
+/* repositionné en coin d'icône dans le bouton "Plus" mobile (bottom-nav-badge-wrapper) —
    le positionnement par défaut ci-dessus vise un lien de nav pleine largeur (sidebar/drawer). */
 .bottom-nav-badge-wrapper .nav-badge--point {
   top: -0.125rem;
@@ -338,7 +338,7 @@
   transform: none;
 }
 
-/* #985 : quelques cycles de pulse à l'apparition d'une nouveauté, pas un clignotement
+/* quelques cycles de pulse à l'apparition d'une nouveauté, pas un clignotement
    permanent entre deux mises à jour — neutralisé par prefers-reduced-motion (base.css). */
 .nav-badge--point-pulse {
   animation: nouveaute-pulse 1.6s ease-in-out 3;
@@ -356,7 +356,7 @@
   }
 }
 
-/* #985 : icône "Nouveautés" (sparkles) elle-même teintée dorée + léger halo quand une
+/* icône "Nouveautés" (sparkles) elle-même teintée dorée + léger halo quand une
    nouveauté est non lue — pas besoin d'un second symbole, celui existant change d'état. */
 .icon--nouveaute-actif {
   color: var(--warning);

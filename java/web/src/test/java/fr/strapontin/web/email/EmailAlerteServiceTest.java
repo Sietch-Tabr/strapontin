@@ -22,9 +22,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link EmailAlerteService} (#925, extrait d'{@code EmailService}).
+/// Tests unitaires pour {@link EmailAlerteService} (extrait d'{@code EmailService}).
 ///
-/// <p>Couvre le garde-fou anti-boucle (#907) sur les notifications bounce/plainte spam. Les
+/// <p>Couvre le garde-fou anti-boucle sur les notifications bounce/plainte spam. Les
 /// méthodes d'envoi réel (dépendant du SDK Resend, non injectable) ne sont testées que sur leurs
 /// branches de retour anticipé — le SDK n'effectue aucun appel réseau tant que
 /// {@code emails().send()} n'est pas invoqué.
@@ -92,12 +92,12 @@ class EmailAlerteServiceTest {
     verify(emailSender, never()).obtenirDestinataireAlerte();
   }
 
-  // --- envoyerAlerteQuotaResend (#981) ---
+  // --- envoyerAlerteQuotaResend ---
 
   private static final CompteurEnvoisResend COMPTEUR_SEUIL_JOUR =
       new CompteurEnvoisResend("2026-07-18", 85, "2026-07", 200, false, false);
 
-  // --- envoyerAlerteIntegrite (#976) ---
+  // --- envoyerAlerteIntegrite ---
 
   @Test
   void envoyerAlerteIntegrite_resendApiKeyAbsent_neResoutPasLeDestinataire() {

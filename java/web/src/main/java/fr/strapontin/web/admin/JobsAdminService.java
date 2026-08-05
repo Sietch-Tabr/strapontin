@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 
 /// Statistiques des jobs Quartz et quota Ticketmaster pour l'onglet admin.
 ///
-/// <p>Extrait d'{@code AdminService} (#916) — `AdminService` reste dédié à la seule gestion des
+/// <p>Extrait d'{@code AdminService} — `AdminService` reste dédié à la seule gestion des
 /// comptes utilisateurs.
 ///
 /// @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
@@ -137,7 +137,7 @@ public class JobsAdminService {
   ///
   /// <p>Sans cette complétion, un job de maintenance tout juste ajouté (ex. {@code
   /// reconciliation:nocturne}, cron 3h) reste invisible et non déclenchable manuellement depuis
-  /// l'admin tant que son premier passage cron automatique n'a pas eu lieu (#762).
+  /// l'admin tant que son premier passage cron automatique n'a pas eu lieu.
   ///
   /// @param statsConnus    statistiques déjà présentes en base, triées ou non
   /// @param prochainesExec prochaines exécutions planifiées par {@code typeJob} (source de vérité

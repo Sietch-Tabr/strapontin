@@ -45,7 +45,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
   private final RestClient restClient;
   private final Cache<String, ResultatResolution> cache;
-  // Bilan de panne agrégé, remonté dans logs_admin par le worker (#912).
+  // Bilan de panne agrégé, remonté dans logs_admin par le worker.
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
   /// Crée une instance avec les URLs distantes et un cache TTL 7 jours.
@@ -91,7 +91,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     }
   }
 
-  /// Retourne le bilan agrégé des appels Deezer depuis le dernier prélèvement (#912) et remet
+  /// Retourne le bilan agrégé des appels Deezer depuis le dernier prélèvement et remet
   /// les compteurs à zéro.
   ///
   /// @return le bilan depuis le dernier prélèvement

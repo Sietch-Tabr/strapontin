@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 /// <p>{@code id} est en revanche dérivé de {@code PUBLIC_BASE_URL} quand cette clé est
 /// configurée, pour rester stable quel que soit l'hôte utilisé pour accéder à l'instance
 /// (IP LAN, domaine public…) — un {@code id} variable ferait traiter chaque hôte comme une
-/// installation PWA distincte plutôt qu'une mise à jour de la même application (#859). Repli
+/// installation PWA distincte plutôt qu'une mise à jour de la même application. Repli
 /// sur le comportement dynamique historique si {@code PUBLIC_BASE_URL} n'est pas configurée.
 ///
 /// <p>Le manifeste est servi sans cache navigateur.

@@ -19,22 +19,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Orchestrateur du job nocturne de réconciliation des sources salles/artistes (#706).
+/// Orchestrateur du job nocturne de réconciliation des sources salles/artistes.
 ///
 /// Phase 1 — health-check des identifiants TM suspects (`suspect_depuis IS NOT NULL`) et
 /// redécouverte active si l'identifiant est mort. Digitick : alerte seule (pas de redécouverte
-/// auto, slugs gérés manuellement via #710). Eventim : ignoré (IDs synthétiques, pas de
-/// health-check pertinent).
+/// auto, slugs gérés manuellement). Eventim : ignoré (IDs synthétiques, pas de health-check
+/// pertinent).
 ///
-/// Phase 2 — délègue à {@link EnrichissementSallesService} et
-/// {@link EnrichissementArtistesService} (#711/#716).
+/// Phase 2 — délègue à {@link EnrichissementSallesService} et {@link
+/// EnrichissementArtistesService}.
 ///
-/// La redécouverte passive décrite dans le ticket #706 (scanner les concerts des dernières 24h)
-/// n'est pas implémentée : le pipeline temps réel existant
-/// ({@code ReconciliateurSalles.upsertSalleSource}, exécuté à chaque fetch) réalise déjà cette
-/// association par correspondance de nom, et {@code concerts} ne conserve pas l'identifiant brut
-/// une fois résolu — un scan nocturne dédié ne découvrirait rien de plus (décision actée pour
-/// le jalon 2.6.0).
+/// La redécouverte passive décrite dans le ticket (scanner les concerts des dernières 24h) n'est
+/// pas implémentée : le pipeline temps réel existant ({@code
+/// ReconciliateurSalles.upsertSalleSource}, exécuté à chaque fetch) réalise déjà cette association
+/// par correspondance de nom, et {@code concerts} ne conserve pas l'identifiant brut une fois
+/// résolu — un scan nocturne dédié ne découvrirait rien de plus (décision actée pour le jalon
+/// 2.6.0).
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -69,8 +69,8 @@ public class ReconciliationNocturneService {
   ///
   /// <p>L'enrichissement artistes (Wikidata/Deezer) est traité avant l'enrichissement salles
   /// (Overpass/Wikidata) : l'instance publique Overpass est une infrastructure partagée
-  /// régulièrement surchargée (timeouts fréquents en 2026), chaque lot en échec consommant tout
-  /// son timeout client avant d'abandonner. Ce risque de ralentissement ne doit pas retarder
+  /// régulièrement surchargée (timeouts fréquents en 2026), chaque lot en échec consommant tout son
+  /// timeout client avant d'abandonner. Ce risque de ralentissement ne doit pas retarder
   /// l'enrichissement artistes, indépendant d'Overpass.
   ///
   /// @return bilan agrégé de l'exécution
@@ -95,9 +95,9 @@ public class ReconciliationNocturneService {
   }
 
   /// Vérifie que le nom retourné par TM pour chaque attractionId lié correspond toujours à
-  /// l'artiste suivi (#1012) — contrôle distinct du health-check de vivacité
-  /// ({@link #healthCheckArtistesTM}), qui ne détecte qu'un identifiant mort (HTTP 404), jamais
-  /// un identifiant vivant mais rattaché à la mauvaise entité (tribute, homonyme). S'applique à
+  /// l'artiste suivi — contrôle distinct du health-check de vivacité ({@link
+  /// #healthCheckArtistesTM}), qui ne détecte qu'un identifiant mort (HTTP 404), jamais un
+  /// identifiant vivant mais rattaché à la mauvaise entité (tribute, homonyme). S'applique à
   /// **tous** les artistes liés TM, pas seulement les `suspect_depuis` : un tribute/homonyme a des
   /// événements à venir, il ne déclenche donc jamais le compteur passif `nb_zero_consecutifs`.
   ///

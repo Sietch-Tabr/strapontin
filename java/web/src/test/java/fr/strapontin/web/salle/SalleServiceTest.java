@@ -85,7 +85,7 @@ class SalleServiceTest {
     assertEquals(r1, r2);
   }
 
-  // #830 : un slug déjà attribué à une autre salle ne doit jamais créer un doublon mort (201
+  // un slug déjà attribué à une autre salle ne doit jamais créer un doublon mort (201
   // trompeur sans source Digitick fonctionnelle) — erreur 409 explicite à la place.
   @Test
   void creerSalleDigitick_slugDejaAttribueAUneAutreSalle_leveErreurMetier409() {
@@ -158,7 +158,7 @@ class SalleServiceTest {
     assertThrows(ErreurMetier.class, () -> salleService.ajouter("u1", "Olympia", null));
   }
 
-  // #718 : sélection d'une suggestion Nominatim à l'ajout — persiste osmId (salle_sources) et
+  // sélection d'une suggestion Nominatim à l'ajout — persiste osmId (salle_sources) et
   // wikidataId (salles.wikidata_id) sans attendre le job nocturne.
   @Test
   void ajouter_osmIdEtWikidataIdFournis_persisteLesDeux() {
@@ -175,7 +175,7 @@ class SalleServiceTest {
     verify(salleRepository).ajouterPourUtilisateur("u1", uuid);
   }
 
-  // #718 : conflit sur idx_salles_wikidata_id (Q-ID déjà porté par une autre salle) — rattrapé,
+  // conflit sur idx_salles_wikidata_id (Q-ID déjà porté par une autre salle) — rattrapé,
   // ne doit jamais faire échouer l'ajout à la liste de suivi.
   @Test
   void ajouter_wikidataIdDejaAttribueAUneAutreSalle_neFaitPasEchouerLajout() {
@@ -194,7 +194,7 @@ class SalleServiceTest {
     verify(salleRepository).ajouterPourUtilisateur("u1", uuid);
   }
 
-  // #718 : deux résultats externes désignant la même salle (Nominatim + Ticketmaster) doivent
+  // deux résultats externes désignant la même salle (Nominatim + Ticketmaster) doivent
   // fusionner en une seule suggestion combinant osmId et tmVenueId, pas créer un doublon.
   @Test
   void fusionnerOuAjouter_candidatCorrespondantExistant_fusionneLesIdentifiants() {
@@ -226,7 +226,7 @@ class SalleServiceTest {
     assertEquals("Bataclan", liste.get(0).salle());
   }
 
-  // #779 : une salle taguée leisure/tourism (pas amenity) mais dont extratags.amenity confirme
+  // une salle taguée leisure/tourism (pas amenity) mais dont extratags.amenity confirme
   // une salle de concert ne doit plus être rejetée (cas réel : Plenitude Arena, Nanterre,
   // class=leisure/type=stadium avec extratags.amenity=music_venue).
   @Test
@@ -249,7 +249,7 @@ class SalleServiceTest {
     assertEquals("Q2860806", resultats.get(0).wikidataId());
   }
 
-  // #779 : class=amenity ne suffit plus à lui seul — un type amenity non pertinent (ex. borne de
+  // class=amenity ne suffit plus à lui seul — un type amenity non pertinent (ex. borne de
   // recharge électrique) doit être rejeté même si class=amenity (cas réel : recherche "plenitude"
   // renvoyant une borne de recharge à Bourgoin-Jallieu avant ce correctif).
   @Test
@@ -270,7 +270,7 @@ class SalleServiceTest {
     assertEquals(0, resultats.size());
   }
 
-  // #779 : garde-fou de non-régression pour l'E2E salles_rechercheNominatim_afficheBadgeOsm —
+  // garde-fou de non-régression pour l'E2E salles_rechercheNominatim_afficheBadgeOsm —
   // un type déjà présent dans TYPES_SALLE_NOMINATIM (arts_centre) reste accepté.
   @Test
   void parseNominatimResultats_typeDejaDansAllowlist_estAcceptee() {
@@ -341,7 +341,7 @@ class SalleServiceTest {
     verify(salleRepository).lireIdentifiantsSources(uuid);
   }
 
-  // #780 : "zenith" doit être détecté comme correspondant partiellement à "zenithparis" déjà
+  // "zenith" doit être détecté comme correspondant partiellement à "zenithparis" déjà
   // suivie — même correctif que ArtisteService.contientCorrespondancePartielle.
   @Test
   void contientCorrespondancePartielle_rechercheSubstringDuneSalleSuivie_retourneTrue() {
@@ -358,7 +358,7 @@ class SalleServiceTest {
     assertFalse(SalleService.contientCorrespondancePartielle("olympia", Set.of("zenithparis")));
   }
 
-  // #865 : déplacés depuis l'ancien SalleControllerTest, qui ne testait en réalité pas
+  // déplacés depuis l'ancien SalleControllerTest, qui ne testait en réalité pas
   // SalleController mais cette méthode statique.
   @Test
   void normaliserSalleCle_nomStandard_retourneAlphanumeriqueMinuscule() {

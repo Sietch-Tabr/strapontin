@@ -12,12 +12,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Écriture dans `logs_admin` depuis le worker (#706/#711/#716).
+/// Écriture dans `logs_admin` depuis le worker.
 ///
 /// Le worker n'a pas accès au `LogAdminService` du module web (deux applications Spring Boot
 /// séparées, ports 8080/8081). Point d'insertion générique utilisé par le bilan de panne
 /// mutualisé de {@code WorkerStatsService#remonterBilan} et {@code NotificationDigestService}
-/// (#909/#912) — plusieurs services `worker.Worker*Service` écrivent encore directement en SQL
+/// plusieurs services `worker.Worker*Service` écrivent encore directement en SQL
 /// pour certains cas spécifiques non couverts par cette abstraction (ex.
 /// {@code WorkerRevocationService#executerRevoquerAdmins}).
 ///

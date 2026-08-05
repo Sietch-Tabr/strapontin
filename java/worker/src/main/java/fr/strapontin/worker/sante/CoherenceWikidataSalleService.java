@@ -25,13 +25,13 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /// Contrôle de cohérence *a posteriori* entre `salles.wikidata_id` (déjà connu) et `salles.ville`
-/// (#1005, découvert en marge de l'investigation #1004) : 7 salles sur 12 avaient un `wikidata_id`
+/// (découvert en marge de l'investigation) : 7 salles sur 12 avaient un `wikidata_id`
 /// pointant vers une entité totalement étrangère — Q-ID matché sur un homonyme d'une autre ville
 /// (ex. « Theatre Municipal » de Béthune rattaché au musée des Beaux-Arts de Nancy) — jamais
 /// détecté faute de contrôle après coup, uniquement trouvé par un audit manuel ponctuel.
 ///
 /// {@link WikidataSalleSource#enrichirLot} rejette déjà ce type d'incohérence *au moment du
-/// matching* (`villeIncompatible`, #1002) mais seulement quand `salle.ville()` et la commune du
+/// matching* (`villeIncompatible`) mais seulement quand `salle.ville` et la commune du
 /// candidat sont toutes les deux connues — une ville locale inconnue ou fausse au moment de
 /// l'enrichissement (le cas des 7 salles ci-dessus) ne bloque rien, choix assumé pour ne pas
 /// réduire la couverture d'enrichissement des salles légitimement sans ville. Ce service ne change
@@ -40,7 +40,7 @@ import org.springframework.stereotype.Service;
 /// WikidataSalleSource} (aucune requête SPARQL supplémentaire par rapport à un enrichissement
 /// classique à `wikidata_id` connu).
 ///
-/// <p>#1021 : la comparaison initiale contre `salles.ville` seule est aveugle par construction
+/// <p> : la comparaison initiale contre `salles.ville` seule est aveugle par construction
 /// quand le mauvais rapprochement a corrompu `ville` en même temps que `wikidata_id` (la mauvaise
 /// entité écrase les deux au même moment) — les deux valeurs corrompues sont alors toujours
 /// cohérentes entre elles. `concerts.ville`, dérivée du code postal brut de la source et jamais
@@ -101,7 +101,7 @@ public class CoherenceWikidataSalleService {
 
   /// Charge, pour chaque salle candidate, les villes réelles distinctes de ses concerts
   /// (`concerts.ville`) — dérivées du code postal brut de la source, jamais touchées par
-  /// l'enrichissement Wikidata, contrairement à `salles.ville` (#1021).
+  /// l'enrichissement Wikidata, contrairement à `salles.ville`.
   ///
   /// @param salleIds identifiants des salles candidates
   /// @return villes réelles par salle, absente si la salle n'a aucun concert avec une ville connue
@@ -121,17 +121,17 @@ public class CoherenceWikidataSalleService {
     return parSalle;
   }
 
-  /// Résultat de {@link #evaluerCoherence} (#1038) : distingue une contamination *partielle*
-  /// (certains concerts cohérents, d'autres non — signe qu'une minorité de concerts a été mal
-  /// rattachée à une salle par ailleurs correctement enrichie) d'une incohérence *totale* (aucun
-  /// concert cohérent, signe classique d'un mauvais rapprochement Wikidata complet).
+  /// Résultat de {@link #evaluerCoherence} : distingue une contamination *partielle* (certains
+  /// concerts cohérents, d'autres non — une minorité de concerts mal rattachée à une salle par
+  /// ailleurs correctement enrichie) d'une incohérence *totale* (aucun concert cohérent, signe
+  /// classique d'un mauvais rapprochement Wikidata complet).
   private enum Coherence {
     COHERENTE,
     INCOHERENTE_PARTIELLE,
     INCOHERENTE_TOTALE
   }
 
-  /// Évalue la cohérence de la commune Wikidata contre une source de vérité indépendante (#1021).
+  /// Évalue la cohérence de la commune Wikidata contre une source de vérité indépendante.
   ///
   /// <p>Si le mauvais rapprochement a corrompu {@code salles.ville} en même temps que {@code
   /// wikidata_id} (constaté systématiquement dans les 3 cas confirmés), une comparaison contre
@@ -139,14 +139,11 @@ public class CoherenceWikidataSalleService {
   /// silencieux. {@code concerts.ville} sert de référence prioritaire quand elle est disponible ;
   /// repli sur {@code salles.ville} uniquement pour une salle sans concert avec ville connue.
   ///
-  /// <p>#1038 : {@code anyMatch} seul devenait aveugle dès qu'un seul concert légitimement rattaché
-  /// apparaissait parmi des concerts mal rattachés — une fois qu'une salle mal fusionnée récupérait
-  /// ne serait-ce qu'un concert cohérent, elle passait pour entièrement cohérente, masquant
-  /// silencieusement la contamination restante (cas réel : "Theatre Municipal" Nancy/Béthune,
-  /// jamais réalerté après le 23/07 malgré 2 concerts Carcassonne toujours mal rattachés). Toutes
-  /// les villes réelles doivent désormais être cohérentes pour ne rien journaliser ; une
-  /// contamination partielle (au moins une cohérente, au moins une non) reste journalisée avec un
-  /// message dédié plutôt que d'être confondue avec un mauvais rapprochement total.
+  /// <p>Toutes les villes réelles doivent être cohérentes pour ne rien journaliser — un simple
+  /// {@code anyMatch} devient aveugle dès qu'une salle mal fusionnée récupère ne serait-ce qu'un
+  /// concert cohérent, masquant silencieusement la contamination restante. Une contamination
+  /// partielle (au moins une ville cohérente, au moins une non) reste journalisée avec un message
+  /// dédié plutôt que d'être confondue avec un mauvais rapprochement total.
   ///
   /// @param salle salle candidate
   /// @param communeWikidata commune Wikidata (P131) du `wikidata_id` déjà associé
@@ -166,14 +163,14 @@ public class CoherenceWikidataSalleService {
         : Coherence.INCOHERENTE_TOTALE;
   }
 
-  // #1009 : une comparaison texte-à-texte stricte ville/commune Wikidata génère du bruit quasi
+  // une comparaison texte-à-texte stricte ville/commune Wikidata génère du bruit quasi
   // systématique sur toute salle parisienne/lyonnaise/marseillaise (arrondissement ≠ ville mère),
   // en zone urbaine dense (quartiers/districts informels sans commune propre, ex. Bercy, La
   // Défense) ou sur une commune fusionnée/intercommunalité (Wikidata garde parfois l'ancien nom
   // d'une des communes d'origine, ou référence l'intercommunalité). Cette normalisation est
   // volontairement locale à ce contrôle *a posteriori* : {@link
   // WikidataSalleSource#villeIncompatible}
-  // (#1002) reste inchangé, il bloque le matching *au moment de l'enrichissement* où une
+  // reste inchangé, il bloque le matching *au moment de l'enrichissement* où une
   // comparaison plus permissive réduirait la couverture.
   private static final Pattern ARRONDISSEMENT =
       Pattern.compile("^(\\d{1,2})(?:e|er|eme|ieme)? +arrondissement de (paris|lyon|marseille)$");
@@ -187,9 +184,7 @@ public class CoherenceWikidataSalleService {
           "st germain l auxerrois", Set.of("paris"),
           "notre dame", Set.of("paris"),
           "chaussee d antin", Set.of("paris"),
-          // #1039 : Quinze-Vingts (quartier administratif du 12e arrondissement, où se trouve
-          // l'Opéra Bastille) alertait chaque nuit depuis le 23/07 — faux positif de granularité,
-          // pas un vrai mauvais rapprochement.
+          // Quartier administratif du 12e arrondissement de Paris où se trouve l'Opéra Bastille.
           "quinze vingts", Set.of("paris"));
 
   // Longueur minimale pour le repli par containment (commune fusionnée/intercommunalité, ex.
@@ -224,9 +219,9 @@ public class CoherenceWikidataSalleService {
 
   /// @param salle salle candidate
   /// @param communeWikidata commune Wikidata (P131) du `wikidata_id` déjà associé
-  /// @param partielle {@code true} si seule une partie des concerts réels est incohérente (#1038) —
-  ///   message distinct signalant une contamination partielle plutôt qu'un mauvais rapprochement
-  ///   total, pour ne pas induire un examinateur en erreur sur l'ampleur réelle
+  /// @param partielle {@code true} si seule une partie des concerts réels est incohérente — message
+  ///   distinct signalant une contamination partielle plutôt qu'un mauvais rapprochement total,
+  ///   pour ne pas induire un examinateur en erreur sur l'ampleur réelle
   private void loggerIncoherence(SalleAEnrichir salle, String communeWikidata, boolean partielle) {
     logsAdminWorker.inserer(
         "warn",

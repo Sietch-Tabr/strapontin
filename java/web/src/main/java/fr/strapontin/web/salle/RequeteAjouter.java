@@ -10,8 +10,8 @@ import jakarta.validation.constraints.Pattern;
 ///
 /// @param nom        nom de la salle
 /// @param tmVenueId  identifiant Ticketmaster optionnel
-/// @param osmId      identifiant OSM {@code "type/id"} optionnel (#718)
-/// @param wikidataId Q-ID Wikidata optionnel (#718). Format contraint (#812) : ce champ est
+/// @param osmId identifiant OSM {@code "type/id"} optionnel
+/// @param wikidataId Q-ID Wikidata optionnel. Format contraint : ce champ est
 ///                   concaténé dans une requête SPARQL exécutée par le job d'enrichissement
 ///                   nocturne ({@code WikidataSalleSource}).
 /// @since 2.1.0

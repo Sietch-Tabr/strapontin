@@ -33,7 +33,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 /// Tests unitaires pour {@link AdminService} (logique métier de gestion des utilisateurs,
 /// dépendances mockées).
 ///
-/// <p>Depuis #916, la configuration applicative et les statistiques de jobs sont testées dans
+/// <p>Depuis, la configuration applicative et les statistiques de jobs sont testées dans
 /// {@code ConfigAdminServiceTest}/{@code JobsAdminServiceTest}.
 ///
 /// @since 2.2.3
@@ -152,7 +152,7 @@ class AdminServiceTest {
     verify(emailService, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
   }
 
-  // #807 : PATCH modifierUtilisateur ne rétrograde plus jamais un admin immédiatement — délègue
+  // PATCH modifierUtilisateur ne rétrograde plus jamais un admin immédiatement — délègue
   // à initierRevocationAdmin (même délai différé 7 jours, même garde dernier admin) plutôt que
   // d'exécuter un UPDATE role='user' direct.
   @Test
@@ -176,7 +176,7 @@ class AdminServiceTest {
     verify(emailService, never()).envoyerPromotionAdmin(anyString());
   }
 
-  // #807 : le seul admin restant ne peut pas être rétrogradé via PATCH.
+  // le seul admin restant ne peut pas être rétrogradé via PATCH.
   @Test
   void modifierUtilisateur_retrogradeSeulAdmin_leveErreurMetier409() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
@@ -195,7 +195,7 @@ class AdminServiceTest {
     assertEquals(409, ex.getStatus());
   }
 
-  // #940 : combiner une rétrogradation admin avec nom/email en un seul PATCH imbriquerait un
+  // combiner une rétrogradation admin avec nom/email en un seul PATCH imbriquerait un
   // appel REQUIRES_NEW+SERIALIZABLE (initierRevocationAdminTransactionnel) dans la transaction
   // déjà ouverte de modifierUtilisateur — risque d'épuisement du pool HikariCP (incident v2.6.4).
   @Test
@@ -268,7 +268,7 @@ class AdminServiceTest {
         .logAdmin(eq("warn"), eq("admin"), eq("révocation admin initiée"), anyMap());
   }
 
-  // #811 : deux révocations concurrentes peuvent lever un conflit de sérialisation PostgreSQL
+  // deux révocations concurrentes peuvent lever un conflit de sérialisation PostgreSQL
   // (isolation SERIALIZABLE) — la première tentative échoue, la seconde réussit.
   @Test
   void initierRevocationAdmin_conflitSerialisationPuisSucces_reessaieEtReussit() {

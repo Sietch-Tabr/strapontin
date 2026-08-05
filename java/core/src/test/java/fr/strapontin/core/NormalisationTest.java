@@ -38,27 +38,27 @@ class NormalisationTest {
 
   @Test
   void normaliserTexte_avecOSlash_substitueO() {
-    // non-régression #656 : Ø non décomposable par NFD → supprimé sans substitution préalable
+    // non-régression : Ø non décomposable par NFD → supprimé sans substitution préalable
     assertEquals("moonspell", Normalisation.normaliserTexte("MØØNSPELL"));
     assertEquals("moonspell", Normalisation.normaliserTexte("møønspell"));
   }
 
   @Test
   void normaliserTexte_avecLBarree_substitueL() {
-    // #656 : Ł (polonais) non décomposable par NFD
+    // Ł (polonais) non décomposable par NFD
     assertEquals("l artiste", Normalisation.normaliserTexte("Ł artiste"));
     assertEquals("lodz", Normalisation.normaliserTexte("ŁÓDŹ"));
   }
 
   @Test
   void normaliserTexte_avecDBarree_substitueD() {
-    // #656 : Đ (serbe/croate) non décomposable par NFD — Đ/đ → d (translittération simple)
+    // Đ (serbe/croate) non décomposable par NFD — Đ/đ → d (translittération simple)
     assertEquals("dordevic", Normalisation.normaliserTexte("Đorđević"));
   }
 
   @Test
   void normaliserTexte_avecNEng_substitueN() {
-    // #656 : Ŋ non décomposable par NFD
+    // Ŋ non décomposable par NFD
     assertEquals("nanga", Normalisation.normaliserTexte("Ŋanga"));
   }
 
@@ -101,7 +101,7 @@ class NormalisationTest {
 
   @Test
   void normaliserTexte_dollarStyleArtiste_supprimeSansEspace() {
-    // #703 : TM utilise "$" comme "S" — supprimé sans espace pour éviter "chri tian"
+    // TM utilise "$" comme "S" — supprimé sans espace pour éviter "chri tian"
     // ("chri$tian" → "chritian", pas "christian") mais Jaro("chritian", "christian") ≥ 0.95
     assertEquals("chritian", Normalisation.normaliserTexte("Chri$tian"));
     assertEquals("chritian gate", Normalisation.normaliserTexte("Chri$tian Gate$"));
@@ -109,7 +109,7 @@ class NormalisationTest {
 
   @Test
   void normaliserTexte_esperluetteIsolee_normaliseEnAnd() {
-    // #703 : "Katia & Marielle" (fetch 1) et "Katia and Marielle" (fetch 2) → même norm
+    // "Katia & Marielle" (fetch 1) et "Katia and Marielle" (fetch 2) → même norm
     assertEquals("katia and marielle", Normalisation.normaliserTexte("Katia & Marielle"));
     assertEquals("katia and marielle", Normalisation.normaliserTexte("Katia and Marielle"));
   }
@@ -122,7 +122,7 @@ class NormalisationTest {
 
   @Test
   void normaliserTexte_elyseeAvecEtSansAccents_memeResultat() {
-    // non-régression #639 : TM supprime les accents ("Elysee Montmartre") mais la salle existe
+    // non-régression : TM supprime les accents ("Elysee Montmartre") mais la salle existe
     // en base avec accents ("Elysée Montmartre") — la normalisation doit produire la même clé
     assertEquals(
         Normalisation.normaliserTexte("Elysée Montmartre"),
@@ -167,7 +167,7 @@ class NormalisationTest {
 
   @Test
   void jaro_krashKarmaVarianteEspaceOmise_superieurOuEgalA095() {
-    // #668 : "krash karma"/"krashkarma" — une seule différence (espace), doit passer 0.95
+    // "krash karma"/"krashkarma" — une seule différence (espace), doit passer 0.95
     assertTrue(Normalisation.jaro("krash karma", "krashkarma") >= 0.95);
   }
 
@@ -183,7 +183,7 @@ class NormalisationTest {
     assertTrue(Normalisation.jaro("mika", "coldplay") < 0.95);
   }
 
-  // --- extraireDeptFrancais (#920, ex-TicketmasterSource/EventimSource.extraireDept) ---
+  // --- extraireDeptFrancais (ex-TicketmasterSource/EventimSource.extraireDept) ---
 
   @Test
   void extraireDeptFrancais_codePostalAbsent_retourneNull() {
@@ -217,7 +217,7 @@ class NormalisationTest {
     assertEquals("75", Normalisation.extraireDeptFrancais("  75012  "));
   }
 
-  // --- normaliserCasse (#921, ex-TicketmasterSource.normaliserCasse) ---
+  // --- normaliserCasse (ex-TicketmasterSource.normaliserCasse) ---
 
   @Test
   void normaliserCasse_nomToutMajuscule_retourneTitleCase() {

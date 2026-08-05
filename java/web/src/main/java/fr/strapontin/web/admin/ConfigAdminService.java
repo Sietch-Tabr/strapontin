@@ -20,7 +20,7 @@ import org.springframework.web.client.RestClient;
 /// Configuration applicative de l'onglet admin : statuts, sauvegarde, validation de format, test
 /// de la clé Ticketmaster.
 ///
-/// <p>Extrait d'{@code AdminService} (#916) — `AdminService` reste dédié à la seule gestion des
+/// <p>Extrait d'{@code AdminService} — `AdminService` reste dédié à la seule gestion des
 /// comptes utilisateurs.
 ///
 /// @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)

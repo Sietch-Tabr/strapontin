@@ -13,8 +13,8 @@ package fr.strapontin.web.salle;
 /// @param digitickSlug slug Digitick pré-configuré (null si non configuré)
 /// @param source       origine du résultat : {@code "base"}, {@code "base-digitick"},
 ///                     {@code "ticketmaster"}, {@code "osm"}
-/// @param osmId        identifiant OSM {@code "type/id"} (#718, null si non issu de Nominatim)
-/// @param wikidataId   Q-ID Wikidata (#718, null si absent des extratags Nominatim)
+/// @param osmId identifiant OSM {@code "type/id"} (null si non issu de Nominatim)
+/// @param wikidataId Q-ID Wikidata (null si absent des extratags Nominatim)
 /// @since 2.1.0
 /// @author Kwaite
 public record ResultatSalle(

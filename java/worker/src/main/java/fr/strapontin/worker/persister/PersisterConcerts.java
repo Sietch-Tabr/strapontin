@@ -179,7 +179,7 @@ public class PersisterConcerts {
   /// <p>Pour les salles TM dont le {@code salleSourceId} est absent de {@code salle_sources},
   /// effectue un upsert dans {@code salles} et {@code salle_sources}.
   ///
-  /// <p>Pour les concerts sans {@code salleSourceId} du tout (#965 — TM omet parfois
+  /// <p>Pour les concerts sans {@code salleSourceId} du tout (TM omet parfois
   /// {@code venue.id} pour un événement donné, sans identifiant source exploitable), tente un
   /// repli par correspondance floue ({@link ReconciliateurSalles#chercherSalleParTokens}) plutôt
   /// que de laisser {@code salle_id} indéfiniment {@code null} — sans identifiant source fiable,

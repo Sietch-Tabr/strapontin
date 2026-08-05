@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Statistiques et bilans de panne des jobs Quartz — extrait de {@code WorkerService} (#915),
+/// Statistiques et bilans de panne des jobs Quartz — extrait de {@code WorkerService},
 /// mécanisme partagé par tous les jobs (fetch, purge, révocation, réconciliation), pas seulement
 /// le fetch.
 ///
@@ -47,7 +47,7 @@ public class WorkerStatsService {
   /// @param resolveur  résolveur Deezer (bilan de panne dédié)
   /// @param jdbc       accès JDBC pour {@code fetch_jobs}/{@code fetch_jobs_historique}
   /// @param logsAdminWorker journalisation des bilans dans {@code logs_admin}
-  /// @param meterRegistry   registre Micrometer (#953) pour la métrique de durée par type de job
+  /// @param meterRegistry registre Micrometer pour la métrique de durée par type de job
   public WorkerStatsService(
       List<SourceConcerts> sources,
       TicketmasterSource tm,
@@ -130,7 +130,7 @@ public class WorkerStatsService {
   }
 
   /// Remonte dans `logs_admin` le bilan agrégé d'appels/erreurs d'une source pour le cycle qui
-  /// vient de se terminer (#909/#912) — mécanisme générique remplaçant les anciennes méthodes
+  /// vient de se terminer — mécanisme générique remplaçant les anciennes méthodes
   /// dédiées `remonterBilanTm`/`remonterBilanEventim` : une panne totale (100% d'échecs sur un
   /// nombre suffisant d'appels — voir {@link BilanFetch#SEUIL_APPELS_MIN_ALERTE_DEFAUT}) est
   /// remontée en niveau {@code error}, captée automatiquement par {@code AlerteLogsAdminService}
@@ -163,7 +163,7 @@ public class WorkerStatsService {
 
   /// Remonte dans `logs_admin` le nombre de concerts TM non récupérés par plafonnement de la
   /// pagination pour le cycle qui vient de se terminer. Métrique spécifique à TM, distincte du
-  /// bilan appels/erreurs commun porté par {@link #remonterBilan} (#909).
+  /// bilan appels/erreurs commun porté par {@link #remonterBilan}.
   ///
   /// @param typeJob le type de job de fetch (préfixe `fetch:`)
   /// @return {@code true} si un warn a été inséré dans {@code logs_admin}
@@ -179,7 +179,7 @@ public class WorkerStatsService {
   }
 
   /// Remonte dans `logs_admin` les correspondances Eventim par containment acceptées pour le
-  /// cycle qui vient de se terminer (#1013) — un containment n'est pas nécessairement une erreur
+  /// cycle qui vient de se terminer — un containment n'est pas nécessairement une erreur
   /// (Eventim ne persiste aucun identifiant, {@code rechercherAttractionId} est rappelé à chaque
   /// cycle) mais reste invisible jusque-là (log SLF4J niveau INFO uniquement) : signalé en
   /// {@code warn} pour permettre une vérification manuelle rapide plutôt qu'une acceptation

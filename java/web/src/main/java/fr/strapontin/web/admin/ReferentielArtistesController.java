@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Contrôleur REST pour l'onglet admin « Artistes » du référentiel (#710).
+/// Contrôleur REST pour l'onglet admin « Artistes » du référentiel.
 ///
 /// <p>HTTP pur — délègue toute la logique métier à {@link ReferentielArtistesService}.
 /// Accessible uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code
@@ -39,7 +39,7 @@ public class ReferentielArtistesController {
   ///
   /// @param page             numéro de page (0-indexé, défaut 0)
   /// @param nom              filtre nom partiel
-  /// @param statut           filtre {@code a_jour}/{@code invalide} (#888, statut binaire)
+  /// @param statut filtre {@code a_jour}/{@code invalide} (statut binaire)
   /// @param wikidataManquant si {@code true}, ne retourne que les artistes sans {@code wikidata_id}
   /// @return 200 avec la page de résultats
   @GetMapping("/artistes")
@@ -82,7 +82,7 @@ public class ReferentielArtistesController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  /// Efface {@code necessite_intervention_le} sans fusion (#1026) — l'admin juge la divergence de
+  /// Efface {@code necessite_intervention_le} sans fusion — l'admin juge la divergence de
   /// nom TM acceptable.
   ///
   /// @param uuid UUID de l'artiste
@@ -96,7 +96,7 @@ public class ReferentielArtistesController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  /// Corrige directement l'identifiant Ticketmaster d'un artiste (#1026) — alternative à la
+  /// Corrige directement l'identifiant Ticketmaster d'un artiste — alternative à la
   /// fusion pour un simple mauvais lien.
   ///
   /// @param uuid  UUID de l'artiste

@@ -241,7 +241,7 @@ public class SecurityConfiguration {
 
   /// Gestionnaire d'authentification avec chargement depuis la base de données.
   ///
-  /// <p>Attache un {@link AuthenticationEventPublisher} explicitement (#964) : un
+  /// <p>Attache un {@link AuthenticationEventPublisher} explicitement : un
   /// {@link ProviderManager} construit à la main, hors du chemin d'auto-configuration Spring Boot
   /// standard, n'en reçoit aucun par défaut — sans lui, {@code AuthenticationSuccessEvent}/
   /// {@code AbstractAuthenticationFailureEvent} ne sont jamais publiés et {@link

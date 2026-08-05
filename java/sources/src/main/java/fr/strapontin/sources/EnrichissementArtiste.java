@@ -4,10 +4,10 @@
  */
 package fr.strapontin.sources;
 
-/// Résultat d'enrichissement d'un artiste par une {@link SourceEnrichissementArtiste} (#711/#716).
+/// Résultat d'enrichissement d'un artiste par une {@link SourceEnrichissementArtiste}.
 ///
 /// Tous les champs sont nullable — une source ne renseigne que ce qu'elle sait produire.
-/// {@code ticketmasterAttractionId} porte le P6262 Wikidata (#716), une cross-validation
+/// {@code ticketmasterAttractionId} porte le P6262 Wikidata, une cross-validation
 /// indépendante de TM plutôt qu'un enrichissement cosmétique.
 ///
 /// @param wikidataId               Q-ID Wikidata découvert ou confirmé

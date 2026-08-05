@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link ConfigCipher} (#922, extrait de web.ConfigService).
+/// Tests unitaires de {@link ConfigCipher} (extrait de web.ConfigService).
 ///
 /// <p>Valide la cohérence chiffrement/déchiffrement AES-256-GCM et la compatibilité avec le
 /// format produit par l'ancien module TypeScript.

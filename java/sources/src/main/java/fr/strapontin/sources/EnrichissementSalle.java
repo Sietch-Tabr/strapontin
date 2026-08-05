@@ -4,7 +4,7 @@
  */
 package fr.strapontin.sources;
 
-/// Résultat d'enrichissement d'une salle par une {@link SourceEnrichissementSalle} (#711).
+/// Résultat d'enrichissement d'une salle par une {@link SourceEnrichissementSalle}.
 ///
 /// Tous les champs sont nullable — une source ne renseigne que ce qu'elle sait produire
 /// (ex. Overpass ne fournit pas toujours `wikidataId`, Wikidata ne fournit pas `capacite`).

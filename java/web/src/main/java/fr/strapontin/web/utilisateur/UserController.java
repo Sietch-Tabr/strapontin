@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 /// <p>HTTP pur — délègue l'accès aux données à {@link UtilisateurRepository}.
 /// Gère la lecture du profil, l'identifiant, le mot de passe et la suppression de compte.
 ///
-/// <p>La modification d'email n'est volontairement pas exposée ici (#805) : le seul chemin
+/// <p>La modification d'email n'est volontairement pas exposée ici : le seul chemin
 /// autorisé est le flux à confirmation par token {@code POST /api/parametres/email-change}
 /// ({@link ParametresRestController}), qui vérifie la possession de la nouvelle adresse avant de
 /// l'appliquer — contrairement à un simple {@code PATCH} qui l'aurait acceptée immédiatement.
@@ -46,7 +46,7 @@ public class UserController {
 
   /// @param utilisateurRepository accès aux données utilisateur
   /// @param passwordEncoder        encodeur bcrypt
-  /// @param sessionRepository      dépôt de sessions JDBC (révocation multi-appareils, #804)
+  /// @param sessionRepository dépôt de sessions JDBC (révocation multi-appareils)
   public UserController(
       UtilisateurRepository utilisateurRepository,
       PasswordEncoder passwordEncoder,
@@ -98,7 +98,7 @@ public class UserController {
 
   /// Change le mot de passe de l'utilisateur courant et révoque toutes ses sessions actives.
   ///
-  /// <p>Révoque les sessions sur tous les appareils (#804), pas seulement celle de la requête en
+  /// <p>Révoque les sessions sur tous les appareils, pas seulement celle de la requête en
   /// cours — sinon une session compromise sur un autre appareil survivrait jusqu'à expiration
   /// naturelle (30 jours) malgré le changement de mot de passe.
   ///

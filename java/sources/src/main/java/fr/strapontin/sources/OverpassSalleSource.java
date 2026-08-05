@@ -23,7 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
-/// Client Overpass (OSM) pour l'enrichissement initial des salles par nom (#711).
+/// Client Overpass (OSM) pour l'enrichissement initial des salles par nom.
 ///
 /// Recherche par lot les salles de spectacle taguées `amenity=music_venue|arts_centre|theatre`
 /// sur le territoire français. Utilisé en première étape : les salles sans {@code wikidataId}
@@ -36,7 +36,7 @@ import org.springframework.web.client.RestClient;
 /// `gall`/`lambert.openstreetmap.de`) a traversé un incident de surcharge documenté depuis avril
 /// 2026 (wiki.openstreetmap.org/wiki/Overpass_API/status) — 504 systématiques pendant plus de 3
 /// mois, aucune contribution du cycle nocturne pendant tout cet incident. `overpass.karte.io`
-/// (cité dans le ticket #711) n'existe pas (résolution DNS en échec). #990 (19/07/2026) : test en
+/// (cité dans le tick) n'existe pas (résolution DNS en échec). (19/07/2026) : test en
 /// direct de tous les miroirs publics officiels — seul `overpass.osm.ch` (SOSM, association OSM
 /// suisse) a répondu correctement (HTTP 200 en 1,7s sur une requête représentative du trafic
 /// Strapontin, `kumi.systems`/`openstreetmap.fr`/`private.coffee`/`maps.mail.ru` tous injoignables
@@ -55,8 +55,8 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
 
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
-  /// Retourne le bilan agrégé des appels HTTP Overpass depuis le dernier prélèvement (#993) et
-  /// remet les compteurs à zéro — panne de 3+ mois de l'instance publique (#990) jusque-là
+  /// Retourne le bilan agrégé des appels HTTP Overpass depuis le dernier prélèvement et
+  /// remet les compteurs à zéro — panne de 3+ mois de l'instance publique jusque-là
   /// invisible dans {@code logs_admin}, seul un grep manuel de journalctl permettait de la
   /// constater.
   ///
@@ -66,7 +66,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     return compteurBilan.preleverBilan();
   }
 
-  // #990 (19/07/2026) : overpass-api.de en panne 3+ mois (504 systématique), overpass.osm.ch seul
+  // (19/07/2026) : overpass-api.de en panne 3+ mois (504 systématique), overpass.osm.ch seul
   // miroir public répondant correctement au test en direct — voir Javadoc de la classe.
   private static final String BASE_URL = "https://overpass.osm.ch/api/interpreter";
   // Identification obligatoire côté serveur (User-Agent générique/absent → 406 sur l'instance
@@ -74,7 +74,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   private static final String USER_AGENT =
       "Strapontin/2.6.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr) SpringBoot/4.1";
   private static final int TAILLE_LOT = 25;
-  // #990 : porté de 500ms à 1750ms — overpass.osm.ch ne publie aucune politique de rate-limit,
+  // porté de 500ms à 1750ms — overpass.osm.ch ne publie aucune politique de rate-limit,
   // contrairement à overpass-api.de ; prudence sans coût réel (cycle nocturne unique, 3h du matin).
   private static final int DELAI_MIN_ENTRE_APPELS_MS = 1750;
   // Le timeout serveur ([timeout:...] dans la requête OverpassQL) doit rester strictement
@@ -155,7 +155,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   // TM/Eventim/Digitick).
   // Le filtre ["name"~"regex"] est appliqué côté serveur Overpass sur la chaîne brute : sans cette
   // substitution, une regex contenant l'apostrophe droite ne matche jamais un nom OSM en apostrophe
-  // courbe (#783, constaté sur « L'Empreinte » à Savigny-le-Temple). La normalisation de
+  // courbe (constaté sur « L'Empreinte » à Savigny-le-Temple). La normalisation de
   // Normalisation.normaliserTexte, elle, n'intervient qu'après réception de la réponse
   // (mapperReponse)
   // et ne peut pas rattraper un élément qu'Overpass n'a jamais renvoyé.

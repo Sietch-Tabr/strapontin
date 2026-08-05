@@ -316,7 +316,7 @@ public class SpectacleService {
   /// Masque tous les concerts d'un artiste pour l'utilisateur courant.
   ///
   /// <p>Filtre sur {@code artiste_id} (référentiel, stable) plutôt que {@code artiste_norm}
-  /// (#818) — le worker (réconciliation cross-sources) démontre que {@code artiste_norm} peut
+  /// le worker (réconciliation cross-sources) démontre que {@code artiste_norm} peut
   /// diverger pour un même artiste réel selon la source/le lot de fetch ; un filtre sur ce champ
   /// texte ne couvrait donc qu'un sous-ensemble des concerts du groupe visuellement affiché sur
   /// l'accueil (tous partageant le même {@code artiste_id}, groupés par nom affiché).
@@ -340,7 +340,7 @@ public class SpectacleService {
   /// Démasque tous les concerts d'un artiste pour l'utilisateur courant.
   ///
   /// <p>Filtre sur {@code artiste_id} plutôt que {@code artiste_norm} — voir
-  /// {@link #masquerArtiste} (#818).
+  /// {@link #masquerArtiste}.
   ///
   /// @param userId    identifiant de l'utilisateur
   /// @param artisteId UUID stable de l'artiste dans le référentiel

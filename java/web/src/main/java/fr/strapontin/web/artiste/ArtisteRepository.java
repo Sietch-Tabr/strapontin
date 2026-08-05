@@ -155,7 +155,7 @@ class ArtisteRepository {
         Map.of(CLE_USER_ID, userId, "nom", nom, "artisteId", artisteId.toString()));
   }
 
-  /// Enregistre une correspondance source externe → artiste interne (#717).
+  /// Enregistre une correspondance source externe → artiste interne.
   ///
   /// @param artisteId          UUID stable de l'artiste
   /// @param source             nom de la source (ex. {@code "wikidata"}, {@code "deezer"})
@@ -173,7 +173,7 @@ class ArtisteRepository {
             "identifiantExterne", identifiantExterne));
   }
 
-  /// Met à jour {@code wikidata_id}/{@code deezer_id} d'un artiste si absents (#717) — ne
+  /// Met à jour {@code wikidata_id}/{@code deezer_id} d'un artiste si absents — ne
   /// touche jamais une valeur déjà résolue par le job nocturne ({@code COALESCE}). Peut lever
   /// {@link org.springframework.dao.DuplicateKeyException} ({@code idx_artistes_wikidata_id}) —
   /// à la charge de l'appelant (même piège qu'{@code EnrichissementArtistesService}, jalon

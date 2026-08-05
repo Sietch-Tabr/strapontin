@@ -32,10 +32,10 @@ import org.springframework.context.annotation.Configuration;
 ///   (cf. `worker.cron.fetch-artistes`)
 /// - `fetch:region` — 1 batch nocturne unique à 02h (cf. `worker.cron.fetch-region`) — restreint
 ///   à ce seul consommateur ([DecouverteService], browse-only, fraîcheur non critique) depuis
-///   #996, l'ancien cron adaptatif 11x/jour n'apportant aucune valeur aux artistes/salles suivis
+/// l'ancien cron adaptatif 11x/jour n'apportant aucune valeur aux artistes/salles suivis
 ///   (couverts indépendamment par `fetch:artistes:batch`/`fetch:salles:all`)
 /// - `fetch:salles:all` — mêmes heures que fetch:artistes + 30 min (cf. `worker.cron.fetch-salles`,
-///   fréquence inchangée), restreint aux salles suivies (`user_salles`) depuis #996
+/// fréquence inchangée), restreint aux salles suivies (`user_salles`) depuis
 /// - `recalculer:matches` — mêmes heures que fetch:artistes (cf. `worker.cron.recalculer-matches`)
 /// - `purger:concerts` — tous les jours à minuit
 /// - `purger:salles` — tous les jours à 0h05 (après purge concerts)
@@ -43,7 +43,7 @@ import org.springframework.context.annotation.Configuration;
 /// - `purger:logs-admin` — tous les jours à 0h15
 /// - `notifier:digest` — tous les jours à 8h
 /// - `revoquer:admins` — toutes les heures
-/// - `reconciliation:nocturne` — tous les jours à 3h (#706)
+/// - `reconciliation:nocturne` — tous les jours à 3h
 ///
 /// Le job `fetch:salle` est planifié dynamiquement par [WorkerService]
 /// selon les salles configurées. `fetch:salles:all` est le pendant périodique
@@ -57,7 +57,7 @@ public class Planificateur {
   @Value("${worker.cron.fetch-artistes:0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronFetchArtistes;
 
-  // #996 : cron adaptatif (11x/jour) → 1 batch nocturne unique. DecouverteService est l'unique
+  // cron adaptatif (11x/jour) → 1 batch nocturne unique. DecouverteService est l'unique
   // consommateur de fetch:region (browse-only, sans notification associée) — les artistes/salles
   // suivis ont leurs propres mécanismes indépendants (fetch:artistes:batch, fetch:salles:all),
   // non affectés par cette fréquence.

@@ -13,7 +13,7 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteAjouter} (#812).
+/// Tests unitaires de validation Bean Validation de {@link RequeteAjouter}.
 ///
 /// <p>Le {@code wikidataId} est concaténé dans une requête SPARQL exécutée par le job
 /// d'enrichissement nocturne ({@code WikidataSalleSource}) — sans contrainte de format, une
@@ -40,7 +40,7 @@ class RequeteAjouterValidationTest {
     assertTrue(violations.isEmpty());
   }
 
-  // #812 : une valeur du type "Q1 . } SELECT ..." casserait la clause VALUES SPARQL
+  // une valeur du type "Q1. } SELECT..." casserait la clause VALUES SPARQL
   // (WikidataSalleSource.java:154-168) — doit être rejetée avant persistance.
   @Test
   void wikidataId_formatInvalide_estRejete() {

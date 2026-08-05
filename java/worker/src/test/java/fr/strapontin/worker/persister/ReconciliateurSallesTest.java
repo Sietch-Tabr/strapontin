@@ -24,7 +24,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
-/// Tests unitaires de {@link ReconciliateurSalles} — priorité exacte avant flou (#794).
+/// Tests unitaires de {@link ReconciliateurSalles} — priorité exacte avant flou.
 ///
 /// @since 2.6.3
 /// @author Kwaite
@@ -53,10 +53,10 @@ class ReconciliateurSallesTest {
         null);
   }
 
-  // Cas réel documenté (wiki Sources-de-données, ticket #669) : "zenith europe strasbourg" /
+  // Cas réel documenté (wiki Sources-de-données, tick) : "zenith europe strasbourg" /
   // "zenith de strasbourg europe" — Jaccard tokens = 1.0 (doublon flou, réordonnancement de
   // mots). Sans ORDER BY sur la requête source, ce candidat flou peut apparaître avant un
-  // candidat exact dans le result set — avant #794, la boucle réécrivait à tort le salleNorm
+  // candidat exact dans le result set — avant, la boucle réécrivait à tort le salleNorm
   // entrant avec l'orthographe du candidat flou trouvé en premier, ratant le candidat exact
   // (littéralement identique, donc sans changement à apporter) plus loin dans la liste.
   @Test
@@ -86,7 +86,7 @@ class ReconciliateurSallesTest {
     assertEquals("zenith de strasbourg europe", resultat.get(0).salleNorm());
   }
 
-  // #902 : "L'Olympia" (TM, nom_norm="l olympia") déjà en base, Eventim fetch "LOlympia" (sans
+  // "L'Olympia" (TM, nom_norm="l olympia") déjà en base, Eventim fetch "LOlympia" (sans
   // apostrophe, nom_norm="lolympia"). Le préfiltre par tokens seul ratait ce candidat (l'espace
   // dans "l olympia" casse le LIKE sur le token "lolympia") — la clause squash doit le retrouver.
   @Test
@@ -117,7 +117,7 @@ class ReconciliateurSallesTest {
     assertNull(reconciliateur.chercherSalleParTokens("Salle inédite", null));
   }
 
-  // #969 : absorberRenommagesSalles mettait à jour salles.nom sans jamais recalculer nom_norm,
+  // absorberRenommagesSalles mettait à jour salles.nom sans jamais recalculer nom_norm,
   // désynchronisant les deux colonnes avec le temps et cassant le matching Wikidata (comparaison
   // calibrée sur un nom_norm déjà normalisé — voir CorrespondanceSalle).
   @Test
@@ -159,10 +159,10 @@ class ReconciliateurSallesTest {
         Normalisation.normaliserTexte("L'Olympia"), paramsCaptor.getValue().get("nomNorm"));
   }
 
-  // #973 (rattrapage) : raccrocherSallesParNomNorm faisait un rattachement par égalité exacte de
+  // (rattrapage) : raccrocherSallesParNomNorm faisait un rattachement par égalité exacte de
   // nom_norm sans aucun filtre dept, défaisant silencieusement le filtre dept ajouté à
   // chercherSalleParTokens — deux salles homonymes au texte strictement identique (ex. "Casino -
-  // Barriere" Toulouse/Lille, #971) se faisaient quand même fusionner via ce repli en aval.
+  // Barriere" Toulouse/Lille) se faisaient quand même fusionner via ce repli en aval.
   @Test
   void raccrocherSallesParNomNorm_candidatDeptDifferent_neRattachePas() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);

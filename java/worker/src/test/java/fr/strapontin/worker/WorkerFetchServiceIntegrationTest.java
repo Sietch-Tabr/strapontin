@@ -23,7 +23,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 /// Tests d'intégration de [WorkerFetchService] avec PostgreSQL réel (Testcontainers).
 ///
 /// <p>Couvre spécifiquement la restriction de {@code fetch:salles:all} aux salles suivies
-/// (#996) — le filtre {@code EXISTS (... FROM user_salles ...)} de la requête SQL ne peut être
+/// le filtre {@code EXISTS (... FROM user_salles...)} de la requête SQL ne peut être
 /// vérifié qu'avec une vraie base, les tests unitaires de {@link WorkerFetchServiceTest} mockant
 /// {@code jdbc} avec un matcher {@code anyString()} qui ne distingue pas les variantes de la
 /// requête.

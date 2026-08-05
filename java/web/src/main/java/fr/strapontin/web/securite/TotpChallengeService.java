@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 
 /// Vérifie un challenge TOTP post-login et gère le compteur d'échecs/verrouillage.
 ///
-/// <p>Extrait de {@code AuthController.verifierTotp} (#917) — le contrôleur ne portait pas
+/// <p>Extrait de {@code AuthController.verifierTotp} — le contrôleur ne portait pas
 /// seulement la vérification du code (déjà déléguée à {@link TotpService}) mais aussi toute la
 /// logique métier de compteur d'échecs et de verrouillage, en violation du pattern
 /// Controller (HTTP pur) → Service → Repository.

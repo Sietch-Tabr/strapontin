@@ -13,10 +13,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Gestion du référentiel artistes pour l'onglet admin (#710) : liste paginée, édition du nom
+/// Gestion du référentiel artistes pour l'onglet admin : liste paginée, édition du nom
 /// affiché, fusion de doublons.
 ///
-/// <p>La fusion dédoublonne désormais les concerts en conflit avant remapping (#828), à l'image
+/// <p>La fusion dédoublonne désormais les concerts en conflit avant remapping, à l'image
 /// de {@link ReferentielSallesService#fusionner} : même si la contrainte unique
 /// {@code uq_concerts_artiste_date_heure_salle} porte sur {@code artiste_norm} (texte, jamais en
 /// conflit lors d'un remapping d'{@code artiste_id}), deux artistes distincts fusionnés peuvent
@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 /// {@code artiste_norm} textuel différent selon la source — sans ce nettoyage, les deux lignes
 /// subsistaient après fusion, dupliquant le concert sur la fiche de l'artiste cible.
 ///
-/// <p>Le statut affiché est binaire ({@code a_jour}/{@code invalide}, #888) : contrairement à
+/// <p>Le statut affiché est binaire ({@code a_jour}/{@code invalide}) : contrairement à
 /// {@link ReferentielSallesService} (3 états basés sur {@code suspect_depuis}, compteur passif
 /// jugé fiable pour les salles), le statut artiste dérive de
 /// {@code artiste_sources.necessite_intervention_le}, posée uniquement quand la vérification
@@ -52,7 +52,7 @@ public class ReferentielArtistesService {
   ///
   /// @param page             numéro de page (0-indexé)
   /// @param nom              filtre nom partiel (insensible à la casse), peut être null
-  /// @param statut           filtre {@code "a_jour"}/{@code "invalide"} (#888, statut binaire —
+  /// @param statut filtre {@code "a_jour"}/{@code "invalide"} (statut binaire —
   ///     {@code "a_verifier"} n'est jamais retourné pour un artiste), peut être null
   /// @param wikidataManquant si {@code true}, ne retourne que les artistes sans {@code wikidata_id}
   ///     — facilite le repérage des candidats à corriger manuellement sans parcourir toute la
@@ -155,7 +155,7 @@ public class ReferentielArtistesService {
   }
 
   /// Efface {@code necessite_intervention_le} sur toutes les sources d'un artiste sans fusion ni
-  /// changement d'identifiant (#1026) — action minimale pour un admin qui juge la divergence de
+  /// changement d'identifiant — action minimale pour un admin qui juge la divergence de
   /// nom TM acceptable (ex. convention d'affichage différente, cf. -M-/Matthieu Chédid).
   ///
   /// @param artisteId UUID de l'artiste
@@ -176,7 +176,7 @@ public class ReferentielArtistesService {
     return nb > 0;
   }
 
-  /// Corrige directement l'identifiant Ticketmaster d'un artiste (#1026) — alternative à la
+  /// Corrige directement l'identifiant Ticketmaster d'un artiste — alternative à la
   /// fusion pour un simple mauvais lien (attractionId erroné plutôt qu'un doublon de référentiel).
   /// Réinitialise le compteur de santé et efface {@code necessite_intervention_le} : un admin qui
   /// corrige manuellement l'identifiant confirme lui-même la nouvelle identité, il n'y a rien de
@@ -276,7 +276,7 @@ public class ReferentielArtistesService {
             + " AS uuid)",
         ids);
 
-    // Dédoublonnage préalable des conflits par type de source (#1019 : sans lui, deux
+    // Dédoublonnage préalable des conflits par type de source (sans lui, deux
     // identifiants du même type, ex. deux ticketmaster, coexistent indéfiniment sur l'artiste
     // fusionné).
     dedupliquerArtisteSourcesAvantFusion(cibleId, sourceId);
@@ -285,7 +285,7 @@ public class ReferentielArtistesService {
             + " CAST(:source AS uuid)",
         ids);
 
-    // #888 : une fusion admin est elle-même une résolution manuelle — efface le signal
+    // une fusion admin est elle-même une résolution manuelle — efface le signal
     // d'intervention hérité de l'artiste absorbé ou déjà posé sur la cible.
     jdbc.update(
         "UPDATE artiste_sources SET necessite_intervention_le = NULL WHERE artiste_id ="
@@ -310,7 +310,7 @@ public class ReferentielArtistesService {
   }
 
   /// Supprime, avant réassignation, les doublons d'{@code artiste_sources} qu'une fusion créerait
-  /// sinon silencieusement (#1019) : la PK {@code (source, identifiant_externe)} est indépendante
+  /// sinon silencieusement : la PK {@code (source, identifiant_externe)} est indépendante
   /// de {@code artiste_id}, donc deux lignes portant le même {@code source} (ex. deux
   /// identifiants {@code ticketmaster} différents) peuvent coexister indéfiniment sur l'artiste
   /// fusionné sans jamais entrer en conflit de PK. Garde la ligne la plus saine (non suspecte

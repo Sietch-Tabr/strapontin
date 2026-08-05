@@ -136,7 +136,7 @@ const workerLastSuccess = ref(null)
 const relancerEnCours = ref(false)
 const relanceJobEnCours = reactive({})
 let pollingInterval = null
-// #571 : annule les fetch en vol à la destruction du composant (pas de maj de refs mortes).
+// annule les fetch en vol à la destruction du composant (pas de maj de refs mortes).
 const controleur = new AbortController()
 
 const statsFetches = computed(() => statsJobs.value.filter((s) => TYPES_FETCHES.has(s.typeJob)))

@@ -61,7 +61,7 @@ class PushServiceTest {
     verify(logAdminService).logAdmin(eq("info"), eq("push"), anyString(), anyMap());
   }
 
-  // #827 : le cap de 10 abonnements doit être respecté même si le COUNT et l'INSERT sont deux
+  // le cap de 10 abonnements doit être respecté même si le COUNT et l'INSERT sont deux
   // requêtes distinctes — la vérification passe par une transaction SERIALIZABLE dédiée
   // (abonnerTransactionnel), pas testable directement ici (pas de vrai gestionnaire de
   // transactions en test unitaire), mais le comportement observable (rejet au cap) est vérifié.

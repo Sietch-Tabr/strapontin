@@ -157,7 +157,7 @@ class ResolveurNomCanoniqueTest {
     serveur.verify();
   }
 
-  // --- BilanFetch (#912) ---
+  // --- BilanFetch ---
 
   @Test
   void preleverBilan_appelReussi_compteUnAppelSansErreur() {

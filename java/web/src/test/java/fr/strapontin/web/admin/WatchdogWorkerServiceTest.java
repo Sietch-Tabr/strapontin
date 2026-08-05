@@ -25,7 +25,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 /// Tests unitaires pour {@link WatchdogWorkerService}.
 ///
 /// <p>Couvre la résolution du destinataire via {@link EmailAlerteService#obtenirDestinataireAlerte()}
-/// (#907, plus de lecture directe de CONTACT_EMAIL).
+/// (plus de lecture directe de CONTACT_EMAIL).
 ///
 /// @since 2.7.0
 /// @author Kwaite

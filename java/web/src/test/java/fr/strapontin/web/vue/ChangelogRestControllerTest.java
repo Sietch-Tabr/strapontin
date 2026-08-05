@@ -23,7 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires pour {@link ChangelogRestController} (#820) — badge "nouveautés" piloté par
+/// Tests unitaires pour {@link ChangelogRestController} — badge "nouveautés" piloté par
 /// {@code changelog_version_vue} comparé à la version courante lue via {@link BuildProperties}.
 ///
 /// @since 2.6.4

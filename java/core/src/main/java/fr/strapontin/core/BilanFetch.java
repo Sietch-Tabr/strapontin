@@ -9,8 +9,8 @@ import java.util.Optional;
 
 /// Bilan agrégé d'appels (HTTP ou envois) et d'échecs pour une source ou un canal de
 /// notification depuis le dernier prélèvement, et logique d'escalade partagée vers `logs_admin`
-/// (#909/#912) — remplace la duplication `TicketmasterSource`/`EventimSource` du bilan introduit
-/// par #901.
+/// remplace la duplication `TicketmasterSource`/`EventimSource` du bilan introduit
+/// par.
 ///
 /// @param appels      nombre total d'appels tentés depuis le dernier prélèvement
 /// @param erreursHttp nombre d'appels en échec depuis le dernier prélèvement

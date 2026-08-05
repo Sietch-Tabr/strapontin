@@ -204,7 +204,7 @@ class DigitickSourceTest {
     assertEquals("Black Star-Riders", DigitickSource.normaliserCasse("BLACK STAR-RIDERS"));
   }
 
-  // --- BilanFetch (#912) ---
+  // --- BilanFetch ---
 
   @Test
   void preleverBilan_appelReussi_compteUnAppelSansErreur() {

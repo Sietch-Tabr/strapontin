@@ -25,7 +25,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /// Orchestration des jobs de fetch : fetch → dédoublonnage → résolution → persistance →
-/// recalcul. Extrait de {@code WorkerService} (#915).
+/// recalcul. Extrait de {@code WorkerService}.
 ///
 /// Délégué par les jobs Quartz {@code FetchArtistesBatchJob}, {@code FetchRegionJob},
 /// {@code FetchSalleJob}, {@code FetchSallesAllJob}.
@@ -38,7 +38,7 @@ public class WorkerFetchService {
   private static final Logger log = LoggerFactory.getLogger(WorkerFetchService.class);
 
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
-  // #1014 : Deezer ne référence pas les humoristes — toute recherche pour un humoriste renvoie le
+  // Deezer ne référence pas les humoristes — toute recherche pour un humoriste renvoie le
   // musicien le plus proche textuellement (ex. "Fabrice Éboué" → "Fabrice Aboulker"), jamais
   // détecté par le seuil de similarité seul. La classification "theatre" (TM : segment "arts et
   // théâtre") est le seul signal fiable disponible pour distinguer un spectacle d'humour d'un
@@ -86,7 +86,7 @@ public class WorkerFetchService {
   /// Fetch global de tous les artistes suivis (TM par attraction ID + Eventim individuel).
   ///
   /// Suspendu si le quota TM est inférieur à 500 (SEUIL_QUOTA_CRON). Une exception dans un lot
-  /// n'interrompt pas les lots suivants (#792) : le recalcul de matchs et le digest de
+  /// n'interrompt pas les lots suivants : le recalcul de matchs et le digest de
   /// notification s'exécutent toujours sur la base des lots effectivement réussis, plutôt que
   /// d'être sautés en cas d'échec partiel.
   public void executerFetchArtistesBatch() {
@@ -193,7 +193,7 @@ public class WorkerFetchService {
   }
 
   /// Fetch une salle auprès de la source qui accepte son identifiant et enregistre le résultat
-  /// auprès de {@link SuiviSanteSourcesService} (#706 phase 1).
+  /// auprès de {@link SuiviSanteSourcesService} (phase 1).
   ///
   /// @param identifiant identifiant préfixé {@code source:identifiant_externe}
   /// @param destination liste dans laquelle ajouter les concerts trouvés
@@ -252,7 +252,7 @@ public class WorkerFetchService {
         } catch (Exception e) {
           log.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());
         }
-        // #789 : throttle manquant ici jusqu'alors — un lot avec plusieurs artistes jamais
+        // throttle manquant ici jusqu'alors — un lot avec plusieurs artistes jamais
         // résolus pouvait générer une rafale d'appels /attractions.json sans délai.
         attendreRateLimit();
       }
@@ -411,9 +411,9 @@ public class WorkerFetchService {
   /// Fetch périodique des salles suivies (`user_salles`) ayant des sources configurées dans
   /// {@code salle_sources}.
   ///
-  /// Restreint aux salles réellement suivies par un utilisateur depuis #996 — jusque-là toutes
+  /// Restreint aux salles réellement suivies par un utilisateur depuis — jusque-là toutes
   /// les salles du référentiel (255 avec source TM en prod le 18/07/2026) étaient refetchées à
-  /// chaque cycle, épuisant le quota TM en une journée dès que #966 a débloqué cet appel pour de
+  /// chaque cycle, épuisant le quota TM en une journée dès que a débloqué cet appel pour de
   /// vrai. Les salles non suivies n'apportent aucune valeur ici : un artiste suivi qui y jouerait
   /// est de toute façon déjà détecté par {@code fetch:artistes:batch} (recherche nationale par
   /// nom, indépendante du département).
@@ -432,11 +432,11 @@ public class WorkerFetchService {
         return;
       }
 
-      // #966 : le préfixe emis ici doit correspondre à celui attendu par
+      // le préfixe emis ici doit correspondre à celui attendu par
       // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique "ticketmaster"
       // de salle_sources.source) — sans cette traduction, fetchSalle n'est jamais invoqué pour
       // aucune salle TM (mismatch silencieux, aucune exception, aucun log d'erreur).
-      // #996 : restreint aux salles suivies (user_salles) — voir Javadoc de la méthode.
+      // restreint aux salles suivies (user_salles) — voir Javadoc de la méthode.
       List<String> identifiantsParSalle =
           jdbc
               .queryForList(

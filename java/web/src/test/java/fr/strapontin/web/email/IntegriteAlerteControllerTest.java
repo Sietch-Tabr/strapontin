@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link IntegriteAlerteController} (#976).
+/// Tests unitaires pour {@link IntegriteAlerteController}.
 ///
 /// @since 2.7.3
 /// @author Kwaite

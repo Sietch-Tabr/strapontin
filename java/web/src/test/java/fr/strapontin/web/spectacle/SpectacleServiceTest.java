@@ -185,7 +185,7 @@ class SpectacleServiceTest {
     verify(jdbc).update(contains("masque_le = NULL"), anyMap());
   }
 
-  // #818 : filtre désormais sur artiste_id (référentiel, stable) plutôt qu'artiste_norm (texte
+  // filtre désormais sur artiste_id (référentiel, stable) plutôt qu'artiste_norm (texte
   // par source, pouvant diverger entre concerts d'un même artiste réel).
   @Test
   @SuppressWarnings("unchecked")

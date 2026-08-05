@@ -6,7 +6,7 @@ package fr.strapontin.sources;
 
 import java.util.UUID;
 
-/// Artiste candidat à l'enrichissement Wikidata/Deezer (#711/#716).
+/// Artiste candidat à l'enrichissement Wikidata/Deezer.
 ///
 /// @param id         UUID interne stable de l'artiste
 /// @param nom        nom brut affiché

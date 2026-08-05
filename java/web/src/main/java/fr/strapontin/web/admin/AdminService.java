@@ -40,7 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 /// <p>Contient la logique métier et l'accès aux données pour la gestion des utilisateurs.
 /// {@link AdminController#creerUtilisateur} est atomique ({@code @Transactional}). La gestion des
 /// clés VAPID est déléguée à {@link VapidService}, la configuration applicative à
-/// {@link ConfigAdminService} et les statistiques de jobs à {@link JobsAdminService} (#916).
+/// {@link ConfigAdminService} et les statistiques de jobs à {@link JobsAdminService}.
 ///
 /// @since 2.1.0
 /// @author Kwaite
@@ -206,7 +206,7 @@ public class AdminService {
   /// <p>Si le nouveau rôle est {@code admin}, envoie un email de promotion à l'utilisateur.
   ///
   /// <p>Si le nouveau rôle est {@code user} et que la cible est actuellement {@code admin}, la
-  /// rétrogradation n'est <strong>pas</strong> appliquée immédiatement ici (#807) : elle est
+  /// rétrogradation n'est <strong>pas</strong> appliquée immédiatement ici : elle est
   /// déléguée à {@link #initierRevocationAdmin}, qui applique le même délai différé de 7 jours et
   /// la même garde « dernier admin » que le bouton dédié — sans quoi ce chemin `PATCH` permettait
   /// de contourner intégralement les deux protections.
@@ -252,13 +252,13 @@ public class AdminService {
           roleActuelRows.isEmpty() ? null : (String) roleActuelRows.get(0).get("role");
       retrogradationAdmin = "user".equals(role) && "admin".equals(roleActuel);
     }
-    // #940 : initierRevocationAdmin délègue à initierRevocationAdminTransactionnel
+    // initierRevocationAdmin délègue à initierRevocationAdminTransactionnel
     // (REQUIRES_NEW + SERIALIZABLE) — appelée depuis cette méthode déjà @Transactional, elle
     // consommerait une seconde connexion HikariCP suspendue. Rejeter la combinaison en un seul
     // PATCH force l'appelant à séquencer deux requêtes distinctes (déjà fait côté front depuis
     // l'incident v2.6.4), plutôt que de rendre initierRevocationAdminTransactionnel sûr en
     // imbrication : NESTED perdrait l'isolation SERIALIZABLE nécessaire à la garde anti-concurrence
-    // (#811), la transaction imbriquée héritant de l'isolation de la transaction englobante.
+    // la transaction imbriquée héritant de l'isolation de la transaction englobante.
     if (retrogradationAdmin && (!nom.isEmpty() || !email.isEmpty())) {
       throw new ErreurMetier(
           "Impossible de combiner une rétrogradation admin avec une modification de nom/email en"
@@ -314,7 +314,7 @@ public class AdminService {
   /// Initie une révocation différée du rôle admin (effective dans 7 jours).
   ///
   /// <p>Réessaie jusqu'à {@value MAX_TENTATIVES_REVOCATION} fois en cas d'échec de sérialisation
-  /// (deux révocations concurrentes détectées par PostgreSQL, #811) — sans cela, deux admins se
+  /// (deux révocations concurrentes détectées par PostgreSQL) — sans cela, deux admins se
   /// révoquant mutuellement au même instant pourraient tous deux passer la garde « dernier admin »
   /// avant qu'aucun des deux `UPDATE` ne soit committé.
   ///
@@ -341,7 +341,7 @@ public class AdminService {
   ///
   /// <p>Envoie un email de préavis à l'administrateur concerné et loggue l'action.
   /// {@code REQUIRES_NEW} garantit une transaction dédiée même si appelée depuis une transaction
-  /// déjà ouverte (ex. {@link #modifierUtilisateur}, #807) — sans quoi l'isolation SERIALIZABLE
+  /// déjà ouverte (ex. {@link #modifierUtilisateur}) — sans quoi l'isolation SERIALIZABLE
   /// serait ignorée en cas d'imbrication dans une transaction moins stricte.
   ///
   /// @param userId  identifiant de l'administrateur à révoquer
@@ -422,7 +422,7 @@ public class AdminService {
   /// Envoie un email de réinitialisation de mot de passe à un utilisateur.
   ///
   /// <p>Le lien de réinitialisation est toujours retourné dans {@link ResultatReset#lienReset()}
-  /// (#815) — comme {@link #creerUtilisateur}, c'est au contrôleur de décider de l'exposer à
+  /// comme {@link #creerUtilisateur}, c'est au contrôleur de décider de l'exposer à
   /// l'admin selon la disponibilité de Resend, pour garder un filet de secours si l'email
   /// n'atteint jamais l'utilisateur.
   ///

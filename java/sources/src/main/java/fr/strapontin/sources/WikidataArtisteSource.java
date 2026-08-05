@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
-/// Client SPARQL Wikidata pour l'enrichissement des artistes (#711 étape 3 + #716).
+/// Client SPARQL Wikidata pour l'enrichissement des artistes (étape 3 +).
 ///
 /// Deux modes selon que le Q-ID est déjà connu :
 ///
@@ -28,12 +28,12 @@ import org.springframework.web.client.RestClient;
 ///   <li>{@code wikidataId != null} : requête batch classique (clause {@code VALUES}, ≤50)
 ///   <li>{@code wikidataId == null} : découverte par recherche de nom via
 ///       {@code SERVICE wikibase:mwapi} (une requête par artiste, non batchable), filtrée par les
-///       types intrinsèques Wikidata (humain+musicien, humain+humoriste depuis #767, ou groupe) —
+/// types intrinsèques Wikidata (humain+musicien, humain+humoriste depuis, ou groupe) —
 ///       <strong>jamais validée contre l'attractionId Ticketmaster existant</strong> : Wikidata
 ///       fait autorité pour l'identité de l'artiste, indépendamment de TM (décision actée, cf.
 ///       plan du jalon 2.6.0). Le P6262 éventuellement porté par le Q-ID trouvé sert ensuite à
-///       corriger notre lien vers TM (#716), jamais l'inverse. En cas d'homonymie groupe/personne
-///       (#772, ex. « Van Halen ») détectée via la diversité de {@code ?typeMatch} parmi les
+/// corriger notre lien vers TM, jamais l'inverse. En cas d'homonymie groupe/personne
+/// (ex. « Van Halen ») détectée via la diversité de {@code ?typeMatch} parmi les
 ///       meilleurs candidats, aucun Q-ID n'est retenu plutôt que de deviner — cf. {@link
 ///       #decouvrir}.
 /// </ul>
@@ -44,7 +44,7 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
 
   private static final Logger log = LoggerFactory.getLogger(WikidataArtisteSource.class);
 
-  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement (#993).
+  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement.
   ///
   /// @return le bilan depuis le dernier prélèvement
   @Override
@@ -145,7 +145,7 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
   // --- Mode découverte (Q-ID inconnu) ---
 
   /// Résout un candidat par découverte mwapi, en refusant de deviner en cas d'homonymie
-  /// groupe/personne (#772) — ex. « Van Halen », où le groupe porte le vrai nom de famille de
+  /// groupe/personne — ex. « Van Halen », où le groupe porte le vrai nom de famille de
   /// son fondateur, guitariste et chanteur du groupe éponyme. Structurellement, {@code
   /// ?typeMatch} ne peut valoir {@code "humain"} et {@code "groupe"} pour le même {@code ?item}
   /// ({@code wdt:P31 wd:Q5} exige une personne physique, incompatible avec l'appartenance à
@@ -186,8 +186,8 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
   private static final int TAILLE_CANDIDATS_DECOUVERTE = 5;
 
   /// Filtre de découverte par nom : humain de profession musicien, humoriste ou auteur comique
-  /// (#767 — un humoriste, ex. Pierre-Emmanuel Barré, n'entrait dans aucune des deux branches
-  /// d'origine ; #1018 — sa fiche réelle porte en fait `Q12406482` « auteur comique », dont la
+  /// (un humoriste, ex. Pierre-Emmanuel Barré, n'entrait dans aucune des deux branches
+  /// d'origine; — sa fiche réelle porte en fait `Q12406482` « auteur comique », dont la
   /// fermeture transitive P279* ne remonte jamais vers `Q245068`, un troisième branchement est
   /// donc nécessaire plutôt qu'une correction du premier), ou groupe musical. Les trois
   /// occupations humaines partagent le même {@code ?typeMatch} (« humain ») car elles exigent

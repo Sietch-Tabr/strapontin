@@ -92,7 +92,7 @@ public class ResendWebhookController {
     } catch (Exception e) {
       // Exception large (pas seulement ResendException) : la vérification Svix embarquée lève
       // aussi une NumberFormatException non enveloppée sur un svix-timestamp non numérique
-      // (#810) — sans ce catch, l'exception technique remonte en 500 (au lieu du 401 attendu
+      // sans ce catch, l'exception technique remonte en 500 (au lieu du 401 attendu
       // pour une signature invalide) et déclenche une alerte email admin parasite.
       log.warn("Signature webhook Resend invalide : {}", e.getMessage());
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -114,7 +114,7 @@ public class ResendWebhookController {
       String type = racine.path("type").asText("");
       String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");
 
-      // email.bounced et email.complained (plainte spam) reçoivent le même traitement (#832) :
+      // email.bounced et email.complained (plainte spam) reçoivent le même traitement :
       // une plainte spam menace la réputation d'envoi du domaine au moins autant qu'un bounce.
       if ("email.bounced".equals(type)) {
         traiterIncidentEmail("Bounce", "bounce email reçu", emailDestinataire);
@@ -129,7 +129,7 @@ public class ResendWebhookController {
   }
 
   /// Journalise un incident email (bounce ou plainte spam) avec l'adresse hachée — jamais en
-  /// clair dans {@code logs_admin} (#831), cohérent avec le hachage déjà appliqué côté SLF4J.
+  /// clair dans {@code logs_admin}, cohérent avec le hachage déjà appliqué côté SLF4J.
   private void traiterIncidentEmail(String libelle, String messageLogAdmin, String email) {
     String emailHash = String.valueOf(email.hashCode());
     log.warn("{} email Resend : emailHash={}", libelle, emailHash);

@@ -51,7 +51,7 @@ public final class FiltreConcertsBuilder {
   ///
   /// <p>La regex ne valide que la forme (4 chiffres, tiret, 2 chiffres), pas la validité
   /// calendaire — un mois comme {@code 2026-13} la passe puis faisait échouer
-  /// {@link LocalDate#parse} avec une exception non interceptée (#819, 500 générique au lieu du
+  /// {@link LocalDate#parse} avec une exception non interceptée (500 générique au lieu du
   /// contrat documenté "sans effet si invalide").
   ///
   /// @param where  clause WHERE en construction

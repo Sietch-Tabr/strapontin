@@ -16,8 +16,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /// HealthIndicator custom exposant l'état du quota TM et le statut des sources de fetch via
-/// {@code /actuator/health} (#954) — un incident métier critique (quota épuisé, source bloquée
-/// comme #901, boucle de bounces comme #907) n'était visible jusqu'ici que via {@code logs_admin}
+/// {@code /actuator/health} — un incident métier critique (quota épuisé, source bloquée
+/// comme, boucle de bounces comme) n'était visible jusqu'ici que via {@code logs_admin}
 /// ou email, jamais interrogeable par un outil de monitoring externe sondant l'endpoint standard.
 ///
 /// <p>Implémentation volontairement minimale : ne remplace pas {@code SuiviSanteSourcesService}

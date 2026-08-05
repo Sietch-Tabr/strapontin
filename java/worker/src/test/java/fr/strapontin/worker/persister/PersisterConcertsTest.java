@@ -105,7 +105,7 @@ class PersisterConcertsTest {
 
   @Test
   void estDoublonSalle_apostropheOmiseParUneSource_retourneTrue() {
-    // #902 : "L'Olympia" (TM) normalisé "l olympia" vs "LOlympia" (Eventim, sans apostrophe)
+    // "L'Olympia" (TM) normalisé "l olympia" vs "LOlympia" (Eventim, sans apostrophe)
     // normalisé "lolympia" — aucun token commun, mais identiques une fois les espaces retirés.
     assertTrue(PersisterConcerts.estDoublonSalle("l olympia", "lolympia"));
   }
@@ -151,7 +151,7 @@ class PersisterConcertsTest {
     assertFalse(PersisterConcerts.estDoublonSalle("accor arena", "ACCOR ARENA"));
   }
 
-  // --- estDoublonSalle — Jaccard tokens (#669) ---
+  // --- estDoublonSalle — Jaccard tokens ---
 
   @Test
   void estDoublonSalle_reordonancementMots_retourneTrue() {
@@ -184,18 +184,18 @@ class PersisterConcertsTest {
     assertFalse(PersisterConcerts.estDoublonSalle("zenith de bordeaux", "zenith de caen"));
   }
 
-  // --- estDoublonSalle — critère pivot (#702) ---
+  // --- estDoublonSalle — critère pivot ---
 
   @Test
   void estDoublonSalle_kursaalBesanconVsGrandKursaal_retourneTrue() {
-    // #702 : Eventim renomme "Grand Kursaal" → "Kursaal Besancon" entre deux fetches
+    // Eventim renomme "Grand Kursaal" → "Kursaal Besancon" entre deux fetches
     // Token pivot "kursaal" (7 chars), Jaccard = 1/3 = 0.33 > 0.3
     assertTrue(PersisterConcerts.estDoublonSalle("grand kursaal", "kursaal besancon"));
   }
 
   @Test
   void estDoublonSalle_megaciteAmiensVsAuditoriumMegacite_retourneTrue() {
-    // #702 : Eventim renomme "Auditorium Megacite" → "Megacite Amiens" entre deux fetches
+    // Eventim renomme "Auditorium Megacite" → "Megacite Amiens" entre deux fetches
     // Token pivot "megacite" (8 chars), Jaccard = 1/3 = 0.33 > 0.3
     assertTrue(PersisterConcerts.estDoublonSalle("auditorium megacite", "megacite amiens"));
   }
@@ -233,13 +233,13 @@ class PersisterConcertsTest {
 
   @Test
   void estDoublonArtiste_suffixeNumerique_retourneTrue() {
-    // ticket #619 — "Star Academy" -> "Star Academy 1" entre deux fetches TM
+    // ticket — "Star Academy" -> "Star Academy 1" entre deux fetches TM
     assertTrue(PersisterConcerts.estDoublonArtiste("star academy", "star academy 1"));
   }
 
   @Test
   void estDoublonArtiste_articleAjoute_retourneTrue() {
-    // ticket #619 — "Comédies Musicales" -> "Les Comédies Musicales" entre deux fetches TM
+    // ticket — "Comédies Musicales" -> "Les Comédies Musicales" entre deux fetches TM
     assertTrue(PersisterConcerts.estDoublonArtiste("comedies musicales", "les comedies musicales"));
   }
 
@@ -287,13 +287,13 @@ class PersisterConcertsTest {
 
   @Test
   void estDoublonArtiste_krashKarmaEspaceOmise_retourneTrue() {
-    // #668 : Jaro("krash karma", "krashkarma") ≈ 0.97 ≥ 0.95 — même artiste, espace omis
+    // Jaro("krash karma", "krashkarma") ≈ 0.97 ≥ 0.95 — même artiste, espace omis
     assertTrue(PersisterConcerts.estDoublonArtiste("krash karma", "krashkarma"));
   }
 
   @Test
   void estDoublonArtiste_dollarStyleArtisteTM_retourneTrue() {
-    // #703 : "Chri$tian Gate$" → norm "chritian gate" ($ supprimé sans espace)
+    // "Chri$tian Gate$" → norm "chritian gate" ($ supprimé sans espace)
     //        "Christian Gates" → norm "christian gates"
     // Jaro("chritian gate", "christian gates") ≈ 0.956 ≥ 0.95
     assertTrue(PersisterConcerts.estDoublonArtiste("chritian gate", "christian gates"));
@@ -301,7 +301,7 @@ class PersisterConcertsTest {
 
   @Test
   void estDoublonArtiste_esperluetteVsAnd_retourneTrue() {
-    // #703 : "Katia & Marielle Labèque" → norm "katia and marielle labeque" (nouveau)
+    // "Katia & Marielle Labèque" → norm "katia and marielle labeque" (nouveau)
     //        "Katia and Marielle Labèque" → norm "katia and marielle labeque" (identique)
     assertTrue(
         PersisterConcerts.estDoublonArtiste(
@@ -343,7 +343,7 @@ class PersisterConcertsTest {
 
   @Test
   void deduplicerParCleConflit_elyseeAvecEtSansAccents_reconcilie() {
-    // non-régression #639 : TM retourne "Elysee Montmartre" (sans accent) alors que la salle
+    // non-régression : TM retourne "Elysee Montmartre" (sans accent) alors que la salle
     // existe en base sous "Elysée Montmartre" — les deux doivent produire la même clé
     List<ConcertBrut> liste =
         List.of(

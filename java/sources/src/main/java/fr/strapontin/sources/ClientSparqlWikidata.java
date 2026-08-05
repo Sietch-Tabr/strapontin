@@ -34,7 +34,7 @@ final class ClientSparqlWikidata {
   private static final int RETRY_503_MAX = 3;
   private static final int RETRY_TOTAL_MAX = 5;
   private static final Duration TIMEOUT_LECTURE = Duration.ofSeconds(60);
-  // #1010 : espacement proactif entre appels, sur le même principe que
+  // espacement proactif entre appels, sur le même principe que
   // OverpassSalleSource.DELAI_MIN_ENTRE_APPELS_MS — le retry réactif sur 429 (Retry-After 120s
   // constaté) a fait perdre ~4 des 5 minutes d'un cycle nocturne. Aucune politique de rate-limit
   // publiée par Wikidata pour l'endpoint SPARQL ; valeur calibrée empiriquement, sans contrainte
@@ -85,7 +85,7 @@ final class ClientSparqlWikidata {
   /// @param sparql corps de la requête SPARQL
   /// @return corps JSON désérialisé, ou null en cas d'échec définitif
   java.util.Map<String, Object> executer(String sparql) {
-    // #993 : un appel logique = un executer(), quel que soit le nombre de retries internes —
+    // un appel logique = un executer, quel que soit le nombre de retries internes —
     // seul un échec définitif (retries épuisés) compte comme erreur pour le bilan de panne.
     compteurBilan.enregistrerAppel();
     attendreRateLimitGlobal();
@@ -118,7 +118,7 @@ final class ClientSparqlWikidata {
     return null;
   }
 
-  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement (#993) et
+  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement et
   /// remet les compteurs à zéro — client partagé entre {@link WikidataSalleSource} et
   /// {@link WikidataArtisteSource}, mais une instance par source (non partagée) : chacune
   /// prélève son propre bilan sans interférer avec l'autre.
@@ -147,7 +147,7 @@ final class ClientSparqlWikidata {
     }
   }
 
-  /// Espace proactivement les appels SPARQL Wikidata (#1010), sur le même principe que
+  /// Espace proactivement les appels SPARQL Wikidata, sur le même principe que
   /// {@code OverpassSalleSource.attendreRateLimitGlobal}.
   private synchronized void attendreRateLimitGlobal() {
     long maintenant = System.currentTimeMillis();

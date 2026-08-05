@@ -26,7 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerStatsService} (#915, extrait de {@code WorkerService}).
+/// Tests unitaires pour {@link WorkerStatsService} (extrait de {@code WorkerService}).
 ///
 /// @since 2.7.0
 /// @author Kwaite
@@ -49,7 +49,7 @@ class WorkerStatsServiceTest {
     resolveur = mock(ResolveurNomCanonique.class);
     jdbc = mock(NamedParameterJdbcTemplate.class);
     // Instance réelle adossée au jdbc mocké : les assertions verify(jdbc)... continuent de
-    // fonctionner sans changer de cible (#909).
+    // fonctionner sans changer de cible.
     logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
     meterRegistry = new SimpleMeterRegistry();
     service = creerService(List.of(tm, eventim));
@@ -59,7 +59,7 @@ class WorkerStatsServiceTest {
     return new WorkerStatsService(sources, tm, resolveur, jdbc, logsAdminWorker, meterRegistry);
   }
 
-  // #901 : bilan Eventim remonté via le mécanisme générique (instanceof SourceAvecBilanFetch),
+  // bilan Eventim remonté via le mécanisme générique (instanceof SourceAvecBilanFetch),
   // pour tout job de type "fetch:".
   @Test
   void enregistrerStatJob_eventimPanneTotale_insereLogsAdminNiveauError() {
@@ -122,7 +122,7 @@ class WorkerStatsServiceTest {
                         && params.get("message").toString().contains("Eventim")));
   }
 
-  // #909 : le bilan de panne n'est plus limité à Eventim — Digitick en bénéficie via la boucle
+  // le bilan de panne n'est plus limité à Eventim — Digitick en bénéficie via la boucle
   // générique sur `sources` (instanceof SourceAvecBilanFetch), sans méthode dédiée.
   @Test
   void enregistrerStatJob_digitickPanneTotale_insereLogsAdminNiveauError() {
@@ -143,7 +143,7 @@ class WorkerStatsServiceTest {
                         && params.get("message").toString().contains("Digitick")));
   }
 
-  // #912 : même bilan de panne étendu à Deezer (ResolveurNomCanonique, hors liste `sources` car
+  // même bilan de panne étendu à Deezer (ResolveurNomCanonique, hors liste `sources` car
   // pas un SourceConcerts — remonté explicitement par WorkerStatsService).
   @Test
   void enregistrerStatJob_deezerPanneTotale_insereLogsAdminNiveauError() {
@@ -160,7 +160,7 @@ class WorkerStatsServiceTest {
                         && params.get("message").toString().contains("Deezer")));
   }
 
-  // #909 : concertsManques reste une métrique TM spécifique, remontée séparément du bilan
+  // concertsManques reste une métrique TM spécifique, remontée séparément du bilan
   // appels/erreurs commun.
   @Test
   void enregistrerStatJob_tmConcertsManques_insereLogsAdminNiveauWarn() {
@@ -192,7 +192,7 @@ class WorkerStatsServiceTest {
                         && params.get("message").toString().contains("concert(s) TM")));
   }
 
-  // #944 : remonterResultatVide n'avait aucune assertion directe — jusque-là déclenché
+  // remonterResultatVide n'avait aucune assertion directe — jusque-là déclenché
   // silencieusement en marge d'autres tests (ex. bilan Eventim à zéro) sans jamais être vérifié.
   @Test
   void
@@ -225,7 +225,7 @@ class WorkerStatsServiceTest {
                         && params.get("message").toString().contains("résultat vide")));
   }
 
-  // #953 : métrique Micrometer de durée par type de job, exposée via /actuator/prometheus.
+  // métrique Micrometer de durée par type de job, exposée via /actuator/prometheus.
   @Test
   void enregistrerStatJob_nominal_enregistreLaDureeDansLeTimerMicrometer() {
     service.enregistrerStatJob("fetch:region", 42, new ResultatPersistance(1, 0), null);
@@ -240,7 +240,7 @@ class WorkerStatsServiceTest {
     assertEquals(42.0, timer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS), 0.001);
   }
 
-  // #953 : compteur d'erreurs par source, incrémenté à chaque bilan de panne comportant au
+  // compteur d'erreurs par source, incrémenté à chaque bilan de panne comportant au
   // moins un échec (même sous le seuil d'escalade error/warn de remonterBilan).
   @Test
   void enregistrerStatJob_eventimAvecErreurs_incrementeLeCompteurMicrometer() {
@@ -254,7 +254,7 @@ class WorkerStatsServiceTest {
     assertEquals(2.0, compteur.count(), 0.001);
   }
 
-  // #1013 : les correspondances Eventim par containment (invisibles jusque-là, log SLF4J INFO
+  // les correspondances Eventim par containment (invisibles jusque-là, log SLF4J INFO
   // uniquement) sont remontées dans logs_admin au niveau warn à chaque cycle fetch.
   @Test
   void enregistrerStatJob_eventimContainmentsAcceptes_insereLogsAdminNiveauWarn() {

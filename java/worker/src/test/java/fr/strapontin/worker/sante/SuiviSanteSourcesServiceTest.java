@@ -16,7 +16,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link SuiviSanteSourcesService} (#706 phase 1).
+/// Tests unitaires pour {@link SuiviSanteSourcesService} (phase 1).
 ///
 /// @since 2.6.0
 /// @author Kwaite

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-/// Test d'intégration de {@link AdminService} avec PostgreSQL réel (Testcontainers, #940).
+/// Test d'intégration de {@link AdminService} avec PostgreSQL réel (Testcontainers).
 ///
 /// <p>Les tests mockés de {@code AdminServiceTest} ne peuvent pas reproduire l'épuisement du
 /// pool HikariCP documenté en v2.6.4 (jdbc mocké, aucune vraie transaction) : ce test vérifie
@@ -78,7 +78,7 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
         Map.of("id", id, "email", id + "@test.fr"));
   }
 
-  // #940 : combiner nom/email + rétrogradation imbriquerait initierRevocationAdminTransactionnel
+  // combiner nom/email + rétrogradation imbriquerait initierRevocationAdminTransactionnel
   // (REQUIRES_NEW + SERIALIZABLE) dans la transaction déjà ouverte de modifierUtilisateur —
   // risque d'épuisement du pool HikariCP (incident v2.6.4). Vérifie avec une vraie connexion
   // qu'aucune écriture n'a lieu (ni le nom, ni le rôle) lorsque la combinaison est rejetée.

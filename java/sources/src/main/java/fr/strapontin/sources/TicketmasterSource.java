@@ -47,7 +47,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   /// Préfixe abrégé attendu par {@link #accepteIdentifiantSalle}/{@link #fetchSalle}, distinct
   /// de {@link #nom()} ({@code "ticketmaster"}, valeur canonique stockée dans
   /// {@code salle_sources.source}). Référencée par les appelants qui construisent l'identifiant
-  /// préfixé à partir de cette colonne (#966) — sans cette traduction, {@code fetchSalle} n'est
+  /// préfixé à partir de cette colonne — sans cette traduction, {@code fetchSalle} n'est
   /// jamais invoqué (mismatch de préfixe silencieux, aucune exception).
   public static final String PREFIXE_IDENTIFIANT = "tm";
   private static final int TAILLE_PAGE_REGION = 200;
@@ -174,13 +174,13 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   private final RestClient restClient;
   private final AtomicReference<QuotaTM> dernierQuota = new AtomicReference<>();
   // concertsManques reste spécifique à TM (pagination plafonnée), séparé du tronc commun
-  // appels/erreurs porté par compteurBilan (#909).
+  // appels/erreurs porté par compteurBilan.
   private final AtomicInteger concertsManquesCumules = new AtomicInteger();
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
   private final AtomicLong dernierAppelMs = new AtomicLong(0);
 
   /// Crée une instance avec la clé API fournie et un RestClient par défaut (timeout connexion
-  /// 10s, lecture 30s — #887).
+  /// 10s, lecture 30s).
   ///
   /// @param apiKey clé API Ticketmaster Discovery v2
   public TicketmasterSource(String apiKey) {
@@ -210,7 +210,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     return dernierQuota.get();
   }
 
-  /// Retourne le bilan agrégé appels/erreurs HTTP depuis le dernier prélèvement (#909) et remet
+  /// Retourne le bilan agrégé appels/erreurs HTTP depuis le dernier prélèvement et remet
   /// les compteurs à zéro. Le nombre de concerts manqués (pagination plafonnée) reste distinct,
   /// voir {@link #preleverConcertsManques()}.
   ///
@@ -222,7 +222,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
   /// Retourne le nombre cumulé de concerts non récupérés par plafonnement de la pagination
   /// (pagination bornée à {@code NB_PAGES_MAX}) depuis le dernier prélèvement, et remet le
-  /// compteur à zéro. Métrique spécifique à TM, distincte du bilan appels/erreurs commun (#909).
+  /// compteur à zéro. Métrique spécifique à TM, distincte du bilan appels/erreurs commun.
   ///
   /// @return le nombre de concerts manqués depuis le dernier prélèvement
   public int preleverConcertsManques() {
@@ -493,7 +493,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   /// @param uriBase         URI de base de la requête, sans pagination
   /// @param artisteFallback nom de l'artiste cherché (fetch:artiste uniquement), peut être null
   /// @param contexte        identifiant du centre de recherche (ex. {@code "dept=75"}) inclus
-  ///     dans le log de plafonnement de pagination (#995), pour distinguer les départements/salles
+  /// dans le log de plafonnement de pagination, pour distinguer les départements/salles
   ///     chroniquement affectés
   /// @return les concerts récupérés sur toutes les pages parcourues
   private List<ConcertBrut> fetchToutesPages(
@@ -596,7 +596,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   ///
   /// <p>Parcourt jusqu'à 10 résultats pour trouver la première correspondance exacte normalisée.
   /// TM peut trier par popularité et retourner un artiste similaire avant l'artiste recherché
-  /// (ex: "Shy" avant "Shy'm" — #654).
+  /// (ex: "Shy" avant "Shy'm").
   ///
   /// @param nom nom de l'artiste
   /// @return attractionId TM, ou null si aucun résultat exact dans les 10 premiers
@@ -655,7 +655,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     return concerts;
   }
 
-  /// Statut de vivacité d'un identifiant TM (#706 phase 1).
+  /// Statut de vivacité d'un identifiant TM (phase 1).
   public enum StatutIdTM {
     VIVANT,
     MORT
@@ -701,7 +701,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     }
   }
 
-  /// Récupère le nom actuel d'une attraction TM (#1012, health-check du rattachement — distinct
+  /// Récupère le nom actuel d'une attraction TM (health-check du rattachement — distinct
   /// de {@link #verifierAttraction}, qui ne vérifie que la vivacité HTTP de l'identifiant, jamais
   /// que le nom retourné correspond toujours à l'artiste suivi).
   ///
@@ -725,7 +725,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     }
   }
 
-  /// Recherche des salles TM candidates par nom (redécouverte active, #706 phase 1).
+  /// Recherche des salles TM candidates par nom (redécouverte active, phase 1).
   ///
   /// @param nom nom de la salle recherchée
   /// @return candidats trouvés (peut être vide)

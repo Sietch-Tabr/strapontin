@@ -84,7 +84,7 @@ public class NotificationPushService {
   ///
   /// <p>Si {@code endpoint} est fourni (l'appareil demandeur, disponible côté client via
   /// {@code PushManager.getSubscription()}), cible précisément cet abonnement plutôt que de
-  /// sélectionner arbitrairement le plus récent par {@code id} (#826) — un utilisateur abonné sur
+  /// sélectionner arbitrairement le plus récent par {@code id} — un utilisateur abonné sur
   /// plusieurs appareils cliquant "Test" depuis l'un d'eux recevait auparavant la notification
   /// sur un autre appareil, sans lien garanti avec la session courante (un UUID v4 n'a pas de
   /// corrélation temporelle). Repli sur le plus récent si {@code endpoint} absent.

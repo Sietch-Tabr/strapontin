@@ -8,7 +8,7 @@ package fr.strapontin.web.admin;
 ///
 /// @param email     email du compte cible
 /// @param lienReset lien de réinitialisation, exposé à l'admin uniquement si Resend n'est pas
-///     disponible (#815) — sinon transmis par email au seul utilisateur concerné
+/// disponible — sinon transmis par email au seul utilisateur concerné
 /// @since 2.6.4
 /// @author Kwaite
 public record ResultatReset(String email, String lienReset) {}

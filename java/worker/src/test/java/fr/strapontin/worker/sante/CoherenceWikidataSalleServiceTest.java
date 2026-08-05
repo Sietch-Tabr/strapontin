@@ -32,7 +32,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link CoherenceWikidataSalleService} (#1005).
+/// Tests unitaires pour {@link CoherenceWikidataSalleService}.
 ///
 /// @since 2.7.5
 /// @author Kwaite
@@ -163,7 +163,7 @@ class CoherenceWikidataSalleServiceTest {
     assertEquals(0, resultat);
   }
 
-  // #1009 : faux positifs constatés lors de la première nuit de fonctionnement (arrondissements
+  // faux positifs constatés lors de la première nuit de fonctionnement (arrondissements
   // Paris/Lyon/Marseille, quartiers informels sans commune propre, communes fusionnées,
   // intercommunalités) — aucun ne doit journaliser d'incohérence.
   static Stream<Arguments> villesCoherentesMalgreDivergenceTextuelle() {
@@ -179,9 +179,6 @@ class CoherenceWikidataSalleServiceTest {
             "Orange",
             "communauté de communes du Pays d'Orange en Provence"),
         Arguments.of("Parc Jean de la Fontaine", "Oullins-Pierre-Bénite", "Pierre-Bénite"),
-        // #1039 : Quinze-Vingts (quartier administratif du 12e arrondissement de Paris, où se
-        // trouve l'Opéra Bastille) alertait chaque nuit depuis le 23/07 — faux positif de
-        // granularité, absent de la table de canonicalisation.
         Arguments.of("Opéra Bastille", "Quinze-Vingts", "Quinze-Vingts"));
   }
 
@@ -228,7 +225,7 @@ class CoherenceWikidataSalleServiceTest {
             any());
   }
 
-  // #1021 : le mauvais rapprochement a corrompu salles.ville en même temps que wikidata_id (les
+  // le mauvais rapprochement a corrompu salles.ville en même temps que wikidata_id (les
   // deux valeurs pointent vers la même mauvaise entité) — une comparaison contre salles.ville
   // seule trouve alors toujours les deux cohérents entre eux, angle mort total. concerts.ville
   // (indépendante, jamais touchée par l'enrichissement) doit prendre le dessus et révéler
@@ -259,10 +256,9 @@ class CoherenceWikidataSalleServiceTest {
             any());
   }
 
-  // #1038 : anyMatch seul devenait aveugle dès qu'un seul concert cohérent apparaissait parmi
-  // des concerts mal rattachés — cas réel "Theatre Municipal" (Nancy/Béthune, wikidata correct
-  // pour Béthune) qui absorbe aussi 2 concerts Carcassonne mal rattachés. Toutes les villes
-  // réelles doivent désormais être cohérentes pour ne rien journaliser.
+  // Une salle correctement enrichie pour Béthune mais qui absorbe aussi des concerts mal
+  // rattachés à Carcassonne doit rester détectée — toutes les villes réelles doivent être
+  // cohérentes pour ne rien journaliser, pas seulement une majorité.
   @Test
   void verifier_contaminationPartielle_journaliseIncoherenceMemeAvecUnConcertCoherent() {
     UUID id = UUID.randomUUID();
@@ -289,7 +285,7 @@ class CoherenceWikidataSalleServiceTest {
             any());
   }
 
-  // #1021 : à l'inverse, si salles.ville diverge textuellement de la commune Wikidata mais que
+  // à l'inverse, si salles.ville diverge textuellement de la commune Wikidata mais que
   // les concerts réels (source indépendante) confirment la même ville, ce n'est pas une vraie
   // incohérence — concerts.ville doit primer sur salles.ville plutôt que de générer un faux
   // positif.

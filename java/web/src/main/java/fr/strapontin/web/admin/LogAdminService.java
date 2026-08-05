@@ -111,7 +111,7 @@ public class LogAdminService {
                 rs.getString("meta")));
   }
 
-  /// Retourne les entrées de niveau {@code error} postérieures à {@code tsDepuis} (#765).
+  /// Retourne les entrées de niveau {@code error} postérieures à {@code tsDepuis}.
   ///
   /// @param tsDepuis horodatage Unix en millisecondes, exclusif
   /// @return les entrées d'erreur, de la plus ancienne à la plus récente

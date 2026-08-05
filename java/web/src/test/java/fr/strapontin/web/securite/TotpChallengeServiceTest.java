@@ -14,7 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link TotpChallengeService} (#917, extrait d'{@code AuthController}).
+/// Tests unitaires de {@link TotpChallengeService} (extrait d'{@code AuthController}).
 ///
 /// @since 2.7.0
 /// @author Kwaite

@@ -15,7 +15,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link ManifestController} (#859 — {@code id} stable via
+/// Tests unitaires pour {@link ManifestController} ({@code id} stable via
 /// {@code PUBLIC_BASE_URL}, indépendant de l'hôte de la requête entrante).
 ///
 /// @since 2.6.5

@@ -300,7 +300,7 @@ function fermerDialogConfirmerRole() {
   modifEnAttenteRole.value = null
 }
 
-// #838 : envoyer aussi nom/email (requête PATCH séparée) avant l'appel de révocation — PATCH
+// envoyer aussi nom/email (requête PATCH séparée) avant l'appel de révocation — PATCH
 // /api/admin/utilisateurs/{id} délègue en interne à initierRevocationAdmin (transaction
 // SERIALIZABLE + REQUIRES_NEW) quand role passe à "user" ; l'imbriquer dans la même transaction
 // que la mise à jour nom/email épuise le pool de connexions (CannotCreateTransactionException,

@@ -17,7 +17,7 @@ createApp(App).use(router).mount("#app");
 // pour que le service worker (sw.js) puisse remonter ses erreurs.
 window.afficherToast = afficherToast;
 
-// #942 : remonte les erreurs JS non catchées et les rejections de promesse vers
+// remonte les erreurs JS non catchées et les rejections de promesse vers
 // POST /api/client/erreur (endpoint jusque-là jamais câblé côté front, cf. ClientController).
 function signalerErreurClient(corps) {
   fetch("/api/client/erreur", {
@@ -42,7 +42,7 @@ window.addEventListener("unhandledrejection", (e) => {
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
 
-  // #839 : un second listener "nav-ancre" existait dans App.vue (traitement effectif, toujours
+  // un second listener "nav-ancre" existait dans App.vue (traitement effectif, toujours
   // router.push) — celui-ci faisait double emploi et sa branche scrollIntoView était du code mort
   // (les URLs construites côté serveur utilisent toujours une query string, jamais un #fragment,
   // donc cible.hash était toujours vide). Ne garder qu'un seul listener message, dans App.vue.

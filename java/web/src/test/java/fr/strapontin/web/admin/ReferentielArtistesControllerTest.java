@@ -19,7 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link ReferentielArtistesController} (#710).
+/// Tests unitaires pour {@link ReferentielArtistesController}.
 ///
 /// @since 2.6.0
 /// @author Kwaite

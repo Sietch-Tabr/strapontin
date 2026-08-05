@@ -31,7 +31,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Tests unitaires pour {@link EnrichissementArtistesService} — orchestration multi-sources et
-/// cross-validation P6262 (#716).
+/// cross-validation P6262.
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -250,7 +250,7 @@ class EnrichissementArtistesServiceTest {
             anyMap());
   }
 
-  // #993 : bilan de panne absent jusqu'ici sur les sources d'enrichissement artiste.
+  // bilan de panne absent jusqu'ici sur les sources d'enrichissement artiste.
   @Test
   void enrichir_sourceAvecBilanFetchPanneTotale_loggeErreurDansLogsAdmin() {
     UUID artisteId = UUID.randomUUID();

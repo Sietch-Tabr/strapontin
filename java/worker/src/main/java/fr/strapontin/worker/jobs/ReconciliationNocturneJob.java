@@ -12,10 +12,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : réconciliation nocturne des sources salles/artistes (#706), tous les jours à 3h.
+/// Job Quartz : réconciliation nocturne des sources salles/artistes, tous les jours à 3h.
 ///
 /// Health-check et redécouverte des identifiants TM suspects, puis enrichissement
-/// Wikidata/OSM/Deezer (#711/#716). Durée variable selon les appels externes rate-limités —
+/// Wikidata/OSM/Deezer. Durée variable selon les appels externes rate-limités —
 /// {@code @DisallowConcurrentExecution} empêche tout chevauchement avec un déclenchement manuel.
 ///
 /// @since 2.6.0

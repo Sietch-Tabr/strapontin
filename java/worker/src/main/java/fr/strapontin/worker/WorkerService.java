@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 
 /// Orchestration des jobs de recalcul de matches et de réconciliation nocturne.
 ///
-/// <p>Depuis #915, le fetch (voir {@link WorkerFetchService}), la purge (voir
+/// <p>Depuis, le fetch (voir {@link WorkerFetchService}), la purge (voir
 /// {@link WorkerPurgeService}) et la révocation admin (voir {@link WorkerRevocationService}) ont
 /// été extraits dans des services dédiés — cette classe reste le point d'entrée fin délégué par
 /// les jobs Quartz {@code RecalculerMatchesJob} et {@code ReconciliationNocturneJob}, les deux
@@ -66,7 +66,7 @@ public class WorkerService {
     }
   }
 
-  /// Job nocturne de réconciliation des sources salles/artistes (#706) : health-check et
+  /// Job nocturne de réconciliation des sources salles/artistes : health-check et
   /// redécouverte des identifiants suspects, puis enrichissement Wikidata/OSM/Deezer.
   public void executerReconciliationNocturne() {
     log.info("reconciliation:nocturne démarré");

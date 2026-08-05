@@ -30,7 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerFetchService} (#915, extrait de {@code WorkerService}).
+/// Tests unitaires pour {@link WorkerFetchService} (extrait de {@code WorkerService}).
 ///
 /// <p>Les tests du bilan de panne (Eventim/Digitick/Deezer/TM concerts manqués) sont dans
 /// {@code WorkerStatsServiceTest}, testés directement au niveau où cette logique vit désormais.
@@ -136,7 +136,7 @@ class WorkerFetchServiceTest {
     verify(tm, times(2)).fetchArtistesLot(any());
   }
 
-  // #1022 : deezer_id/wikidata_id doivent être transmis à fetchArtiste(nom, deezerId,
+  // deezer_id/wikidata_id doivent être transmis à fetchArtiste(nom, deezerId,
   // wikidataId) — condition nécessaire pour qu'EventimSource puisse désactiver le repli par
   // containment dès qu'une identité indépendante est déjà connue.
   @Test
@@ -180,7 +180,7 @@ class WorkerFetchServiceTest {
     verify(persisterConcerts).persisterConcerts(any());
   }
 
-  // #1014 : Deezer ne référence pas les humoristes — la résolution de nom canonique ne doit
+  // Deezer ne référence pas les humoristes — la résolution de nom canonique ne doit
   // jamais être appliquée à un concert classification="theatre" (ex. Deezer renverrait "Fabrice
   // Aboulker" pour la recherche "Fabrice Éboué").
   @Test
@@ -324,7 +324,7 @@ class WorkerFetchServiceTest {
     verify(persisterConcerts).persisterConcerts(any());
   }
 
-  // #966 : la requête SQL réelle agrège salle_sources.source ("ticketmaster", la valeur
+  // la requête SQL réelle agrège salle_sources.source ("ticketmaster", la valeur
   // canonique), jamais l'abréviation "tm" — sans traduction, TicketmasterSource.fetchSalle
   // n'est jamais invoqué (accepteIdentifiantSalle rejette silencieusement le préfixe long).
   @Test

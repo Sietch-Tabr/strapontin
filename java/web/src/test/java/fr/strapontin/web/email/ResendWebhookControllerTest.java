@@ -22,7 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires de {@link ResendWebhookController} (#810).
+/// Tests unitaires de {@link ResendWebhookController}.
 ///
 /// @since 2.6.3
 /// @author Kwaite
@@ -52,9 +52,9 @@ class ResendWebhookControllerTest {
     assertEquals(HttpStatus.BAD_REQUEST, reponse.getStatusCode());
   }
 
-  // #810 : un svix-timestamp non numérique fait lever une NumberFormatException non enveloppée
+  // un svix-timestamp non numérique fait lever une NumberFormatException non enveloppée
   // par le SDK resend-java (Webhooks.verify() appelle Long.parseLong sans try/catch interne).
-  // Avant #810, seul ResendException était intercepté — cette exception technique remontait donc
+  // Avant, seul ResendException était intercepté — cette exception technique remontait donc
   // en 500 (via GlobalExceptionHandler) plutôt qu'en 401, avec un warn logs_admin parasite.
   @Test
   void recevoirEvenement_svixTimestampNonNumerique_retourne401PasUne500() {
@@ -78,7 +78,7 @@ class ResendWebhookControllerTest {
     assertEquals(HttpStatus.UNAUTHORIZED, reponse.getStatusCode());
   }
 
-  // #831 : l'email ne doit jamais apparaître en clair dans logs_admin, cohérent avec le hachage
+  // l'email ne doit jamais apparaître en clair dans logs_admin, cohérent avec le hachage
   // déjà appliqué côté SLF4J juste au-dessus dans le code.
   @Test
   @SuppressWarnings("unchecked")
@@ -96,7 +96,7 @@ class ResendWebhookControllerTest {
     verify(emailAlerteService).envoyerNotificationBounce("victime@exemple.fr");
   }
 
-  // #832 : une plainte spam (email.complained) reçoit désormais le même traitement qu'un
+  // une plainte spam (email.complained) reçoit désormais le même traitement qu'un
   // bounce — logs_admin + notification admin — plutôt qu'un simple log SLF4J invisible.
   @Test
   @SuppressWarnings("unchecked")

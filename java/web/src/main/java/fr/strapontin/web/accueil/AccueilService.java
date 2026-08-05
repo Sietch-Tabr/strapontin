@@ -37,7 +37,7 @@ public class AccueilService {
   /// Marque comme vus les matches artiste non encore vus pour l'utilisateur.
   ///
   /// <p>Appelé à la visite de l'accueil pour réinitialiser le badge de navigation. Restreint aux
-  /// matchs artiste (#799) — l'accueil n'affiche jamais les matchs salle (voir {@link #accueil}),
+  /// matchs artiste — l'accueil n'affiche jamais les matchs salle (voir {@link #accueil}),
   /// donc marquer aussi ces derniers effaçait à tort l'indicateur « Nouveau » par concert sur
   /// {@code /spectacles} avant même que l'utilisateur n'ait visité cette page.
   ///
@@ -104,7 +104,7 @@ public class AccueilService {
     params.put(CLE_USER_ID, userId);
     params.put("aujourd8", aujourd8);
 
-    // #816 : est_nouveau (badge affiché par concert) unifié sur um.vu_le IS NULL — cohérent avec
+    // est_nouveau (badge affiché par concert) unifié sur um.vu_le IS NULL — cohérent avec
     // SpectacleDto.estNew et avec l'intention "jamais vu", plutôt que first_seen (fraîcheur en
     // base, indépendante de l'utilisateur) utilisé auparavant ici. Sans lien avec le paramètre
     // `nouveau` de cette méthode (filtre chip "Nouveau", basé sur first_seen — fonctionnalité

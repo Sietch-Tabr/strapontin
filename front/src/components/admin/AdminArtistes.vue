@@ -234,7 +234,7 @@ const {
 
 const { afficherToast } = useToasts()
 
-// #1026 : actions propres aux artistes (necessite_intervention_le n'existe pas sur salle_sources)
+// actions propres aux artistes (necessite_intervention_le n'existe pas sur salle_sources)
 // — implémentées localement plutôt que dans useReferentielAdmin.js, partagé avec AdminSalles.vue.
 async function ignorerIntervention(artiste) {
   try {
