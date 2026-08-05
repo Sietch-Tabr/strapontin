@@ -136,6 +136,30 @@ class WorkerFetchServiceTest {
     verify(tm, times(2)).fetchArtistesLot(any());
   }
 
+  // Le compteur d'absences consécutives doit être mis à jour pour l'artiste effectivement
+  // retraité dans le lot, permettant de détecter plus tard un concert disparu du catalogue.
+  @Test
+  void executerFetchArtistesBatch_lotTraite_metAJourLesAbsencesConsecutives() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    row.put("artiste_id_str", "artiste-123");
+    row.put("artiste_affiche", "Indila");
+    row.put("attraction_id", "attractionId1");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
+    when(tm.fetchArtistesLot(any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchArtistesBatch();
+
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("absences_consecutives"),
+            org.mockito.ArgumentMatchers.argThat(
+                (java.util.Map<String, Object> params) ->
+                    ((List<?>) params.get("ids")).contains("artiste-123")));
+  }
+
   // artiste_sources n'a pas de contrainte d'unicité sur artiste_id — deux identifiant_externe
   // ticketmaster pour le même artiste rendent le MAX() de la requête SQL arbitraire. Mieux vaut
   // ignorer le fetch TM pour cet artiste ce cycle que d'envoyer un identifiant potentiellement

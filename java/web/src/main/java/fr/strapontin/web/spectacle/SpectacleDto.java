@@ -9,6 +9,9 @@ import java.time.Instant;
 
 /// Concert dans la vue spectacles d'un utilisateur.
 ///
+/// @param informationNonConfirmee {@code true} si le concert n'a plus été revu depuis plusieurs
+///   cycles de fetch consécutifs (voir {@code WorkerFetchService.mettreAJourAbsences}) — signal
+///   affiché à l'utilisateur, jamais utilisé pour masquer le concert
 /// @since 2.1.0
 /// @author Kwaite
 public record SpectacleDto(
@@ -24,7 +27,8 @@ public record SpectacleDto(
     String statut,
     boolean estNew,
     Instant presaleDebut,
-    String presaleNom) {
+    String presaleNom,
+    boolean informationNonConfirmee) {
 
   /// @return date formatée (ex. "sam. 12 avr.")
   public String dateFormatee() {

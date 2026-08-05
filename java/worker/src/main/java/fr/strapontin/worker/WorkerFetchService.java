@@ -15,6 +15,7 @@ import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import fr.strapontin.worker.sante.SuiviSanteSourcesService;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -190,7 +191,38 @@ public class WorkerFetchService {
         tous.size(),
         dedoublonnes.size());
 
-    return persisterConcerts.persisterConcerts(dedoublonnes);
+    String debutLot = OffsetDateTime.now().toString();
+    ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+    List<String> artisteIds = lot.stream().map(row -> (String) row.get("artiste_id_str")).toList();
+    mettreAJourAbsences("artiste_id", artisteIds, debutLot);
+    return resultat;
+  }
+
+  // Nombre d'absences consécutives (cycles fetch:artistes:batch/fetch:salles:all successifs sans
+  // qu'un concert précédemment vu ne réapparaisse) à partir duquel il est marqué comme non
+  // confirmé récemment — évite un faux positif sur un simple aléa réseau isolé, tout en restant
+  // assez bas pour signaler une disparition réelle dans un délai raisonnable (cron ~11 cycles/jour
+  // — 5 absences correspond à environ une demi-journée de silence continu).
+  private static final int SEUIL_ABSENCES_CONSECUTIVES = 5;
+
+  /// Met à jour le compteur d'absences consécutives des concerts futurs liés aux entités
+  /// effectivement retraitées dans ce cycle : remis à zéro pour tout concert réellement revu
+  /// (`updated_at` avancé par l'upsert), incrémenté sinon.
+  ///
+  /// @param colonne "artiste_id" ou "salle_id"
+  /// @param ids identifiants (texte) des entités traitées dans ce cycle
+  /// @param debutCycle horodatage capturé avant la persistance du lot
+  private void mettreAJourAbsences(String colonne, List<String> ids, String debutCycle) {
+    if (ids.isEmpty()) return;
+    jdbc.update(
+        "UPDATE concerts SET   absences_consecutives = CASE WHEN updated_at >= CAST(:debut AS"
+            + " timestamptz)                                THEN 0 ELSE absences_consecutives + 1"
+            + " END,   absence_detectee_le = CASE     WHEN updated_at >= CAST(:debut AS"
+            + " timestamptz) THEN NULL     WHEN absences_consecutives + 1 >= :seuil THEN"
+            + " COALESCE(absence_detectee_le, now())     ELSE absence_detectee_le END WHERE "
+            + colonne
+            + "::text IN (:ids) AND date >= CURRENT_DATE",
+        Map.of("debut", debutCycle, "seuil", SEUIL_ABSENCES_CONSECUTIVES, "ids", ids));
   }
 
   private static ResultatPersistance accumuler(ResultatPersistance a, ResultatPersistance b) {
