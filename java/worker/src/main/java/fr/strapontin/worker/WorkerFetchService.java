@@ -110,6 +110,7 @@ public class WorkerFetchService {
               "SELECT ua.artiste_id::text AS artiste_id_str,"
                   + " MAX(ua.artiste_affiche) AS artiste_affiche,"
                   + " MAX(asm.identifiant_externe) AS attraction_id,"
+                  + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
                   + " MAX(a.deezer_id) AS deezer_id,"
                   + " MAX(a.wikidata_id) AS wikidata_id"
                   + " FROM user_artistes ua"
@@ -232,7 +233,7 @@ public class WorkerFetchService {
   /// </ol>
   ///
   /// @param rows lignes agrégées par {@code artiste_id} avec {@code artiste_affiche}, {@code
-  ///   artiste_id_str}, {@code attraction_id}
+  ///   artiste_id_str}, {@code attraction_id}, {@code nb_ids_distincts}
   /// @return concerts bruts collectés depuis TM
   private List<ConcertBrut> fetchTMParArtistes(List<Map<String, Object>> rows) {
     List<ConcertBrut> resultats = new ArrayList<>();
@@ -243,6 +244,27 @@ public class WorkerFetchService {
       String nom = (String) row.get("artiste_affiche");
       String artisteIdStr = (String) row.get("artiste_id_str");
       String attractionId = (String) row.get("attraction_id");
+      Number nbIdsDistinctsNum = (Number) row.get("nb_ids_distincts");
+      int nbIdsDistincts = nbIdsDistinctsNum != null ? nbIdsDistinctsNum.intValue() : 0;
+      if (nbIdsDistincts > 1) {
+        // artiste_sources n'a pas de contrainte d'unicité sur artiste_id (PK = (source,
+        // identifiant_externe)) — une fusion mal dédupliquée peut laisser deux identifiants TM
+        // pour le même artiste, rendant le MAX() ci-dessus arbitraire. Mieux vaut ne pas fetcher
+        // avec un identifiant potentiellement faux que de rapatrier silencieusement les concerts
+        // d'un autre artiste sous cette identité.
+        log.warn(
+            "artiste_sources ambigu — {} identifiant_externe ticketmaster distincts pour"
+                + " artiste={} artisteId={}, fetch TM ignoré ce cycle",
+            nbIdsDistincts,
+            nom,
+            artisteIdStr);
+        jdbc.update(
+            "UPDATE artiste_sources SET necessite_intervention_le ="
+                + " COALESCE(necessite_intervention_le, now()) WHERE artiste_id = CAST(:artisteId"
+                + " AS uuid) AND source = 'ticketmaster'",
+            Map.of("artisteId", artisteIdStr));
+        continue;
+      }
       if (attractionId == null) {
         try {
           attractionId = tm.rechercherAttractionId(nom);

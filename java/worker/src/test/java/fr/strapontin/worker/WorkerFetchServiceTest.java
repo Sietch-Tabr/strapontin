@@ -136,6 +136,30 @@ class WorkerFetchServiceTest {
     verify(tm, times(2)).fetchArtistesLot(any());
   }
 
+  // artiste_sources n'a pas de contrainte d'unicité sur artiste_id — deux identifiant_externe
+  // ticketmaster pour le même artiste rendent le MAX() de la requête SQL arbitraire. Mieux vaut
+  // ignorer le fetch TM pour cet artiste ce cycle que d'envoyer un identifiant potentiellement
+  // faux, et flaguer necessite_intervention_le pour une résolution manuelle admin.
+  @Test
+  void executerFetchArtistesBatch_identifiantTmAmbigu_ignoreLeFetchEtFlagueIntervention() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    row.put("artiste_id_str", "artiste-ambigu");
+    row.put("artiste_affiche", "U2");
+    row.put("attraction_id", "K8vZ91712W7");
+    row.put("nb_ids_distincts", 2);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchArtistesBatch();
+
+    verify(tm, never()).fetchArtistesLot(any());
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("necessite_intervention_le"),
+            eq(java.util.Map.of("artisteId", "artiste-ambigu")));
+  }
+
   // deezer_id/wikidata_id doivent être transmis à fetchArtiste(nom, deezerId,
   // wikidataId) — condition nécessaire pour qu'EventimSource puisse désactiver le repli par
   // containment dès qu'une identité indépendante est déjà connue.

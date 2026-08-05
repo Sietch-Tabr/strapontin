@@ -656,6 +656,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   @Override
   public List<ConcertBrut> fetchArtistesLot(List<String> attractionIds) {
     if (attractionIds.isEmpty()) return List.of();
+    // Valeur exacte envoyée (pas seulement le nombre) — permet de corréler après coup un
+    // identifiant attendu (base) avec celui réellement transmis en cas d'écart constaté.
+    log.info("TM fetchArtistesLot ids envoyés={}", attractionIds);
     FenetreTemps fenetre = obtenirFenetreTemps();
     var uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
