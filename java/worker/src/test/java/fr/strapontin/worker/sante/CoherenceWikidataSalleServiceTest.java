@@ -60,10 +60,10 @@ class CoherenceWikidataSalleServiceTest {
         .thenReturn(candidats);
   }
 
-  /// Simule le résultat de `chargerVillesConcertsReelles` en pilotant directement le
-  /// {@link RowCallbackHandler} avec un {@link ResultSet} mocké — sans ce stub, l'appel réel
-  /// n'est jamais déclenché en test (Mockito no-op par défaut sur un `void`), ce qui correspond
-  /// au cas « aucun concert réel connu » (repli sur `salles.ville`, comportement historique).
+  /// Simule le résultat de `chargerVillesConcertsReelles` en pilotant directement le {@link
+  /// RowCallbackHandler} avec un {@link ResultSet} mocké — sans ce stub, l'appel réel n'est jamais
+  /// déclenché en test (Mockito no-op par défaut sur un `void`), ce qui correspond au cas « aucun
+  /// concert réel connu » (repli sur `salles.ville`, comportement historique).
   private void simulerVillesConcertsReelles(Map<UUID, List<String>> villesParSalle) {
     doAnswer(
             invocation -> {
@@ -178,7 +178,11 @@ class CoherenceWikidataSalleServiceTest {
             "Théâtre Antique d'Orange",
             "Orange",
             "communauté de communes du Pays d'Orange en Provence"),
-        Arguments.of("Parc Jean de la Fontaine", "Oullins-Pierre-Bénite", "Pierre-Bénite"));
+        Arguments.of("Parc Jean de la Fontaine", "Oullins-Pierre-Bénite", "Pierre-Bénite"),
+        // #1039 : Quinze-Vingts (quartier administratif du 12e arrondissement de Paris, où se
+        // trouve l'Opéra Bastille) alertait chaque nuit depuis le 23/07 — faux positif de
+        // granularité, absent de la table de canonicalisation.
+        Arguments.of("Opéra Bastille", "Quinze-Vingts", "Quinze-Vingts"));
   }
 
   @ParameterizedTest
@@ -252,6 +256,36 @@ class CoherenceWikidataSalleServiceTest {
             eq("warn"),
             eq("coherence-wikidata"),
             org.mockito.ArgumentMatchers.contains("Espace Saint-Exupéry"),
+            any());
+  }
+
+  // #1038 : anyMatch seul devenait aveugle dès qu'un seul concert cohérent apparaissait parmi
+  // des concerts mal rattachés — cas réel "Theatre Municipal" (Nancy/Béthune, wikidata correct
+  // pour Béthune) qui absorbe aussi 2 concerts Carcassonne mal rattachés. Toutes les villes
+  // réelles doivent désormais être cohérentes pour ne rien journaliser.
+  @Test
+  void verifier_contaminationPartielle_journaliseIncoherenceMemeAvecUnConcertCoherent() {
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q46101992");
+    simulerCandidats(List.of(salle));
+    simulerVillesConcertsReelles(Map.of(id, List.of("Bethune", "Carcassonne")));
+    when(wikidata.enrichirLot(anyList()))
+        .thenReturn(
+            Map.of(
+                id,
+                new EnrichissementSalle(
+                    "Q46101992", "Theatre Municipal de Bethune", "Bethune", null, null)));
+
+    int resultat = service.verifier();
+
+    assertEquals(1, resultat);
+    verify(logsAdminWorker)
+        .inserer(
+            eq("warn"),
+            eq("coherence-wikidata"),
+            org.mockito.ArgumentMatchers.contains("contamination partielle"),
             any());
   }
 
