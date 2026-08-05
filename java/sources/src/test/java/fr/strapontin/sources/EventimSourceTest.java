@@ -599,6 +599,35 @@ class EventimSourceTest {
     serveur.verify();
   }
 
+  // Contrairement à un artiste réellement absent d'Eventim (liste vide, succès), un échec HTTP
+  // sur le fetch des produits après une résolution d'identité réussie doit aussi retourner une
+  // liste vide sans lever d'exception — voir ResultatPageEventim#succes.
+  @Test
+  void fetchArtiste_erreurHttpSurFetchProduits_retourneListeVideSansLeverDException() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-123","name":"Julien Clerc"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
+        .andRespond(withServerError());
+
+    EventimSource source = new EventimSource(restClient);
+    List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
   @Test
   void fetchRegion_requete_inclutParamInStock() {
     // le fetch région doit inclure in_stock=true pour exclure les sold out

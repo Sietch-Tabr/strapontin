@@ -233,8 +233,12 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
   }
 
-  private record ResultatPageEventim(List<ConcertBrut> concerts, int total) {
-    static final ResultatPageEventim VIDE = new ResultatPageEventim(List.of(), 0);
+  /// @param succes {@code false} si l'appel HTTP a échoué — distingue une page réellement vide
+  ///   (succès, 0 résultat) d'un appel qui n'a jamais abouti.
+  private record ResultatPageEventim(List<ConcertBrut> concerts, int total, boolean succes) {
+    // Page légitimement vide (0 résultat, pas d'échec HTTP) — distinct de ECHEC ci-dessous.
+    static final ResultatPageEventim VIDE = new ResultatPageEventim(List.of(), 0, true);
+    static final ResultatPageEventim ECHEC = new ResultatPageEventim(List.of(), 0, false);
 
     boolean estVide() {
       return concerts.isEmpty();
@@ -261,7 +265,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
       log.warn("Eventim erreur HTTP", e);
-      return ResultatPageEventim.VIDE;
+      return ResultatPageEventim.ECHEC;
     }
   }
 
@@ -275,7 +279,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
       log.warn("Eventim erreur HTTP", e);
-      return ResultatPageEventim.VIDE;
+      return ResultatPageEventim.ECHEC;
     }
   }
 
@@ -293,7 +297,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
     int total =
         data.get(CLE_TOTAL_RESULTS) != null ? ((Number) data.get(CLE_TOTAL_RESULTS)).intValue() : 0;
-    return new ResultatPageEventim(concerts, total);
+    return new ResultatPageEventim(concerts, total, true);
   }
 
   @SuppressWarnings("unchecked")
@@ -436,13 +440,17 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
   }
 
-  private List<ConcertBrut> fetchProduitsParAttraction(
+  /// @param succes {@code false} si au moins une page a échoué (voir {@link ResultatPageEventim}).
+  private record ResultatArtisteEventim(List<ConcertBrut> concerts, boolean succes) {}
+
+  private ResultatArtisteEventim fetchProduitsParAttraction(
       String attractionId, String artisteFallback) {
     LocalDate dateDebut = LocalDate.now();
     LocalDate dateFin = dateDebut.plusMonths(24);
     DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     List<ConcertBrut> concerts = new ArrayList<>();
     boolean continuer = true;
+    boolean succes = true;
     String artisteSourceId = "eventim:" + attractionId;
 
     for (int page = 1; page <= MAX_PAGES && continuer; page++) {
@@ -462,12 +470,13 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
                 .toUriString();
         ResultatPageEventim resultat =
             chargerPageProduits(uri, artisteFallback, null, artisteSourceId);
+        if (!resultat.succes()) succes = false;
         concerts.addAll(resultat.concerts());
         continuer = !resultat.estVide() && concerts.size() < resultat.total();
       }
     }
 
-    return concerts;
+    return new ResultatArtisteEventim(concerts, succes);
   }
 
   private List<ConcertBrut> fetchProduitsParRegion(String dept, List<String> classifications) {
@@ -538,9 +547,13 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       log.info("Eventim: artiste non trouvé artiste={}", nom);
       return List.of();
     }
-    List<ConcertBrut> concerts = fetchProduitsParAttraction(attractionId, nom);
-    log.info("Eventim fetchArtiste artiste={} total={}", nom, concerts.size());
-    return concerts;
+    ResultatArtisteEventim resultat = fetchProduitsParAttraction(attractionId, nom);
+    if (resultat.succes()) {
+      log.info("Eventim fetchArtiste artiste={} total={}", nom, resultat.concerts().size());
+    } else {
+      log.warn("Eventim fetchArtiste artiste={} échoué (voir erreur HTTP ci-dessus)", nom);
+    }
+    return resultat.concerts();
   }
 
   /// Récupère les concerts par région pour une liste de départements.

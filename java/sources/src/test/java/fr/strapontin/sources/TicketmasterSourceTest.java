@@ -451,6 +451,25 @@ class TicketmasterSourceTest {
     serveur.verify();
   }
 
+  // Un échec HTTP (contrairement à une salle réellement sans concert, testé ci-dessus) doit
+  // rester distinguable après coup — voir ResultatPage#succes, propagé jusqu'au log de fetchSalle.
+  @Test
+  void fetchSalle_erreurHttp_retourneListeVideSansLeverDException() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withServerError());
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchSalle("tm:venue-en-echec");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
   @Test
   void rechercherAttractionId_nomTrouve_retourneId() {
     RestClient.Builder builder = RestClient.builder();
