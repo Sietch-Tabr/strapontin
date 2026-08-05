@@ -11,7 +11,7 @@ import fr.strapontin.sources.WikidataSalleSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/// Beans des sources d'enrichissement Wikidata/OSM/Deezer (#711/#716).
+/// Beans des sources d'enrichissement Wikidata/OSM/Deezer.
 ///
 /// Ajouter une nouvelle source d'enrichissement = créer une implémentation de
 /// {@link fr.strapontin.sources.SourceEnrichissementSalle} ou

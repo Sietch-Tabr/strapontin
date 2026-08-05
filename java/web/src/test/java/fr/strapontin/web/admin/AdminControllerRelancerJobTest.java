@@ -15,7 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires ciblés pour {@link AdminController#relancerJob} (v2.6.0, #706/#710) — bouton
+/// Tests unitaires ciblés pour {@link AdminController#relancerJob} (v2.6.0) — bouton
 /// « Relancer » par job de maintenance dans l'onglet admin Tableau de bord.
 ///
 /// @since 2.6.0
@@ -61,7 +61,7 @@ class AdminControllerRelancerJobTest {
     assertEquals(503, reponse.getStatusCode().value());
   }
 
-  // #837 : un typeJob inconnu (erreur cliente 400 renvoyée par le worker) ne doit plus être
+  // un typeJob inconnu (erreur cliente 400 renvoyée par le worker) ne doit plus être
   // masqué sous un 503 générique — l'admin doit pouvoir distinguer une faute de frappe d'une
   // vraie panne du worker.
   @Test

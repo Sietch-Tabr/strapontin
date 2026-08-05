@@ -18,7 +18,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 /// Tests unitaires de {@link UtilisateurRepository}.
 ///
 /// <p>{@code compterNouveauxMatchesArtistes} extrait de {@code securite.SessionController}
-/// (#918).
+///.
 ///
 /// @since 2.7.0
 /// @author Kwaite

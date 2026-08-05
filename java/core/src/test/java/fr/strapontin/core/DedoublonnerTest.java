@@ -239,7 +239,7 @@ class DedoublonnerTest {
     assertEquals(2, Dedoublonner.dedoublonner(concerts).size());
   }
 
-  // #793 : deux concerts du même artiste, même date, même ville, mais aucune ville renseignée
+  // deux concerts du même artiste, même date, même ville, mais aucune ville renseignée
   // (null) et deux salles réellement différentes ne doivent pas fusionner — avant le correctif,
   // la clé de la passe exacte utilisait "" pour toute ville absente, fusionnant à tort deux
   // concerts distincts faute de salle dans la clé.
@@ -252,7 +252,7 @@ class DedoublonnerTest {
     assertEquals(2, Dedoublonner.dedoublonner(concerts).size());
   }
 
-  // --- Heure (#793) ---
+  // --- Heure ---
 
   @Test
   void dedoublonner_matineeEtSoiree_nePasseFusionnerHeuresDifferentes() {

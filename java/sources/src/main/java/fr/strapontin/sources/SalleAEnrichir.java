@@ -6,7 +6,7 @@ package fr.strapontin.sources;
 
 import java.util.UUID;
 
-/// Salle candidate à l'enrichissement Wikidata/OSM (#711).
+/// Salle candidate à l'enrichissement Wikidata/OSM.
 ///
 /// @param id         UUID interne stable de la salle
 /// @param nom        nom brut affiché

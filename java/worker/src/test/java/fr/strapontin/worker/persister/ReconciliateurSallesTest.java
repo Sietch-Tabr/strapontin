@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.Normalisation;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,22 +25,27 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
-/// Tests unitaires de {@link ReconciliateurSalles} — priorité exacte avant flou (#794).
+/// Tests unitaires de {@link ReconciliateurSalles} — priorité exacte avant flou.
 ///
 /// @since 2.6.3
 /// @author Kwaite
 class ReconciliateurSallesTest {
 
   private static ValeurConcert concert(String artisteNorm, LocalDate date, String salleNorm) {
+    return concert(artisteNorm, date, null, salleNorm, null);
+  }
+
+  private static ValeurConcert concert(
+      String artisteNorm, LocalDate date, LocalTime heure, String salleNorm, String dept) {
     return new ValeurConcert(
         "Artiste",
         artisteNorm,
         date,
-        null,
+        heure,
         "Salle",
         salleNorm,
         null,
-        null,
+        dept,
         null,
         "ticketmaster",
         null,
@@ -53,10 +59,10 @@ class ReconciliateurSallesTest {
         null);
   }
 
-  // Cas réel documenté (wiki Sources-de-données, ticket #669) : "zenith europe strasbourg" /
+  // Cas réel documenté (wiki Sources-de-données, tick) : "zenith europe strasbourg" /
   // "zenith de strasbourg europe" — Jaccard tokens = 1.0 (doublon flou, réordonnancement de
   // mots). Sans ORDER BY sur la requête source, ce candidat flou peut apparaître avant un
-  // candidat exact dans le result set — avant #794, la boucle réécrivait à tort le salleNorm
+  // candidat exact dans le result set — avant, la boucle réécrivait à tort le salleNorm
   // entrant avec l'orthographe du candidat flou trouvé en premier, ratant le candidat exact
   // (littéralement identique, donc sans changement à apporter) plus loin dans la liste.
   @Test
@@ -86,7 +92,7 @@ class ReconciliateurSallesTest {
     assertEquals("zenith de strasbourg europe", resultat.get(0).salleNorm());
   }
 
-  // #902 : "L'Olympia" (TM, nom_norm="l olympia") déjà en base, Eventim fetch "LOlympia" (sans
+  // "L'Olympia" (TM, nom_norm="l olympia") déjà en base, Eventim fetch "LOlympia" (sans
   // apostrophe, nom_norm="lolympia"). Le préfiltre par tokens seul ratait ce candidat (l'espace
   // dans "l olympia" casse le LIKE sur le token "lolympia") — la clause squash doit le retrouver.
   @Test
@@ -117,7 +123,7 @@ class ReconciliateurSallesTest {
     assertNull(reconciliateur.chercherSalleParTokens("Salle inédite", null));
   }
 
-  // #969 : absorberRenommagesSalles mettait à jour salles.nom sans jamais recalculer nom_norm,
+  // absorberRenommagesSalles mettait à jour salles.nom sans jamais recalculer nom_norm,
   // désynchronisant les deux colonnes avec le temps et cassant le matching Wikidata (comparaison
   // calibrée sur un nom_norm déjà normalisé — voir CorrespondanceSalle).
   @Test
@@ -159,10 +165,110 @@ class ReconciliateurSallesTest {
         Normalisation.normaliserTexte("L'Olympia"), paramsCaptor.getValue().get("nomNorm"));
   }
 
-  // #973 (rattrapage) : raccrocherSallesParNomNorm faisait un rattachement par égalité exacte de
+  // Deux salles réellement distinctes (départements différents) partageant un pivot commun
+  // ("kursaal", déjà un doublon flou légitime pour deux salles du même lieu) ne doivent jamais
+  // fusionner entre elles au sein d'un même lot si elles ne sont pas dans le même département.
+  @Test
+  void reconcilierSalles_memeArtisteDateDeptDifferent_neFusionnePasIntraLot() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    LocalDate date = LocalDate.of(2026, 9, 1);
+    ValeurConcert concert1 = concert("artiste x", date, null, "grand kursaal", "25");
+    ValeurConcert concert2 = concert("artiste x", date, null, "kursaal besancon", "90");
+
+    List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+
+    assertEquals("grand kursaal", resultat.get(0).salleNorm());
+    assertEquals("kursaal besancon", resultat.get(1).salleNorm());
+  }
+
+  // Même artiste/date/dept mais deux représentations distinctes (matinée/soirée) d'un même
+  // titre générique dans deux salles différentes ne doivent pas non plus fusionner.
+  @Test
+  void reconcilierSalles_memeArtisteDateDeptHeureDifferente_neFusionnePasIntraLot() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    LocalDate date = LocalDate.of(2026, 9, 1);
+    ValeurConcert concert1 = concert("artiste x", date, LocalTime.of(15, 0), "grand kursaal", "25");
+    ValeurConcert concert2 =
+        concert("artiste x", date, LocalTime.of(20, 0), "kursaal besancon", "25");
+
+    List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+
+    assertEquals("grand kursaal", resultat.get(0).salleNorm());
+    assertEquals("kursaal besancon", resultat.get(1).salleNorm());
+  }
+
+  // Même artiste/date/dept/heure : la fusion floue doit continuer à s'appliquer normalement.
+  @Test
+  void reconcilierSalles_memeArtisteDateDeptHeure_fusionneIntraLotCommeAvant() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    LocalDate date = LocalDate.of(2026, 9, 1);
+    ValeurConcert concert1 = concert("artiste x", date, LocalTime.of(20, 0), "grand kursaal", "25");
+    ValeurConcert concert2 =
+        concert("artiste x", date, LocalTime.of(20, 0), "kursaal besancon", "25");
+
+    List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+
+    assertEquals(resultat.get(0).salleNorm(), resultat.get(1).salleNorm());
+  }
+
+  // Un concert sans salle_id (TM a omis venue.id, aucune salle suffisamment proche au moment de
+  // l'insertion) doit pouvoir être résolu plus tard si une salle correspondante apparaît entre
+  // temps via une autre source.
+  @Test
+  void retenterSallesOrphelines_salleApparueEntreTemps_resoutLeConcert() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    UUID concertId = UUID.randomUUID();
+    UUID salleId = UUID.randomUUID();
+
+    Map<String, Object> orphelin = new HashMap<>();
+    orphelin.put("id", concertId);
+    orphelin.put("salle", "Le Zenith Toulouse Metropole");
+    orphelin.put("dept", "31");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(orphelin));
+
+    Map<String, Object> candidat = new HashMap<>();
+    candidat.put("id", salleId);
+    candidat.put("nom_norm", "zenith toulouse metropole");
+    when(jdbc.queryForList(anyString(), any(SqlParameterSource.class)))
+        .thenReturn(List.of(candidat));
+
+    int resolus = reconciliateur.retenterSallesOrphelines();
+
+    assertEquals(1, resolus);
+    verify(jdbc)
+        .update(
+            anyString(),
+            org.mockito.ArgumentMatchers.argThat(
+                (Map<String, Object> params) ->
+                    salleId.toString().equals(params.get("salleId"))
+                        && concertId.equals(params.get("id"))));
+  }
+
+  @Test
+  void retenterSallesOrphelines_aucunOrphelin_neQueryPasLesCandidats() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    int resolus = reconciliateur.retenterSallesOrphelines();
+
+    assertEquals(0, resolus);
+  }
+
+  // (rattrapage) : raccrocherSallesParNomNorm faisait un rattachement par égalité exacte de
   // nom_norm sans aucun filtre dept, défaisant silencieusement le filtre dept ajouté à
   // chercherSalleParTokens — deux salles homonymes au texte strictement identique (ex. "Casino -
-  // Barriere" Toulouse/Lille, #971) se faisaient quand même fusionner via ce repli en aval.
+  // Barriere" Toulouse/Lille) se faisaient quand même fusionner via ce repli en aval.
   @Test
   void raccrocherSallesParNomNorm_candidatDeptDifferent_neRattachePas() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);

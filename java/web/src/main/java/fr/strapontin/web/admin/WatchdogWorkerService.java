@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 ///
 /// <p>Si aucun job réussi n'est enregistré depuis {@value #SEUIL_HEURES} heures,
 /// un email d'alerte est envoyé à l'adresse retournée par
-/// {@link EmailAlerteService#obtenirDestinataireAlerte()} (#907).
+/// {@link EmailAlerteService#obtenirDestinataireAlerte}.
 /// Une nouvelle alerte ne peut être envoyée qu'après {@value #SEUIL_HEURES} heures
 /// depuis la dernière, pour éviter le spam en cas de panne prolongée.
 ///

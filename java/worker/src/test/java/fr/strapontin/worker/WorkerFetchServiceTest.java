@@ -30,10 +30,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerFetchService} (#915, extrait de {@code WorkerService}).
+/// Tests unitaires pour {@link WorkerFetchService} (extrait de {@code WorkerService}).
 ///
-/// <p>Les tests du bilan de panne (Eventim/Digitick/Deezer/TM concerts manqués) sont dans
-/// {@code WorkerStatsServiceTest}, testés directement au niveau où cette logique vit désormais.
+/// <p>Les tests du bilan de panne (Eventim/Digitick/Deezer/TM concerts manqués) sont dans {@code
+/// WorkerStatsServiceTest}, testés directement au niveau où cette logique vit désormais.
 ///
 /// @since 2.2.3 (extrait dans sa forme actuelle en 2.7.0)
 /// @author Kwaite
@@ -136,7 +136,55 @@ class WorkerFetchServiceTest {
     verify(tm, times(2)).fetchArtistesLot(any());
   }
 
-  // #1022 : deezer_id/wikidata_id doivent être transmis à fetchArtiste(nom, deezerId,
+  // Le compteur d'absences consécutives doit être mis à jour pour l'artiste effectivement
+  // retraité dans le lot, permettant de détecter plus tard un concert disparu du catalogue.
+  @Test
+  void executerFetchArtistesBatch_lotTraite_metAJourLesAbsencesConsecutives() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    row.put("artiste_id_str", "artiste-123");
+    row.put("artiste_affiche", "Indila");
+    row.put("attraction_id", "attractionId1");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
+    when(tm.fetchArtistesLot(any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchArtistesBatch();
+
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("absences_consecutives"),
+            org.mockito.ArgumentMatchers.argThat(
+                (java.util.Map<String, Object> params) ->
+                    ((List<?>) params.get("ids")).contains("artiste-123")));
+  }
+
+  // artiste_sources n'a pas de contrainte d'unicité sur artiste_id — deux identifiant_externe
+  // ticketmaster pour le même artiste rendent le MAX() de la requête SQL arbitraire. Mieux vaut
+  // ignorer le fetch TM pour cet artiste ce cycle que d'envoyer un identifiant potentiellement
+  // faux, et flaguer necessite_intervention_le pour une résolution manuelle admin.
+  @Test
+  void executerFetchArtistesBatch_identifiantTmAmbigu_ignoreLeFetchEtFlagueIntervention() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    row.put("artiste_id_str", "artiste-ambigu");
+    row.put("artiste_affiche", "U2");
+    row.put("attraction_id", "K8vZ91712W7");
+    row.put("nb_ids_distincts", 2);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchArtistesBatch();
+
+    verify(tm, never()).fetchArtistesLot(any());
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("necessite_intervention_le"),
+            eq(java.util.Map.of("artisteId", "artiste-ambigu")));
+  }
+
+  // deezer_id/wikidata_id doivent être transmis à fetchArtiste(nom, deezerId,
   // wikidataId) — condition nécessaire pour qu'EventimSource puisse désactiver le repli par
   // containment dès qu'une identité indépendante est déjà connue.
   @Test
@@ -180,7 +228,7 @@ class WorkerFetchServiceTest {
     verify(persisterConcerts).persisterConcerts(any());
   }
 
-  // #1014 : Deezer ne référence pas les humoristes — la résolution de nom canonique ne doit
+  // Deezer ne référence pas les humoristes — la résolution de nom canonique ne doit
   // jamais être appliquée à un concert classification="theatre" (ex. Deezer renverrait "Fabrice
   // Aboulker" pour la recherche "Fabrice Éboué").
   @Test
@@ -238,6 +286,40 @@ class WorkerFetchServiceTest {
     List<fr.strapontin.core.ConcertBrut> persistes = captor.getValue();
     assertTrue(persistes.stream().anyMatch(c -> "Fabrice Eboue".equals(c.artiste())));
     assertTrue(persistes.stream().anyMatch(c -> "Indila Officiel".equals(c.artiste())));
+  }
+
+  // Contrairement à Digitick (classification toujours vide, mais filtré en amont sur de vrais
+  // concerts), Eventim omet fréquemment sa classification y compris pour des spectacles non
+  // musicaux (ex. "Paris is Magique", comédie musicale) — la résolution Deezer ne doit pas
+  // s'appliquer à un concert Eventim sans classification.
+  @Test
+  void executerFetchSalle_concertEventimSansClassification_nAppliquePasLaResolutionDeezer() {
+    when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
+    when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(false);
+    when(eventim.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
+    fr.strapontin.core.ConcertBrut concertEventimSansClassification =
+        new fr.strapontin.core.ConcertBrut(
+            "Paris is Magique",
+            "2026-09-01",
+            "20:00",
+            "Salle",
+            "Paris",
+            "75",
+            "http://x",
+            "eventim",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    when(eventim.fetchSalle("tm:venue-42")).thenReturn(List.of(concertEventimSansClassification));
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchSalle("tm:venue-42");
+
+    verify(resolveur, never()).resoudreNomCanonique(eq("artiste"), eq("Paris is Magique"));
   }
 
   @Test
@@ -324,7 +406,7 @@ class WorkerFetchServiceTest {
     verify(persisterConcerts).persisterConcerts(any());
   }
 
-  // #966 : la requête SQL réelle agrège salle_sources.source ("ticketmaster", la valeur
+  // la requête SQL réelle agrège salle_sources.source ("ticketmaster", la valeur
   // canonique), jamais l'abréviation "tm" — sans traduction, TicketmasterSource.fetchSalle
   // n'est jamais invoqué (accepteIdentifiantSalle rejette silencieusement le préfixe long).
   @Test

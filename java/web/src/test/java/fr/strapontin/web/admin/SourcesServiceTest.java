@@ -93,7 +93,7 @@ class SourcesServiceTest {
     assertEquals(0, wikidata.nbArtistesConfigures());
   }
 
-  // #777 : les comptages par source doivent bien interroger salle_sources/artiste_sources avec
+  // les comptages par source doivent bien interroger salle_sources/artiste_sources avec
   // le littéral de source correspondant (ticketmaster/eventim), pas une requête générique.
   @Test
   @SuppressWarnings("unchecked")
@@ -159,7 +159,7 @@ class SourcesServiceTest {
             argThat((Map<String, ?> params) -> "lempreinte".equals(params.get("slug"))));
   }
 
-  // #830 : un slug déjà attribué à une autre salle ne doit jamais être volé silencieusement —
+  // un slug déjà attribué à une autre salle ne doit jamais être volé silencieusement —
   // erreur 409 explicite plutôt qu'un ON CONFLICT DO UPDATE muet.
   @Test
   void mettreAJourDigitickSlug_slugDejaAttribueAUneAutreSalle_leveErreurMetier409() {

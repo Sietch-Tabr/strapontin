@@ -5,13 +5,13 @@ import { parseJsonOuNull } from "../utils/reponseJson.js";
 const banniere = ref(null);
 const visible = ref(false);
 let minuterie = null;
-// #591 : id de la bannière dont la minuterie (10 s info / 20 s warning) a déjà expiré.
+// id de la bannière dont la minuterie (10 s info / 20 s warning) a déjà expiré.
 // Drapeau en mémoire (pas sessionStorage) : un rechargement complet ré-affiche une fois.
-// #834 : seul le poll périodique (chargerBanniere) respecte ce drapeau — une navigation SPA
+// seul le poll périodique (chargerBanniere) respecte ce drapeau — une navigation SPA
 // (afficherSiPertinente) doit réafficher la bannière malgré l'auto-masquage, conformément à
 // Design-et-navigation.md ("réapparaît à chaque changement de page, sauf fermeture manuelle").
 let idAutoMasque = null;
-// #571 : un seul interval de polling au niveau module, partagé entre toutes les instances.
+// un seul interval de polling au niveau module, partagé entre toutes les instances.
 let intervalPoll = null;
 let nbInstances = 0;
 
@@ -37,7 +37,7 @@ function lancerMinuterie(val) {
 
 // Affiche la bannière courante si elle existe et n'a pas été rejetée manuellement.
 //
-// #834 : contrairement à chargerBanniere() (poll périodique — ne doit pas ressusciter une
+// contrairement à chargerBanniere (poll périodique — ne doit pas ressusciter une
 // bannière auto-masquée sans navigation réelle), une navigation SPA doit réafficher une bannière
 // auto-masquée (types info/warning, Design-et-navigation.md) — seule une fermeture manuelle doit
 // bloquer la réapparition, via estDismissed (sessionStorage, persistant).

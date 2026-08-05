@@ -4,13 +4,18 @@
  */
 package fr.strapontin.worker;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.TicketmasterSource;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -22,17 +27,17 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /// Tests d'intégration de [WorkerFetchService] avec PostgreSQL réel (Testcontainers).
 ///
-/// <p>Couvre spécifiquement la restriction de {@code fetch:salles:all} aux salles suivies
-/// (#996) — le filtre {@code EXISTS (... FROM user_salles ...)} de la requête SQL ne peut être
-/// vérifié qu'avec une vraie base, les tests unitaires de {@link WorkerFetchServiceTest} mockant
-/// {@code jdbc} avec un matcher {@code anyString()} qui ne distingue pas les variantes de la
-/// requête.
+/// <p>Couvre spécifiquement la restriction de {@code fetch:salles:all} aux salles suivies le filtre
+/// {@code EXISTS (... FROM user_salles...)} de la requête SQL ne peut être vérifié qu'avec une
+/// vraie base, les tests unitaires de {@link WorkerFetchServiceTest} mockant {@code jdbc} avec un
+/// matcher {@code anyString()} qui ne distingue pas les variantes de la requête.
 ///
 /// @since 2.7.3
 /// @author Kwaite
 class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @MockitoBean private TicketmasterSource ticketmasterSource;
+  @MockitoBean private EventimSource eventimSource;
 
   @Autowired private WorkerFetchService fetchService;
   @Autowired private NamedParameterJdbcTemplate jdbc;
@@ -41,9 +46,12 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
   void nettoyerBase() {
     jdbc.update("DELETE FROM user_matches", Map.of());
     jdbc.update("DELETE FROM user_salles", Map.of());
+    jdbc.update("DELETE FROM user_artistes", Map.of());
     jdbc.update("DELETE FROM salle_sources", Map.of());
+    jdbc.update("DELETE FROM artiste_sources", Map.of());
     jdbc.update("DELETE FROM concerts", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
+    jdbc.update("DELETE FROM artistes", Map.of());
     jdbc.update("DELETE FROM users", Map.of());
   }
 
@@ -96,5 +104,54 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     fetchService.executerFetchSallesAll();
 
     verify(ticketmasterSource, never()).fetchSalle("tm:venue-non-suivie");
+  }
+
+  private UUID insererArtisteSuivi(String userId, String nom) {
+    UUID artisteId =
+        jdbc.queryForObject(
+            "INSERT INTO artistes (nom, nom_norm) VALUES (:nom, :norm) RETURNING id",
+            Map.of("nom", nom, "norm", nom.toLowerCase()),
+            (rs, _) -> rs.getObject("id", UUID.class));
+    jdbc.update(
+        "INSERT INTO user_artistes (user_id, artiste_id, artiste_affiche)"
+            + " VALUES (:userId, CAST(:artisteId AS uuid), :nom)",
+        Map.of("userId", userId, "artisteId", artisteId.toString(), "nom", nom));
+    return artisteId;
+  }
+
+  private void insererConcertAncien(UUID artisteId, String artisteNorm) {
+    jdbc.update(
+        "INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source,"
+            + " artiste_id, updated_at)"
+            + " VALUES (:artiste, :artisteNorm, :date, 'Salle Test', 'salle test',"
+            + " 'ticketmaster', CAST(:artisteId AS uuid), now() - interval '1 hour')",
+        Map.of(
+            "artiste", artisteNorm,
+            "artisteNorm", artisteNorm.toLowerCase(),
+            "date", LocalDate.now().plusMonths(1),
+            "artisteId", artisteId.toString()));
+  }
+
+  // Un concert précédemment vu mais absent de la réponse fraîche de ce cycle doit voir son
+  // compteur d'absences consécutives incrémenté — pas seulement en théorie (mock), mais avec la
+  // vraie syntaxe SQL exécutée contre PostgreSQL.
+  @Test
+  void executerFetchArtistesBatch_concertNonReconfirme_incrementeLesAbsencesConsecutives() {
+    insererUser("u1");
+    UUID artisteId = insererArtisteSuivi("u1", "Indila");
+    insererConcertAncien(artisteId, "Indila");
+    when(ticketmasterSource.rechercherAttractionId(anyString())).thenReturn(null);
+    when(ticketmasterSource.fetchArtiste(anyString())).thenReturn(List.<ConcertBrut>of());
+    when(ticketmasterSource.fetchArtistesLot(any())).thenReturn(List.<ConcertBrut>of());
+    when(eventimSource.fetchArtiste(anyString(), any(), any())).thenReturn(List.<ConcertBrut>of());
+
+    fetchService.executerFetchArtistesBatch();
+
+    Integer absences =
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE artiste_id = CAST(:id AS uuid)",
+            Map.of("id", artisteId.toString()),
+            Integer.class);
+    assertEquals(1, absences);
   }
 }

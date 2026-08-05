@@ -42,7 +42,7 @@ class FiltreConcertsBuilderTest {
     assertTrue(params.isEmpty());
   }
 
-  // #819 : "2026-13"/"2026-00" passent la regex de forme (4 chiffres-tiret-2 chiffres) mais ne
+  // "2026-13"/"2026-00" passent la regex de forme (4 chiffres-tiret-2 chiffres) mais ne
   // sont pas des mois calendaires valides — LocalDate.parse levait une exception non interceptée
   // avant correctif, provoquant un 500 au lieu du contrat documenté "sans effet si invalide".
   @Test

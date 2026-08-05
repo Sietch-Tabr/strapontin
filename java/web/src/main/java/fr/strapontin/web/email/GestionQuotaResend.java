@@ -16,7 +16,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-/// Garde-fou quota d'envoi Resend jour/mois (#981, suite de l'incident #907 — boucle de bounces
+/// Garde-fou quota d'envoi Resend jour/mois (suite de l'incident — boucle de bounces
 /// ayant épuisé le quota Resend en 14 minutes sans garde-fou local).
 ///
 /// <p>Lecture/écriture SQL brute non chiffrée dans {@code app_config} (clé

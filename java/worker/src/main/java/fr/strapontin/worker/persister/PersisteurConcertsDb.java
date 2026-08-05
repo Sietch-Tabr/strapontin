@@ -313,7 +313,7 @@ public class PersisteurConcertsDb {
   ///
   /// <p>Quand deux sources nomment la même salle différemment, deux lignes peuvent coexister
   /// malgré un {@code salle_id} identique. Généralisé à toutes les paires de sources — pas
-  /// seulement TM/Eventim (#790) — via une priorité TM &gt; Eventim &gt; Digitick : la ligne de
+  /// seulement TM/Eventim — via une priorité TM &gt; Eventim &gt; Digitick : la ligne de
   /// la source la moins prioritaire est supprimée, celle de la source la plus prioritaire est
   /// conservée comme référence.
   ///

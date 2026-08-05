@@ -19,7 +19,7 @@ public final class Dedoublonner {
   private static ConcertEnrichi enrichir(ConcertBrut c) {
     String salleNorm = Normalisation.normaliserTexte(c.salle());
     // Ville absente : repli sur salleNorm plutôt qu'une chaîne vide partagée par tous les
-    // concerts sans ville (#793) — deux concerts du même artiste le même jour, dans deux villes
+    // concerts sans ville — deux concerts du même artiste le même jour, dans deux villes
     // réellement différentes mais toutes deux non renseignées, ne fusionnent alors que s'ils
     // partagent aussi la même salle.
     String villeNorm = c.ville() != null ? Normalisation.normaliserVille(c.ville()) : salleNorm;
@@ -31,7 +31,7 @@ public final class Dedoublonner {
 
     List<ConcertEnrichi> enrichis = concerts.stream().map(Dedoublonner::enrichir).toList();
 
-    // Passe 1 : exacte — (artiste_norm, date, heure, ville_norm). L'heure est incluse (#793) :
+    // Passe 1 : exacte — (artiste_norm, date, heure, ville_norm). L'heure est incluse :
     // sans elle, deux concerts réellement distincts (matinée + soirée, même artiste/date/ville)
     // fusionnaient à tort dès cette première passe.
     Map<String, List<ConcertEnrichi>> groupesExacts = new LinkedHashMap<>();
@@ -106,7 +106,7 @@ public final class Dedoublonner {
     return fusionnes;
   }
 
-  /// Indique si deux concerts peuvent fusionner du point de vue de l'heure (#793).
+  /// Indique si deux concerts peuvent fusionner du point de vue de l'heure.
   ///
   /// <p>Empêche la passe 2 (fuzzy, groupée par date+ville sans heure) de refusionner deux
   /// concerts que la passe 1 vient de distinguer par heure (matinée + soirée) : deux heures

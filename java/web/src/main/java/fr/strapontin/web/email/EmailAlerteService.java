@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /// Alertes email système (bounce, plainte spam, backup, worker inactif, digest logs_admin) —
-/// extrait d'{@code EmailService} (#925), qui reste dédié aux emails transactionnels utilisateur.
+/// extrait d'{@code EmailService}, qui reste dédié aux emails transactionnels utilisateur.
 ///
 /// <p>Si `RESEND_API_KEY` est absent de la configuration, toutes les méthodes retournent
 /// silencieusement sans erreur. Les corps HTML sont générés par {@link EmailTemplates}.
@@ -28,7 +28,7 @@ public class EmailAlerteService {
 
   private static final Logger log = LoggerFactory.getLogger(EmailAlerteService.class);
 
-  // Garde-fou anti-boucle (#907) : au plus une notification de bounce/plainte spam par heure,
+  // Garde-fou anti-boucle : au plus une notification de bounce/plainte spam par heure,
   // persisté en app_config pour survivre aux redéploiements (même pattern que
   // AlerteLogsAdminService.CLE_CURSEUR) — sans ça, un problème de délivrabilité sur le nouveau
   // destinataire d'alerte pourrait recréer une boucle du même type que celle du 15/07/2026.
@@ -45,7 +45,7 @@ public class EmailAlerteService {
   }
 
   /// Retourne l'adresse destinataire des alertes système (bounce, plainte spam, worker inactif,
-  /// digest logs_admin) — distincte de l'expéditeur (#907). Voir
+  /// digest logs_admin) — distincte de l'expéditeur. Voir
   /// {@link EmailSender#obtenirDestinataireAlerte()} pour la justification complète.
   ///
   /// @return l'adresse à notifier, vide si ni `ADMIN_ALERT_EMAIL` ni aucun admin n'existe
@@ -54,7 +54,7 @@ public class EmailAlerteService {
   }
 
   /// Indique si une alerte du type donné a déjà été envoyée il y a moins de
-  /// {@link #INTERVALLE_MIN_ALERTE} — garde-fou anti-boucle (#907).
+  /// {@link #INTERVALLE_MIN_ALERTE} — garde-fou anti-boucle.
   private boolean alerteRecente(String cleConfig) {
     return configService
         .lireConfig(cleConfig)
@@ -67,7 +67,7 @@ public class EmailAlerteService {
 
   /// Envoie une notification à l'admin quand un email Strapontin est rejeté en bounce.
   ///
-  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907 — c'est
+  /// <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur (c'est
   /// cette confusion qui a provoqué la boucle de bounces du 15/07/2026). Throttlée à une
   /// notification par heure maximum.
   ///
@@ -110,10 +110,10 @@ public class EmailAlerteService {
   }
 
   /// Envoie une notification à l'admin quand un destinataire signale un email Strapontin comme
-  /// spam (#832) — même traitement que le bounce, une plainte spam menaçant la réputation
+  /// spam — même traitement que le bounce, une plainte spam menaçant la réputation
   /// d'envoi du domaine au moins autant qu'un rejet définitif.
   ///
-  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907).
+  /// <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur.
   /// Throttlée à une notification par heure maximum.
   ///
   /// @param emailPlaignant l'adresse email à l'origine de la plainte
@@ -157,7 +157,7 @@ public class EmailAlerteService {
 
   /// Envoie une alerte à l'admin quand le backup nocturne a échoué.
   ///
-  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907).
+  /// <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur.
   ///
   /// @param horodatage l'horodatage du backup (format YYYYMMDD_HHMMSS), ou chaîne vide
   /// @param raison     la commande bash ayant déclenché l'échec, ou chaîne vide
@@ -192,9 +192,9 @@ public class EmailAlerteService {
   }
 
   /// Envoie une alerte à l'admin quand le contrôle d'intégrité AIDE détecte une modification de
-  /// fichier hors déploiement légitime sur un LXC prod/dev (#976).
+  /// fichier hors déploiement légitime sur un LXC prod/dev.
   ///
-  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907).
+  /// <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur.
   ///
   /// @param detail sortie résumée d'{@code aide --check}
   public void envoyerAlerteIntegrite(String detail) {
@@ -264,9 +264,9 @@ public class EmailAlerteService {
   }
 
   /// Envoie une alerte à l'admin quand le quota d'envoi Resend jour ou mois approche de sa
-  /// limite (80%, #981, suite de l'incident #907).
+  /// limite (80%, suite de l'incident).
   ///
-  /// <p>Destinataire : {@link #obtenirDestinataireAlerte()}, jamais l'expéditeur (#907). Ne
+  /// <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur. Ne
   /// consomme volontairement pas le garde-fou {@code GestionQuotaResend.reserverEnvoi()} avant
   /// son propre envoi — au seuil de 80%, il reste toujours de la marge sous la limite dure.
   ///
@@ -312,7 +312,7 @@ public class EmailAlerteService {
     }
   }
 
-  /// Envoie un digest des nouvelles entrées {@code logs_admin} de niveau erreur (#765).
+  /// Envoie un digest des nouvelles entrées {@code logs_admin} de niveau erreur.
   ///
   /// @param email   l'adresse email de l'administrateur
   /// @param erreurs les entrées d'erreur à inclure dans le digest (non vide)

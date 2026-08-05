@@ -399,6 +399,14 @@ tr:hover td {
   background: #fdf4ff;
   color: #7e22ce;
 }
+.badge-a-verifier {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+.dark .badge-a-verifier {
+  background: #27272a;
+  color: #a1a1aa;
+}
 .dark .badge-prevente {
   background: #3b0764;
   color: #e9d5ff;

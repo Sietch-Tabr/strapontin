@@ -78,7 +78,7 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
-  // #991 : la recherche mwapi échoue quasi systématiquement sur les noms à suffixe de sous-salle
+  // la recherche mwapi échoue quasi systématiquement sur les noms à suffixe de sous-salle
   // ("Zenith Toulouse Metropole" → 0 résultat en direct, "Zenith de Toulouse" trouvé aussitôt).
   // Ici : nom avec séparateur "-", premier appel (nom complet) sans résultat, repli sur le nom
   // tronqué au séparateur qui, lui, trouve un candidat.
@@ -208,6 +208,41 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // La recherche par nom peut retourner une entité administrative homonyme (région, département,
+  // commune) plutôt que le lieu physique recherché — la requête doit les exclure explicitement.
+  @Test
+  void construireRequeteDecouverte_excluLesEntitesAdministratives() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle = new SalleAEnrichir(id, "Summum", "summum", null, null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q3455524")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q6465")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q484170")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    src.enrichirLot(List.of(salle));
+
+    serveur.verify();
+  }
+
   // Régression : le label canonique Wikidata omet souvent l'article défini français porté par le
   // nom Strapontin (ex. salle "L'Olympia" ↔ Wikidata "Olympia", Q915451, vérifié en juillet 2026).
   // La correspondance floue (CorrespondanceSalle.estDoublonSalle, containment ratio) absorbe cet
@@ -317,7 +352,7 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
-  // #769 : "Dôme de Paris" (nom Strapontin actuel) n'a ni libellé principal ("Palais des
+  // "Dôme de Paris" (nom Strapontin actuel) n'a ni libellé principal ("Palais des
   // sports") ni alias exact correspondant sur Wikidata — l'alias le plus proche, "Dôme de Paris
   // - Palais des Sports", combine ancien et nouveau nom et est trop long pour satisfaire le
   // containment/Jaccard symétrique de estDoublonSalle (Jaccard=0.4, ratio de containment=0.41,
@@ -356,7 +391,7 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
-  // #1002 : constaté en production — le repli sur nom tronqué peut retenir un candidat au nom
+  // constaté en production — le repli sur nom tronqué peut retenir un candidat au nom
   // générique partagé par plusieurs communes ("Collegiale Saint" → "collégiale Saint-Agricol
   // d'Avignon" en rang 0, alors que la salle recherchée "Collegiale Saint-Mexme Chinon" est à
   // Chinon). Vérifié en direct sur l'API Wikidata (mwapi:search "Collegiale Saint") : ce candidat

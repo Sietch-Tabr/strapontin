@@ -115,7 +115,7 @@ public class SourcesService {
   ///
   /// <p>Si le slug est vide, supprime l'entrée existante. Si le slug est déjà attribué à une
   /// autre salle, lève une erreur 409 plutôt que de le voler silencieusement à cette autre salle
-  /// (#830) — le conflit est vérifié avant toute suppression pour ne pas perdre la configuration
+  /// le conflit est vérifié avant toute suppression pour ne pas perdre la configuration
   /// existante si l'opération échoue.
   ///
   /// @param salleId UUID de la salle
@@ -277,7 +277,7 @@ public class SourcesService {
     }
   }
 
-  /// Compte les salles reliées à une source externe donnée (#777).
+  /// Compte les salles reliées à une source externe donnée.
   ///
   /// @param source identifiant de la source (ex. {@code "ticketmaster"}, {@code "digitick"})
   /// @return nombre de salles avec un identifiant pour cette source, 0 en cas d'échec
@@ -295,7 +295,7 @@ public class SourcesService {
     }
   }
 
-  /// Compte les artistes reliés à une source externe donnée (#777).
+  /// Compte les artistes reliés à une source externe donnée.
   ///
   /// @param source identifiant de la source (ex. {@code "ticketmaster"})
   /// @return nombre d'artistes avec un identifiant pour cette source, 0 en cas d'échec
@@ -314,7 +314,7 @@ public class SourcesService {
     }
   }
 
-  /// Compte les artistes avec un identifiant Deezer (#777) — colonne directe sur {@code artistes},
+  /// Compte les artistes avec un identifiant Deezer — colonne directe sur {@code artistes},
   /// pas d'entrée dans {@code artiste_sources} pour cette source.
   ///
   /// @return nombre d'artistes avec {@code deezer_id} renseigné, 0 en cas d'échec

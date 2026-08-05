@@ -9,8 +9,8 @@ package fr.strapontin.web.artiste;
 ///
 /// @param nom         nom affiché
 /// @param source      origine de la suggestion
-/// @param description description Wikidata (#717, {@code null} pour les autres sources)
-/// @param wikidataId  Q-ID Wikidata (#717, {@code null} pour les autres sources)
+/// @param description description Wikidata ({@code null} pour les autres sources)
+/// @param wikidataId Q-ID Wikidata ({@code null} pour les autres sources)
 /// @since 2.1.0
 /// @author Kwaite
 public record SuggestionArtiste(String nom, String source, String description, String wikidataId) {

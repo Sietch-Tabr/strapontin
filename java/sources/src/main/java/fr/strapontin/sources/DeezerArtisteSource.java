@@ -16,7 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
-/// Client Deezer pour l'enrichissement des artistes (#711 étape 3).
+/// Client Deezer pour l'enrichissement des artistes (étape 3).
 ///
 /// Deux modes, indépendants l'un de l'autre :
 /// - `deezerId` connu (renseigné au préalable par {@link WikidataArtisteSource} via P2722) →
@@ -28,7 +28,7 @@ import org.springframework.web.client.RestClient;
 ///   ailleurs dans le projet. Seule une correspondance exacte de nom normalisé est retenue (pas
 ///   de seuil de similarité comme dans {@link ResolveurNomCanonique}) : cette découverte assigne
 ///   un identifiant persistant, un enjeu plus élevé qu'une simple confirmation cosmétique de nom
-///   affiché — même prudence que {@code TicketmasterSource.rechercherAttractionId} (anti-#715
+/// affiché — même prudence que {@code TicketmasterSource.rechercherAttractionId} (anti-
 ///   JAIN/ANUV JAIN).
 ///
 /// @since 2.6.0
@@ -43,7 +43,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
   private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
       new fr.strapontin.core.CompteurBilanFetch();
 
-  /// Retourne le bilan agrégé des appels HTTP Deezer depuis le dernier prélèvement (#993).
+  /// Retourne le bilan agrégé des appels HTTP Deezer depuis le dernier prélèvement.
   ///
   /// @return le bilan depuis le dernier prélèvement
   @Override

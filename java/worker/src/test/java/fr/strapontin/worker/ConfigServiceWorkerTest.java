@@ -21,7 +21,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Tests unitaires de {@link ConfigServiceWorker}.
 ///
-/// <p>Le module n'avait aucun test dédié avant #922 (extraction de {@code ConfigCipher}) — le
+/// <p>Le module n'avait aucun test dédié avant (extraction de {@code ConfigCipher}) — le
 /// chiffrement/déchiffrement lui-même est testé dans {@code core.ConfigCipherTest}, ce fichier
 /// couvre le comportement propre au service worker : lecture seule, résilience au mauvais secret.
 ///

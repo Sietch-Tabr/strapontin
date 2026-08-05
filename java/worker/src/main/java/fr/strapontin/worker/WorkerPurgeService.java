@@ -18,7 +18,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /// Jobs de purge (concerts, salles, artistes orphelins, logs admin) — extrait de
-/// {@code WorkerService} (#915).
+/// {@code WorkerService}.
 ///
 /// Délégué par les jobs Quartz {@code PurgerConcertsJob}, {@code PurgerSallesJob},
 /// {@code PurgerArtistesJob}, {@code PurgerLogsAdminJob}.
@@ -75,7 +75,7 @@ public class WorkerPurgeService {
   /// Doit s'exécuter après {@link #executerPurgerConcerts()} pour travailler
   /// sur un jeu de données cohérent (cf. `PurgerSallesJob`).
   ///
-  /// <p>Supprime les candidates une par une plutôt qu'en un seul `DELETE` en masse (#1025) : la
+  /// <p>Supprime les candidates une par une plutôt qu'en un seul `DELETE` en masse : la
   /// suppression d'une salle peut déclencher en cascade (FK `ON DELETE SET NULL`) un
   /// `UPDATE concerts SET salle_id = NULL` qui entre en conflit avec la contrainte unique
   /// {@code uq_concerts_artiste_date_heure_salle} si un doublon TM/Eventim du même concert existe

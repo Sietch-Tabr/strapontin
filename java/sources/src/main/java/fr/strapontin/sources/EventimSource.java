@@ -47,15 +47,15 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   public static final List<String> CATEGORIES_REGION =
       List.of("Concerts & Festivals", "Classique & Danse");
 
-  /// `User-Agent` honnête de bot (#904) — jamais une chaîne `Mozilla/5.0...`, voir Javadoc du
-  /// constructeur par défaut pour la justification complète.
+  /// `User-Agent` honnête de bot — jamais une chaîne `Mozilla/5.0...`, voir Javadoc du constructeur
+  /// par défaut pour la justification complète.
   static final String USER_AGENT = "StrapontinBot/1.0 (+https://strapontin.kwaite.fr)";
 
   private final RestClient restClient;
-  // Compteur cumulé depuis le dernier prélèvement (remonté dans logs_admin par le worker, #901,
-  // factorisé en composant partagé par #909).
+  // Compteur cumulé depuis le dernier prélèvement (remonté dans logs_admin par le worker,
+  // via un composant partagé).
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
-  // #1013 : correspondances par containment acceptées depuis le dernier prélèvement — un
+  // correspondances par containment acceptées depuis le dernier prélèvement — un
   // containment n'est pas nécessairement une erreur (ex. "-M-" → "-M- Matthieu Chedid" est
   // correct) mais reste un signal à vérifier manuellement, jusque-là invisible (log SLF4J niveau
   // INFO uniquement, jamais dans logs_admin).
@@ -63,22 +63,22 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       java.util.Collections.synchronizedList(new java.util.ArrayList<>());
 
   /// Crée une instance avec un RestClient par défaut incluant les headers Eventim et un timeout
-  /// explicite (connexion 10s, lecture 30s — #887).
+  /// explicite (connexion 10s, lecture 30s).
   ///
-  /// <p>Le `User-Agent` identifie honnêtement un bot plutôt que de mimer un navigateur (#904) :
-  /// depuis le 09/07/2026, Akamai bloque en 403 tout client dont le `User-Agent` prétend être un
-  /// navigateur (`Mozilla/5.0...`, quel que soit le navigateur imité) sans en avoir la signature
-  /// réelle, alors qu'un `User-Agent` non-navigateur passe sans restriction — vérifié par tests
-  /// répétés depuis des réseaux distincts. Les en-têtes `sec-ch-ua*`/`Sec-Fetch-*`/`Referer`/
-  /// `Origin` (contournement anti-bot historique, commit 231c026, devenu obsolète) sont retirés
-  /// en conséquence : incohérents avec un `User-Agent` de bot.
+  /// <p>Le `User-Agent` identifie honnêtement un bot plutôt que de mimer un navigateur : depuis le
+  /// 09/07/2026, Akamai bloque en 403 tout client dont le `User-Agent` prétend être un navigateur
+  /// (`Mozilla/5.0...`, quel que soit le navigateur imité) sans en avoir la signature réelle, alors
+  /// qu'un `User-Agent` non-navigateur passe sans restriction — vérifié par tests répétés depuis
+  /// des réseaux distincts. Les en-têtes `sec-ch-ua*`/`Sec-Fetch-*`/`Referer`/ `Origin`
+  /// (contournement anti-bot historique, commit 231c026, devenu obsolète) sont retirés en
+  /// conséquence : incohérents avec un `User-Agent` de bot.
   ///
   /// <p>Aucun `Accept-Encoding` explicite : envoyer ce header manuellement fait basculer
-  /// `SimpleClientHttpRequestFactory` (JDK `HttpURLConnection`, introduit par #887) en mode
-  /// « décompression à la charge de l'appelant » — Eventim répond alors en gzip sans jamais être
-  /// décompressé, faisant échouer la désérialisation JSON. En l'absence de ce header, le JDK ajoute
-  /// son propre `Accept-Encoding: gzip` et décompresse la réponse de façon transparente. Bug latent
-  /// introduit par #887 le 08/07/2026, masqué du 09/07 au correctif #904 par le blocage Akamai.
+  /// `SimpleClientHttpRequestFactory` (JDK `HttpURLConnection`) en mode « décompression à la charge
+  /// de l'appelant » — Eventim répond alors en gzip sans jamais être décompressé, faisant échouer
+  /// la désérialisation JSON. En l'absence de ce header, le JDK ajoute son propre `Accept-Encoding:
+  /// gzip` et décompresse la réponse de façon transparente. Bug latent introduit par le 08/07/2026,
+  /// masqué du 09/07 au correctif par le blocage Akamai.
   public EventimSource() {
     this(
         builderAvecHeadersParDefaut()
@@ -89,9 +89,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /// Construit un {@link RestClient.Builder} avec les headers par défaut (sans requestFactory ni
-  /// build), pour permettre à {@link org.springframework.test.web.client.MockRestServiceServer}
-  /// de se lier à la configuration réelle en test (#904 — régression sur `User-Agent`/
-  /// `Accept-Encoding`).
+  /// build), pour permettre à {@link org.springframework.test.web.client.MockRestServiceServer} de
+  /// se lier à la configuration réelle en test (régression sur `User-Agent`/ `Accept-Encoding`).
   ///
   /// @return le builder configuré, prêt à recevoir une requestFactory
   static RestClient.Builder builderAvecHeadersParDefaut() {
@@ -114,8 +113,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     return "eventim";
   }
 
-  /// Retourne le bilan agrégé des appels HTTP Eventim depuis le dernier prélèvement (#901) et
-  /// remet les compteurs à zéro.
+  /// Retourne le bilan agrégé des appels HTTP Eventim depuis le dernier prélèvement et remet les
+  /// compteurs à zéro.
   ///
   /// @return le bilan depuis le dernier prélèvement
   @Override
@@ -123,11 +122,11 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     return compteurBilan.preleverBilan();
   }
 
-  /// Retourne les correspondances par containment acceptées depuis le dernier prélèvement (#1013)
-  /// et vide la liste — contrairement à {@link #preleverBilan}, ce n'est pas un bilan de panne :
-  /// Eventim ne persiste aucun identifiant ({@link #rechercherAttractionId} est rappelé à chaque
-  /// cycle), donc un containment mal résolu peut réapparaître à chaque fetch tant qu'il n'est pas
-  /// corrigé manuellement.
+  /// Retourne les correspondances par containment acceptées depuis le dernier prélèvement et vide
+  /// la liste — contrairement à {@link #preleverBilan}, ce n'est pas un bilan de panne : Eventim ne
+  /// persiste aucun identifiant ({@link #rechercherAttractionId} est rappelé à chaque cycle), donc
+  /// un containment mal résolu peut réapparaître à chaque fetch tant qu'il n'est pas corrigé
+  /// manuellement.
   ///
   /// @return messages décrivant chaque containment accepté depuis le dernier prélèvement
   public List<String> preleverContainmentsAcceptes() {
@@ -140,14 +139,14 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   /// Corrige la ville Eventim pour les salles de la région parisienne hors Paris intra-muros.
   ///
-  /// Eventim utilise parfois "Paris" comme libellé régional/marketing au lieu de la commune
-  /// réelle pour les salles de la petite couronne (ex. La Seine Musicale à Boulogne-Billancourt,
-  /// Stade de France à Saint-Denis), alors que `dept` (dérivé du code postal) reste fiable.
-  /// Si une incohérence est détectée, tente d'extraire la commune depuis le nom de la salle
-  /// (forme "Salle - Commune") ; sinon journalise et conserve la ville telle que reçue.
+  /// Eventim utilise parfois "Paris" comme libellé régional/marketing au lieu de la commune réelle
+  /// pour les salles de la petite couronne (ex. La Seine Musicale à Boulogne-Billancourt, Stade de
+  /// France à Saint-Denis), alors que `dept` (dérivé du code postal) reste fiable. Si une
+  /// incohérence est détectée, tente d'extraire la commune depuis le nom de la salle (forme "Salle
+  /// - Commune") ; sinon journalise et conserve la ville telle que reçue.
   ///
   /// @param ville ville brute renvoyée par Eventim, peut être `null`
-  /// @param dept  département dérivé du code postal, peut être `null`
+  /// @param dept département dérivé du code postal, peut être `null`
   /// @param salle nom de la salle, utilisé comme source alternative de la commune
   /// @return ville corrigée, ou la ville d'origine si aucune incohérence ou correction possible
   public static String corrigerVilleEventim(String ville, String dept, String salle) {
@@ -182,8 +181,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   /// Extrait le nom de l'artiste depuis un titre d'événement Eventim.
   ///
-  /// Le titre Eventim est de la forme "Artiste - Tournée" ou "Artiste : Spectacle".
-  /// On extrait la partie avant le premier séparateur " - " ou " : ".
+  /// Le titre Eventim est de la forme "Artiste - Tournée" ou "Artiste : Spectacle". On extrait la
+  /// partie avant le premier séparateur " - " ou " : ".
   ///
   /// @param titre titre de l'événement Eventim
   /// @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
@@ -197,7 +196,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   /// Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
   ///
-  /// @param produit         produit Eventim sous forme de Map imbriquée
+  /// @param produit produit Eventim sous forme de Map imbriquée
   /// @param artisteFallback nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
   /// @return concert extrait, ou null si le produit est invalide
   public static ConcertBrut mapProduit(Map<String, Object> produit, String artisteFallback) {
@@ -209,8 +208,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   /// @param produit          produit Eventim sous forme de Map imbriquée
   /// @param artisteFallback  nom de l'artiste cherché (pour fetchArtiste uniquement), peut être
   // null
-  /// @param artisteSourceId  identifiant source préfixé de l'artiste (ex. {@code "eventim:12345"}),
-  ///                         null si inconnu (fetch région ou salle)
+  /// @param artisteSourceId identifiant source préfixé de l'artiste (ex. {@code "eventim:12345"}),
+  ///   null si inconnu (fetch région ou salle)
   /// @return concert extrait, ou null si le produit est invalide
   @SuppressWarnings("unchecked")
   public static ConcertBrut mapProduit(
@@ -234,8 +233,12 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
   }
 
-  private record ResultatPageEventim(List<ConcertBrut> concerts, int total) {
-    static final ResultatPageEventim VIDE = new ResultatPageEventim(List.of(), 0);
+  /// @param succes {@code false} si l'appel HTTP a échoué — distingue une page réellement vide
+  ///   (succès, 0 résultat) d'un appel qui n'a jamais abouti.
+  private record ResultatPageEventim(List<ConcertBrut> concerts, int total, boolean succes) {
+    // Page légitimement vide (0 résultat, pas d'échec HTTP) — distinct de ECHEC ci-dessous.
+    static final ResultatPageEventim VIDE = new ResultatPageEventim(List.of(), 0, true);
+    static final ResultatPageEventim ECHEC = new ResultatPageEventim(List.of(), 0, false);
 
     boolean estVide() {
       return concerts.isEmpty();
@@ -262,7 +265,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
       log.warn("Eventim erreur HTTP", e);
-      return ResultatPageEventim.VIDE;
+      return ResultatPageEventim.ECHEC;
     }
   }
 
@@ -276,7 +279,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
       log.warn("Eventim erreur HTTP", e);
-      return ResultatPageEventim.VIDE;
+      return ResultatPageEventim.ECHEC;
     }
   }
 
@@ -294,7 +297,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
     int total =
         data.get(CLE_TOTAL_RESULTS) != null ? ((Number) data.get(CLE_TOTAL_RESULTS)).intValue() : 0;
-    return new ResultatPageEventim(concerts, total);
+    return new ResultatPageEventim(concerts, total, true);
   }
 
   @SuppressWarnings("unchecked")
@@ -365,10 +368,10 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   /// Recherche l'attractionId Eventim correspondant à un terme de recherche.
   ///
-  /// @param terme             nom de l'artiste cherché
+  /// @param terme nom de l'artiste cherché
   /// @param identiteConfirmee {@code true} si l'artiste a déjà une identité confirmée par une
-  ///     source indépendante (#1022) — désactive le repli par containment, n'accepte plus qu'une
-  ///     correspondance exacte
+  ///   source indépendante — désactive le repli par containment, n'accepte plus qu'une
+  ///   correspondance exacte
   /// @return attractionId trouvé, ou {@code null} si aucune correspondance acceptable
   @SuppressWarnings("unchecked")
   private String rechercherAttractionId(String terme, boolean identiteConfirmee) {
@@ -398,7 +401,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
           break;
         }
         // Accepte "terme" contenu dans le nom Eventim (ex. "-M-" dans "-M- Matthieu Chedid") —
-        // seulement si l'identité n'est pas déjà confirmée par ailleurs (#1022) : sinon ce repli
+        // seulement si l'identité n'est pas déjà confirmée par ailleurs : sinon ce repli
         // approximatif a fini par accepter à répétition un mauvais rapprochement (ex. "Furies"
         // dans "Love & Furies", deux entités distinctes). Seuil sur la longueur brute pour éviter
         // les faux positifs sur un seul caractère.
@@ -437,13 +440,17 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
   }
 
-  private List<ConcertBrut> fetchProduitsParAttraction(
+  /// @param succes {@code false} si au moins une page a échoué (voir {@link ResultatPageEventim}).
+  private record ResultatArtisteEventim(List<ConcertBrut> concerts, boolean succes) {}
+
+  private ResultatArtisteEventim fetchProduitsParAttraction(
       String attractionId, String artisteFallback) {
     LocalDate dateDebut = LocalDate.now();
     LocalDate dateFin = dateDebut.plusMonths(24);
     DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     List<ConcertBrut> concerts = new ArrayList<>();
     boolean continuer = true;
+    boolean succes = true;
     String artisteSourceId = "eventim:" + attractionId;
 
     for (int page = 1; page <= MAX_PAGES && continuer; page++) {
@@ -463,12 +470,13 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
                 .toUriString();
         ResultatPageEventim resultat =
             chargerPageProduits(uri, artisteFallback, null, artisteSourceId);
+        if (!resultat.succes()) succes = false;
         concerts.addAll(resultat.concerts());
         continuer = !resultat.estVide() && concerts.size() < resultat.total();
       }
     }
 
-    return concerts;
+    return new ResultatArtisteEventim(concerts, succes);
   }
 
   private List<ConcertBrut> fetchProduitsParRegion(String dept, List<String> classifications) {
@@ -504,8 +512,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   /// Récupère les concerts d'un artiste via l'API Eventim.
   ///
-  /// <p>Recherche d'abord l'attractionId Eventim par le nom, puis pagine les produits. Identité
-  /// non confirmée par une source indépendante : le repli par containment reste autorisé (#1022).
+  /// <p>Recherche d'abord l'attractionId Eventim par le nom, puis pagine les produits. Identité non
+  /// confirmée par une source indépendante : le repli par containment reste autorisé.
   ///
   /// @param nom nom de l'artiste
   /// @return liste des concerts trouvés, vide si l'artiste n'est pas référencé sur Eventim
@@ -517,19 +525,19 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   /// Récupère les concerts d'un artiste via l'API Eventim, en tenant compte de son identité déjà
   /// confirmée par une source indépendante si connue.
   ///
-  /// <p>#1022 : le repli par containment de {@link #rechercherAttractionId} (ex. "Furies" trouvé
-  /// dans "Love & Furies") s'est révélé actif et récurrent — chaque cycle de fetch réacceptait le
-  /// même mauvais rapprochement, défaisant silencieusement tout nettoyage de données fait à la
-  /// main. Dès que l'artiste a déjà un {@code deezerId} ou un {@code wikidataId} connu (identité
-  /// confirmée indépendamment), seule une correspondance exacte est acceptée — le repli par
-  /// containment reste réservé aux artistes dont l'identité n'est pas encore confirmée, cas pour
-  /// lequel il a été introduit (ex. {@code "-M-"} → {@code "-M- Matthieu Chedid"}).
+  /// <p>: le repli par containment de {@link #rechercherAttractionId} (ex. "Furies" trouvé dans
+  /// "Love & Furies") s'est révélé actif et récurrent — chaque cycle de fetch réacceptait le même
+  /// mauvais rapprochement, défaisant silencieusement tout nettoyage de données fait à la main. Dès
+  /// que l'artiste a déjà un {@code deezerId} ou un {@code wikidataId} connu (identité confirmée
+  /// indépendamment), seule une correspondance exacte est acceptée — le repli par containment reste
+  /// réservé aux artistes dont l'identité n'est pas encore confirmée, cas pour lequel il a été
+  /// introduit (ex. {@code "-M-"} → {@code "-M- Matthieu Chedid"}).
   ///
-  /// @param nom        nom de l'artiste
-  /// @param deezerId   identifiant Deezer déjà connu, ou {@code null} si l'identité n'est pas
-  ///     confirmée
+  /// @param nom nom de l'artiste
+  /// @param deezerId identifiant Deezer déjà connu, ou {@code null} si l'identité n'est pas
+  ///   confirmée
   /// @param wikidataId identifiant Wikidata déjà connu, ou {@code null} si l'identité n'est pas
-  ///     confirmée
+  ///   confirmée
   /// @return liste des concerts trouvés, vide si l'artiste n'est pas référencé sur Eventim
   @Override
   public List<ConcertBrut> fetchArtiste(String nom, String deezerId, String wikidataId) {
@@ -539,17 +547,21 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       log.info("Eventim: artiste non trouvé artiste={}", nom);
       return List.of();
     }
-    List<ConcertBrut> concerts = fetchProduitsParAttraction(attractionId, nom);
-    log.info("Eventim fetchArtiste artiste={} total={}", nom, concerts.size());
-    return concerts;
+    ResultatArtisteEventim resultat = fetchProduitsParAttraction(attractionId, nom);
+    if (resultat.succes()) {
+      log.info("Eventim fetchArtiste artiste={} total={}", nom, resultat.concerts().size());
+    } else {
+      log.warn("Eventim fetchArtiste artiste={} échoué (voir erreur HTTP ci-dessus)", nom);
+    }
+    return resultat.concerts();
   }
 
   /// Récupère les concerts par région pour une liste de départements.
   ///
-  /// <p>Le paramètre {@code classifs} est ignoré : Eventim utilise ses propres catégories
-  /// ({@link #CATEGORIES_REGION}) qui ne correspondent pas aux classifications Ticketmaster.
+  /// <p>Le paramètre {@code classifs} est ignoré : Eventim utilise ses propres catégories ({@link
+  /// #CATEGORIES_REGION}) qui ne correspondent pas aux classifications Ticketmaster.
   ///
-  /// @param depts   liste de codes département (ex: ["75", "92"])
+  /// @param depts liste de codes département (ex: ["75", "92"])
   /// @param classifs ignoré — toujours {@link #CATEGORIES_REGION}
   /// @return liste des concerts trouvés pour tous les départements
   @Override

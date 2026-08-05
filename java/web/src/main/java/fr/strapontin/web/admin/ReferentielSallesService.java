@@ -13,7 +13,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Gestion du référentiel salles pour l'onglet admin (#710) : liste paginée, édition du nom
+/// Gestion du référentiel salles pour l'onglet admin : liste paginée, édition du nom
 /// affiché, fusion de doublons.
 ///
 /// L'algorithme de fusion porte en service runtime le gabarit déjà utilisé pour les fusions
@@ -224,7 +224,7 @@ public class ReferentielSallesService {
         ids);
 
     // 4. Sources externes réassignées (PK indépendante de salle_id, pas de conflit de PK
-    // possible) — dédoublonnage préalable des conflits par type de source (#1019 : sans lui, deux
+    // possible) — dédoublonnage préalable des conflits par type de source (sans lui, deux
     // identifiants du même type, ex. deux ticketmaster, coexistent indéfiniment sur la salle
     // fusionnée).
     dedupliquerSallesSourcesAvantFusion(cibleId, sourceId);
@@ -233,7 +233,7 @@ public class ReferentielSallesService {
             + " uuid)",
         ids);
 
-    // 5. Métadonnées #711 récupérées si la cible ne les a pas déjà
+    // 5. Métadonnées récupérées si la cible ne les a pas déjà
     jdbc.update(
         """
         UPDATE salles SET
@@ -252,7 +252,7 @@ public class ReferentielSallesService {
   }
 
   /// Supprime, avant réassignation, les doublons de {@code salle_sources} qu'une fusion créerait
-  /// sinon silencieusement (#1019) : la PK {@code (source, identifiant_externe)} est indépendante
+  /// sinon silencieusement : la PK {@code (source, identifiant_externe)} est indépendante
   /// de {@code salle_id}, donc deux lignes portant le même {@code source} (ex. deux identifiants
   /// {@code ticketmaster} différents) peuvent coexister indéfiniment sur la salle fusionnée sans
   /// jamais entrer en conflit de PK. Garde la ligne la plus saine (non suspecte prioritaire, puis

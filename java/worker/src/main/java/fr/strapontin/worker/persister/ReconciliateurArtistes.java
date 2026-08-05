@@ -155,7 +155,7 @@ public class ReconciliateurArtistes {
   /// Réconcilie un concert contre les candidats existants d'une même clé (date, salle).
   ///
   /// <p>Scanne toute la liste à la recherche d'une correspondance exacte avant de retomber sur
-  /// une correspondance floue (#794) : sans cette priorité, l'absence de {@code ORDER BY} sur la
+  /// une correspondance floue : sans cette priorité, l'absence de {@code ORDER BY} sur la
   /// requête source (voir {@link #reconcilierArtistes}) peut placer un candidat flou avant un
   /// candidat exact dans le result set, faisant rattacher à tort le concert au mauvais artiste
   /// alors qu'une correspondance exacte existait plus loin dans la même liste.

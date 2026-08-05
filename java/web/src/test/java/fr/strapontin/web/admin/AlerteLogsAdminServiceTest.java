@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 
 /// Tests unitaires pour {@link AlerteLogsAdminService}.
 ///
-/// <p>Couvre le curseur persisté : n'avance qu'après envoi réussi (#765), pas de re-notification.
+/// <p>Couvre le curseur persisté : n'avance qu'après envoi réussi, pas de re-notification.
 ///
 /// @since 2.6.1
 /// @author Kwaite

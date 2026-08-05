@@ -272,7 +272,7 @@ async function abonnerPush() {
   }
 }
 
-// #826 : transmettre l'endpoint de l'appareil courant plutôt que de laisser le serveur
+// transmettre l'endpoint de l'appareil courant plutôt que de laisser le serveur
 // sélectionner arbitrairement le plus récent — sinon un utilisateur abonné sur plusieurs
 // appareils cliquant "Test" depuis l'un d'eux pouvait recevoir la notification sur un autre.
 async function testerPush() {

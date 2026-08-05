@@ -22,9 +22,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/// Tests unitaires pour {@link EmailSender} (#925, extrait d'{@code EmailService}).
+/// Tests unitaires pour {@link EmailSender} (extrait d'{@code EmailService}).
 ///
-/// <p>Couvre {@link EmailSender#obtenirDestinataireAlerte()} (#907 — ne se replie jamais sur
+/// <p>Couvre {@link EmailSender#obtenirDestinataireAlerte} (ne se replie jamais sur
 /// l'expéditeur/CONTACT_EMAIL).
 ///
 /// @since 2.7.0
@@ -85,7 +85,7 @@ class EmailSenderTest {
     assertTrue(emailSender.obtenirContexte().isEmpty());
   }
 
-  // --- envoyer (#981 : garde-fou quota Resend) ---
+  // --- envoyer (garde-fou quota Resend) ---
 
   @Test
   void envoyer_quotaResendAtteint_neContactePasResend() {

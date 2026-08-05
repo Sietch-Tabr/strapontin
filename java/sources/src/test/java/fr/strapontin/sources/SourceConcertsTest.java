@@ -38,7 +38,7 @@ class SourceConcertsTest {
     assertFalse(source.accepteIdentifiantSalle("id"));
   }
 
-  // #1022 : le défaut à 3 paramètres délègue à fetchArtiste(nom) pour toute source qui ne
+  // le défaut à 3 paramètres délègue à fetchArtiste(nom) pour toute source qui ne
   // surcharge pas explicitement le repli identité — seule EventimSource en a besoin.
   @Test
   void fetchArtisteAvecIdentite_parDefaut_delegueAFetchArtisteSansIdentite() {

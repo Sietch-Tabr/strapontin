@@ -51,7 +51,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   private static final String SEL_URL = "a.evenementReserver";
 
   private final RestClient restClient;
-  // Bilan de panne agrégé, remonté dans logs_admin par le worker (#912).
+  // Bilan de panne agrégé, remonté dans logs_admin par le worker.
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
   /// Crée une instance avec User-Agent navigateur standard et HTTP/1.1 forcé.
@@ -120,7 +120,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     }
   }
 
-  /// Retourne le bilan agrégé des appels HTTP Digitick depuis le dernier prélèvement (#912) et
+  /// Retourne le bilan agrégé des appels HTTP Digitick depuis le dernier prélèvement et
   /// remet les compteurs à zéro.
   ///
   /// @return le bilan depuis le dernier prélèvement

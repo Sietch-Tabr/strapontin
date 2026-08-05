@@ -451,6 +451,25 @@ class TicketmasterSourceTest {
     serveur.verify();
   }
 
+  // Un échec HTTP (contrairement à une salle réellement sans concert, testé ci-dessus) doit
+  // rester distinguable après coup — voir ResultatPage#succes, propagé jusqu'au log de fetchSalle.
+  @Test
+  void fetchSalle_erreurHttp_retourneListeVideSansLeverDException() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withServerError());
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchSalle("tm:venue-en-echec");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
   @Test
   void rechercherAttractionId_nomTrouve_retourneId() {
     RestClient.Builder builder = RestClient.builder();
@@ -475,7 +494,7 @@ class TicketmasterSourceTest {
 
   @Test
   void rechercherAttractionId_aucuneCorrespondanceExacteParmis10_retourneNull() {
-    // non-régression #649 : TM retourne "Anuv Jain" sans "Jain" parmi 10 résultats → null
+    // non-régression : TM retourne "Anuv Jain" sans "Jain" parmi 10 résultats → null
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
@@ -501,7 +520,7 @@ class TicketmasterSourceTest {
 
   @Test
   void rechercherAttractionId_correspondanceExacteApresDecalage_retourneId() {
-    // non-régression #654 : TM retourne "Shy" avant "Shy'm" (tri popularité) → doit trouver Shy'm
+    // non-régression : TM retourne "Shy" avant "Shy'm" (tri popularité) → doit trouver Shy'm
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
@@ -620,7 +639,7 @@ class TicketmasterSourceTest {
     assertEquals("offsale", concert.statut());
   }
 
-  // --- filtrage homonymes / partiels (#715) ---
+  // --- filtrage homonymes / partiels ---
 
   @Test
   void mapEvenement_fallbackEtAttractionNomDifferent_retourneNull() {
@@ -668,7 +687,7 @@ class TicketmasterSourceTest {
     assertEquals("Julien Clerc", resultat.artiste());
   }
 
-  // --- Tests santé des sources (#706) ---
+  // --- Tests santé des sources ---
 
   @Test
   void verifierVenue_reponse200_retourneVivant() {
@@ -790,7 +809,7 @@ class TicketmasterSourceTest {
     serveur.verify();
   }
 
-  // --- BilanFetch (#909) ---
+  // --- BilanFetch ---
 
   @Test
   void preleverBilan_appelReussi_compteUnAppelSansErreur() {
@@ -852,7 +871,7 @@ class TicketmasterSourceTest {
   }
 
   // concertsManques reste une métrique TM spécifique, distincte du bilan appels/erreurs commun
-  // (#909) : pagination plafonnée à NB_PAGES_MAX (6) pages de 200 événements, totalElements=1300
+  // : pagination plafonnée à NB_PAGES_MAX (6) pages de 200 événements, totalElements=1300
   // déclenche un plafonnement (7 pages nécessaires) laissant 1300 - 6 = 1294 concerts non
   // récupérés (6 pages fetchées, 1 événement par page dans la fixture).
   @Test

@@ -32,7 +32,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link CoherenceWikidataSalleService} (#1005).
+/// Tests unitaires pour {@link CoherenceWikidataSalleService}.
 ///
 /// @since 2.7.5
 /// @author Kwaite
@@ -60,10 +60,10 @@ class CoherenceWikidataSalleServiceTest {
         .thenReturn(candidats);
   }
 
-  /// Simule le résultat de `chargerVillesConcertsReelles` en pilotant directement le
-  /// {@link RowCallbackHandler} avec un {@link ResultSet} mocké — sans ce stub, l'appel réel
-  /// n'est jamais déclenché en test (Mockito no-op par défaut sur un `void`), ce qui correspond
-  /// au cas « aucun concert réel connu » (repli sur `salles.ville`, comportement historique).
+  /// Simule le résultat de `chargerVillesConcertsReelles` en pilotant directement le {@link
+  /// RowCallbackHandler} avec un {@link ResultSet} mocké — sans ce stub, l'appel réel n'est jamais
+  /// déclenché en test (Mockito no-op par défaut sur un `void`), ce qui correspond au cas « aucun
+  /// concert réel connu » (repli sur `salles.ville`, comportement historique).
   private void simulerVillesConcertsReelles(Map<UUID, List<String>> villesParSalle) {
     doAnswer(
             invocation -> {
@@ -163,7 +163,7 @@ class CoherenceWikidataSalleServiceTest {
     assertEquals(0, resultat);
   }
 
-  // #1009 : faux positifs constatés lors de la première nuit de fonctionnement (arrondissements
+  // faux positifs constatés lors de la première nuit de fonctionnement (arrondissements
   // Paris/Lyon/Marseille, quartiers informels sans commune propre, communes fusionnées,
   // intercommunalités) — aucun ne doit journaliser d'incohérence.
   static Stream<Arguments> villesCoherentesMalgreDivergenceTextuelle() {
@@ -178,7 +178,8 @@ class CoherenceWikidataSalleServiceTest {
             "Théâtre Antique d'Orange",
             "Orange",
             "communauté de communes du Pays d'Orange en Provence"),
-        Arguments.of("Parc Jean de la Fontaine", "Oullins-Pierre-Bénite", "Pierre-Bénite"));
+        Arguments.of("Parc Jean de la Fontaine", "Oullins-Pierre-Bénite", "Pierre-Bénite"),
+        Arguments.of("Opéra Bastille", "Quinze-Vingts", "Quinze-Vingts"));
   }
 
   @ParameterizedTest
@@ -224,7 +225,7 @@ class CoherenceWikidataSalleServiceTest {
             any());
   }
 
-  // #1021 : le mauvais rapprochement a corrompu salles.ville en même temps que wikidata_id (les
+  // le mauvais rapprochement a corrompu salles.ville en même temps que wikidata_id (les
   // deux valeurs pointent vers la même mauvaise entité) — une comparaison contre salles.ville
   // seule trouve alors toujours les deux cohérents entre eux, angle mort total. concerts.ville
   // (indépendante, jamais touchée par l'enrichissement) doit prendre le dessus et révéler
@@ -255,7 +256,36 @@ class CoherenceWikidataSalleServiceTest {
             any());
   }
 
-  // #1021 : à l'inverse, si salles.ville diverge textuellement de la commune Wikidata mais que
+  // Une salle correctement enrichie pour Béthune mais qui absorbe aussi des concerts mal
+  // rattachés à Carcassonne doit rester détectée — toutes les villes réelles doivent être
+  // cohérentes pour ne rien journaliser, pas seulement une majorité.
+  @Test
+  void verifier_contaminationPartielle_journaliseIncoherenceMemeAvecUnConcertCoherent() {
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q46101992");
+    simulerCandidats(List.of(salle));
+    simulerVillesConcertsReelles(Map.of(id, List.of("Bethune", "Carcassonne")));
+    when(wikidata.enrichirLot(anyList()))
+        .thenReturn(
+            Map.of(
+                id,
+                new EnrichissementSalle(
+                    "Q46101992", "Theatre Municipal de Bethune", "Bethune", null, null)));
+
+    int resultat = service.verifier();
+
+    assertEquals(1, resultat);
+    verify(logsAdminWorker)
+        .inserer(
+            eq("warn"),
+            eq("coherence-wikidata"),
+            org.mockito.ArgumentMatchers.contains("contamination partielle"),
+            any());
+  }
+
+  // à l'inverse, si salles.ville diverge textuellement de la commune Wikidata mais que
   // les concerts réels (source indépendante) confirment la même ville, ce n'est pas une vraie
   // incohérence — concerts.ville doit primer sur salles.ville plutôt que de générer un faux
   // positif.

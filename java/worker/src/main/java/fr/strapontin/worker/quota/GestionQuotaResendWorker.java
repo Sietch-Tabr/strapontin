@@ -18,7 +18,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Garde-fou quota d'envoi Resend jour/mois côté worker (#981, suite de l'incident #907).
+/// Garde-fou quota d'envoi Resend jour/mois côté worker (suite de l'incident).
 ///
 /// <p>Lecture/écriture SQL brute non chiffrée dans {@code app_config} (clé
 /// {@code RESEND_QUOTA_JSON}) — même clé que {@code web.email.GestionQuotaResend}, même pattern

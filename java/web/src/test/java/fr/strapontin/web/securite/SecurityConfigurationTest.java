@@ -36,7 +36,7 @@ class SecurityConfigurationTest {
 
   private final SecurityConfiguration config = new SecurityConfiguration();
 
-  // --- authenticationManager (#964 — publication des événements d'authentification) ---
+  // --- authenticationManager (publication des événements d'authentification) ---
 
   @Test
   void authenticationManager_credentialsValides_publieAuthenticationSuccessEvent() {

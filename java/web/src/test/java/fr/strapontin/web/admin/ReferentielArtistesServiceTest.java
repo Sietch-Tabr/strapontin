@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link ReferentielArtistesService} (#710).
+/// Tests unitaires pour {@link ReferentielArtistesService}.
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -65,9 +65,9 @@ class ReferentielArtistesServiceTest {
     assertEquals(1L, reponse.totalArtistes());
   }
 
-  // Régression #778 : les valeurs de statut exposées doivent être autoporteuses
+  // Régression : les valeurs de statut exposées doivent être autoporteuses
   // (a_jour/invalide) plutôt que vivant/suspect/mort, peu clairs hors contexte.
-  // #888 : statut désormais binaire (necessite_intervention_le), 'a_verifier' n'est plus jamais
+  // statut désormais binaire (necessite_intervention_le), 'a_verifier' n'est plus jamais
   // retourné pour un artiste — le compteur passif seul générait trop de faux positifs (65%).
   @Test
   @SuppressWarnings("unchecked")
@@ -131,7 +131,7 @@ class ReferentielArtistesServiceTest {
     assertFalse(service.reinitialiserEnrichissement(UUID.randomUUID()));
   }
 
-  // #1026 : action minimale pour un admin qui juge la divergence de nom TM acceptable, sans
+  // action minimale pour un admin qui juge la divergence de nom TM acceptable, sans
   // passer par une fusion.
   @Test
   void ignorerIntervention_artisteAvecSourceFlaggee_effaceEtLogueEtRetourneTrue() {
@@ -154,7 +154,7 @@ class ReferentielArtistesServiceTest {
     verify(logAdminService, never()).logAdmin(anyString(), anyString(), anyString(), anyMap());
   }
 
-  // #1026 : alternative à la fusion pour un simple mauvais lien (attractionId erroné).
+  // alternative à la fusion pour un simple mauvais lien (attractionId erroné).
   @Test
   void corrigerIdentifiantTm_artisteAvecSourceTicketmaster_metAJourEtReinitialiseLaSante() {
     UUID id = UUID.randomUUID();
@@ -241,7 +241,7 @@ class ReferentielArtistesServiceTest {
     verify(logAdminService).logAdmin(eq("info"), eq("admin"), any());
   }
 
-  // #828 : deux artistes fusionnés peuvent chacun avoir enregistré le même concert réel (même
+  // deux artistes fusionnés peuvent chacun avoir enregistré le même concert réel (même
   // salle, même date/heure) sous un artiste_norm textuel différent selon la source — sans ce
   // nettoyage préalable, les deux lignes concerts subsistaient après fusion, dupliquant le
   // concert sur la fiche de l'artiste cible. Aligné sur ReferentielSallesService.fusionner.
@@ -266,7 +266,7 @@ class ReferentielArtistesServiceTest {
             anyMap());
   }
 
-  // #1019 : deux identifiants du même type de source (ex. deux ticketmaster) sur cible et source
+  // deux identifiants du même type de source (ex. deux ticketmaster) sur cible et source
   // ne doivent pas coexister après fusion — la ligne la moins saine (suspecte) doit être
   // supprimée avant la réassignation en masse.
   @Test

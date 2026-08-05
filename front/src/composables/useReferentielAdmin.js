@@ -2,7 +2,7 @@ import { ref, shallowRef, reactive, onMounted, onUnmounted } from "vue";
 import { useToasts } from "./useToasts.js";
 import { useDialog } from "./useDialog.js";
 
-/// Logique partagée des onglets admin Référentiel artistes/salles (#934) : pagination,
+/// Logique partagée des onglets admin Référentiel artistes/salles : pagination,
 /// sélection pour fusion, édition du nom affiché, réinitialisation d'enrichissement.
 ///
 /// @param endpoint       segment d'URL REST (`artistes` ou `salles`)
@@ -84,7 +84,7 @@ export function useReferentielAdmin({
     }
   }
 
-  // #829 : la sélection (UUID) ne référence que des éléments de la page courante — un changement
+  // la sélection (UUID) ne référence que des éléments de la page courante — un changement
   // de page/filtre sans réinitialisation laissait ouvrirFusion() chercher un UUID absent de la
   // page rechargée, ouvrant un dialog de fusion vide sans aucun message explicite.
   function reinitialiserSelectionSiNonVide() {

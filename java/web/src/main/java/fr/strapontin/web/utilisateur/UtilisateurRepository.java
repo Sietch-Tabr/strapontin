@@ -58,7 +58,7 @@ class UtilisateurRepository {
   /// Met à jour l'identifiant (username).
   ///
   /// <p>Ne resynchronise {@code display_username} sur le nouvel identifiant que s'il n'a jamais
-  /// été personnalisé par un admin (#814) — sinon un nom affiché personnalisé
+  /// été personnalisé par un admin — sinon un nom affiché personnalisé
   /// ({@link fr.strapontin.web.admin.AdminService}, champ {@code nom}) serait écrasé
   /// silencieusement à chaque changement d'identifiant par l'utilisateur lui-même.
   ///
@@ -139,7 +139,7 @@ class UtilisateurRepository {
 
   /// Compte les concerts non vus/masqués pour un artiste suivi (badge "nouveau" de navigation).
   ///
-  /// <p>Extrait de {@code securite.SessionController} (#918) — le contrôleur exécutait ce SQL
+  /// <p>Extrait de {@code securite.SessionController} — le contrôleur exécutait ce SQL
   /// directement, en violation du pattern Controller (HTTP pur) → Service → Repository.
   ///
   /// @param userId identifiant de l'utilisateur

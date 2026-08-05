@@ -141,6 +141,7 @@
                 <span v-if="concert.statut === 'rescheduled' || concert.statut === 'postponed'" class="badge badge-reporte">Reporté</span>
                 <span v-if="concert.statut === 'offsale'" class="badge badge-complet">Complet</span>
                 <span v-if="concert.statut === 'presale'" class="badge badge-prevente">{{ concert.presaleDebut ? 'Prévente le ' + formaterPresale(concert.presaleDebut) : 'Prévente' }}</span>
+                <span v-if="concert.informationNonConfirmee" class="badge badge-a-verifier" title="Ce concert n'a plus été retrouvé lors des dernières vérifications automatiques — à confirmer avant de se déplacer.">À vérifier</span>
               </td>
               <td data-label="Date">
                 <time class="concert-date" :datetime="concert.date">{{ formaterAvecHeure(concert.date, concert.heure) }}</time>

@@ -15,6 +15,7 @@ import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import fr.strapontin.worker.sante.SuiviSanteSourcesService;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,11 +25,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Orchestration des jobs de fetch : fetch → dédoublonnage → résolution → persistance →
-/// recalcul. Extrait de {@code WorkerService} (#915).
+/// Orchestration des jobs de fetch : fetch → dédoublonnage → résolution → persistance → recalcul.
+/// Extrait de {@code WorkerService}.
 ///
-/// Délégué par les jobs Quartz {@code FetchArtistesBatchJob}, {@code FetchRegionJob},
-/// {@code FetchSalleJob}, {@code FetchSallesAllJob}.
+/// Délégué par les jobs Quartz {@code FetchArtistesBatchJob}, {@code FetchRegionJob}, {@code
+/// FetchSalleJob}, {@code FetchSallesAllJob}.
 ///
 /// @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
 /// @author Kwaite
@@ -38,13 +39,17 @@ public class WorkerFetchService {
   private static final Logger log = LoggerFactory.getLogger(WorkerFetchService.class);
 
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
-  // #1014 : Deezer ne référence pas les humoristes — toute recherche pour un humoriste renvoie le
+  // Deezer ne référence pas les humoristes — toute recherche pour un humoriste renvoie le
   // musicien le plus proche textuellement (ex. "Fabrice Éboué" → "Fabrice Aboulker"), jamais
   // détecté par le seuil de similarité seul. La classification "theatre" (TM : segment "arts et
-  // théâtre") est le seul signal fiable disponible pour distinguer un spectacle d'humour d'un
+  // théâtre") est le signal le plus fiable pour distinguer un spectacle d'humour/théâtral d'un
   // concert — Digitick filtre déjà en amont sur le genre "Concert" (jamais de classification
-  // "theatre"), Eventim n'a pas de classification (toujours music de fait).
+  // "theatre", classification systématiquement absente par construction, sans ambiguïté). Eventim
+  // en revanche omet fréquemment sa classification (ex. "Paris is Magique", comédie musicale
+  // sans rapport avec la musique réelle) : une classification vide côté Eventim ne garantit rien
+  // sur la nature musicale du concert, contrairement à Digitick.
   private static final String CLASSIFICATION_THEATRE = "theatre";
+  private static final String SOURCE_EVENTIM = "eventim";
   private static final int TAILLE_LOT_TM = 20;
   private static final int TAILLE_LOT_DEPTS = 5;
   private static final int TAILLE_LOT_SALLES = 20;
@@ -86,9 +91,9 @@ public class WorkerFetchService {
   /// Fetch global de tous les artistes suivis (TM par attraction ID + Eventim individuel).
   ///
   /// Suspendu si le quota TM est inférieur à 500 (SEUIL_QUOTA_CRON). Une exception dans un lot
-  /// n'interrompt pas les lots suivants (#792) : le recalcul de matchs et le digest de
-  /// notification s'exécutent toujours sur la base des lots effectivement réussis, plutôt que
-  /// d'être sautés en cas d'échec partiel.
+  /// n'interrompt pas les lots suivants : le recalcul de matchs et le digest de notification
+  /// s'exécutent toujours sur la base des lots effectivement réussis, plutôt que d'être sautés en
+  /// cas d'échec partiel.
   public void executerFetchArtistesBatch() {
     log.info("fetch:artistes:batch démarré");
     long debut = System.currentTimeMillis();
@@ -106,6 +111,7 @@ public class WorkerFetchService {
               "SELECT ua.artiste_id::text AS artiste_id_str,"
                   + " MAX(ua.artiste_affiche) AS artiste_affiche,"
                   + " MAX(asm.identifiant_externe) AS attraction_id,"
+                  + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
                   + " MAX(a.deezer_id) AS deezer_id,"
                   + " MAX(a.wikidata_id) AS wikidata_id"
                   + " FROM user_artistes ua"
@@ -153,7 +159,7 @@ public class WorkerFetchService {
   /// (TM/Eventim) reste correct à cette granularité : un même concert n'est jamais rapporté par
   /// deux sources pour deux artistes différents, la comparaison par lot suffit.
   ///
-  /// @param lot            sous-ensemble de lignes artiste (taille {@value TAILLE_LOT_TM})
+  /// @param lot sous-ensemble de lignes artiste (taille {@value TAILLE_LOT_TM})
   /// @param sourcesSimples sources hors {@link SourceAvecFetchLot} (fetch individuel par artiste)
   /// @return bilan de persistance du lot
   private ResultatPersistance traiterLotArtistesBatch(
@@ -185,7 +191,38 @@ public class WorkerFetchService {
         tous.size(),
         dedoublonnes.size());
 
-    return persisterConcerts.persisterConcerts(dedoublonnes);
+    String debutLot = OffsetDateTime.now().toString();
+    ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+    List<String> artisteIds = lot.stream().map(row -> (String) row.get("artiste_id_str")).toList();
+    mettreAJourAbsences("artiste_id", artisteIds, debutLot);
+    return resultat;
+  }
+
+  // Nombre d'absences consécutives (cycles fetch:artistes:batch/fetch:salles:all successifs sans
+  // qu'un concert précédemment vu ne réapparaisse) à partir duquel il est marqué comme non
+  // confirmé récemment — évite un faux positif sur un simple aléa réseau isolé, tout en restant
+  // assez bas pour signaler une disparition réelle dans un délai raisonnable (cron ~11 cycles/jour
+  // — 5 absences correspond à environ une demi-journée de silence continu).
+  private static final int SEUIL_ABSENCES_CONSECUTIVES = 5;
+
+  /// Met à jour le compteur d'absences consécutives des concerts futurs liés aux entités
+  /// effectivement retraitées dans ce cycle : remis à zéro pour tout concert réellement revu
+  /// (`updated_at` avancé par l'upsert), incrémenté sinon.
+  ///
+  /// @param colonne "artiste_id" ou "salle_id"
+  /// @param ids identifiants (texte) des entités traitées dans ce cycle
+  /// @param debutCycle horodatage capturé avant la persistance du lot
+  private void mettreAJourAbsences(String colonne, List<String> ids, String debutCycle) {
+    if (ids.isEmpty()) return;
+    jdbc.update(
+        "UPDATE concerts SET   absences_consecutives = CASE WHEN updated_at >= CAST(:debut AS"
+            + " timestamptz)                                THEN 0 ELSE absences_consecutives + 1"
+            + " END,   absence_detectee_le = CASE     WHEN updated_at >= CAST(:debut AS"
+            + " timestamptz) THEN NULL     WHEN absences_consecutives + 1 >= :seuil THEN"
+            + " COALESCE(absence_detectee_le, now())     ELSE absence_detectee_le END WHERE "
+            + colonne
+            + "::text IN (:ids) AND date >= CURRENT_DATE",
+        Map.of("debut", debutCycle, "seuil", SEUIL_ABSENCES_CONSECUTIVES, "ids", ids));
   }
 
   private static ResultatPersistance accumuler(ResultatPersistance a, ResultatPersistance b) {
@@ -193,7 +230,7 @@ public class WorkerFetchService {
   }
 
   /// Fetch une salle auprès de la source qui accepte son identifiant et enregistre le résultat
-  /// auprès de {@link SuiviSanteSourcesService} (#706 phase 1).
+  /// auprès de {@link SuiviSanteSourcesService} (phase 1).
   ///
   /// @param identifiant identifiant préfixé {@code source:identifiant_externe}
   /// @param destination liste dans laquelle ajouter les concerts trouvés
@@ -221,14 +258,14 @@ public class WorkerFetchService {
   ///
   /// <ol>
   ///   <li>Résolution des {@code attractionId} manquants (1 requête /attractions.json par artiste
-  ///       non résolu), puis fetch groupé par lots de {@value TAILLE_LOT_TM} via
-  ///       {@code fetchArtistesBatch} — réduit la consommation de quota d'un facteur ×20 par
-  ///       rapport à un fetch artiste-par-artiste.
+  ///       non résolu), puis fetch groupé par lots de {@value TAILLE_LOT_TM} via {@code
+  ///       fetchArtistesBatch} — réduit la consommation de quota d'un facteur ×20 par rapport à un
+  ///       fetch artiste-par-artiste.
   ///   <li>Fallback keyword ({@code fetchArtiste}) pour les artistes sans {@code attractionId} TM.
   /// </ol>
   ///
-  /// @param rows lignes agrégées par {@code artiste_id} avec {@code artiste_affiche},
-  ///     {@code artiste_id_str}, {@code attraction_id}
+  /// @param rows lignes agrégées par {@code artiste_id} avec {@code artiste_affiche}, {@code
+  ///   artiste_id_str}, {@code attraction_id}, {@code nb_ids_distincts}
   /// @return concerts bruts collectés depuis TM
   private List<ConcertBrut> fetchTMParArtistes(List<Map<String, Object>> rows) {
     List<ConcertBrut> resultats = new ArrayList<>();
@@ -239,6 +276,27 @@ public class WorkerFetchService {
       String nom = (String) row.get("artiste_affiche");
       String artisteIdStr = (String) row.get("artiste_id_str");
       String attractionId = (String) row.get("attraction_id");
+      Number nbIdsDistinctsNum = (Number) row.get("nb_ids_distincts");
+      int nbIdsDistincts = nbIdsDistinctsNum != null ? nbIdsDistinctsNum.intValue() : 0;
+      if (nbIdsDistincts > 1) {
+        // artiste_sources n'a pas de contrainte d'unicité sur artiste_id (PK = (source,
+        // identifiant_externe)) — une fusion mal dédupliquée peut laisser deux identifiants TM
+        // pour le même artiste, rendant le MAX() ci-dessus arbitraire. Mieux vaut ne pas fetcher
+        // avec un identifiant potentiellement faux que de rapatrier silencieusement les concerts
+        // d'un autre artiste sous cette identité.
+        log.warn(
+            "artiste_sources ambigu — {} identifiant_externe ticketmaster distincts pour"
+                + " artiste={} artisteId={}, fetch TM ignoré ce cycle",
+            nbIdsDistincts,
+            nom,
+            artisteIdStr);
+        jdbc.update(
+            "UPDATE artiste_sources SET necessite_intervention_le ="
+                + " COALESCE(necessite_intervention_le, now()) WHERE artiste_id = CAST(:artisteId"
+                + " AS uuid) AND source = 'ticketmaster'",
+            Map.of("artisteId", artisteIdStr));
+        continue;
+      }
       if (attractionId == null) {
         try {
           attractionId = tm.rechercherAttractionId(nom);
@@ -252,7 +310,7 @@ public class WorkerFetchService {
         } catch (Exception e) {
           log.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());
         }
-        // #789 : throttle manquant ici jusqu'alors — un lot avec plusieurs artistes jamais
+        // throttle manquant ici jusqu'alors — un lot avec plusieurs artistes jamais
         // résolus pouvait générer une rafale d'appels /attractions.json sans délai.
         attendreRateLimit();
       }
@@ -350,13 +408,12 @@ public class WorkerFetchService {
     return tousLesDepts;
   }
 
-  /// Fetch + dédoublonnage + persistance d'un lot de départements (taille
-  /// {@value TAILLE_LOT_DEPTS}).
+  /// Fetch + dédoublonnage + persistance d'un lot de départements (taille {@value
+  /// TAILLE_LOT_DEPTS}).
   ///
-  /// <p>Persistance par lot plutôt qu'en un seul bloc final (même motif que
-  /// {@link #traiterLotArtistesBatch}) : le dédoublonnage cross-sources reste correct à cette
-  /// granularité, un même concert n'étant jamais rapporté par deux sources dans deux départements
-  /// différents.
+  /// <p>Persistance par lot plutôt qu'en un seul bloc final (même motif que {@link
+  /// #traiterLotArtistesBatch}) : le dédoublonnage cross-sources reste correct à cette granularité,
+  /// un même concert n'étant jamais rapporté par deux sources dans deux départements différents.
   ///
   /// @param lotDepts sous-ensemble de départements (taille {@value TAILLE_LOT_DEPTS})
   /// @return bilan de persistance du lot
@@ -382,8 +439,8 @@ public class WorkerFetchService {
 
   /// Fetch les concerts d'une ou plusieurs salles identifiées par leurs identifiants préfixés.
   ///
-  /// <p>Le paramètre est une liste d'identifiants séparés par une virgule, chacun préfixé
-  /// par la source : {@code "tm:rZFSnyZdFvA"} ou {@code "tm:id1,digitick:slug"}.
+  /// <p>Le paramètre est une liste d'identifiants séparés par une virgule, chacun préfixé par la
+  /// source : {@code "tm:rZFSnyZdFvA"} ou {@code "tm:id1,digitick:slug"}.
   ///
   /// @param identifiantsStr identifiants préfixés séparés par des virgules
   public void executerFetchSalle(String identifiantsStr) {
@@ -408,15 +465,15 @@ public class WorkerFetchService {
     log.info("fetch:salle terminé identifiants={}", identifiantsStr);
   }
 
-  /// Fetch périodique des salles suivies (`user_salles`) ayant des sources configurées dans
-  /// {@code salle_sources}.
+  /// Fetch périodique des salles suivies (`user_salles`) ayant des sources configurées dans {@code
+  /// salle_sources}.
   ///
-  /// Restreint aux salles réellement suivies par un utilisateur depuis #996 — jusque-là toutes
-  /// les salles du référentiel (255 avec source TM en prod le 18/07/2026) étaient refetchées à
-  /// chaque cycle, épuisant le quota TM en une journée dès que #966 a débloqué cet appel pour de
-  /// vrai. Les salles non suivies n'apportent aucune valeur ici : un artiste suivi qui y jouerait
-  /// est de toute façon déjà détecté par {@code fetch:artistes:batch} (recherche nationale par
-  /// nom, indépendante du département).
+  /// Restreint aux salles réellement suivies par un utilisateur depuis — jusque-là toutes les
+  /// salles du référentiel (255 avec source TM en prod le 18/07/2026) étaient refetchées à chaque
+  /// cycle, épuisant le quota TM en une journée dès que a débloqué cet appel pour de vrai. Les
+  /// salles non suivies n'apportent aucune valeur ici : un artiste suivi qui y jouerait est de
+  /// toute façon déjà détecté par {@code fetch:artistes:batch} (recherche nationale par nom,
+  /// indépendante du département).
   ///
   /// Boucle sur les salles suivies et exécute le même pipeline que {@link #executerFetchSalle} en
   /// agrégeant les concerts avant persistance. Suspendu si le quota TM est insuffisant.
@@ -432,11 +489,11 @@ public class WorkerFetchService {
         return;
       }
 
-      // #966 : le préfixe emis ici doit correspondre à celui attendu par
+      // le préfixe emis ici doit correspondre à celui attendu par
       // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique "ticketmaster"
       // de salle_sources.source) — sans cette traduction, fetchSalle n'est jamais invoqué pour
       // aucune salle TM (mismatch silencieux, aucune exception, aucun log d'erreur).
-      // #996 : restreint aux salles suivies (user_salles) — voir Javadoc de la méthode.
+      // restreint aux salles suivies (user_salles) — voir Javadoc de la méthode.
       List<String> identifiantsParSalle =
           jdbc
               .queryForList(
@@ -487,10 +544,10 @@ public class WorkerFetchService {
 
   /// Fetch + dédoublonnage + persistance d'un lot de salles (taille {@value TAILLE_LOT_SALLES}).
   ///
-  /// <p>Persistance par lot plutôt qu'en un seul bloc final (même motif que
-  /// {@link #traiterLotArtistesBatch}) : chaque chaîne d'identifiants regroupe déjà toutes les
-  /// sources d'une même salle ({@code GROUP BY ss.salle_id}), le dédoublonnage cross-sources reste
-  /// donc correct à cette granularité.
+  /// <p>Persistance par lot plutôt qu'en un seul bloc final (même motif que {@link
+  /// #traiterLotArtistesBatch}) : chaque chaîne d'identifiants regroupe déjà toutes les sources
+  /// d'une même salle ({@code GROUP BY ss.salle_id}), le dédoublonnage cross-sources reste donc
+  /// correct à cette granularité.
   ///
   /// @param lotSalles sous-ensemble de chaînes d'identifiants préfixés, une par salle
   /// @return bilan de persistance du lot
@@ -513,13 +570,29 @@ public class WorkerFetchService {
     return persisterConcerts.persisterConcerts(dedoublonnes);
   }
 
+  /// Détermine si un concert est éligible à la résolution du nom canonique via Deezer.
+  ///
+  /// <p>Exclut la classification "theatre" (TM/musical/théâtral, jamais un vrai musicien côté
+  /// Deezer) ainsi que, spécifiquement pour Eventim, une classification vide/absente — Digitick
+  /// omet aussi sa classification mais uniquement pour de vrais concerts (filtré en amont sur le
+  /// genre "Concert"), alors qu'Eventim l'omet fréquemment y compris pour des spectacles non
+  /// musicaux.
+  ///
+  /// @param c concert à évaluer
+  /// @return {@code true} si la résolution Deezer peut s'appliquer à ce concert
+  private static boolean estEligibleResolutionDeezer(ConcertBrut c) {
+    if (CLASSIFICATION_THEATRE.equals(c.classification())) return false;
+    return !SOURCE_EVENTIM.equals(c.source())
+        || (c.classification() != null && !c.classification().isBlank());
+  }
+
   private List<ConcertBrut> resoudreEtDeduplicer(List<ConcertBrut> concerts) {
     List<ConcertBrut> dedoublonnes = Dedoublonner.dedoublonner(concerts);
 
     Map<String, String> tableauResolution = new LinkedHashMap<>();
     List<String> noms =
         dedoublonnes.stream()
-            .filter(c -> !CLASSIFICATION_THEATRE.equals(c.classification()))
+            .filter(WorkerFetchService::estEligibleResolutionDeezer)
             .map(ConcertBrut::artiste)
             .distinct()
             .toList();
@@ -533,7 +606,7 @@ public class WorkerFetchService {
     return dedoublonnes.stream()
         .map(
             c -> {
-              if (CLASSIFICATION_THEATRE.equals(c.classification())) return c;
+              if (!estEligibleResolutionDeezer(c)) return c;
               String nomResolu = tableauResolution.getOrDefault(c.artiste(), c.artiste());
               if (nomResolu.equals(c.artiste())) return c;
               return new ConcertBrut(

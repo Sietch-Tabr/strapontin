@@ -32,7 +32,7 @@ public class ParametresService {
 
   /// @param jdbc                  accès JDBC
   /// @param emailService          service d'envoi d'emails
-  /// @param utilisateurRepository accès aux données utilisateur (#918)
+  /// @param utilisateurRepository accès aux données utilisateur
   public ParametresService(
       NamedParameterJdbcTemplate jdbc,
       EmailService emailService,

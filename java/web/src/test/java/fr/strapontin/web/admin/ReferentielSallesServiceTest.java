@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link ReferentielSallesService} (#710).
+/// Tests unitaires pour {@link ReferentielSallesService}.
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -66,7 +66,7 @@ class ReferentielSallesServiceTest {
     assertEquals(0, reponse.page());
   }
 
-  // Régression #778 : les valeurs de statut exposées doivent être autoporteuses
+  // Régression : les valeurs de statut exposées doivent être autoporteuses
   // (a_jour/a_verifier/invalide) plutôt que vivant/suspect/mort, peu clairs hors contexte.
   @Test
   @SuppressWarnings("unchecked")
@@ -186,7 +186,7 @@ class ReferentielSallesServiceTest {
     verify(logAdminService).logAdmin(eq("info"), eq("admin"), any());
   }
 
-  // #1019 : deux identifiants du même type de source (ex. deux ticketmaster) sur cible et source
+  // deux identifiants du même type de source (ex. deux ticketmaster) sur cible et source
   // ne doivent pas coexister après fusion — la ligne la moins saine (suspecte) doit être
   // supprimée avant la réassignation en masse.
   @Test

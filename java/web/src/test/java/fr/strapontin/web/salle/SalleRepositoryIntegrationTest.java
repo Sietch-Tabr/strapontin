@@ -20,7 +20,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 /// Test d'intégration de {@link SalleRepository} avec PostgreSQL réel (Testcontainers).
 ///
-/// <p>Vérifie spécifiquement {@link SalleRepository#lireIdentifiantsSources} (#966) : le
+/// <p>Vérifie spécifiquement {@link SalleRepository#lireIdentifiantsSources} : le
 /// préfixe Ticketmaster construit à partir de {@code salle_sources.source} doit être abrégé
 /// ({@code "tm"}) pour correspondre à ce qu'attend
 /// {@code TicketmasterSource.accepteIdentifiantSalle} — sans quoi le fetch déclenché à l'ajout
@@ -114,7 +114,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
     assertNull(repository.lireIdentifiantsSources(salleId));
   }
 
-  // #970 : upsertSalle/upsertSalleAvecLoc écrivaient nom_norm = salleCle (fonction
+  // upsertSalle/upsertSalleAvecLoc écrivaient nom_norm = salleCle (fonction
   // normaliserSalleCle, sans espaces — ex. "lempreinte"), incompatible avec la tokenisation par
   // espaces qu'attend CorrespondanceSalle.tokensSignificatifs, cassant le matching Wikidata pour
   // toute salle ajoutée via le flux interactif (recherche Nominatim).
@@ -141,9 +141,9 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
     assertEquals("accorhotels arena", nomNorm);
   }
 
-  // #1001 : mettreAJourSalle mettait à jour nom sans jamais recalculer nom_norm, laissant les
+  // mettreAJourSalle mettait à jour nom sans jamais recalculer nom_norm, laissant les
   // deux colonnes désynchronisées après un renommage (ex. correction admin Digitick) — cassant
-  // le matching Wikidata/Overpass exactement comme #969.
+  // le matching Wikidata/Overpass exactement comme.
   @Test
   void mettreAJourSalle_nouveauNom_recalculeNomNorm() {
     UUID salleId = repository.upsertSalle("elyseemontmartre", "Elysee Montmartre");

@@ -212,7 +212,7 @@ class SalleRepository {
 
   /// Met à jour le nom, la ville et le CP d'une salle existante.
   ///
-  /// <p>Recalcule {@code nom_norm} depuis le nouveau nom (#1001) — sans cela, un renommage via
+  /// <p>Recalcule {@code nom_norm} depuis le nouveau nom — sans cela, un renommage via
   /// cette méthode laisse {@code nom_norm} désynchronisé de {@code nom}, cassant le matching
   /// Wikidata/Overpass pour cette salle.
   ///
@@ -245,7 +245,7 @@ class SalleRepository {
   /// préfixe Ticketmaster est abrégé ({@code "tm"}, pas {@code "ticketmaster"}, la valeur
   /// canonique de {@code salle_sources.source}) — {@link
   // TicketmasterSource#accepteIdentifiantSalle}
-  /// n'accepte que ce préfixe court (#966), sans quoi le fetch déclenché à l'ajout d'une salle
+  /// n'accepte que ce préfixe court, sans quoi le fetch déclenché à l'ajout d'une salle
   /// TM ne fait jamais rien (mismatch silencieux, aucune exception).
   ///
   /// @param salleId UUID de la salle
@@ -290,7 +290,7 @@ class SalleRepository {
     return nb > 0;
   }
 
-  /// Met à jour {@code wikidata_id} d'une salle si absent (#718) — ne touche jamais une valeur
+  /// Met à jour {@code wikidata_id} d'une salle si absent — ne touche jamais une valeur
   /// déjà résolue par le job nocturne ({@code COALESCE}). Peut lever
   /// {@link org.springframework.dao.DuplicateKeyException} ({@code idx_salles_wikidata_id}) — à
   /// la charge de l'appelant (même piège qu'{@code EnrichissementSallesService}, jalon 2.6.0).
@@ -307,7 +307,7 @@ class SalleRepository {
   }
 
   /// Recherche une salle différente de {@code exclureSalleId} déjà associée à un slug Digitick
-  /// (#830) — permet de détecter un conflit avant l'attribution plutôt que d'échouer
+  /// permet de détecter un conflit avant l'attribution plutôt que d'échouer
   /// silencieusement sur {@code ON CONFLICT DO NOTHING}.
   ///
   /// @param slug             slug Digitick à vérifier

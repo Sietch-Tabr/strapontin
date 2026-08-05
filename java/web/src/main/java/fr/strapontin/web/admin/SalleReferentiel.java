@@ -7,7 +7,7 @@ package fr.strapontin.web.admin;
 import java.util.List;
 import java.util.UUID;
 
-/// Ligne du référentiel salles pour l'onglet admin « Salles » (#710).
+/// Ligne du référentiel salles pour l'onglet admin « Salles ».
 ///
 /// @param id         UUID interne stable
 /// @param nom        nom brut (dernière valeur vue par une source)
@@ -17,7 +17,7 @@ import java.util.UUID;
 /// @param nbConcerts nombre de concerts à venir liés à cette salle
 /// @param sources    sources externes liées (ex. {@code ["ticketmaster", "digitick"]})
 /// @param statut     {@code "a_jour"}, {@code "a_verifier"} ou {@code "invalide"} (basé sur
-///     {@code suspect_depuis}, #706, #778)
+/// {@code suspect_depuis})
 /// @param wikidataId Q-ID Wikidata si présent
 /// @since 2.6.0
 /// @author Kwaite

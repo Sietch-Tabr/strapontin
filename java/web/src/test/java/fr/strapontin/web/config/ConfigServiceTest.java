@@ -24,7 +24,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 /// Tests unitaires de {@link ConfigService}.
 ///
 /// <p>Le chiffrement/déchiffrement AES-256-GCM lui-même est testé dans
-/// {@code fr.strapontin.core.ConfigCipherTest} (#922) — ce fichier se concentre sur le
+/// {@code fr.strapontin.core.ConfigCipherTest} — ce fichier se concentre sur le
 /// comportement propre au service : cache, sauvegarde/suppression, résilience au mauvais secret.
 ///
 /// @since 2.0.0

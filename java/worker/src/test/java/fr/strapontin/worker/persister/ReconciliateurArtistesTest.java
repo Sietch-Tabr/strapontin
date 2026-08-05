@@ -18,7 +18,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link ReconciliateurArtistes} — priorité exacte avant flou (#794).
+/// Tests unitaires de {@link ReconciliateurArtistes} — priorité exacte avant flou.
 ///
 /// @since 2.6.3
 /// @author Kwaite
@@ -49,7 +49,7 @@ class ReconciliateurArtistesTest {
 
   // Cas réel documenté (wiki Sources-de-données) : "krash karma" / "krashkarma" donnent un Jaro
   // ≈ 0.97 ≥ 0.95 (doublon flou). Sans ORDER BY sur la requête source, le candidat flou peut
-  // apparaître avant le candidat exact dans le result set — avant #794, la boucle s'arrêtait sur
+  // apparaître avant le candidat exact dans le result set — avant, la boucle s'arrêtait sur
   // le premier match flou trouvé, ratant le candidat exact plus loin dans la même liste.
   @Test
   void reconcilierArtistes_candidatFlouAvantCandidatExact_prioriseLexact() {

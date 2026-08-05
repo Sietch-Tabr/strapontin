@@ -25,7 +25,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Tests unitaires pour {@link NotificationPushService} — focus sur le ciblage d'abonnement de
-/// {@code envoyerNotificationTest} (#826).
+/// {@code envoyerNotificationTest}.
 ///
 /// @since 2.6.4
 /// @author Kwaite
@@ -54,7 +54,7 @@ class NotificationPushServiceTest {
     verify(jdbc, never()).queryForList(anyString(), anyMap());
   }
 
-  // #826 : endpoint fourni → cible précisément cet abonnement plutôt que le plus récent par id.
+  // endpoint fourni → cible précisément cet abonnement plutôt que le plus récent par id.
   @Test
   @SuppressWarnings("unchecked")
   void envoyerNotificationTest_avecEndpoint_requeteFiltreParEndpoint() {
@@ -72,7 +72,7 @@ class NotificationPushServiceTest {
     assertEquals("https://exemple.test/endpoint-precis", paramsCaptor.getValue().get("endpoint"));
   }
 
-  // #826 : endpoint absent → repli sur le plus récent (comportement historique conservé).
+  // endpoint absent → repli sur le plus récent (comportement historique conservé).
   @Test
   void envoyerNotificationTest_sansEndpoint_requeteReplieSurLePlusRecent() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());

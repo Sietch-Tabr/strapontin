@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 /// retournent silencieusement sans erreur.
 ///
 /// <p>Les corps HTML sont générés par {@link EmailTemplates}. Les alertes système
-/// (bounce/spam/backup/watchdog/logs-admin) sont dans {@link EmailAlerteService} (#925) ;
+/// (bounce/spam/backup/watchdog/logs-admin) sont dans {@link EmailAlerteService};
 /// l'infrastructure d'envoi Resend partagée par les deux est dans {@link EmailSender}.
 ///
 /// @since 2.0.0
@@ -62,7 +62,7 @@ public class EmailService {
 
     String corps = EmailTemplates.invitation(lienReset, ctx.get().baseUrl());
 
-    // #833 : corps texte brut corrigé à "7 jours" — copié depuis le gabarit de confirmation de
+    // corps texte brut corrigé à "7 jours" — copié depuis le gabarit de confirmation de
     // changement d'email (celui-là bien à 24h) sans être adapté ; incohérent avec le HTML
     // (EmailTemplates.invitation) et la durée réelle du token (AdminService.creerUtilisateur,
     // Instant.now().plus(7, ChronoUnit.DAYS)).

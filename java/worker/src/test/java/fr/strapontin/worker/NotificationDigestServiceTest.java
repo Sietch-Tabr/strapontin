@@ -42,7 +42,7 @@ class NotificationDigestServiceTest {
   static {
     // Le provider BouncyCastle est normalement enregistré par WorkerApplication#main au
     // démarrage réel — jamais exécuté dans ce test unitaire pur, alors que la construction
-    // réelle d'un Notification (#943, chemin nominal push) en a besoin pour parser p256dh.
+    // réelle d'un Notification (chemin nominal push) en a besoin pour parser p256dh.
     if (Security.getProvider("BC") == null) {
       Security.addProvider(new BouncyCastleProvider());
     }
@@ -63,7 +63,7 @@ class NotificationDigestServiceTest {
             configService, jdbc, new ObjectMapper(), logsAdminWorker, gestionQuotaResendWorker);
   }
 
-  // #912 : push totalement ignoré (VAPID absent) — aucun appel tenté, aucune remontée de bilan.
+  // push totalement ignoré (VAPID absent) — aucun appel tenté, aucune remontée de bilan.
   @Test
   void executerDigest_vapidAbsent_nInsereAucunBilanPush() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneTest("u1")));
@@ -188,7 +188,7 @@ class NotificationDigestServiceTest {
         "L'URL push d'un concert de salle doit pointer vers /spectacles?source=salles");
   }
 
-  // #822 : l'URL absolue (préfixée par baseUrl) cassait router.push() côté service worker — les
+  // l'URL absolue (préfixée par baseUrl) cassait router.push côté service worker — les
   // listeners main.js/App.vue passent l'URL telle quelle, qui ne matche aucune route déclarée
   // avec un schéma https:// en préfixe. icon reste préfixé par baseUrl (résolu par le SW dans les
   // deux cas), seule url doit désormais être un chemin relatif.
@@ -240,7 +240,7 @@ class NotificationDigestServiceTest {
     assertTrue(html.contains("https://example.com"), "L'email doit contenir le lien billet");
   }
 
-  // --- #795 : interprétation du statut HTTP push ---
+  // --- : interprétation du statut HTTP push ---
 
   @Test
   void interpreterStatutPush_statut2xx_retourneSucces() {
@@ -259,7 +259,7 @@ class NotificationDigestServiceTest {
         NotificationDigestService.interpreterStatutPush(410));
   }
 
-  // Avant #795, tout statut différent de 404/410 était compté comme un succès — un 400 (payload
+  // Avant, tout statut différent de 404/410 était compté comme un succès — un 400 (payload
   // malformé), un 429 (rate-limit) ou un 500 étaient donc traités à tort comme des envois réussis.
   @Test
   void interpreterStatutPush_statutErreurNi404Ni410_retourneEchec() {
@@ -274,7 +274,7 @@ class NotificationDigestServiceTest {
         NotificationDigestService.interpreterStatutPush(500));
   }
 
-  // --- #791 : marquage notification_envoyee_le uniquement si un canal a réellement réussi ---
+  // --- : marquage notification_envoyee_le uniquement si un canal a réellement réussi ---
 
   @Test
   void executerDigest_toutEchoue_neMarqueAucunConcertNotifie() {
@@ -289,7 +289,7 @@ class NotificationDigestServiceTest {
         .update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
-  // #943 : Resend/PushService n'étaient pas injectables (instanciation en dur dans
+  // Resend/PushService n'étaient pas injectables (instanciation en dur dans
   // envoyerEmail/envoyerPush), rendant le chemin nominal de succès impossible à exercer.
   @Test
   void executerDigest_emailEnvoyeAvecSucces_marqueLeConcertNotifie() throws Exception {
@@ -326,7 +326,7 @@ class NotificationDigestServiceTest {
     verify(jdbc).update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
-  // #981 : quota Resend atteint — le canal email doit être ignoré sans jamais contacter la
+  // quota Resend atteint — le canal email doit être ignoré sans jamais contacter la
   // fabrique Resend, comme le fait déjà l'absence de RESEND_API_KEY.
   @Test
   void executerDigest_quotaResendAtteint_ignoreLeCanalEmailSansContacterResend() {

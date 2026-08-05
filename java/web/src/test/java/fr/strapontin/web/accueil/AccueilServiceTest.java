@@ -25,7 +25,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Tests unitaires de {@link AccueilService}.
 ///
-/// <p>Couvre la restriction aux matchs artiste de {@link AccueilService#marquerVus} (#799).
+/// <p>Couvre la restriction aux matchs artiste de {@link AccueilService#marquerVus}.
 ///
 /// @since 2.6.3
 /// @author Kwaite
@@ -42,7 +42,7 @@ class AccueilServiceTest {
     service = new AccueilService(jdbc, userConfigService);
   }
 
-  // #799 : marquerVus effaçait à tort le badge "Nouveau" des matchs salle (jamais affichés sur
+  // marquerVus effaçait à tort le badge "Nouveau" des matchs salle (jamais affichés sur
   // l'accueil, uniquement sur /spectacles) car la mise à jour ne filtrait pas par source de
   // match. Le SQL doit désormais restreindre aux concerts dont l'artiste est suivi.
   @Test
@@ -57,7 +57,7 @@ class AccueilServiceTest {
     assertTrue(sql.contains("vu_le IS NULL"), "seuls les matchs non vus doivent être mis à jour");
   }
 
-  // #816 : le badge "Nouveau" par concert (est_nouveau) doit être unifié sur um.vu_le IS NULL
+  // le badge "Nouveau" par concert (est_nouveau) doit être unifié sur um.vu_le IS NULL
   // (cohérent avec SpectacleDto.estNew et l'intention "jamais vu"), pas sur first_seen (fraîcheur
   // en base) — sinon un concert ajouté il y a 10 jours et jamais vu n'affichait pas "Nouveau" sur
   // l'accueil alors qu'il l'affichait sur /spectacles.

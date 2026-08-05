@@ -9,7 +9,7 @@ package fr.strapontin.web.admin;
 /// Découple la couche service du protocole HTTP : {@code AdminController} traduit
 /// ce résultat en réponse HTTP.
 ///
-/// <p>{@code statutHttp} distingue désormais (#837) les trois causes d'échec possibles plutôt
+/// <p>{@code statutHttp} distingue désormais les trois causes d'échec possibles plutôt
 /// que de les masquer sous un 503 unique : 400 (job inconnu, erreur cliente), 502 (erreur interne
 /// worker, ex. Quartz), 503 (worker réellement injoignable).
 ///

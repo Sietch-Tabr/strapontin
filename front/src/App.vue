@@ -95,7 +95,7 @@ const navFooter = [
 const nbNouveau = computed(() => session.value?.nbNouveau ?? 0)
 const estAdmin = computed(() => session.value?.role === 'admin')
 
-// #820 : badge "nouveautés" — changelog_version_vue pilote désormais un indicateur visuel,
+// badge "nouveautés" — changelog_version_vue pilote désormais un indicateur visuel,
 // complétant l'intention initiale du mécanisme (jusque là une écriture sans aucun lecteur).
 const changelogNonVu = ref(false)
 async function chargerChangelogNonVu() {
@@ -149,7 +149,7 @@ onMounted(async () => {
   }
 
   let idToastHorsLigne = null
-  // #841 : si la PWA démarre alors que l'appareil est déjà hors-ligne (JS chargé depuis le cache
+  // si la PWA démarre alors que l'appareil est déjà hors-ligne (JS chargé depuis le cache
   // du service worker, mais réseau absent), aucun événement 'offline' ne se déclenche jamais —
   // les listeners de transition ci-dessous ne couvrent que les changements d'état, pas l'état
   // initial. Vérifier navigator.onLine au montage pour afficher le toast immédiatement.

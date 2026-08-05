@@ -12,7 +12,33 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.7.7 — 30 juillet 2026</h2>
+        <h2 class="changelog-version">v 2.7.8 — 5 août 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Compte</p>
+            <ul>
+              <li>Nouvel écran dans Paramètres → Compte : consultez vos appareils connectés (session actuelle repérée) et révoquez-en un à distance.</li>
+              <li>Vos abonnements aux notifications push sont désormais listés et révocables individuellement au même endroit.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Concerts</p>
+            <ul>
+              <li>Un badge « À vérifier » signale désormais un concert que la source n'a pas reconfirmé depuis plusieurs vérifications — l'information est peut-être obsolète, mais le concert reste affiché normalement.</li>
+            </ul>
+          </div>
+          <div>
+            <p class="changelog-categorie">Administration</p>
+            <ul>
+              <li>Un admin peut désormais déconnecter à distance toutes les sessions actives d'un utilisateur.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.7.7 — 30 juillet 2026</h2></summary>
+        <div class="details-corps">
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Application installée (PWA)</p>
@@ -28,7 +54,8 @@
             </ul>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.7.6 — 23 juillet 2026</h2></summary>

@@ -45,7 +45,7 @@ public class SalleService {
   private static final String TM_VENUES_URL =
       "https://app.ticketmaster.com/discovery/v2/venues.json";
   private static final String NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
-  // Types Nominatim pertinents pour une salle de spectacle (#718, #779) — testés sur le type de
+  // Types Nominatim pertinents pour une salle de spectacle — testés sur le type de
   // premier niveau ET sur extratags.amenity (une salle taguée leisure/tourism, ex. un stade, peut
   // porter amenity en tag secondaire). community_centre couvre les salles des fêtes/polyvalentes
   // (petites communes, souvent seule couverture Digitick disponible).
@@ -69,7 +69,7 @@ public class SalleService {
   /// @param salleRepository accès aux données salles
   /// @param configService   lecture de la clé API Ticketmaster
   /// @param objectMapper    désérialiseur JSON (pour l'API Ticketmaster)
-  /// @param restClient      client HTTP partagé (#923, timeout 5s/10s défini dans
+  /// @param restClient client HTTP partagé (timeout 5s/10s défini dans
   ///                        {@link fr.strapontin.web.WebConfiguration})
   public SalleService(
       SalleRepository salleRepository,
@@ -96,7 +96,7 @@ public class SalleService {
 
   /// Liste les salles suivies, avec suggestions si {@code q} est fourni.
   ///
-  /// <p>Complète la base avec Nominatim (#718) si moins de 3 résultats locaux, puis avec l'API
+  /// <p>Complète la base avec Nominatim si moins de 3 résultats locaux, puis avec l'API
   /// Ticketmaster si Nominatim retourne moins de 2 résultats. Une salle retournée par les deux
   /// sources externes est fusionnée en une seule suggestion (osmId + tmVenueId).
   ///
@@ -154,14 +154,14 @@ public class SalleService {
   /// Fusionne un candidat externe avec une suggestion déjà présente désignant la même salle
   /// ({@link CorrespondanceSalle#estDoublonSalle}), ou l'ajoute comme nouvelle suggestion sinon.
   ///
-  /// <p>Utilise le même algorithme que {@link #resoudreSalleId} (#835) — avant correctif,
+  /// <p>Utilise le même algorithme que {@link #resoudreSalleId} — avant correctif,
   /// {@code fusionnerOuAjouter} utilisait sa propre implémentation Levenshtein locale
   /// ({@code estMemeSalle}), ce qui pouvait afficher deux suggestions distinctes dans l'UI alors
   /// qu'un clic sur l'une ou l'autre aurait résolu vers le même UUID via {@code resoudreSalleId}
   /// — un seul algorithme de dédoublonnage salle dans tout le projet.
   ///
   /// <p>Permet à Nominatim et Ticketmaster de contribuer chacun leurs identifiants (osmId,
-  /// tmVenueId) à une même suggestion plutôt que de créer deux entrées dupliquées (#718).
+  /// tmVenueId) à une même suggestion plutôt que de créer deux entrées dupliquées.
   ///
   /// <p>Package-private (plutôt que {@code private}) pour être testable directement.
   ///
@@ -214,8 +214,8 @@ public class SalleService {
   /// salle déjà présente sous une graphie légèrement différente.
   ///
   /// <p>Si {@code osmId}/{@code wikidataId} sont fournis (l'utilisateur a choisi une suggestion
-  /// Nominatim, #718), les IDs stables sont persistés immédiatement sans attendre le job
-  /// d'enrichissement nocturne (#706). Un conflit sur l'index unique {@code
+  /// Nominatim), les IDs stables sont persistés immédiatement sans attendre le job
+  /// d'enrichissement nocturne. Un conflit sur l'index unique {@code
   /// idx_salles_wikidata_id} (Q-ID déjà porté par une autre salle) est rattrapé et loggé plutôt
   /// que de faire échouer l'ajout — même pattern que {@code EnrichissementSallesService} (jalon
   /// 2.6.0).
@@ -264,7 +264,7 @@ public class SalleService {
     declencherWorkerParSources(salleId);
   }
 
-  /// Met à jour le wikidataId d'une salle sous savepoint (#718, conflit possible sur l'index
+  /// Met à jour le wikidataId d'une salle sous savepoint (conflit possible sur l'index
   /// unique {@code idx_salles_wikidata_id} si le Q-ID est déjà porté par une autre salle).
   ///
   /// <p>{@code Propagation.NESTED} isole ce conflit du reste de {@link #ajouter} via un
@@ -292,13 +292,13 @@ public class SalleService {
   /// utilise {@link CorrespondanceSalle#estDoublonSalle} sur le nom normalisé au sens de
   /// {@link Normalisation#normaliserTexte} — même algorithme que {@code ReconciliateurSalles} côté
   /// worker, {@code WikidataSalleSource} côté enrichissement, et {@link #fusionnerOuAjouter} côté
-  /// suggestions (#835, un seul algorithme de dédoublonnage salle dans tout le projet). En cas de
+  /// suggestions (un seul algorithme de dédoublonnage salle dans tout le projet). En cas de
   /// correspondance exacte de {@code salle_cle}, passe par {@code upsertSalle} pour conserver le
   /// comportement existant de mise à jour du nom affiché ; en cas de correspondance floue
   /// seulement, réutilise l'UUID existant sans toucher au nom déjà établi.
   ///
   /// <p>Public (pas seulement utilisé par {@link #ajouter}) : réutilisé par
-  /// {@code PreferencesService.importerSalles} (#824) pour que l'import de préférences applique
+  /// {@code PreferencesService.importerSalles} pour que l'import de préférences applique
   /// la même dédup floue que l'ajout interactif, plutôt qu'une égalité stricte sur
   /// {@code salle_cle}.
   ///
@@ -353,7 +353,7 @@ public class SalleService {
   /// puis déclenche le worker.
   ///
   /// <p>Si le slug est déjà attribué à une autre salle, lève une erreur 409 plutôt que de créer
-  /// une salle sans source Digitick fonctionnelle (#830) — {@code enregistrerSalleSource} fait un
+  /// une salle sans source Digitick fonctionnelle — {@code enregistrerSalleSource} fait un
   /// {@code ON CONFLICT DO NOTHING} silencieux, qui laissait auparavant la nouvelle salle créée
   /// avec un 201 "succès" trompeur mais aucune source réelle.
   ///
@@ -414,7 +414,7 @@ public class SalleService {
     return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}", "").replaceAll("[^a-z0-9]", "");
   }
 
-  /// Indique si une recherche correspond, même partiellement, à une salle déjà suivie (#780).
+  /// Indique si une recherche correspond, même partiellement, à une salle déjà suivie.
   ///
   /// <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un
   /// terme partiel (ex. "Zenith" ne matchait pas "zenithparis") alors que la salle a bien été
@@ -430,7 +430,7 @@ public class SalleService {
     return clesNorm.stream().anyMatch(cle -> cle.contains(rechercheNorm));
   }
 
-  /// Recherche des salles par nom via Nominatim (OSM, #718).
+  /// Recherche des salles par nom via Nominatim (OSM).
   ///
   /// <p>Sans clé API — couvre les salles hors référentiel Ticketmaster. User-Agent obligatoire
   /// selon la politique d'usage Nominatim.
@@ -465,7 +465,7 @@ public class SalleService {
     }
   }
 
-  /// Filtre et convertit les résultats bruts Nominatim en suggestions de salle (#718, #779).
+  /// Filtre et convertit les résultats bruts Nominatim en suggestions de salle.
   ///
   /// <p>Un résultat est pertinent si son {@code type} de premier niveau ou son
   /// {@code extratags.amenity} (tag secondaire) figure dans {@link #TYPES_SALLE_NOMINATIM} —
@@ -575,7 +575,7 @@ public class SalleService {
     }
   }
 
-  /// Déclenche le worker en fire-and-forget, sur un thread virtuel (#923) — voir
+  /// Déclenche le worker en fire-and-forget, sur un thread virtuel — voir
   /// {@link fr.strapontin.web.artiste.ArtisteService#declencherWorkerArtiste} pour la même
   /// justification (RestClient est bloquant, contrairement à l'ancien HttpClient.sendAsync).
   private void declencherWorkerSalle(String identifiants) {

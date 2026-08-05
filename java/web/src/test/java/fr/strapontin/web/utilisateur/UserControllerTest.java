@@ -26,7 +26,7 @@ import org.springframework.session.Session;
 /// Tests unitaires de {@link UserController}.
 ///
 /// <p>Couvre principalement la garde "dernier admin" sur la suppression de compte, et la
-/// révocation multi-sessions au changement de mot de passe (#804).
+/// révocation multi-sessions au changement de mot de passe.
 ///
 /// @since 2.2.6
 /// @author Kwaite
@@ -84,7 +84,7 @@ class UserControllerTest {
     verify(utilisateurRepository, never()).compterAdmins();
   }
 
-  // #804 : le changement de mot de passe révoque toutes les sessions de l'utilisateur (pas
+  // le changement de mot de passe révoque toutes les sessions de l'utilisateur (pas
   // seulement celle de la requête en cours) — sinon une session compromise sur un autre appareil
   // survit jusqu'à expiration naturelle malgré le changement de mot de passe.
   @Test
@@ -106,7 +106,7 @@ class UserControllerTest {
     verify(sessionRepository).deleteById("id-b");
   }
 
-  // #813 : régression #712 — un second contrôle manuel plus strict que la validation Bean
+  // régression — un second contrôle manuel plus strict que la validation Bean
   // rejetait à tort les identifiants contenant un point ou un tiret, pourtant autorisés par
   // RequeteIdentifiant.
   @Test

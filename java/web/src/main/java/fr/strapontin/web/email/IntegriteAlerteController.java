@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /// Endpoint interne appelé par {@code scripts/aide-check.sh} pour signaler le statut du contrôle
-/// d'intégrité quotidien (AIDE) sur un LXC prod/dev (#976).
+/// d'intégrité quotidien (AIDE) sur un LXC prod/dev.
 ///
 /// <p>Protégé par un secret partagé : l'appelant doit présenter le header
 /// {@code Authorization: Bearer <INTEGRITY_INTERNAL_SECRET>}. Si la variable

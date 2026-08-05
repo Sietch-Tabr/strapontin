@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/// Source capable d'enrichir un lot d'artistes avec des métadonnées canoniques (#711/#716).
+/// Source capable d'enrichir un lot d'artistes avec des métadonnées canoniques.
 ///
 /// Ajouter une source d'enrichissement = créer une implémentation + un bean Spring dans
 /// {@code EnrichissementConfiguration} (module worker), sans modifier l'orchestrateur. Aucun

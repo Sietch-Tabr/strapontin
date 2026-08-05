@@ -162,7 +162,7 @@ async function charger() {
     if (filtreIndisponibles.value) params.set('indisponibles', '1')
     if (filtreMasques.value) params.set('masques', 'true')
     const rep = await fetch('/api/accueil?' + params)
-    // #1028 : au démarrage PWA (shell servi depuis le cache SW), cet appel peut partir avant que
+    // au démarrage PWA (shell servi depuis le cache SW), cet appel peut partir avant que
     // la session ne soit confirmée côté serveur (401 transitoire, pas une vraie panne) — pas de
     // toast dans ce cas, comme le fait déjà App.vue pour ses propres appels de montage.
     if (rep.status === 401) return
@@ -221,7 +221,7 @@ async function demasquerConcert(concert, groupe) {
   }
 }
 
-// #818 : artisteId (UUID référentiel) plutôt qu'artisteNorm — garantit que tous les concerts du
+// artisteId (UUID référentiel) plutôt qu'artisteNorm — garantit que tous les concerts du
 // groupe visuellement affiché sont couverts, artiste_norm pouvant diverger entre concerts d'un
 // même artiste réel selon la source de fetch. artisteNorm reste utilisé pour les clés Vue/ancres.
 async function masquerGroupe(groupe) {
@@ -257,7 +257,7 @@ async function scrollVersAncre() {
   if (!ancre) return
   await nextTick()
   document.getElementById(String(ancre))?.scrollIntoView({ behavior: 'smooth' })
-  // #801 : retire l'ancre de l'URL une fois le scroll effectué — sinon basculerFiltre() la
+  // retire l'ancre de l'URL une fois le scroll effectué — sinon basculerFiltre la
   // conserve par spread et chaque changement de filtre suivant re-déclenche le scroll forcé.
   const q = { ...route.query }
   delete q.ancre

@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link SourcesHealthIndicator} (#954).
+/// Tests unitaires pour {@link SourcesHealthIndicator}.
 ///
 /// @since 2.7.0
 /// @author Kwaite

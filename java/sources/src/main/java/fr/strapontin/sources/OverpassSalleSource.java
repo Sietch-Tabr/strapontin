@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -23,29 +24,26 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
-/// Client Overpass (OSM) pour l'enrichissement initial des salles par nom (#711).
+/// Client Overpass (OSM) pour l'enrichissement initial des salles par nom.
 ///
-/// Recherche par lot les salles de spectacle taguées `amenity=music_venue|arts_centre|theatre`
-/// sur le territoire français. Utilisé en première étape : les salles sans {@code wikidataId}
-/// connu sont recherchées ici ; si le tag `wikidata=Qxxx` est présent, il alimente directement
-/// l'enrichissement Wikidata par Q-ID. Les salles qu'Overpass ne trouve pas (nom absent d'OSM,
-/// service indisponible) restent éligibles à la recherche Wikidata directe par nom, voir
-/// {@link WikidataSalleSource} — Overpass n'est donc plus un passage obligé.
+/// Recherche par lot les salles de spectacle taguées `amenity=music_venue|arts_centre|theatre`.
+/// Utilisé en première étape : les salles sans {@code wikidataId} connu sont recherchées ici ; si
+/// le tag `wikidata=Qxxx` est présent, il alimente directement l'enrichissement Wikidata par Q-ID.
+/// Les salles qu'Overpass ne trouve pas (nom absent d'OSM, service indisponible) restent éligibles
+/// à la recherche Wikidata directe par nom, voir {@link WikidataSalleSource} — Overpass n'est donc
+/// plus un passage obligé.
 ///
-/// ⚠️ L'instance publique de référence (`overpass-api.de`, alias de
-/// `gall`/`lambert.openstreetmap.de`) a traversé un incident de surcharge documenté depuis avril
-/// 2026 (wiki.openstreetmap.org/wiki/Overpass_API/status) — 504 systématiques pendant plus de 3
-/// mois, aucune contribution du cycle nocturne pendant tout cet incident. `overpass.karte.io`
-/// (cité dans le ticket #711) n'existe pas (résolution DNS en échec). #990 (19/07/2026) : test en
-/// direct de tous les miroirs publics officiels — seul `overpass.osm.ch` (SOSM, association OSM
-/// suisse) a répondu correctement (HTTP 200 en 1,7s sur une requête représentative du trafic
-/// Strapontin, `kumi.systems`/`openstreetmap.fr`/`private.coffee`/`maps.mail.ru` tous injoignables
-/// ou instables au moment du test) — bascule effectuée. Aucune politique de rate-limit publiée sur
-/// cette instance (contrairement à `overpass-api.de` ou `private.coffee`) — délai entre appels
-/// porté à {@value #DELAI_MIN_ENTRE_APPELS_MS}ms par prudence, sans contrainte de temps réel
-/// (cycle nocturne unique, coût d'un cycle un peu plus long négligeable). Les échecs 504/timeout
-/// restent non bloquants : le lot échoué revient simplement vide, sans retry. Les salles non
-/// enrichies restent candidates pour les cycles nocturnes suivants.
+/// Chaque lot interroge une zone géographique <strong>par département</strong> (rayon `around:`
+/// centré sur {@link TicketmasterSource#CENTRES_DEPT}) plutôt qu'une bounding box couvrant la
+/// France entière : une requête sur tout le territoire échoue quasi systématiquement par timeout
+/// sur les instances publiques Overpass (surchargées), alors que la même requête restreinte à un
+/// département répond en 2-3s. Un basculement précédent vers `overpass.osm.ch` (association OSM
+/// suisse) s'est révélé une impasse — cette instance ne couvre en réalité que la Suisse (+ 10 km de
+/// frontière), confirmé en test direct (0 résultat sur des salles françaises pourtant bien
+/// référencées sur OSM) : un succès HTTP `200 OK` avec un tableau d'éléments vide avait été
+/// confondu avec un succès fonctionnel, masquant 12 jours de contribution nulle sans la moindre
+/// erreur journalisée. Les salles sans département connu ne sont pas interrogées (aucune zone à
+/// requêter) — elles restent éligibles à la découverte Wikidata par nom, indépendante d'Overpass.
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -55,10 +53,8 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
 
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
-  /// Retourne le bilan agrégé des appels HTTP Overpass depuis le dernier prélèvement (#993) et
-  /// remet les compteurs à zéro — panne de 3+ mois de l'instance publique (#990) jusque-là
-  /// invisible dans {@code logs_admin}, seul un grep manuel de journalctl permettait de la
-  /// constater.
+  /// Retourne le bilan agrégé des appels HTTP Overpass depuis le dernier prélèvement et remet les
+  /// compteurs à zéro.
   ///
   /// @return le bilan depuis le dernier prélèvement
   @Override
@@ -66,22 +62,26 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     return compteurBilan.preleverBilan();
   }
 
-  // #990 (19/07/2026) : overpass-api.de en panne 3+ mois (504 systématique), overpass.osm.ch seul
-  // miroir public répondant correctement au test en direct — voir Javadoc de la classe.
-  private static final String BASE_URL = "https://overpass.osm.ch/api/interpreter";
-  // Identification obligatoire côté serveur (User-Agent générique/absent → 406 sur l'instance
-  // principale, cf. wiki.openstreetmap.org/wiki/Overpass_API).
+  private static final String BASE_URL = "https://overpass-api.de/api/interpreter";
+  // Identification obligatoire côté serveur (User-Agent générique/absent → 406).
   private static final String USER_AGENT =
       "Strapontin/2.6.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr) SpringBoot/4.1";
   private static final int TAILLE_LOT = 25;
-  // #990 : porté de 500ms à 1750ms — overpass.osm.ch ne publie aucune politique de rate-limit,
-  // contrairement à overpass-api.de ; prudence sans coût réel (cycle nocturne unique, 3h du matin).
-  private static final int DELAI_MIN_ENTRE_APPELS_MS = 1750;
+  private static final int DELAI_MIN_ENTRE_APPELS_MS = 1000;
+  // Une requête restreinte à un département répond typiquement en 2-3s (contre systématiquement
+  // en timeout pour une bbox France entière) — un seul retry suffit à absorber un aléa réseau
+  // isolé sans faire pendre le cycle nocturne sur une instance en difficulté passagère.
+  private static final int NB_ESSAIS_MAX = 2;
+  private static final long DELAI_ENTRE_ESSAIS_MS = 5000;
   // Le timeout serveur ([timeout:...] dans la requête OverpassQL) doit rester strictement
   // inférieur au timeout de lecture HTTP client pour laisser le temps à Overpass de renvoyer sa
   // propre réponse d'erreur "Query timed out" plutôt que de couper la connexion en premier.
-  private static final int TIMEOUT_SERVEUR_SECONDES = 55;
-  private static final Duration TIMEOUT_LECTURE_CLIENT = Duration.ofSeconds(70);
+  private static final int TIMEOUT_SERVEUR_SECONDES = 25;
+  private static final Duration TIMEOUT_LECTURE_CLIENT = Duration.ofSeconds(35);
+  // Rayon de recherche autour du centre géographique du département, en mètres — légèrement plus
+  // large que le rayon TM (CentreDept#rayon, en km) pour couvrir les salles proches d'une
+  // frontière départementale sans avoir à interroger les deux départements voisins.
+  private static final int MARGE_RAYON_METRES = 5_000;
 
   private static final Pattern METACARACTERES_REGEX = Pattern.compile("([.^$|()\\[\\]{}*+?\\\\])");
   private static final Pattern APOSTROPHE_DROITE = Pattern.compile("'");
@@ -89,7 +89,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   private final RestClient restClient;
   private final AtomicLong dernierAppelMs = new AtomicLong(0);
 
-  /// Crée une instance avec un RestClient par défaut (timeout connexion 5s, lecture 70s).
+  /// Crée une instance avec un RestClient par défaut (timeout connexion 5s, lecture 35s).
   public OverpassSalleSource() {
     this(construireRestClientParDefaut());
   }
@@ -115,66 +115,93 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
 
   @Override
   public Map<UUID, EnrichissementSalle> enrichirLot(List<SalleAEnrichir> salles) {
-    List<SalleAEnrichir> aTraiter = salles.stream().filter(s -> s.wikidataId() == null).toList();
+    List<SalleAEnrichir> aTraiter =
+        salles.stream().filter(s -> s.wikidataId() == null && s.dept() != null).toList();
+    int sansDept =
+        (int) salles.stream().filter(s -> s.wikidataId() == null).count() - aTraiter.size();
+    if (sansDept > 0) {
+      log.debug("Overpass — {} salle(s) ignorée(s), département inconnu", sansDept);
+    }
     if (aTraiter.isEmpty()) return Map.of();
 
     Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
-    for (int i = 0; i < aTraiter.size(); i += TAILLE_LOT) {
-      List<SalleAEnrichir> lot = aTraiter.subList(i, Math.min(i + TAILLE_LOT, aTraiter.size()));
-      attendreRateLimitGlobal();
-      resultats.putAll(enrichirUnLot(lot));
+    Map<String, List<SalleAEnrichir>> parDept =
+        aTraiter.stream().collect(Collectors.groupingBy(SalleAEnrichir::dept));
+    for (var entree : parDept.entrySet()) {
+      CentreDept centre = TicketmasterSource.CENTRES_DEPT.get(entree.getKey());
+      if (centre == null) continue;
+      List<SalleAEnrichir> sallesDept = entree.getValue();
+      for (int i = 0; i < sallesDept.size(); i += TAILLE_LOT) {
+        List<SalleAEnrichir> lot =
+            sallesDept.subList(i, Math.min(i + TAILLE_LOT, sallesDept.size()));
+        attendreRateLimitGlobal();
+        resultats.putAll(enrichirUnLot(lot, centre));
+      }
     }
     return resultats;
   }
 
-  private Map<UUID, EnrichissementSalle> enrichirUnLot(List<SalleAEnrichir> lot) {
-    String requete = construireRequeteOverpassQL(lot);
-    compteurBilan.enregistrerAppel();
+  private Map<UUID, EnrichissementSalle> enrichirUnLot(
+      List<SalleAEnrichir> lot, CentreDept centre) {
+    String requete = construireRequeteOverpassQL(lot, centre);
+    Exception derniereErreur = null;
+    for (int essai = 1; essai <= NB_ESSAIS_MAX; essai++) {
+      compteurBilan.enregistrerAppel();
+      try {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> data =
+            restClient
+                .post()
+                .uri(BASE_URL)
+                .header("User-Agent", USER_AGENT)
+                .header("Accept", "application/json")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body("data=" + URLEncoder.encode(requete, StandardCharsets.UTF_8))
+                .retrieve()
+                .body(Map.class);
+        return mapperReponse(data, lot);
+      } catch (Exception e) {
+        derniereErreur = e;
+        compteurBilan.enregistrerErreur();
+        if (essai < NB_ESSAIS_MAX) {
+          attendre(DELAI_ENTRE_ESSAIS_MS);
+        }
+      }
+    }
+    log.warn("Overpass erreur lot taille={} : {}", lot.size(), derniereErreur.getMessage());
+    return Map.of();
+  }
+
+  private static void attendre(long ms) {
     try {
-      @SuppressWarnings("unchecked")
-      Map<String, Object> data =
-          restClient
-              .post()
-              .uri(BASE_URL)
-              .header("User-Agent", USER_AGENT)
-              .header("Accept", "application/json")
-              .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-              .body("data=" + URLEncoder.encode(requete, StandardCharsets.UTF_8))
-              .retrieve()
-              .body(Map.class);
-      return mapperReponse(data, lot);
-    } catch (Exception e) {
-      compteurBilan.enregistrerErreur();
-      log.warn("Overpass erreur lot taille={} : {}", lot.size(), e.getMessage());
-      return Map.of();
+      Thread.sleep(ms);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
     }
   }
 
   // OSM tague fréquemment ses noms avec l'apostrophe typographique courbe (’, U+2019) plutôt que
   // l'apostrophe droite (', U+0027) utilisée dans les noms Strapontin (issus de
-  // TM/Eventim/Digitick).
-  // Le filtre ["name"~"regex"] est appliqué côté serveur Overpass sur la chaîne brute : sans cette
-  // substitution, une regex contenant l'apostrophe droite ne matche jamais un nom OSM en apostrophe
-  // courbe (#783, constaté sur « L'Empreinte » à Savigny-le-Temple). La normalisation de
-  // Normalisation.normaliserTexte, elle, n'intervient qu'après réception de la réponse
-  // (mapperReponse)
-  // et ne peut pas rattraper un élément qu'Overpass n'a jamais renvoyé.
+  // TM/Eventim/Digitick). Le filtre ["name"~"regex"] est appliqué côté serveur Overpass sur la
+  // chaîne brute : sans cette substitution, une regex contenant l'apostrophe droite ne matche
+  // jamais un nom OSM en apostrophe courbe (constaté sur « L'Empreinte » à Savigny-le-Temple). La
+  // normalisation de Normalisation.normaliserTexte, elle, n'intervient qu'après réception de la
+  // réponse (mapperReponse) et ne peut pas rattraper un élément qu'Overpass n'a jamais renvoyé.
   private static String echapperRegex(String nom) {
     String echappe = METACARACTERES_REGEX.matcher(nom).replaceAll("\\\\$1");
     return APOSTROPHE_DROITE.matcher(echappe).replaceAll("['’]");
   }
 
-  // Bounding box englobant la France métropolitaine (marge incluse). Volontairement PAS
-  // area["ISO3166-1"="FR"][admin_level=2] : le calcul du polygone administratif exact est l'une
-  // des opérations les plus coûteuses d'Overpass et échoue quasi systématiquement (timeout serveur
-  // dépassé sans réponse) sur l'instance publique actuellement en surcharge (cf. commentaire de
-  // classe). Une bbox est une opération spatiale bien moins chère, vérifiée fonctionnelle en
-  // juillet 2026 sur le même cluster (gall/lambert.openstreetmap.de) là où l'area échouait.
-  private static final String BBOX_FRANCE = "41.0,-5.5,51.5,10.0";
-
-  private static String construireRequeteOverpassQL(List<SalleAEnrichir> lot) {
+  private static String construireRequeteOverpassQL(List<SalleAEnrichir> lot, CentreDept centre) {
     String nomsRegex =
         lot.stream().map(s -> echapperRegex(s.nom())).collect(Collectors.joining("|"));
+    int rayonMetres = centre.rayon() * 1000 + MARGE_RAYON_METRES;
+    String around =
+        "around:%d,%s,%s"
+            .formatted(
+                rayonMetres,
+                String.format(Locale.ROOT, "%.4f", centre.lat()),
+                String.format(Locale.ROOT, "%.4f", centre.lng()));
     return """
     [out:json][timeout:%d];
     (
@@ -182,7 +209,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     );
     out tags center;
     """
-        .formatted(TIMEOUT_SERVEUR_SECONDES, nomsRegex, BBOX_FRANCE);
+        .formatted(TIMEOUT_SERVEUR_SECONDES, nomsRegex, around);
   }
 
   @SuppressWarnings("unchecked")
@@ -230,11 +257,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     long maintenant = System.currentTimeMillis();
     long prochainAppel = dernierAppelMs.get() + DELAI_MIN_ENTRE_APPELS_MS;
     if (maintenant < prochainAppel) {
-      try {
-        Thread.sleep(prochainAppel - maintenant);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
+      attendre(prochainAppel - maintenant);
     }
     dernierAppelMs.set(System.currentTimeMillis());
   }

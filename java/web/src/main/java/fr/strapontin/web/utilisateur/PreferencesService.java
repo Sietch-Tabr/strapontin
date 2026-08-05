@@ -52,8 +52,8 @@ public class PreferencesService {
   /// @param jdbc            accès JDBC
   /// @param objectMapper    désérialiseur JSON
   /// @param logAdminService journalisation des actions admin
-  /// @param artisteService  résolution d'UUID artiste avec dédup floue (#824)
-  /// @param salleService    résolution d'UUID salle avec dédup floue (#824)
+  /// @param artisteService résolution d'UUID artiste avec dédup floue
+  /// @param salleService résolution d'UUID salle avec dédup floue
   public PreferencesService(
       NamedParameterJdbcTemplate jdbc,
       ObjectMapper objectMapper,
@@ -210,7 +210,7 @@ public class PreferencesService {
         configRows.isEmpty() ? null : configRows.get(0));
   }
 
-  // #824 : résolution de l'UUID artiste via ArtisteService.resoudreArtisteId — même dédup floue
+  // résolution de l'UUID artiste via ArtisteService.resoudreArtisteId — même dédup floue
   // (CorrespondanceArtiste.estDoublonArtiste) que l'ajout interactif, plutôt qu'un ON CONFLICT
   // exact sur nom_norm qui créait un doublon de référentiel pour une variante orthographique
   // mineure (ex. "The Rolling Stones" importé alors que "Rolling Stones" est déjà suivi).
@@ -250,7 +250,7 @@ public class PreferencesService {
     return new int[] {traites, rejetes};
   }
 
-  // #824 : résolution de l'UUID salle via SalleService.resoudreSalleId — même dédup floue
+  // résolution de l'UUID salle via SalleService.resoudreSalleId — même dédup floue
   // (CorrespondanceSalle.estDoublonSalle) que l'ajout interactif, plutôt qu'un ON CONFLICT exact
   // sur salle_cle. Le salleId de l'export JSON n'est volontairement pas utilisé pour retrouver
   // une salle existante (comportement inchangé) — le nom est toujours re-normalisé.
@@ -354,7 +354,7 @@ public class PreferencesService {
       java.util.regex.Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
 
   /// Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction
-  /// d'import (#932, même pattern que {@code ArtisteService.executerApresCommit}).
+  /// d'import (même pattern que {@code ArtisteService.executerApresCommit}).
   ///
   /// <p>Sans cela, le worker pouvait être sollicité avant que les artistes/salles importés ne
   /// soient visibles en base (isolation {@code READ COMMITTED}), faisant manquer l'import tout

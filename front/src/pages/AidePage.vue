@@ -248,7 +248,7 @@ async function envoyerSignalement() {
     succesSignalement.value = true
     messageSignalement.value = ''
     afficherToast('Signalement envoyé. Merci !', 'succes')
-    // #821 : fermer immédiatement empêchait Vue de jamais peindre l'alerte de succès (v-if
+    // fermer immédiatement empêchait Vue de jamais peindre l'alerte de succès (v-if
     // succesSignalement) — le dialog disparaissait avant le prochain repaint. Le délai laisse le
     // message visible un instant avant fermeture.
     setTimeout(() => dialogRef.value?.close(), 1500)

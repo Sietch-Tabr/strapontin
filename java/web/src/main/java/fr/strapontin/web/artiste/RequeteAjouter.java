@@ -11,9 +11,9 @@ import jakarta.validation.constraints.Size;
 /// Corps JSON de la requête POST /api/artistes.
 ///
 /// @param nom        nom de l'artiste
-/// @param wikidataId Q-ID Wikidata optionnel (#717) — fourni quand l'utilisateur sélectionne une
+/// @param wikidataId Q-ID Wikidata optionnel — fourni quand l'utilisateur sélectionne une
 ///                    suggestion Wikidata plutôt que de saisir un nom libre. Format contraint
-///                    (#787) : ce champ est concaténé dans un appel API Wikidata sortant.
+/// : ce champ est concaténé dans un appel API Wikidata sortant.
 /// @since 2.1.0
 /// @author Kwaite
 public record RequeteAjouter(

@@ -17,7 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour {@link ConfigAdminService} (#916, extrait de {@code AdminService}).
+/// Tests unitaires pour {@link ConfigAdminService} (extrait de {@code AdminService}).
 ///
 /// @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
 /// @author Kwaite

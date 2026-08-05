@@ -15,7 +15,7 @@ import org.springframework.security.core.Authentication;
 
 /// Tests unitaires de {@link SessionController}.
 ///
-/// <p>Depuis #918, le COUNT SQL est délégué à {@link ParametresService} (extrait vers
+/// <p>Depuis, le COUNT SQL est délégué à {@link ParametresService} (extrait vers
 /// {@code UtilisateurRepository}) — ce contrôleur redevient HTTP pur, conforme au pattern
 /// Controller → Service → Repository.
 ///

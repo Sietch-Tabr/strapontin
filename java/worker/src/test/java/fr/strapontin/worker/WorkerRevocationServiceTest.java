@@ -24,7 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerRevocationService} (#915, extrait de {@code WorkerService}).
+/// Tests unitaires pour {@link WorkerRevocationService} (extrait de {@code WorkerService}).
 ///
 /// @since 2.2.6 (extrait dans sa forme actuelle en 2.7.0)
 /// @author Kwaite
@@ -70,7 +70,7 @@ class WorkerRevocationServiceTest {
     verify(jdbc).update(contains("INSERT INTO logs_admin"), anyMap());
   }
 
-  // #809 : après rétrogradation effective, les sessions Spring Session des comptes concernés
+  // après rétrogradation effective, les sessions Spring Session des comptes concernés
   // sont supprimées — sinon un admin rétrogradé reste authentifié avec son ancien rôle jusqu'à
   // expiration naturelle de sa session (30 jours).
   @Test

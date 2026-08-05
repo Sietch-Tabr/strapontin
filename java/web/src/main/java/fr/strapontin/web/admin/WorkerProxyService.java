@@ -47,7 +47,7 @@ public class WorkerProxyService {
   }
 
   /// Ajoute le header {@code X-Correlation-ID} porté par le MDC de la requête entrante
-  /// courante (#952) — pose par {@code CorrelationIdFilter}, absent si l'appel a lieu hors
+  /// courante — pose par {@code CorrelationIdFilter}, absent si l'appel a lieu hors
   /// contexte de requête HTTP (ex. depuis un thread Quartz).
   ///
   /// @param requete requête en cours de construction
@@ -126,7 +126,7 @@ public class WorkerProxyService {
   /// Déclenche immédiatement tous les fetches via le worker.
   ///
   /// @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause —
-  ///     #837)
+  ///)
   public ResultatRelance relancerFetches() {
     try {
       ajouterCorrelationId(restClient.post().uri(WORKER_BASE_URL + "/trigger/tout"))
@@ -145,9 +145,9 @@ public class WorkerProxyService {
 
   /// Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible
   /// (ex. {@code "purger:salles"}, {@code "reconciliation:nocturne"}) via l'endpoint générique
-  /// du worker (v2.6.0, #706/#710).
+  /// du worker (v2.6.0).
   ///
-  /// <p>Distingue trois causes d'échec (#837) plutôt que de toutes les renvoyer en 503 : le
+  /// <p>Distingue trois causes d'échec plutôt que de toutes les renvoyer en 503 : le
   /// worker répond 400 si {@code typeJob} est inconnu (erreur cliente, pas une panne), un autre
   /// code d'erreur si Quartz échoue en interne, ou aucune réponse si le worker est réellement
   /// injoignable.

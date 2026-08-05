@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link BilanFetch} (#909/#912).
+/// Tests unitaires pour {@link BilanFetch}.
 ///
 /// @since 2.7.0
 /// @author Kwaite

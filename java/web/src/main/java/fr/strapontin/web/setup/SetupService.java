@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 /// L'opération {@link #initialiserTransactionnel} est atomique et isolée
 /// ({@code @Transactional(isolation = SERIALIZABLE)}) : sans cela, deux appels concurrents à
 /// {@code POST /api/setup} passent tous les deux la garde {@link #estDejaConfiguree} avant que
-/// l'un ou l'autre ne committe, créant deux comptes admin distincts (#803).
+/// l'un ou l'autre ne committe, créant deux comptes admin distincts.
 ///
 /// @since 2.1.0
 /// @author Kwaite

@@ -121,7 +121,7 @@ class ArtisteServiceTest {
     verify(artisteRepository).upsertArtiste("Radiohead", "radiohead");
   }
 
-  // #717 : sélection d'une suggestion Wikidata à l'ajout — résout le P2722 (Deezer ID) et
+  // sélection d'une suggestion Wikidata à l'ajout — résout le P2722 (Deezer ID) et
   // persiste les deux sources sans attendre le job nocturne. resoudreDeezerId est substituée
   // (Mockito.spy) pour éviter un appel réseau réel vers Wikidata en test unitaire.
   @Test
@@ -141,7 +141,7 @@ class ArtisteServiceTest {
     verify(artisteRepository).mettreAJourIdsWikidata(artisteId, "Q167023", "27");
   }
 
-  // #717 : conflit sur idx_artistes_wikidata_id (Q-ID déjà porté par un autre artiste) — rattrapé
+  // conflit sur idx_artistes_wikidata_id (Q-ID déjà porté par un autre artiste) — rattrapé
   // et loggé, ne doit jamais faire échouer l'ajout à la liste de suivi.
   @Test
   void ajouter_wikidataIdDejaAttribueAUnAutreArtiste_neFaitPasEchouerLajout() {
@@ -171,7 +171,7 @@ class ArtisteServiceTest {
     verify(artisteRepository).supprimer("u1", artisteId);
   }
 
-  // #836 : un DELETE no-op (artiste déjà retiré, jamais suivi, ou appartenant à un autre
+  // un DELETE no-op (artiste déjà retiré, jamais suivi, ou appartenant à un autre
   // utilisateur) ne doit produire aucune entrée d'audit trompeuse "artiste supprimé".
   @Test
   void supprimer_artisteNonSuivi_neLogguePas() {
@@ -193,7 +193,7 @@ class ArtisteServiceTest {
     verify(logAdminService).logAdmin(eq("warn"), eq("web"), anyString(), anyMap());
   }
 
-  // #780 : "Yael" doit être détecté comme correspondant partiellement à "yaelnaim" déjà suivi —
+  // "Yael" doit être détecté comme correspondant partiellement à "yaelnaim" déjà suivi —
   // avant correctif, seule une égalité stricte était testée et l'utilisateur voyait "Aucun
   // résultat" alors que l'artiste était déjà suivi.
   @Test

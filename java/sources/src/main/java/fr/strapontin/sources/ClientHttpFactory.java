@@ -7,7 +7,7 @@ package fr.strapontin.sources;
 import java.time.Duration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
-/// Fabrique de {@link SimpleClientHttpRequestFactory} à timeouts explicites (#887), partagée
+/// Fabrique de {@link SimpleClientHttpRequestFactory} à timeouts explicites, partagée
 /// entre les sources qui en ont besoin pour éviter de dupliquer une 4e fois le pattern déjà
 /// présent dans {@link DigitickSource}, {@link OverpassSalleSource} et {@link
 /// ClientSparqlWikidata}.

@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link JobsAdminService} (#916, extrait de {@code AdminService}).
+/// Tests unitaires pour {@link JobsAdminService} (extrait de {@code AdminService}).
 ///
 /// @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
 /// @author Kwaite

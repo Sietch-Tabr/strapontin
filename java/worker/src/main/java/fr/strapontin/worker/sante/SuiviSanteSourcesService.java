@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Suivi de santé des identifiants externes (#706 phase 1).
+/// Suivi de santé des identifiants externes (phase 1).
 ///
 /// Chaque fetch (salle ou artiste) enregistre son résultat : 0 résultat incrémente le compteur
 /// d'échecs consécutifs, un résultat positif le remet à zéro. Au 3e échec consécutif (~6h à la
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 /// {@link ReconciliationNocturneService} au prochain cycle nocturne.
 ///
 /// Ce compteur passif reste volontairement générique aux deux tables, mais génère trop de faux
-/// positifs pour être exposé tel quel côté statut admin artistes (#888, 65% de faux positifs
+/// positifs pour être exposé tel quel côté statut admin artistes (65% de faux positifs
 /// observés) : {@code artiste_sources.necessite_intervention_le}, posée uniquement par
 /// {@link ReconciliationNocturneService} en cas d'échec confirmé de la vérification active, fait
 /// désormais foi pour le statut affiché. Un fetch de nouveau positif sur un artiste TM efface
@@ -87,8 +87,8 @@ public class SuiviSanteSourcesService {
 
   private void mettreAJourCompteur(
       String table, String source, String identifiant, boolean succes) {
-    // necessite_intervention_le n'existe que sur artiste_sources (#888) — résolution naturelle
-    // dès qu'un fetch redevient positif ET que le nom TM revérifié reste cohérent (#1026).
+    // necessite_intervention_le n'existe que sur artiste_sources — résolution naturelle
+    // dès qu'un fetch redevient positif ET que le nom TM revérifié reste cohérent.
     boolean estArtisteSources = "artiste_sources".equals(table);
     String colonneInterventionResolue =
         estArtisteSources
@@ -124,7 +124,7 @@ public class SuiviSanteSourcesService {
   }
 
   /// N'autorise l'effacement de {@code necessite_intervention_le} que si le nom TM revérifié
-  /// correspond toujours à l'artiste suivi (#1026) — un fetch positif seul (au moins un concert
+  /// correspond toujours à l'artiste suivi — un fetch positif seul (au moins un concert
   /// renvoyé pour cet {@code identifiant_externe}) ne suffit pas à confirmer l'identité : un
   /// tribute/homonyme mal rattaché peut se remettre à programmer des concerts sans que le mauvais
   /// rapprochement soit corrigé. N'appelle l'API TM (coût/quota) que si le flag est réellement

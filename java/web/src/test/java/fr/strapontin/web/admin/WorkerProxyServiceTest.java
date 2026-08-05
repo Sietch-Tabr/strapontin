@@ -21,7 +21,7 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 /// Tests unitaires pour {@link WorkerProxyService} — focus sur {@code relancerJob} (v2.6.0,
-/// #706/#710, bouton « Relancer » par job de maintenance).
+/// bouton « Relancer » par job de maintenance).
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -32,7 +32,7 @@ class WorkerProxyServiceTest {
     MDC.clear();
   }
 
-  // #952 : le correlationId posé en MDC par CorrelationIdFilter côté requête entrante doit être
+  // le correlationId posé en MDC par CorrelationIdFilter côté requête entrante doit être
   // propagé au worker, pour relier une action admin aux logs du job réellement exécuté.
   @Test
   void relancerFetches_correlationIdPresentDansMdc_estTransmisEnHeader() {
@@ -59,12 +59,12 @@ class WorkerProxyServiceTest {
 
     assertFalse(resultat.succes());
     assertNotNull(resultat.messageErreur());
-    // #837 : une exception réseau générique (pas de réponse HTTP du tout) reste un vrai 503 —
+    // une exception réseau générique (pas de réponse HTTP du tout) reste un vrai 503 —
     // distinct des cas où le worker répond mais avec un statut d'erreur (400/5xx).
     assertEquals(503, resultat.statutHttp());
   }
 
-  // #837 : distingue le job inconnu (400 renvoyé par le worker → erreur cliente) d'une vraie
+  // distingue le job inconnu (400 renvoyé par le worker → erreur cliente) d'une vraie
   // panne interne worker (autre code d'erreur → 502) — auparavant les deux étaient noyés dans un
   // message unique masquant la cause réelle.
   @Test

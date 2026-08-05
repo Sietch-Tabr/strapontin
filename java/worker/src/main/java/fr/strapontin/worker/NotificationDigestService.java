@@ -44,7 +44,7 @@ import org.springframework.stereotype.Service;
 /// email via Resend et push VAPID, puis met à jour `notifie_le`.
 ///
 /// Si `RESEND_API_KEY` ou les clés VAPID sont absentes de `app_config`,
-/// la notification correspondante est ignorée sans erreur. Depuis #981, le canal email est de
+/// la notification correspondante est ignorée sans erreur. Depuis, le canal email est de
 /// même ignoré sans erreur si le quota d'envoi Resend jour/mois est atteint
 /// ({@link GestionQuotaResendWorker}, compteur partagé avec le module web).
 ///
@@ -62,24 +62,24 @@ public class NotificationDigestService {
   private final GestionQuotaResendWorker gestionQuotaResendWorker;
   private final FabriqueResend fabriqueResend;
   private final FabriquePushService fabriquePushService;
-  // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans logs_admin (#912).
+  // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans logs_admin.
   private final CompteurBilanFetch compteurPush = new CompteurBilanFetch();
 
-  /// Fabrique du client Resend (#943) — indirection nécessaire pour rendre {@code envoyerEmail}
+  /// Fabrique du client Resend — indirection nécessaire pour rendre {@code envoyerEmail}
   /// testable sur son chemin nominal de succès, le SDK Resend n'étant pas injectable directement.
   @FunctionalInterface
   interface FabriqueResend {
     Resend creer(String cle);
   }
 
-  /// Fabrique du client push VAPID (#943) — même motif que {@link FabriqueResend}.
+  /// Fabrique du client push VAPID — même motif que {@link FabriqueResend}.
   @FunctionalInterface
   interface FabriquePushService {
     PushService creer(String clePublique, String clePrivee, String sujet)
         throws java.security.GeneralSecurityException;
   }
 
-  /// Constructeur Spring — #943 : les fabriques Resend/PushService ne sont explicitement
+  /// Constructeur Spring — : les fabriques Resend/PushService ne sont explicitement
   /// annotées {@code @Autowired} que sur ce constructeur, sans quoi Spring ne peut pas
   /// déterminer lequel des deux constructeurs utiliser dès qu'il en existe plus d'un.
   @org.springframework.beans.factory.annotation.Autowired
@@ -99,7 +99,7 @@ public class NotificationDigestService {
         PushService::new);
   }
 
-  /// Constructeur de test (#943) — permet d'injecter des fabriques Resend/PushService
+  /// Constructeur de test — permet d'injecter des fabriques Resend/PushService
   /// mockables pour exercer le chemin nominal de succès de l'envoi email/push.
   NotificationDigestService(
       ConfigServiceWorker configService,
@@ -140,7 +140,7 @@ public class NotificationDigestService {
       String statut) {}
 
   /// Résultat d'un envoi de digest, avec le sous-ensemble de concerts effectivement tenté par
-  /// canal (#791) — nécessaire pour ne marquer {@code notification_envoyee_le} que sur les
+  /// canal — nécessaire pour ne marquer {@code notification_envoyee_le} que sur les
   /// concerts réellement délivrés par un canal en succès, pas sur l'ensemble du digest dès qu'un
   /// seul canal a réussi.
   private record ResultatDigest(
@@ -192,7 +192,7 @@ public class NotificationDigestService {
                   groupes.configsUtilisateurs().get(userId));
           if (res.emailOk()) nbEmailsOk++;
           if (res.pushOk()) nbPushOk++;
-          // Seuls les concerts du canal effectivement en succès sont marqués notifiés (#791) :
+          // Seuls les concerts du canal effectivement en succès sont marqués notifiés :
           // un digest mixte email+push où un seul canal échoue ne doit pas marquer à tort les
           // concerts du canal en échec comme notifiés.
           if (res.emailOk()) {
@@ -252,7 +252,7 @@ public class NotificationDigestService {
       Map<String, List<ConcertNotif>> parUtilisateur) {}
 
   /// Charge et regroupe par utilisateur les matches non notifiés pour une fréquence donnée
-  /// (extrait de {@link #executerDigest} — #924).
+  /// (extrait de {@link #executerDigest}).
   ///
   /// @param frequence `"temps_reel"` ou `"quotidien"`
   /// @return les matches non notifiés, groupés par utilisateur
@@ -350,7 +350,7 @@ public class NotificationDigestService {
   }
 
   /// Remonte dans `logs_admin` le bilan agrégé des envois push pour le cycle de digest qui vient
-  /// de se terminer (#912), même mécanisme générique que le bilan de panne des sources de
+  /// de se terminer, même mécanisme générique que le bilan de panne des sources de
   /// concerts (voir {@code WorkerStatsService#remonterBilan}).
   private void remonterBilanPush() {
     BilanFetch bilan = compteurPush.preleverBilan();
@@ -394,7 +394,7 @@ public class NotificationDigestService {
       return false;
     }
     if (!gestionQuotaResendWorker.reserverEnvoi()) {
-      // #981 : notification_envoyee_le n'est pas marquée pour ce canal (comportement déjà
+      // notification_envoyee_le n'est pas marquée pour ce canal (comportement déjà
       // existant, cf. clé "RESEND_API_KEY absent" ci-dessus) — retenté au prochain cycle de
       // digest plutôt que perdu.
       return false;
@@ -428,7 +428,7 @@ public class NotificationDigestService {
   }
 
   /// Issue possible d'un envoi push individuel, selon le statut HTTP retourné par le push
-  /// service (#795).
+  /// service.
   enum ResultatEnvoiPush {
     SUCCES,
     ABONNEMENT_MORT,
@@ -438,7 +438,7 @@ public class NotificationDigestService {
   /// Interprète le statut HTTP d'un envoi push.
   ///
   /// <p>Seul un statut 2xx est un succès. 404/410 signent un abonnement mort (à supprimer). Tout
-  /// le reste (400, 429, 5xx…) est un échec — avant #795, seuls 404/410 étaient exclus du
+  /// le reste (400, 429, 5xx…) est un échec — avant, seuls 404/410 étaient exclus du
   /// succès, comptant à tort tout autre code d'erreur comme un envoi réussi.
   ///
   /// @param status statut HTTP retourné par le push service
@@ -489,13 +489,13 @@ public class NotificationDigestService {
         switch (interpreterStatutPush(status)) {
           case ABONNEMENT_MORT -> {
             // Abonnement mort (410/404) : nettoyage attendu, pas une panne du canal push —
-            // n'entre pas dans le bilan de panne (#912).
+            // n'entre pas dans le bilan de panne.
             jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
             log.info("Abonnement push révoqué : {} — {}", userId, ab.get("endpoint"));
           }
           case SUCCES -> nbEnvoyes++;
           case ECHEC -> {
-            // #795 : tout statut hors 2xx/404/410 (400, 429, 5xx...) est un échec, pas un
+            // tout statut hors 2xx/404/410 (400, 429, 5xx...) est un échec, pas un
             // succès implicite — sans cette branche, un push jamais délivré était compté
             // comme réussi.
             compteurPush.enregistrerErreur();
@@ -511,7 +511,7 @@ public class NotificationDigestService {
     return nbEnvoyes > 0;
   }
 
-  // #822 : url en chemin relatif (pas préfixé par baseUrl) — les listeners du service worker
+  // url en chemin relatif (pas préfixé par baseUrl) — les listeners du service worker
   // (main.js/App.vue) passent cette valeur telle quelle à router.push(), qui ne matche aucune
   // route déclarée avec un schéma https:// en préfixe si PUBLIC_BASE_URL est configurée
   // (navigation muette au lieu du scroll/anchor visé). icon reste préfixé par baseUrl (ou

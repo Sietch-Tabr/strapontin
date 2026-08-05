@@ -16,7 +16,7 @@ import org.bouncycastle.crypto.generators.SCrypt;
 
 /// Chiffrement/déchiffrement AES-256-GCM de `app_config`, clé dérivée via SCrypt.
 ///
-/// Extrait de `web.ConfigService`/`worker.ConfigServiceWorker` (#922) — les deux modules
+/// Extrait de `web.ConfigService`/`worker.ConfigServiceWorker` — les deux modules
 /// dérivaient et utilisaient une clé strictement identique, dupliquée verbatim ; un correctif
 /// de sécurité appliqué à un seul module ne se serait jamais répercuté dans l'autre.
 ///

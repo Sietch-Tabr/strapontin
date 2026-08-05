@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires ciblés pour {@link AdminController#annulerRevocationAdmin} (#808) — seul
-/// endpoint de gestion utilisateur à ne pas vérifier {@code userId.equals(adminId)} avant #808.
+/// Tests unitaires ciblés pour {@link AdminController#annulerRevocationAdmin} — seul
+/// endpoint de gestion utilisateur à ne pas vérifier {@code userId.equals(adminId)} avant.
 ///
 /// @since 2.6.3
 /// @author Kwaite
