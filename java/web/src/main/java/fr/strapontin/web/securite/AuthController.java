@@ -47,24 +47,20 @@ public class AuthController {
   private final AuthService authService;
   private final TotpChallengeService totpChallengeService;
   private final ConfigService configService;
-  private final AppareilsService appareilsService;
 
   /// @param authenticationManager gestionnaire d'authentification Spring Security
   /// @param authService service de réinitialisation de mot de passe
   /// @param totpChallengeService vérification du challenge TOTP (code + compteur d'échecs)
   /// @param configService service de configuration pour lire PUBLIC_BASE_URL
-  /// @param appareilsService capture de l'appareil à la connexion
   public AuthController(
       AuthenticationManager authenticationManager,
       AuthService authService,
       TotpChallengeService totpChallengeService,
-      ConfigService configService,
-      AppareilsService appareilsService) {
+      ConfigService configService) {
     this.authenticationManager = authenticationManager;
     this.authService = authService;
     this.totpChallengeService = totpChallengeService;
     this.configService = configService;
-    this.appareilsService = appareilsService;
   }
 
   /// Authentifie un utilisateur et crée une session persistante.
@@ -101,8 +97,6 @@ public class AuthController {
     if (totpRequis) {
       session.setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
     }
-    appareilsService.enregistrerAppareil(
-        session.getId(), details.id(), httpRequest.getHeader("User-Agent"));
     log.debug("Connexion réussie : {}", details.identifiant());
     return ResponseEntity.ok(
         new UtilisateurDto(

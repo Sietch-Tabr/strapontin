@@ -37,7 +37,6 @@ class AuthControllerTest {
   private AuthService authService;
   private TotpChallengeService totpChallengeService;
   private ConfigService configService;
-  private AppareilsService appareilsService;
 
   @BeforeEach
   void setUp() {
@@ -45,14 +44,8 @@ class AuthControllerTest {
     authService = mock(AuthService.class);
     totpChallengeService = mock(TotpChallengeService.class);
     configService = mock(ConfigService.class);
-    appareilsService = mock(AppareilsService.class);
     authController =
-        new AuthController(
-            authenticationManager,
-            authService,
-            totpChallengeService,
-            configService,
-            appareilsService);
+        new AuthController(authenticationManager, authService, totpChallengeService, configService);
   }
 
   // --- verifierTotp ---

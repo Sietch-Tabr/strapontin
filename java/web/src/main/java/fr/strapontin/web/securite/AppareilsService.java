@@ -7,6 +7,9 @@ package fr.strapontin.web.securite;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +27,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class AppareilsService {
 
+  private static final Logger log = LoggerFactory.getLogger(AppareilsService.class);
+
   private final NamedParameterJdbcTemplate jdbc;
 
   /// @param jdbc accès JDBC
@@ -31,26 +36,33 @@ public class AppareilsService {
     this.jdbc = jdbc;
   }
 
-  /// Enregistre l'appareil associé à une session, à la connexion.
+  /// Enregistre l'appareil associé à une session déjà persistée.
   ///
-  /// <p>Best-effort : une erreur ici (ex. session pas encore committée en base) ne doit jamais
-  /// faire échouer le login lui-même.
+  /// <p>Best-effort : appelé depuis {@link AppareilEnregistrementInterceptor}, jamais depuis le
+  /// contrôleur de login lui-même — la ligne {@code SPRING_SESSION} référencée par la clé étrangère
+  /// n'existe pas encore au moment où ce dernier répond (voir la Javadoc de l'intercepteur). Une
+  /// erreur ici (ex. session invalidée entre-temps par une déconnexion concurrente) ne doit jamais
+  /// faire échouer la requête qui a déclenché l'enregistrement.
   ///
   /// @param sessionId identifiant de session Spring Session
   /// @param userId identifiant de l'utilisateur
   /// @param userAgent en-tête {@code User-Agent} de la requête de connexion, peut être {@code null}
   public void enregistrerAppareil(String sessionId, String userId, String userAgent) {
-    jdbc.update(
-        "INSERT INTO session_appareils (session_id, user_id, user_agent)"
-            + " VALUES (:sessionId, :userId, :userAgent)"
-            + " ON CONFLICT (session_id) DO NOTHING",
-        Map.of(
-            "sessionId",
-            sessionId,
-            "userId",
-            userId,
-            "userAgent",
-            userAgent == null ? "" : userAgent));
+    try {
+      jdbc.update(
+          "INSERT INTO session_appareils (session_id, user_id, user_agent)"
+              + " VALUES (:sessionId, :userId, :userAgent)"
+              + " ON CONFLICT (session_id) DO NOTHING",
+          Map.of(
+              "sessionId",
+              sessionId,
+              "userId",
+              userId,
+              "userAgent",
+              userAgent == null ? "" : userAgent));
+    } catch (DataAccessException e) {
+      log.warn("échec d'enregistrement de l'appareil pour la session, ignoré : {}", e.getMessage());
+    }
   }
 
   /// Liste les appareils (sessions actives) de l'utilisateur, les plus récemment actifs en tête.

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.securite;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
@@ -41,6 +43,15 @@ class AppareilsServiceTest {
 
     org.mockito.Mockito.verify(jdbc)
         .update(org.mockito.ArgumentMatchers.contains("INSERT INTO session_appareils"), anyMap());
+  }
+
+  // La ligne SPRING_SESSION référencée n'existe pas toujours encore au moment de cet appel
+  // (voir AppareilEnregistrementInterceptor) : une violation de contrainte ne doit jamais remonter.
+  @Test
+  void enregistrerAppareil_echecJdbc_neLevePasDException() {
+    when(jdbc.update(anyString(), anyMap())).thenThrow(new DataIntegrityViolationException("fk"));
+
+    assertDoesNotThrow(() -> service.enregistrerAppareil("sess-1", "u1", "Mozilla/5.0"));
   }
 
   // L'identifiant exposé côté client (appareilId) doit être l'UUID opaque, jamais le session_id
