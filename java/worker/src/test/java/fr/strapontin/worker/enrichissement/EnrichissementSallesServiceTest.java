@@ -63,6 +63,47 @@ class EnrichissementSallesServiceTest {
     verify(source, never()).enrichirLot(any());
   }
 
+  // Un bilan d'appels/erreurs à 0 échec ne détecte pas une source qui répond systématiquement
+  // "200 OK, aucun résultat" (ex. panne géographique silencieuse d'Overpass) — un cycle avec un
+  // nombre significatif de candidats et 0 salle enrichie doit être journalisé séparément.
+  @Test
+  void enrichir_vingtCandidatsZeroEnrichis_journaliseUneAlerte() {
+    List<SalleAEnrichir> candidats = new ArrayList<>();
+    for (int i = 0; i < 20; i++) {
+      candidats.add(
+          new SalleAEnrichir(UUID.randomUUID(), "Salle " + i, "salle " + i, null, null, null));
+    }
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(candidats);
+    SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
+    when(source.enrichirLot(any())).thenReturn(Map.of());
+    LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
+
+    EnrichissementSallesService service =
+        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+    int nb = service.enrichir();
+
+    assertEquals(0, nb);
+    verify(logsAdminWorker)
+        .inserer(eq("warn"), eq("reconciliation-nocturne"), anyString(), anyMap());
+  }
+
+  @Test
+  void enrichir_moinsDeVingtCandidatsZeroEnrichis_neJournalisePasDAlerte() {
+    SalleAEnrichir candidat =
+        new SalleAEnrichir(UUID.randomUUID(), "Zenith", "zenith", null, null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
+    SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
+    when(source.enrichirLot(any())).thenReturn(Map.of());
+    LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
+
+    EnrichissementSallesService service =
+        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+    service.enrichir();
+
+    verify(logsAdminWorker, never())
+        .inserer(anyString(), eq("reconciliation-nocturne"), anyString(), anyMap());
+  }
+
   @Test
   void enrichir_overpassTrouveWikidataId_wikidataUtiliseLeQidPropage() {
     UUID salleId = UUID.randomUUID();

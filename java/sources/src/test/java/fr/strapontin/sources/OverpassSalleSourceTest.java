@@ -18,6 +18,10 @@ import org.springframework.web.client.RestClient;
 
 class OverpassSalleSourceTest {
 
+  private static org.hamcrest.Matcher<String> urlOverpass() {
+    return org.hamcrest.Matchers.containsString("overpass-api.de");
+  }
+
   @Test
   void nom_retourneOverpass() {
     assertEquals("overpass", new OverpassSalleSource().nom());
@@ -31,7 +35,25 @@ class OverpassSalleSourceTest {
 
     OverpassSalleSource source = new OverpassSalleSource(restClient);
     UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q123");
+    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, "44", "Q123");
+
+    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
+
+    assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
+  // Sans département connu, aucune zone géographique ne peut être construite pour la requête
+  // Overpass — la salle reste candidate pour la découverte Wikidata par nom, indépendante.
+  @Test
+  void enrichirLot_salleSansDept_ignoreeSansHttp() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    OverpassSalleSource source = new OverpassSalleSource(restClient);
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, null);
 
     Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
 
@@ -52,11 +74,12 @@ class OverpassSalleSourceTest {
             "Zenith de Nantes",
             fr.strapontin.core.Normalisation.normaliserTexte("Zenith de Nantes"),
             null,
-            null,
+            "44",
             null);
 
     serveur
-        .expect(requestTo(OverpassSalleSourceTestUrl()))
+        .expect(requestTo(urlOverpass()))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("around%3A")))
         .andRespond(
             withSuccess(
                 """
@@ -85,10 +108,6 @@ class OverpassSalleSourceTest {
     serveur.verify();
   }
 
-  private static org.hamcrest.Matcher<String> OverpassSalleSourceTestUrl() {
-    return org.hamcrest.Matchers.containsString("overpass.osm.ch");
-  }
-
   @Test
   void enrichirLot_nomNeCorrespondPas_retourneVide() {
     RestClient.Builder builder = RestClient.builder();
@@ -102,11 +121,11 @@ class OverpassSalleSourceTest {
             "Salle Inconnue",
             fr.strapontin.core.Normalisation.normaliserTexte("Salle Inconnue"),
             null,
-            null,
+            "75",
             null);
 
     serveur
-        .expect(requestTo(OverpassSalleSourceTestUrl()))
+        .expect(requestTo(urlOverpass()))
         .andRespond(
             withSuccess(
                 """
@@ -121,8 +140,10 @@ class OverpassSalleSourceTest {
     serveur.verify();
   }
 
+  // Un échec HTTP est retenté une fois (NB_ESSAIS_MAX=2) avant d'abandonner — les deux appels
+  // échouent ici pour vérifier le retry sans faire lever d'exception à l'appelant.
   @Test
-  void enrichirLot_erreurReseau_retourneVideSansException() {
+  void enrichirLot_erreurReseau_retenteUneFoisPuisRetourneVideSansException() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     RestClient restClient = builder.build();
@@ -134,10 +155,11 @@ class OverpassSalleSourceTest {
             "Zenith",
             fr.strapontin.core.Normalisation.normaliserTexte("Zenith"),
             null,
-            null,
+            "75",
             null);
 
-    serveur.expect(requestTo(OverpassSalleSourceTestUrl())).andRespond(withServerError());
+    serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
+    serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
 
     OverpassSalleSource source = new OverpassSalleSource(restClient);
     Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
@@ -159,11 +181,11 @@ class OverpassSalleSourceTest {
             "L'Empreinte",
             fr.strapontin.core.Normalisation.normaliserTexte("L'Empreinte"),
             null,
-            null,
+            "77",
             null);
 
     serveur
-        .expect(requestTo(OverpassSalleSourceTestUrl()))
+        .expect(requestTo(urlOverpass()))
         .andExpect(
             content()
                 .string(
@@ -199,6 +221,56 @@ class OverpassSalleSourceTest {
     Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of());
 
     assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
+  // Deux salles de départements différents doivent générer deux requêtes distinctes (une zone
+  // géographique par département), pas un seul appel mélangeant les deux.
+  @Test
+  void enrichirLot_deuxDepartementsDifferents_genereDeuxRequetes() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id1 = UUID.randomUUID();
+    UUID id2 = UUID.randomUUID();
+    SalleAEnrichir salleParis =
+        new SalleAEnrichir(
+            id1,
+            "Salle A",
+            fr.strapontin.core.Normalisation.normaliserTexte("Salle A"),
+            null,
+            "75",
+            null);
+    SalleAEnrichir salleNantes =
+        new SalleAEnrichir(
+            id2,
+            "Salle B",
+            fr.strapontin.core.Normalisation.normaliserTexte("Salle B"),
+            null,
+            "44",
+            null);
+
+    serveur
+        .expect(requestTo(urlOverpass()))
+        .andRespond(
+            withSuccess(
+                """
+                {"elements":[]}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(urlOverpass()))
+        .andRespond(
+            withSuccess(
+                """
+                {"elements":[]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    OverpassSalleSource source = new OverpassSalleSource(restClient);
+    source.enrichirLot(List.of(salleParis, salleNantes));
+
     serveur.verify();
   }
 }

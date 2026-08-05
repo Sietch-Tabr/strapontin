@@ -23,19 +23,18 @@ import org.springframework.stereotype.Service;
 /// Orchestrateur d'enrichissement des salles (étapes 1-2).
 ///
 /// Boucle sur les {@link SourceEnrichissementSalle} injectées (une nouvelle source = un bean
-/// Spring, sans modification de ce service). L'ordre de déclaration des beans dans
-/// {@code EnrichissementConfiguration} importe : {@code OverpassSalleSource} doit être déclaré
-/// avant {@code WikidataSalleSource} — le Q-ID découvert par Overpass est propagé aux sources
-/// suivantes dans la même passe pour que Wikidata puisse enrichir sur cette base. Pour les salles
-/// qu'Overpass n'a pas trouvées (nom absent d'OSM, instance publique surchargée),
-/// {@code WikidataSalleSource} tente ensuite sa propre recherche par nom — Overpass n'est donc
-/// plus un passage obligé.
+/// Spring, sans modification de ce service). L'ordre de déclaration des beans dans {@code
+/// EnrichissementConfiguration} importe : {@code OverpassSalleSource} doit être déclaré avant
+/// {@code WikidataSalleSource} — le Q-ID découvert par Overpass est propagé aux sources suivantes
+/// dans la même passe pour que Wikidata puisse enrichir sur cette base. Pour les salles qu'Overpass
+/// n'a pas trouvées (nom absent d'OSM, instance publique surchargée), {@code WikidataSalleSource}
+/// tente ensuite sa propre recherche par nom — Overpass n'est donc plus un passage obligé.
 ///
 /// Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : avec
 /// Overpass en incident de surcharge, un cycle complet peut prendre plusieurs dizaines de minutes
 /// (chaque lot épuise son timeout avant d'abandonner) — persister uniquement à la toute fin
-/// perdrait tout le travail déjà résolu en cas d'interruption (redéploiement, crash, arrêt du
-/// job) avant la fin du cycle.
+/// perdrait tout le travail déjà résolu en cas d'interruption (redéploiement, crash, arrêt du job)
+/// avant la fin du cycle.
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -64,10 +63,10 @@ public class EnrichissementSallesService {
   }
 
   /// Enrichit les salles sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
-  /// courant (rotation hebdomadaire, — remplace l'ancien plafond fixe de 500/nuit, qui
-  /// laissait une entité en échec systématique éternellement prioritaire, cf.), priorisées
-  /// par nombre de concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un
-  /// {@code nom_affiche} déjà présent (override manuel admin).
+  /// courant (rotation hebdomadaire, — remplace l'ancien plafond fixe de 500/nuit, qui laissait une
+  /// entité en échec systématique éternellement prioritaire, cf.), priorisées par nombre de
+  /// concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un {@code nom_affiche} déjà
+  /// présent (override manuel admin).
   ///
   /// @return nombre de salles effectivement mises à jour
   public int enrichir() {
@@ -85,15 +84,42 @@ public class EnrichissementSallesService {
       nbEnrichis += enrichirEtPersisterLot(lot);
     }
     log.info("enrichissement:salles candidats={} enrichis={}", candidats.size(), nbEnrichis);
+    alerterSiCycleImproductif(candidats.size(), nbEnrichis);
     remonterBilans();
     return nbEnrichis;
   }
 
-  /// Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source
-  /// implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer —
-  /// même mécanisme générique que {@code WorkerStatsService.remonterBilan}, absent jusqu'ici sur
-  /// les sources d'enrichissement : la panne Overpass de 3+ mois n'avait ainsi jamais généré
-  /// la moindre entrée {@code logs_admin}.
+  // Nombre minimal de candidats pour qu'un cycle à 0 salle enrichie déclenche une alerte — évite
+  // un faux positif sur un tout petit lot où 0 résultat est plausible même en fonctionnement
+  // normal (aucune des quelques salles du jour n'existe sur Wikidata/OSM).
+  private static final int SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF = 20;
+
+  /// Alerte si un cycle avec un nombre significatif de candidats n'a enrichi aucune salle — un
+  /// bilan d'appels/erreurs à 0 échec (voir {@link #remonterBilans}) ne détecte pas ce cas : une
+  /// source répondant `200 OK` avec un contenu systématiquement vide (aucune correspondance, jamais
+  /// une erreur HTTP) ne remonte jamais rien via ce mécanisme, alors qu'elle peut être
+  /// structurellement inopérante (constaté 12 jours durant sur une bascule Overpass vers une
+  /// instance ne couvrant en réalité pas la France).
+  ///
+  /// @param nbCandidats nombre de salles traitées dans ce cycle
+  /// @param nbEnrichis nombre de salles effectivement enrichies
+  private void alerterSiCycleImproductif(int nbCandidats, int nbEnrichis) {
+    if (nbCandidats < SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF || nbEnrichis > 0) return;
+    logsAdminWorker.inserer(
+        "warn",
+        "reconciliation-nocturne",
+        "enrichissement:salles — 0 salle enrichie sur "
+            + nbCandidats
+            + " candidats"
+            + " — vérifier que les sources d'enrichissement répondent réellement",
+        Map.of("candidats", nbCandidats));
+  }
+
+  /// Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source implémentant
+  /// {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer — même mécanisme générique
+  /// que {@code WorkerStatsService.remonterBilan}, absent jusqu'ici sur les sources
+  /// d'enrichissement : la panne Overpass de 3+ mois n'avait ainsi jamais généré la moindre entrée
+  /// {@code logs_admin}.
   private void remonterBilans() {
     for (SourceEnrichissementSalle source : sources) {
       if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
@@ -185,9 +211,9 @@ public class EnrichissementSallesService {
   }
 
   /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
-  ///     découvert est déjà porté par une autre salle (contrainte {@code idx_salles_wikidata_id}) —
-  /// signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le
-  ///     conflit est loggé plutôt que de faire échouer tout le cycle de réconciliation.
+  ///   découvert est déjà porté par une autre salle (contrainte {@code idx_salles_wikidata_id}) —
+  ///   signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le conflit
+  ///   est loggé plutôt que de faire échouer tout le cycle de réconciliation.
   private boolean mettreAJourSalle(UUID salleId, String nom, EnrichissementSalle e) {
     Map<String, Object> params = new HashMap<>();
     params.put("wikidataId", e.wikidataId());
