@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.Normalisation;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,15 +32,20 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 class ReconciliateurSallesTest {
 
   private static ValeurConcert concert(String artisteNorm, LocalDate date, String salleNorm) {
+    return concert(artisteNorm, date, null, salleNorm, null);
+  }
+
+  private static ValeurConcert concert(
+      String artisteNorm, LocalDate date, LocalTime heure, String salleNorm, String dept) {
     return new ValeurConcert(
         "Artiste",
         artisteNorm,
         date,
-        null,
+        heure,
         "Salle",
         salleNorm,
         null,
-        null,
+        dept,
         null,
         "ticketmaster",
         null,
@@ -157,6 +163,61 @@ class ReconciliateurSallesTest {
     verify(jdbc).update(anyString(), paramsCaptor.capture());
     assertEquals(
         Normalisation.normaliserTexte("L'Olympia"), paramsCaptor.getValue().get("nomNorm"));
+  }
+
+  // Deux salles réellement distinctes (départements différents) partageant un pivot commun
+  // ("kursaal", déjà un doublon flou légitime pour deux salles du même lieu) ne doivent jamais
+  // fusionner entre elles au sein d'un même lot si elles ne sont pas dans le même département.
+  @Test
+  void reconcilierSalles_memeArtisteDateDeptDifferent_neFusionnePasIntraLot() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    LocalDate date = LocalDate.of(2026, 9, 1);
+    ValeurConcert concert1 = concert("artiste x", date, null, "grand kursaal", "25");
+    ValeurConcert concert2 = concert("artiste x", date, null, "kursaal besancon", "90");
+
+    List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+
+    assertEquals("grand kursaal", resultat.get(0).salleNorm());
+    assertEquals("kursaal besancon", resultat.get(1).salleNorm());
+  }
+
+  // Même artiste/date/dept mais deux représentations distinctes (matinée/soirée) d'un même
+  // titre générique dans deux salles différentes ne doivent pas non plus fusionner.
+  @Test
+  void reconcilierSalles_memeArtisteDateDeptHeureDifferente_neFusionnePasIntraLot() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    LocalDate date = LocalDate.of(2026, 9, 1);
+    ValeurConcert concert1 = concert("artiste x", date, LocalTime.of(15, 0), "grand kursaal", "25");
+    ValeurConcert concert2 =
+        concert("artiste x", date, LocalTime.of(20, 0), "kursaal besancon", "25");
+
+    List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+
+    assertEquals("grand kursaal", resultat.get(0).salleNorm());
+    assertEquals("kursaal besancon", resultat.get(1).salleNorm());
+  }
+
+  // Même artiste/date/dept/heure : la fusion floue doit continuer à s'appliquer normalement.
+  @Test
+  void reconcilierSalles_memeArtisteDateDeptHeure_fusionneIntraLotCommeAvant() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    LocalDate date = LocalDate.of(2026, 9, 1);
+    ValeurConcert concert1 = concert("artiste x", date, LocalTime.of(20, 0), "grand kursaal", "25");
+    ValeurConcert concert2 =
+        concert("artiste x", date, LocalTime.of(20, 0), "kursaal besancon", "25");
+
+    List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+
+    assertEquals(resultat.get(0).salleNorm(), resultat.get(1).salleNorm());
   }
 
   // (rattrapage) : raccrocherSallesParNomNorm faisait un rattachement par égalité exacte de
