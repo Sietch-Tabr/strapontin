@@ -162,4 +162,48 @@ class CorrespondanceSalleTest {
   void estDoublonSalle_containmentPartielSansAucunTokenSpecifiquePartage_retourneFalse() {
     assertFalse(CorrespondanceSalle.estDoublonSalle("accor arena", "zenith bordeaux"));
   }
+
+  // --- Containment partiel : garde-fou sur le nombre de tokens spécifiques (pas bruts) ---
+
+  // "Casino de Paris" ne conserve qu'un seul token spécifique ("paris") une fois "casino" retiré
+  // comme mot-type générique — ce token unique, un simple nom de ville, ne doit jamais suffire
+  // seul à faire matcher un lieu totalement sans rapport au seul motif qu'il contient aussi
+  // "paris" comme token (arrondissement/ville partagés par des dizaines de salles distinctes).
+  @Test
+  void estDoublonSalle_casinoDeParisEtTheatreSansRapportPartageantLeToken_paris_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle("casino de paris", "theatre rive gauche paris 14"));
+  }
+
+  @Test
+  void estDoublonSalle_casinoDeParisEtParvisEgliseSansRapport_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "casino de paris", "parvis eglise saint germain paris 06"));
+  }
+
+  @Test
+  void estDoublonSalle_casinoDeParisEtCathedraleAmericaineSansRapport_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle("casino de paris", "cathedrale americaine paris 08"));
+  }
+
+  @Test
+  void estDoublonSalle_casinoDeParisEtCathedraleNotreDameSansRapport_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle("casino de paris", "cathedrale notre dame de paris"));
+  }
+
+  @Test
+  void estDoublonSalle_casinoDeParisEtSunsetSunsideSansRapport_retourneFalse() {
+    assertFalse(CorrespondanceSalle.estDoublonSalle("casino de paris", "sunset sunside paris 01"));
+  }
+
+  // Non-régression : le vrai Casino de Paris reste bien détecté comme doublon de lui-même via un
+  // autre critère (containment de caractères, critère 1) — le garde-fou ajouté ne doit affaiblir
+  // que le containment de tokens spécifiques, pas les autres critères.
+  @Test
+  void estDoublonSalle_casinoDeParisEtLuiMemeAvecSuffixeArrondissement_resteTrue() {
+    assertTrue(CorrespondanceSalle.estDoublonSalle("casino de paris", "casino de paris paris 09"));
+  }
 }

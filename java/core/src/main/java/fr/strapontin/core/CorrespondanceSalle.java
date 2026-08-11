@@ -199,10 +199,13 @@ public final class CorrespondanceSalle {
       return true;
     }
 
-    // Containment partiel : même garde-fou que le pivot (≥ 2 tokens bruts de chaque côté) — sans
-    // lui, un nom d'un seul mot ("zenith") correspondrait trivialement à n'importe quel candidat
-    // le contenant comme simple token.
-    if (tokA.size() < 2 || tokB.size() < 2) return false;
+    // Containment partiel : garde-fou sur le nombre de tokens SPÉCIFIQUES (pas bruts) de chaque
+    // côté — sans lui, un nom réduit à un unique token spécifique après retrait des mots-types
+    // génériques ("Casino de Paris" → seul "paris" reste après retrait de "casino") correspond
+    // trivialement à n'importe quel autre nom partageant ce token comme simple nom de ville
+    // ("Théâtre Rive Gauche Paris 14", "Cathédrale Américaine Paris 08"...), sans aucun rapport
+    // avec le lieu recherché.
+    if (specA.size() < 2 || specB.size() < 2) return false;
     Set<String> specCourt = specA.size() <= specB.size() ? specA : specB;
     Set<String> specLong = specA.size() <= specB.size() ? specB : specA;
     return estContainmentTokensPartiel(specCourt, specLong);
