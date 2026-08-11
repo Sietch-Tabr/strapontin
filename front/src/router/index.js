@@ -4,6 +4,7 @@ import {
   sessionInitialisee,
   sessionErreurReseau,
 } from "../composables/useSession.js";
+import { scrollBehavior } from "../utils/scrollBehavior.js";
 import LoginPage from "../pages/auth/LoginPage.vue";
 import TotpChallengePage from "../pages/auth/TotpChallengePage.vue";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage.vue";
@@ -54,6 +55,7 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior,
 });
 
 router.beforeEach((to) => {
