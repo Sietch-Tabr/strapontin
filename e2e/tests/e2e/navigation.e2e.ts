@@ -273,6 +273,41 @@ test.describe("Scénario: navigation Vue Router sans rechargement complet", () =
     const marqueur = await page.evaluate(() => (window as any).__testMarqueur);
     expect(marqueur).toBe(1);
   });
+
+  test("navigationInterne_depuisPageScrollee_remonteLeScrollEnHaut", async ({
+    page,
+    isMobile,
+  }) => {
+    // /changelog est la seule page dont le contenu dépasse systématiquement la hauteur de
+    // viewport par défaut — nécessaire pour produire un vrai scroll à remettre à zéro.
+    await page.goto("/changelog");
+    await expect(page.locator("main#contenu-principal")).toBeVisible();
+    // le contenu du changelog (sections repliées) se déploie après le premier rendu — attendre
+    // qu'il dépasse effectivement la hauteur de viewport avant de tenter le scroll.
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollHeight > window.innerHeight,
+        ),
+      )
+      .toBe(true);
+
+    await page.evaluate(() => window.scrollTo(0, 800));
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
+
+    if (isMobile) {
+      await page.locator("#btn-nav-plus").click();
+      await expect(page.locator("#dialog-nav-plus")).toBeVisible();
+      await page.locator("#dialog-nav-plus a[href='/artistes']").click();
+    } else {
+      await page.locator(".sidebar a[href='/artistes']").click();
+    }
+
+    await expect(page.locator("main#contenu-principal")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  });
 });
 
 test.describe("Scénario: indicateur de chargement (#644)", () => {
