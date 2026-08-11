@@ -12,7 +12,19 @@
            version reste dépliée à la fois. Un test E2E (changelog_versionsAnciennes_repliees)
            échoue si cette conversion est oubliée. -->
       <section>
-        <h2 class="changelog-version">v 2.7.8 — 5 août 2026</h2>
+        <h2 class="changelog-version">v 2.7.9 — 12 août 2026</h2>
+        <div class="changelog-entrees">
+          <div>
+            <p class="changelog-categorie">Navigation</p>
+            <ul>
+              <li>Un clic sur un lien de navigation depuis une page défilée remonte désormais en haut de la page cible, au lieu de conserver la position de défilement précédente.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <details>
+        <summary><h2 class="changelog-version">v 2.7.8 — 5 août 2026</h2></summary>
         <div class="changelog-entrees">
           <div>
             <p class="changelog-categorie">Compte</p>
@@ -34,7 +46,7 @@
             </ul>
           </div>
         </div>
-      </section>
+      </details>
 
       <details>
         <summary><h2 class="changelog-version">v 2.7.7 — 30 juillet 2026</h2></summary>
