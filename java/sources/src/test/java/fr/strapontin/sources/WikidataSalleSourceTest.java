@@ -442,6 +442,108 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // Régression : la ville seule ne bloque rien quand elle est inconnue au moment de
+  // l'enrichissement (cas fréquent d'une salle nouvellement créée) — le département, connu dès la
+  // création de la salle à partir d'un concert réel, doit alors prendre le relais pour rejeter un
+  // candidat sans rapport (ex. une gare/un arrêt de tram matché par erreur, ville non renseignée).
+  @Test
+  void enrichirLot_decouverte_rejetteCandidatDeptIncompatibleVilleInconnue() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Palais des Congres", "palais des congres", null, "04", null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q98573438"},
+                   "itemLabel":{"type":"literal","value":"Palais des Congres"},
+                   "communeLabel":{"type":"literal","value":"Bordeaux"},
+                   "codePostal":{"type":"literal","value":"33000"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
+  // Non-régression : dept connu et cohérent (ou code postal absent côté Wikidata) n'empêche pas
+  // l'acceptation d'un candidat par ailleurs valide.
+  @Test
+  void enrichirLot_decouverte_deptConnuEtCorrespondant_accepteCandidat() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle = new SalleAEnrichir(id, "Accor Arena", "accor arena", null, "75", null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q537720"},
+                   "itemLabel":{"type":"literal","value":"Accor Arena"},
+                   "communeLabel":{"type":"literal","value":"Paris"},
+                   "codePostal":{"type":"literal","value":"75012"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertEquals(1, resultat.size());
+    assertEquals("Q537720", resultat.get(id).wikidataId());
+    serveur.verify();
+  }
+
+  // Une gare/un arrêt de tram homonyme du nom recherché ne doit jamais être proposé comme
+  // candidat — constaté en production (gare de Villepinte, arrêt de tram bordelais).
+  @Test
+  void construireRequeteDecouverte_excluLesInfrastructuresDeTransport() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle = new SalleAEnrichir(id, "Le Splendid", "le splendid", null, null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q55488")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q2175765")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    src.enrichirLot(List.of(salle));
+
+    serveur.verify();
+  }
+
   @Test
   void enrichirLot_decouverte_villeConnueEtCorrespondante_accepteCandidat() {
     RestClient.Builder builder = RestClient.builder();
