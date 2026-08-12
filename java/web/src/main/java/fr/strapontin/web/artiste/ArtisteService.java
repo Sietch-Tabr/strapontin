@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -114,13 +115,16 @@ public class ArtisteService {
               .collect(Collectors.toCollection(HashSet::new));
       nomsDejaPresents.addAll(nomsSuivisNorm);
 
+      // Wikidata et Deezer sont interrogés en parallèle (chacun jusqu'à 10 s de timeout côté
+      // RestClient partagé) plutôt que séquentiellement : un enchaînement séquentiel peut
+      // approcher les 20 s dans le pire cas (les deux appels au plafond de leur timeout),
+      // constaté en E2E (webkit, timeout d'assertion à 25 s dépassé). En parallèle, l'attente
+      // totale est bornée par le plus lent des deux, pas leur somme.
       if (resultatsSuggestions.size() < 3) {
-        ajouterSuggestionsInedites(
-            resultatsSuggestions, nomsDejaPresents, rechercherWikidata(recherche));
-      }
-      if (resultatsSuggestions.size() < 3) {
-        ajouterSuggestionsInedites(
-            resultatsSuggestions, nomsDejaPresents, rechercherDeezer(recherche));
+        var futureWikidata = CompletableFuture.supplyAsync(() -> rechercherWikidata(recherche));
+        var futureDeezer = CompletableFuture.supplyAsync(() -> rechercherDeezer(recherche));
+        ajouterSuggestionsInedites(resultatsSuggestions, nomsDejaPresents, futureWikidata.join());
+        ajouterSuggestionsInedites(resultatsSuggestions, nomsDejaPresents, futureDeezer.join());
       }
 
       suggestions = resultatsSuggestions;
