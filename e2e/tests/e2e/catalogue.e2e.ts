@@ -272,9 +272,12 @@ test.describe("Scénario: catalogue — signalement salle manquante", () => {
     await page.goto("/salles");
     await page.fill("input#q-salle", "SalleInexistanteXYZ987");
     await page.getByRole("button", { name: "Rechercher" }).click();
+    // Même chemin de code (SalleService.lister, appel Nominatim/Ticketmaster) que
+    // salles_ajouterEtSupprimer_fluxComplet_toastSuccesAuDeux ci-dessus, qui utilise 25s — aligné
+    // pour la même marge, un budget plus court sur le même pire cas n'a pas de justification.
     await expect(
       page.getByRole("button", { name: "Signaler cette salle" }),
-    ).toBeVisible({ timeout: 15000 });
+    ).toBeVisible({ timeout: 25000 });
   });
 });
 
