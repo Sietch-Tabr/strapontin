@@ -333,7 +333,11 @@ public class ArtisteService {
   /// @param terme terme de recherche saisi par l'utilisateur
   /// @return suggestions Wikidata filtrées par mots-clés de description, vide si aucune ou en cas
   ///   d'échec réseau
-  private List<SuggestionArtiste> rechercherWikidata(String terme) {
+  ///
+  ///   <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
+  ///   ({@code Mockito.spy}) évitant un appel réseau réel vers Wikidata en test unitaire — même
+  ///   motif que {@link #resoudreDeezerId}.
+  List<SuggestionArtiste> rechercherWikidata(String terme) {
     try {
       String url =
           WIKIDATA_API_URL
@@ -427,7 +431,12 @@ public class ArtisteService {
     }
   }
 
-  private List<SuggestionArtiste> rechercherDeezer(String terme) {
+  /// @param terme terme de recherche saisi par l'utilisateur
+  /// @return suggestions Deezer, vide si aucune ou en cas d'échec réseau
+  ///
+  ///   <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même motif
+  ///   que {@link #rechercherWikidata}.
+  List<SuggestionArtiste> rechercherDeezer(String terme) {
     try {
       String url =
           DEEZER_URL + "?q=" + URLEncoder.encode(terme, StandardCharsets.UTF_8) + "&limit=6";
