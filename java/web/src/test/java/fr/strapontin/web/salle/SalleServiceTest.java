@@ -385,4 +385,52 @@ class SalleServiceTest {
     assertEquals(
         SalleService.normaliserSalleCle("BATACLAN"), SalleService.normaliserSalleCle("bataclan"));
   }
+
+  // Nominatim et Ticketmaster partent en parallèle dès que la recherche en base ne suffit pas —
+  // un enchaînement séquentiel (Nominatim puis Ticketmaster seulement si toujours insuffisant)
+  // pouvait approcher la somme des deux timeouts réseau dans le pire cas, constaté en E2E
+  // (mobile-safari).
+  @Test
+  void lister_baseInsuffisante_appelleNominatimEtTM() {
+    when(salleRepository.listerPourUtilisateur("user1")).thenReturn(List.of());
+    when(salleRepository.rechercherEnBase(anyString())).thenReturn(List.of());
+
+    SalleService espion = org.mockito.Mockito.spy(salleService);
+    espion.setSelf(espion);
+    org.mockito.Mockito.doReturn(
+            List.of(new ResultatSalle("Le Bataclan", "Paris", null, null, "osm")))
+        .when(espion)
+        .rechercherSallesNominatim("Bataclan");
+    org.mockito.Mockito.doReturn(List.of()).when(espion).rechercherSallesTM("Bataclan");
+
+    var reponse = espion.lister("user1", "Bataclan");
+
+    assertEquals(1, reponse.resultats().size());
+    verify(espion).rechercherSallesNominatim("Bataclan");
+    verify(espion).rechercherSallesTM("Bataclan");
+  }
+
+  // Avant le passage en parallèle, Ticketmaster n'était interrogé que si Nominatim seul ne
+  // suffisait pas (< 2 résultats) — désormais les deux partent ensemble dès que la recherche en
+  // base seule est insuffisante, Ticketmaster est donc appelé même si Nominatim seul atteint
+  // déjà le seuil.
+  @Test
+  void lister_nominatimSeulAtteintLeSeuil_appelleQuandMemeTMEnParallele() {
+    when(salleRepository.listerPourUtilisateur("user1")).thenReturn(List.of());
+    when(salleRepository.rechercherEnBase(anyString())).thenReturn(List.of());
+
+    SalleService espion = org.mockito.Mockito.spy(salleService);
+    espion.setSelf(espion);
+    org.mockito.Mockito.doReturn(
+            List.of(
+                new ResultatSalle("A", "Paris", null, null, "osm"),
+                new ResultatSalle("B", "Paris", null, null, "osm")))
+        .when(espion)
+        .rechercherSallesNominatim("terme");
+    org.mockito.Mockito.doReturn(List.of()).when(espion).rechercherSallesTM("terme");
+
+    espion.lister("user1", "terme");
+
+    verify(espion).rechercherSallesTM("terme");
+  }
 }
