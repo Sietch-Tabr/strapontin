@@ -213,4 +213,49 @@ class ArtisteServiceTest {
     assertFalse(
         ArtisteService.contientCorrespondancePartielle("radiohead", java.util.Set.of("yaelnaim")));
   }
+
+  // Wikidata et Deezer partent en parallèle dès que la recherche en base ne suffit pas — un
+  // enchaînement séquentiel (Wikidata puis Deezer seulement si toujours insuffisant) pouvait
+  // approcher la somme des deux timeouts réseau dans le pire cas, constaté en E2E (webkit).
+  @Test
+  void lister_baseInsuffisante_appelleWikidataEtDeezer() {
+    when(artisteRepository.listerPourUtilisateur("user1")).thenReturn(List.of());
+    when(artisteRepository.rechercherEnBase(anyString())).thenReturn(List.of());
+
+    ArtisteService espion = Mockito.spy(service);
+    doReturn(List.of(new SuggestionArtiste("Nina Simone", "wikidata", "chanteuse", "Q212484")))
+        .when(espion)
+        .rechercherWikidata("Nina Simone");
+    doReturn(List.of()).when(espion).rechercherDeezer("Nina Simone");
+
+    var reponse = espion.lister("user1", "Nina Simone");
+
+    assertEquals(1, reponse.suggestions().size());
+    verify(espion).rechercherWikidata("Nina Simone");
+    verify(espion).rechercherDeezer("Nina Simone");
+  }
+
+  // Avant le passage en parallèle, Deezer n'était interrogé que si Wikidata seul ne suffisait
+  // pas (< 3 résultats après combinaison) — désormais les deux partent ensemble dès que la
+  // recherche en base seule est insuffisante, Deezer est donc appelé même si Wikidata seul
+  // atteint déjà le seuil de 3.
+  @Test
+  void lister_wikidataSeulAtteintLeSeuil_appelleQuandMemeDeezerEnParallele() {
+    when(artisteRepository.listerPourUtilisateur("user1")).thenReturn(List.of());
+    when(artisteRepository.rechercherEnBase(anyString())).thenReturn(List.of());
+
+    ArtisteService espion = Mockito.spy(service);
+    doReturn(
+            List.of(
+                new SuggestionArtiste("A", "wikidata", "musicien", "Q1"),
+                new SuggestionArtiste("B", "wikidata", "musicien", "Q2"),
+                new SuggestionArtiste("C", "wikidata", "musicien", "Q3")))
+        .when(espion)
+        .rechercherWikidata("terme");
+    doReturn(List.of()).when(espion).rechercherDeezer("terme");
+
+    espion.lister("user1", "terme");
+
+    verify(espion).rechercherDeezer("terme");
+  }
 }

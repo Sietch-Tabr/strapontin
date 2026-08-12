@@ -104,6 +104,81 @@ class EnrichissementSallesServiceTest {
         .inserer(anyString(), eq("reconciliation-nocturne"), anyString(), anyMap());
   }
 
+  // Un seuil strict à 0 salle enrichie ne détectait qu'une panne totale — une dégradation
+  // chronique mais non totale (quelques succès isolés sur un gros lot) doit désormais aussi
+  // déclencher l'alerte via un seuil de taux de réussite.
+  @Test
+  void enrichir_trenteCandidatsTroisEnrichisTauxSousLeSeuil_journaliseUneAlerte() {
+    List<SalleAEnrichir> candidats = new ArrayList<>();
+    List<UUID> ids = new ArrayList<>();
+    for (int i = 0; i < 30; i++) {
+      UUID id = UUID.randomUUID();
+      ids.add(id);
+      candidats.add(new SalleAEnrichir(id, "Salle " + i, "salle " + i, null, null, null));
+    }
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(candidats);
+    SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
+    // 3 succès sur 30 (10%), répartis sur les deux premiers lots de persistance (25 puis 5).
+    when(source.enrichirLot(any()))
+        .thenAnswer(
+            invocation -> {
+              List<SalleAEnrichir> lot = invocation.getArgument(0);
+              Map<UUID, EnrichissementSalle> resultat = new HashMap<>();
+              for (SalleAEnrichir s : lot) {
+                if (ids.indexOf(s.id()) < 3) {
+                  resultat.put(
+                      s.id(), new EnrichissementSalle("Q" + s.id(), null, null, null, null));
+                }
+              }
+              return resultat;
+            });
+    LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
+
+    EnrichissementSallesService service =
+        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+    int nb = service.enrichir();
+
+    assertEquals(3, nb);
+    verify(logsAdminWorker)
+        .inserer(eq("warn"), eq("reconciliation-nocturne"), anyString(), anyMap());
+  }
+
+  @Test
+  void enrichir_vingtCandidatsDixEnrichisBonTaux_neJournalisePasDAlerte() {
+    List<SalleAEnrichir> candidats = new ArrayList<>();
+    List<UUID> ids = new ArrayList<>();
+    for (int i = 0; i < 20; i++) {
+      UUID id = UUID.randomUUID();
+      ids.add(id);
+      candidats.add(new SalleAEnrichir(id, "Salle " + i, "salle " + i, null, null, null));
+    }
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(candidats);
+    SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
+    // 10 succès sur 20 (50%, largement au-dessus du seuil).
+    when(source.enrichirLot(any()))
+        .thenAnswer(
+            invocation -> {
+              List<SalleAEnrichir> lot = invocation.getArgument(0);
+              Map<UUID, EnrichissementSalle> resultat = new HashMap<>();
+              for (SalleAEnrichir s : lot) {
+                if (ids.indexOf(s.id()) < 10) {
+                  resultat.put(
+                      s.id(), new EnrichissementSalle("Q" + s.id(), null, null, null, null));
+                }
+              }
+              return resultat;
+            });
+    LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
+
+    EnrichissementSallesService service =
+        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+    int nb = service.enrichir();
+
+    assertEquals(10, nb);
+    verify(logsAdminWorker, never())
+        .inserer(anyString(), eq("reconciliation-nocturne"), anyString(), anyMap());
+  }
+
   @Test
   void enrichir_overpassTrouveWikidataId_wikidataUtiliseLeQidPropage() {
     UUID salleId = UUID.randomUUID();

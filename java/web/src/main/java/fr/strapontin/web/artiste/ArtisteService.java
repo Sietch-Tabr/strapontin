@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -114,13 +115,16 @@ public class ArtisteService {
               .collect(Collectors.toCollection(HashSet::new));
       nomsDejaPresents.addAll(nomsSuivisNorm);
 
+      // Wikidata et Deezer sont interrogés en parallèle (chacun jusqu'à 10 s de timeout côté
+      // RestClient partagé) plutôt que séquentiellement : un enchaînement séquentiel peut
+      // approcher les 20 s dans le pire cas (les deux appels au plafond de leur timeout),
+      // constaté en E2E (webkit, timeout d'assertion à 25 s dépassé). En parallèle, l'attente
+      // totale est bornée par le plus lent des deux, pas leur somme.
       if (resultatsSuggestions.size() < 3) {
-        ajouterSuggestionsInedites(
-            resultatsSuggestions, nomsDejaPresents, rechercherWikidata(recherche));
-      }
-      if (resultatsSuggestions.size() < 3) {
-        ajouterSuggestionsInedites(
-            resultatsSuggestions, nomsDejaPresents, rechercherDeezer(recherche));
+        var futureWikidata = CompletableFuture.supplyAsync(() -> rechercherWikidata(recherche));
+        var futureDeezer = CompletableFuture.supplyAsync(() -> rechercherDeezer(recherche));
+        ajouterSuggestionsInedites(resultatsSuggestions, nomsDejaPresents, futureWikidata.join());
+        ajouterSuggestionsInedites(resultatsSuggestions, nomsDejaPresents, futureDeezer.join());
       }
 
       suggestions = resultatsSuggestions;
@@ -329,7 +333,11 @@ public class ArtisteService {
   /// @param terme terme de recherche saisi par l'utilisateur
   /// @return suggestions Wikidata filtrées par mots-clés de description, vide si aucune ou en cas
   ///   d'échec réseau
-  private List<SuggestionArtiste> rechercherWikidata(String terme) {
+  ///
+  ///   <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
+  ///   ({@code Mockito.spy}) évitant un appel réseau réel vers Wikidata en test unitaire — même
+  ///   motif que {@link #resoudreDeezerId}.
+  List<SuggestionArtiste> rechercherWikidata(String terme) {
     try {
       String url =
           WIKIDATA_API_URL
@@ -423,7 +431,12 @@ public class ArtisteService {
     }
   }
 
-  private List<SuggestionArtiste> rechercherDeezer(String terme) {
+  /// @param terme terme de recherche saisi par l'utilisateur
+  /// @return suggestions Deezer, vide si aucune ou en cas d'échec réseau
+  ///
+  ///   <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même motif
+  ///   que {@link #rechercherWikidata}.
+  List<SuggestionArtiste> rechercherDeezer(String terme) {
     try {
       String url =
           DEEZER_URL + "?q=" + URLEncoder.encode(terme, StandardCharsets.UTF_8) + "&limit=6";

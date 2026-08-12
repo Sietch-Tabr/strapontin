@@ -39,9 +39,16 @@ import org.springframework.web.client.RestClient;
 ///       est sous-classe P279 de « gymnase » Q14092), un filtre transitif risquerait de faire
 ///       correspondre des équipements sportifs. Un filtre négatif exclut en revanche les entités
 ///       de type région/département/commune (P31 région administrative, département français,
-///       commune française) : une recherche par nom peut sinon retourner une entité administrative
-///       homonyme plutôt que le lieu physique recherché. En contrepartie, la requête exige
-///       {@code wdt:P625}
+///       commune française) ainsi que les infrastructures de transport (gare, arrêt de tram) :
+///       une recherche par nom peut sinon retourner une entité administrative ou de transport
+///       homonyme plutôt que le lieu physique recherché — constaté en production sur une gare
+///       (Villepinte) et un arrêt de tram (Bordeaux) retenus à tort. Le département de la commune
+///       du candidat (déduit de son code postal, P281) est également confronté au département
+///       connu de la salle Strapontin quand les deux sont disponibles (voir {@link
+// #deptIncompatible}) —
+///       {@code salles.ville} peut rester vide au moment de cet enrichissement quand {@code
+///       salles.dept} est déjà fiable (renseigné dès la création à partir d'un concert réel). En
+///       contrepartie, la requête exige {@code wdt:P625}
 ///       (coordonnées géographiques) : sans ce garde-fou, une recherche par nom seul peut retourner
 ///       en premier résultat une œuvre culturelle homonyme (constaté en production : pour
 ///       « L'Olympia », le premier candidat mwapi est un <em>album</em> d'Émilie Simon sorti en
@@ -260,6 +267,16 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
             communeLabel);
         continue;
       }
+      String codePostal = ClientSparqlWikidata.valeurBinding(binding, "codePostal");
+      if (deptIncompatible(salle.dept(), codePostal)) {
+        log.info(
+            "Wikidata découverte salle — rejet département incompatible nom={} deptSalle={}"
+                + " codePostalCandidat={}",
+            nomRecherche,
+            salle.dept(),
+            codePostal);
+        continue;
+      }
 
       String qid = itemUri.substring(itemUri.lastIndexOf('/') + 1);
       EnrichissementSalle enrichissement =
@@ -291,6 +308,28 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     if (communeLabel == null || communeLabel.isBlank()) return false;
     return !Normalisation.normaliserVille(villeSalle)
         .equals(Normalisation.normaliserVille(communeLabel));
+  }
+
+  /// Vérifie que le département du candidat Wikidata (dérivé du code postal de sa commune) ne
+  /// contredit pas le département connu de la salle Strapontin.
+  ///
+  /// <p>Complète {@link #villeIncompatible} : {@code salles.dept} est renseigné dès la création de
+  /// la salle à partir d'un concert réel (fiable), alors que {@code salles.ville} peut rester vide
+  /// ou fausse au moment de cet enrichissement (angle mort constaté en production sur plusieurs
+  /// salles rattachées à tort à une entité Wikidata sans rapport — gare, arrêt de tram, bâtiment
+  /// homonyme — faute de ville connue pour bloquer le rapprochement). Même politique que {@link
+  /// #villeIncompatible} : ne rejette que si les deux départements sont connus et diffèrent.
+  ///
+  /// @param deptSalle département connu de la salle Strapontin ({@link SalleAEnrichir#dept}), peut
+  ///   être {@code null}
+  /// @param codePostal code postal de la commune du candidat Wikidata (P281), peut être {@code
+  ///   null}
+  /// @return {@code true} si les deux départements sont connus et ne correspondent pas
+  private static boolean deptIncompatible(String deptSalle, String codePostal) {
+    if (deptSalle == null || deptSalle.isBlank()) return false;
+    String deptCandidat = Normalisation.extraireDeptFrancais(codePostal);
+    if (deptCandidat == null) return false;
+    return !deptSalle.equals(deptCandidat);
   }
 
   // Nombre minimal de tokens significatifs cibles pour appliquer le containment asymétrique
@@ -357,7 +396,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
 
   private static String construireRequeteDecouverte(String nom) {
     return """
-    SELECT ?item ?itemLabel ?communeLabel ?num (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) WHERE {
+    SELECT ?item ?itemLabel ?communeLabel ?num (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) (SAMPLE(?cp) AS ?codePostal) WHERE {
       SERVICE wikibase:mwapi {
         bd:serviceParam wikibase:api "EntitySearch".
         bd:serviceParam wikibase:endpoint "www.wikidata.org".
@@ -370,13 +409,14 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       ?item wdt:P17 wd:Q142 .
       FILTER NOT EXISTS {
         ?item wdt:P31 ?typeExclu .
-        VALUES ?typeExclu { wd:Q3455524 wd:Q6465 wd:Q484170 }
+        VALUES ?typeExclu { wd:Q3455524 wd:Q6465 wd:Q484170 wd:Q55488 wd:Q2175765 }
       }
       OPTIONAL { ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "fr") }
       OPTIONAL {
         ?item wdt:P131 ?commune .
         ?commune rdfs:label ?communeLabel .
         FILTER(LANG(?communeLabel) = "fr")
+        OPTIONAL { ?commune wdt:P281 ?cp }
       }
       SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
     }

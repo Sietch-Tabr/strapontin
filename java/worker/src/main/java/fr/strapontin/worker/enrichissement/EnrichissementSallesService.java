@@ -89,30 +89,41 @@ public class EnrichissementSallesService {
     return nbEnrichis;
   }
 
-  // Nombre minimal de candidats pour qu'un cycle à 0 salle enrichie déclenche une alerte — évite
-  // un faux positif sur un tout petit lot où 0 résultat est plausible même en fonctionnement
-  // normal (aucune des quelques salles du jour n'existe sur Wikidata/OSM).
+  // Nombre minimal de candidats pour qu'un cycle sous le seuil de taux de réussite déclenche une
+  // alerte — évite un faux positif sur un tout petit lot où un faible nombre de succès est
+  // plausible même en fonctionnement normal (aucune des quelques salles du jour n'existe sur
+  // Wikidata/OSM).
   private static final int SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF = 20;
+  // Un seuil strict à 0 salle enrichie ne détecte qu'une panne totale — une dégradation
+  // chronique mais non totale (constaté en production : 90-100% d'échec chaque nuit durant 11
+  // nuits, jamais 100% pile) reste alors indéfiniment sous le seuil. Un taux de réussite est
+  // requis, pas seulement une absence totale de résultat.
+  private static final double SEUIL_TAUX_REUSSITE_MIN_CYCLE = 0.15;
 
-  /// Alerte si un cycle avec un nombre significatif de candidats n'a enrichi aucune salle — un
-  /// bilan d'appels/erreurs à 0 échec (voir {@link #remonterBilans}) ne détecte pas ce cas : une
-  /// source répondant `200 OK` avec un contenu systématiquement vide (aucune correspondance, jamais
-  /// une erreur HTTP) ne remonte jamais rien via ce mécanisme, alors qu'elle peut être
-  /// structurellement inopérante (constaté 12 jours durant sur une bascule Overpass vers une
-  /// instance ne couvrant en réalité pas la France).
+  /// Alerte si un cycle avec un nombre significatif de candidats a un taux de réussite chronique
+  /// trop bas — un bilan d'appels/erreurs à 0 échec (voir {@link #remonterBilans}) ne détecte pas
+  /// ce cas : une source répondant `200 OK` avec un contenu systématiquement vide (aucune
+  /// correspondance, jamais une erreur HTTP) ne remonte jamais rien via ce mécanisme, alors qu'elle
+  /// peut être structurellement inopérante. Un seuil strict à 0 salle enrichie (avant 2.7.9) ne
+  /// détectait qu'une panne totale, jamais une dégradation chronique mais non totale (constaté en
+  /// production : 90-100% d'échec chaque nuit durant 11 nuits, jamais 100% pile, restant ainsi
+  /// indéfiniment sous le radar).
   ///
   /// @param nbCandidats nombre de salles traitées dans ce cycle
   /// @param nbEnrichis nombre de salles effectivement enrichies
   private void alerterSiCycleImproductif(int nbCandidats, int nbEnrichis) {
-    if (nbCandidats < SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF || nbEnrichis > 0) return;
+    if (nbCandidats < SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF) return;
+    double tauxReussite = (double) nbEnrichis / nbCandidats;
+    if (tauxReussite >= SEUIL_TAUX_REUSSITE_MIN_CYCLE) return;
     logsAdminWorker.inserer(
         "warn",
         "reconciliation-nocturne",
-        "enrichissement:salles — 0 salle enrichie sur "
+        "enrichissement:salles — taux de réussite chronique trop bas ("
+            + nbEnrichis
+            + "/"
             + nbCandidats
-            + " candidats"
-            + " — vérifier que les sources d'enrichissement répondent réellement",
-        Map.of("candidats", nbCandidats));
+            + ") — vérifier que les sources d'enrichissement répondent réellement",
+        Map.of("candidats", nbCandidats, "enrichis", nbEnrichis));
   }
 
   /// Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source implémentant
