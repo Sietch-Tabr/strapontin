@@ -185,9 +185,22 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
       await page.goto("/admin");
       await page.locator('a[href="#salles"]').click();
       // Recherche par le suffixe partagé (timestamp) — présent dans les deux noms de test.
-      await page
-        .locator('section#salles input[aria-label="Rechercher une salle"]')
-        .fill(String(suffixe));
+      // La saisie déclenche un fetch asynchrone (rechargerPage0) vers /api/admin/salles —
+      // attendre cette réponse avant de vérifier les lignes filtrées, plutôt qu'un simple
+      // timeout d'assertion, évite une course sur les navigateurs plus lents à réagir à
+      // l'événement input (constaté sur webkit : recherche saisie mais table pas encore
+      // rafraîchie au moment de l'assertion).
+      const [reponseFiltre] = await Promise.all([
+        page.waitForResponse(
+          (resp) =>
+            resp.url().includes("/api/admin/salles") &&
+            resp.url().includes(String(suffixe)),
+        ),
+        page
+          .locator('section#salles input[aria-label="Rechercher une salle"]')
+          .fill(String(suffixe)),
+      ]);
+      expect(reponseFiltre.ok()).toBe(true);
 
       const ligneA = page.locator("section#salles table tbody tr", {
         hasText: nomA,
