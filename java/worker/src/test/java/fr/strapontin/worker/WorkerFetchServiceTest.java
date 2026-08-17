@@ -288,6 +288,57 @@ class WorkerFetchServiceTest {
     assertTrue(persistes.stream().anyMatch(c -> "Indila Officiel".equals(c.artiste())));
   }
 
+  // "divers" (spectacles non musicaux type Holiday On Ice) et "sports" ne correspondent
+  // structurellement à aucun contenu musical référençable sur Deezer, au même titre que
+  // "theatre" — la résolution ne doit pas s'y appliquer non plus.
+  @Test
+  void executerFetchSalle_concertClassificationDiversOuSports_nAppliquePasLaResolutionDeezer() {
+    when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
+    when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
+    fr.strapontin.core.ConcertBrut concertDivers =
+        new fr.strapontin.core.ConcertBrut(
+            "Holiday On Ice",
+            "2026-09-01",
+            "20:00",
+            "Salle",
+            "Paris",
+            "75",
+            "http://x",
+            "ticketmaster",
+            "divers",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    fr.strapontin.core.ConcertBrut concertSports =
+        new fr.strapontin.core.ConcertBrut(
+            "Equipe de France de basket-ball",
+            "2026-09-02",
+            "20:00",
+            "Salle",
+            "Paris",
+            "75",
+            "http://y",
+            "ticketmaster",
+            "sports",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of(concertDivers, concertSports));
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchSalle("tm:venue-42");
+
+    verify(resolveur, never()).resoudreNomCanonique(eq("artiste"), eq("Holiday On Ice"));
+    verify(resolveur, never())
+        .resoudreNomCanonique(eq("artiste"), eq("Equipe de France de basket-ball"));
+  }
+
   // Contrairement à Digitick (classification toujours vide, mais filtré en amont sur de vrais
   // concerts), Eventim omet fréquemment sa classification y compris pour des spectacles non
   // musicaux (ex. "Paris is Magique", comédie musicale) — la résolution Deezer ne doit pas
