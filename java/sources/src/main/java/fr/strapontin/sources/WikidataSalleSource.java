@@ -222,16 +222,25 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   /// de salle, le cas échéant.
   private static final Pattern SEPARATEUR_SOUS_SALLE = Pattern.compile("[-/(]");
 
+  private static final Pattern PONCTUATION_FINALE = Pattern.compile("[\\p{Punct}\\s]+$");
+
   private Optional<EnrichissementSalle> decouvrir(SalleAEnrichir salle) {
     Optional<EnrichissementSalle> resultat = decouvrirParNom(salle, salle.nom());
     if (resultat.isPresent()) return resultat;
 
-    // la recherche mwapi:search échoue quasi systématiquement dès que le nom Strapontin
-    // porte un suffixe de sous-salle/qualificatif ("Zenith Toulouse Metropole" → 0 résultat,
-    // "Zenith de Toulouse" trouvé immédiatement), alors que l'entité existe bien sur Wikidata —
-    // l'échec se produit dans l'appel mwapi, avant même la comparaison des candidats. La
-    // validation du candidat reste faite contre salle.nomNorm() (nom complet), inchangée — seule
-    // la requête de recherche envoyée à Wikidata utilise le nom tronqué.
+    resultat = decouvrirNomTronqueParSeparateur(salle);
+    if (resultat.isPresent()) return resultat;
+
+    return decouvrirSansDernierMot(salle);
+  }
+
+  // la recherche mwapi:search échoue quasi systématiquement dès que le nom Strapontin porte un
+  // suffixe de sous-salle/qualificatif ("Zenith Toulouse Metropole" → 0 résultat, "Zenith de
+  // Toulouse" trouvé immédiatement), alors que l'entité existe bien sur Wikidata — l'échec se
+  // produit dans l'appel mwapi, avant même la comparaison des candidats. La validation du candidat
+  // reste faite contre salle.nomNorm() (nom complet), inchangée — seule la requête de recherche
+  // envoyée à Wikidata utilise le nom tronqué.
+  private Optional<EnrichissementSalle> decouvrirNomTronqueParSeparateur(SalleAEnrichir salle) {
     var matcher = SEPARATEUR_SOUS_SALLE.matcher(salle.nom());
     if (!matcher.find() || matcher.start() == 0) return Optional.empty();
     String nomTronque = salle.nom().substring(0, matcher.start()).trim();
@@ -239,6 +248,33 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
 
     log.info(
         "Wikidata découverte salle — repli sur nom tronqué nom={} tronque={}",
+        salle.nom(),
+        nomTronque);
+    return decouvrirParNom(salle, nomTronque);
+  }
+
+  // Convention de nommage fréquente côté sources (Ticketmaster/Eventim/Digitick) : le nom de la
+  // salle est suffixé de sa ville sans séparateur ("Salle Poirel Nancy", "La Belle Electrique
+  // Grenoble") — vérifié en direct contre l'API Wikidata, la recherche mwapi échoue sur le nom
+  // complet mais trouve l'entité sur le seul nom de salle une fois la ville retirée. Un seul mot
+  // est retiré, jamais une troncature récursive : au-delà, le risque de réduire le terme de
+  // recherche à un mot générique non discriminant l'emporte sur le gain (une ville à qualificatif
+  // composé, ex. "Vitry Sur Seine", n'est pas couverte par ce repli). La validation finale reste
+  // faite contre le nom complet ({@link #decouvrirParNom}), ce repli n'élargit que l'ensemble de
+  // candidats interrogés, jamais le critère d'acceptation.
+  private Optional<EnrichissementSalle> decouvrirSansDernierMot(SalleAEnrichir salle) {
+    String nom = salle.nom().trim();
+    int dernierEspace = nom.lastIndexOf(' ');
+    if (dernierEspace <= 0) return Optional.empty();
+    // trim() ne retire que les espaces — un séparateur ("-", "/") laissé en bout de chaîne
+    // produirait une recherche mwapi inutilement sale (ex. "Zenith Toulouse -")
+    String nomTronque =
+        PONCTUATION_FINALE.matcher(nom.substring(0, dernierEspace)).replaceAll("").trim();
+    // au moins deux mots restants — un seul mot est trop générique pour être discriminant
+    if (!nomTronque.contains(" ")) return Optional.empty();
+
+    log.info(
+        "Wikidata découverte salle — repli sans dernier mot nom={} tronque={}",
         salle.nom(),
         nomTronque);
     return decouvrirParNom(salle, nomTronque);
