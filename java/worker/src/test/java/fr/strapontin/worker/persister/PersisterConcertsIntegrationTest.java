@@ -150,6 +150,39 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   @Test
+  void persisterConcerts_upsertConflitSalleRenommee_metsAJourSalleNormAvecSalle() {
+    // salle_norm doit rester cohérent avec salle sur la branche de conflit de l'upsert, pas
+    // seulement à l'insertion initiale
+    ConcertBrut v1 = concert("Mika", "2026-07-10", "THEATRE HEBERTOT", "ticketmaster");
+    ConcertBrut v2 =
+        new ConcertBrut(
+            "Mika",
+            "2026-07-10",
+            "20:30",
+            "Théâtre du Châtelet",
+            "Paris",
+            "75",
+            "https://example.com/mika-v2",
+            "eventim",
+            "music",
+            "Pop",
+            null,
+            null,
+            null,
+            null,
+            null);
+
+    persisterConcerts.persisterConcerts(List.of(v1));
+    persisterConcerts.persisterConcerts(List.of(v2));
+
+    Map<String, Object> row = jdbc.queryForMap("SELECT salle, salle_norm FROM concerts", Map.of());
+    assertEquals("Théâtre du Châtelet", row.get("salle"));
+    assertEquals(
+        fr.strapontin.core.Normalisation.normaliserTexte("Théâtre du Châtelet"),
+        row.get("salle_norm"));
+  }
+
+  @Test
   void persisterConcerts_preferenceArtisteDiacritiques_conserveNomAvecAccents() {
     List<ConcertBrut> liste =
         List.of(
