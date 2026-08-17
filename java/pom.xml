@@ -32,7 +32,7 @@
              13.0.0 (20/07/2026) : IncludeOnlineIndexCreation Oracle, serveur MCP Flyway, IDs sur
              diff JSON check-drift/check-changes — aucun applicable à ce projet (PostgreSQL,
              pas de check-drift/Desktop en usage), aucun breaking change identifié. -->
-        <flyway.version>13.2.0</flyway.version>
+        <flyway.version>13.3.0</flyway.version>
         <caffeine.version>3.2.4</caffeine.version>
         <postgresql.version>42.7.13</postgresql.version>
         <!-- Versions non gérées par le BOM -->
@@ -45,7 +45,7 @@
              et remplacé par une dépendance directe sur okhttp-jvm (jar JVM complet, contient
              bien okhttp3.RequestBody). -->
         <resend.version>v4.18.0</resend.version>
-        <okhttp-jvm.version>5.4.0</okhttp-jvm.version>
+        <okhttp-jvm.version>5.5.0</okhttp-jvm.version>
         <springdoc.version>3.1.0</springdoc.version>
         <bucket4j.version>8.19.0</bucket4j.version>
         <jsoup.version>1.23.1</jsoup.version>
