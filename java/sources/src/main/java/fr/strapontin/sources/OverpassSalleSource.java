@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 /// Client Overpass (OSM) pour l'enrichissement initial des salles par nom.
@@ -67,12 +68,20 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   private static final String USER_AGENT =
       "Strapontin/2.6.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr) SpringBoot/4.1";
   private static final int TAILLE_LOT = 25;
-  private static final int DELAI_MIN_ENTRE_APPELS_MS = 1000;
-  // Une requête restreinte à un département répond typiquement en 2-3s (contre systématiquement
-  // en timeout pour une bbox France entière) — un seul retry suffit à absorber un aléa réseau
-  // isolé sans faire pendre le cycle nocturne sur une instance en difficulté passagère.
+  // Constaté en test direct (hors cycle nocturne) : le rate-limit (429) et la saturation (504,
+  // "server too busy") d'overpass-api.de se déclenchent en quelques secondes déjà à notre propre
+  // cadence d'appels — l'instance publique est partagée avec tous ses autres utilisateurs, notre
+  // délai minimal entre lots n'a donc qu'un effet partiel sur la contention globale, mais rester
+  // en dessous de notre part raisonnable évite d'aggraver une saturation déjà là.
+  private static final int DELAI_MIN_ENTRE_APPELS_MS = 3000;
+  // Un seul retry suffit à absorber un aléa réseau isolé sans faire pendre le cycle nocturne sur
+  // une instance en difficulté passagère. Deux natures d'échec distinctes : 429 (rate-limit,
+  // potentiellement partagé avec d'autres utilisateurs de l'instance) où réessayer trop vite ne
+  // fait qu'ajouter de la charge à un service déjà saturé — backoff long ; 504/erreur réseau (aléa
+  // isolé, souvent résolu en quelques secondes) — backoff court, inchangé depuis 2.7.8.
   private static final int NB_ESSAIS_MAX = 2;
-  private static final long DELAI_ENTRE_ESSAIS_MS = 5000;
+  private static final long DELAI_APRES_ERREUR_MS = 5000;
+  private static final long DELAI_APRES_429_MS = 20000;
   // Le timeout serveur ([timeout:...] dans la requête OverpassQL) doit rester strictement
   // inférieur au timeout de lecture HTTP client pour laisser le temps à Overpass de renvoyer sa
   // propre réponse d'erreur "Query timed out" plutôt que de couper la connexion en premier.
@@ -164,12 +173,23 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
         derniereErreur = e;
         compteurBilan.enregistrerErreur();
         if (essai < NB_ESSAIS_MAX) {
-          attendre(DELAI_ENTRE_ESSAIS_MS);
+          attendre(delaiAvantRetry(e));
         }
       }
     }
     log.warn("Overpass erreur lot taille={} : {}", lot.size(), derniereErreur.getMessage());
     return Map.of();
+  }
+
+  /// Détermine le délai avant retry selon la nature de l'échec — accessible aux tests sans
+  /// déclencher d'attente réelle.
+  ///
+  /// @param e exception levée par l'appel HTTP
+  /// @return délai en millisecondes avant le prochain essai
+  static long delaiAvantRetry(Exception e) {
+    return e instanceof HttpClientErrorException.TooManyRequests
+        ? DELAI_APRES_429_MS
+        : DELAI_APRES_ERREUR_MS;
   }
 
   private static void attendre(long ms) {

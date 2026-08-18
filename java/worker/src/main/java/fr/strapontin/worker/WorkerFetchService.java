@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -41,14 +42,16 @@ public class WorkerFetchService {
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
   // Deezer ne référence pas les humoristes — toute recherche pour un humoriste renvoie le
   // musicien le plus proche textuellement (ex. "Fabrice Éboué" → "Fabrice Aboulker"), jamais
-  // détecté par le seuil de similarité seul. La classification "theatre" (TM : segment "arts et
-  // théâtre") est le signal le plus fiable pour distinguer un spectacle d'humour/théâtral d'un
-  // concert — Digitick filtre déjà en amont sur le genre "Concert" (jamais de classification
-  // "theatre", classification systématiquement absente par construction, sans ambiguïté). Eventim
-  // en revanche omet fréquemment sa classification (ex. "Paris is Magique", comédie musicale
-  // sans rapport avec la musique réelle) : une classification vide côté Eventim ne garantit rien
-  // sur la nature musicale du concert, contrairement à Digitick.
-  private static final String CLASSIFICATION_THEATRE = "theatre";
+  // détecté par le seuil de similarité seul. Les classifications TM "theatre" (segment "arts et
+  // théâtre"), "divers" (segment "miscellaneous"/spectacles non musicaux type Holiday On Ice) et
+  // "sports" ne correspondent structurellement à aucun contenu musical référençable sur Deezer —
+  // Digitick filtre déjà en amont sur le genre "Concert" (jamais l'une de ces classifications,
+  // absente par construction, sans ambiguïté). Eventim en revanche omet fréquemment sa
+  // classification (ex. "Paris is Magique", comédie musicale sans rapport avec la musique réelle) :
+  // une classification vide côté Eventim ne garantit rien sur la nature musicale du concert,
+  // contrairement à Digitick.
+  private static final Set<String> CLASSIFICATIONS_NON_MUSICALES =
+      Set.of("theatre", "divers", "sports");
   private static final String SOURCE_EVENTIM = "eventim";
   private static final int TAILLE_LOT_TM = 20;
   private static final int TAILLE_LOT_DEPTS = 5;
@@ -572,16 +575,18 @@ public class WorkerFetchService {
 
   /// Détermine si un concert est éligible à la résolution du nom canonique via Deezer.
   ///
-  /// <p>Exclut la classification "theatre" (TM/musical/théâtral, jamais un vrai musicien côté
-  /// Deezer) ainsi que, spécifiquement pour Eventim, une classification vide/absente — Digitick
-  /// omet aussi sa classification mais uniquement pour de vrais concerts (filtré en amont sur le
-  /// genre "Concert"), alors qu'Eventim l'omet fréquemment y compris pour des spectacles non
-  /// musicaux.
+  /// <p>Exclut les classifications "theatre", "divers" et "sports" ({@link
+  /// #CLASSIFICATIONS_NON_MUSICALES}, jamais un vrai musicien côté Deezer) ainsi que,
+  /// spécifiquement pour Eventim, une classification vide/absente — Digitick omet aussi sa
+  /// classification mais uniquement pour de vrais concerts (filtré en amont sur le genre
+  /// "Concert"), alors qu'Eventim l'omet fréquemment y compris pour des spectacles non musicaux.
   ///
   /// @param c concert à évaluer
   /// @return {@code true} si la résolution Deezer peut s'appliquer à ce concert
   private static boolean estEligibleResolutionDeezer(ConcertBrut c) {
-    if (CLASSIFICATION_THEATRE.equals(c.classification())) return false;
+    if (c.classification() != null && CLASSIFICATIONS_NON_MUSICALES.contains(c.classification())) {
+      return false;
+    }
     return !SOURCE_EVENTIM.equals(c.source())
         || (c.classification() != null && !c.classification().isBlank());
   }

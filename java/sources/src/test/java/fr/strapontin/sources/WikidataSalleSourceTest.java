@@ -129,8 +129,86 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
-  // Les deux recherches (nom complet, nom tronqué) peuvent échouer : aucun candidat, mais aucune
-  // exception, résultat vide.
+  // Convention de nommage fréquente côté sources : la salle est suffixée de sa ville sans
+  // séparateur ("La Belle Electrique Grenoble") — vérifié en direct sur l'API Wikidata, la
+  // recherche mwapi échoue sur le nom complet mais trouve l'entité sur "La Belle Electrique" seul.
+  @Test
+  void enrichirLot_rechercheCompleteEchoue_replieSansDernierMot() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    String nomComplet = "La Belle Electrique Grenoble";
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id,
+            nomComplet,
+            fr.strapontin.core.Normalisation.normaliserTexte(nomComplet),
+            null,
+            null,
+            null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q61854481"},
+                   "itemLabel":{"type":"literal","value":"La Belle Electrique"},
+                   "communeLabel":{"type":"literal","value":"Grenoble"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertEquals(1, resultat.size());
+    assertEquals("Q61854481", resultat.get(id).wikidataId());
+    serveur.verify();
+  }
+
+  // Garde-fou : un nom de deux mots ne doit jamais être tronqué à un seul mot générique — aucun
+  // second appel HTTP ne doit être tenté (vérifié par MockRestServiceServer : un appel non
+  // attendu ferait échouer le test).
+  @Test
+  void enrichirLot_nomDeuxMots_nePasTronquerAUnMotUnique() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle = new SalleAEnrichir(id, "Espace Nova", "espace nova", null, null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
+  // Les trois recherches (nom complet, nom tronqué au séparateur, nom sans dernier mot) peuvent
+  // toutes échouer : aucun candidat, mais aucune exception, résultat vide.
   @Test
   void enrichirLot_rechercheCompleteEtTronqueeEchouent_retourneVide() {
     RestClient.Builder builder = RestClient.builder();
@@ -148,6 +226,14 @@ class WikidataSalleSourceTest {
             null,
             null);
 
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andRespond(
@@ -434,6 +520,16 @@ class WikidataSalleSourceTest {
                 ]}}
                 """,
                 MediaType.APPLICATION_JSON));
+    // repli sans dernier mot ("Collegiale Saint-Mexme Chinon" → "Collegiale Saint-Mexme"),
+    // également infructueux
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
 
     WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
     Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
@@ -468,6 +564,15 @@ class WikidataSalleSourceTest {
                    "codePostal":{"type":"literal","value":"33000"},
                    "num":{"type":"literal","value":"0"}}
                 ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+    // repli sans dernier mot ("Palais des Congres" → "Palais des"), également infructueux
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
                 """,
                 MediaType.APPLICATION_JSON));
 

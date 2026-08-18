@@ -121,6 +121,84 @@ class ResolveurNomCanoniqueTest {
   }
 
   @Test
+  void resoudreNomCanonique_artiste_plusieursCandidats_retientLePlusPopulaire() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist")))
+        .andRespond(
+            withSuccess(
+                """
+                {"data":[
+                  {"name":"Young T.H.U.G.","nb_fan":323},
+                  {"name":"Young Thug","nb_fan":1547139}
+                ]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    ResolveurNomCanonique resolveur = resolveurAvecServeur(serveur, restClient);
+    ResultatResolution resultat = resolveur.resoudreNomCanonique("artiste", "Young Thug");
+
+    assertEquals("Young Thug", resultat.nom());
+    assertEquals(SourceResolution.DEEZER, resultat.source());
+    serveur.verify();
+  }
+
+  @Test
+  void resoudreNomCanonique_artiste_candidatPopulaireSousLeSeuil_ignore() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist")))
+        .andRespond(
+            withSuccess(
+                """
+                {"data":[
+                  {"name":"Ed Sheeran","nb_fan":100000000},
+                  {"name":"Daft Punk","nb_fan":5000000}
+                ]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    ResolveurNomCanonique resolveur = resolveurAvecServeur(serveur, restClient);
+    ResultatResolution resultat = resolveur.resoudreNomCanonique("artiste", "Daft Punk");
+
+    // "Ed Sheeran" ne passe pas le seuil de similarité face à "Daft Punk" malgré sa popularité
+    // très supérieure — la popularité ne départage que les candidats déjà au-dessus du seuil,
+    // elle ne se substitue jamais au filtre de similarité.
+    assertEquals("Daft Punk", resultat.nom());
+    assertEquals(SourceResolution.DEEZER, resultat.source());
+    serveur.verify();
+  }
+
+  @Test
+  void resoudreNomCanonique_artiste_popularitAbsenteDuCandidat_traiteeCommeNulle() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist")))
+        .andRespond(
+            withSuccess(
+                """
+                {"data":[{"name":"Daft Punk"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    ResolveurNomCanonique resolveur = resolveurAvecServeur(serveur, restClient);
+    ResultatResolution resultat = resolveur.resoudreNomCanonique("artiste", "daft punk");
+
+    assertEquals("Daft Punk", resultat.nom());
+    assertEquals(SourceResolution.DEEZER, resultat.source());
+    serveur.verify();
+  }
+
+  @Test
   void resoudreNomCanonique_artiste_similariteTropFaible_retourneInchange() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();

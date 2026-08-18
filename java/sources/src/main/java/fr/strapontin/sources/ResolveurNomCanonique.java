@@ -18,9 +18,9 @@ import org.springframework.web.client.RestClient;
 
 /// Résolution des noms canoniques d'artistes via Deezer.
 ///
-/// Stratégie : Deezer (similarité ≥ 0.7) → nom inchangé. Les résultats sont mis en cache
-/// Caffeine TTL 7 jours pour limiter les appels. La résolution de salle retourne toujours le
-/// nom inchangé (Deezer ne référence pas les salles).
+/// Stratégie : Deezer (similarité ≥ 0.7) → nom inchangé. Les résultats sont mis en cache Caffeine
+/// TTL 7 jours pour limiter les appels. La résolution de salle retourne toujours le nom inchangé
+/// (Deezer ne référence pas les salles).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -30,6 +30,12 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
   private static final String DEEZER_BASE = "https://api.deezer.com";
   private static final double SEUIL_CONFIANCE_DEEZER = 0.7;
+  // Un seul résultat ne suffit pas à distinguer un artiste connu d'un homonyme marginal : Deezer
+  // classe ses résultats par pertinence textuelle, pas par popularité — une recherche "Young Thug"
+  // peut renvoyer en 1ère position "Young T.H.U.G." (id=1062315, nb_fan=323) avant le vrai rappeur
+  // (id=1590752, nb_fan=1 547 139), présent en 2e position. Élargir la fenêtre de candidats permet
+  // de les comparer entre eux plutôt que de prendre le premier venu.
+  private static final int LIMITE_CANDIDATS_DEEZER = 5;
 
   /// Source de résolution utilisée pour un nom canonique.
   public enum SourceResolution {
@@ -39,7 +45,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
   /// Résultat de la résolution : nom canonique et source utilisée.
   ///
-  /// @param nom    nom canonique résolu
+  /// @param nom nom canonique résolu
   /// @param source source ayant fourni le nom
   public record ResultatResolution(String nom, SourceResolution source) {}
 
@@ -58,7 +64,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   /// Crée une instance avec un RestClient et un cache personnalisés (injection de test).
   ///
   /// @param restClient client HTTP à utiliser
-  /// @param cache      cache Caffeine à utiliser
+  /// @param cache cache Caffeine à utiliser
   public ResolveurNomCanonique(RestClient restClient, Cache<String, ResultatResolution> cache) {
     this.restClient = restClient;
     this.cache = cache;
@@ -66,20 +72,33 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
   @SuppressWarnings("unchecked")
   private String rechercherDeezerArtiste(String nom) {
-    String uri = DEEZER_BASE + "/search/artist?q=" + encode(nom) + "&limit=1";
+    String uri =
+        DEEZER_BASE + "/search/artist?q=" + encode(nom) + "&limit=" + LIMITE_CANDIDATS_DEEZER;
     compteurBilan.enregistrerAppel();
     try {
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return null;
       var dataList = (List<Map<String, Object>>) data.get("data");
       if (dataList == null || dataList.isEmpty()) return null;
-      String resultat = (String) dataList.get(0).get("name");
-      if (resultat == null) return null;
-      if (Normalisation.similarite(
-              Normalisation.normaliserTexte(nom), Normalisation.normaliserTexte(resultat))
-          < SEUIL_CONFIANCE_DEEZER) {
-        return null;
+
+      String nomNormalise = Normalisation.normaliserTexte(nom);
+      Map<String, Object> meilleurCandidat = null;
+      double meilleurePopularite = -1;
+      for (Map<String, Object> candidat : dataList) {
+        String nomCandidat = (String) candidat.get("name");
+        if (nomCandidat == null) continue;
+        double similarite =
+            Normalisation.similarite(nomNormalise, Normalisation.normaliserTexte(nomCandidat));
+        if (similarite < SEUIL_CONFIANCE_DEEZER) continue;
+        double popularite = popularite(candidat);
+        if (meilleurCandidat == null || popularite > meilleurePopularite) {
+          meilleurCandidat = candidat;
+          meilleurePopularite = popularite;
+        }
       }
+      if (meilleurCandidat == null) return null;
+
+      String resultat = (String) meilleurCandidat.get("name");
       if (!resultat.equals(nom)) {
         log.info("Deezer résolution artiste='{}' → '{}'", nom, resultat);
       }
@@ -91,8 +110,13 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     }
   }
 
-  /// Retourne le bilan agrégé des appels Deezer depuis le dernier prélèvement et remet
-  /// les compteurs à zéro.
+  private static double popularite(Map<String, Object> candidat) {
+    Object nbFan = candidat.get("nb_fan");
+    return nbFan instanceof Number nombre ? nombre.doubleValue() : 0;
+  }
+
+  /// Retourne le bilan agrégé des appels Deezer depuis le dernier prélèvement et remet les
+  /// compteurs à zéro.
   ///
   /// @return le bilan depuis le dernier prélèvement
   @Override
@@ -106,11 +130,11 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
   /// Résout le nom canonique d'un artiste ou d'une salle.
   ///
-  /// Les résultats sont mis en cache par clé `"type:nom"`.
-  /// La résolution de salle retourne toujours `INCHANGE` (Deezer ne référence pas les salles).
+  /// Les résultats sont mis en cache par clé `"type:nom"`. La résolution de salle retourne toujours
+  /// `INCHANGE` (Deezer ne référence pas les salles).
   ///
   /// @param type {@code "artiste"} ou {@code "salle"}
-  /// @param nom  nom brut à résoudre
+  /// @param nom nom brut à résoudre
   /// @return résultat contenant le nom canonique et la source utilisée
   public ResultatResolution resoudreNomCanonique(String type, String nom) {
     String cleCache = type + ":" + nom;

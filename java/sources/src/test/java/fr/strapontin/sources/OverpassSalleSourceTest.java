@@ -211,6 +211,25 @@ class OverpassSalleSourceTest {
     serveur.verify();
   }
 
+  // Réessayer immédiatement après un 429 ne fait qu'ajouter de la charge à une instance déjà
+  // rate-limitée — le backoff doit être nettement plus long qu'après une simple erreur réseau
+  // isolée (504, timeout).
+  @Test
+  void delaiAvantRetry_429_backoffPlusLongQuUneErreurReseau() {
+    long delai429 =
+        OverpassSalleSource.delaiAvantRetry(
+            org.springframework.web.client.HttpClientErrorException.create(
+                org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
+                "Too Many Requests",
+                org.springframework.http.HttpHeaders.EMPTY,
+                new byte[0],
+                null));
+    long delaiErreurReseau =
+        OverpassSalleSource.delaiAvantRetry(new java.io.IOException("connexion refusée"));
+
+    assertTrue(delai429 > delaiErreurReseau);
+  }
+
   @Test
   void enrichirLot_lotVide_retourneVideSansHttp() {
     RestClient.Builder builder = RestClient.builder();

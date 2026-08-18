@@ -20,12 +20,12 @@ import org.springframework.stereotype.Service;
 
 /// Service de persistance SQL pur pour les concerts.
 ///
-/// <p>Effectue l'upsert par lot en base avec la stratégie ON CONFLICT sur
-/// {@code (artiste_norm, date, heure, salle_id)} (NULLS NOT DISTINCT, migration V37). Gère
-/// la suppression des doublons par URL et par {@code salle_id} (TM+Eventim).
+/// <p>Effectue l'upsert par lot en base avec la stratégie ON CONFLICT sur {@code (artiste_norm,
+/// date, heure, salle_id)} (NULLS NOT DISTINCT, migration V37). Gère la suppression des doublons
+/// par URL et par {@code salle_id} (TM+Eventim).
 ///
-/// <p>Résout les UUIDs internes depuis les identifiants sources préfixés
-/// ({@code salle_sources}, {@code artiste_sources}).
+/// <p>Résout les UUIDs internes depuis les identifiants sources préfixés ({@code salle_sources},
+/// {@code artiste_sources}).
 ///
 /// @since 2.5.7
 /// @author Kwaite
@@ -50,6 +50,8 @@ public class PersisteurConcertsDb {
                                 THEN EXCLUDED.artiste ELSE concerts.artiste END,
           salle          = CASE WHEN upper(EXCLUDED.salle) != EXCLUDED.salle
                                 THEN EXCLUDED.salle ELSE concerts.salle END,
+          salle_norm     = CASE WHEN upper(EXCLUDED.salle) != EXCLUDED.salle
+                                THEN EXCLUDED.salle_norm ELSE concerts.salle_norm END,
           heure          = EXCLUDED.heure,
           ville          = EXCLUDED.ville,
           dept           = EXCLUDED.dept,
@@ -94,11 +96,11 @@ public class PersisteurConcertsDb {
 
   /// Résout les UUIDs internes depuis les identifiants sources préfixés.
   ///
-  /// <p>Consulte {@code salle_sources} et {@code artiste_sources} par lot pour chaque
-  /// source distincte. Retourne un cache {@code "source:identifiant" → UUID}.
+  /// <p>Consulte {@code salle_sources} et {@code artiste_sources} par lot pour chaque source
+  /// distincte. Retourne un cache {@code "source:identifiant" → UUID}.
   ///
   /// @param concerts concerts à résoudre
-  /// @param type     {@code "salle"} ou {@code "artiste"}
+  /// @param type {@code "salle"} ou {@code "artiste"}
   /// @return cache des UUIDs résolus par identifiant préfixé
   Map<String, UUID> resoudreUuidsParSource(List<ValeurConcert> concerts, String type) {
     Map<String, List<String>> parSource = new HashMap<>();
@@ -140,9 +142,9 @@ public class PersisteurConcertsDb {
   /// Résout les concerts dont l'URL existe déjà en base sous un {@code artiste_norm} différent.
   ///
   /// <p>Couvre le cas des pages festival Eventim : une même URL peut exposer des artistes
-  /// différents selon le fetch. Sans cette résolution, deux lignes coexisteraient en base
-  /// avec le même {@code (source, url, date, heure)} mais des {@code artiste_norm} différents,
-  /// déclenchant une suppression cyclique dans {@link #supprimerDoublonsParUrl}.
+  /// différents selon le fetch. Sans cette résolution, deux lignes coexisteraient en base avec le
+  /// même {@code (source, url, date, heure)} mais des {@code artiste_norm} différents, déclenchant
+  /// une suppression cyclique dans {@link #supprimerDoublonsParUrl}.
   ///
   /// @param concerts concerts après résolution des identités sources
   /// @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL
@@ -198,9 +200,8 @@ public class PersisteurConcertsDb {
 
   /// Insère ou met à jour un lot de concerts en une seule requête multi-lignes.
   ///
-  /// <p>L'unicité de la clé de conflit dans le lot est garantie en amont par
-  /// {@link PersisterConcerts#deduplicerLotReconcilie}, ce qui rend l'ON CONFLICT
-  /// multi-VALUES sûr.
+  /// <p>L'unicité de la clé de conflit dans le lot est garantie en amont par {@link
+  /// PersisterConcerts#deduplicerLotReconcilie}, ce qui rend l'ON CONFLICT multi-VALUES sûr.
   ///
   /// @param valeurs concerts réconciliés et dédupliqués du lot
   /// @return décompte des insertions et mises à jour du lot
@@ -311,11 +312,11 @@ public class PersisteurConcertsDb {
 
   /// Supprime les doublons cross-sources non fusionnés par {@link ReconciliateurSalles}.
   ///
-  /// <p>Quand deux sources nomment la même salle différemment, deux lignes peuvent coexister
-  /// malgré un {@code salle_id} identique. Généralisé à toutes les paires de sources — pas
-  /// seulement TM/Eventim — via une priorité TM &gt; Eventim &gt; Digitick : la ligne de
-  /// la source la moins prioritaire est supprimée, celle de la source la plus prioritaire est
-  /// conservée comme référence.
+  /// <p>Quand deux sources nomment la même salle différemment, deux lignes peuvent coexister malgré
+  /// un {@code salle_id} identique. Généralisé à toutes les paires de sources — pas seulement
+  /// TM/Eventim — via une priorité TM &gt; Eventim &gt; Digitick : la ligne de la source la moins
+  /// prioritaire est supprimée, celle de la source la plus prioritaire est conservée comme
+  /// référence.
   ///
   /// @return nombre de concerts supprimés
   int supprimerDoublonsParSalleId() {
