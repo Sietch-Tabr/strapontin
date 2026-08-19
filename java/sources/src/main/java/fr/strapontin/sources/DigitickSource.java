@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -24,11 +25,11 @@ import org.springframework.web.client.RestClient;
 
 /// Client de scraping pour la billetterie Digitick (web.digitick.com).
 ///
-/// <p>Scrape la page de billetterie d'une salle identifiée par son slug Digitick.
-/// L'identifiant préfixé attendu est {@code "digitick:{slug}"}, ex. {@code "digitick:lempreinte"}.
+/// <p>Scrape la page de billetterie d'une salle identifiée par son slug Digitick. L'identifiant
+/// préfixé attendu est {@code "digitick:{slug}"}, ex. {@code "digitick:lempreinte"}.
 ///
-/// <p>Filtre appliqué : genre {@code "Concert"} et code postal présent (exclut les adhésions
-/// et packs multi-dates sans salle fixe).
+/// <p>Filtre appliqué : genre {@code "Concert"} et code postal présent (exclut les adhésions et
+/// packs multi-dates sans salle fixe).
 ///
 /// @since 2.4.0
 /// @author Kwaite
@@ -78,7 +79,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   ///
   /// @param restClient client HTTP à utiliser
   public DigitickSource(RestClient restClient) {
-    this.restClient = restClient;
+    this.restClient = Objects.requireNonNull(restClient, "restClient");
   }
 
   @Override
@@ -120,8 +121,8 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     }
   }
 
-  /// Retourne le bilan agrégé des appels HTTP Digitick depuis le dernier prélèvement et
-  /// remet les compteurs à zéro.
+  /// Retourne le bilan agrégé des appels HTTP Digitick depuis le dernier prélèvement et remet les
+  /// compteurs à zéro.
   ///
   /// @return le bilan depuis le dernier prélèvement
   @Override
@@ -131,8 +132,8 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
 
   /// Parse le HTML Digitick et extrait les concerts.
   ///
-  /// @param html  HTML brut (ISO-8859-1 déjà décodé en String)
-  /// @param slug  slug de la salle, utilisé pour construire le {@code salleSourceId}
+  /// @param html HTML brut (ISO-8859-1 déjà décodé en String)
+  /// @param slug slug de la salle, utilisé pour construire le {@code salleSourceId}
   /// @return liste de concerts filtrés
   static List<ConcertBrut> parserConcerts(String html, String slug) {
     Document doc = Jsoup.parse(html);

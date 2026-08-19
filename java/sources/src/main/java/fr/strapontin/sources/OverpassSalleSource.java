@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -35,9 +34,9 @@ import org.springframework.web.client.RestClient;
 /// plus un passage obligé.
 ///
 /// Chaque lot interroge une zone géographique <strong>par département</strong> (rayon `around:`
-/// centré sur {@link TicketmasterSource#CENTRES_DEPT}) plutôt qu'une bounding box couvrant la
-/// France entière : une requête sur tout le territoire échoue quasi systématiquement par timeout
-/// sur les instances publiques Overpass (surchargées), alors que la même requête restreinte à un
+/// centré sur {@link CentresDepartement#PAR_DEPT}) plutôt qu'une bounding box couvrant la France
+/// entière : une requête sur tout le territoire échoue quasi systématiquement par timeout sur les
+/// instances publiques Overpass (surchargées), alors que la même requête restreinte à un
 /// département répond en 2-3s. Un basculement précédent vers `overpass.osm.ch` (association OSM
 /// suisse) s'est révélé une impasse — cette instance ne couvre en réalité que la Suisse (+ 10 km de
 /// frontière), confirmé en test direct (0 résultat sur des salles françaises pourtant bien
@@ -96,7 +95,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   private static final Pattern APOSTROPHE_DROITE = Pattern.compile("'");
 
   private final RestClient restClient;
-  private final AtomicLong dernierAppelMs = new AtomicLong(0);
+  private final CadenceurAppels cadenceur = new CadenceurAppels(DELAI_MIN_ENTRE_APPELS_MS);
 
   /// Crée une instance avec un RestClient par défaut (timeout connexion 5s, lecture 35s).
   public OverpassSalleSource() {
@@ -137,13 +136,13 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     Map<String, List<SalleAEnrichir>> parDept =
         aTraiter.stream().collect(Collectors.groupingBy(SalleAEnrichir::dept));
     for (var entree : parDept.entrySet()) {
-      CentreDept centre = TicketmasterSource.CENTRES_DEPT.get(entree.getKey());
+      CentreDept centre = CentresDepartement.PAR_DEPT.get(entree.getKey());
       if (centre == null) continue;
       List<SalleAEnrichir> sallesDept = entree.getValue();
       for (int i = 0; i < sallesDept.size(); i += TAILLE_LOT) {
         List<SalleAEnrichir> lot =
             sallesDept.subList(i, Math.min(i + TAILLE_LOT, sallesDept.size()));
-        attendreRateLimitGlobal();
+        cadenceur.attendre();
         resultats.putAll(enrichirUnLot(lot, centre));
       }
     }
@@ -271,14 +270,5 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
         tags.get("addr:city"),
         tags.get("website"),
         capacite);
-  }
-
-  private synchronized void attendreRateLimitGlobal() {
-    long maintenant = System.currentTimeMillis();
-    long prochainAppel = dernierAppelMs.get() + DELAI_MIN_ENTRE_APPELS_MS;
-    if (maintenant < prochainAppel) {
-      attendre(prochainAppel - maintenant);
-    }
-    dernierAppelMs.set(System.currentTimeMillis());
   }
 }
