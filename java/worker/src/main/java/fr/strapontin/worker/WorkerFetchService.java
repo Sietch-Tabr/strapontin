@@ -10,6 +10,7 @@ import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceAvecFetchLot;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.worker.persister.EligibiliteResolutionDeezer;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
@@ -20,7 +21,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -40,19 +40,6 @@ public class WorkerFetchService {
   private static final Logger log = LoggerFactory.getLogger(WorkerFetchService.class);
 
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
-  // Deezer ne référence pas les humoristes — toute recherche pour un humoriste renvoie le
-  // musicien le plus proche textuellement (ex. "Fabrice Éboué" → "Fabrice Aboulker"), jamais
-  // détecté par le seuil de similarité seul. Les classifications TM "theatre" (segment "arts et
-  // théâtre"), "divers" (segment "miscellaneous"/spectacles non musicaux type Holiday On Ice) et
-  // "sports" ne correspondent structurellement à aucun contenu musical référençable sur Deezer —
-  // Digitick filtre déjà en amont sur le genre "Concert" (jamais l'une de ces classifications,
-  // absente par construction, sans ambiguïté). Eventim en revanche omet fréquemment sa
-  // classification (ex. "Paris is Magique", comédie musicale sans rapport avec la musique réelle) :
-  // une classification vide côté Eventim ne garantit rien sur la nature musicale du concert,
-  // contrairement à Digitick.
-  private static final Set<String> CLASSIFICATIONS_NON_MUSICALES =
-      Set.of("theatre", "divers", "sports");
-  private static final String SOURCE_EVENTIM = "eventim";
   private static final int TAILLE_LOT_TM = 20;
   private static final int TAILLE_LOT_DEPTS = 5;
   private static final int TAILLE_LOT_SALLES = 20;
@@ -626,11 +613,7 @@ public class WorkerFetchService {
   /// @param c concert à évaluer
   /// @return {@code true} si la résolution Deezer peut s'appliquer à ce concert
   private static boolean estEligibleResolutionDeezer(ConcertBrut c) {
-    if (c.classification() != null && CLASSIFICATIONS_NON_MUSICALES.contains(c.classification())) {
-      return false;
-    }
-    return !SOURCE_EVENTIM.equals(c.source())
-        || (c.classification() != null && !c.classification().isBlank());
+    return EligibiliteResolutionDeezer.estEligible(c.classification(), c.source());
   }
 
   private List<ConcertBrut> resoudreEtDeduplicer(List<ConcertBrut> concerts) {

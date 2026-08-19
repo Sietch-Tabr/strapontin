@@ -179,18 +179,61 @@ public class ReconciliateurArtistes {
       }
     }
     for (ArtisteExistant existant : artistesExistants) {
-      if (estDoublonArtiste(concert.artisteNorm(), existant.artisteNorm())) {
-        UUID artisteIdPropague =
-            concert.artisteId() == null ? existant.artisteId() : concert.artisteId();
-        log.debug(
-            "doublon artiste inter-jobs réconcilié entrant={} existant={} artisteId={}",
-            concert.artisteNorm(),
-            existant.artisteNorm(),
-            artisteIdPropague);
-        return concert.avecArtisteNormEtId(existant.artisteNorm(), artisteIdPropague);
+      if (!estDoublonArtiste(concert.artisteNorm(), existant.artisteNorm())) continue;
+
+      UUID artisteIdPropague =
+          concert.artisteId() == null ? existant.artisteId() : concert.artisteId();
+
+      // Un concert inéligible à la résolution Deezer (théâtre, spectacle "divers", sport — voir
+      // EligibiliteResolutionDeezer) n'est jamais passé par cette résolution : son artisteNorm
+      // vient directement de la source, fiable par construction. Le corriger rétroactivement en
+      // base plutôt que de forcer l'entrant vers l'ancienne valeur permet à une correction de la
+      // cause racine (ex. #1063 sur la résolution Deezer elle-même) de guérir une ligne déjà
+      // persistée sous une identité erronée, au lieu de rester bloquée indéfiniment par ce même
+      // mécanisme de convergence. Pour un concert éligible, le comportement protecteur historique
+      // est conservé (l'existant l'emporte) : la résolution Deezer reste sujette à un mauvais
+      // rapprochement futur (cf. Van Halen, #770), qu'il ne faut pas laisser écraser une valeur
+      // déjà correcte en base.
+      if (!EligibiliteResolutionDeezer.estEligible(concert.classification(), concert.source())) {
+        corrigerArtisteExistantEnBase(existant, concert);
+        return concert.avecArtisteId(artisteIdPropague);
       }
+
+      log.debug(
+          "doublon artiste inter-jobs réconcilié entrant={} existant={} artisteId={}",
+          concert.artisteNorm(),
+          existant.artisteNorm(),
+          artisteIdPropague);
+      return concert.avecArtisteNormEtId(existant.artisteNorm(), artisteIdPropague);
     }
     return concert;
+  }
+
+  /// Corrige rétroactivement une ligne déjà persistée sous une identité d'artiste erronée,
+  /// désormais démentie par un fetch fiable (concert inéligible à la résolution Deezer).
+  ///
+  /// @param existant ancienne identité (erronée) à corriger
+  /// @param concert concert entrant portant l'identité corrigée
+  private void corrigerArtisteExistantEnBase(ArtisteExistant existant, ValeurConcert concert) {
+    int nbCorrigees =
+        jdbc.update(
+            "UPDATE concerts SET artiste = :nouvelArtiste, artiste_norm = :nouvelArtisteNorm,"
+                + " updated_at = now()"
+                + " WHERE artiste_norm = :ancienArtisteNorm AND date = CAST(:date AS date)"
+                + " AND salle_norm = :salleNorm",
+            new MapSqlParameterSource()
+                .addValue("nouvelArtiste", concert.artiste())
+                .addValue("nouvelArtisteNorm", concert.artisteNorm())
+                .addValue("ancienArtisteNorm", existant.artisteNorm())
+                .addValue("date", concert.date().toString())
+                .addValue("salleNorm", concert.salleNorm()));
+    if (nbCorrigees > 0) {
+      log.info(
+          "artiste corrigé rétroactivement ancien={} nouveau={} count={}",
+          existant.artisteNorm(),
+          concert.artisteNorm(),
+          nbCorrigees);
+    }
   }
 
   /// Résout les {@code artiste_id} manquants par lookup sur {@code artistes.nom_norm}.

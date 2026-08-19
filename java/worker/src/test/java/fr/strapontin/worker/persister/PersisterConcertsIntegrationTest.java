@@ -820,6 +820,67 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   @Test
+  void persisterConcerts_memeUrlTicketmasterArtisteCorrige_laLigneCorrigeeRemplaceLAncienne() {
+    // Reproduit le cas réel #1065 : "Holiday On Ice" (spectacle sur glace, classification
+    // "divers") corrompu en "Holiday Nice" par une résolution Deezer erronée sur un fetch, avant
+    // que la cause racine (résolution Deezer appliquée à tort aux classifications non musicales)
+    // ne soit corrigée. Un fetch ultérieur, désormais inéligible à cette résolution, doit pouvoir
+    // guérir la ligne déjà persistée plutôt que rester bloqué indéfiniment par les mécanismes de
+    // réconciliation (resoudreParUrl, ReconciliateurArtistes) — ni resoudreParUrl (URL partagée)
+    // ni la réconciliation floue par date/salle ne doivent forcer l'entrant vers l'ancienne
+    // valeur, sans remédiation de données manuelle.
+    String urlEvenement = "https://www.ticketmaster.fr/event/holiday-on-ice-123456";
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Holiday Nice",
+                DATE_RECENTE,
+                "20:30",
+                "Zenith Paris - la Villette",
+                "Paris",
+                "75",
+                urlEvenement,
+                "ticketmaster",
+                "divers",
+                null,
+                "onsale",
+                null,
+                null,
+                null,
+                null)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Holiday On Ice",
+                DATE_RECENTE,
+                "20:30",
+                "Zenith Paris - la Villette",
+                "Paris",
+                "75",
+                urlEvenement,
+                "ticketmaster",
+                "divers",
+                null,
+                "onsale",
+                null,
+                null,
+                null,
+                null)));
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(1L, count, "l'ancienne ligne corrompue doit être absorbée, pas dupliquée");
+
+    String artisteEnBase =
+        jdbc.queryForObject("SELECT artiste_norm FROM concerts", Map.of(), String.class);
+    assertEquals(
+        "holiday on ice",
+        artisteEnBase,
+        "la résolution corrigée du second fetch doit remplacer l'ancienne valeur corrompue");
+  }
+
+  @Test
   void persisterConcerts_digitickSansArtisteSourceId_resolutionParNomNorm() {
     // Digitick ne fournit pas d'artisteSourceId : la résolution doit quand même
     // retrouver l'artiste_id en base via correspondance exacte sur artiste_norm.
