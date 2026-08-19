@@ -7,8 +7,6 @@ package fr.strapontin.worker.jobs;
 import fr.strapontin.worker.WorkerService;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
@@ -23,8 +21,6 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
 @DisallowConcurrentExecution
 public class ReconciliationNocturneJob extends QuartzJobBean {
 
-  private static final Logger log = LoggerFactory.getLogger(ReconciliationNocturneJob.class);
-
   private WorkerService workerService;
 
   @Autowired
@@ -34,11 +30,6 @@ public class ReconciliationNocturneJob extends QuartzJobBean {
 
   @Override
   protected void executeInternal(JobExecutionContext context) {
-    try {
-      workerService.executerReconciliationNocturne();
-    } catch (Exception e) {
-      log.error("reconciliation:nocturne échoué", e);
-      throw e;
-    }
+    workerService.executerReconciliationNocturne();
   }
 }

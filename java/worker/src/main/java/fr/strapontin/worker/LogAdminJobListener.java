@@ -19,8 +19,8 @@ import org.springframework.stereotype.Component;
 
 /// Listener Quartz global : alimente `logs_admin` à chaque démarrage et fin de job.
 ///
-/// Permet d'observer en temps réel les exécutions Quartz depuis la page d'administration,
-/// au même titre que les actions manuelles de l'interface web.
+/// Permet d'observer en temps réel les exécutions Quartz depuis la page d'administration, au même
+/// titre que les actions manuelles de l'interface web.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -28,14 +28,6 @@ import org.springframework.stereotype.Component;
 public class LogAdminJobListener implements JobListener {
 
   private static final Logger log = LoggerFactory.getLogger(LogAdminJobListener.class);
-
-  private static final Map<String, String> NOM_JOBS =
-      Map.of(
-          "fetchArtistesBatch", "fetch:artistes:batch",
-          "fetchRegion", "fetch:region",
-          "purgerConcerts", "purger:concerts",
-          "recalculerMatches", "recalculer:matches",
-          "notifierDigest", "notifier:digest");
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
@@ -76,7 +68,7 @@ public class LogAdminJobListener implements JobListener {
 
   private String nomJob(JobExecutionContext context) {
     String cle = context.getJobDetail().getKey().getName();
-    return NOM_JOBS.getOrDefault(cle, cle);
+    return NomsJobs.PAR_CLE_QUARTZ.getOrDefault(cle, cle);
   }
 
   private void insererLog(String niveau, String message, Map<String, Object> meta) {

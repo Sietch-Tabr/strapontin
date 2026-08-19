@@ -1,0 +1,35 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.worker;
+
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/// Correspondance entre la clé Quartz d'un job (nom du bean déclencheur) et son nom lisible
+/// (`type_job`, utilisé dans `logs_admin`/`fetch_jobs`) — table unique partagée par {@link
+/// LogAdminJobListener} et {@link TriggerController}, jusque-là dupliquée et désynchronisée entre
+/// les deux.
+final class NomsJobs {
+
+  static final Map<String, String> PAR_CLE_QUARTZ =
+      Map.ofEntries(
+          Map.entry("fetchArtistesBatch", "fetch:artistes:batch"),
+          Map.entry("fetchRegion", "fetch:region"),
+          Map.entry("fetchSallesAll", "fetch:salles:all"),
+          Map.entry("purgerConcerts", "purger:concerts"),
+          Map.entry("purgerSalles", "purger:salles"),
+          Map.entry("purgerArtistes", "purger:artistes"),
+          Map.entry("purgerLogsAdmin", "purger:logs-admin"),
+          Map.entry("revoquerAdmins", "revoquer:admins"),
+          Map.entry("recalculerMatches", "recalculer:matches"),
+          Map.entry("notifierDigest", "notifier:digest"),
+          Map.entry("reconciliationNocturne", "reconciliation:nocturne"));
+
+  static final Map<String, String> CLE_QUARTZ_PAR_TYPE_JOB =
+      PAR_CLE_QUARTZ.entrySet().stream()
+          .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
+
+  private NomsJobs() {}
+}
