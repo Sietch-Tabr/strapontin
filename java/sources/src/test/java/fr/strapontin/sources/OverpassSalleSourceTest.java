@@ -109,6 +109,35 @@ class OverpassSalleSourceTest {
   }
 
   @Test
+  void enrichirLot_nomAvecGuillemet_echappeSansRompreLeLitteralOverpassQL() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    String nom = "Salle \"Le Central\"";
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id, nom, fr.strapontin.core.Normalisation.normaliserTexte(nom), null, "44", null);
+
+    // Requête envoyée en corps form-urlencoded (data=...) : la comparaison doit passer par le
+    // même encodage que le client, pas par la chaîne brute.
+    String fragmentAttendu =
+        java.net.URLEncoder.encode(
+            "name\"~\"Salle \\\"Le Central\\\"\",i", java.nio.charset.StandardCharsets.UTF_8);
+    serveur
+        .expect(requestTo(urlOverpass()))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString(fragmentAttendu)))
+        .andRespond(withSuccess("{\"elements\":[]}", MediaType.APPLICATION_JSON));
+
+    OverpassSalleSource source = new OverpassSalleSource(restClient);
+    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
+
+    assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
   void enrichirLot_nomNeCorrespondPas_retourneVide() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
