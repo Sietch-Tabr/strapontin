@@ -425,6 +425,32 @@ class AuthControllerTest {
         () -> authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest));
   }
 
+  @Test
+  void login_identifiantManquant_leveErreurMetier400() {
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+
+    var ex =
+        assertThrows(
+            fr.strapontin.web.ErreurMetier.class,
+            () -> authController.login(new LoginRequest(null, "motdepasse12345"), httpRequest));
+
+    assertEquals(400, ex.getStatus());
+    verifyNoInteractions(authenticationManager);
+  }
+
+  @Test
+  void login_motDePasseManquant_leveErreurMetier400() {
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+
+    var ex =
+        assertThrows(
+            fr.strapontin.web.ErreurMetier.class,
+            () -> authController.login(new LoginRequest("alice", " "), httpRequest));
+
+    assertEquals(400, ex.getStatus());
+    verifyNoInteractions(authenticationManager);
+  }
+
   // --- moi ---
 
   @Test

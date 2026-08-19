@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.securite;
 
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.Cookie;
@@ -11,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -77,8 +77,12 @@ public class AuthController {
   @PostMapping("/api/auth/login")
   public ResponseEntity<UtilisateurDto> login(
       @RequestBody LoginRequest req, HttpServletRequest httpRequest) {
-    Objects.requireNonNull(req.identifiant(), "L'identifiant est requis");
-    Objects.requireNonNull(req.motDePasse(), "Le mot de passe est requis");
+    if (req.identifiant() == null || req.identifiant().isBlank()) {
+      throw new ErreurMetier("L'identifiant est requis.");
+    }
+    if (req.motDePasse() == null || req.motDePasse().isBlank()) {
+      throw new ErreurMetier("Le mot de passe est requis.");
+    }
 
     UsernamePasswordAuthenticationToken tokenNonAuthentifie =
         UsernamePasswordAuthenticationToken.unauthenticated(req.identifiant(), req.motDePasse());
