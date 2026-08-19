@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,6 +38,7 @@ class AuthControllerTest {
   private AuthService authService;
   private TotpChallengeService totpChallengeService;
   private ConfigService configService;
+  private LogAdminService logAdminService;
 
   @BeforeEach
   void setUp() {
@@ -44,8 +46,14 @@ class AuthControllerTest {
     authService = mock(AuthService.class);
     totpChallengeService = mock(TotpChallengeService.class);
     configService = mock(ConfigService.class);
+    logAdminService = mock(LogAdminService.class);
     authController =
-        new AuthController(authenticationManager, authService, totpChallengeService, configService);
+        new AuthController(
+            authenticationManager,
+            authService,
+            totpChallengeService,
+            configService,
+            logAdminService);
   }
 
   // --- verifierTotp ---
@@ -476,9 +484,7 @@ class AuthControllerTest {
 
   @Test
   void motDePasseOublieEndpoint_emailBlanc_neDelegueRienEtRetourne200() {
-    var reponse =
-        authController.motDePasseOublie(
-            new ForgotPasswordRequest(""), mock(HttpServletRequest.class));
+    var reponse = authController.motDePasseOublie(new ForgotPasswordRequest(""));
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(authService, never()).motDePasseOublie(anyString(), anyString());
@@ -488,13 +494,26 @@ class AuthControllerTest {
   void motDePasseOublieEndpoint_emailPresent_normaliseEtDelegueAuService() {
     when(configService.lireConfig("PUBLIC_BASE_URL"))
         .thenReturn(java.util.Optional.of("https://strapontin.fr"));
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
 
-    var reponse =
-        authController.motDePasseOublie(new ForgotPasswordRequest(" Alice@Test.FR "), httpRequest);
+    var reponse = authController.motDePasseOublie(new ForgotPasswordRequest(" Alice@Test.FR "));
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(authService).motDePasseOublie("alice@test.fr", "https://strapontin.fr");
+  }
+
+  // PUBLIC_BASE_URL absente : ne doit jamais retomber sur le header Host de la requête entrante
+  // (Host Header Injection) — le lien de réinitialisation ne doit tout simplement pas être
+  // envoyé, avec une alerte logs_admin plutôt qu'un lien potentiellement redirigé vers un domaine
+  // contrôlé par un attaquant.
+  @Test
+  void motDePasseOublieEndpoint_baseUrlNonConfiguree_neDelegueRienEtAlerte() {
+    when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(java.util.Optional.empty());
+
+    var reponse = authController.motDePasseOublie(new ForgotPasswordRequest("alice@test.fr"));
+
+    assertEquals(200, reponse.getStatusCode().value());
+    verify(authService, never()).motDePasseOublie(anyString(), anyString());
+    verify(logAdminService).logAdmin(eq("error"), eq("auth"), anyString());
   }
 
   // --- typeToken ---

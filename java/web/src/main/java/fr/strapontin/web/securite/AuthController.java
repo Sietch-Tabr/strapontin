@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.securite;
 
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,20 +49,24 @@ public class AuthController {
   private final AuthService authService;
   private final TotpChallengeService totpChallengeService;
   private final ConfigService configService;
+  private final LogAdminService logAdminService;
 
   /// @param authenticationManager gestionnaire d'authentification Spring Security
   /// @param authService service de réinitialisation de mot de passe
   /// @param totpChallengeService vérification du challenge TOTP (code + compteur d'échecs)
   /// @param configService service de configuration pour lire PUBLIC_BASE_URL
+  /// @param logAdminService audit des tentatives bloquées faute de PUBLIC_BASE_URL configurée
   public AuthController(
       AuthenticationManager authenticationManager,
       AuthService authService,
       TotpChallengeService totpChallengeService,
-      ConfigService configService) {
+      ConfigService configService,
+      LogAdminService logAdminService) {
     this.authenticationManager = authenticationManager;
     this.authService = authService;
     this.totpChallengeService = totpChallengeService;
     this.configService = configService;
+    this.logAdminService = logAdminService;
   }
 
   /// Authentifie un utilisateur et crée une session persistante.
@@ -226,11 +232,19 @@ public class AuthController {
   /// @return 200 dans tous les cas
   @PostMapping("/api/auth/forgot-password")
   public ResponseEntity<Map<String, Object>> motDePasseOublie(
-      @RequestBody ForgotPasswordRequest req, HttpServletRequest httpRequest) {
+      @RequestBody ForgotPasswordRequest req) {
     if (req.email() != null && !req.email().isBlank()) {
-      authService.motDePasseOublie(
-          req.email().strip().toLowerCase(), baseUrlDepuisRequete(httpRequest));
+      resoudreBaseUrl()
+          .ifPresentOrElse(
+              baseUrl -> authService.motDePasseOublie(req.email().strip().toLowerCase(), baseUrl),
+              () ->
+                  logAdminService.logAdmin(
+                      "error",
+                      "auth",
+                      "Réinitialisation de mot de passe bloquée — PUBLIC_BASE_URL non configurée"));
     }
+    // Réponse identique que l'email existe ou non, et que PUBLIC_BASE_URL soit configurée ou
+    // non — évite toute énumération de compte ou fuite de configuration au client.
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
@@ -248,11 +262,10 @@ public class AuthController {
 
   /// Réinitialise le mot de passe via un token de vérification.
   ///
-  /// <p>Si le token est de type {@code invite:} et que {@code identifiant} est fourni,
-  /// active le compte en une seule opération (identifiant + mot de passe) et ouvre une session.
+  /// <p>Si le token est de type {@code invite:} et que {@code identifiant} est fourni, active le
+  /// compte en une seule opération (identifiant + mot de passe) et ouvre une session.
   ///
-  /// @param req        le corps contenant le token, le mot de passe et optionnellement
-  /// l'identifiant
+  /// @param req le corps contenant le token, le mot de passe et optionnellement l'identifiant
   /// @param httpRequest pour créer la session lors de l'activation d'une invitation
   /// @return 200 si réinitialisé — 400 si invalide
   @PostMapping("/api/auth/reset-password")
@@ -311,23 +324,17 @@ public class AuthController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  private String baseUrlDepuisRequete(HttpServletRequest request) {
-    return configService
-        .lireConfig("PUBLIC_BASE_URL")
-        .filter(s -> !s.isBlank())
-        .orElseGet(
-            () -> {
-              log.warn(
-                  "PUBLIC_BASE_URL absente — URL construite depuis la requête (risque Host Header"
-                      + " Injection si derrière un proxy)");
-              String scheme = request.getScheme();
-              String host = request.getServerName();
-              int port = request.getServerPort();
-              if (("http".equals(scheme) && port == 80)
-                  || ("https".equals(scheme) && port == 443)) {
-                return scheme + "://" + host + request.getContextPath();
-              }
-              return scheme + "://" + host + ":" + port + request.getContextPath();
-            });
+  /// Résout l'URL de base publique pour construire un lien envoyé par email (reset de mot de
+  /// passe).
+  ///
+  /// <p>Ne retombe jamais sur le header {@code Host}/{@code getServerName()} de la requête entrante
+  /// : un attaquant contrôlant ce header pourrait rediriger le lien de réinitialisation vers un
+  /// domaine sous son contrôle et voler le token dès qu'un utilisateur clique dessus (Host Header
+  /// Injection). {@link Optional#empty()} plutôt qu'un repli non sûr si {@code PUBLIC_BASE_URL}
+  /// n'est pas configurée — l'appelant doit alors refuser d'envoyer le lien.
+  ///
+  /// @return l'URL de base configurée, ou vide si absente
+  private Optional<String> resoudreBaseUrl() {
+    return configService.lireConfig("PUBLIC_BASE_URL").filter(s -> !s.isBlank());
   }
 }
