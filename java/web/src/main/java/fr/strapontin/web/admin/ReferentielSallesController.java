@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -19,9 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Contrôleur REST pour l'onglet admin « Salles » du référentiel.
 ///
-/// <p>HTTP pur — délègue toute la logique métier à {@link ReferentielSallesService}.
-/// Accessible uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code
-/// SecurityConfiguration}, {@code /api/admin/**}).
+/// <p>HTTP pur — délègue toute la logique métier à {@link ReferentielSallesService}. Accessible
+/// uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration},
+/// {@code /api/admin/**}).
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -37,11 +38,11 @@ public class ReferentielSallesController {
 
   /// Liste paginée du référentiel salles.
   ///
-  /// @param page             numéro de page (0-indexé, défaut 0)
-  /// @param nom              filtre nom partiel
-  /// @param ville            filtre ville partielle
-  /// @param dept             filtre département exact
-  /// @param statut           filtre {@code a_jour}/{@code a_verifier}/{@code invalide}
+  /// @param page numéro de page (0-indexé, défaut 0)
+  /// @param nom filtre nom partiel
+  /// @param ville filtre ville partielle
+  /// @param dept filtre département exact
+  /// @param statut filtre {@code a_jour}/{@code a_verifier}/{@code invalide}
   /// @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id}
   /// @return 200 avec la page de résultats
   @GetMapping("/salles")
@@ -57,15 +58,15 @@ public class ReferentielSallesController {
 
   /// Modifie le nom affiché d'une salle.
   ///
-  /// @param uuid  UUID de la salle
+  /// @param uuid UUID de la salle
   /// @param corps corps JSON avec {@code nomAffiche} (null/vide pour revenir à l'auto)
   /// @return 200 si mis à jour, 400 si UUID invalide, 404 si salle inconnue
   @PatchMapping("/salles/{uuid}")
   public ResponseEntity<Map<String, Object>> modifierNomAffiche(
-      @PathVariable String uuid, @RequestBody Map<String, String> corps) {
+      @PathVariable String uuid, @Valid @RequestBody RequeteNomAffiche corps) {
     UUID id = parseUuid(uuid);
     if (id == null) return erreur(400, "UUID de salle invalide.");
-    boolean maj = service.modifierNomAffiche(id, corps.get("nomAffiche"));
+    boolean maj = service.modifierNomAffiche(id, corps.nomAffiche());
     if (!maj) return erreur(404, "Salle inconnue.");
     return ResponseEntity.ok(Map.of("succes", true));
   }
@@ -88,8 +89,8 @@ public class ReferentielSallesController {
 
   /// Fusionne deux salles (la source est absorbée par la cible puis supprimée).
   ///
-  /// @param uuid       UUID de la salle source
-  /// @param uuidCible  UUID de la salle cible
+  /// @param uuid UUID de la salle source
+  /// @param uuidCible UUID de la salle cible
   /// @return 200 si fusionnée, 400 si UUID invalide ou identiques, 404 si une salle est inconnue
   @PostMapping("/salles/{uuid}/fusionner/{uuidCible}")
   public ResponseEntity<Map<String, Object>> fusionner(

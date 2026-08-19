@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -19,9 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Contrôleur REST pour l'onglet admin « Artistes » du référentiel.
 ///
-/// <p>HTTP pur — délègue toute la logique métier à {@link ReferentielArtistesService}.
-/// Accessible uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code
-/// SecurityConfiguration}, {@code /api/admin/**}).
+/// <p>HTTP pur — délègue toute la logique métier à {@link ReferentielArtistesService}. Accessible
+/// uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration},
+/// {@code /api/admin/**}).
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -37,8 +38,8 @@ public class ReferentielArtistesController {
 
   /// Liste paginée du référentiel artistes.
   ///
-  /// @param page             numéro de page (0-indexé, défaut 0)
-  /// @param nom              filtre nom partiel
+  /// @param page numéro de page (0-indexé, défaut 0)
+  /// @param nom filtre nom partiel
   /// @param statut filtre {@code a_jour}/{@code invalide} (statut binaire)
   /// @param wikidataManquant si {@code true}, ne retourne que les artistes sans {@code wikidata_id}
   /// @return 200 avec la page de résultats
@@ -53,15 +54,15 @@ public class ReferentielArtistesController {
 
   /// Modifie le nom affiché d'un artiste.
   ///
-  /// @param uuid  UUID de l'artiste
+  /// @param uuid UUID de l'artiste
   /// @param corps corps JSON avec {@code nomAffiche} (null/vide pour revenir à l'auto)
   /// @return 200 si mis à jour, 400 si UUID invalide, 404 si artiste inconnu
   @PatchMapping("/artistes/{uuid}")
   public ResponseEntity<Map<String, Object>> modifierNomAffiche(
-      @PathVariable String uuid, @RequestBody Map<String, String> corps) {
+      @PathVariable String uuid, @Valid @RequestBody RequeteNomAffiche corps) {
     UUID id = parseUuid(uuid);
     if (id == null) return erreur(400, "UUID d'artiste invalide.");
-    boolean maj = service.modifierNomAffiche(id, corps.get("nomAffiche"));
+    boolean maj = service.modifierNomAffiche(id, corps.nomAffiche());
     if (!maj) return erreur(404, "Artiste inconnu.");
     return ResponseEntity.ok(Map.of("succes", true));
   }
@@ -82,8 +83,8 @@ public class ReferentielArtistesController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  /// Efface {@code necessite_intervention_le} sans fusion — l'admin juge la divergence de
-  /// nom TM acceptable.
+  /// Efface {@code necessite_intervention_le} sans fusion — l'admin juge la divergence de nom TM
+  /// acceptable.
   ///
   /// @param uuid UUID de l'artiste
   /// @return 200 si mis à jour, 400 si UUID invalide, 404 si artiste inconnu/sans intervention
@@ -96,30 +97,26 @@ public class ReferentielArtistesController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  /// Corrige directement l'identifiant Ticketmaster d'un artiste — alternative à la
-  /// fusion pour un simple mauvais lien.
+  /// Corrige directement l'identifiant Ticketmaster d'un artiste — alternative à la fusion pour un
+  /// simple mauvais lien.
   ///
-  /// @param uuid  UUID de l'artiste
+  /// @param uuid UUID de l'artiste
   /// @param corps corps JSON avec {@code identifiantExterne} (non vide)
   /// @return 200 si mis à jour, 400 si UUID invalide ou identifiant vide, 404 si l'artiste n'a pas
-  ///     de source Ticketmaster, 409 si l'identifiant est déjà attribué à un autre artiste
+  ///   de source Ticketmaster, 409 si l'identifiant est déjà attribué à un autre artiste
   @PatchMapping("/artistes/{uuid}/identifiant-tm")
   public ResponseEntity<Map<String, Object>> corrigerIdentifiantTm(
-      @PathVariable String uuid, @RequestBody Map<String, String> corps) {
+      @PathVariable String uuid, @Valid @RequestBody RequeteIdentifiantTm corps) {
     UUID id = parseUuid(uuid);
     if (id == null) return erreur(400, "UUID d'artiste invalide.");
-    String identifiantExterne = corps.get("identifiantExterne");
-    if (identifiantExterne == null || identifiantExterne.isBlank()) {
-      return erreur(400, "Identifiant Ticketmaster requis.");
-    }
-    boolean maj = service.corrigerIdentifiantTm(id, identifiantExterne);
+    boolean maj = service.corrigerIdentifiantTm(id, corps.identifiantExterne());
     if (!maj) return erreur(404, "Artiste inconnu ou sans source Ticketmaster.");
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
   /// Fusionne deux artistes (la source est absorbée par la cible puis supprimée).
   ///
-  /// @param uuid      UUID de l'artiste source
+  /// @param uuid UUID de l'artiste source
   /// @param uuidCible UUID de l'artiste cible
   /// @return 200 si fusionné, 400 si UUID invalide ou identiques, 404 si un artiste est inconnu
   @PostMapping("/artistes/{uuid}/fusionner/{uuidCible}")
