@@ -54,7 +54,10 @@ final class TicketmasterHealthCheck {
     } catch (HttpClientErrorException.NotFound e) {
       return StatutIdTM.MORT;
     } catch (Exception e) {
-      log.warn("verifierRessource TM échoué chemin={} : {}", chemin, e.getMessage());
+      log.warn(
+          "verifierRessource TM échoué chemin={} : {}",
+          chemin,
+          TicketmasterSource.redigerApiKey(e.getMessage()));
       return StatutIdTM.VIVANT;
     }
   }
@@ -72,7 +75,9 @@ final class TicketmasterHealthCheck {
       return data != null ? (String) data.get("name") : null;
     } catch (Exception e) {
       log.warn(
-          "recupererNomAttraction TM échoué attractionId={} : {}", attractionId, e.getMessage());
+          "recupererNomAttraction TM échoué attractionId={} : {}",
+          attractionId,
+          TicketmasterSource.redigerApiKey(e.getMessage()));
       return null;
     }
   }
@@ -100,7 +105,10 @@ final class TicketmasterHealthCheck {
       }
       return resultat;
     } catch (Exception e) {
-      log.warn("rechercherVenuesParNom TM échoué nom='{}' : {}", nom, e.getMessage());
+      log.warn(
+          "rechercherVenuesParNom TM échoué nom='{}' : {}",
+          nom,
+          TicketmasterSource.redigerApiKey(e.getMessage()));
       return List.of();
     }
   }
@@ -121,7 +129,10 @@ final class TicketmasterHealthCheck {
       var page = (Map<String, Object>) data.get("page");
       return page != null ? ((Number) page.get("totalElements")).intValue() : 0;
     } catch (Exception e) {
-      log.warn("compterEventsVenue TM échoué venueId={} : {}", venueId, e.getMessage());
+      log.warn(
+          "compterEventsVenue TM échoué venueId={} : {}",
+          venueId,
+          TicketmasterSource.redigerApiKey(e.getMessage()));
       return 0;
     }
   }

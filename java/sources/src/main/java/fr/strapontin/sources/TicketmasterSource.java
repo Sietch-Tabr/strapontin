@@ -201,10 +201,21 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
     } catch (Exception e) {
       String uriSafe = uri.replaceAll("apikey=[^&]+", "apikey=***");
-      log.warn("erreur HTTP Ticketmaster url={}", uriSafe, e);
+      log.warn("erreur HTTP Ticketmaster url={} : {}", uriSafe, redigerApiKey(e.getMessage()));
       compteurBilan.enregistrerErreur();
       return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
     }
+  }
+
+  /// Retire toute clé API Ticketmaster (paramètre {@code apikey=...}) d'un message avant
+  /// journalisation. Sur une panne réseau bas niveau, l'exception Spring ({@code
+  /// ResourceAccessException}) embarque l'URI complète — y compris sa query string — dans son
+  /// propre message, contournant toute rédaction faite en amont sur l'URI seule.
+  ///
+  /// @param message message à assainir, peut être {@code null}
+  /// @return le message avec toute clé API masquée, ou {@code null} si {@code message} est null
+  static String redigerApiKey(String message) {
+    return message == null ? null : message.replaceAll("apikey=[^&\\s\"]+", "apikey=***");
   }
 
   private record FenetreTemps(String debut, String fin) {}
@@ -368,7 +379,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       log.warn("rechercherAttractionId TM — pas de correspondance exacte nom={}", nom);
       return null;
     } catch (Exception e) {
-      log.warn("rechercherAttractionId TM échoué nom='{}' : {}", nom, e.getMessage());
+      log.warn(
+          "rechercherAttractionId TM échoué nom='{}' : {}", nom, redigerApiKey(e.getMessage()));
       return null;
     }
   }
