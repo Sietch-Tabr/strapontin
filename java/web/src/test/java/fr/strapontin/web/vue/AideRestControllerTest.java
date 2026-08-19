@@ -103,19 +103,8 @@ class AideRestControllerTest {
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
   }
 
-  @Test
-  void signaler_messageVide_retourneErreur() {
-    var rep = controller.signaler(new RequeteSignalement("bug", "   "), auth, requete("10.0.0.5"));
-    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
-  }
-
-  @Test
-  void signaler_messageTropLong_retourneErreur() {
-    var rep =
-        controller.signaler(
-            new RequeteSignalement("bug", "a".repeat(2001)), auth, requete("10.0.0.6"));
-    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
-  }
+  // message vide/trop long : voir RequeteSignalementValidationTest (@Valid ne s'exerce pas sur
+  // un appel Java direct au contrôleur, seulement via Spring MVC).
 
   @Test
   void signaler_headerXRealIpIgnore_seulRemoteAddrCompte() {
