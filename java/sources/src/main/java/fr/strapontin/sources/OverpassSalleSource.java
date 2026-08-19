@@ -207,7 +207,12 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   // normalisation de Normalisation.normaliserTexte, elle, n'intervient qu'après réception de la
   // réponse (mapperReponse) et ne peut pas rattraper un élément qu'Overpass n'a jamais renvoyé.
   private static String echapperRegex(String nom) {
-    String echappe = METACARACTERES_REGEX.matcher(nom).replaceAll("\\\\$1");
+    // Le guillemet droit doit être échappé séparément des autres métacaractères : la regex
+    // produite ici est elle-même insérée dans un littéral OverpassQL délimité par des guillemets
+    // ("name"~"regex") — un guillemet non échappé dans le nom d'une salle romprait ce littéral et
+    // permettrait d'injecter des clauses OverpassQL arbitraires dans la requête.
+    String echappeGuillemets = nom.replace("\"", "\\\"");
+    String echappe = METACARACTERES_REGEX.matcher(echappeGuillemets).replaceAll("\\\\$1");
     return APOSTROPHE_DROITE.matcher(echappe).replaceAll("['’]");
   }
 
