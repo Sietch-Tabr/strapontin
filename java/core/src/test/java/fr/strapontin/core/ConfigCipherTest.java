@@ -4,14 +4,16 @@
  */
 package fr.strapontin.core;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
 /// Tests unitaires de {@link ConfigCipher} (extrait de web.ConfigService).
 ///
-/// <p>Valide la cohérence chiffrement/déchiffrement AES-256-GCM et la compatibilité avec le
-/// format produit par l'ancien module TypeScript.
+/// <p>Valide la cohérence chiffrement/déchiffrement AES-256-GCM et la compatibilité avec le format
+/// produit par l'ancien module TypeScript.
 ///
 /// @since 2.7.0
 /// @author Kwaite

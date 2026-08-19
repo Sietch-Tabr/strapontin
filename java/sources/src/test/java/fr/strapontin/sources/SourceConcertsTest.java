@@ -53,8 +53,21 @@ class SourceConcertsTest {
           public List<ConcertBrut> fetchArtiste(String nom) {
             return List.of(
                 new ConcertBrut(
-                    nom, null, null, null, null, null, null, null, null, null, null, null, null,
-                    null, null));
+                    nom,
+                    "2026-01-01",
+                    null,
+                    "salle",
+                    null,
+                    null,
+                    null,
+                    "test",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null));
           }
         };
 
