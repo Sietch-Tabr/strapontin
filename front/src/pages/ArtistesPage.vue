@@ -112,7 +112,7 @@
 <script setup>
 defineOptions({ name: 'ArtistesPage' })
 
-import { ref, shallowRef, onMounted } from 'vue'
+import { ref, shallowRef, onMounted, onUnmounted } from 'vue'
 import { useDialog } from '../composables/useDialog.js'
 import { useToasts } from '../composables/useToasts.js'
 import EtatChargement from '../components/EtatChargement.vue'
@@ -127,10 +127,11 @@ const qSoumis = ref('')
 const erreur = ref('')
 const artisteASupprimer = ref(null)
 const { dialogRef, ouvrir: ouvrirDialog, fermer: fermerDialog } = useDialog()
+const controleur = new AbortController()
 
 async function charger(recherche = '') {
   const params = recherche.trim().length >= 2 ? '?q=' + encodeURIComponent(recherche) : ''
-  const rep = await fetch('/api/artistes' + params)
+  const rep = await fetch('/api/artistes' + params, { signal: controleur.signal })
   if (!rep.ok) throw new Error()
   return rep.json()
 }
@@ -140,7 +141,8 @@ async function rechercher() {
   try {
     qSoumis.value = q.value
     donnees.value = await charger(q.value)
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de rechercher.', 'erreur')
   }
 }
@@ -152,6 +154,7 @@ async function ajouter(nom, wikidataId = null) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nom, wikidataId }),
+      signal: controleur.signal,
     })
     if (rep.status === 409) {
       afficherToast('Vous suivez déjà cet artiste.', 'info')
@@ -166,7 +169,8 @@ async function ajouter(nom, wikidataId = null) {
     q.value = ''
     qSoumis.value = ''
     donnees.value = await charger()
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible d\'ajouter cet artiste.', 'erreur')
   }
 }
@@ -182,11 +186,13 @@ async function confirmerSuppression() {
   try {
     const rep = await fetch('/api/artistes/' + artisteASupprimer.value.id, {
       method: 'DELETE',
+      signal: controleur.signal,
     })
     if (!rep.ok) throw new Error()
     afficherToast('Artiste retiré de votre liste.', 'succes')
     donnees.value = await charger()
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de supprimer cet artiste.', 'erreur')
   } finally {
     artisteASupprimer.value = null
@@ -196,10 +202,12 @@ async function confirmerSuppression() {
 onMounted(async () => {
   try {
     donnees.value = await charger()
-  } catch {
-    afficherToast('Impossible de charger les artistes.', 'erreur')
+  } catch (e) {
+    if (e.name !== 'AbortError') afficherToast('Impossible de charger les artistes.', 'erreur')
   } finally {
     chargement.value = false
   }
 })
+
+onUnmounted(() => controleur.abort())
 </script>

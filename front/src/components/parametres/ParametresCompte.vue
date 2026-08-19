@@ -157,10 +157,11 @@
 <script setup>
 defineOptions({ name: 'ParametresCompte' })
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToasts } from '../../composables/useToasts.js'
 import EtatChargement from '../EtatChargement.vue'
+import { corpsJsonOuVide } from '../../utils/reponseJson.js'
 
 const router = useRouter()
 const { afficherToast } = useToasts()
@@ -175,6 +176,7 @@ const mdpActuel = ref('')
 const mdpNouveau = ref('')
 const appareils = ref([])
 const abonnementsPush = ref([])
+const controleur = new AbortController()
 
 function formaterDateHeure(iso) {
   return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
@@ -191,50 +193,74 @@ function resumerUserAgent(userAgent) {
 }
 
 async function chargerAppareils() {
-  const rep = await fetch('/api/user/appareils')
-  if (rep.ok) appareils.value = await rep.json()
+  try {
+    const rep = await fetch('/api/user/appareils', { signal: controleur.signal })
+    if (rep.ok) appareils.value = await rep.json()
+  } catch (e) {
+    if (e.name === 'AbortError') return
+    afficherToast('Impossible de charger la liste des appareils.', 'erreur')
+  }
 }
 
 async function chargerAbonnementsPush() {
-  const rep = await fetch('/api/push/abonnements')
-  if (rep.ok) abonnementsPush.value = await rep.json()
+  try {
+    const rep = await fetch('/api/push/abonnements', { signal: controleur.signal })
+    if (rep.ok) abonnementsPush.value = await rep.json()
+  } catch (e) {
+    if (e.name === 'AbortError') return
+    afficherToast('Impossible de charger les abonnements push.', 'erreur')
+  }
 }
 
 async function revoquerAppareil(appareilId) {
-  const rep = await fetch(`/api/user/appareils/${appareilId}`, { method: 'DELETE' })
-  if (rep.ok) {
-    appareils.value = appareils.value.filter((a) => a.appareilId !== appareilId)
-    afficherToast('Appareil révoqué.', 'succes')
-  } else {
-    afficherToast('Erreur lors de la révocation.', 'erreur')
+  try {
+    const rep = await fetch(`/api/user/appareils/${appareilId}`, {
+      method: 'DELETE',
+      signal: controleur.signal,
+    })
+    if (rep.ok) {
+      appareils.value = appareils.value.filter((a) => a.appareilId !== appareilId)
+      afficherToast('Appareil révoqué.', 'succes')
+    } else {
+      afficherToast('Erreur lors de la révocation.', 'erreur')
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return
+    afficherToast('Erreur réseau lors de la révocation.', 'erreur')
   }
 }
 
 async function revoquerAbonnementPush(endpoint) {
-  const rep = await fetch('/api/push', {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ endpoint }),
-  })
-  if (rep.ok) {
-    abonnementsPush.value = abonnementsPush.value.filter((a) => a.endpoint !== endpoint)
-    afficherToast('Abonnement push révoqué.', 'succes')
-  } else {
-    afficherToast('Erreur lors de la révocation.', 'erreur')
+  try {
+    const rep = await fetch('/api/push', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint }),
+      signal: controleur.signal,
+    })
+    if (rep.ok) {
+      abonnementsPush.value = abonnementsPush.value.filter((a) => a.endpoint !== endpoint)
+      afficherToast('Abonnement push révoqué.', 'succes')
+    } else {
+      afficherToast('Erreur lors de la révocation.', 'erreur')
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return
+    afficherToast('Erreur réseau lors de la révocation.', 'erreur')
   }
 }
 
 async function charger() {
   try {
-    const rep = await fetch('/api/user/profile')
+    const rep = await fetch('/api/user/profile', { signal: controleur.signal })
     if (rep.ok) {
       profil.value = await rep.json()
       email.value = profil.value.email ?? ''
       identifiant.value = profil.value.identifiant ?? ''
       deuxFacteursActif.value = profil.value.twoFactorActif ?? false
     }
-  } catch (_) {
-    afficherToast('Erreur lors du chargement du profil.', 'erreur')
+  } catch (e) {
+    if (e.name !== 'AbortError') afficherToast('Erreur lors du chargement du profil.', 'erreur')
   } finally {
     chargement.value = false
   }
@@ -243,14 +269,16 @@ async function charger() {
 async function sauvegarderProfil() {
   const emailActuel = profil.value?.email ?? ''
   const emailChange = email.value && email.value.toLowerCase() !== emailActuel.toLowerCase()
+  if (!emailChange) return
 
-  if (emailChange) {
+  try {
     const rep = await fetch('/api/parametres/email-change', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value }),
+      signal: controleur.signal,
     })
-    const corps = await rep.json()
+    const corps = await corpsJsonOuVide(rep)
     if (rep.ok) {
       afficherToast(
         'Un email de confirmation a été envoyé à ' + email.value + '.',
@@ -260,55 +288,75 @@ async function sauvegarderProfil() {
     } else {
       afficherToast(corps.erreur || "Erreur lors du changement d'email.", 'erreur')
     }
-    return
+  } catch (e) {
+    if (e.name === 'AbortError') return
+    afficherToast("Erreur réseau lors du changement d'email.", 'erreur')
   }
 }
 
 async function sauvegarderIdentifiant() {
-  const rep = await fetch('/api/user/identifiant', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifiant: identifiant.value }),
-  })
-  const corps = await rep.json()
-  if (rep.ok) {
-    afficherToast('Identifiant modifié.', 'succes')
-  } else {
-    afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/user/identifiant', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifiant: identifiant.value }),
+      signal: controleur.signal,
+    })
+    const corps = await corpsJsonOuVide(rep)
+    if (rep.ok) {
+      afficherToast('Identifiant modifié.', 'succes')
+    } else {
+      afficherToast(corps.erreur || 'Erreur.', 'erreur')
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return
+    afficherToast('Erreur réseau lors de la modification.', 'erreur')
   }
 }
 
 async function desactiverTotp() {
-  const rep = await fetch('/api/totp/desactiver', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: totpDesactCode.value }),
-  })
-  const corps = await rep.json()
-  if (rep.ok) {
-    deuxFacteursActif.value = false
-    totpDesactCode.value = ''
-    afficherToast('Authentification à deux facteurs désactivée.', 'succes')
-  } else {
-    afficherToast(corps.erreur || 'Code TOTP incorrect.', 'erreur')
+  try {
+    const rep = await fetch('/api/totp/desactiver', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: totpDesactCode.value }),
+      signal: controleur.signal,
+    })
+    const corps = await corpsJsonOuVide(rep)
+    if (rep.ok) {
+      deuxFacteursActif.value = false
+      totpDesactCode.value = ''
+      afficherToast('Authentification à deux facteurs désactivée.', 'succes')
+    } else {
+      afficherToast(corps.erreur || 'Code TOTP incorrect.', 'erreur')
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return
+    afficherToast('Erreur réseau lors de la désactivation.', 'erreur')
   }
 }
 
 async function changerMotDePasse() {
-  const rep = await fetch('/api/user/password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      motDePasseActuel: mdpActuel.value,
-      motDePasseNouveau: mdpNouveau.value,
-    }),
-  })
-  if (rep.ok) {
-    afficherToast('Mot de passe modifié. Reconnectez-vous.', 'succes')
-    router.push('/login?reset=true')
-  } else {
-    const corps = await rep.json()
-    afficherToast(corps.erreur || 'Erreur lors du changement de mot de passe.', 'erreur')
+  try {
+    const rep = await fetch('/api/user/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        motDePasseActuel: mdpActuel.value,
+        motDePasseNouveau: mdpNouveau.value,
+      }),
+      signal: controleur.signal,
+    })
+    if (rep.ok) {
+      afficherToast('Mot de passe modifié. Reconnectez-vous.', 'succes')
+      router.push('/login?reset=true')
+    } else {
+      const corps = await corpsJsonOuVide(rep)
+      afficherToast(corps.erreur || 'Erreur lors du changement de mot de passe.', 'erreur')
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return
+    afficherToast('Erreur réseau lors du changement de mot de passe.', 'erreur')
   }
 }
 
@@ -317,4 +365,6 @@ onMounted(() => {
   chargerAppareils()
   chargerAbonnementsPush()
 })
+
+onUnmounted(() => controleur.abort())
 </script>

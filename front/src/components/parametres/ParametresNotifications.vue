@@ -134,9 +134,10 @@
 <script setup>
 defineOptions({ name: 'ParametresNotifications' })
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useToasts } from '../../composables/useToasts.js'
 import EtatChargement from '../EtatChargement.vue'
+import { corpsJsonOuVide } from '../../utils/reponseJson.js'
 
 const { afficherToast } = useToasts()
 
@@ -156,12 +157,13 @@ const pushEnCours = ref(false)
 const testEnCours = ref(false)
 let swRegistration = null
 let cleVapidPublique = null
+const controleur = new AbortController()
 
 async function charger() {
   try {
     const [repConfig, repPush] = await Promise.all([
-      fetch('/api/user/config'),
-      fetch('/api/push'),
+      fetch('/api/user/config', { signal: controleur.signal }),
+      fetch('/api/push', { signal: controleur.signal }),
     ])
     if (repConfig.ok) {
       const config = await repConfig.json()
@@ -178,8 +180,10 @@ async function charger() {
       cleVapidPublique = vapid.clePublique ?? null
     }
     await initialiserPush()
-  } catch (_) {
-    afficherToast('Erreur lors du chargement des notifications.', 'erreur')
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      afficherToast('Erreur lors du chargement des notifications.', 'erreur')
+    }
   } finally {
     chargement.value = false
   }
@@ -212,22 +216,28 @@ function urlBase64VersUint8Array(base64) {
 }
 
 async function sauvegarderNotifications() {
-  const rep = await fetch('/api/user/config/notifications', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      frequenceNotifications: frequenceNotifications.value,
-      notifArtistes: notifArtistes.value,
-      notifSalles: notifSalles.value,
-      notifArtistesPush: notifArtistesPush.value,
-      notifSallesPush: notifSallesPush.value,
-    }),
-  })
-  if (rep.ok) {
-    afficherToast('Préférences de notification enregistrées.', 'succes')
-  } else {
-    const corps = await rep.json()
-    afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/user/config/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        frequenceNotifications: frequenceNotifications.value,
+        notifArtistes: notifArtistes.value,
+        notifSalles: notifSalles.value,
+        notifArtistesPush: notifArtistesPush.value,
+        notifSallesPush: notifSallesPush.value,
+      }),
+      signal: controleur.signal,
+    })
+    if (rep.ok) {
+      afficherToast('Préférences de notification enregistrées.', 'succes')
+    } else {
+      const corps = await corpsJsonOuVide(rep)
+      afficherToast(corps.erreur || 'Erreur.', 'erreur')
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return
+    afficherToast('Erreur réseau lors de l\'enregistrement.', 'erreur')
   }
 }
 
@@ -254,6 +264,7 @@ async function abonnerPush() {
           auth: new Uint8Array(abonnement.getKey('auth')).toBase64(),
         },
       }),
+      signal: controleur.signal,
     })
 
     if (rep.ok) {
@@ -287,6 +298,7 @@ async function testerPush() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ endpoint }),
+      signal: controleur.signal,
     })
     if (rep.ok) {
       afficherToast('Notification de test envoyée.', 'succes')
@@ -311,6 +323,7 @@ async function desabonnerPush() {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint: abonnement.endpoint }),
+        signal: controleur.signal,
       })
       await abonnement.unsubscribe()
     }
@@ -325,4 +338,5 @@ async function desabonnerPush() {
 }
 
 onMounted(charger)
+onUnmounted(() => controleur.abort())
 </script>

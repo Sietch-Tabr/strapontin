@@ -198,7 +198,7 @@
 <script setup>
 defineOptions({ name: 'SpectaclesPage' })
 
-import { ref, shallowRef, computed, watch, onMounted } from 'vue'
+import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formaterAvecHeure } from '../composables/useDates.js'
 import { useToasts } from '../composables/useToasts.js'
@@ -247,7 +247,17 @@ function syncFiltresLocaux() {
   triLocal.value = route.query.tri ?? 'date'
 }
 
+const controleurComposant = new AbortController()
+
+// Un nouvel appel (changement de filtre pendant qu'un chargement précédent est en cours)
+// annule le précédent plutôt que de laisser deux requêtes concurrentes risquer d'appliquer
+// leurs résultats dans le désordre.
+let controleurActuel = null
+
 async function charger() {
+  controleurActuel?.abort()
+  const controleur = new AbortController()
+  controleurActuel = controleur
   chargement.value = true
   try {
     const params = new URLSearchParams()
@@ -261,13 +271,14 @@ async function charger() {
     sources.value.forEach(s => params.append('source', s))
     if (indisponiblesActive.value) params.set('indisponibles', '1')
     if (route.query.page) params.set('page', route.query.page)
-    const rep = await fetch('/api/spectacles?' + params)
+    const rep = await fetch('/api/spectacles?' + params, { signal: controleur.signal })
     if (!rep.ok) throw new Error()
     donnees.value = await rep.json()
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de charger les spectacles.', 'erreur')
   } finally {
-    chargement.value = false
+    if (controleurActuel === controleur) chargement.value = false
   }
 }
 
@@ -337,11 +348,13 @@ async function demasquerConcert(concert) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ masquer: false }),
+      signal: controleurComposant.signal,
     })
     if (!rep.ok) throw new Error()
     donnees.value.concerts.splice(donnees.value.concerts.indexOf(concert), 1)
     donnees.value.totalConcerts--
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de réafficher ce concert.', 'erreur')
   }
 }
@@ -360,5 +373,10 @@ watch(() => route.query, () => {
 onMounted(() => {
   syncFiltresLocaux()
   charger()
+})
+
+onUnmounted(() => {
+  controleurComposant.abort()
+  controleurActuel?.abort()
 })
 </script>
