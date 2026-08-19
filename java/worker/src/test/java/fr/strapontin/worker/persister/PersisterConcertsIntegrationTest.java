@@ -30,9 +30,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   // fenêtre au fil du temps (constaté sur "2026-06-28", devenu invalide après le 5 juillet).
   private static final String DATE_RECENTE = LocalDate.now().toString();
 
-  @MockitoBean
-  @SuppressWarnings("unused")
-  TicketmasterSource ticketmasterSource;
+  @MockitoBean TicketmasterSource ticketmasterSource;
 
   @Autowired private PersisterConcerts persisterConcerts;
 
