@@ -37,10 +37,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/salles")
 public class SalleController {
 
-  private static final int MAX_NOM = 200;
-  private static final int MAX_VILLE = 100;
-  private static final int MAX_URL_SITE = 500;
-  private static final int MAX_COMMENTAIRE = 1000;
   private static final int MAX_SIGNALEMENTS_PAR_HEURE = 3;
 
   private final SalleService salleService;
@@ -52,8 +48,8 @@ public class SalleController {
           .maximumSize(10_000)
           .build();
 
-  /// @param salleService  service de gestion des salles
-  /// @param emailService  service d'envoi d'emails
+  /// @param salleService service de gestion des salles
+  /// @param emailService service d'envoi d'emails
   public SalleController(SalleService salleService, EmailService emailService) {
     this.salleService = salleService;
     this.emailService = emailService;
@@ -61,7 +57,7 @@ public class SalleController {
 
   /// Liste les salles suivies, avec suggestions de recherche si {@code q} est fourni.
   ///
-  /// @param q    terme de recherche (optionnel, min 2 caractères)
+  /// @param q terme de recherche (optionnel, min 2 caractères)
   /// @param auth contexte d'authentification
   /// @return la liste des salles et les suggestions
   @GetMapping
@@ -74,9 +70,9 @@ public class SalleController {
   /// Ajoute une salle à la liste de suivi.
   ///
   /// @param requete corps JSON avec le nom et l'ID TM optionnel
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 201 si créée — 409 si doublon, 400 si invalide/cap (via {@link
-  /// GlobalExceptionHandler})
+  ///   GlobalExceptionHandler})
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterSalle(
       @Valid @RequestBody RequeteAjouter requete, Authentication auth) {
@@ -103,7 +99,7 @@ public class SalleController {
   /// Supprime une salle de la liste de suivi.
   ///
   /// @param salleId UUID stable de la salle
-  /// @param auth      contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 204 si supprimée
   @DeleteMapping("/{salleId}")
   public ResponseEntity<Void> supprimerSalle(@PathVariable UUID salleId, Authentication auth) {
@@ -114,43 +110,26 @@ public class SalleController {
 
   /// Enregistre le signalement d'une salle absente du référentiel.
   ///
-  /// <p>Envoie un email à l'administrateur et un email de confirmation à l'utilisateur.
-  /// Rate-limité à 3 signalements par heure par IP.
+  /// <p>Envoie un email à l'administrateur et un email de confirmation à l'utilisateur. Rate-limité
+  /// à 3 signalements par heure par IP.
   ///
-  /// @param requete  corps JSON avec nom, ville, urlSite, commentaire
-  /// @param auth     contexte d'authentification
-  /// @param request  la requête HTTP (pour rate limiting par IP)
+  /// @param requete corps JSON avec nom, ville, urlSite, commentaire
+  /// @param auth contexte d'authentification
+  /// @param request la requête HTTP (pour rate limiting par IP)
   /// @return 204 si transmis, 400 si validation échoue, 429 si rate limit atteint
   @PostMapping("/signaler")
   public ResponseEntity<Map<String, Object>> signalerManquante(
-      @RequestBody RequeteSignalementSalle requete,
+      @Valid @RequestBody RequeteSignalementSalle requete,
       Authentication auth,
       HttpServletRequest request) {
     UtilisateurDetails utilisateur = utilisateur(auth);
 
-    // Validation avant rate-limiting : une requête invalide ne consomme pas de quota
-    String nom = requete.nom() == null ? "" : requete.nom().strip();
-    if (nom.isEmpty()) {
-      return erreur(400, "Le nom de la salle est requis.");
-    }
-    if (nom.length() > MAX_NOM) {
-      return erreur(400, "Le nom ne peut pas dépasser " + MAX_NOM + " caractères.");
-    }
-
+    // @Valid rejette une requête invalide avant l'exécution de cette méthode — le rate-limiting
+    // ci-dessous n'est donc jamais consommé par une requête invalide.
+    String nom = requete.nom().strip();
     String ville = requete.ville() == null ? "" : requete.ville().strip();
-    if (ville.length() > MAX_VILLE) {
-      return erreur(400, "La ville ne peut pas dépasser " + MAX_VILLE + " caractères.");
-    }
-
     String urlSite = requete.urlSite() == null ? "" : requete.urlSite().strip();
-    if (urlSite.length() > MAX_URL_SITE) {
-      return erreur(400, "L'URL ne peut pas dépasser " + MAX_URL_SITE + " caractères.");
-    }
-
     String commentaire = requete.commentaire() == null ? "" : requete.commentaire().strip();
-    if (commentaire.length() > MAX_COMMENTAIRE) {
-      return erreur(400, "Le commentaire ne peut pas dépasser " + MAX_COMMENTAIRE + " caractères.");
-    }
 
     String ip = request.getRemoteAddr();
     Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
