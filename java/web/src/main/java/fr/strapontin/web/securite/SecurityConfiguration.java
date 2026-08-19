@@ -8,6 +8,8 @@ import fr.strapontin.web.admin.LogAdminService;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
@@ -40,18 +42,20 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 
 /// Configuration Spring Security 7 pour le mode SPA Vue 3.
 ///
-/// <p>Sessions persistantes JDBC (survivent aux redémarrages). Rate limiting login
-/// via {@link RateLimitingLoginFilter} (intercepte {@code /api/auth/login}).
-/// Accès direct par IP bloqué via {@link BloquerAccesDirectIpFilter}.
-/// CSRF désactivé (sessions {@code SameSite=Lax} — pas {@code Strict}, compatibilité Safari sur
-/// navigation entrante, voir {@link #cookieSerializer} — + {@code form-action 'self'} en CSP).
-/// Login via {@code POST /api/auth/login}, logout via {@code POST /api/auth/logout}.
+/// <p>Sessions persistantes JDBC (survivent aux redémarrages). Rate limiting login via {@link
+/// RateLimitingLoginFilter} (intercepte {@code /api/auth/login}). Accès direct par IP bloqué via
+/// {@link BloquerAccesDirectIpFilter}. CSRF désactivé (sessions {@code SameSite=Lax} — pas {@code
+/// Strict}, compatibilité Safari sur navigation entrante, voir {@link #cookieSerializer} — + {@code
+/// form-action 'self'} en CSP). Login via {@code POST /api/auth/login}, logout via {@code POST
+/// /api/auth/logout}.
 ///
 /// @since 2.0.0
 /// @author Kwaite
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
+
+  private static final Logger log = LoggerFactory.getLogger(SecurityConfiguration.class);
 
   /// Registre de sessions persisté en JDBC — survit aux redémarrages.
   ///
@@ -65,13 +69,13 @@ public class SecurityConfiguration {
 
   /// Chaîne de filtres de sécurité principale.
   ///
-  /// @param http                le constructeur de configuration Spring Security
+  /// @param http le constructeur de configuration Spring Security
   /// @param correlationIdFilter le filtre de corrélation MDC (premier dans la chaîne)
-  /// @param rateLimitingFilter  le filtre de rate limiting sur le login
-  /// @param bloquerIpFilter     le filtre de blocage d'accès direct par IP
-  /// @param totpGuardFilter     le filtre de garde TOTP post-login
-  /// @param sessionRegistry     le registre de sessions persisté en JDBC
-  /// @param logAdminService     le service de journalisation admin
+  /// @param rateLimitingFilter le filtre de rate limiting sur le login
+  /// @param bloquerIpFilter le filtre de blocage d'accès direct par IP
+  /// @param totpGuardFilter le filtre de garde TOTP post-login
+  /// @param sessionRegistry le registre de sessions persisté en JDBC
+  /// @param logAdminService le service de journalisation admin
   /// @return la SecurityFilterChain configurée
   /// @throws Exception en cas d'erreur de configuration
   @Bean
@@ -192,7 +196,8 @@ public class SecurityConfiguration {
                                   "web",
                                   "Accès API non authentifié : " + request.getServletPath(),
                                   meta);
-                            } catch (Exception ignored) {
+                            } catch (Exception e) {
+                              log.warn("échec de la journalisation d'un accès non authentifié", e);
                             }
                             response.setStatus(401);
                             response.setContentType("application/json;charset=UTF-8");
@@ -218,7 +223,8 @@ public class SecurityConfiguration {
                                   "web",
                                   "Accès API refusé : " + request.getServletPath(),
                                   meta);
-                            } catch (Exception ignored) {
+                            } catch (Exception e) {
+                              log.warn("échec de la journalisation d'un accès refusé", e);
                             }
                             response.setStatus(403);
                             response.setContentType("application/json;charset=UTF-8");
@@ -241,15 +247,15 @@ public class SecurityConfiguration {
 
   /// Gestionnaire d'authentification avec chargement depuis la base de données.
   ///
-  /// <p>Attache un {@link AuthenticationEventPublisher} explicitement : un
-  /// {@link ProviderManager} construit à la main, hors du chemin d'auto-configuration Spring Boot
-  /// standard, n'en reçoit aucun par défaut — sans lui, {@code AuthenticationSuccessEvent}/
-  /// {@code AbstractAuthenticationFailureEvent} ne sont jamais publiés et {@link
-  /// AuthEvenementListener} reste du code mort.
+  /// <p>Attache un {@link AuthenticationEventPublisher} explicitement : un {@link ProviderManager}
+  /// construit à la main, hors du chemin d'auto-configuration Spring Boot standard, n'en reçoit
+  /// aucun par défaut — sans lui, {@code AuthenticationSuccessEvent}/ {@code
+  /// AbstractAuthenticationFailureEvent} ne sont jamais publiés et {@link AuthEvenementListener}
+  /// reste du code mort.
   ///
   /// @param userDetailsService le service de chargement des utilisateurs
-  /// @param passwordEncoder    l'encodeur de mots de passe
-  /// @param eventPublisher     l'éditeur d'événements applicatif Spring
+  /// @param passwordEncoder l'encodeur de mots de passe
+  /// @param eventPublisher l'éditeur d'événements applicatif Spring
   /// @return l'AuthenticationManager configuré
   @Bean
   AuthenticationManager authenticationManager(
@@ -266,10 +272,9 @@ public class SecurityConfiguration {
 
   /// Force le timeout d'inactivité des sessions JDBC à 30 jours.
   ///
-  /// <p>{@code spring.session.timeout=30d} n'est pas appliqué par Spring Session 4 —
-  /// ce customizer le remplace de façon programmatique.
-  /// La session est prolongée à chaque requête ; elle expire uniquement après
-  /// 30 jours sans activité.
+  /// <p>{@code spring.session.timeout=30d} n'est pas appliqué par Spring Session 4 — ce customizer
+  /// le remplace de façon programmatique. La session est prolongée à chaque requête ; elle expire
+  /// uniquement après 30 jours sans activité.
   ///
   /// @return le customizer de dépôt de sessions
   @Bean
@@ -285,8 +290,8 @@ public class SecurityConfiguration {
     return new HttpSessionEventPublisher();
   }
 
-  /// Sérialiseur de cookies Spring Session — force {@code Secure}, {@code SameSite=Lax}
-  /// et {@code max-age} 30 jours.
+  /// Sérialiseur de cookies Spring Session — force {@code Secure}, {@code SameSite=Lax} et {@code
+  /// max-age} 30 jours.
   ///
   /// <p>Les propriétés {@code server.servlet.session.cookie.*} sont ignorées par Spring Session
   /// JDBC ; ce bean prend le relais.
