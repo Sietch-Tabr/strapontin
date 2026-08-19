@@ -4,13 +4,13 @@
  */
 package fr.strapontin.web.securite;
 
-import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -76,13 +76,7 @@ public class AuthController {
   /// @return l'utilisateur authentifié ou 401 si les credentials sont invalides
   @PostMapping("/api/auth/login")
   public ResponseEntity<UtilisateurDto> login(
-      @RequestBody LoginRequest req, HttpServletRequest httpRequest) {
-    if (req.identifiant() == null || req.identifiant().isBlank()) {
-      throw new ErreurMetier("L'identifiant est requis.");
-    }
-    if (req.motDePasse() == null || req.motDePasse().isBlank()) {
-      throw new ErreurMetier("Le mot de passe est requis.");
-    }
+      @Valid @RequestBody LoginRequest req, HttpServletRequest httpRequest) {
 
     UsernamePasswordAuthenticationToken tokenNonAuthentifie =
         UsernamePasswordAuthenticationToken.unauthenticated(req.identifiant(), req.motDePasse());
@@ -152,7 +146,9 @@ public class AuthController {
   ///   trop d'échecs ou compte verrouillé
   @PostMapping("/api/auth/totp")
   public ResponseEntity<Map<String, Object>> verifierTotp(
-      @RequestBody TotpChallengeRequest req, HttpServletRequest httpRequest, Authentication auth) {
+      @Valid @RequestBody TotpChallengeRequest req,
+      HttpServletRequest httpRequest,
+      Authentication auth) {
     HttpSession session = httpRequest.getSession(false);
     if (session == null
         || !Boolean.TRUE.equals(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))) {
@@ -274,15 +270,7 @@ public class AuthController {
   /// @return 200 si réinitialisé — 400 si invalide
   @PostMapping("/api/auth/reset-password")
   public ResponseEntity<?> reinitialiserMotDePasse(
-      @RequestBody ResetPasswordRequest req, HttpServletRequest httpRequest) {
-    if (req.token() == null || req.motDePasse() == null) {
-      return ResponseEntity.badRequest().body(Map.of("erreur", "Token et mot de passe requis."));
-    }
-    if (req.motDePasse().length() < 12) {
-      return ResponseEntity.badRequest()
-          .body(Map.of("erreur", "Le mot de passe doit contenir au moins 12 caractères."));
-    }
-
+      @Valid @RequestBody ResetPasswordRequest req, HttpServletRequest httpRequest) {
     if (req.identifiant() != null && !req.identifiant().isBlank()) {
       String ident = req.identifiant().strip().toLowerCase();
       if (ident.length() < 3 || ident.length() > 30) {

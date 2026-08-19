@@ -7,6 +7,7 @@ package fr.strapontin.web.securite;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.utilisateur.UserController;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -19,8 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Endpoints REST pour l'enrollment et la désactivation TOTP depuis la SPA Vue.
 ///
-/// <p>HTTP pur — délègue la cryptographie à {@link TotpService} et la persistance
-/// à {@link UserController}.
+/// <p>HTTP pur — délègue la cryptographie à {@link TotpService} et la persistance à {@link
+/// UserController}.
 ///
 /// @since 2.2.0
 /// @author Kwaite
@@ -34,9 +35,9 @@ public class TotpEnrollmentController {
   private final UserController userController;
   private final LogAdminService logAdminService;
 
-  /// @param totpService      service TOTP (génération, vérification)
-  /// @param userController   contrôleur utilisateur (activation/désactivation TOTP)
-  /// @param logAdminService  journal d'administration
+  /// @param totpService service TOTP (génération, vérification)
+  /// @param userController contrôleur utilisateur (activation/désactivation TOTP)
+  /// @param logAdminService journal d'administration
   public TotpEnrollmentController(
       TotpService totpService, UserController userController, LogAdminService logAdminService) {
     this.totpService = totpService;
@@ -47,7 +48,7 @@ public class TotpEnrollmentController {
   /// Génère un nouveau secret TOTP, le stocke en session, et retourne le QR code SVG.
   ///
   /// @param session la session HTTP courante (stocke le secret)
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return `{otpUri, totpSecret, qrCodeSvg}`
   @GetMapping("/setup")
   public ResponseEntity<Map<String, Object>> setup(HttpSession session, Authentication auth) {
@@ -73,20 +74,19 @@ public class TotpEnrollmentController {
 
   /// Confirme l'enrollment TOTP en vérifiant le premier code saisi.
   ///
-  /// @param corps   corps JSON avec `code` (6 chiffres)
+  /// @param corps corps JSON avec `code` (6 chiffres)
   /// @param session la session HTTP courante (lit le secret)
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 200 `{succes: true}` ou 400 `{erreur: "..."}`
   @PostMapping("/confirmer")
   public ResponseEntity<Map<String, Object>> confirmer(
-      @RequestBody Map<String, String> corps, HttpSession session, Authentication auth) {
+      @Valid @RequestBody TotpChallengeRequest corps, HttpSession session, Authentication auth) {
     String secret = (String) session.getAttribute(SESSION_TOTP_SETUP);
     if (secret == null) {
       return erreur(400, "Session expirée. Recommencez la configuration.");
     }
 
-    String code = corps.getOrDefault("code", "");
-    if (!totpService.verifierCode(secret, code)) {
+    if (!totpService.verifierCode(secret, corps.code())) {
       return erreur(400, "Code incorrect. Recommencez la configuration.");
     }
 
@@ -105,16 +105,15 @@ public class TotpEnrollmentController {
   /// Désactive le TOTP après vérification du code courant.
   ///
   /// @param corps corps JSON avec `code` (6 chiffres)
-  /// @param auth  contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 200 `{succes: true}` ou 400 `{erreur: "..."}`
   @PostMapping("/desactiver")
   public ResponseEntity<Map<String, Object>> desactiver(
-      @RequestBody Map<String, String> corps, Authentication auth) {
+      @Valid @RequestBody TotpChallengeRequest corps, Authentication auth) {
     UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
     String secret = userController.lireSecretTotp(details.id());
 
-    String code = corps.getOrDefault("code", "");
-    if (!totpService.verifierCode(secret, code)) {
+    if (!totpService.verifierCode(secret, corps.code())) {
       return erreur(400, "Code TOTP incorrect.");
     }
 

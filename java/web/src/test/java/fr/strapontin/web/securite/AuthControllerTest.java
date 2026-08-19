@@ -188,31 +188,8 @@ class AuthControllerTest {
   }
 
   // --- reinitialiserMotDePasse ---
-
-  @Test
-  void reinitialiserMotDePasse_tokenNull_retourne400() {
-    var reponse =
-        authController.reinitialiserMotDePasse(
-            new ResetPasswordRequest(null, "motdepasse12345", null),
-            mock(HttpServletRequest.class));
-    assertEquals(400, reponse.getStatusCode().value());
-  }
-
-  @Test
-  void reinitialiserMotDePasse_motDePasseNull_retourne400() {
-    var reponse =
-        authController.reinitialiserMotDePasse(
-            new ResetPasswordRequest("token", null, null), mock(HttpServletRequest.class));
-    assertEquals(400, reponse.getStatusCode().value());
-  }
-
-  @Test
-  void reinitialiserMotDePasse_motDePasseTropCourt_retourne400() {
-    var reponse =
-        authController.reinitialiserMotDePasse(
-            new ResetPasswordRequest("token", "court", null), mock(HttpServletRequest.class));
-    assertEquals(400, reponse.getStatusCode().value());
-  }
+  // token/motDePasse manquants ou trop courts : voir ResetPasswordRequestValidationTest
+  // (@Valid ne s'exerce pas sur un appel Java direct au contrôleur, seulement via Spring MVC).
 
   @Test
   void reinitialiserMotDePasse_identifiantTropCourt_retourne400() {
@@ -423,32 +400,6 @@ class AuthControllerTest {
     assertThrows(
         IllegalStateException.class,
         () -> authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest));
-  }
-
-  @Test
-  void login_identifiantManquant_leveErreurMetier400() {
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
-
-    var ex =
-        assertThrows(
-            fr.strapontin.web.ErreurMetier.class,
-            () -> authController.login(new LoginRequest(null, "motdepasse12345"), httpRequest));
-
-    assertEquals(400, ex.getStatus());
-    verifyNoInteractions(authenticationManager);
-  }
-
-  @Test
-  void login_motDePasseManquant_leveErreurMetier400() {
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
-
-    var ex =
-        assertThrows(
-            fr.strapontin.web.ErreurMetier.class,
-            () -> authController.login(new LoginRequest("alice", " "), httpRequest));
-
-    assertEquals(400, ex.getStatus());
-    verifyNoInteractions(authenticationManager);
   }
 
   // --- moi ---
