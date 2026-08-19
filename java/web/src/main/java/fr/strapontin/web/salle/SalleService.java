@@ -30,6 +30,8 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestClient;
 
 /// Service de gestion des salles suivies.
@@ -267,7 +269,32 @@ public class SalleService {
     }
     salleRepository.ajouterPourUtilisateur(userId, salleId);
 
-    declencherWorkerParSources(salleId);
+    executerApresCommit(salleId);
+  }
+
+  /// Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction.
+  ///
+  /// <p>Sans cela, le déclenchement synchrone (thread virtuel, appel HTTP immédiat vers le worker)
+  /// pouvait s'exécuter avant que l'{@code INSERT}/{@code UPDATE} ne soit visible en base
+  /// (isolation {@code READ COMMITTED}), faisant manquer la salle tout juste ajoutée au cycle de
+  /// fetch qu'elle vient elle-même de déclencher — même correctif que {@code
+  /// ArtisteService#executerApresCommit}. Exécute immédiatement si aucune transaction n'est active
+  /// (ex. tests unitaires sans contexte Spring).
+  ///
+  /// @param salleId UUID de la salle ajoutée/créée dans la transaction en cours
+  private void executerApresCommit(UUID salleId) {
+    Runnable action = () -> declencherWorkerParSources(salleId);
+    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              action.run();
+            }
+          });
+    } else {
+      action.run();
+    }
   }
 
   /// Met à jour le wikidataId d'une salle sous savepoint (conflit possible sur l'index unique
@@ -379,7 +406,7 @@ public class SalleService {
               throw new ErreurMetier("Slug déjà utilisé par la salle " + nomConflit + ".", 409);
             });
     salleRepository.enregistrerSalleSource(salleId, "digitick", slug);
-    declencherWorkerParSources(salleId);
+    executerApresCommit(salleId);
     return salleId;
   }
 
