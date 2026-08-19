@@ -25,28 +25,28 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /// Contrôle de cohérence *a posteriori* entre `salles.wikidata_id` (déjà connu) et `salles.ville`
-/// (découvert en marge de l'investigation) : 7 salles sur 12 avaient un `wikidata_id`
-/// pointant vers une entité totalement étrangère — Q-ID matché sur un homonyme d'une autre ville
-/// (ex. « Theatre Municipal » de Béthune rattaché au musée des Beaux-Arts de Nancy) — jamais
-/// détecté faute de contrôle après coup, uniquement trouvé par un audit manuel ponctuel.
+/// (découvert en marge de l'investigation) : 7 salles sur 12 avaient un `wikidata_id` pointant vers
+/// une entité totalement étrangère — Q-ID matché sur un homonyme d'une autre ville (ex. « Theatre
+/// Municipal » de Béthune rattaché au musée des Beaux-Arts de Nancy) — jamais détecté faute de
+/// contrôle après coup, uniquement trouvé par un audit manuel ponctuel.
 ///
 /// {@link WikidataSalleSource#enrichirLot} rejette déjà ce type d'incohérence *au moment du
-/// matching* (`villeIncompatible`) mais seulement quand `salle.ville` et la commune du
-/// candidat sont toutes les deux connues — une ville locale inconnue ou fausse au moment de
-/// l'enrichissement (le cas des 7 salles ci-dessus) ne bloque rien, choix assumé pour ne pas
-/// réduire la couverture d'enrichissement des salles légitimement sans ville. Ce service ne change
-/// rien à ce comportement : il journalise seulement les incohérences déjà présentes en base pour un
-/// examen manuel ultérieur, en réutilisant la commune déjà récupérée par le mode batch de {@link
+/// matching* (`villeIncompatible`) mais seulement quand `salle.ville` et la commune du candidat
+/// sont toutes les deux connues — une ville locale inconnue ou fausse au moment de l'enrichissement
+/// (le cas des 7 salles ci-dessus) ne bloque rien, choix assumé pour ne pas réduire la couverture
+/// d'enrichissement des salles légitimement sans ville. Ce service ne change rien à ce comportement
+/// : il journalise seulement les incohérences déjà présentes en base pour un examen manuel
+/// ultérieur, en réutilisant la commune déjà récupérée par le mode batch de {@link
 /// WikidataSalleSource} (aucune requête SPARQL supplémentaire par rapport à un enrichissement
 /// classique à `wikidata_id` connu).
 ///
-/// <p> : la comparaison initiale contre `salles.ville` seule est aveugle par construction
-/// quand le mauvais rapprochement a corrompu `ville` en même temps que `wikidata_id` (la mauvaise
-/// entité écrase les deux au même moment) — les deux valeurs corrompues sont alors toujours
-/// cohérentes entre elles. `concerts.ville`, dérivée du code postal brut de la source et jamais
-/// touchée par l'enrichissement, sert désormais de référence prioritaire quand elle est disponible
-/// ; `salles.ville` reste le repli pour une salle sans concert avec ville connue (ex. tous ses
-/// concerts passés déjà purgés).
+/// <p>Angle mort corrigé : la comparaison initiale contre `salles.ville` seule est aveugle par
+/// construction quand le mauvais rapprochement a corrompu `ville` en même temps que `wikidata_id`
+/// (la mauvaise entité écrase les deux au même moment) — les deux valeurs corrompues sont alors
+/// toujours cohérentes entre elles. `concerts.ville`, dérivée du code postal brut de la source et
+/// jamais touchée par l'enrichissement, sert désormais de référence prioritaire quand elle est
+/// disponible ; `salles.ville` reste le repli pour une salle sans concert avec ville connue (ex.
+/// tous ses concerts passés déjà purgés).
 ///
 /// @since 2.7.5
 /// @author Kwaite
