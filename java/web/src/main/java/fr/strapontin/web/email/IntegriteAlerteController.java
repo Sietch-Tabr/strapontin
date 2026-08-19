@@ -49,7 +49,7 @@ public class IntegriteAlerteController {
   ///
   /// @param statut        {@code ok} ou {@code modifie}
   /// @param detail        sortie résumée d'{@code aide --check} (optionnel, {@code modifie}
-  // uniquement)
+  /// uniquement)
   /// @param authorization header {@code Authorization: Bearer <INTEGRITY_INTERNAL_SECRET>}
   /// @return 200 si traité, 403 si le token est absent ou invalide
   @PostMapping("/api/interne/integrite-statut")

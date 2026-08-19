@@ -215,7 +215,7 @@ public class AdminService {
   /// @param requete champs à modifier (nom, email, role — tous optionnels)
   /// @param adminId identifiant de l'admin demandeur
   /// @throws ErreurMetier si les données sont invalides, l'email est déjà utilisé, ou
-  // (rétrogradation
+  /// (rétrogradation
   /// d'un admin) si c'est le seul admin restant (409)
   @Transactional
   public void modifierUtilisateur(

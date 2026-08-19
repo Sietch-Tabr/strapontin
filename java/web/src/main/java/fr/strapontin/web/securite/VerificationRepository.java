@@ -42,7 +42,7 @@ public class VerificationRepository {
   /// Supprime les entrées de vérification pour un identifiant donné.
   ///
   /// @param identifiant préfixe/identifiant de la vérification (ex. {@code
-  // "reset:user@example.com"})
+  /// "reset:user@example.com"})
   public void supprimerParIdentifiant(String identifiant) {
     jdbc.update(
         "DELETE FROM verifications WHERE identifier = :prefixe", Map.of("prefixe", identifiant));
@@ -71,7 +71,7 @@ public class VerificationRepository {
   ///
   /// @param tokenHash hash SHA-256 du token
   /// @return l'identifiant (ex. {@code "reset:email"}), ou {@link Optional#empty()} si
-  // invalide/expiré
+  /// invalide/expiré
   public Optional<String> lireIdentifiantParTokenHash(String tokenHash) {
     List<String> lignes =
         jdbc.queryForList(
@@ -136,7 +136,7 @@ public class VerificationRepository {
   ///
   /// @param email email de l'utilisateur (normalisé)
   /// @return le username, ou {@link Optional#empty()} si l'utilisateur n'existe pas ou n'a
-  // pas de username
+  /// pas de username
   public Optional<String> lireUsernameParEmail(String email) {
     List<String> lignes =
         jdbc.queryForList(

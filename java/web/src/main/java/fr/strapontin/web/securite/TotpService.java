@@ -99,7 +99,7 @@ public class TotpService {
   /// @param secret le secret Base32 du compte
   /// @param code   le code à 6 chiffres saisi
   /// @return {@code true} si le code est valide dans la fenêtre courante ou adjacente, et non déjà
-  // utilisé
+  /// utilisé
   public boolean verifierCode(String secret, String code) {
     if (secret == null || code == null) return false;
     // Retire tous les espaces (et non seulement aux extrémités) : les applications TOTP comme

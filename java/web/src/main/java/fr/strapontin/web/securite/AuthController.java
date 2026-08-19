@@ -252,7 +252,7 @@ public class AuthController {
   /// active le compte en une seule opération (identifiant + mot de passe) et ouvre une session.
   ///
   /// @param req        le corps contenant le token, le mot de passe et optionnellement
-  // l'identifiant
+  /// l'identifiant
   /// @param httpRequest pour créer la session lors de l'activation d'une invitation
   /// @return 200 si réinitialisé — 400 si invalide
   @PostMapping("/api/auth/reset-password")

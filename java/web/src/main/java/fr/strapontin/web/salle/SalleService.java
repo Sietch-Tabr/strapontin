@@ -421,7 +421,7 @@ public class SalleService {
   }
 
   /// Retourne les identifiants sources CSV d'une salle (ex. {@code
-  // "digitick:lempreinte,tm:rZ..."}).
+  /// "digitick:lempreinte,tm:rZ..."}).
   /// @param salleId UUID de la salle
   /// @return CSV d'identifiants ou {@code null} si aucun
   public String lireIdentifiantsSources(UUID salleId) {

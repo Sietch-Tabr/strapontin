@@ -76,7 +76,7 @@ public class SalleController {
   /// @param requete corps JSON avec le nom et l'ID TM optionnel
   /// @param auth    contexte d'authentification
   /// @return 201 si créée — 409 si doublon, 400 si invalide/cap (via {@link
-  // GlobalExceptionHandler})
+  /// GlobalExceptionHandler})
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterSalle(
       @Valid @RequestBody RequeteAjouter requete, Authentication auth) {

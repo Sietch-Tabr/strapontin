@@ -242,7 +242,7 @@ class SalleRepository {
   /// <p>Ex. : {@code "digitick:lempreinte"} ou {@code "tm:rZFSnyZdFvA,digitick:lempreinte"}. Le
   /// préfixe Ticketmaster est abrégé ({@code "tm"}, pas {@code "ticketmaster"}, la valeur
   /// canonique de {@code salle_sources.source}) — {@link
-  // TicketmasterSource#accepteIdentifiantSalle}
+  /// TicketmasterSource#accepteIdentifiantSalle}
   /// n'accepte que ce préfixe court, sans quoi le fetch déclenché à l'ajout d'une salle TM ne fait
   /// jamais rien (mismatch silencieux, aucune exception).
   ///

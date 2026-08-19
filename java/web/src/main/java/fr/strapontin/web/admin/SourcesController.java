@@ -136,7 +136,7 @@ public class SourcesController {
   ///
   /// @param salleId UUID de la salle
   /// @return 204 si supprimée, 409 si des contraintes empêchent la suppression, 400 si UUID
-  // invalide
+  /// invalide
   @DeleteMapping("/digitick-salles/{salleId}")
   public ResponseEntity<?> supprimerSalleDigitick(@PathVariable String salleId) {
     UUID uuid = parseUuid(salleId);
