@@ -316,6 +316,7 @@ import { useToasts } from '../../composables/useToasts.js'
 import { useDialog } from '../../composables/useDialog.js'
 import { formaterInstant, formaterTs } from '../../composables/useDates.js'
 import { corpsJsonOuVide } from '../../utils/reponseJson.js'
+import { extraireSlugDepuisUrl, slugDeduit } from '../../utils/digitickSlug.js'
 
 const { afficherToast } = useToasts()
 
@@ -360,13 +361,6 @@ function classeBarre(source) {
   return 'barre-danger'
 }
 
-function slugDeduit(nom) {
-  return nom
-    .toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]/g, '')
-}
-
 function slugCourant(salle) {
   const edite = slugsEdites[salle.salleId]
   return edite !== undefined ? edite : (salle.digitickSlug ?? '')
@@ -391,17 +385,6 @@ async function charger() {
   } finally {
     chargement.value = false
   }
-}
-
-function extraireSlugDepuisUrl(valeur) {
-  try {
-    const url = new URL(valeur)
-    const site = url.searchParams.get('site')
-    if (site) return site.trim()
-    const m = url.pathname.match(/\/index-css\d+-(.+?)-pg\d+\.html$/)
-    if (m) return m[1].trim()
-  } catch (_) {}
-  return valeur.trim()
 }
 
 function mettreAJourSlug(salle, valeur) {
