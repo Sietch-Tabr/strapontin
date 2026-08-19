@@ -14,29 +14,25 @@ import java.security.spec.ECGenParameterSpec;
 import java.security.spec.ECPoint;
 import java.util.Base64;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /// Service de gestion des clés VAPID pour les notifications push PWA.
 ///
-/// <p>Génère une paire de clés EC P-256 (secp256r1) encodées en Base64 URL-safe,
-/// les persiste dans {@code app_config} et invalide tous les abonnements push existants.
+/// <p>Génère une paire de clés EC P-256 (secp256r1) encodées en Base64 URL-safe, les persiste dans
+/// {@code app_config} et invalide tous les abonnements push existants.
 ///
 /// @since 2.2.0
 /// @author Kwaite
 @Service
 public class VapidService {
 
-  private static final Logger log = LoggerFactory.getLogger(VapidService.class);
-
   private final ConfigService configService;
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
-  /// @param configService   lecture/écriture de la configuration applicative
-  /// @param jdbc            accès JDBC pour supprimer les abonnements push
+  /// @param configService lecture/écriture de la configuration applicative
+  /// @param jdbc accès JDBC pour supprimer les abonnements push
   /// @param logAdminService audit des actions admin
   public VapidService(
       ConfigService configService,
@@ -97,7 +93,7 @@ public class VapidService {
 
   /// Résultat de la génération des clés VAPID.
   ///
-  /// @param clePublique             clé publique EC P-256 en Base64 URL-safe
-  /// @param nbAbonnementsSupprimes  nombre d'abonnements push invalidés
+  /// @param clePublique clé publique EC P-256 en Base64 URL-safe
+  /// @param nbAbonnementsSupprimes nombre d'abonnements push invalidés
   public record ResultatVapid(String clePublique, int nbAbonnementsSupprimes) {}
 }

@@ -460,7 +460,7 @@ public class SalleService {
               .uri(url)
               .header("User-Agent", "Strapontin/2.6.3 (contact: " + contact + ")")
               .exchange(
-                  (req, resp) ->
+                  (_, resp) ->
                       new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) {
         log.warn("Nominatim erreur HTTP {} pour '{}'", reponse.statut(), terme);
@@ -553,7 +553,7 @@ public class SalleService {
               .get()
               .uri(url)
               .exchange(
-                  (req, resp) ->
+                  (_, resp) ->
                       new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) return List.of();
 

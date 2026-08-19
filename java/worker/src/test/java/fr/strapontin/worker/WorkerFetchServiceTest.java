@@ -281,7 +281,7 @@ class WorkerFetchServiceTest {
     verify(resolveur, never()).resoudreNomCanonique(eq("artiste"), eq("Fabrice Eboue"));
     verify(resolveur).resoudreNomCanonique("artiste", "Indila");
     org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
-        org.mockito.ArgumentCaptor.forClass(List.class);
+        org.mockito.ArgumentCaptor.captor();
     verify(persisterConcerts).persisterConcerts(captor.capture());
     List<fr.strapontin.core.ConcertBrut> persistes = captor.getValue();
     assertTrue(persistes.stream().anyMatch(c -> "Fabrice Eboue".equals(c.artiste())));

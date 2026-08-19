@@ -26,9 +26,9 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 
 /// Tests unitaires pour les beans de sécurité de {@link SecurityConfiguration}.
 ///
-/// <p>Couvre les propriétés des cookies de session et l'encodeur de mots de passe.
-/// Les règles d'autorisation ({@code securityFilterChain}) sont vérifiées par les
-/// tests E2E Playwright (auth.spec.js).
+/// <p>Couvre les propriétés des cookies de session et l'encodeur de mots de passe. Les règles
+/// d'autorisation ({@code securityFilterChain}) sont vérifiées par les tests E2E Playwright
+/// (auth.spec.js).
 ///
 /// @since 2.2.5
 /// @author Kwaite
@@ -46,7 +46,7 @@ class SecurityConfigurationTest {
             .password(encodeur.encode("motdepasse12345"))
             .roles("USER")
             .build();
-    UserDetailsService userDetailsService = id -> utilisateur;
+    UserDetailsService userDetailsService = _ -> utilisateur;
     ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 
     AuthenticationManager authenticationManager =
@@ -65,7 +65,7 @@ class SecurityConfigurationTest {
             .password(encodeur.encode("motdepasse12345"))
             .roles("USER")
             .build();
-    UserDetailsService userDetailsService = id -> utilisateur;
+    UserDetailsService userDetailsService = _ -> utilisateur;
     ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 
     AuthenticationManager authenticationManager =

@@ -5,7 +5,6 @@
 package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -68,7 +67,10 @@ class WorkerPurgeServiceTest {
   @Test
   void executerPurgerSalles_supprimeSallesOrphelinesEtEnregistreStat() {
     List<UUID> candidats = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
-    when(jdbc.query(contains("SELECT id FROM salles"), anyMap(), any(RowMapper.class)))
+    when(jdbc.query(
+            contains("SELECT id FROM salles"),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<RowMapper<UUID>>any()))
         .thenReturn(candidats);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
@@ -84,7 +86,10 @@ class WorkerPurgeServiceTest {
     UUID bloquee = UUID.randomUUID();
     UUID libre1 = UUID.randomUUID();
     UUID libre2 = UUID.randomUUID();
-    when(jdbc.query(contains("SELECT id FROM salles"), anyMap(), any(RowMapper.class)))
+    when(jdbc.query(
+            contains("SELECT id FROM salles"),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<RowMapper<UUID>>any()))
         .thenReturn(List.of(bloquee, libre1, libre2));
     when(jdbc.update(
             contains("DELETE FROM salles"),
@@ -110,7 +115,10 @@ class WorkerPurgeServiceTest {
 
   @Test
   void executerPurgerSalles_aucuneSalleOrpheline_neSupprimeRien() {
-    when(jdbc.query(contains("SELECT id FROM salles"), anyMap(), any(RowMapper.class)))
+    when(jdbc.query(
+            contains("SELECT id FROM salles"),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<RowMapper<UUID>>any()))
         .thenReturn(List.of());
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
