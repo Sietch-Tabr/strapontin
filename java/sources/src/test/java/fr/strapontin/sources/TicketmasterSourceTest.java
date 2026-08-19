@@ -916,4 +916,29 @@ class TicketmasterSourceTest {
 
     assertEquals(0, source.preleverConcertsManques());
   }
+
+  @Test
+  void redigerApiKey_messageAvecCle_masqueLaCle() {
+    String message =
+        "connect timed out:"
+            + " https://app.ticketmaster.com/discovery/v2/events.json?apikey=abcd1234&size=200";
+
+    String resultat = TicketmasterSource.redigerApiKey(message);
+
+    assertFalse(resultat.contains("abcd1234"));
+    assertTrue(resultat.contains("apikey=***"));
+    assertTrue(resultat.contains("size=200"));
+  }
+
+  @Test
+  void redigerApiKey_messageSansCle_inchange() {
+    String message = "connect timed out";
+
+    assertEquals(message, TicketmasterSource.redigerApiKey(message));
+  }
+
+  @Test
+  void redigerApiKey_messageNull_retourneNull() {
+    assertNull(TicketmasterSource.redigerApiKey(null));
+  }
 }
