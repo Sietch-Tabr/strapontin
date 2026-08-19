@@ -116,21 +116,21 @@ public class PersisteurConcertsDb {
       }
     }
 
-    Map<String, UUID> cache = new HashMap<>();
-    String table = "salle".equals(type) ? "salle_sources" : "artiste_sources";
-    String colUuid = "salle".equals(type) ? "salle_id" : "artiste_id";
+    boolean estSalle = "salle".equals(type);
+    String sql =
+        estSalle
+            ? "SELECT salle_id, identifiant_externe FROM salle_sources"
+                + " WHERE source = :source AND identifiant_externe IN (:ids)"
+            : "SELECT artiste_id, identifiant_externe FROM artiste_sources"
+                + " WHERE source = :source AND identifiant_externe IN (:ids)";
+    String colUuid = estSalle ? "salle_id" : "artiste_id";
 
+    Map<String, UUID> cache = new HashMap<>();
     for (var entry : parSource.entrySet()) {
       String source = entry.getKey();
       List<String> ids = entry.getValue().stream().distinct().toList();
       List<Map<String, Object>> lignes =
-          jdbc.queryForList(
-              "SELECT "
-                  + colUuid
-                  + ", identifiant_externe FROM "
-                  + table
-                  + " WHERE source = :source AND identifiant_externe IN (:ids)",
-              Map.of("source", source, "ids", ids));
+          jdbc.queryForList(sql, Map.of("source", source, "ids", ids));
       for (var ligne : lignes) {
         String cle = source + ":" + ligne.get("identifiant_externe");
         cache.put(cle, (UUID) ligne.get(colUuid));
@@ -139,24 +139,35 @@ public class PersisteurConcertsDb {
     return cache;
   }
 
-  /// Résout les concerts dont l'URL existe déjà en base sous un {@code artiste_norm} différent.
+  /// Résout les concerts Eventim dont l'URL existe déjà en base sous un {@code artiste_norm}
+  /// différent.
   ///
   /// <p>Couvre le cas des pages festival Eventim : une même URL peut exposer des artistes
   /// différents selon le fetch. Sans cette résolution, deux lignes coexisteraient en base avec le
   /// même {@code (source, url, date, heure)} mais des {@code artiste_norm} différents, déclenchant
   /// une suppression cyclique dans {@link #supprimerDoublonsParUrl}.
   ///
+  /// <p>Restreint à Eventim (seule source concernée par le cas documenté ci-dessus) : appliqué à
+  /// toutes les sources, ce mécanisme empêchait aussi toute guérison d'une corruption de {@code
+  /// artiste_norm} déjà persistée une fois sa cause racine corrigée en amont — la ligne entrante,
+  /// désormais correcte, se voyait reforcée vers l'ancienne valeur avant même d'atteindre l'upsert.
+  /// Pour les autres sources, {@link #supprimerDoublonsParUrl} (qui conserve la ligne la plus
+  /// récemment mise à jour) suffit à absorber une éventuelle ligne dupliquée transitoire, tout en
+  /// laissant une résolution corrigée remplacer effectivement l'ancienne.
+  ///
   /// @param concerts concerts après résolution des identités sources
-  /// @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL
+  /// @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour
+  ///   Eventim uniquement
   List<ValeurConcert> resoudreParUrl(List<ValeurConcert> concerts) {
-    List<ValeurConcert> avecUrl = concerts.stream().filter(c -> c.url() != null).toList();
+    List<ValeurConcert> avecUrl =
+        concerts.stream().filter(c -> c.url() != null && "eventim".equals(c.source())).toList();
     if (avecUrl.isEmpty()) return concerts;
 
     List<String> urls = avecUrl.stream().map(ValeurConcert::url).distinct().toList();
     List<Map<String, Object>> lignesExistantes =
         jdbc.queryForList(
             "SELECT artiste_norm, artiste_id, date, heure, source, url"
-                + " FROM concerts WHERE url IN (:urls)",
+                + " FROM concerts WHERE url IN (:urls) AND source = 'eventim'",
             Map.of("urls", urls));
 
     if (lignesExistantes.isEmpty()) return concerts;

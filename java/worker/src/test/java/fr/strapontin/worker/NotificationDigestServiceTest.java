@@ -315,8 +315,8 @@ class NotificationDigestServiceTest {
             new ObjectMapper(),
             logsAdminWorker,
             gestionQuotaResendWorker,
-            cle -> resendMock,
-            (clePublique, clePrivee, sujet) -> {
+            _ -> resendMock,
+            (_, _, _) -> {
               throw new java.security.GeneralSecurityException("VAPID non configuré en test");
             });
 
@@ -357,8 +357,7 @@ class NotificationDigestServiceTest {
         "p256dh",
         "BPKi4XnOYaPYQWcKZsUfMxTQZV0JyJA-zx65BGYqeHJ8KDlO2AL5lhoFUCXC1iFMUlTzt_sgos9GiYMxFEgCDQE");
     abonnement.put("auth", "RZIK8q0lRcIbLO9VyII_4Q");
-    when(jdbc.queryForList(contains("push_abonnements"), anyMap()))
-        .thenReturn(List.of(abonnement));
+    when(jdbc.queryForList(contains("push_abonnements"), anyMap())).thenReturn(List.of(abonnement));
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
     when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.of("cle-publique"));
     when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.of("cle-privee"));
@@ -382,10 +381,10 @@ class NotificationDigestServiceTest {
             new ObjectMapper(),
             logsAdminWorker,
             gestionQuotaResendWorker,
-            cle -> {
+            _ -> {
               throw new IllegalStateException("Resend non configuré en test");
             },
-            (clePublique, clePrivee, sujet) -> pushServiceMock);
+            (_, _, _) -> pushServiceMock);
 
     serviceAvecFabriques.executerDigest("quotidien");
 

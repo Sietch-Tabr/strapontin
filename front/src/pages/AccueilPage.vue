@@ -135,7 +135,7 @@
 <script setup>
 defineOptions({ name: 'AccueilPage' })
 
-import { ref, shallowRef, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, shallowRef, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import EtatChargement from '../components/EtatChargement.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formaterAvecHeure } from '../composables/useDates.js'
@@ -154,24 +154,35 @@ const filtreNouveau = computed(() => route.query.nouveau === 'true')
 const filtreIndisponibles = computed(() => route.query.indisponibles === '1')
 const filtreMasques = computed(() => route.query.masques === 'true')
 
+const controleurComposant = new AbortController()
+
+// Un nouvel appel (changement de filtre pendant qu'un chargement précédent est en cours)
+// annule le précédent plutôt que de laisser deux requêtes concurrentes risquer d'appliquer
+// leurs résultats dans le désordre.
+let controleurActuel = null
+
 async function charger() {
+  controleurActuel?.abort()
+  const controleur = new AbortController()
+  controleurActuel = controleur
   chargement.value = true
   try {
     const params = new URLSearchParams()
     if (filtreNouveau.value) params.set('nouveau', 'true')
     if (filtreIndisponibles.value) params.set('indisponibles', '1')
     if (filtreMasques.value) params.set('masques', 'true')
-    const rep = await fetch('/api/accueil?' + params)
+    const rep = await fetch('/api/accueil?' + params, { signal: controleur.signal })
     // au démarrage PWA (shell servi depuis le cache SW), cet appel peut partir avant que
     // la session ne soit confirmée côté serveur (401 transitoire, pas une vraie panne) — pas de
     // toast dans ce cas, comme le fait déjà App.vue pour ses propres appels de montage.
     if (rep.status === 401) return
     if (!rep.ok) throw new Error()
     donnees.value = await rep.json()
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de charger les concerts.', 'erreur')
   } finally {
-    chargement.value = false
+    if (controleurActuel === controleur) chargement.value = false
   }
 }
 
@@ -193,13 +204,15 @@ async function masquerConcert(concert, groupe) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ masquer: true }),
+      signal: controleurComposant.signal,
     })
     if (!rep.ok) throw new Error()
     groupe.concerts.splice(groupe.concerts.indexOf(concert), 1)
     if (groupe.concerts.length === 0) {
       donnees.value.artistesGroupes.splice(donnees.value.artistesGroupes.indexOf(groupe), 1)
     }
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de masquer ce concert.', 'erreur')
   }
 }
@@ -210,13 +223,15 @@ async function demasquerConcert(concert, groupe) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ masquer: false }),
+      signal: controleurComposant.signal,
     })
     if (!rep.ok) throw new Error()
     groupe.concerts.splice(groupe.concerts.indexOf(concert), 1)
     if (groupe.concerts.length === 0) {
       donnees.value.artistesGroupes.splice(donnees.value.artistesGroupes.indexOf(groupe), 1)
     }
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de réafficher ce concert.', 'erreur')
   }
 }
@@ -230,10 +245,12 @@ async function masquerGroupe(groupe) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ artisteId: groupe.artisteId }),
+      signal: controleurComposant.signal,
     })
     if (!rep.ok) throw new Error()
     donnees.value.artistesGroupes.splice(donnees.value.artistesGroupes.indexOf(groupe), 1)
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de masquer cet artiste.', 'erreur')
   }
 }
@@ -244,10 +261,12 @@ async function demasquerGroupe(groupe) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ artisteId: groupe.artisteId }),
+      signal: controleurComposant.signal,
     })
     if (!rep.ok) throw new Error()
     donnees.value.artistesGroupes.splice(donnees.value.artistesGroupes.indexOf(groupe), 1)
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de réafficher cet artiste.', 'erreur')
   }
 }
@@ -270,9 +289,21 @@ watch(() => route.query, async () => {
 }, { deep: true })
 
 onMounted(async () => {
-  await fetch('/api/accueil/marquer-vus', { method: 'POST' })
+  // Best-effort, jamais bloquant : une panne réseau sur cet appel ne doit pas empêcher le
+  // chargement de la page (chargerSession/charger/scrollVersAncre ci-dessous) — un badge
+  // "nouveau" resté affiché un cycle de plus n'est pas grave, une page blanche l'est.
+  try {
+    await fetch('/api/accueil/marquer-vus', { method: 'POST', signal: controleurComposant.signal })
+  } catch (_) {
+    // ignoré volontairement
+  }
   chargerSession()
   await charger()
   await scrollVersAncre()
+})
+
+onUnmounted(() => {
+  controleurComposant.abort()
+  controleurActuel?.abort()
 })
 </script>

@@ -6,8 +6,6 @@ package fr.strapontin.worker.jobs;
 
 import fr.strapontin.worker.NotificationDigestService;
 import org.quartz.JobExecutionContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
@@ -16,8 +14,6 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
 /// @since 2.0.0
 /// @author Kwaite
 public class NotifierDigestJob extends QuartzJobBean {
-
-  private static final Logger log = LoggerFactory.getLogger(NotifierDigestJob.class);
 
   private NotificationDigestService notificationDigestService;
 
@@ -28,11 +24,6 @@ public class NotifierDigestJob extends QuartzJobBean {
 
   @Override
   protected void executeInternal(JobExecutionContext context) {
-    try {
-      notificationDigestService.executerDigest("quotidien");
-    } catch (Exception e) {
-      log.error("notifier:digest échoué", e);
-      throw e;
-    }
+    notificationDigestService.executerDigest("quotidien");
   }
 }

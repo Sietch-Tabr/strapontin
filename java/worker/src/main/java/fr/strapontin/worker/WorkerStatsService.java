@@ -24,9 +24,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Statistiques et bilans de panne des jobs Quartz — extrait de {@code WorkerService},
-/// mécanisme partagé par tous les jobs (fetch, purge, révocation, réconciliation), pas seulement
-/// le fetch.
+/// Statistiques et bilans de panne des jobs Quartz — extrait de {@code WorkerService}, mécanisme
+/// partagé par tous les jobs (fetch, purge, révocation, réconciliation), pas seulement le fetch.
 ///
 /// @since 2.7.0
 /// @author Kwaite
@@ -42,10 +41,10 @@ public class WorkerStatsService {
   private final LogsAdminWorker logsAdminWorker;
   private final MeterRegistry meterRegistry;
 
-  /// @param sources    sources de concerts (bilan de panne par source)
-  /// @param tm         source Ticketmaster (bilan des concerts manqués par pagination plafonnée)
-  /// @param resolveur  résolveur Deezer (bilan de panne dédié)
-  /// @param jdbc       accès JDBC pour {@code fetch_jobs}/{@code fetch_jobs_historique}
+  /// @param sources sources de concerts (bilan de panne par source)
+  /// @param tm source Ticketmaster (bilan des concerts manqués par pagination plafonnée)
+  /// @param resolveur résolveur Deezer (bilan de panne dédié)
+  /// @param jdbc accès JDBC pour {@code fetch_jobs}/{@code fetch_jobs_historique}
   /// @param logsAdminWorker journalisation des bilans dans {@code logs_admin}
   /// @param meterRegistry registre Micrometer pour la métrique de durée par type de job
   public WorkerStatsService(
@@ -69,7 +68,7 @@ public class WorkerStatsService {
   /// @param typeJob type de job (ex. {@code "fetch:region"}, {@code "purger:concerts"})
   /// @param dureeMs durée d'exécution en millisecondes
   /// @param resultat bilan de persistance (insertions/mises à jour)
-  /// @param erreur   message d'erreur, ou {@code null} si le job s'est terminé sans exception
+  /// @param erreur message d'erreur, ou {@code null} si le job s'est terminé sans exception
   public void enregistrerStatJob(
       String typeJob, long dureeMs, ResultatPersistance resultat, String erreur) {
     Timestamp maintenant = Timestamp.from(Instant.now());
@@ -130,15 +129,15 @@ public class WorkerStatsService {
   }
 
   /// Remonte dans `logs_admin` le bilan agrégé d'appels/erreurs d'une source pour le cycle qui
-  /// vient de se terminer — mécanisme générique remplaçant les anciennes méthodes
-  /// dédiées `remonterBilanTm`/`remonterBilanEventim` : une panne totale (100% d'échecs sur un
-  /// nombre suffisant d'appels — voir {@link BilanFetch#SEUIL_APPELS_MIN_ALERTE_DEFAUT}) est
-  /// remontée en niveau {@code error}, captée automatiquement par {@code AlerteLogsAdminService}
-  /// (digest niveau erreur) ; un échec partiel reste en {@code warn}.
+  /// vient de se terminer — mécanisme générique remplaçant les anciennes méthodes dédiées
+  /// `remonterBilanTm`/`remonterBilanEventim` : une panne totale (100% d'échecs sur un nombre
+  /// suffisant d'appels — voir {@link BilanFetch#SEUIL_APPELS_MIN_ALERTE_DEFAUT}) est remontée en
+  /// niveau {@code error}, captée automatiquement par {@code AlerteLogsAdminService} (digest niveau
+  /// erreur) ; un échec partiel reste en {@code warn}.
   ///
-  /// @param typeJob   le type de job de fetch (préfixe `fetch:`)
+  /// @param typeJob le type de job de fetch (préfixe `fetch:`)
   /// @param nomSource nom de la source (ex. {@code "eventim"}, capitalisé pour l'affichage)
-  /// @param bilan     bilan prélevé pour cette source depuis le dernier cycle
+  /// @param bilan bilan prélevé pour cette source depuis le dernier cycle
   /// @return {@code true} si une entrée a été insérée dans {@code logs_admin}
   private boolean remonterBilan(String typeJob, String nomSource, BilanFetch bilan) {
     if (bilan == null) return false;
@@ -178,15 +177,14 @@ public class WorkerStatsService {
     return true;
   }
 
-  /// Remonte dans `logs_admin` les correspondances Eventim par containment acceptées pour le
-  /// cycle qui vient de se terminer — un containment n'est pas nécessairement une erreur
-  /// (Eventim ne persiste aucun identifiant, {@code rechercherAttractionId} est rappelé à chaque
-  /// cycle) mais reste invisible jusque-là (log SLF4J niveau INFO uniquement) : signalé en
-  /// {@code warn} pour permettre une vérification manuelle rapide plutôt qu'une acceptation
-  /// silencieuse.
+  /// Remonte dans `logs_admin` les correspondances Eventim par containment acceptées pour le cycle
+  /// qui vient de se terminer — un containment n'est pas nécessairement une erreur (Eventim ne
+  /// persiste aucun identifiant, {@code rechercherAttractionId} est rappelé à chaque cycle) mais
+  /// reste invisible jusque-là (log SLF4J niveau INFO uniquement) : signalé en {@code warn} pour
+  /// permettre une vérification manuelle rapide plutôt qu'une acceptation silencieuse.
   ///
   /// @param typeJob le type de job de fetch (préfixe `fetch:`)
-  /// @param eventim  la source Eventim dont on prélève les containments acceptés
+  /// @param eventim la source Eventim dont on prélève les containments acceptés
   /// @return {@code true} si un warn a été inséré dans {@code logs_admin}
   private boolean remonterContainmentsEventim(String typeJob, EventimSource eventim) {
     List<String> containments = eventim.preleverContainmentsAcceptes();
@@ -197,17 +195,17 @@ public class WorkerStatsService {
         typeJob
             + " — "
             + containments.size()
-            + " correspondance(s) Eventim par containment (#1013) : "
+            + " correspondance(s) Eventim par containment : "
             + String.join("; ", containments),
         Map.of("containments", containments));
     return true;
   }
 
-  /// Remonte dans `logs_admin` un warn de résultat vide (nb_inseres + nb_mis_a_jour = 0)
-  /// pour un fetch qui s'est terminé sans erreur mais sans aucun concert persisté.
+  /// Remonte dans `logs_admin` un warn de résultat vide (nb_inseres + nb_mis_a_jour = 0) pour un
+  /// fetch qui s'est terminé sans erreur mais sans aucun concert persisté.
   ///
-  /// @param typeJob  le type de job de fetch
-  /// @param execLe   l'horodatage de l'exécution
+  /// @param typeJob le type de job de fetch
+  /// @param execLe l'horodatage de l'exécution
   private void remonterResultatVide(String typeJob, Timestamp execLe) {
     try {
       Map<String, Object> params = new LinkedHashMap<>();

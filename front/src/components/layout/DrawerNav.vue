@@ -70,6 +70,7 @@ defineOptions({ name: 'DrawerNav' })
 
 import { ref, watch } from 'vue'
 import { useNavigation } from '../../composables/useNavigation.js'
+import { useDeconnexion } from '../../composables/useDeconnexion.js'
 
 const props = defineProps({
   ouvert: { type: Boolean, default: false },
@@ -84,6 +85,7 @@ const emit = defineEmits(['fermer'])
 const dialogRef = ref(null)
 const handleRef = ref(null)
 const { naviguer, estActif } = useNavigation()
+const { deconnecter } = useDeconnexion()
 
 watch(
   () => props.ouvert,
@@ -94,6 +96,7 @@ watch(
       enregistrerSwipe()
     } else {
       dialogRef.value.close()
+      retirerSwipe()
     }
   },
 )
@@ -113,28 +116,42 @@ function clicBackdrop(e) {
   }
 }
 
-async function deconnecter() {
-  await fetch('/logout', { method: 'POST' })
-  window.location.href = '/login'
-}
-
 let touchDepart = 0
+let swipeAbortController = null
 
 // Écouteurs posés sur la poignée uniquement, pas sur le dialog entier : un touchend sur un
 // lien (bulle jusqu'au dialog) pouvait sinon être interprété comme un swipe et fermer le menu
 // pendant le clic, rendant la navigation vers ce lien intermittente.
+//
+// AbortController plutôt que { once: true } seul : un drawer ouvert puis refermé sans swipe
+// abouti (backdrop, navigation) ne déclenche jamais les écouteurs "once" — ils s'accumulaient
+// sur la poignée à chaque ouverture. retirerSwipe() les annule explicitement à la fermeture,
+// quel que soit son déclencheur.
 function enregistrerSwipe() {
   const poignee = handleRef.value
   if (!poignee) return
 
-  const onTouchStart = (e) => {
-    touchDepart = e.touches[0].clientY
-  }
-  const onTouchEnd = (e) => {
-    if (e.changedTouches[0].clientY - touchDepart > 80) dialogRef.value?.close()
-  }
+  swipeAbortController = new AbortController()
+  const { signal } = swipeAbortController
 
-  poignee.addEventListener('touchstart', onTouchStart, { passive: true, once: true })
-  poignee.addEventListener('touchend', onTouchEnd, { passive: true, once: true })
+  poignee.addEventListener(
+    'touchstart',
+    (e) => {
+      touchDepart = e.touches[0].clientY
+    },
+    { passive: true, signal },
+  )
+  poignee.addEventListener(
+    'touchend',
+    (e) => {
+      if (e.changedTouches[0].clientY - touchDepart > 80) dialogRef.value?.close()
+    },
+    { passive: true, signal },
+  )
+}
+
+function retirerSwipe() {
+  swipeAbortController?.abort()
+  swipeAbortController = null
 }
 </script>

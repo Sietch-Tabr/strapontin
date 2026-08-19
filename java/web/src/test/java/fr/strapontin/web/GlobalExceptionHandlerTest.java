@@ -128,4 +128,17 @@ class GlobalExceptionHandlerTest {
     assertEquals(400, rep.getStatusCode().value());
     assertEquals("Données invalides.", rep.getBody().get("erreur"));
   }
+
+  @Test
+  void gererErreurInattendue_logAdminEnEchec_retourneQuandMemeLaReponse() {
+    when(request.getServletPath()).thenReturn("/api/test");
+    when(request.getMethod()).thenReturn("GET");
+    doThrow(new RuntimeException("base indisponible"))
+        .when(logAdminService)
+        .logAdmin(anyString(), anyString(), anyString(), any());
+
+    Map<String, Object> rep = handler.gererErreurInattendue(new RuntimeException("panne"), request);
+
+    assertEquals("Une erreur inattendue s'est produite.", rep.get("erreur"));
+  }
 }

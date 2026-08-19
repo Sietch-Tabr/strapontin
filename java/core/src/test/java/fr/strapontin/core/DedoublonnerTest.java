@@ -1,6 +1,10 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
 package fr.strapontin.core;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -222,7 +226,7 @@ class DedoublonnerTest {
 
   @Test
   void dedoublonner_villeNull_fusionneMemeSalle() {
-    // ville null → ville_norm "" → même clé → fusionné
+    // ville null des deux côtés, même salle → repli sur salle_norm comme clé → fusionné
     var concerts =
         List.of(
             concert("Portishead", "2025-05-20", "La Cigale", null, "bandsintown"),

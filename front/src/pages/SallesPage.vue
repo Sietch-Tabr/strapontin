@@ -148,10 +148,11 @@
 <script setup>
 defineOptions({ name: 'SallesPage' })
 
-import { ref, shallowRef, onMounted } from 'vue'
+import { ref, shallowRef, onMounted, onUnmounted } from 'vue'
 import { useDialog } from '../composables/useDialog.js'
 import { useToasts } from '../composables/useToasts.js'
 import EtatChargement from '../components/EtatChargement.vue'
+import { corpsJsonOuVide } from '../utils/reponseJson.js'
 
 const { afficherToast } = useToasts()
 
@@ -165,10 +166,11 @@ const signalement = ref({ nom: '', ville: '', urlSite: '', commentaire: '' })
 const signalementEnCours = ref(false)
 const { dialogRef, ouvrir: ouvrirDialog, fermer: fermerDialog } = useDialog()
 const { dialogRef: dialogSignalementRef, ouvrir: ouvrirDialogSignalement } = useDialog()
+const controleur = new AbortController()
 
 async function charger(recherche = '') {
   const params = recherche.trim().length >= 2 ? '?q=' + encodeURIComponent(recherche) : ''
-  const rep = await fetch('/api/salles' + params)
+  const rep = await fetch('/api/salles' + params, { signal: controleur.signal })
   if (!rep.ok) throw new Error()
   return rep.json()
 }
@@ -178,7 +180,8 @@ async function rechercher() {
   try {
     qSoumis.value = q.value
     donnees.value = await charger(q.value)
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de rechercher.', 'erreur')
   }
 }
@@ -190,13 +193,14 @@ async function ajouter(nom, tmVenueId, osmId = null, wikidataId = null) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nom, tmVenueId: tmVenueId || null, osmId, wikidataId }),
+      signal: controleur.signal,
     })
     if (rep.status === 409) {
       afficherToast('Vous suivez déjà cette salle.', 'info')
       return
     }
     if (!rep.ok) {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       afficherToast(data.erreur || 'Erreur lors de l\'ajout.', 'erreur')
       return
     }
@@ -204,7 +208,8 @@ async function ajouter(nom, tmVenueId, osmId = null, wikidataId = null) {
     q.value = ''
     qSoumis.value = ''
     donnees.value = await charger()
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible d\'ajouter cette salle.', 'erreur')
   }
 }
@@ -220,11 +225,13 @@ async function confirmerSuppression() {
   try {
     const rep = await fetch('/api/salles/' + salleASupprimer.value.id, {
       method: 'DELETE',
+      signal: controleur.signal,
     })
     if (!rep.ok) throw new Error()
     afficherToast('Salle retirée de votre liste.', 'succes')
     donnees.value = await charger()
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de supprimer cette salle.', 'erreur')
   } finally {
     salleASupprimer.value = null
@@ -243,19 +250,21 @@ async function envoyerSignalement() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(signalement.value),
+      signal: controleur.signal,
     })
     if (rep.status === 429) {
       afficherToast('Trop de signalements. Réessayez dans une heure.', 'erreur')
       return
     }
     if (!rep.ok) {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       afficherToast(data.erreur || 'Erreur lors du signalement.', 'erreur')
       return
     }
     dialogSignalementRef.value.close()
     afficherToast('Votre signalement a été transmis.', 'succes')
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible d\'envoyer le signalement.', 'erreur')
   } finally {
     signalementEnCours.value = false
@@ -265,10 +274,12 @@ async function envoyerSignalement() {
 onMounted(async () => {
   try {
     donnees.value = await charger()
-  } catch {
-    afficherToast('Impossible de charger les salles.', 'erreur')
+  } catch (e) {
+    if (e.name !== 'AbortError') afficherToast('Impossible de charger les salles.', 'erreur')
   } finally {
     chargement.value = false
   }
 })
+
+onUnmounted(() => controleur.abort())
 </script>

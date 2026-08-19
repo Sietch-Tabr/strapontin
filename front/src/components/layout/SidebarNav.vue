@@ -84,6 +84,7 @@
 defineOptions({ name: 'SidebarNav' })
 
 import { useNavigation } from '../../composables/useNavigation.js'
+import { useDeconnexion } from '../../composables/useDeconnexion.js'
 
 const props = defineProps({
   navPrincipal: { type: Array, default: () => [] },
@@ -95,9 +96,5 @@ const props = defineProps({
 })
 
 const { naviguer, estActif } = useNavigation()
-
-async function deconnecter() {
-  await fetch('/logout', { method: 'POST' })
-  window.location.href = '/login'
-}
+const { deconnecter } = useDeconnexion()
 </script>

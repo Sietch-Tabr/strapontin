@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
@@ -39,9 +40,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   private static final String CLE_TOTAL_RESULTS = "totalResults";
   private static final int TAILLE_PAGE = 50;
   private static final int MAX_PAGES = 10;
-  private static final String DEPT_PARIS = "75";
-  private static final String VILLE_PARIS = "Paris";
-  private static final String SEPARATEUR_NOM_SALLE = " - ";
 
   /// Catégories Eventim correspondant aux spectacles musicaux (concerts et musique classique).
   public static final List<String> CATEGORIES_REGION =
@@ -105,7 +103,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   ///
   /// @param restClient client HTTP Spring à utiliser
   public EventimSource(RestClient restClient) {
-    this.restClient = restClient;
+    this.restClient = Objects.requireNonNull(restClient, "restClient");
   }
 
   @Override
@@ -150,48 +148,23 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   /// @param salle nom de la salle, utilisé comme source alternative de la commune
   /// @return ville corrigée, ou la ville d'origine si aucune incohérence ou correction possible
   public static String corrigerVilleEventim(String ville, String dept, String salle) {
-    if (ville == null || dept == null) return ville;
-    if (DEPT_PARIS.equals(dept) || !VILLE_PARIS.equalsIgnoreCase(ville.trim())) return ville;
-
-    int idx = salle.lastIndexOf(SEPARATEUR_NOM_SALLE);
-    if (idx > 0) {
-      String commune = salle.substring(idx + SEPARATEUR_NOM_SALLE.length()).strip();
-      if (!commune.isBlank()) return commune;
-    }
-
-    log.warn(
-        "Eventim ville incohérente non corrigée salle={} dept={} ville={}", salle, dept, ville);
-    return ville;
+    return MapeurProduitEventim.corrigerVilleEventim(ville, dept, salle);
   }
 
   /// Parse une date ISO 8601 Eventim et extrait la date et l'heure locales.
   ///
-  /// L'heure "00:00" est considérée comme absente (Eventim utilise minuit par défaut).
-  ///
   /// @param dateStr chaîne de date ISO 8601
   /// @return tableau à deux éléments : [date (yyyy-MM-dd), heure (HH:mm) ou null]
   public static String[] parseDateEventim(String dateStr) {
-    String datePart = dateStr.substring(0, 10);
-    int tIndex = dateStr.indexOf('T');
-    if (tIndex == -1) return new String[] {datePart, null};
-    String heurePart = dateStr.substring(tIndex + 1, Math.min(tIndex + 6, dateStr.length()));
-    String heure = "00:00".equals(heurePart) ? null : heurePart;
-    return new String[] {datePart, heure};
+    return MapeurProduitEventim.parseDateEventim(dateStr);
   }
 
   /// Extrait le nom de l'artiste depuis un titre d'événement Eventim.
   ///
-  /// Le titre Eventim est de la forme "Artiste - Tournée" ou "Artiste : Spectacle". On extrait la
-  /// partie avant le premier séparateur " - " ou " : ".
-  ///
   /// @param titre titre de l'événement Eventim
   /// @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
   public static String extraireNomArtiste(String titre) {
-    for (String sep : new String[] {" - ", " : "}) {
-      int idx = titre.indexOf(sep);
-      if (idx > 0) return titre.substring(0, idx).strip();
-    }
-    return titre;
+    return MapeurProduitEventim.extraireNomArtiste(titre);
   }
 
   /// Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
@@ -200,37 +173,19 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   /// @param artisteFallback nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
   /// @return concert extrait, ou null si le produit est invalide
   public static ConcertBrut mapProduit(Map<String, Object> produit, String artisteFallback) {
-    return mapProduit(produit, artisteFallback, null);
+    return MapeurProduitEventim.mapper(produit, artisteFallback, null);
   }
 
   /// Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
   ///
-  /// @param produit          produit Eventim sous forme de Map imbriquée
-  /// @param artisteFallback  nom de l'artiste cherché (pour fetchArtiste uniquement), peut être
-  // null
+  /// @param produit produit Eventim sous forme de Map imbriquée
+  /// @param artisteFallback nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
   /// @param artisteSourceId identifiant source préfixé de l'artiste (ex. {@code "eventim:12345"}),
   ///   null si inconnu (fetch région ou salle)
   /// @return concert extrait, ou null si le produit est invalide
-  @SuppressWarnings("unchecked")
   public static ConcertBrut mapProduit(
       Map<String, Object> produit, String artisteFallback, String artisteSourceId) {
-    try {
-      var liveEnt = extraireLiveEntertainment(produit);
-      String dateStr = liveEnt != null ? (String) liveEnt.get("startDate") : null;
-      if (dateStr == null) return null;
-
-      String titre = (String) produit.get("name");
-      if (titre == null) return null;
-
-      String[] datHeure = parseDateEventim(dateStr);
-      String artiste = artisteFallback != null ? artisteFallback : extraireNomArtiste(titre);
-      var location = (Map<String, Object>) liveEnt.get("location");
-      return construireConcertEventim(
-          produit, liveEnt, location, artiste, datHeure[0], datHeure[1], artisteSourceId);
-    } catch (Exception e) {
-      log.warn("erreur parsing produit Eventim", e);
-      return null;
-    }
+    return MapeurProduitEventim.mapper(produit, artisteFallback, artisteSourceId);
   }
 
   /// @param succes {@code false} si l'appel HTTP a échoué — distingue une page réellement vide
@@ -257,25 +212,11 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   @SuppressWarnings("unchecked")
   private ResultatPageEventim chargerPageProduits(
-      String uri, String artisteFallback, String deptFiltre, String artisteSourceId) {
+      java.net.URI uri, String artisteFallback, String deptFiltre, String artisteSourceId) {
     compteurBilan.enregistrerAppel();
     try {
       Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       return parserReponseProduits(data, artisteFallback, deptFiltre, artisteSourceId);
-    } catch (Exception e) {
-      compteurBilan.enregistrerErreur();
-      log.warn("Eventim erreur HTTP", e);
-      return ResultatPageEventim.ECHEC;
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private ResultatPageEventim chargerPageProduits(
-      java.net.URI uri, String artisteFallback, String deptFiltre) {
-    compteurBilan.enregistrerAppel();
-    try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      return parserReponseProduits(data, artisteFallback, deptFiltre, null);
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
       log.warn("Eventim erreur HTTP", e);
@@ -298,72 +239,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     int total =
         data.get(CLE_TOTAL_RESULTS) != null ? ((Number) data.get(CLE_TOTAL_RESULTS)).intValue() : 0;
     return new ResultatPageEventim(concerts, total, true);
-  }
-
-  @SuppressWarnings("unchecked")
-  private static Map<String, Object> extraireLiveEntertainment(Map<String, Object> produit) {
-    var typeAttributes = (Map<String, Object>) produit.get("typeAttributes");
-    return typeAttributes != null
-        ? (Map<String, Object>) typeAttributes.get("liveEntertainment")
-        : null;
-  }
-
-  @SuppressWarnings("unchecked")
-  private static String extraireUrlProduit(Map<String, Object> produit) {
-    String lienDirect = (String) produit.get("link");
-    if (lienDirect != null && lienDirect.startsWith("http")) return lienDirect;
-    var urlObj = (Map<String, Object>) produit.get("url");
-    if (urlObj != null && urlObj.get("domain") != null && urlObj.get("path") != null) {
-      return urlObj.get("domain") + (String) urlObj.get("path");
-    }
-    return null;
-  }
-
-  private static ConcertBrut construireConcertEventim(
-      Map<String, Object> produit,
-      Map<String, Object> liveEnt,
-      Map<String, Object> location,
-      String artiste,
-      String date,
-      String heure,
-      String artisteSourceId) {
-    String salle =
-        location != null && location.get("name") != null
-            ? Normalisation.normaliserCasse((String) location.get("name"))
-            : "Salle inconnue";
-    String ville = location != null ? (String) location.get("city") : null;
-    String dept =
-        Normalisation.extraireDeptFrancais(
-            location != null ? (String) location.get("postalCode") : null);
-    ville = corrigerVilleEventim(ville, dept, salle);
-
-    String url = extraireUrlProduit(produit);
-    // inStock=false couvre à la fois les concerts complets et les préventes : impossible à
-    // distinguer via l'API Eventim. On ne stocke pas de statut pour éviter les faux positifs.
-    String statut = null;
-    // Eventim n'expose pas de venueId stable : on génère un identifiant interne basé sur
-    // le nom normalisé pour alimenter salle_sources et vider la liste admin "Sans source".
-    // Écrasable par un vrai venueId si Eventim en expose un à l'avenir (ON CONFLICT DO NOTHING).
-    String salleNorm = Normalisation.normaliserTexte(salle);
-    boolean salleInconnue = "Salle inconnue".equals(salle);
-    String salleSourceId =
-        (salleNorm.isBlank() || salleInconnue) ? null : "eventim:internal:" + salleNorm;
-    return new ConcertBrut(
-        artiste,
-        date,
-        heure,
-        salle,
-        ville,
-        dept,
-        url,
-        "eventim",
-        null,
-        null,
-        statut,
-        null,
-        null,
-        salleSourceId,
-        artisteSourceId);
   }
 
   /// Recherche l'attractionId Eventim correspondant à un terme de recherche.
@@ -469,7 +344,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
                 .build()
                 .toUriString();
         ResultatPageEventim resultat =
-            chargerPageProduits(uri, artisteFallback, null, artisteSourceId);
+            chargerPageProduits(java.net.URI.create(uri), artisteFallback, null, artisteSourceId);
         if (!resultat.succes()) succes = false;
         concerts.addAll(resultat.concerts());
         continuer = !resultat.estVide() && concerts.size() < resultat.total();
@@ -501,7 +376,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
                 .queryParam("page", page);
         for (String c : classifications) uriBuilder = uriBuilder.queryParam("categories", c);
         java.net.URI uri = uriBuilder.build().encode().toUri();
-        ResultatPageEventim resultat = chargerPageProduits(uri, null, dept);
+        ResultatPageEventim resultat = chargerPageProduits(uri, null, dept, null);
         concerts.addAll(resultat.concerts());
         continuer = !resultat.estVide() && concerts.size() < resultat.total();
       }
@@ -525,13 +400,13 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   /// Récupère les concerts d'un artiste via l'API Eventim, en tenant compte de son identité déjà
   /// confirmée par une source indépendante si connue.
   ///
-  /// <p>: le repli par containment de {@link #rechercherAttractionId} (ex. "Furies" trouvé dans
-  /// "Love & Furies") s'est révélé actif et récurrent — chaque cycle de fetch réacceptait le même
-  /// mauvais rapprochement, défaisant silencieusement tout nettoyage de données fait à la main. Dès
-  /// que l'artiste a déjà un {@code deezerId} ou un {@code wikidataId} connu (identité confirmée
-  /// indépendamment), seule une correspondance exacte est acceptée — le repli par containment reste
-  /// réservé aux artistes dont l'identité n'est pas encore confirmée, cas pour lequel il a été
-  /// introduit (ex. {@code "-M-"} → {@code "-M- Matthieu Chedid"}).
+  /// <p>Motif : le repli par containment de {@link #rechercherAttractionId} (ex. "Furies" trouvé
+  /// dans "Love & Furies") s'est révélé actif et récurrent — chaque cycle de fetch réacceptait le
+  /// même mauvais rapprochement, défaisant silencieusement tout nettoyage de données fait à la
+  /// main. Dès que l'artiste a déjà un {@code deezerId} ou un {@code wikidataId} connu (identité
+  /// confirmée indépendamment), seule une correspondance exacte est acceptée — le repli par
+  /// containment reste réservé aux artistes dont l'identité n'est pas encore confirmée, cas pour
+  /// lequel il a été introduit (ex. {@code "-M-"} → {@code "-M- Matthieu Chedid"}).
   ///
   /// @param nom nom de l'artiste
   /// @param deezerId identifiant Deezer déjà connu, ou {@code null} si l'identité n'est pas

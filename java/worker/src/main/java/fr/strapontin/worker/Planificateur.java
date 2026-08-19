@@ -16,6 +16,7 @@ import fr.strapontin.worker.jobs.RecalculerMatchesJob;
 import fr.strapontin.worker.jobs.ReconciliationNocturneJob;
 import fr.strapontin.worker.jobs.RevoquerAdminsJob;
 import org.quartz.CronScheduleBuilder;
+import org.quartz.Job;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.Trigger;
@@ -28,14 +29,14 @@ import org.springframework.context.annotation.Configuration;
 ///
 /// Déclencheurs configurés :
 ///
-/// - `fetch:artistes:batch` — 11 cycles/jour : 01h, 05h, puis toutes les 2h de 07h à 23h
-///   (cf. `worker.cron.fetch-artistes`)
-/// - `fetch:region` — 1 batch nocturne unique à 02h (cf. `worker.cron.fetch-region`) — restreint
-///   à ce seul consommateur ([DecouverteService], browse-only, fraîcheur non critique) depuis
-/// l'ancien cron adaptatif 11x/jour n'apportant aucune valeur aux artistes/salles suivis
+/// - `fetch:artistes:batch` — 11 cycles/jour : 01h, 05h, puis toutes les 2h de 07h à 23h (cf.
+///   `worker.cron.fetch-artistes`)
+/// - `fetch:region` — 1 batch nocturne unique à 02h (cf. `worker.cron.fetch-region`) — restreint à
+///   ce seul consommateur ([DecouverteService], browse-only, fraîcheur non critique) depuis
+///   l'ancien cron adaptatif 11x/jour n'apportant aucune valeur aux artistes/salles suivis
 ///   (couverts indépendamment par `fetch:artistes:batch`/`fetch:salles:all`)
 /// - `fetch:salles:all` — mêmes heures que fetch:artistes + 30 min (cf. `worker.cron.fetch-salles`,
-/// fréquence inchangée), restreint aux salles suivies (`user_salles`) depuis
+///   fréquence inchangée), restreint aux salles suivies (`user_salles`) depuis
 /// - `recalculer:matches` — mêmes heures que fetch:artistes (cf. `worker.cron.recalculer-matches`)
 /// - `purger:concerts` — tous les jours à minuit
 /// - `purger:salles` — tous les jours à 0h05 (après purge concerts)
@@ -45,9 +46,9 @@ import org.springframework.context.annotation.Configuration;
 /// - `revoquer:admins` — toutes les heures
 /// - `reconciliation:nocturne` — tous les jours à 3h
 ///
-/// Le job `fetch:salle` est planifié dynamiquement par [WorkerService]
-/// selon les salles configurées. `fetch:salles:all` est le pendant périodique
-/// qui boucle sur toutes les salles ayant des sources configurées.
+/// Le job `fetch:salle` est planifié dynamiquement par [WorkerService] selon les salles
+/// configurées. `fetch:salles:all` est le pendant périodique qui boucle sur toutes les salles ayant
+/// des sources configurées.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -70,190 +71,128 @@ public class Planificateur {
   @Value("${worker.cron.recalculer-matches:0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronRecalculerMatches;
 
+  private static JobDetail creerJobDetail(Class<? extends Job> jobClass, String identite) {
+    return JobBuilder.newJob(jobClass).withIdentity(identite).storeDurably().build();
+  }
+
+  private static Trigger creerTrigger(JobDetail jobDetail, String identite, String cron) {
+    return TriggerBuilder.newTrigger()
+        .forJob(jobDetail)
+        .withIdentity(identite)
+        .withSchedule(CronScheduleBuilder.cronSchedule(cron))
+        .build();
+  }
+
   @Bean
   JobDetail jobDetailFetchArtistesBatch() {
-    return JobBuilder.newJob(FetchArtistesBatchJob.class)
-        .withIdentity("fetchArtistesBatch")
-        .storeDurably()
-        .build();
+    return creerJobDetail(FetchArtistesBatchJob.class, "fetchArtistesBatch");
   }
 
   @Bean
   Trigger triggerFetchArtistesBatch(JobDetail jobDetailFetchArtistesBatch) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailFetchArtistesBatch)
-        .withIdentity("triggerFetchArtistesBatch")
-        .withSchedule(CronScheduleBuilder.cronSchedule(cronFetchArtistes))
-        .build();
+    return creerTrigger(
+        jobDetailFetchArtistesBatch, "triggerFetchArtistesBatch", cronFetchArtistes);
   }
 
   @Bean
   JobDetail jobDetailFetchRegion() {
-    return JobBuilder.newJob(FetchRegionJob.class)
-        .withIdentity("fetchRegion")
-        .storeDurably()
-        .build();
+    return creerJobDetail(FetchRegionJob.class, "fetchRegion");
   }
 
   @Bean
   Trigger triggerFetchRegion(JobDetail jobDetailFetchRegion) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailFetchRegion)
-        .withIdentity("triggerFetchRegion")
-        .withSchedule(CronScheduleBuilder.cronSchedule(cronFetchRegion))
-        .build();
+    return creerTrigger(jobDetailFetchRegion, "triggerFetchRegion", cronFetchRegion);
   }
 
   @Bean
   JobDetail jobDetailFetchSallesAll() {
-    return JobBuilder.newJob(FetchSallesAllJob.class)
-        .withIdentity("fetchSallesAll")
-        .storeDurably()
-        .build();
+    return creerJobDetail(FetchSallesAllJob.class, "fetchSallesAll");
   }
 
   @Bean
   Trigger triggerFetchSallesAll(JobDetail jobDetailFetchSallesAll) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailFetchSallesAll)
-        .withIdentity("triggerFetchSallesAll")
-        .withSchedule(CronScheduleBuilder.cronSchedule(cronFetchSalles))
-        .build();
+    return creerTrigger(jobDetailFetchSallesAll, "triggerFetchSallesAll", cronFetchSalles);
   }
 
   @Bean
   JobDetail jobDetailRecalculerMatches() {
-    return JobBuilder.newJob(RecalculerMatchesJob.class)
-        .withIdentity("recalculerMatches")
-        .storeDurably()
-        .build();
+    return creerJobDetail(RecalculerMatchesJob.class, "recalculerMatches");
   }
 
   @Bean
   Trigger triggerRecalculerMatches(JobDetail jobDetailRecalculerMatches) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailRecalculerMatches)
-        .withIdentity("triggerRecalculerMatches")
-        .withSchedule(CronScheduleBuilder.cronSchedule(cronRecalculerMatches))
-        .build();
+    return creerTrigger(
+        jobDetailRecalculerMatches, "triggerRecalculerMatches", cronRecalculerMatches);
   }
 
   @Bean
   JobDetail jobDetailPurgerConcerts() {
-    return JobBuilder.newJob(PurgerConcertsJob.class)
-        .withIdentity("purgerConcerts")
-        .storeDurably()
-        .build();
+    return creerJobDetail(PurgerConcertsJob.class, "purgerConcerts");
   }
 
   @Bean
   Trigger triggerPurgerConcerts(JobDetail jobDetailPurgerConcerts) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailPurgerConcerts)
-        .withIdentity("triggerPurgerConcerts")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0 * * ?"))
-        .build();
+    return creerTrigger(jobDetailPurgerConcerts, "triggerPurgerConcerts", "0 0 0 * * ?");
   }
 
   @Bean
   JobDetail jobDetailPurgerSalles() {
-    return JobBuilder.newJob(PurgerSallesJob.class)
-        .withIdentity("purgerSalles")
-        .storeDurably()
-        .build();
+    return creerJobDetail(PurgerSallesJob.class, "purgerSalles");
   }
 
   @Bean
   Trigger triggerPurgerSalles(JobDetail jobDetailPurgerSalles) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailPurgerSalles)
-        .withIdentity("triggerPurgerSalles")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 5 0 * * ?"))
-        .build();
+    return creerTrigger(jobDetailPurgerSalles, "triggerPurgerSalles", "0 5 0 * * ?");
   }
 
   @Bean
   JobDetail jobDetailPurgerArtistes() {
-    return JobBuilder.newJob(PurgerArtistesJob.class)
-        .withIdentity("purgerArtistes")
-        .storeDurably()
-        .build();
+    return creerJobDetail(PurgerArtistesJob.class, "purgerArtistes");
   }
 
   @Bean
   Trigger triggerPurgerArtistes(JobDetail jobDetailPurgerArtistes) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailPurgerArtistes)
-        .withIdentity("triggerPurgerArtistes")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 6 0 * * ?"))
-        .build();
+    return creerTrigger(jobDetailPurgerArtistes, "triggerPurgerArtistes", "0 6 0 * * ?");
   }
 
   @Bean
   JobDetail jobDetailPurgerLogsAdmin() {
-    return JobBuilder.newJob(PurgerLogsAdminJob.class)
-        .withIdentity("purgerLogsAdmin")
-        .storeDurably()
-        .build();
+    return creerJobDetail(PurgerLogsAdminJob.class, "purgerLogsAdmin");
   }
 
   @Bean
   Trigger triggerPurgerLogsAdmin(JobDetail jobDetailPurgerLogsAdmin) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailPurgerLogsAdmin)
-        .withIdentity("triggerPurgerLogsAdmin")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 15 0 * * ?"))
-        .build();
+    return creerTrigger(jobDetailPurgerLogsAdmin, "triggerPurgerLogsAdmin", "0 15 0 * * ?");
   }
 
   @Bean
   JobDetail jobDetailNotifierDigest() {
-    return JobBuilder.newJob(NotifierDigestJob.class)
-        .withIdentity("notifierDigest")
-        .storeDurably()
-        .build();
+    return creerJobDetail(NotifierDigestJob.class, "notifierDigest");
   }
 
   @Bean
   Trigger triggerNotifierDigest(JobDetail jobDetailNotifierDigest) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailNotifierDigest)
-        .withIdentity("triggerNotifierDigest")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 8 * * ?"))
-        .build();
+    return creerTrigger(jobDetailNotifierDigest, "triggerNotifierDigest", "0 0 8 * * ?");
   }
 
   @Bean
   JobDetail jobDetailRevoquerAdmins() {
-    return JobBuilder.newJob(RevoquerAdminsJob.class)
-        .withIdentity("revoquerAdmins")
-        .storeDurably()
-        .build();
+    return creerJobDetail(RevoquerAdminsJob.class, "revoquerAdmins");
   }
 
   @Bean
   Trigger triggerRevoquerAdmins(JobDetail jobDetailRevoquerAdmins) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailRevoquerAdmins)
-        .withIdentity("triggerRevoquerAdmins")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 * * * ?"))
-        .build();
+    return creerTrigger(jobDetailRevoquerAdmins, "triggerRevoquerAdmins", "0 0 * * * ?");
   }
 
   @Bean
   JobDetail jobDetailReconciliationNocturne() {
-    return JobBuilder.newJob(ReconciliationNocturneJob.class)
-        .withIdentity("reconciliationNocturne")
-        .storeDurably()
-        .build();
+    return creerJobDetail(ReconciliationNocturneJob.class, "reconciliationNocturne");
   }
 
   @Bean
   Trigger triggerReconciliationNocturne(JobDetail jobDetailReconciliationNocturne) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailReconciliationNocturne)
-        .withIdentity("triggerReconciliationNocturne")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 3 * * ?"))
-        .build();
+    return creerTrigger(
+        jobDetailReconciliationNocturne, "triggerReconciliationNocturne", "0 0 3 * * ?");
   }
 }

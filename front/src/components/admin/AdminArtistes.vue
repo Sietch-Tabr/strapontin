@@ -194,6 +194,7 @@ import { useReferentielAdmin } from '../../composables/useReferentielAdmin.js'
 import { useDialog } from '../../composables/useDialog.js'
 import { useToasts } from '../../composables/useToasts.js'
 import { classeStatut, libelleStatut } from '../../utils/statutReferentiel.js'
+import { corpsJsonOuVide } from '../../utils/reponseJson.js'
 
 const {
   chargement,
@@ -280,7 +281,7 @@ async function sauvegarderIdentifiantTm() {
       afficherToast('Identifiant Ticketmaster corrigé.', 'succes')
       await charger()
     } else {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       afficherToast(data.erreur || 'Erreur lors de la correction.', 'erreur')
     }
   } catch {

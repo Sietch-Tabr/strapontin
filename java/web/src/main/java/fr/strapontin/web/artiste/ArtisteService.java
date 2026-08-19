@@ -350,7 +350,7 @@ public class ArtisteService {
               .uri(url)
               .header("User-Agent", WIKIDATA_USER_AGENT)
               .exchange(
-                  (req, resp) ->
+                  (_, resp) ->
                       new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) {
         log.warn("Wikidata Search erreur HTTP {} pour '{}'", reponse.statut(), terme);
@@ -409,7 +409,7 @@ public class ArtisteService {
               .uri(url)
               .header("User-Agent", WIKIDATA_USER_AGENT)
               .exchange(
-                  (req, resp) ->
+                  (_, resp) ->
                       new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) return null;
 
@@ -445,7 +445,7 @@ public class ArtisteService {
               .get()
               .uri(url)
               .exchange(
-                  (req, resp) ->
+                  (_, resp) ->
                       new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) {
         log.warn("Deezer erreur HTTP {} pour '{}'", reponse.statut(), terme);

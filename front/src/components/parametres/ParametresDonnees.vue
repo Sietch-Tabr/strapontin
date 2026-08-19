@@ -22,7 +22,7 @@
       </p>
       <form class="form-vertical form-compact" @submit.prevent="importerPreferences">
         <div class="form-group">
-          <label>Fichier JSON</label>
+          <label for="import-fichier">Fichier JSON</label>
           <div class="form-fichier">
             <input
               id="import-fichier"
@@ -119,6 +119,7 @@ import { useRouter } from 'vue-router'
 import { useDialog } from '../../composables/useDialog.js'
 import { useToasts } from '../../composables/useToasts.js'
 import EtatChargement from '../EtatChargement.vue'
+import { corpsJsonOuVide } from '../../utils/reponseJson.js'
 
 const router = useRouter()
 const { afficherToast } = useToasts()
@@ -157,27 +158,31 @@ async function importerPreferences() {
   formData.append('mode', importMode.value)
   formData.append('importerConfig', importerConfig.value ? 'true' : 'false')
 
-  const rep = await fetch('/api/preferences/importer', {
-    method: 'POST',
-    body: formData,
-  })
-  const corps = await rep.json()
-  if (rep.ok) {
-    const a = corps.artistes ?? 0
-    const s = corps.salles ?? 0
-    const r = corps.rejetes ?? 0
-    const msg =
-      a + ' artiste' + (a > 1 ? 's' : '') +
-      ' et ' + s + ' salle' + (s > 1 ? 's' : '') +
-      ' importés' +
-      (r > 0 ? ' (' + r + ' rejeté' + (r > 1 ? 's' : '') + ')' : '') + '.'
-    afficherToast(msg, 'succes')
-    const repStats = await fetch('/api/parametres/stats')
-    if (repStats.ok) stats.value = await repStats.json()
-    fichierEl.value = ''
-    nomFichier.value = 'Aucun fichier sélectionné'
-  } else {
-    afficherToast(corps.erreur || "Erreur lors de l'import.", 'erreur')
+  try {
+    const rep = await fetch('/api/preferences/importer', {
+      method: 'POST',
+      body: formData,
+    })
+    const corps = await corpsJsonOuVide(rep)
+    if (rep.ok) {
+      const a = corps.artistes ?? 0
+      const s = corps.salles ?? 0
+      const r = corps.rejetes ?? 0
+      const msg =
+        a + ' artiste' + (a > 1 ? 's' : '') +
+        ' et ' + s + ' salle' + (s > 1 ? 's' : '') +
+        ' importés' +
+        (r > 0 ? ' (' + r + ' rejeté' + (r > 1 ? 's' : '') + ')' : '') + '.'
+      afficherToast(msg, 'succes')
+      const repStats = await fetch('/api/parametres/stats')
+      if (repStats.ok) stats.value = await repStats.json()
+      fichierEl.value = ''
+      nomFichier.value = 'Aucun fichier sélectionné'
+    } else {
+      afficherToast(corps.erreur || "Erreur lors de l'import.", 'erreur')
+    }
+  } catch (_) {
+    afficherToast("Erreur réseau lors de l'import.", 'erreur')
   }
 }
 
@@ -192,19 +197,20 @@ function fermerDialogSuppression() {
 
 async function supprimerCompte() {
   if (confirmationSuppression.value !== 'supprimer') return
-  const rep = await fetch('/api/user', { method: 'DELETE' })
-  if (rep.ok || rep.status === 204) {
+  try {
+    const rep = await fetch('/api/user', { method: 'DELETE' })
+    if (rep.ok || rep.status === 204) {
+      fermerDialogSuppression()
+      afficherToast('Compte supprimé.', 'succes')
+      router.push('/login')
+    } else {
+      fermerDialogSuppression()
+      const corps = await corpsJsonOuVide(rep)
+      afficherToast(corps.erreur || 'Erreur lors de la suppression du compte.', 'erreur')
+    }
+  } catch (_) {
     fermerDialogSuppression()
-    afficherToast('Compte supprimé.', 'succes')
-    router.push('/login')
-  } else {
-    fermerDialogSuppression()
-    let message = 'Erreur lors de la suppression du compte.'
-    try {
-      const corps = await rep.json()
-      if (corps.erreur) message = corps.erreur
-    } catch (_) { /* réponse non-JSON */ }
-    afficherToast(message, 'erreur')
+    afficherToast('Erreur réseau lors de la suppression du compte.', 'erreur')
   }
 }
 

@@ -81,7 +81,7 @@ class CoherenceWikidataSalleServiceTest {
         .when(jdbc)
         .query(
             org.mockito.ArgumentMatchers.anyString(),
-            any(Map.class),
+            org.mockito.ArgumentMatchers.<Map<String, ?>>any(),
             any(RowCallbackHandler.class));
   }
 

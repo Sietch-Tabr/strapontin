@@ -1,3 +1,7 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
 package fr.strapontin.core;
 
 import java.util.ArrayList;
@@ -5,9 +9,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/// Dédoublonne des concerts issus de plusieurs sources (TM, Eventim, Digitick) en trois passes de
+/// rapprochement progressivement plus tolérantes.
+///
+/// @author Kwaite
 public final class Dedoublonner {
 
   private static final double SEUIL_SIMILARITE = 0.85;
+  // Poids du score de richesse diacritique dans l'arbitrage du nom de salle retenu par fusionner
+  // — favorise une forme accentuée correcte ("Théâtre") sur une casse mixte sans accent.
+  private static final int POIDS_DIACRITIQUES = 2;
 
   private Dedoublonner() {}
 
@@ -26,59 +37,67 @@ public final class Dedoublonner {
     return new ConcertEnrichi(c, Normalisation.normaliserTexte(c.artiste()), villeNorm, salleNorm);
   }
 
+  /// Dédoublonne une liste de concerts en trois passes progressivement plus tolérantes : égalité
+  /// exacte (artiste/date/heure/ville normalisés), similarité floue de l'artiste à date et ville
+  /// identiques, puis repli sur la salle pour les concerts dont la ville diverge entre sources.
+  ///
+  /// @param concerts les concerts bruts, éventuellement en double entre sources
+  /// @return les concerts dédoublonnés, chaque doublon fusionné vers sa version la plus complète
   public static List<ConcertBrut> dedoublonner(List<ConcertBrut> concerts) {
     if (concerts.isEmpty()) return List.of();
-
     List<ConcertEnrichi> enrichis = concerts.stream().map(Dedoublonner::enrichir).toList();
+    List<ConcertEnrichi> apresPasseExacte = passeExacte(enrichis);
+    List<ConcertEnrichi> apresPasseFuzzy = passeFuzzyDateVille(apresPasseExacte);
+    return passeFallbackDateSalle(apresPasseFuzzy);
+  }
 
-    // Passe 1 : exacte — (artiste_norm, date, heure, ville_norm). L'heure est incluse :
-    // sans elle, deux concerts réellement distincts (matinée + soirée, même artiste/date/ville)
-    // fusionnaient à tort dès cette première passe.
-    Map<String, List<ConcertEnrichi>> groupesExacts = new LinkedHashMap<>();
+  // Passe 1 : exacte — (artiste_norm, date, heure, ville_norm). L'heure est incluse : sans elle,
+  // deux concerts réellement distincts (matinée + soirée, même artiste/date/ville) fusionnaient
+  // à tort dès cette première passe.
+  private static List<ConcertEnrichi> passeExacte(List<ConcertEnrichi> enrichis) {
+    Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
     for (ConcertEnrichi c : enrichis) {
       String heureCle = c.concert().heure() != null ? c.concert().heure() : SANS_HEURE;
       String cle =
           c.artisteNorm() + "|" + c.concert().date() + "|" + heureCle + "|" + c.villeNorm();
-      groupesExacts.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
+      groupes.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
     }
+    return groupes.values().stream().map(Dedoublonner::fusionner).toList();
+  }
 
-    List<ConcertEnrichi> apresPasseExacte = new ArrayList<>();
-    for (List<ConcertEnrichi> groupe : groupesExacts.values()) {
-      apresPasseExacte.add(fusionner(groupe));
-    }
-
-    // Passe 2 : fuzzy — (date, ville_norm) + similarité artiste >= seuil
-    Map<String, List<ConcertEnrichi>> groupesDateVille = new LinkedHashMap<>();
+  // Passe 2 : fuzzy — (date, ville_norm) + similarité artiste >= seuil.
+  private static List<ConcertEnrichi> passeFuzzyDateVille(List<ConcertEnrichi> apresPasseExacte) {
+    Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
     for (ConcertEnrichi c : apresPasseExacte) {
       String cle = c.concert().date() + "|" + c.villeNorm();
-      groupesDateVille.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
+      groupes.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
     }
-
-    List<ConcertEnrichi> apresPasseFuzzy = new ArrayList<>();
-    for (List<ConcertEnrichi> groupe : groupesDateVille.values()) {
+    List<ConcertEnrichi> resultat = new ArrayList<>();
+    for (List<ConcertEnrichi> groupe : groupes.values()) {
       if (groupe.size() <= 1) {
-        apresPasseFuzzy.addAll(groupe);
+        resultat.addAll(groupe);
       } else {
-        apresPasseFuzzy.addAll(grouperParSimilarite(groupe));
+        resultat.addAll(grouperParSimilarite(groupe));
       }
     }
+    return resultat;
+  }
 
-    // Fallback : (date, salle_norm) pour les grandes salles avec villes divergentes
-    Map<String, List<ConcertEnrichi>> groupesDateSalle = new LinkedHashMap<>();
+  // Fallback : (date, salle_norm) pour les grandes salles avec villes divergentes entre sources.
+  private static List<ConcertBrut> passeFallbackDateSalle(List<ConcertEnrichi> apresPasseFuzzy) {
+    Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
     for (ConcertEnrichi c : apresPasseFuzzy) {
       String cle = c.concert().date() + "|" + c.salleNorm();
-      groupesDateSalle.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
+      groupes.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
     }
-
     List<ConcertBrut> resultat = new ArrayList<>();
-    for (List<ConcertEnrichi> groupe : groupesDateSalle.values()) {
+    for (List<ConcertEnrichi> groupe : groupes.values()) {
       if (groupe.size() <= 1) {
         resultat.add(groupe.get(0).concert());
       } else {
         grouperParSimilarite(groupe).forEach(c -> resultat.add(c.concert()));
       }
     }
-
     return resultat;
   }
 
@@ -108,10 +127,10 @@ public final class Dedoublonner {
 
   /// Indique si deux concerts peuvent fusionner du point de vue de l'heure.
   ///
-  /// <p>Empêche la passe 2 (fuzzy, groupée par date+ville sans heure) de refusionner deux
-  /// concerts que la passe 1 vient de distinguer par heure (matinée + soirée) : deux heures
-  /// renseignées et différentes signent deux concerts distincts, une heure absente d'un côté
-  /// (ou des deux) ne permet ni de confirmer ni d'exclure la fusion.
+  /// <p>Empêche la passe 2 (fuzzy, groupée par date+ville sans heure) de refusionner deux concerts
+  /// que la passe 1 vient de distinguer par heure (matinée + soirée) : deux heures renseignées et
+  /// différentes signent deux concerts distincts, une heure absente d'un côté (ou des deux) ne
+  /// permet ni de confirmer ni d'exclure la fusion.
   ///
   /// @param a premier concert enrichi
   /// @param b second concert enrichi
@@ -141,10 +160,10 @@ public final class Dedoublonner {
     String meilleureSalle = gagnant.concert().salle();
     for (ConcertEnrichi c : concerts) {
       int scoreM =
-          scoreNomRiche(meilleureSalle) * 2
+          scoreNomRiche(meilleureSalle) * POIDS_DIACRITIQUES
               + (!meilleureSalle.equals(meilleureSalle.toUpperCase()) ? 1 : 0);
       int scoreC =
-          scoreNomRiche(c.concert().salle()) * 2
+          scoreNomRiche(c.concert().salle()) * POIDS_DIACRITIQUES
               + (!c.concert().salle().equals(c.concert().salle().toUpperCase()) ? 1 : 0);
       if (scoreC > scoreM) meilleureSalle = c.concert().salle();
     }

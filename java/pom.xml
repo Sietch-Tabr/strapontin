@@ -25,7 +25,7 @@
 
     <properties>
         <!-- Version CI-friendly (#764) : un seul bump ici met à jour parent + 4 modules enfants -->
-        <revision>2.7.10</revision>
+        <revision>2.7.11</revision>
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Override BOM : Spring Boot 4.1.0 tire Flyway 12.4.0 ; on requiert 12.9.0+.
@@ -44,7 +44,8 @@
              automatiquement mais Maven doit choisir explicitement okhttp-jvm. Exclu ci-dessous
              et remplacé par une dépendance directe sur okhttp-jvm (jar JVM complet, contient
              bien okhttp3.RequestBody). -->
-        <resend.version>v4.18.0</resend.version>
+        <!-- À partir de 4.19.0, publication sur Maven Central sans le préfixe "v" -->
+        <resend.version>4.19.0</resend.version>
         <okhttp-jvm.version>5.5.0</okhttp-jvm.version>
         <springdoc.version>3.1.0</springdoc.version>
         <bucket4j.version>8.19.0</bucket4j.version>

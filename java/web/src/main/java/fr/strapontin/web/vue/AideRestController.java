@@ -12,6 +12,7 @@ import fr.strapontin.web.securite.UtilisateurDetails;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +33,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/aide")
 public class AideRestController {
 
-  private static final int MAX_LONGUEUR_MESSAGE = 2000;
   private static final int MAX_SIGNALEMENTS_PAR_HEURE = 3;
 
   private final EmailService emailService;
@@ -44,7 +44,7 @@ public class AideRestController {
           .maximumSize(10_000)
           .build();
 
-  /// @param emailService  service d'envoi d'emails
+  /// @param emailService service d'envoi d'emails
   /// @param configService service de configuration applicative
   public AideRestController(EmailService emailService, ConfigService configService) {
     this.emailService = emailService;
@@ -65,13 +65,15 @@ public class AideRestController {
 
   /// Envoie un signalement à l'adresse de contact.
   ///
-  /// @param requete  corps JSON avec type et message
-  /// @param auth     contexte d'authentification
-  /// @param request  la requête HTTP (pour rate limiting par IP)
+  /// @param requete corps JSON avec type et message
+  /// @param auth contexte d'authentification
+  /// @param request la requête HTTP (pour rate limiting par IP)
   /// @return 204 si envoyé, 400 si validation échoue, 429 si rate limit atteint
   @PostMapping("/signalement")
   public ResponseEntity<Map<String, Object>> signaler(
-      @RequestBody RequeteSignalement requete, Authentication auth, HttpServletRequest request) {
+      @Valid @RequestBody RequeteSignalement requete,
+      Authentication auth,
+      HttpServletRequest request) {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails utilisateur)) {
       return erreur(401, "Non authentifié.");
     }
@@ -82,15 +84,7 @@ public class AideRestController {
       return erreur(429, "Trop de signalements. Réessayez dans une heure.");
     }
 
-    String msg = requete.message() == null ? "" : requete.message().strip();
-    if (msg.isEmpty()) {
-      return erreur(400, "Le message est requis.");
-    }
-    if (msg.length() > MAX_LONGUEUR_MESSAGE) {
-      return erreur(
-          400, "Le message ne peut pas dépasser " + MAX_LONGUEUR_MESSAGE + " caractères.");
-    }
-
+    String msg = requete.message().strip();
     String typeValide =
         Set.of("bug", "suggestion", "question").contains(requete.type())
             ? requete.type()

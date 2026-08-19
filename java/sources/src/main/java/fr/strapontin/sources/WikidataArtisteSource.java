@@ -14,7 +14,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,17 +25,15 @@ import org.springframework.web.client.RestClient;
 ///
 /// <ul>
 ///   <li>{@code wikidataId != null} : requête batch classique (clause {@code VALUES}, ≤50)
-///   <li>{@code wikidataId == null} : découverte par recherche de nom via
-///       {@code SERVICE wikibase:mwapi} (une requête par artiste, non batchable), filtrée par les
-/// types intrinsèques Wikidata (humain+musicien, humain+humoriste depuis, ou groupe) —
+///   <li>{@code wikidataId == null} : découverte par recherche de nom via {@code SERVICE
+///       wikibase:mwapi} (une requête par artiste, non batchable), filtrée par les types
+///       intrinsèques Wikidata (humain+musicien, humain+humoriste depuis, ou groupe) —
 ///       <strong>jamais validée contre l'attractionId Ticketmaster existant</strong> : Wikidata
-///       fait autorité pour l'identité de l'artiste, indépendamment de TM (décision actée, cf.
-///       plan du jalon 2.6.0). Le P6262 éventuellement porté par le Q-ID trouvé sert ensuite à
-/// corriger notre lien vers TM, jamais l'inverse. En cas d'homonymie groupe/personne
-/// (ex. « Van Halen ») détectée via la diversité de {@code ?typeMatch} parmi les
-///       meilleurs candidats, aucun Q-ID n'est retenu plutôt que de deviner — cf. {@link
-///       #decouvrir}.
-/// </ul>
+///       fait autorité pour l'identité de l'artiste, indépendamment de TM (décision actée, cf. plan
+///       du jalon 2.6.0). Le P6262 éventuellement porté par le Q-ID trouvé sert ensuite à corriger
+///       notre lien vers TM, jamais l'inverse. En cas d'homonymie groupe/personne (ex. « Van Halen
+///       ») détectée via la diversité de {@code ?typeMatch} parmi les meilleurs candidats, aucun
+///       Q-ID n'est retenu plutôt que de deviner — cf. {@link #decouvrir}. </ul>
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -53,11 +50,9 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
   }
 
   private static final int TAILLE_LOT_MAX = 50;
-  private static final int DELAI_MIN_ENTRE_APPELS_MS = 500;
 
   private final ClientSparqlWikidata client;
   private final Cache<String, EnrichissementArtiste> cache;
-  private final AtomicLong dernierAppelMs = new AtomicLong(0);
 
   /// Crée une instance avec un client SPARQL par défaut et un cache 24h.
   public WikidataArtisteSource() {
@@ -69,7 +64,7 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
   /// Crée une instance avec un RestClient et un cache personnalisés (injection de test).
   ///
   /// @param restClient client HTTP à utiliser
-  /// @param cache      cache Caffeine à utiliser
+  /// @param cache cache Caffeine à utiliser
   public WikidataArtisteSource(RestClient restClient, Cache<String, EnrichissementArtiste> cache) {
     this(new ClientSparqlWikidata(restClient), cache);
   }
@@ -99,7 +94,6 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
     }
 
     for (ArtisteAEnrichir artiste : aDecouvrir) {
-      attendreRateLimitGlobal();
       decouvrir(artiste).ifPresent(e -> resultats.put(artiste.id(), e));
     }
 
@@ -145,13 +139,13 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
   // --- Mode découverte (Q-ID inconnu) ---
 
   /// Résout un candidat par découverte mwapi, en refusant de deviner en cas d'homonymie
-  /// groupe/personne — ex. « Van Halen », où le groupe porte le vrai nom de famille de
-  /// son fondateur, guitariste et chanteur du groupe éponyme. Structurellement, {@code
-  /// ?typeMatch} ne peut valoir {@code "humain"} et {@code "groupe"} pour le même {@code ?item}
-  /// ({@code wdt:P31 wd:Q5} exige une personne physique, incompatible avec l'appartenance à
-  /// {@code wd:Q215380}) : toute diversité de {@code ?typeMatch} parmi les {@value
-  /// #TAILLE_CANDIDATS_DECOUVERTE} meilleurs candidats mwapi signale donc deux entités distinctes
-  /// en concurrence, jamais un faux positif sur une même entité aux occupations multiples.
+  /// groupe/personne — ex. « Van Halen », où le groupe porte le vrai nom de famille de son
+  /// fondateur, guitariste et chanteur du groupe éponyme. Structurellement, {@code ?typeMatch} ne
+  /// peut valoir {@code "humain"} et {@code "groupe"} pour le même {@code ?item} ({@code wdt:P31
+  /// wd:Q5} exige une personne physique, incompatible avec l'appartenance à {@code wd:Q215380}) :
+  /// toute diversité de {@code ?typeMatch} parmi les {@value #TAILLE_CANDIDATS_DECOUVERTE}
+  /// meilleurs candidats mwapi signale donc deux entités distinctes en concurrence, jamais un faux
+  /// positif sur une même entité aux occupations multiples.
   private Optional<EnrichissementArtiste> decouvrir(ArtisteAEnrichir artiste) {
     String sparql = construireRequeteDecouverte(artiste.nom());
     Map<String, Object> data = client.executer(sparql);
@@ -185,15 +179,14 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
 
   private static final int TAILLE_CANDIDATS_DECOUVERTE = 5;
 
-  /// Filtre de découverte par nom : humain de profession musicien, humoriste ou auteur comique
-  /// (un humoriste, ex. Pierre-Emmanuel Barré, n'entrait dans aucune des deux branches
-  /// d'origine; — sa fiche réelle porte en fait `Q12406482` « auteur comique », dont la
-  /// fermeture transitive P279* ne remonte jamais vers `Q245068`, un troisième branchement est
-  /// donc nécessaire plutôt qu'une correction du premier), ou groupe musical. Les trois
-  /// occupations humaines partagent le même {@code ?typeMatch} (« humain ») car elles exigent
-  /// toutes {@code wdt:P31 wd:Q5} — seule la branche « groupe » (organisation, jamais une
-  /// personne physique) peut produire un {@code ?typeMatch} distinct pour la même recherche, cf.
-  /// {@link #decouvrir}.
+  /// Filtre de découverte par nom : humain de profession musicien, humoriste ou auteur comique (un
+  /// humoriste, ex. Pierre-Emmanuel Barré, n'entrait dans aucune des deux branches d'origine; — sa
+  /// fiche réelle porte en fait `Q12406482` « auteur comique », dont la fermeture transitive P279*
+  /// ne remonte jamais vers `Q245068`, un troisième branchement est donc nécessaire plutôt qu'une
+  /// correction du premier), ou groupe musical. Les trois occupations humaines partagent le même
+  /// {@code ?typeMatch} (« humain ») car elles exigent toutes {@code wdt:P31 wd:Q5} — seule la
+  /// branche « groupe » (organisation, jamais une personne physique) peut produire un {@code
+  /// ?typeMatch} distinct pour la même recherche, cf. {@link #decouvrir}.
   private static String construireRequeteDecouverte(String nom) {
     return """
     SELECT ?item ?itemLabel ?deezerId ?tmId ?num ?typeMatch WHERE {
@@ -222,7 +215,7 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
     ORDER BY ?num
     LIMIT %d
     """
-        .formatted(nom.replace("\"", "\\\""), TAILLE_CANDIDATS_DECOUVERTE);
+        .formatted(ClientSparqlWikidata.echapperLitteral(nom), TAILLE_CANDIDATS_DECOUVERTE);
   }
 
   // --- Commun ---
@@ -247,18 +240,5 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
         ClientSparqlWikidata.valeurBinding(binding, "itemLabel"),
         ClientSparqlWikidata.valeurBinding(binding, "deezerId"),
         ClientSparqlWikidata.valeurBinding(binding, "tmId"));
-  }
-
-  private synchronized void attendreRateLimitGlobal() {
-    long maintenant = System.currentTimeMillis();
-    long prochainAppel = dernierAppelMs.get() + DELAI_MIN_ENTRE_APPELS_MS;
-    if (maintenant < prochainAppel) {
-      try {
-        Thread.sleep(prochainAppel - maintenant);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-    }
-    dernierAppelMs.set(System.currentTimeMillis());
   }
 }

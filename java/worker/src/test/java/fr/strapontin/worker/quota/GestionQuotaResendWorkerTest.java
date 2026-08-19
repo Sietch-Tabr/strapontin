@@ -48,6 +48,7 @@ class GestionQuotaResendWorkerTest {
     logsAdminWorker = mock(LogsAdminWorker.class);
     gestionQuotaResendWorker =
         new GestionQuotaResendWorker(jdbc, new ObjectMapper(), logsAdminWorker);
+    gestionQuotaResendWorker.setSelf(gestionQuotaResendWorker);
   }
 
   private void enBase(CompteurEnvoisResend compteur) throws Exception {

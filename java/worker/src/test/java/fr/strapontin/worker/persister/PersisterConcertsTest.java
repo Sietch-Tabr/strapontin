@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import fr.strapontin.core.ConcertBrut;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class PersisterConcertsTest {
@@ -52,30 +51,6 @@ class PersisterConcertsTest {
 
   private static ValeurConcert valeur(String artisteNorm, String date, String salleNorm) {
     return valeur(artisteNorm, date, salleNorm, artisteNorm, salleNorm);
-  }
-
-  private static ValeurConcert valeurAvecArtisteId(
-      String artisteNorm, String date, String salleNorm, String artisteSourceId, UUID artisteId) {
-    return new ValeurConcert(
-        artisteNorm,
-        artisteNorm,
-        LocalDate.parse(date),
-        null,
-        salleNorm,
-        salleNorm,
-        null,
-        null,
-        null,
-        "eventim",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        artisteSourceId,
-        null,
-        artisteId);
   }
 
   // --- estDoublonSalle ---

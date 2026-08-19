@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -20,8 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Contrôleur REST pour l'onglet admin « Sources ».
 ///
-/// <p>HTTP pur — délègue toute la logique métier à {@link SourcesService}.
-/// Accessible uniquement aux utilisateurs avec le rôle {@code ADMIN}.
+/// <p>HTTP pur — délègue toute la logique métier à {@link SourcesService}. Accessible uniquement
+/// aux utilisateurs avec le rôle {@code ADMIN}.
 ///
 /// @since 2.3.0
 /// @author Kwaite
@@ -32,7 +33,7 @@ public class SourcesController {
   private final SourcesService sourcesService;
   private final WorkerProxyService workerProxyService;
 
-  /// @param sourcesService    service de gestion des sources
+  /// @param sourcesService service de gestion des sources
   /// @param workerProxyService proxy HTTP vers le worker
   public SourcesController(SourcesService sourcesService, WorkerProxyService workerProxyService) {
     this.sourcesService = sourcesService;
@@ -50,26 +51,26 @@ public class SourcesController {
   /// Met à jour le slug Digitick d'une salle.
   ///
   /// @param salleId UUID stable de la salle
-  /// @param corps     corps JSON avec {@code slug} (vide pour supprimer)
+  /// @param corps corps JSON avec {@code slug} (vide pour supprimer)
   /// @return 200 si mis à jour, 400 si UUID invalide
   @PutMapping("/salles/{salleId}/digitick-slug")
   public ResponseEntity<Map<String, Object>> mettreAJourDigitickSlug(
-      @PathVariable String salleId, @RequestBody Map<String, String> corps) {
+      @PathVariable String salleId, @Valid @RequestBody RequeteSlug corps) {
     UUID uuid = parseUuid(salleId);
     if (uuid == null) return erreur(400, "UUID de salle invalide.");
-    sourcesService.mettreAJourDigitickSlug(uuid, corps.getOrDefault("slug", ""));
+    sourcesService.mettreAJourDigitickSlug(uuid, corps.slug() == null ? "" : corps.slug());
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
   /// Teste un slug Digitick : vérifie l'accessibilité et compte les concerts disponibles.
   ///
   /// @param salleId UUID de la salle (pour cohérence d'URL)
-  /// @param corps     corps JSON avec {@code slug}
+  /// @param corps corps JSON avec {@code slug}
   /// @return 200 avec {@code {accessible: true, nbConcerts: N}}, 404 si inaccessible
   @PostMapping("/salles/{salleId}/tester-digitick")
   public ResponseEntity<Map<String, Object>> testerDigitickSlug(
-      @PathVariable String salleId, @RequestBody Map<String, String> corps) {
-    int nbConcerts = sourcesService.testerDigitickSlug(corps.getOrDefault("slug", ""));
+      @PathVariable String salleId, @Valid @RequestBody RequeteSlug corps) {
+    int nbConcerts = sourcesService.testerDigitickSlug(corps.slug() == null ? "" : corps.slug());
     return nbConcerts >= 0
         ? ResponseEntity.ok(Map.of("accessible", true, "nbConcerts", nbConcerts))
         : ResponseEntity.status(404).body(Map.of("accessible", false, "nbConcerts", 0));
@@ -96,11 +97,11 @@ public class SourcesController {
   /// Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
   ///
   /// @param requete corps JSON avec {@code nom}, {@code slug}, {@code ville} (opt.), {@code dept}
-  ///     (opt.)
+  ///   (opt.)
   /// @return 201 avec {@code {salleId}} si créée, 400 si invalide
   @PostMapping("/digitick-salles")
   public ResponseEntity<Map<String, Object>> creerSalleDigitick(
-      @RequestBody RequeteDigitickSalle requete) {
+      @Valid @RequestBody RequeteDigitickSalle requete) {
     String nom = requete.nom() == null ? "" : requete.nom().strip();
     String slug = requete.slug() == null ? "" : requete.slug().strip();
     if (nom.isEmpty() || nom.length() > 200) return erreur(400, "Nom de salle invalide.");
@@ -116,11 +117,11 @@ public class SourcesController {
   /// Met à jour les métadonnées d'une salle Digitick (nom, ville, département).
   ///
   /// @param salleId UUID de la salle
-  /// @param requete   corps JSON avec les champs à modifier (null = inchangé)
+  /// @param requete corps JSON avec les champs à modifier (null = inchangé)
   /// @return 200 si mis à jour, 400 si UUID invalide
   @PatchMapping("/digitick-salles/{salleId}")
   public ResponseEntity<Map<String, Object>> modifierSalleDigitick(
-      @PathVariable String salleId, @RequestBody RequeteDigitickSalle requete) {
+      @PathVariable String salleId, @Valid @RequestBody RequeteDigitickSalle requete) {
     UUID uuid = parseUuid(salleId);
     if (uuid == null) return erreur(400, "UUID de salle invalide.");
     String nom = requete.nom() == null || requete.nom().isBlank() ? null : requete.nom().strip();
@@ -136,7 +137,7 @@ public class SourcesController {
   ///
   /// @param salleId UUID de la salle
   /// @return 204 si supprimée, 409 si des contraintes empêchent la suppression, 400 si UUID
-  // invalide
+  ///   invalide
   @DeleteMapping("/digitick-salles/{salleId}")
   public ResponseEntity<?> supprimerSalleDigitick(@PathVariable String salleId) {
     UUID uuid = parseUuid(salleId);

@@ -4,10 +4,12 @@
  */
 package fr.strapontin.core;
 
+import java.util.Objects;
+
 /// Détermine si deux noms d'artiste normalisés désignent le même artiste.
 ///
-/// Extrait de `worker/persister/ReconciliateurArtistes` (v2.5.7) vers `core` pour être
-/// réutilisable par le module `web` (ajout d'artiste, v2.6.0) sans dépendance `web` → `worker`.
+/// Extrait de `worker/persister/ReconciliateurArtistes` (v2.5.7) vers `core` pour être réutilisable
+/// par le module `web` (ajout d'artiste, v2.6.0) sans dépendance `web` → `worker`.
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -33,13 +35,11 @@ public final class CorrespondanceArtiste {
   /// @param b deuxième nom normalisé
   /// @return {@code true} si les artistes sont considérés identiques
   public static boolean estDoublonArtiste(String a, String b) {
+    Objects.requireNonNull(a, "a");
+    Objects.requireNonNull(b, "b");
     if (a.equals(b)) return true;
     if (Normalisation.jaro(a, b) >= SEUIL_JARO_ARTISTE) return true;
-    String court = a.length() <= b.length() ? a : b;
-    String plusLong = a.length() <= b.length() ? b : a;
-    double ratio = (double) court.length() / plusLong.length();
-    return court.length() >= LONGUEUR_MIN_CONTAINMENT_ARTISTE
-        && ratio >= RATIO_MIN_CONTAINMENT_ARTISTE
-        && plusLong.contains(court);
+    return UtilitairesChaine.estContainmentRatio(
+        a, b, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE);
   }
 }

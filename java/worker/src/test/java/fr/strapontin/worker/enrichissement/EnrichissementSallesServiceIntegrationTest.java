@@ -26,9 +26,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /// Tests d'intégration de [EnrichissementSallesService] avec PostgreSQL réel (Testcontainers) —
-/// couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, qui ne peut être
-/// vérifiée qu'avec une vraie base (l'expression SQL {@code EXTRACT(ISODOW FROM CURRENT_DATE)}
-/// n'est jamais évaluée avec un {@code NamedParameterJdbcTemplate} mocké).
+/// couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, qui ne peut être vérifiée
+/// qu'avec une vraie base (l'expression SQL {@code EXTRACT(ISODOW FROM CURRENT_DATE)} n'est jamais
+/// évaluée avec un {@code NamedParameterJdbcTemplate} mocké).
 ///
 /// @since 2.7.3
 /// @author Kwaite
@@ -37,9 +37,7 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
   @MockitoBean private OverpassSalleSource overpassSalleSource;
   @MockitoBean private WikidataSalleSource wikidataSalleSource;
 
-  @MockitoBean
-  @SuppressWarnings("unused")
-  private TicketmasterSource ticketmasterSource;
+  @MockitoBean private TicketmasterSource ticketmasterSource;
 
   @Autowired private EnrichissementSallesService service;
   @Autowired private NamedParameterJdbcTemplate jdbc;

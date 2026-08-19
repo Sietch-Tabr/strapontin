@@ -315,6 +315,8 @@ import EtatChargement from '../EtatChargement.vue'
 import { useToasts } from '../../composables/useToasts.js'
 import { useDialog } from '../../composables/useDialog.js'
 import { formaterInstant, formaterTs } from '../../composables/useDates.js'
+import { corpsJsonOuVide } from '../../utils/reponseJson.js'
+import { extraireSlugDepuisUrl, slugDeduit } from '../../utils/digitickSlug.js'
 
 const { afficherToast } = useToasts()
 
@@ -359,13 +361,6 @@ function classeBarre(source) {
   return 'barre-danger'
 }
 
-function slugDeduit(nom) {
-  return nom
-    .toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]/g, '')
-}
-
 function slugCourant(salle) {
   const edite = slugsEdites[salle.salleId]
   return edite !== undefined ? edite : (salle.digitickSlug ?? '')
@@ -390,17 +385,6 @@ async function charger() {
   } finally {
     chargement.value = false
   }
-}
-
-function extraireSlugDepuisUrl(valeur) {
-  try {
-    const url = new URL(valeur)
-    const site = url.searchParams.get('site')
-    if (site) return site.trim()
-    const m = url.pathname.match(/\/index-css\d+-(.+?)-pg\d+\.html$/)
-    if (m) return m[1].trim()
-  } catch (_) {}
-  return valeur.trim()
 }
 
 function mettreAJourSlug(salle, valeur) {
@@ -445,7 +429,7 @@ async function testerSlug(salle) {
       signal: controleur.signal,
     })
     if (rep.ok) {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       statutTester[salle.salleId] = data.nbConcerts > 0 ? `ok:${data.nbConcerts}` : 'ok:0'
     } else {
       statutTester[salle.salleId] = 'ko'
@@ -477,7 +461,7 @@ async function fetchSalle(salle) {
     if (rep.ok) {
       afficherToast('Fetch déclenché.', 'succes')
     } else {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       afficherToast(data.erreur || 'Erreur lors du déclenchement.', 'erreur')
     }
   } catch (e) {
@@ -509,7 +493,7 @@ async function testerSlugAjout() {
       signal: controleur.signal,
     })
     if (rep.ok) {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       ajoutSlugStatut.value = data.nbConcerts > 0 ? `ok:${data.nbConcerts}` : 'ok:0'
     } else {
       ajoutSlugStatut.value = 'ko'
@@ -536,7 +520,7 @@ async function creerSalleDigitick() {
       afficherToast('Salle Digitick ajoutée — fetch en cours.', 'succes')
       await charger()
     } else {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       afficherToast(data.erreur || 'Erreur lors de la création.', 'erreur')
     }
   } catch (e) {
@@ -603,7 +587,7 @@ async function confirmerSuppression() {
       afficherToast('Salle supprimée.', 'succes')
       await charger()
     } else if (rep.status === 409) {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       afficherToast(data.erreur || 'Impossible de supprimer : salle suivie ou avec concerts.', 'erreur')
     } else {
       afficherToast('Erreur lors de la suppression.', 'erreur')

@@ -8,7 +8,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -18,9 +17,9 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
-/// Client SPARQL Wikidata partagé entre {@link WikidataSalleSource} et
-/// {@link WikidataArtisteSource} : User-Agent obligatoire, timeout 60s, retry 429 (Retry-After +
-/// backoff exponentiel) et 503 (×3).
+/// Client SPARQL Wikidata partagé entre {@link WikidataSalleSource} et {@link
+/// WikidataArtisteSource} : User-Agent obligatoire, timeout 60s, retry 429 (Retry-After + backoff
+/// exponentiel) et 503 (×3).
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -44,7 +43,7 @@ final class ClientSparqlWikidata {
   private final RestClient restClient;
   private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
       new fr.strapontin.core.CompteurBilanFetch();
-  private final AtomicLong dernierAppelMs = new AtomicLong(0);
+  private final CadenceurAppels cadenceur = new CadenceurAppels(DELAI_MIN_ENTRE_APPELS_MS);
 
   /// Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture 60s).
   ClientSparqlWikidata() {
@@ -78,9 +77,9 @@ final class ClientSparqlWikidata {
         .body(java.util.Map.class);
   }
 
-  /// Exécute une requête SPARQL avec retry sur 429 (Retry-After + backoff exponentiel) et 503
-  /// (×3). Retourne `null` si toutes les tentatives échouent — l'appelant traite cela comme une
-  /// absence de résultat, sans lever d'exception.
+  /// Exécute une requête SPARQL avec retry sur 429 (Retry-After + backoff exponentiel) et 503 (×3).
+  /// Retourne `null` si toutes les tentatives échouent — l'appelant traite cela comme une absence
+  /// de résultat, sans lever d'exception.
   ///
   /// @param sparql corps de la requête SPARQL
   /// @return corps JSON désérialisé, ou null en cas d'échec définitif
@@ -88,7 +87,7 @@ final class ClientSparqlWikidata {
     // un appel logique = un executer, quel que soit le nombre de retries internes —
     // seul un échec définitif (retries épuisés) compte comme erreur pour le bilan de panne.
     compteurBilan.enregistrerAppel();
-    attendreRateLimitGlobal();
+    cadenceur.attendre();
     int tentative = 0;
     int tentatives503 = 0;
     while (tentative < RETRY_TOTAL_MAX) {
@@ -118,10 +117,10 @@ final class ClientSparqlWikidata {
     return null;
   }
 
-  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement et
-  /// remet les compteurs à zéro — client partagé entre {@link WikidataSalleSource} et
-  /// {@link WikidataArtisteSource}, mais une instance par source (non partagée) : chacune
-  /// prélève son propre bilan sans interférer avec l'autre.
+  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement et remet les
+  /// compteurs à zéro — client partagé entre {@link WikidataSalleSource} et {@link
+  /// WikidataArtisteSource}, mais une instance par source (non partagée) : chacune prélève son
+  /// propre bilan sans interférer avec l'autre.
   ///
   /// @return le bilan depuis le dernier prélèvement
   fr.strapontin.core.BilanFetch preleverBilan() {
@@ -147,25 +146,24 @@ final class ClientSparqlWikidata {
     }
   }
 
-  /// Espace proactivement les appels SPARQL Wikidata, sur le même principe que
-  /// {@code OverpassSalleSource.attendreRateLimitGlobal}.
-  private synchronized void attendreRateLimitGlobal() {
-    long maintenant = System.currentTimeMillis();
-    long prochainAppel = dernierAppelMs.get() + DELAI_MIN_ENTRE_APPELS_MS;
-    if (maintenant < prochainAppel) {
-      dormir(prochainAppel - maintenant);
-    }
-    dernierAppelMs.set(System.currentTimeMillis());
-  }
-
   /// Extrait la valeur d'une variable SPARQL dans un binding de résultat.
   ///
   /// @param binding binding JSON d'une ligne de résultat
-  /// @param cle     nom de la variable SPARQL
+  /// @param cle nom de la variable SPARQL
   /// @return valeur textuelle, ou null si absente
   @SuppressWarnings("unchecked")
   static String valeurBinding(java.util.Map<String, Object> binding, String cle) {
     var v = (java.util.Map<String, Object>) binding.get(cle);
     return v != null ? (String) v.get("value") : null;
+  }
+
+  /// Échappe une chaîne pour insertion sûre dans un littéral SPARQL délimité par des guillemets
+  /// doubles (ex. {@code mwapi:search "..."}). L'antislash est échappé avant le guillemet, sinon le
+  /// {@code \"} produit par l'échappement du guillemet serait lui-même ré-échappé.
+  ///
+  /// @param s la chaîne à insérer dans le littéral
+  /// @return la chaîne échappée
+  static String echapperLitteral(String s) {
+    return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
 }

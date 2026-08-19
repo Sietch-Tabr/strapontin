@@ -10,6 +10,7 @@ import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceAvecFetchLot;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.worker.persister.EligibiliteResolutionDeezer;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
@@ -20,7 +21,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -40,19 +40,6 @@ public class WorkerFetchService {
   private static final Logger log = LoggerFactory.getLogger(WorkerFetchService.class);
 
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
-  // Deezer ne référence pas les humoristes — toute recherche pour un humoriste renvoie le
-  // musicien le plus proche textuellement (ex. "Fabrice Éboué" → "Fabrice Aboulker"), jamais
-  // détecté par le seuil de similarité seul. Les classifications TM "theatre" (segment "arts et
-  // théâtre"), "divers" (segment "miscellaneous"/spectacles non musicaux type Holiday On Ice) et
-  // "sports" ne correspondent structurellement à aucun contenu musical référençable sur Deezer —
-  // Digitick filtre déjà en amont sur le genre "Concert" (jamais l'une de ces classifications,
-  // absente par construction, sans ambiguïté). Eventim en revanche omet fréquemment sa
-  // classification (ex. "Paris is Magique", comédie musicale sans rapport avec la musique réelle) :
-  // une classification vide côté Eventim ne garantit rien sur la nature musicale du concert,
-  // contrairement à Digitick.
-  private static final Set<String> CLASSIFICATIONS_NON_MUSICALES =
-      Set.of("theatre", "divers", "sports");
-  private static final String SOURCE_EVENTIM = "eventim";
   private static final int TAILLE_LOT_TM = 20;
   private static final int TAILLE_LOT_DEPTS = 5;
   private static final int TAILLE_LOT_SALLES = 20;
@@ -215,17 +202,28 @@ public class WorkerFetchService {
   /// @param colonne "artiste_id" ou "salle_id"
   /// @param ids identifiants (texte) des entités traitées dans ce cycle
   /// @param debutCycle horodatage capturé avant la persistance du lot
+  private static final String SQL_ABSENCES_BASE =
+      "UPDATE concerts SET"
+          + " absences_consecutives = CASE WHEN updated_at >= CAST(:debut AS timestamptz)"
+          + "   THEN 0 ELSE absences_consecutives + 1 END,"
+          + " absence_detectee_le = CASE"
+          + "   WHEN updated_at >= CAST(:debut AS timestamptz) THEN NULL"
+          + "   WHEN absences_consecutives + 1 >= :seuil THEN COALESCE(absence_detectee_le, now())"
+          + "   ELSE absence_detectee_le END"
+          + " WHERE %s::text IN (:ids) AND date >= CURRENT_DATE";
+
+  private static final String SQL_ABSENCES_ARTISTE = SQL_ABSENCES_BASE.formatted("artiste_id");
+  private static final String SQL_ABSENCES_SALLE = SQL_ABSENCES_BASE.formatted("salle_id");
+
   private void mettreAJourAbsences(String colonne, List<String> ids, String debutCycle) {
     if (ids.isEmpty()) return;
-    jdbc.update(
-        "UPDATE concerts SET   absences_consecutives = CASE WHEN updated_at >= CAST(:debut AS"
-            + " timestamptz)                                THEN 0 ELSE absences_consecutives + 1"
-            + " END,   absence_detectee_le = CASE     WHEN updated_at >= CAST(:debut AS"
-            + " timestamptz) THEN NULL     WHEN absences_consecutives + 1 >= :seuil THEN"
-            + " COALESCE(absence_detectee_le, now())     ELSE absence_detectee_le END WHERE "
-            + colonne
-            + "::text IN (:ids) AND date >= CURRENT_DATE",
-        Map.of("debut", debutCycle, "seuil", SEUIL_ABSENCES_CONSECUTIVES, "ids", ids));
+    String sql =
+        switch (colonne) {
+          case "artiste_id" -> SQL_ABSENCES_ARTISTE;
+          case "salle_id" -> SQL_ABSENCES_SALLE;
+          default -> throw new IllegalArgumentException("colonne inconnue : " + colonne);
+        };
+    jdbc.update(sql, Map.of("debut", debutCycle, "seuil", SEUIL_ABSENCES_CONSECUTIVES, "ids", ids));
   }
 
   private static ResultatPersistance accumuler(ResultatPersistance a, ResultatPersistance b) {
@@ -270,8 +268,22 @@ public class WorkerFetchService {
   /// @param rows lignes agrégées par {@code artiste_id} avec {@code artiste_affiche}, {@code
   ///   artiste_id_str}, {@code attraction_id}, {@code nb_ids_distincts}
   /// @return concerts bruts collectés depuis TM
+  private record ResolutionAttractionIds(List<String> attractionIds, List<String> nomsSansTmId) {}
+
   private List<ConcertBrut> fetchTMParArtistes(List<Map<String, Object>> rows) {
-    List<ConcertBrut> resultats = new ArrayList<>();
+    ResolutionAttractionIds resolution = resoudreAttractionIds(rows);
+    List<ConcertBrut> resultats =
+        new ArrayList<>(fetchParLotsAttractionIds(resolution.attractionIds()));
+    resultats.addAll(fetchParNomsSansAttractionId(resolution.nomsSansTmId()));
+    return resultats;
+  }
+
+  // artiste_sources n'a pas de contrainte d'unicité sur artiste_id (PK = (source,
+  // identifiant_externe)) — une fusion mal dédupliquée peut laisser deux identifiants TM pour le
+  // même artiste, rendant le MAX() de la requête appelante arbitraire. Mieux vaut ne pas fetcher
+  // avec un identifiant potentiellement faux que de rapatrier silencieusement les concerts d'un
+  // autre artiste sous cette identité.
+  private ResolutionAttractionIds resoudreAttractionIds(List<Map<String, Object>> rows) {
     List<String> attractionIds = new ArrayList<>();
     List<String> nomsSansTmId = new ArrayList<>();
 
@@ -279,43 +291,9 @@ public class WorkerFetchService {
       String nom = (String) row.get("artiste_affiche");
       String artisteIdStr = (String) row.get("artiste_id_str");
       String attractionId = (String) row.get("attraction_id");
-      Number nbIdsDistinctsNum = (Number) row.get("nb_ids_distincts");
-      int nbIdsDistincts = nbIdsDistinctsNum != null ? nbIdsDistinctsNum.intValue() : 0;
-      if (nbIdsDistincts > 1) {
-        // artiste_sources n'a pas de contrainte d'unicité sur artiste_id (PK = (source,
-        // identifiant_externe)) — une fusion mal dédupliquée peut laisser deux identifiants TM
-        // pour le même artiste, rendant le MAX() ci-dessus arbitraire. Mieux vaut ne pas fetcher
-        // avec un identifiant potentiellement faux que de rapatrier silencieusement les concerts
-        // d'un autre artiste sous cette identité.
-        log.warn(
-            "artiste_sources ambigu — {} identifiant_externe ticketmaster distincts pour"
-                + " artiste={} artisteId={}, fetch TM ignoré ce cycle",
-            nbIdsDistincts,
-            nom,
-            artisteIdStr);
-        jdbc.update(
-            "UPDATE artiste_sources SET necessite_intervention_le ="
-                + " COALESCE(necessite_intervention_le, now()) WHERE artiste_id = CAST(:artisteId"
-                + " AS uuid) AND source = 'ticketmaster'",
-            Map.of("artisteId", artisteIdStr));
-        continue;
-      }
+      if (attractionIdAmbigu(row, nom, artisteIdStr)) continue;
       if (attractionId == null) {
-        try {
-          attractionId = tm.rechercherAttractionId(nom);
-          if (attractionId != null) {
-            jdbc.update(
-                "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
-                    + " VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :attractionId)"
-                    + " ON CONFLICT DO NOTHING",
-                Map.of("artisteId", artisteIdStr, "attractionId", attractionId));
-          }
-        } catch (Exception e) {
-          log.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());
-        }
-        // throttle manquant ici jusqu'alors — un lot avec plusieurs artistes jamais
-        // résolus pouvait générer une rafale d'appels /attractions.json sans délai.
-        attendreRateLimit();
+        attractionId = rechercherEtEnregistrerAttractionId(nom, artisteIdStr);
       }
       if (attractionId != null) {
         attractionIds.add(attractionId);
@@ -323,7 +301,49 @@ public class WorkerFetchService {
         nomsSansTmId.add(nom);
       }
     }
+    return new ResolutionAttractionIds(attractionIds, nomsSansTmId);
+  }
 
+  private boolean attractionIdAmbigu(Map<String, Object> row, String nom, String artisteIdStr) {
+    Number nbIdsDistinctsNum = (Number) row.get("nb_ids_distincts");
+    int nbIdsDistincts = nbIdsDistinctsNum != null ? nbIdsDistinctsNum.intValue() : 0;
+    if (nbIdsDistincts <= 1) return false;
+    log.warn(
+        "artiste_sources ambigu — {} identifiant_externe ticketmaster distincts pour"
+            + " artiste={} artisteId={}, fetch TM ignoré ce cycle",
+        nbIdsDistincts,
+        nom,
+        artisteIdStr);
+    jdbc.update(
+        "UPDATE artiste_sources SET necessite_intervention_le ="
+            + " COALESCE(necessite_intervention_le, now()) WHERE artiste_id = CAST(:artisteId"
+            + " AS uuid) AND source = 'ticketmaster'",
+        Map.of("artisteId", artisteIdStr));
+    return true;
+  }
+
+  private String rechercherEtEnregistrerAttractionId(String nom, String artisteIdStr) {
+    String attractionId = null;
+    try {
+      attractionId = tm.rechercherAttractionId(nom);
+      if (attractionId != null) {
+        jdbc.update(
+            "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
+                + " VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :attractionId)"
+                + " ON CONFLICT DO NOTHING",
+            Map.of("artisteId", artisteIdStr, "attractionId", attractionId));
+      }
+    } catch (Exception e) {
+      log.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());
+    }
+    // Throttle nécessaire ici : un lot avec plusieurs artistes jamais résolus peut générer une
+    // rafale d'appels /attractions.json sans délai sinon.
+    attendreRateLimit();
+    return attractionId;
+  }
+
+  private List<ConcertBrut> fetchParLotsAttractionIds(List<String> attractionIds) {
+    List<ConcertBrut> resultats = new ArrayList<>();
     for (int i = 0; i < attractionIds.size(); i += TAILLE_LOT_TM) {
       List<String> lot =
           attractionIds.subList(i, Math.min(i + TAILLE_LOT_TM, attractionIds.size()));
@@ -335,7 +355,11 @@ public class WorkerFetchService {
         log.warn("TM fetchArtistesLot lot={} échoué : {}", lot.size(), e.getMessage());
       }
     }
+    return resultats;
+  }
 
+  private List<ConcertBrut> fetchParNomsSansAttractionId(List<String> nomsSansTmId) {
+    List<ConcertBrut> resultats = new ArrayList<>();
     for (String nom : nomsSansTmId) {
       try {
         resultats.addAll(tm.fetchArtiste(nom));
@@ -344,7 +368,6 @@ public class WorkerFetchService {
       }
       attendreRateLimit();
     }
-
     return resultats;
   }
 
@@ -492,46 +515,13 @@ public class WorkerFetchService {
         return;
       }
 
-      // le préfixe emis ici doit correspondre à celui attendu par
-      // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique "ticketmaster"
-      // de salle_sources.source) — sans cette traduction, fetchSalle n'est jamais invoqué pour
-      // aucune salle TM (mismatch silencieux, aucune exception, aucun log d'erreur).
-      // restreint aux salles suivies (user_salles) — voir Javadoc de la méthode.
-      List<String> identifiantsParSalle =
-          jdbc
-              .queryForList(
-                  "SELECT string_agg(ss.source || ':' || ss.identifiant_externe, ',')"
-                      + " FROM salle_sources ss"
-                      + " WHERE EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id ="
-                      + " ss.salle_id)"
-                      + " GROUP BY ss.salle_id",
-                  Map.of(),
-                  String.class)
-              .stream()
-              .map(
-                  csv ->
-                      csv == null
-                          ? null
-                          : csv.replace(
-                              "ticketmaster:", TicketmasterSource.PREFIXE_IDENTIFIANT + ":"))
-              .toList();
-
+      List<String> identifiantsParSalle = recupererIdentifiantsSallesSuivies();
       if (identifiantsParSalle.isEmpty()) {
         log.info("fetch:salles:all — aucune salle suivie avec source configurée");
         return;
       }
 
-      for (int i = 0; i < identifiantsParSalle.size(); i += TAILLE_LOT_SALLES) {
-        List<String> lotSalles =
-            identifiantsParSalle.subList(
-                i, Math.min(i + TAILLE_LOT_SALLES, identifiantsParSalle.size()));
-        try {
-          resultat = accumuler(resultat, traiterLotSalles(lotSalles));
-        } catch (Exception e) {
-          log.error(
-              "fetch:salles:all lot {}-{} échoué : {}", i, i + lotSalles.size(), e.getMessage(), e);
-        }
-      }
+      resultat = traiterTousLesLotsSalles(identifiantsParSalle);
       sauvegarderQuota();
       recalculerMatchesService.recalculerMatches(null);
       notificationDigestService.executerDigest("temps_reel");
@@ -543,6 +533,45 @@ public class WorkerFetchService {
       workerStatsService.enregistrerStatJob(
           "fetch:salles:all", System.currentTimeMillis() - debut, resultat, erreur);
     }
+  }
+
+  // Le préfixe émis ici doit correspondre à celui attendu par
+  // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique "ticketmaster" de
+  // salle_sources.source) — sans cette traduction, fetchSalle n'est jamais invoqué pour aucune
+  // salle TM (mismatch silencieux, aucune exception, aucun log d'erreur). Restreint aux salles
+  // suivies (user_salles) — voir Javadoc de executerFetchSallesAll.
+  private List<String> recupererIdentifiantsSallesSuivies() {
+    return jdbc
+        .queryForList(
+            "SELECT string_agg(ss.source || ':' || ss.identifiant_externe, ',')"
+                + " FROM salle_sources ss"
+                + " WHERE EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id = ss.salle_id)"
+                + " GROUP BY ss.salle_id",
+            Map.of(),
+            String.class)
+        .stream()
+        .map(
+            csv ->
+                csv == null
+                    ? null
+                    : csv.replace("ticketmaster:", TicketmasterSource.PREFIXE_IDENTIFIANT + ":"))
+        .toList();
+  }
+
+  private ResultatPersistance traiterTousLesLotsSalles(List<String> identifiantsParSalle) {
+    ResultatPersistance resultat = new ResultatPersistance(0, 0);
+    for (int i = 0; i < identifiantsParSalle.size(); i += TAILLE_LOT_SALLES) {
+      List<String> lotSalles =
+          identifiantsParSalle.subList(
+              i, Math.min(i + TAILLE_LOT_SALLES, identifiantsParSalle.size()));
+      try {
+        resultat = accumuler(resultat, traiterLotSalles(lotSalles));
+      } catch (Exception e) {
+        log.error(
+            "fetch:salles:all lot {}-{} échoué : {}", i, i + lotSalles.size(), e.getMessage(), e);
+      }
+    }
+    return resultat;
   }
 
   /// Fetch + dédoublonnage + persistance d'un lot de salles (taille {@value TAILLE_LOT_SALLES}).
@@ -584,11 +613,7 @@ public class WorkerFetchService {
   /// @param c concert à évaluer
   /// @return {@code true} si la résolution Deezer peut s'appliquer à ce concert
   private static boolean estEligibleResolutionDeezer(ConcertBrut c) {
-    if (c.classification() != null && CLASSIFICATIONS_NON_MUSICALES.contains(c.classification())) {
-      return false;
-    }
-    return !SOURCE_EVENTIM.equals(c.source())
-        || (c.classification() != null && !c.classification().isBlank());
+    return EligibiliteResolutionDeezer.estEligible(c.classification(), c.source());
   }
 
   private List<ConcertBrut> resoudreEtDeduplicer(List<ConcertBrut> concerts) {

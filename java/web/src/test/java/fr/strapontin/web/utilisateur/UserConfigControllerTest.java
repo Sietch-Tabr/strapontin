@@ -5,22 +5,19 @@
 package fr.strapontin.web.utilisateur;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires pour {@link UserConfigController} (limite de taille sur le champ
-/// départements brut, avant découpage).
+/// Tests unitaires pour {@link UserConfigController} (limite de taille sur le champ départements
+/// brut, avant découpage).
 ///
 /// @since 2.6.5
 /// @author Kwaite
@@ -43,16 +40,8 @@ class UserConfigControllerTest {
     return auth;
   }
 
-  @Test
-  void majDepartements_champTropLong_leveErreurMetierSansAppelerLeService() {
-    String brut = "7".repeat(1001);
-
-    assertThatThrownBy(
-            () -> controller.majDepartements(new RequeteDepartements(brut), authPour("u1")))
-        .isInstanceOf(ErreurMetier.class);
-
-    verify(userConfigService, never()).majDepartements(any(), any());
-  }
+  // champ trop long : voir RequeteDepartementsValidationTest (@Valid ne s'exerce pas sur un
+  // appel Java direct au contrôleur, seulement via Spring MVC).
 
   @Test
   void majDepartements_champLimiteExacte_appelleLeService() {

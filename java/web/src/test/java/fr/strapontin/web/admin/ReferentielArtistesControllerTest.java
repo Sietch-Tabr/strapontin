@@ -48,7 +48,7 @@ class ReferentielArtistesControllerTest {
   @Test
   void modifierNomAffiche_uuidInvalide_retourne400() {
     ResponseEntity<Map<String, Object>> reponse =
-        controller.modifierNomAffiche("pas-un-uuid", Map.of());
+        controller.modifierNomAffiche("pas-un-uuid", new RequeteNomAffiche(null));
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(service, never()).modifierNomAffiche(any(), any());
@@ -60,7 +60,7 @@ class ReferentielArtistesControllerTest {
     when(service.modifierNomAffiche(eq(id), any())).thenReturn(false);
 
     ResponseEntity<Map<String, Object>> reponse =
-        controller.modifierNomAffiche(id.toString(), Map.of("nomAffiche", "Nouveau"));
+        controller.modifierNomAffiche(id.toString(), new RequeteNomAffiche("Nouveau"));
 
     assertEquals(404, reponse.getStatusCode().value());
   }
@@ -127,34 +127,14 @@ class ReferentielArtistesControllerTest {
   @Test
   void corrigerIdentifiantTm_uuidInvalide_retourne400() {
     ResponseEntity<Map<String, Object>> reponse =
-        controller.corrigerIdentifiantTm(
-            "pas-un-uuid", Map.of("identifiantExterne", "K8vZ917G1B7"));
+        controller.corrigerIdentifiantTm("pas-un-uuid", new RequeteIdentifiantTm("K8vZ917G1B7"));
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(service, never()).corrigerIdentifiantTm(any(), any());
   }
 
-  @Test
-  void corrigerIdentifiantTm_identifiantVide_retourne400() {
-    UUID id = UUID.randomUUID();
-
-    ResponseEntity<Map<String, Object>> reponse =
-        controller.corrigerIdentifiantTm(id.toString(), Map.of("identifiantExterne", "  "));
-
-    assertEquals(400, reponse.getStatusCode().value());
-    verify(service, never()).corrigerIdentifiantTm(any(), any());
-  }
-
-  @Test
-  void corrigerIdentifiantTm_identifiantAbsent_retourne400() {
-    UUID id = UUID.randomUUID();
-
-    ResponseEntity<Map<String, Object>> reponse =
-        controller.corrigerIdentifiantTm(id.toString(), Map.of());
-
-    assertEquals(400, reponse.getStatusCode().value());
-    verify(service, never()).corrigerIdentifiantTm(any(), any());
-  }
+  // identifiant vide/absent : voir RequeteIdentifiantTmValidationTest (@Valid ne s'exerce pas
+  // sur un appel Java direct au contrôleur, seulement via Spring MVC).
 
   @Test
   void corrigerIdentifiantTm_artisteSansSourceTicketmaster_retourne404() {
@@ -162,8 +142,7 @@ class ReferentielArtistesControllerTest {
     when(service.corrigerIdentifiantTm(eq(id), any())).thenReturn(false);
 
     ResponseEntity<Map<String, Object>> reponse =
-        controller.corrigerIdentifiantTm(
-            id.toString(), Map.of("identifiantExterne", "K8vZ917G1B7"));
+        controller.corrigerIdentifiantTm(id.toString(), new RequeteIdentifiantTm("K8vZ917G1B7"));
 
     assertEquals(404, reponse.getStatusCode().value());
   }
@@ -174,8 +153,7 @@ class ReferentielArtistesControllerTest {
     when(service.corrigerIdentifiantTm(id, "K8vZ917G1B7")).thenReturn(true);
 
     ResponseEntity<Map<String, Object>> reponse =
-        controller.corrigerIdentifiantTm(
-            id.toString(), Map.of("identifiantExterne", "K8vZ917G1B7"));
+        controller.corrigerIdentifiantTm(id.toString(), new RequeteIdentifiantTm("K8vZ917G1B7"));
 
     assertEquals(200, reponse.getStatusCode().value());
   }

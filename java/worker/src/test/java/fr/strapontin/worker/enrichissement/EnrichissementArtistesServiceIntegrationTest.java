@@ -27,8 +27,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /// Tests d'intégration de [EnrichissementArtistesService] avec PostgreSQL réel (Testcontainers) —
-/// couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, symétrique à
-/// {@link EnrichissementSallesServiceIntegrationTest}.
+/// couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, symétrique à {@link
+/// EnrichissementSallesServiceIntegrationTest}.
 ///
 /// @since 2.7.3
 /// @author Kwaite
@@ -37,9 +37,7 @@ class EnrichissementArtistesServiceIntegrationTest extends AbstractWorkerIntegra
   @MockitoBean private WikidataArtisteSource wikidataArtisteSource;
   @MockitoBean private DeezerArtisteSource deezerArtisteSource;
 
-  @MockitoBean
-  @SuppressWarnings("unused")
-  private TicketmasterSource ticketmasterSource;
+  @MockitoBean private TicketmasterSource ticketmasterSource;
 
   @Autowired private EnrichissementArtistesService service;
   @Autowired private NamedParameterJdbcTemplate jdbc;

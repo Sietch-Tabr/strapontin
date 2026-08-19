@@ -16,7 +16,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -96,11 +95,9 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   private static final int TAILLE_LOT_MAX = 50;
-  private static final int DELAI_MIN_ENTRE_APPELS_MS = 500;
 
   private final ClientSparqlWikidata client;
   private final Cache<String, EnrichissementSalle> cache;
-  private final AtomicLong dernierAppelMs = new AtomicLong(0);
 
   /// Crée une instance avec un client SPARQL par défaut et un cache 24h.
   public WikidataSalleSource() {
@@ -152,7 +149,6 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     }
 
     for (SalleAEnrichir salle : aDecouvrir) {
-      attendreRateLimitGlobal();
       decouvrir(salle).ifPresent(e -> resultats.put(salle.id(), e));
     }
 
@@ -432,7 +428,9 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
 
   private static String construireRequeteDecouverte(String nom) {
     return """
-    SELECT ?item ?itemLabel ?communeLabel ?num (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) (SAMPLE(?cp) AS ?codePostal) WHERE {
+    SELECT ?item ?itemLabel ?communeLabel ?num
+      (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) (SAMPLE(?cp) AS ?codePostal)
+    WHERE {
       SERVICE wikibase:mwapi {
         bd:serviceParam wikibase:api "EntitySearch".
         bd:serviceParam wikibase:endpoint "www.wikidata.org".
@@ -460,7 +458,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     ORDER BY ?num
     LIMIT 5
     """
-        .formatted(nom.replace("\"", "\\\""));
+        .formatted(ClientSparqlWikidata.echapperLitteral(nom));
   }
 
   @SuppressWarnings("unchecked")
@@ -469,18 +467,5 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     if (results == null) return List.of();
     var bindings = (List<Map<String, Object>>) results.get("bindings");
     return bindings != null ? bindings : List.of();
-  }
-
-  private synchronized void attendreRateLimitGlobal() {
-    long maintenant = System.currentTimeMillis();
-    long prochainAppel = dernierAppelMs.get() + DELAI_MIN_ENTRE_APPELS_MS;
-    if (maintenant < prochainAppel) {
-      try {
-        Thread.sleep(prochainAppel - maintenant);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-    }
-    dernierAppelMs.set(System.currentTimeMillis());
   }
 }

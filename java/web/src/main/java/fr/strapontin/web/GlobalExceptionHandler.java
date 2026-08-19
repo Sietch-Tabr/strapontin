@@ -25,9 +25,9 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 /// Gestionnaire centralisé des exceptions pour tous les contrôleurs REST.
 ///
 /// <p>Retourne systématiquement `{"erreur": "..."}`, cohérent avec le format d'erreur de l'API.
-/// L'ordre de résolution Spring choisit automatiquement le handler le plus spécifique
-/// ({@link DuplicateKeyException} avant {@link DataAccessException}, etc.).
-/// Les erreurs 500 sont aussi consignées dans {@code logs_admin} (source {@code web}).
+/// L'ordre de résolution Spring choisit automatiquement le handler le plus spécifique ({@link
+/// DuplicateKeyException} avant {@link DataAccessException}, etc.). Les erreurs 500 sont aussi
+/// consignées dans {@code logs_admin} (source {@code web}).
 ///
 /// @since 2.1.0
 /// @author Kwaite
@@ -119,7 +119,7 @@ public class GlobalExceptionHandler {
 
   /// Retourne 500 en cas d'erreur d'accès aux données (hors doublon).
   ///
-  /// @param ex      l'exception JDBC/Spring Data
+  /// @param ex l'exception JDBC/Spring Data
   /// @param request la requête HTTP entrante
   /// @return `{"erreur": "Erreur de base de données."}`
   @ExceptionHandler(DataAccessException.class)
@@ -132,7 +132,7 @@ public class GlobalExceptionHandler {
 
   /// Retourne 500 pour toute exception non traitée par les handlers précédents.
   ///
-  /// @param ex      l'exception inattendue
+  /// @param ex l'exception inattendue
   /// @param request la requête HTTP entrante
   /// @return `{"erreur": "Une erreur inattendue s'est produite."}`
   @ExceptionHandler(Exception.class)
@@ -151,7 +151,8 @@ public class GlobalExceptionHandler {
       meta.put("exception", ex.getClass().getSimpleName());
       logAdminService.logAdmin(
           "error", "web", "Erreur serveur : " + request.getServletPath(), meta);
-    } catch (Exception ignored) {
+    } catch (Exception e) {
+      log.warn("échec de la journalisation admin d'une erreur serveur", e);
     }
   }
 }

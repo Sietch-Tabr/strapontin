@@ -10,15 +10,15 @@ import java.util.UUID;
 
 /// Valeurs normalisées d'un concert prêtes pour l'upsert en base.
 ///
-/// La colonne `disponible` est exclue : elle est `GENERATED ALWAYS AS`
-/// dans le schéma PostgreSQL et ne doit jamais être insérée ni mise à jour.
+/// La colonne `disponible` est exclue : elle est `GENERATED ALWAYS AS` dans le schéma PostgreSQL et
+/// ne doit jamais être insérée ni mise à jour.
 ///
-/// `salleSourceId` et `artisteSourceId` portent les identifiants externes préfixés
-/// (ex. {@code "tm:rZFSnyZdFvA"}) utilisés par {@code PersisteurConcertsDb} pour la
-/// résolution UUID-first via {@code salle_sources} / {@code artiste_sources}.
+/// `salleSourceId` et `artisteSourceId` portent les identifiants externes préfixés (ex. {@code
+/// "tm:rZFSnyZdFvA"}) utilisés par {@code PersisteurConcertsDb} pour la résolution UUID-first via
+/// {@code salle_sources} / {@code artiste_sources}.
 ///
-/// `salleId` et `artisteId` sont remplis par la résolution des identités sources ;
-/// null si aucune correspondance trouvée.
+/// `salleId` et `artisteId` sont remplis par la résolution des identités sources ; null si aucune
+/// correspondance trouvée.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -43,18 +43,17 @@ public record ValeurConcert(
     UUID salleId,
     UUID artisteId) {
 
-  /// Retourne un nouveau concert avec le {@code salleNorm} remplacé.
-  ///
-  /// @param nouvelleSalleNorm nouveau nom de salle normalisé
-  /// @return nouveau record avec le champ modifié
-  public ValeurConcert avecSalleNorm(String nouvelleSalleNorm) {
+  // Seul point de reconstruction du record — les méthodes avecXxx ci-dessous ne varient que sur
+  // ces quatre champs (les seuls jamais modifiés après la résolution des identités sources) ;
+  // l'ajout d'un futur champ au record ne demande de mettre à jour que cette seule méthode.
+  private ValeurConcert avec(String artisteNorm, String salleNorm, UUID salleId, UUID artisteId) {
     return new ValeurConcert(
         artiste,
         artisteNorm,
         date,
         heure,
         salle,
-        nouvelleSalleNorm,
+        salleNorm,
         ville,
         dept,
         url,
@@ -68,6 +67,14 @@ public record ValeurConcert(
         artisteSourceId,
         salleId,
         artisteId);
+  }
+
+  /// Retourne un nouveau concert avec le {@code salleNorm} remplacé.
+  ///
+  /// @param nouvelleSalleNorm nouveau nom de salle normalisé
+  /// @return nouveau record avec le champ modifié
+  public ValeurConcert avecSalleNorm(String nouvelleSalleNorm) {
+    return avec(artisteNorm, nouvelleSalleNorm, salleId, artisteId);
   }
 
   /// Retourne un nouveau concert avec le {@code salleId} remplacé.
@@ -75,26 +82,7 @@ public record ValeurConcert(
   /// @param nouvelleSalleId nouveau UUID de salle
   /// @return nouveau record avec le champ modifié
   public ValeurConcert avecSalleId(UUID nouvelleSalleId) {
-    return new ValeurConcert(
-        artiste,
-        artisteNorm,
-        date,
-        heure,
-        salle,
-        salleNorm,
-        ville,
-        dept,
-        url,
-        source,
-        classification,
-        genre,
-        statut,
-        presaleDebut,
-        presaleNom,
-        salleSourceId,
-        artisteSourceId,
-        nouvelleSalleId,
-        artisteId);
+    return avec(artisteNorm, salleNorm, nouvelleSalleId, artisteId);
   }
 
   /// Retourne un nouveau concert avec l'{@code artisteNorm} remplacé.
@@ -102,26 +90,7 @@ public record ValeurConcert(
   /// @param nouvelArtisteNorm nouveau nom d'artiste normalisé
   /// @return nouveau record avec le champ modifié
   public ValeurConcert avecArtisteNorm(String nouvelArtisteNorm) {
-    return new ValeurConcert(
-        artiste,
-        nouvelArtisteNorm,
-        date,
-        heure,
-        salle,
-        salleNorm,
-        ville,
-        dept,
-        url,
-        source,
-        classification,
-        genre,
-        statut,
-        presaleDebut,
-        presaleNom,
-        salleSourceId,
-        artisteSourceId,
-        salleId,
-        artisteId);
+    return avec(nouvelArtisteNorm, salleNorm, salleId, artisteId);
   }
 
   /// Retourne un nouveau concert avec l'{@code artisteId} remplacé.
@@ -129,81 +98,24 @@ public record ValeurConcert(
   /// @param nouvelArtisteId nouveau UUID d'artiste
   /// @return nouveau record avec le champ modifié
   public ValeurConcert avecArtisteId(UUID nouvelArtisteId) {
-    return new ValeurConcert(
-        artiste,
-        artisteNorm,
-        date,
-        heure,
-        salle,
-        salleNorm,
-        ville,
-        dept,
-        url,
-        source,
-        classification,
-        genre,
-        statut,
-        presaleDebut,
-        presaleNom,
-        salleSourceId,
-        artisteSourceId,
-        salleId,
-        nouvelArtisteId);
+    return avec(artisteNorm, salleNorm, salleId, nouvelArtisteId);
   }
 
   /// Retourne un nouveau concert avec le {@code salleId} et l'{@code artisteId} remplacés.
   ///
   /// @param nouvelleSalleId nouveau UUID de salle (null conserve l'existant)
-  /// @param nouvelArtisteId   nouveau UUID d'artiste (null conserve l'existant)
+  /// @param nouvelArtisteId nouveau UUID d'artiste (null conserve l'existant)
   /// @return nouveau record avec les champs modifiés
   public ValeurConcert avecUuids(UUID nouvelleSalleId, UUID nouvelArtisteId) {
-    return new ValeurConcert(
-        artiste,
-        artisteNorm,
-        date,
-        heure,
-        salle,
-        salleNorm,
-        ville,
-        dept,
-        url,
-        source,
-        classification,
-        genre,
-        statut,
-        presaleDebut,
-        presaleNom,
-        salleSourceId,
-        artisteSourceId,
-        nouvelleSalleId,
-        nouvelArtisteId);
+    return avec(artisteNorm, salleNorm, nouvelleSalleId, nouvelArtisteId);
   }
 
   /// Retourne un nouveau concert avec l'{@code artisteNorm} et l'{@code artisteId} remplacés.
   ///
   /// @param nouvelArtisteNorm nouveau nom d'artiste normalisé
-  /// @param nouvelArtisteId   nouveau UUID d'artiste
+  /// @param nouvelArtisteId nouveau UUID d'artiste
   /// @return nouveau record avec les champs modifiés
   public ValeurConcert avecArtisteNormEtId(String nouvelArtisteNorm, UUID nouvelArtisteId) {
-    return new ValeurConcert(
-        artiste,
-        nouvelArtisteNorm,
-        date,
-        heure,
-        salle,
-        salleNorm,
-        ville,
-        dept,
-        url,
-        source,
-        classification,
-        genre,
-        statut,
-        presaleDebut,
-        presaleNom,
-        salleSourceId,
-        artisteSourceId,
-        salleId,
-        nouvelArtisteId);
+    return avec(nouvelArtisteNorm, salleNorm, salleId, nouvelArtisteId);
   }
 }

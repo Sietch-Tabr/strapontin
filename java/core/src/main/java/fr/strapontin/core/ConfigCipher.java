@@ -9,6 +9,7 @@ import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Objects;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -16,13 +17,12 @@ import org.bouncycastle.crypto.generators.SCrypt;
 
 /// Chiffrement/déchiffrement AES-256-GCM de `app_config`, clé dérivée via SCrypt.
 ///
-/// Extrait de `web.ConfigService`/`worker.ConfigServiceWorker` — les deux modules
-/// dérivaient et utilisaient une clé strictement identique, dupliquée verbatim ; un correctif
-/// de sécurité appliqué à un seul module ne se serait jamais répercuté dans l'autre.
+/// Extrait de `web.ConfigService`/`worker.ConfigServiceWorker` — les deux modules dérivaient et
+/// utilisaient une clé strictement identique, dupliquée verbatim ; un correctif de sécurité
+/// appliqué à un seul module ne se serait jamais répercuté dans l'autre.
 ///
-/// La clé AES-256 est dérivée de `APP_CONFIG_SECRET` via SCrypt (paramètres par défaut
-/// Node.js : N=16384, r=8, p=1, dkLen=32) — DIFFÉRENT de `BetterAuthPasswordEncoder`
-/// (r=16, Better-Auth).
+/// La clé AES-256 est dérivée de `APP_CONFIG_SECRET` via SCrypt (paramètres par défaut Node.js :
+/// N=16384, r=8, p=1, dkLen=32) — DIFFÉRENT de `BetterAuthPasswordEncoder` (r=16, Better-Auth).
 ///
 /// Format de stockage : `base64(IV(12) || TAG(16) || données_chiffrées)`. Compatible avec les
 /// valeurs chiffrées par l'ancien module TypeScript.
@@ -44,6 +44,7 @@ public final class ConfigCipher {
   ///
   /// @param secret secret applicatif (variable {@code APP_CONFIG_SECRET})
   public ConfigCipher(String secret) {
+    Objects.requireNonNull(secret, "secret");
     this.cleChiffrement =
         SCrypt.generate(
             secret.getBytes(StandardCharsets.UTF_8),

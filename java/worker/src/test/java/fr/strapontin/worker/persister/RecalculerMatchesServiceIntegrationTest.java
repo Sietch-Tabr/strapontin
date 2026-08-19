@@ -25,9 +25,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 /// @author Kwaite
 class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
-  @MockitoBean
-  @SuppressWarnings("unused")
-  TicketmasterSource ticketmasterSource;
+  @MockitoBean TicketmasterSource ticketmasterSource;
 
   @Autowired private RecalculerMatchesService service;
   @Autowired private NamedParameterJdbcTemplate jdbc;

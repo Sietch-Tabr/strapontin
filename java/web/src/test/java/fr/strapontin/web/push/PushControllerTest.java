@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -123,23 +122,8 @@ class PushControllerTest {
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
   }
 
-  @Test
-  void desabonner_endpointManquant_retourne400SansDelegation() {
-    ResponseEntity<Map<String, Object>> rep =
-        controller.desabonner(new RequeteDesabonnement(null), auth);
-
-    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
-    verify(pushService, never()).desabonner(anyString(), anyString());
-  }
-
-  @Test
-  void desabonner_endpointBlanc_retourne400SansDelegation() {
-    ResponseEntity<Map<String, Object>> rep =
-        controller.desabonner(new RequeteDesabonnement("   "), auth);
-
-    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
-    verify(pushService, never()).desabonner(anyString(), anyString());
-  }
+  // endpoint manquant/blanc : voir RequeteDesabonnementValidationTest (@Valid ne s'exerce pas
+  // sur un appel Java direct au contrôleur, seulement via Spring MVC).
 
   @Test
   void desabonner_endpointValide_delegueAuServiceEtRetourne200() {

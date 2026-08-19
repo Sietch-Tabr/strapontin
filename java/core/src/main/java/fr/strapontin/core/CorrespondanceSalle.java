@@ -66,12 +66,7 @@ public final class CorrespondanceSalle {
       double ratioMinContainment) {
     if (a.equals(b)) return true;
     if (Normalisation.similarite(a, b) >= seuilSimilarite) return true;
-    String court = a.length() <= b.length() ? a : b;
-    String plusLong = a.length() <= b.length() ? b : a;
-    double ratio = (double) court.length() / plusLong.length();
-    return court.length() >= longueurMinContainment
-        && ratio >= ratioMinContainment
-        && plusLong.contains(court);
+    return UtilitairesChaine.estContainmentRatio(a, b, longueurMinContainment, ratioMinContainment);
   }
 
   /// Découpe une chaîne normalisée en tokens significatifs (filtre les mots de moins de {@value
@@ -171,40 +166,60 @@ public final class CorrespondanceSalle {
     if (estDoublonTexte(
         a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE, RATIO_MIN_CONTAINMENT_SALLE))
       return true;
-    if (a.replace(" ", "").equals(b.replace(" ", ""))) return true;
+    if (estEgaliteSansEspaces(a, b)) return true;
 
     Set<String> tokA = tokensSignificatifs(a);
     Set<String> tokB = tokensSignificatifs(b);
     Set<String> specA = tokensSpecifiques(a);
     Set<String> specB = tokensSpecifiques(b);
+    Set<String> intersectionSpec = intersection(specA, specB);
+    double jaccardSpec = jaccard(specA, specB, intersectionSpec);
 
-    Set<String> intersectionSpec = new HashSet<>(specA);
-    intersectionSpec.retainAll(specB);
-    Set<String> unionSpec = new HashSet<>(specA);
-    unionSpec.addAll(specB);
-    double jaccardSpec =
-        unionSpec.isEmpty() ? 0.0 : (double) intersectionSpec.size() / unionSpec.size();
+    if (estJaccardSpecifiqueSuffisant(specA, specB, jaccardSpec)) return true;
+    if (estPivotSpecifique(tokA, tokB, jaccardSpec, intersectionSpec)) return true;
+    return estContainmentPartielSuffisant(specA, specB);
+  }
 
-    // Au moins un token spécifique en commun requis — sans quoi deux noms entièrement génériques
-    // (déjà couverts par l'égalité stricte ci-dessus) ou sans mot distinctif partagé ne doivent
-    // jamais être déclarés doublons sur ce seul critère.
-    if (!unionSpec.isEmpty() && jaccardSpec > SEUIL_JACCARD_SALLE) return true;
+  private static boolean estEgaliteSansEspaces(String a, String b) {
+    return a.replace(" ", "").equals(b.replace(" ", ""));
+  }
 
-    // Pivot : requiert ≥ 2 tokens dans chaque nom pour éviter les faux positifs de type
-    // "galaxie" (1 token) vs "le galaxie amneville".
-    if (tokA.size() >= 2
+  private static Set<String> intersection(Set<String> a, Set<String> b) {
+    Set<String> resultat = new HashSet<>(a);
+    resultat.retainAll(b);
+    return resultat;
+  }
+
+  private static double jaccard(Set<String> a, Set<String> b, Set<String> intersection) {
+    Set<String> union = new HashSet<>(a);
+    union.addAll(b);
+    return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
+  }
+
+  // Au moins un token spécifique en commun requis — sans quoi deux noms entièrement génériques
+  // (déjà couverts par l'égalité stricte) ou sans mot distinctif partagé ne doivent jamais être
+  // déclarés doublons sur ce seul critère.
+  private static boolean estJaccardSpecifiqueSuffisant(
+      Set<String> specA, Set<String> specB, double jaccardSpec) {
+    return !(specA.isEmpty() && specB.isEmpty()) && jaccardSpec > SEUIL_JACCARD_SALLE;
+  }
+
+  // Pivot : requiert ≥ 2 tokens dans chaque nom pour éviter les faux positifs de type
+  // "galaxie" (1 token) vs "le galaxie amneville".
+  private static boolean estPivotSpecifique(
+      Set<String> tokA, Set<String> tokB, double jaccardSpec, Set<String> intersectionSpec) {
+    return tokA.size() >= 2
         && tokB.size() >= 2
         && jaccardSpec > SEUIL_JACCARD_PIVOT
-        && intersectionSpec.stream().anyMatch(t -> t.length() >= LONGUEUR_MIN_PIVOT)) {
-      return true;
-    }
+        && intersectionSpec.stream().anyMatch(t -> t.length() >= LONGUEUR_MIN_PIVOT);
+  }
 
-    // Containment partiel : garde-fou sur le nombre de tokens SPÉCIFIQUES (pas bruts) de chaque
-    // côté — sans lui, un nom réduit à un unique token spécifique après retrait des mots-types
-    // génériques ("Casino de Paris" → seul "paris" reste après retrait de "casino") correspond
-    // trivialement à n'importe quel autre nom partageant ce token comme simple nom de ville
-    // ("Théâtre Rive Gauche Paris 14", "Cathédrale Américaine Paris 08"...), sans aucun rapport
-    // avec le lieu recherché.
+  // Garde-fou sur le nombre de tokens SPÉCIFIQUES (pas bruts) de chaque côté — sans lui, un nom
+  // réduit à un unique token spécifique après retrait des mots-types génériques ("Casino de
+  // Paris" → seul "paris" reste après retrait de "casino") correspond trivialement à n'importe
+  // quel autre nom partageant ce token comme simple nom de ville ("Théâtre Rive Gauche Paris 14",
+  // "Cathédrale Américaine Paris 08"...), sans aucun rapport avec le lieu recherché.
+  private static boolean estContainmentPartielSuffisant(Set<String> specA, Set<String> specB) {
     if (specA.size() < 2 || specB.size() < 2) return false;
     Set<String> specCourt = specA.size() <= specB.size() ? specA : specB;
     Set<String> specLong = specA.size() <= specB.size() ? specB : specA;

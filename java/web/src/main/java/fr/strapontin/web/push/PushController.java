@@ -5,6 +5,7 @@
 package fr.strapontin.web.push;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
+import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -50,7 +51,7 @@ public class PushController {
   /// @return 201 si créé — 400/429 si invalide/cap (via {@link GlobalExceptionHandler})
   @PostMapping
   public ResponseEntity<Map<String, Object>> abonner(
-      @RequestBody RequeteAbonnement requete, Authentication auth) {
+      @Valid @RequestBody RequeteAbonnement requete, Authentication auth) {
     pushService.abonner(((UtilisateurDetails) auth.getPrincipal()).id(), requete);
     return ResponseEntity.status(201).body(Map.of("ok", true));
   }
@@ -81,10 +82,7 @@ public class PushController {
   /// @return 200 si supprimé, 400 si endpoint manquant
   @DeleteMapping
   public ResponseEntity<Map<String, Object>> desabonner(
-      @RequestBody RequeteDesabonnement requete, Authentication auth) {
-    if (requete.endpoint() == null || requete.endpoint().isBlank()) {
-      return ResponseEntity.badRequest().body(Map.of("erreur", "Endpoint manquant."));
-    }
+      @Valid @RequestBody RequeteDesabonnement requete, Authentication auth) {
     pushService.desabonner(((UtilisateurDetails) auth.getPrincipal()).id(), requete.endpoint());
     return ResponseEntity.ok(Map.of("ok", true));
   }

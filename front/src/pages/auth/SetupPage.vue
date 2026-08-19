@@ -72,6 +72,7 @@ defineOptions({ name: 'SetupPage' })
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '../../components/auth/AuthLayout.vue'
+import { corpsJsonOuVide } from '../../utils/reponseJson.js'
 
 const router = useRouter()
 
@@ -113,7 +114,7 @@ async function soumettre() {
       }),
     })
     if (!rep.ok) {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       erreur.value = data.erreur || 'Une erreur est survenue.'
       return
     }

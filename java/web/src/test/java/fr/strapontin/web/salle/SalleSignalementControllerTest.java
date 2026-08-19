@@ -89,59 +89,10 @@ class SalleSignalementControllerTest {
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
   }
 
-  @Test
-  void signalerManquante_nomVide_retourneErreur400() {
-    var rep =
-        controller.signalerManquante(
-            new RequeteSignalementSalle("   ", "", "", ""), auth, requete("10.1.0.6"));
-    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
-    verifyNoInteractions(emailService);
-  }
-
-  @Test
-  void signalerManquante_nomNull_retourneErreur400() {
-    var rep =
-        controller.signalerManquante(
-            new RequeteSignalementSalle(null, "", "", ""), auth, requete("10.1.0.7"));
-    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
-    verifyNoInteractions(emailService);
-  }
-
-  @Test
-  void signalerManquante_nomTropLong_retourneErreur400() {
-    var rep =
-        controller.signalerManquante(
-            new RequeteSignalementSalle("x".repeat(201), "", "", ""), auth, requete("10.1.0.8"));
-    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
-    verifyNoInteractions(emailService);
-  }
-
-  @Test
-  void signalerManquante_commentaireTropLong_retourneErreur400() {
-    var rep =
-        controller.signalerManquante(
-            new RequeteSignalementSalle("Salle", "", "", "c".repeat(1001)),
-            auth,
-            requete("10.1.0.9"));
-    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
-    verifyNoInteractions(emailService);
-  }
-
-  @Test
-  void signalerManquante_nomVideApresRateLimitEpuise_retourne400PasRateLimit() {
-    // La validation est vérifiée AVANT le rate-limit : une requête invalide ne consomme pas de
-    // quota
-    var request = requete("10.1.0.11");
-    for (int i = 0; i < 3; i++) {
-      controller.signalerManquante(
-          new RequeteSignalementSalle("Salle " + i, "", "", ""), auth, request);
-    }
-    clearInvocations(emailService);
-    var rep =
-        controller.signalerManquante(new RequeteSignalementSalle("   ", "", "", ""), auth, request);
-    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
-    verifyNoMoreInteractions(emailService);
-  }
+  // Validation nom/longueurs (blanc, null, trop long) : voir RequeteSignalementSalleValidationTest
+  // — @Valid s'exerce désormais avant même l'exécution de cette méthode (donc avant le
+  // rate-limiting ci-dessus, garantie plus forte que l'ancien contrôle manuel), mais ne s'exerce
+  // jamais sur un appel Java direct au contrôleur, seulement via Spring MVC.
 
   @Test
   void signalerManquante_champsFacultatifsBlancs_passeEtStrip() {

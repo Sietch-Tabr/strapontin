@@ -15,19 +15,20 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Service;
 
 /// Service de réconciliation des noms d'artiste et de résolution des {@code artiste_id}.
 ///
-/// <p>Deux passes de réconciliation : intra-lot (variantes dans le même fetch) puis
-/// contre la base (variantes entre deux fetches). Utilise
-/// {@link CorrespondanceArtiste#estDoublonArtiste} (module {@code core}, partagé avec {@code web}
-/// — voir {@code ArtisteService.ajouter}) pour déterminer si deux noms désignent le même artiste.
+/// <p>Deux passes de réconciliation : intra-lot (variantes dans le même fetch) puis contre la base
+/// (variantes entre deux fetches). Utilise {@link CorrespondanceArtiste#estDoublonArtiste} (module
+/// {@code core}, partagé avec {@code web} — voir {@code ArtisteService.ajouter}) pour déterminer si
+/// deux noms désignent le même artiste.
 ///
-/// <p>La résolution par nom ({@link #resoudreArtisteParNomNorm}) couvre toutes les
-/// sources sans {@code artiste_id}, y compris Digitick qui ne fournit pas
-/// d'identifiant artiste externe.
+/// <p>La résolution par nom ({@link #resoudreArtisteParNomNorm}) couvre toutes les sources sans
+/// {@code artiste_id}, y compris Digitick qui ne fournit pas d'identifiant artiste externe.
 ///
 /// @since 2.5.7
 /// @author Kwaite
@@ -70,12 +71,12 @@ public class ReconciliateurArtistes {
 
   /// Réconcilie les variations mineures de nommage d'artiste dans un lot et contre la base.
   ///
-  /// <p>Le regroupement se fait par {@code (date, salleNorm)} — déjà canonique à ce stade
-  /// puisque cette méthode s'exécute après {@code ReconciliateurSalles} — plutôt que par
-  /// {@code artisteNorm}, qui est précisément la valeur à corriger.
+  /// <p>Le regroupement se fait par {@code (date, salleNorm)} — déjà canonique à ce stade puisque
+  /// cette méthode s'exécute après {@code ReconciliateurSalles} — plutôt que par {@code
+  /// artisteNorm}, qui est précisément la valeur à corriger.
   ///
-  /// <p>Filtre temporel : seuls les concerts à partir de 7 jours avant aujourd'hui sont
-  /// chargés depuis la base.
+  /// <p>Filtre temporel : seuls les concerts à partir de 7 jours avant aujourd'hui sont chargés
+  /// depuis la base.
   ///
   /// @param lot valeurs de concerts après réconciliation des salles
   /// @return lot avec {@code artisteNorm} réconcilié
@@ -154,13 +155,13 @@ public class ReconciliateurArtistes {
 
   /// Réconcilie un concert contre les candidats existants d'une même clé (date, salle).
   ///
-  /// <p>Scanne toute la liste à la recherche d'une correspondance exacte avant de retomber sur
-  /// une correspondance floue : sans cette priorité, l'absence de {@code ORDER BY} sur la
-  /// requête source (voir {@link #reconcilierArtistes}) peut placer un candidat flou avant un
-  /// candidat exact dans le result set, faisant rattacher à tort le concert au mauvais artiste
-  /// alors qu'une correspondance exacte existait plus loin dans la même liste.
+  /// <p>Scanne toute la liste à la recherche d'une correspondance exacte avant de retomber sur une
+  /// correspondance floue : sans cette priorité, l'absence de {@code ORDER BY} sur la requête
+  /// source (voir {@link #reconcilierArtistes}) peut placer un candidat flou avant un candidat
+  /// exact dans le result set, faisant rattacher à tort le concert au mauvais artiste alors qu'une
+  /// correspondance exacte existait plus loin dans la même liste.
   ///
-  /// @param concert        concert à réconcilier
+  /// @param concert concert à réconcilier
   /// @param indexExistants candidats existants indexés par {@code date|salleNorm}
   /// @return concert réconcilié (artisteNorm/artisteId propagés si un candidat correspond)
   private ValeurConcert reconcilierUnArtiste(
@@ -178,26 +179,69 @@ public class ReconciliateurArtistes {
       }
     }
     for (ArtisteExistant existant : artistesExistants) {
-      if (estDoublonArtiste(concert.artisteNorm(), existant.artisteNorm())) {
-        UUID artisteIdPropague =
-            concert.artisteId() == null ? existant.artisteId() : concert.artisteId();
-        log.debug(
-            "doublon artiste inter-jobs réconcilié entrant={} existant={} artisteId={}",
-            concert.artisteNorm(),
-            existant.artisteNorm(),
-            artisteIdPropague);
-        return concert.avecArtisteNormEtId(existant.artisteNorm(), artisteIdPropague);
+      if (!estDoublonArtiste(concert.artisteNorm(), existant.artisteNorm())) continue;
+
+      UUID artisteIdPropague =
+          concert.artisteId() == null ? existant.artisteId() : concert.artisteId();
+
+      // Un concert inéligible à la résolution Deezer (théâtre, spectacle "divers", sport — voir
+      // EligibiliteResolutionDeezer) n'est jamais passé par cette résolution : son artisteNorm
+      // vient directement de la source, fiable par construction. Le corriger rétroactivement en
+      // base plutôt que de forcer l'entrant vers l'ancienne valeur permet à une correction de la
+      // cause racine (ex. #1063 sur la résolution Deezer elle-même) de guérir une ligne déjà
+      // persistée sous une identité erronée, au lieu de rester bloquée indéfiniment par ce même
+      // mécanisme de convergence. Pour un concert éligible, le comportement protecteur historique
+      // est conservé (l'existant l'emporte) : la résolution Deezer reste sujette à un mauvais
+      // rapprochement futur (cf. Van Halen, #770), qu'il ne faut pas laisser écraser une valeur
+      // déjà correcte en base.
+      if (!EligibiliteResolutionDeezer.estEligible(concert.classification(), concert.source())) {
+        corrigerArtisteExistantEnBase(existant, concert);
+        return concert.avecArtisteId(artisteIdPropague);
       }
+
+      log.debug(
+          "doublon artiste inter-jobs réconcilié entrant={} existant={} artisteId={}",
+          concert.artisteNorm(),
+          existant.artisteNorm(),
+          artisteIdPropague);
+      return concert.avecArtisteNormEtId(existant.artisteNorm(), artisteIdPropague);
     }
     return concert;
   }
 
+  /// Corrige rétroactivement une ligne déjà persistée sous une identité d'artiste erronée,
+  /// désormais démentie par un fetch fiable (concert inéligible à la résolution Deezer).
+  ///
+  /// @param existant ancienne identité (erronée) à corriger
+  /// @param concert concert entrant portant l'identité corrigée
+  private void corrigerArtisteExistantEnBase(ArtisteExistant existant, ValeurConcert concert) {
+    int nbCorrigees =
+        jdbc.update(
+            "UPDATE concerts SET artiste = :nouvelArtiste, artiste_norm = :nouvelArtisteNorm,"
+                + " updated_at = now()"
+                + " WHERE artiste_norm = :ancienArtisteNorm AND date = CAST(:date AS date)"
+                + " AND salle_norm = :salleNorm",
+            new MapSqlParameterSource()
+                .addValue("nouvelArtiste", concert.artiste())
+                .addValue("nouvelArtisteNorm", concert.artisteNorm())
+                .addValue("ancienArtisteNorm", existant.artisteNorm())
+                .addValue("date", concert.date().toString())
+                .addValue("salleNorm", concert.salleNorm()));
+    if (nbCorrigees > 0) {
+      log.info(
+          "artiste corrigé rétroactivement ancien={} nouveau={} count={}",
+          existant.artisteNorm(),
+          concert.artisteNorm(),
+          nbCorrigees);
+    }
+  }
+
   /// Résout les {@code artiste_id} manquants par lookup sur {@code artistes.nom_norm}.
   ///
-  /// <p>Couvre toutes les sources sans {@code artiste_id}, y compris Digitick qui ne
-  /// fournit pas d'identifiant artiste externe ({@code artisteSourceId == null}). Les
-  /// mappings trouvés pour les sources avec identifiant externe sont persistés dans
-  /// {@code artiste_sources} (ON CONFLICT DO NOTHING) pour accélérer les fetches suivants.
+  /// <p>Couvre toutes les sources sans {@code artiste_id}, y compris Digitick qui ne fournit pas
+  /// d'identifiant artiste externe ({@code artisteSourceId == null}). Les mappings trouvés pour les
+  /// sources avec identifiant externe sont persistés dans {@code artiste_sources} (ON CONFLICT DO
+  /// NOTHING) pour accélérer les fetches suivants.
   ///
   /// @param concerts concerts après résolution par source
   /// @return liste enrichie avec les {@code artiste_id} résolus par nom
@@ -237,14 +281,15 @@ public class ReconciliateurArtistes {
 
   /// Persiste dans {@code artiste_sources} les mappings nouvellement résolus par nom.
   ///
-  /// <p>N'insère que les concerts dont {@code artisteId} vient d'être résolu (nom_norm présent
-  /// dans {@code nomNormsResolus}) et dont la source externe est connue
-  /// ({@code artisteSourceId != null} — Digitick n'en a pas).
+  /// <p>N'insère que les concerts dont {@code artisteId} vient d'être résolu (nom_norm présent dans
+  /// {@code nomNormsResolus}) et dont la source externe est connue ({@code artisteSourceId != null}
+  /// — Digitick n'en a pas).
   ///
-  /// @param concerts       concerts après résolution par nom
+  /// @param concerts concerts après résolution par nom
   /// @param nomNormsResolus noms normalisés effectivement résolus par le lookup
   private void persistersArtistesSources(
       List<ValeurConcert> concerts, java.util.Set<String> nomNormsResolus) {
+    List<SqlParameterSource> params = new ArrayList<>();
     for (ValeurConcert c : concerts) {
       if (c.artisteId() == null
           || c.artisteSourceId() == null
@@ -253,19 +298,18 @@ public class ReconciliateurArtistes {
       if (sep <= 0) continue;
       String source = c.artisteSourceId().substring(0, sep);
       String identifiant = c.artisteSourceId().substring(sep + 1);
-      jdbc.update(
-          "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
-              + " VALUES (CAST(:artisteId AS uuid), :source, :identifiant)"
-              + " ON CONFLICT DO NOTHING",
-          Map.of(
-              "artisteId", c.artisteId().toString(),
-              "source", source,
-              "identifiant", identifiant));
-      log.info(
-          "artiste source persisté artisteId={} source={} identifiant={}",
-          c.artisteId(),
-          source,
-          identifiant);
+      params.add(
+          new MapSqlParameterSource()
+              .addValue("artisteId", c.artisteId().toString())
+              .addValue("source", source)
+              .addValue("identifiant", identifiant));
     }
+    if (params.isEmpty()) return;
+    jdbc.batchUpdate(
+        "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
+            + " VALUES (CAST(:artisteId AS uuid), :source, :identifiant)"
+            + " ON CONFLICT DO NOTHING",
+        params.toArray(new SqlParameterSource[0]));
+    log.info("artiste_sources persistés en lot count={}", params.size());
   }
 }

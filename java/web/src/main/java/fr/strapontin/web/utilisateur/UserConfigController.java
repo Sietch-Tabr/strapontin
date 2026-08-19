@@ -4,8 +4,8 @@
  */
 package fr.strapontin.web.utilisateur;
 
-import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.securite.UtilisateurDetails;
+import jakarta.validation.Valid;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -29,10 +29,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/user/config")
 public class UserConfigController {
 
-  /// Taille max du champ brut, avant découpage — largement suffisant pour les ~101 départements
-  /// français existants, même saisis avec une ponctuation ou des espaces excessifs.
-  private static final int MAX_LONGUEUR_DEPARTEMENTS = 1000;
-
   private final UserConfigService userConfigService;
 
   /// @param userConfigService service de gestion de la configuration utilisateur
@@ -53,22 +49,14 @@ public class UserConfigController {
   /// Met à jour les départements de l'utilisateur.
   ///
   /// @param requete corps JSON avec {@code departements} séparés par virgules
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 200 avec {@code succes} et éventuellement {@code ignores}
-  /// @throws ErreurMetier si le champ brut dépasse {@value #MAX_LONGUEUR_DEPARTEMENTS} caractères
   @PatchMapping("/departements")
   public ResponseEntity<Map<String, Object>> majDepartements(
-      @RequestBody RequeteDepartements requete, Authentication auth) {
+      @Valid @RequestBody RequeteDepartements requete, Authentication auth) {
     String userId = utilisateur(auth).id();
 
     String brut = requete.departements() == null ? "" : requete.departements();
-    if (brut.length() > MAX_LONGUEUR_DEPARTEMENTS) {
-      throw new ErreurMetier(
-          "Le champ départements ne peut pas dépasser "
-              + MAX_LONGUEUR_DEPARTEMENTS
-              + " caractères.");
-    }
-
     List<String> bruts =
         Arrays.stream(brut.split(",")).map(String::strip).filter(s -> !s.isEmpty()).toList();
 
@@ -86,7 +74,7 @@ public class UserConfigController {
   /// Met à jour les préférences de notification.
   ///
   /// @param requete corps JSON avec fréquence et types de notification
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 200 si mis à jour — 400 si invalide (via {@link GlobalExceptionHandler})
   @PatchMapping("/notifications")
   public ResponseEntity<Map<String, Object>> majNotifications(
@@ -99,7 +87,7 @@ public class UserConfigController {
   /// Met à jour le filtre de disponibilité.
   ///
   /// @param requete corps JSON avec {@code filtreDisponibles}
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 200 si mis à jour
   @PatchMapping("/filtres")
   public ResponseEntity<Map<String, Object>> majFiltres(
@@ -112,7 +100,7 @@ public class UserConfigController {
   /// Met à jour le thème de l'interface.
   ///
   /// @param requete corps JSON avec {@code valeur} ({@code auto}, {@code clair} ou {@code sombre})
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 200 si mis à jour — 400 si invalide (via {@link GlobalExceptionHandler})
   @PatchMapping("/theme")
   public ResponseEntity<Map<String, Object>> majTheme(

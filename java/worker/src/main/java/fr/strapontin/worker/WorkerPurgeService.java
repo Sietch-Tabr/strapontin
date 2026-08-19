@@ -17,11 +17,11 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Jobs de purge (concerts, salles, artistes orphelins, logs admin) — extrait de
-/// {@code WorkerService}.
+/// Jobs de purge (concerts, salles, artistes orphelins, logs admin) — extrait de {@code
+/// WorkerService}.
 ///
-/// Délégué par les jobs Quartz {@code PurgerConcertsJob}, {@code PurgerSallesJob},
-/// {@code PurgerArtistesJob}, {@code PurgerLogsAdminJob}.
+/// Délégué par les jobs Quartz {@code PurgerConcertsJob}, {@code PurgerSallesJob}, {@code
+/// PurgerArtistesJob}, {@code PurgerLogsAdminJob}.
 ///
 /// @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
 /// @author Kwaite
@@ -66,22 +66,21 @@ public class WorkerPurgeService {
 
   /// Supprime les salles orphelines (sans concerts futurs, sans utilisateurs et sans slug
   // Digitick).
-  ///
   /// Une salle est conservée si :
   /// - elle possède au moins un concert futur (`date >= CURRENT_DATE`), ou
   /// - au moins un utilisateur la suit, ou
   /// - elle a un slug Digitick configuré (salle source Digitick dans `salle_sources`).
   ///
-  /// Doit s'exécuter après {@link #executerPurgerConcerts()} pour travailler
-  /// sur un jeu de données cohérent (cf. `PurgerSallesJob`).
+  /// Doit s'exécuter après {@link #executerPurgerConcerts()} pour travailler sur un jeu de données
+  /// cohérent (cf. `PurgerSallesJob`).
   ///
-  /// <p>Supprime les candidates une par une plutôt qu'en un seul `DELETE` en masse : la
-  /// suppression d'une salle peut déclencher en cascade (FK `ON DELETE SET NULL`) un
-  /// `UPDATE concerts SET salle_id = NULL` qui entre en conflit avec la contrainte unique
-  /// {@code uq_concerts_artiste_date_heure_salle} si un doublon TM/Eventim du même concert existe
-  /// déjà avec `salle_id = NULL` — un seul cas de ce type faisait jusqu'ici échouer toute la
-  /// transaction du `DELETE` en masse, bloquant la purge de **toutes** les salles orphelines
-  /// légitimes, pas seulement celle en cause.
+  /// <p>Supprime les candidates une par une plutôt qu'en un seul `DELETE` en masse : la suppression
+  /// d'une salle peut déclencher en cascade (FK `ON DELETE SET NULL`) un `UPDATE concerts SET
+  /// salle_id = NULL` qui entre en conflit avec la contrainte unique {@code
+  /// uq_concerts_artiste_date_heure_salle} si un doublon TM/Eventim du même concert existe déjà
+  /// avec `salle_id = NULL` — un seul cas de ce type faisait jusqu'ici échouer toute la transaction
+  /// du `DELETE` en masse, bloquant la purge de **toutes** les salles orphelines légitimes, pas
+  /// seulement celle en cause.
   public void executerPurgerSalles() {
     log.info("purger:salles démarré");
     long debut = System.currentTimeMillis();
@@ -108,7 +107,7 @@ public class WorkerPurgeService {
         } catch (DuplicateKeyException e) {
           log.warn(
               "purger:salles suppression bloquée salleId={} — probable doublon TM/Eventim jamais"
-                  + " fusionné (cf. #1025)",
+                  + " fusionné",
               id);
         }
       }
@@ -166,13 +165,12 @@ public class WorkerPurgeService {
     }
   }
 
-  /// Supprime les entrées de `logs_admin` plus anciennes que 30 jours,
-  /// les entrées de `fetch_jobs_historique` plus anciennes que 7 jours,
-  /// et les vérifications (tokens d'invitation, emails de confirmation) expirées
-  /// depuis plus de 7 jours.
+  /// Supprime les entrées de `logs_admin` plus anciennes que 30 jours, les entrées de
+  /// `fetch_jobs_historique` plus anciennes que 7 jours, et les vérifications (tokens d'invitation,
+  /// emails de confirmation) expirées depuis plus de 7 jours.
   ///
-  /// Remplace l'ancien plafond de 200 entrées purgé à chaque insertion : la rétention
-  /// est désormais temporelle et la purge planifiée (cf. `PurgerLogsAdminJob`).
+  /// Remplace l'ancien plafond de 200 entrées purgé à chaque insertion : la rétention est désormais
+  /// temporelle et la purge planifiée (cf. `PurgerLogsAdminJob`).
   public void executerPurgerLogsAdmin() {
     long seuilLogs = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
     Instant seuilHistorique = Instant.now().minusSeconds(7L * 24 * 60 * 60);

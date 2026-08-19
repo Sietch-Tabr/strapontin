@@ -183,7 +183,7 @@
 <script setup>
 defineOptions({ name: 'DecouvertePage' })
 
-import { ref, shallowRef, computed, watch, onMounted } from 'vue'
+import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formaterAvecHeure, formaterInstant } from '../composables/useDates.js'
 import { useToasts } from '../composables/useToasts.js'
@@ -235,7 +235,19 @@ function syncFiltresLocaux() {
   triLocal.value = route.query.tri ?? 'date'
 }
 
+// Contrôleur dédié au cycle de vie du composant (démontage) — distinct de controleurActuel
+// ci-dessous, propre au fetch de la liste de concerts et à sa logique d'annulation du précédent.
+const controleurComposant = new AbortController()
+
+// Un nouvel appel (changement de filtre pendant qu'un chargement précédent est en cours)
+// annule le précédent plutôt que de laisser deux requêtes concurrentes risquer d'appliquer
+// leurs résultats dans le désordre.
+let controleurActuel = null
+
 async function charger() {
+  controleurActuel?.abort()
+  const controleur = new AbortController()
+  controleurActuel = controleur
   chargement.value = true
   try {
     const params = new URLSearchParams()
@@ -246,13 +258,14 @@ async function charger() {
     if (route.query.classification) params.set('classification', route.query.classification)
     if (triLocal.value && triLocal.value !== 'date') params.set('tri', triLocal.value)
     if (route.query.page) params.set('page', route.query.page)
-    const rep = await fetch('/api/decouverte?' + params)
+    const rep = await fetch('/api/decouverte?' + params, { signal: controleur.signal })
     if (!rep.ok) throw new Error()
     donnees.value = await rep.json()
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de charger les concerts.', 'erreur')
   } finally {
-    chargement.value = false
+    if (controleurActuel === controleur) chargement.value = false
   }
 }
 
@@ -288,10 +301,14 @@ function changerPage(page) {
 
 async function actualiser() {
   try {
-    const rep = await fetch('/api/decouverte/fetcher', { method: 'POST' })
+    const rep = await fetch('/api/decouverte/fetcher', {
+      method: 'POST',
+      signal: controleurComposant.signal,
+    })
     if (!rep.ok) throw new Error()
     afficherToast('Synchronisation déclenchée — résultats mis à jour dans quelques minutes.', 'succes')
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return
     afficherToast('Impossible de déclencher la synchronisation.', 'erreur')
   }
 }
@@ -304,5 +321,10 @@ watch(() => route.query, () => {
 onMounted(() => {
   syncFiltresLocaux()
   charger()
+})
+
+onUnmounted(() => {
+  controleurComposant.abort()
+  controleurActuel?.abort()
 })
 </script>

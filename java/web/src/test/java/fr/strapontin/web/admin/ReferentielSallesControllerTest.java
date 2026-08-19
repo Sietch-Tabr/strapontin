@@ -49,7 +49,7 @@ class ReferentielSallesControllerTest {
   @Test
   void modifierNomAffiche_uuidInvalide_retourne400() {
     ResponseEntity<Map<String, Object>> reponse =
-        controller.modifierNomAffiche("pas-un-uuid", Map.of());
+        controller.modifierNomAffiche("pas-un-uuid", new RequeteNomAffiche(null));
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(service, never()).modifierNomAffiche(any(), any());
@@ -61,7 +61,7 @@ class ReferentielSallesControllerTest {
     when(service.modifierNomAffiche(eq(id), any())).thenReturn(false);
 
     ResponseEntity<Map<String, Object>> reponse =
-        controller.modifierNomAffiche(id.toString(), Map.of("nomAffiche", "Nouveau"));
+        controller.modifierNomAffiche(id.toString(), new RequeteNomAffiche("Nouveau"));
 
     assertEquals(404, reponse.getStatusCode().value());
   }
@@ -72,7 +72,7 @@ class ReferentielSallesControllerTest {
     when(service.modifierNomAffiche(eq(id), any())).thenReturn(true);
 
     ResponseEntity<Map<String, Object>> reponse =
-        controller.modifierNomAffiche(id.toString(), Map.of("nomAffiche", "Nouveau"));
+        controller.modifierNomAffiche(id.toString(), new RequeteNomAffiche("Nouveau"));
 
     assertEquals(200, reponse.getStatusCode().value());
   }
