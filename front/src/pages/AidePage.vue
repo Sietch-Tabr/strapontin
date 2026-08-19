@@ -209,6 +209,7 @@ defineOptions({ name: 'AidePage' })
 
 import { ref, shallowRef, onMounted } from 'vue'
 import { useToasts } from '../composables/useToasts.js'
+import { corpsJsonOuVide } from '../utils/reponseJson.js'
 
 const { afficherToast } = useToasts()
 
@@ -241,7 +242,7 @@ async function envoyerSignalement() {
       return
     }
     if (!rep.ok) {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       erreurSignalement.value = data.erreur || 'Une erreur est survenue.'
       return
     }

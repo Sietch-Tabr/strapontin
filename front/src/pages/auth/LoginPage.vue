@@ -55,6 +55,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AuthLayout from '../../components/auth/AuthLayout.vue'
 import { useSession } from '../../composables/useSession.js'
+import { corpsJsonOuVide } from '../../utils/reponseJson.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -92,7 +93,7 @@ async function soumettre() {
     })
     if (!rep.ok) {
       if (rep.status === 429) {
-        const corps = await rep.json().catch(() => ({}))
+        const corps = await corpsJsonOuVide(rep)
         erreurSoumission.value =
           corps.erreur ?? 'Trop de tentatives de connexion. Réessayez dans quelques minutes.'
       } else if (rep.status === 401) {

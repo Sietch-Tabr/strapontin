@@ -152,6 +152,7 @@ import { ref, shallowRef, onMounted } from 'vue'
 import { useDialog } from '../composables/useDialog.js'
 import { useToasts } from '../composables/useToasts.js'
 import EtatChargement from '../components/EtatChargement.vue'
+import { corpsJsonOuVide } from '../utils/reponseJson.js'
 
 const { afficherToast } = useToasts()
 
@@ -196,7 +197,7 @@ async function ajouter(nom, tmVenueId, osmId = null, wikidataId = null) {
       return
     }
     if (!rep.ok) {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       afficherToast(data.erreur || 'Erreur lors de l\'ajout.', 'erreur')
       return
     }
@@ -249,7 +250,7 @@ async function envoyerSignalement() {
       return
     }
     if (!rep.ok) {
-      const data = await rep.json().catch(() => ({}))
+      const data = await corpsJsonOuVide(rep)
       afficherToast(data.erreur || 'Erreur lors du signalement.', 'erreur')
       return
     }

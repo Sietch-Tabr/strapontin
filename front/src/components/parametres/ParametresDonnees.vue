@@ -119,6 +119,7 @@ import { useRouter } from 'vue-router'
 import { useDialog } from '../../composables/useDialog.js'
 import { useToasts } from '../../composables/useToasts.js'
 import EtatChargement from '../EtatChargement.vue'
+import { corpsJsonOuVide } from '../../utils/reponseJson.js'
 
 const router = useRouter()
 const { afficherToast } = useToasts()
@@ -162,7 +163,7 @@ async function importerPreferences() {
       method: 'POST',
       body: formData,
     })
-    const corps = await rep.json().catch(() => ({}))
+    const corps = await corpsJsonOuVide(rep)
     if (rep.ok) {
       const a = corps.artistes ?? 0
       const s = corps.salles ?? 0
@@ -204,7 +205,7 @@ async function supprimerCompte() {
       router.push('/login')
     } else {
       fermerDialogSuppression()
-      const corps = await rep.json().catch(() => ({}))
+      const corps = await corpsJsonOuVide(rep)
       afficherToast(corps.erreur || 'Erreur lors de la suppression du compte.', 'erreur')
     }
   } catch (_) {

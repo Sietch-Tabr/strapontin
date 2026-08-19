@@ -146,6 +146,7 @@ import EtatChargement from '../EtatChargement.vue'
 import { useDialog } from '../../composables/useDialog.js'
 import { useToasts } from '../../composables/useToasts.js'
 import { formaterInstant } from '../../composables/useDates.js'
+import { corpsJsonOuVide } from '../../utils/reponseJson.js'
 
 const { afficherToast } = useToasts()
 const { dialogRef: dialogSupprimerUserRef, ouvrir: ouvrirDialogSupprimerModal, fermer: fermerDialogSupprimerModal } = useDialog()
@@ -338,7 +339,7 @@ async function confirmerChangementRole() {
       body: JSON.stringify(corpsNomEmail),
     })
     if (!repNomEmail.ok) {
-      const corpsErreur = await repNomEmail.json().catch(() => ({}))
+      const corpsErreur = await corpsJsonOuVide(repNomEmail)
       modifErreurs[u.id] = corpsErreur.erreur || 'Erreur.'
       return
     }

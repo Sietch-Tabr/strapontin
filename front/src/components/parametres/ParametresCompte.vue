@@ -44,7 +44,7 @@
 
     <div class="param-bloc">
       <h3 class="param-label">Authentification à deux facteurs (TOTP)</h3>
-      <div v-if="twoFactorActif">
+      <div v-if="deuxFacteursActif">
         <p class="param-aide">TOTP activé sur votre compte.</p>
         <form class="form-vertical form-compact" @submit.prevent="desactiverTotp">
           <div class="form-group">
@@ -169,7 +169,7 @@ const chargement = ref(true)
 const profil = ref(null)
 const email = ref('')
 const identifiant = ref('')
-const twoFactorActif = ref(false)
+const deuxFacteursActif = ref(false)
 const totpDesactCode = ref('')
 const mdpActuel = ref('')
 const mdpNouveau = ref('')
@@ -231,7 +231,7 @@ async function charger() {
       profil.value = await rep.json()
       email.value = profil.value.email ?? ''
       identifiant.value = profil.value.identifiant ?? ''
-      twoFactorActif.value = profil.value.twoFactorActif ?? false
+      deuxFacteursActif.value = profil.value.twoFactorActif ?? false
     }
   } catch (_) {
     afficherToast('Erreur lors du chargement du profil.', 'erreur')
@@ -286,7 +286,7 @@ async function desactiverTotp() {
   })
   const corps = await rep.json()
   if (rep.ok) {
-    twoFactorActif.value = false
+    deuxFacteursActif.value = false
     totpDesactCode.value = ''
     afficherToast('Authentification à deux facteurs désactivée.', 'succes')
   } else {
