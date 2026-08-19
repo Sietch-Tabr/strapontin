@@ -7,6 +7,7 @@ package fr.strapontin.worker.quota;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CompteurEnvoisResend;
+import fr.strapontin.core.RetrySerialisable;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -14,20 +15,24 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /// Garde-fou quota d'envoi Resend jour/mois côté worker (suite de l'incident).
 ///
-/// <p>Lecture/écriture SQL brute non chiffrée dans {@code app_config} (clé
-/// {@code RESEND_QUOTA_JSON}) — même clé que {@code web.email.GestionQuotaResend}, même pattern
-/// que {@link fr.strapontin.worker.quota.GestionQuotaTM}/{@code TM_QUOTA_JSON}. Contournement
-/// nécessaire : {@code ConfigServiceWorker} est explicitement en lecture seule. L'alerte de seuil
-/// (80%) est portée exclusivement côté web ({@code AlerteQuotaResendService}, polling 15 min sur
-/// le même compteur partagé) — le blocage effectif ici insère directement un {@code logs_admin}
-/// niveau {@code error}, capté par l'{@code AlerteLogsAdminService} existant, sans nouveau canal
-/// d'envoi.
+/// <p>Lecture/écriture SQL brute non chiffrée dans {@code app_config} (clé {@code
+/// RESEND_QUOTA_JSON}) — même clé que {@code web.email.GestionQuotaResend}, même pattern que {@link
+/// fr.strapontin.worker.quota.GestionQuotaTM}/{@code TM_QUOTA_JSON}. Contournement nécessaire :
+/// {@code ConfigServiceWorker} est explicitement en lecture seule. L'alerte de seuil (80%) est
+/// portée exclusivement côté web ({@code AlerteQuotaResendService}, polling 15 min sur le même
+/// compteur partagé) — le blocage effectif ici insère directement un {@code logs_admin} niveau
+/// {@code error}, capté par l'{@code AlerteLogsAdminService} existant, sans nouveau canal d'envoi.
 ///
 /// @since 2.7.2
 /// @author Kwaite
@@ -38,17 +43,29 @@ public class GestionQuotaResendWorker {
 
   static final int LIMITE_JOUR = 100;
   static final int LIMITE_MOIS = 3000;
+  private static final int MAX_TENTATIVES = 3;
   private static final String CLE_QUOTA = "RESEND_QUOTA_JSON";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
   private final LogsAdminWorker logsAdminWorker;
+  private GestionQuotaResendWorker self;
 
   public GestionQuotaResendWorker(
       NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper, LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.logsAdminWorker = logsAdminWorker;
+  }
+
+  /// Auto-injection par setter (même pattern que {@code web.push.PushService}, v2.6.3) : évite le
+  /// problème d'auto-référence à la construction — l'appel à {@link #reserverEnvoiTransactionnel}
+  /// passe ainsi par le proxy AOP Spring et bénéficie de l'isolation {@code SERIALIZABLE}.
+  ///
+  /// @param self référence proxifiée de ce bean ({@code @Lazy})
+  @Autowired
+  public void setSelf(@Lazy GestionQuotaResendWorker self) {
+    this.self = self;
   }
 
   private Optional<CompteurEnvoisResend> lireCompteurBrut() {
@@ -112,12 +129,24 @@ public class GestionQuotaResendWorker {
 
   /// Réserve un envoi si le quota jour/mois le permet — bloque avant l'appel réseau Resend.
   ///
-  /// <p>Sur blocage, insère un {@code logs_admin} niveau {@code error} (capté par
-  /// {@code AlerteLogsAdminService}, digest 15 min).
+  /// <p>Sur blocage, insère un {@code logs_admin} niveau {@code error} (capté par {@code
+  /// AlerteLogsAdminService}, digest 15 min). Le COUNT+INSERT est rendu atomique via une
+  /// transaction {@code SERIALIZABLE} avec retry (même pattern que {@code
+  /// web.push.PushService.abonner}) — sans cela, deux cycles de digest concurrents lisant tous deux
+  /// le même compteur avant qu'aucune des deux écritures ne soit committée pouvaient tous deux
+  /// réserver un envoi, dépassant le quota réel Resend.
   ///
-  /// @return {@code true} si l'envoi est autorisé (compteur incrémenté et persisté),
-  ///     {@code false} si le quota jour ou mois est atteint
+  /// @return {@code true} si l'envoi est autorisé (compteur incrémenté et persisté), {@code false}
+  ///   si le quota jour ou mois est atteint
   public boolean reserverEnvoi() {
+    return RetrySerialisable.executer(
+        MAX_TENTATIVES, log, "la réservation du quota Resend", self::reserverEnvoiTransactionnel);
+  }
+
+  /// Partie transactionnelle et isolée de {@link #reserverEnvoi}. {@code REQUIRES_NEW} garantit une
+  /// transaction dédiée même si appelée depuis une transaction déjà ouverte.
+  @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
+  boolean reserverEnvoiTransactionnel() {
     CompteurEnvoisResend actuel = lireCompteurCourant();
     if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {
       ecrireCompteur(actuel);

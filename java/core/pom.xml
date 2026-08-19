@@ -14,10 +14,22 @@
     <artifactId>core</artifactId>
 
     <dependencies>
-        <!-- Dérivation de clé pour ConfigCipher (#922) -->
+        <!-- Dérivation de clé pour ConfigCipher -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
+        </dependency>
+
+        <!-- PessimisticLockingFailureException pour RetrySerialisable — artefact minimal
+             (hiérarchie d'exceptions génériques, pas de JDBC/web), déjà tiré transitivement par
+             web et worker via spring-boot-starter-jdbc. -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
         </dependency>
 
         <!-- Tests -->

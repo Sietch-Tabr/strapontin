@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.core.RetrySerialisable;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.GenerateurSecrets;
@@ -27,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -323,18 +323,11 @@ public class AdminService {
   /// @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur
   ///   n'est pas admin (400)
   public void initierRevocationAdmin(String userId, String adminId) {
-    for (int tentative = 1; ; tentative++) {
-      try {
-        self.initierRevocationAdminTransactionnel(userId, adminId);
-        return;
-      } catch (PessimisticLockingFailureException e) {
-        if (tentative >= MAX_TENTATIVES_REVOCATION) throw e;
-        log.warn(
-            "Conflit de sérialisation lors de la révocation admin — nouvelle tentative ({}/{})",
-            tentative,
-            MAX_TENTATIVES_REVOCATION);
-      }
-    }
+    RetrySerialisable.executer(
+        MAX_TENTATIVES_REVOCATION,
+        log,
+        "la révocation admin",
+        () -> self.initierRevocationAdminTransactionnel(userId, adminId));
   }
 
   /// Partie transactionnelle et isolée de {@link #initierRevocationAdmin}.
