@@ -116,21 +116,21 @@ public class PersisteurConcertsDb {
       }
     }
 
-    Map<String, UUID> cache = new HashMap<>();
-    String table = "salle".equals(type) ? "salle_sources" : "artiste_sources";
-    String colUuid = "salle".equals(type) ? "salle_id" : "artiste_id";
+    boolean estSalle = "salle".equals(type);
+    String sql =
+        estSalle
+            ? "SELECT salle_id, identifiant_externe FROM salle_sources"
+                + " WHERE source = :source AND identifiant_externe IN (:ids)"
+            : "SELECT artiste_id, identifiant_externe FROM artiste_sources"
+                + " WHERE source = :source AND identifiant_externe IN (:ids)";
+    String colUuid = estSalle ? "salle_id" : "artiste_id";
 
+    Map<String, UUID> cache = new HashMap<>();
     for (var entry : parSource.entrySet()) {
       String source = entry.getKey();
       List<String> ids = entry.getValue().stream().distinct().toList();
       List<Map<String, Object>> lignes =
-          jdbc.queryForList(
-              "SELECT "
-                  + colUuid
-                  + ", identifiant_externe FROM "
-                  + table
-                  + " WHERE source = :source AND identifiant_externe IN (:ids)",
-              Map.of("source", source, "ids", ids));
+          jdbc.queryForList(sql, Map.of("source", source, "ids", ids));
       for (var ligne : lignes) {
         String cle = source + ":" + ligne.get("identifiant_externe");
         cache.put(cle, (UUID) ligne.get(colUuid));

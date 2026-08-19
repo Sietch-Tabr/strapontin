@@ -215,17 +215,28 @@ public class WorkerFetchService {
   /// @param colonne "artiste_id" ou "salle_id"
   /// @param ids identifiants (texte) des entités traitées dans ce cycle
   /// @param debutCycle horodatage capturé avant la persistance du lot
+  private static final String SQL_ABSENCES_BASE =
+      "UPDATE concerts SET"
+          + " absences_consecutives = CASE WHEN updated_at >= CAST(:debut AS timestamptz)"
+          + "   THEN 0 ELSE absences_consecutives + 1 END,"
+          + " absence_detectee_le = CASE"
+          + "   WHEN updated_at >= CAST(:debut AS timestamptz) THEN NULL"
+          + "   WHEN absences_consecutives + 1 >= :seuil THEN COALESCE(absence_detectee_le, now())"
+          + "   ELSE absence_detectee_le END"
+          + " WHERE %s::text IN (:ids) AND date >= CURRENT_DATE";
+
+  private static final String SQL_ABSENCES_ARTISTE = SQL_ABSENCES_BASE.formatted("artiste_id");
+  private static final String SQL_ABSENCES_SALLE = SQL_ABSENCES_BASE.formatted("salle_id");
+
   private void mettreAJourAbsences(String colonne, List<String> ids, String debutCycle) {
     if (ids.isEmpty()) return;
-    jdbc.update(
-        "UPDATE concerts SET   absences_consecutives = CASE WHEN updated_at >= CAST(:debut AS"
-            + " timestamptz)                                THEN 0 ELSE absences_consecutives + 1"
-            + " END,   absence_detectee_le = CASE     WHEN updated_at >= CAST(:debut AS"
-            + " timestamptz) THEN NULL     WHEN absences_consecutives + 1 >= :seuil THEN"
-            + " COALESCE(absence_detectee_le, now())     ELSE absence_detectee_le END WHERE "
-            + colonne
-            + "::text IN (:ids) AND date >= CURRENT_DATE",
-        Map.of("debut", debutCycle, "seuil", SEUIL_ABSENCES_CONSECUTIVES, "ids", ids));
+    String sql =
+        switch (colonne) {
+          case "artiste_id" -> SQL_ABSENCES_ARTISTE;
+          case "salle_id" -> SQL_ABSENCES_SALLE;
+          default -> throw new IllegalArgumentException("colonne inconnue : " + colonne);
+        };
+    jdbc.update(sql, Map.of("debut", debutCycle, "seuil", SEUIL_ABSENCES_CONSECUTIVES, "ids", ids));
   }
 
   private static ResultatPersistance accumuler(ResultatPersistance a, ResultatPersistance b) {
