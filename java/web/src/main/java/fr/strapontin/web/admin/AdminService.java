@@ -206,20 +206,42 @@ public class AdminService {
   /// <p>Si le nouveau rôle est {@code admin}, envoie un email de promotion à l'utilisateur.
   ///
   /// <p>Si le nouveau rôle est {@code user} et que la cible est actuellement {@code admin}, la
-  /// rétrogradation n'est <strong>pas</strong> appliquée immédiatement ici : elle est
-  /// déléguée à {@link #initierRevocationAdmin}, qui applique le même délai différé de 7 jours et
-  /// la même garde « dernier admin » que le bouton dédié — sans quoi ce chemin `PATCH` permettait
-  /// de contourner intégralement les deux protections.
+  /// rétrogradation n'est <strong>pas</strong> appliquée immédiatement ici : elle est déléguée à
+  /// {@link #initierRevocationAdmin}, qui applique le même délai différé de 7 jours et la même
+  /// garde « dernier admin » que le bouton dédié — sans quoi ce chemin `PATCH` permettait de
+  /// contourner intégralement les deux protections.
   ///
-  /// @param userId  identifiant de l'utilisateur cible
+  /// @param userId identifiant de l'utilisateur cible
   /// @param requete champs à modifier (nom, email, role — tous optionnels)
   /// @param adminId identifiant de l'admin demandeur
   /// @throws ErreurMetier si les données sont invalides, l'email est déjà utilisé, ou
-  /// (rétrogradation
-  /// d'un admin) si c'est le seul admin restant (409)
+  ///   (rétrogradation d'un admin) si c'est le seul admin restant (409)
   @Transactional
   public void modifierUtilisateur(
       String userId, RequeteModifierUtilisateur requete, String adminId) {
+    ChampsModification champs = validerEtNormaliser(requete, userId);
+    boolean retrogradationAdmin = detecterRetrogradationAdmin(userId, champs.role());
+    // initierRevocationAdmin délègue à initierRevocationAdminTransactionnel
+    // (REQUIRES_NEW + SERIALIZABLE) — appelée depuis cette méthode déjà @Transactional, elle
+    // consommerait une seconde connexion HikariCP suspendue. Rejeter la combinaison en un seul
+    // PATCH force l'appelant à séquencer deux requêtes distinctes (déjà fait côté front depuis
+    // l'incident v2.6.4), plutôt que de rendre initierRevocationAdminTransactionnel sûr en
+    // imbrication : NESTED perdrait l'isolation SERIALIZABLE nécessaire à la garde anti-concurrence
+    // la transaction imbriquée héritant de l'isolation de la transaction englobante.
+    if (retrogradationAdmin && (!champs.nom().isEmpty() || !champs.email().isEmpty())) {
+      throw new ErreurMetier(
+          "Impossible de combiner une rétrogradation admin avec une modification de nom/email en"
+              + " une seule requête. Envoyer deux requêtes distinctes.");
+    }
+
+    appliquerModification(userId, champs, retrogradationAdmin);
+    notifierModification(userId, adminId, champs, retrogradationAdmin);
+  }
+
+  private record ChampsModification(String nom, String email, String role) {}
+
+  private ChampsModification validerEtNormaliser(
+      RequeteModifierUtilisateur requete, String userId) {
     String nom = requete.nom() == null ? "" : requete.nom().strip();
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
     String role = requete.role() == null ? "" : requete.role().strip().toLowerCase();
@@ -233,80 +255,76 @@ public class AdminService {
     if (!role.isEmpty() && !ROLES_VALIDES.contains(role)) {
       throw new ErreurMetier("Rôle invalide. Valeurs acceptées : user, admin.");
     }
-    if (!email.isEmpty()) {
-      boolean emailPris =
-          !jdbc.queryForList(
-                  "SELECT 1 FROM users WHERE email = :email AND id != :id",
-                  Map.of("email", email, "id", userId),
-                  Integer.class)
-              .isEmpty();
-      if (emailPris) throw new ErreurMetier("Cette adresse email est déjà utilisée.");
+    if (!email.isEmpty() && emailDejaPris(email, userId)) {
+      throw new ErreurMetier("Cette adresse email est déjà utilisée.");
     }
+    return new ChampsModification(nom, email, role);
+  }
 
-    boolean retrogradationAdmin = false;
-    if (!role.isEmpty()) {
-      List<Map<String, Object>> roleActuelRows =
-          jdbc.queryForList(
-              "SELECT role::text AS role FROM users WHERE id = :id", Map.of("id", userId));
-      String roleActuel =
-          roleActuelRows.isEmpty() ? null : (String) roleActuelRows.get(0).get("role");
-      retrogradationAdmin = "user".equals(role) && "admin".equals(roleActuel);
-    }
-    // initierRevocationAdmin délègue à initierRevocationAdminTransactionnel
-    // (REQUIRES_NEW + SERIALIZABLE) — appelée depuis cette méthode déjà @Transactional, elle
-    // consommerait une seconde connexion HikariCP suspendue. Rejeter la combinaison en un seul
-    // PATCH force l'appelant à séquencer deux requêtes distinctes (déjà fait côté front depuis
-    // l'incident v2.6.4), plutôt que de rendre initierRevocationAdminTransactionnel sûr en
-    // imbrication : NESTED perdrait l'isolation SERIALIZABLE nécessaire à la garde anti-concurrence
-    // la transaction imbriquée héritant de l'isolation de la transaction englobante.
-    if (retrogradationAdmin && (!nom.isEmpty() || !email.isEmpty())) {
-      throw new ErreurMetier(
-          "Impossible de combiner une rétrogradation admin avec une modification de nom/email en"
-              + " une seule requête. Envoyer deux requêtes distinctes.");
-    }
+  private boolean emailDejaPris(String email, String userId) {
+    return !jdbc.queryForList(
+            "SELECT 1 FROM users WHERE email = :email AND id != :id",
+            Map.of("email", email, "id", userId),
+            Integer.class)
+        .isEmpty();
+  }
 
+  private boolean detecterRetrogradationAdmin(String userId, String role) {
+    if (role.isEmpty()) return false;
+    List<Map<String, Object>> roleActuelRows =
+        jdbc.queryForList(
+            "SELECT role::text AS role FROM users WHERE id = :id", Map.of("id", userId));
+    String roleActuel =
+        roleActuelRows.isEmpty() ? null : (String) roleActuelRows.get(0).get("role");
+    return "user".equals(role) && "admin".equals(roleActuel);
+  }
+
+  private void appliquerModification(
+      String userId, ChampsModification champs, boolean retrogradationAdmin) {
     Map<String, Object> miseAJour = new HashMap<>();
     miseAJour.put("updatedAt", Timestamp.from(Instant.now()));
     miseAJour.put("userId", userId);
-    if (!nom.isEmpty()) miseAJour.put("nom", nom);
-    if (!email.isEmpty()) miseAJour.put("email", email);
-    if (!role.isEmpty() && !retrogradationAdmin) miseAJour.put("role", role);
+    if (!champs.nom().isEmpty()) miseAJour.put("nom", champs.nom());
+    if (!champs.email().isEmpty()) miseAJour.put("email", champs.email());
+    if (!champs.role().isEmpty() && !retrogradationAdmin) miseAJour.put("role", champs.role());
 
     StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
-    if (!nom.isEmpty()) setClauses.append(", display_username = :nom");
-    if (!email.isEmpty()) setClauses.append(", email = :email");
-    if (!role.isEmpty() && !retrogradationAdmin) {
+    if (!champs.nom().isEmpty()) setClauses.append(", display_username = :nom");
+    if (!champs.email().isEmpty()) setClauses.append(", email = :email");
+    if (!champs.role().isEmpty() && !retrogradationAdmin) {
       setClauses.append(", role = CAST(:role AS role_utilisateur)");
     }
     jdbc.update("UPDATE users SET " + setClauses + " WHERE id = :userId", miseAJour);
+  }
 
-    if (!nom.isEmpty()) {
+  private void notifierModification(
+      String userId, String adminId, ChampsModification champs, boolean retrogradationAdmin) {
+    if (!champs.nom().isEmpty()) {
       logAdminService.logAdmin(
           "info", "admin", "nom modifié", Map.of("userId", userId, "parAdmin", adminId));
     }
-    if (!email.isEmpty()) {
+    if (!champs.email().isEmpty()) {
       logAdminService.logAdmin(
           "warn",
           "admin",
           "email modifié",
-          Map.of("userId", userId, "nouvelEmail", email, "parAdmin", adminId));
+          Map.of("userId", userId, "nouvelEmail", champs.email(), "parAdmin", adminId));
     }
-    if (!role.isEmpty()) {
-      if (retrogradationAdmin) {
-        initierRevocationAdmin(userId, adminId);
-      } else {
-        logAdminService.logAdmin(
-            "warn",
-            "admin",
-            "rôle modifié",
-            Map.of("userId", userId, "nouveauRole", role, "parAdmin", adminId));
-        if ("admin".equals(role)) {
-          List<Map<String, Object>> cible =
-              jdbc.queryForList("SELECT email FROM users WHERE id = :id", Map.of("id", userId));
-          if (!cible.isEmpty()) {
-            emailService.envoyerPromotionAdmin((String) cible.get(0).get("email"));
-          }
-        }
+    if (champs.role().isEmpty()) return;
+    if (retrogradationAdmin) {
+      initierRevocationAdmin(userId, adminId);
+      return;
+    }
+    logAdminService.logAdmin(
+        "warn",
+        "admin",
+        "rôle modifié",
+        Map.of("userId", userId, "nouveauRole", champs.role(), "parAdmin", adminId));
+    if ("admin".equals(champs.role())) {
+      List<Map<String, Object>> cible =
+          jdbc.queryForList("SELECT email FROM users WHERE id = :id", Map.of("id", userId));
+      if (!cible.isEmpty()) {
+        emailService.envoyerPromotionAdmin((String) cible.get(0).get("email"));
       }
     }
   }
