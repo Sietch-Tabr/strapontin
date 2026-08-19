@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.web.AbstractWebIntegrationTest;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
@@ -20,11 +21,10 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 /// Test d'intégration de {@link SalleRepository} avec PostgreSQL réel (Testcontainers).
 ///
-/// <p>Vérifie spécifiquement {@link SalleRepository#lireIdentifiantsSources} : le
-/// préfixe Ticketmaster construit à partir de {@code salle_sources.source} doit être abrégé
-/// ({@code "tm"}) pour correspondre à ce qu'attend
-/// {@code TicketmasterSource.accepteIdentifiantSalle} — sans quoi le fetch déclenché à l'ajout
-/// d'une salle TM ne fait jamais rien.
+/// <p>Vérifie spécifiquement {@link SalleRepository#lireIdentifiantsSources} : le préfixe
+/// Ticketmaster construit à partir de {@code salle_sources.source} doit être abrégé ({@code "tm"})
+/// pour correspondre à ce qu'attend {@code TicketmasterSource.accepteIdentifiantSalle} — sans quoi
+/// le fetch déclenché à l'ajout d'une salle TM ne fait jamais rien.
 ///
 /// @since 2.7.1
 /// @author Kwaite
@@ -48,6 +48,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
 
   @BeforeEach
   void setUp() {
+    jdbc.update("DELETE FROM concerts", Map.of());
     jdbc.update("DELETE FROM salle_sources", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
     repository = new SalleRepository(jdbc);
@@ -168,5 +169,68 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
             "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
 
     assertEquals("elysee montmartre", nomNorm);
+  }
+
+  // rechercherEnBase filtrait sur regexp_replace(salle_norm/nom_norm, '[^a-z0-9]', '', 'g')
+  // sans le moindre index depuis la suppression de concerts.salle_cle (V24) — restauré par
+  // concerts.salle_cle/salles.nom_cle (colonnes générées indexées, V49). Ces tests valident que
+  // la requête retourne toujours les mêmes résultats après le passage aux nouvelles colonnes.
+
+  @Test
+  void rechercherEnBase_concertNonResolu_trouveParNomApprochant() {
+    jdbc.update(
+        "INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source)"
+            + " VALUES ('Radiohead', 'radiohead', '2026-06-15', 'Zenith Paris', 'zenith paris',"
+            + " 'ticketmaster')",
+        Map.of());
+
+    List<Map<String, Object>> resultats = repository.rechercherEnBase("%zenithparis%");
+
+    assertEquals(1, resultats.size());
+    assertEquals("Zenith Paris", resultats.get(0).get("salle"));
+  }
+
+  @Test
+  void rechercherEnBase_concertDejaResolu_neLeRetourneQueViaLeReferentiel() {
+    // Un concert déjà résolu (salle_id renseigné) n'est plus jamais trouvé via la branche
+    // "concerts non résolus" (salle_id IS NULL) — il ne peut apparaître que via la branche
+    // référentiel, une seule fois malgré le concert associé (DISTINCT sur l'union).
+    UUID salleId = creerSalle("zenithparis");
+    jdbc.update(
+        "INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source, salle_id)"
+            + " VALUES ('Radiohead', 'radiohead', '2026-06-15', 'Zenith Paris', 'zenith paris',"
+            + " 'ticketmaster', CAST(:salleId AS uuid))",
+        Map.of("salleId", salleId.toString()));
+
+    List<Map<String, Object>> resultats = repository.rechercherEnBase("%zenithparis%");
+
+    assertEquals(1, resultats.size());
+    assertEquals("zenithparis", resultats.get(0).get("salle"));
+  }
+
+  @Test
+  void rechercherEnBase_salleDigitick_retourneSonSlug() {
+    UUID salleId = creerSalle("bataclan");
+    jdbc.update(
+        "UPDATE salles SET nom = 'Bataclan', nom_norm = 'bataclan' WHERE id = :id",
+        Map.of("id", salleId));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:uuid AS uuid), 'digitick', 'le-bataclan')",
+        Map.of("uuid", salleId.toString()));
+
+    List<Map<String, Object>> resultats = repository.rechercherEnBase("%bataclan%");
+
+    assertEquals(1, resultats.size());
+    assertEquals("le-bataclan", resultats.get(0).get("digitick_slug"));
+  }
+
+  @Test
+  void rechercherEnBase_salleReferentielSansConcertNiDigitick_nApparaitPas() {
+    creerSalle("salle inconnue du public");
+
+    List<Map<String, Object>> resultats = repository.rechercherEnBase("%salleinconnue%");
+
+    assertTrue(resultats.isEmpty());
   }
 }
