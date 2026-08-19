@@ -61,4 +61,17 @@ class ChangelogServiceTest {
             org.mockito.ArgumentMatchers.argThat(
                 (Map<String, ?> params) -> "2.6.4".equals(params.get("v"))));
   }
+
+  @Test
+  void marquerVue_utiliseUnUpsert_fonctionneSansLigneUserConfigPreexistante() {
+    // Un simple UPDATE ne ferait rien pour un utilisateur sans ligne user_config existante
+    // (compte tout juste créé, aucune préférence encore enregistrée) — vérifie que la requête
+    // reste bien un INSERT ... ON CONFLICT plutôt qu'une régression vers un UPDATE seul.
+    service.marquerVue("u1", "2.6.4");
+
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("ON CONFLICT"),
+            org.mockito.ArgumentMatchers.anyMap());
+  }
 }

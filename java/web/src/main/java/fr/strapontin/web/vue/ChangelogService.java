@@ -40,11 +40,20 @@ class ChangelogService {
 
   /// Marque une version du changelog comme vue pour l'utilisateur.
   ///
+  /// <p>Upsert plutôt qu'une simple mise à jour : un utilisateur qui n'a encore jamais écrit dans
+  /// {@code user_config} (aucun changement de thème, de préférences...) n'y a pas encore de ligne —
+  /// un {@code UPDATE} seul ne ferait alors rien, laissant le badge "nouveautés" affiché
+  /// indéfiniment malgré un appel réussi.
+  ///
   /// @param userId identifiant de l'utilisateur
   /// @param versionCourante version actuelle de l'application
   void marquerVue(String userId, String versionCourante) {
     jdbc.update(
-        "UPDATE user_config SET changelog_version_vue = :v WHERE user_id = :u",
+        """
+        INSERT INTO user_config (user_id, changelog_version_vue)
+        VALUES (:u, :v)
+        ON CONFLICT (user_id) DO UPDATE SET changelog_version_vue = :v, updated_at = now()
+        """,
         Map.of("v", versionCourante, "u", userId));
   }
 }
