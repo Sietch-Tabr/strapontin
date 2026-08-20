@@ -4,6 +4,25 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 2.8.0 — 20 août 2026",
+    categories: [
+      {
+        categorie: "Premiers pas",
+        items: [
+          "Une présentation de bienvenue s'affiche automatiquement à votre première connexion (suivi, filtres, notifications, installation) — rejouable à tout moment depuis Aide → « Revoir la présentation de bienvenue ».",
+          "Une checklist des premiers pas reste visible sur Aide tant que vous n'avez pas configuré vos départements, suivi un artiste ou une salle, et activé une notification.",
+          "Un rappel s'affiche après votre tout premier ajout d'artiste ou de salle pour vous inviter à activer les notifications.",
+        ],
+      },
+      {
+        categorie: "Application installée (PWA)",
+        items: [
+          "Sur Chrome/Edge desktop, une bannière propose désormais l'installation de l'application après quelques visites.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 2.7.9 — 12 août 2026",
     categories: [
       {
@@ -62,7 +81,7 @@ export const versionsChangelog = [
       {
         categorie: "Concerts",
         items: [
-          "Un artiste suivi (\"Furies\") pouvait réafficher les concerts d'un homonyme même après correction manuelle — corrigé durablement, plus seulement en surface.",
+          'Un artiste suivi ("Furies") pouvait réafficher les concerts d\'un homonyme même après correction manuelle — corrigé durablement, plus seulement en surface.',
         ],
       },
       {
@@ -444,7 +463,7 @@ export const versionsChangelog = [
         items: [
           "La page de connexion indique désormais son titre aux lecteurs d'écran (h1 invisible à l'affichage, lisible pour les technologies d'assistance).",
           "Les messages d'erreur et de succès sur la page de connexion sont automatiquement lus par les lecteurs d'écran dès leur apparition.",
-          "Les liens de navigation (sidebar, barre mobile, menu « Plus ») indiquent aux technologies d'assistance quel est le lien correspondant à la page active (<code>aria-current=\"page\"</code>).",
+          'Les liens de navigation (sidebar, barre mobile, menu « Plus ») indiquent aux technologies d\'assistance quel est le lien correspondant à la page active (<code>aria-current="page"</code>).',
           "Le menu « Plus » sur mobile est maintenant déclaré comme un dialogue modal, empêchant les lecteurs d'écran de parcourir le contenu situé derrière.",
           "Le lien « Aller au contenu principal » (navigation clavier) s'affiche avec un contour visible au focus — le ratio de contraste est passé de 1,09:1 à plus de 12:1.",
           "L'indicateur de focus sur les champs de saisie est désormais un contour solide (2 px, couleur primaire) au lieu d'un halo semi-transparent peu visible.",
@@ -528,7 +547,7 @@ export const versionsChangelog = [
         items: [
           "Lors d'une recherche de salle, une même salle pouvait apparaître en double si elle était liée à plusieurs sources (Digitick et Eventim) — corrigé.",
           "Sur iPhone, une mise à jour de l'application affichait un écran entièrement blanc pendant la transition. Un écran de chargement (icône + \"Mise à jour en cours…\") s'affiche désormais pendant cette courte transition.",
-          "Le nom de certaines salles Eventim s'affichait en majuscules (ex. \"LEMPREINTE SAVIGNY LE TEMPLE CEDEX\"). Les noms sont désormais normalisés en casse lisible.",
+          'Le nom de certaines salles Eventim s\'affichait en majuscules (ex. "LEMPREINTE SAVIGNY LE TEMPLE CEDEX"). Les noms sont désormais normalisés en casse lisible.',
           "Le nom de certaines salles Ticketmaster s'affichait entièrement en majuscules dans les résultats de recherche — corrigé.",
           "Lors de la recherche d'une salle, les salles déjà connues (avec des concerts en base) apparaissent désormais dans les suggestions locales sans déclencher un appel à Ticketmaster — évite les résultats en double ou la confusion entre plusieurs identifiants pour la même salle.",
           "Certaines salles Eventim qui changent de nom entre deux mises à jour (ex. « Grand Kursaal » / « Kursaal Besancon », « Auditorium Megacite » / « Megacite Amiens ») créaient des concerts en double — corrigé.",
@@ -554,8 +573,8 @@ export const versionsChangelog = [
           "Les concerts découverts via la recherche régionale Eventim n'apparaissaient plus — une incompatibilité entre les catégories Ticketmaster et Eventim empêchait tout résultat. La recherche régionale Eventim est à nouveau fonctionnelle.",
           "Un concert peut désormais être correctement attribué à un artiste dont le nom contient une apostrophe (ex. Shy'm) même si Eventim référence un homonyme sous un nom différent.",
           "Le nom d'artiste s'affiche désormais tel que vous le suivez — si vous suivez \"MØØNSPELL\", les concerts ne s'affichent plus sous le nom retourné par Ticketmaster (\"Moonspell\"). Cela s'applique à l'accueil, à la liste des spectacles, à la découverte et aux notifications.",
-          "Les artistes \"Krash Karma\" et \"Krashkarma\" étaient enregistrés en double — ils sont désormais unifiés sous \"Krash Karma\". Concerts et préférences des deux noms sont conservés.",
-          "Eventim ne trouvait pas les artistes dont le nom est plus court que celui qu'il utilise (ex. \"-M-\" non reconnu car Eventim liste \"-M- Matthieu Chedid\") — ces artistes récupèrent désormais leurs concerts Eventim.",
+          'Les artistes "Krash Karma" et "Krashkarma" étaient enregistrés en double — ils sont désormais unifiés sous "Krash Karma". Concerts et préférences des deux noms sont conservés.',
+          'Eventim ne trouvait pas les artistes dont le nom est plus court que celui qu\'il utilise (ex. "-M-" non reconnu car Eventim liste "-M- Matthieu Chedid") — ces artistes récupèrent désormais leurs concerts Eventim.',
           "Des concerts sold-out Eventim s'affichaient à tort avec le badge « Prévente » — corrigé. L'API Eventim ne distinguant pas prévente et complet, aucun badge n'est désormais affiché pour ces concerts.",
           "Les spectacles à séances multiples (matinée et soirée le même jour dans la même salle) sont maintenant affichés comme deux événements distincts plutôt que fusionnés.",
           "Des concerts de l'artiste \"Shy\" (Ticketmaster) pouvaient apparaître à tort pour l'artiste Shy'm suivi — la correspondance exacte est désormais vérifiée parmi plusieurs résultats.",
@@ -893,9 +912,7 @@ export const versionsChangelog = [
       },
       {
         categorie: "Aide",
-        items: [
-          "Limite à 3 signalements par heure par adresse IP.",
-        ],
+        items: ["Limite à 3 signalements par heure par adresse IP."],
       },
     ],
   },
@@ -908,10 +925,10 @@ export const versionsChangelog = [
           "Confirmation par email lors du changement d'adresse email — la nouvelle adresse est validée avant d'être appliquée.",
           "Messages de confirmation différenciés selon l'action (TOTP activé/désactivé, identifiant modifié, email confirmé).",
           "Compteur de longueur en temps réel sur le champ mot de passe.",
-          "Notifications push : le bouton d'activation est désactivé si la fréquence email est sur \"Jamais\".",
+          'Notifications push : le bouton d\'activation est désactivé si la fréquence email est sur "Jamais".',
           "Import de préférences : résumé du nombre d'artistes et de salles importés, avec les éléments rejetés le cas échéant.",
           "Compteur de capacité restante (X/500 artistes — Y/200 salles) visible dans l'onglet Données.",
-          "Suppression de compte : saisie obligatoire du mot \"supprimer\" pour confirmer l'action.",
+          'Suppression de compte : saisie obligatoire du mot "supprimer" pour confirmer l\'action.',
         ],
       },
       {
@@ -919,8 +936,8 @@ export const versionsChangelog = [
         items: [
           "Notifications push : les notifications push PWA sont désormais réellement envoyées (un problème de configuration interne empêchait tout envoi depuis la mise en ligne).",
           "Badge \"Nouveau\" : le badge apparaît correctement sur l'accueil et dans Mes spectacles pendant 7 jours après la découverte d'un concert — il n'était pas affiché même pour les concerts récents.",
-          "Navigation PWA : le menu \"+\" et la liste déroulante des onglets fonctionnent de nouveau après une navigation.",
-          "Accueil : les concerts des salles suivies apparaissent désormais correctement (ils n'étaient pas affichés malgré le badge \"Nouveau\").",
+          'Navigation PWA : le menu "+" et la liste déroulante des onglets fonctionnent de nouveau après une navigation.',
+          'Accueil : les concerts des salles suivies apparaissent désormais correctement (ils n\'étaient pas affichés malgré le badge "Nouveau").',
         ],
       },
     ],
@@ -1125,19 +1142,23 @@ export const versionsChangelog = [
     categories: [
       {
         categorie: "Notifications push",
-        texte: "Recevez des notifications directement sur votre appareil. Activez-les dans Paramètres → Notifications push.",
+        texte:
+          "Recevez des notifications directement sur votre appareil. Activez-les dans Paramètres → Notifications push.",
       },
       {
         categorie: "Application installable",
-        texte: "Strapontin peut désormais être installé comme application sur votre appareil (Android, iOS, desktop) via le menu de votre navigateur.",
+        texte:
+          "Strapontin peut désormais être installé comme application sur votre appareil (Android, iOS, desktop) via le menu de votre navigateur.",
       },
       {
         categorie: "Masquer un concert",
-        texte: "Un bouton « Masquer » est disponible sur chaque concert de l'Accueil. Le concert disparaît de la page d'accueil mais reste visible dans Mes spectacles. Pour le réafficher, utilisez le chip « Masqués ».",
+        texte:
+          "Un bouton « Masquer » est disponible sur chaque concert de l'Accueil. Le concert disparaît de la page d'accueil mais reste visible dans Mes spectacles. Pour le réafficher, utilisez le chip « Masqués ».",
       },
       {
         categorie: "Mot de passe oublié",
-        texte: "Réinitialisez votre mot de passe depuis la page de connexion sans passer par l'admin.",
+        texte:
+          "Réinitialisez votre mot de passe depuis la page de connexion sans passer par l'admin.",
       },
     ],
   },
