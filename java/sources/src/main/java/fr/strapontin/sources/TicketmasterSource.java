@@ -4,6 +4,8 @@
  */
 package fr.strapontin.sources;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.ConcertBrut;
@@ -53,9 +55,11 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   private static final int TAILLE_PAGE_REGION = 200;
   // TM refuse offset > 1000 : avec size=200, page 6 → offset 1000 (ok), page 7 → 1200 (HTTP 400)
   private static final int NB_PAGES_MAX = 6;
-  // 250 ms entre appels = 4 req/s max — protège contre le spike arrest TM (5 req/s) même sous
-  // concurrence
-  private static final int DELAI_MIN_ENTRE_APPELS_MS = 250;
+  // TM applique un Spike Arrest strict de 200ms minimum entre requêtes, sans tolérance de rafale
+  // (maxBurstMessageCount=1.0) : le cadenceur n'espace que les instants de départ côté client, la
+  // latence réseau peut donc faire percevoir deux appels espacés de 250ms comme trop rapprochés
+  // côté serveur. Marge doublée à 100ms au-dessus du minimum strict.
+  private static final int DELAI_MIN_ENTRE_APPELS_MS = 300;
   private static final String CHEMIN_EVENTS = "/events.json";
   private static final String TRI_DATE_ASC = "date,asc";
   private static final String CLE_EMBEDDED = "_embedded";
@@ -69,6 +73,11 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
   private final CadenceurAppels cadenceur = new CadenceurAppels(DELAI_MIN_ENTRE_APPELS_MS);
   private final TicketmasterHealthCheck healthCheck;
+  // Une absence de correspondance TM pour un nom donné est un résultat stable la plupart du temps
+  // (rappelé à chaque cycle fetch:artistes:batch, aucun état négatif persisté pour permettre une
+  // redécouverte si TM ajoute l'attraction plus tard) — sans throttle, le WARN se répète à chaque
+  // cycle pour le même nom déjà classé introuvable.
+  private final Cache<String, Boolean> avertissementsAttractionIntrouvable;
 
   /// Crée une instance avec la clé API fournie et un RestClient par défaut (timeout connexion 10s,
   /// lecture 30s).
@@ -89,8 +98,27 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   /// @param apiKey clé API Ticketmaster Discovery v2
   /// @param restClient client HTTP Spring à utiliser
   public TicketmasterSource(String apiKey, RestClient restClient) {
+    this(
+        apiKey,
+        restClient,
+        Caffeine.newBuilder().expireAfterWrite(Duration.ofDays(1)).maximumSize(1_000).build());
+  }
+
+  /// Crée une instance avec la clé API, le RestClient et le cache de throttle des avertissements
+  /// personnalisés (injection de test).
+  ///
+  /// @param apiKey clé API Ticketmaster Discovery v2
+  /// @param restClient client HTTP Spring à utiliser
+  /// @param avertissementsAttractionIntrouvable cache de throttle à utiliser
+  TicketmasterSource(
+      String apiKey,
+      RestClient restClient,
+      Cache<String, Boolean> avertissementsAttractionIntrouvable) {
     this.apiKey = Objects.requireNonNull(apiKey, "apiKey");
     this.restClient = Objects.requireNonNull(restClient, "restClient");
+    this.avertissementsAttractionIntrouvable =
+        Objects.requireNonNull(
+            avertissementsAttractionIntrouvable, "avertissementsAttractionIntrouvable");
     this.healthCheck = new TicketmasterHealthCheck(this.apiKey, this.restClient, cadenceur);
   }
 
@@ -376,7 +404,13 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
           return (String) attraction.get("id");
         }
       }
-      log.warn("rechercherAttractionId TM — pas de correspondance exacte nom={}", nom);
+      if (avertissementsAttractionIntrouvable.getIfPresent(nomNorm) == null) {
+        avertissementsAttractionIntrouvable.put(nomNorm, Boolean.TRUE);
+        log.warn("rechercherAttractionId TM — pas de correspondance exacte nom={}", nom);
+      } else {
+        log.debug(
+            "rechercherAttractionId TM — pas de correspondance exacte nom={} (déjà signalé)", nom);
+      }
       return null;
     } catch (Exception e) {
       log.warn(

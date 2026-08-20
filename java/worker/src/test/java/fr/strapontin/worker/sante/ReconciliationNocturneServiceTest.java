@@ -281,10 +281,29 @@ class ReconciliationNocturneServiceTest {
     verify(jdbc)
         .update(
             org.mockito.ArgumentMatchers.matches(
-                "(?s).*UPDATE artiste_sources.*necessite_intervention_le = now\\(\\).*"),
+                "(?s).*UPDATE artiste_sources.*necessite_intervention_le ="
+                    + " COALESCE\\(necessite_intervention_le, now\\(\\)\\).*"),
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 p -> artisteId.toString().equals(p.get("artisteId"))));
     verify(logsAdminWorker)
+        .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("nom TM incohérent"), any());
+  }
+
+  // un état déjà connu et stable (le flag est déjà posé une nuit précédente) ne doit pas
+  // regénérer indéfiniment le même WARN à chaque cycle.
+  @Test
+  void executer_nomTMDivergeDejaSignale_neJournalieQuUneFois() {
+    UUID artisteId = UUID.randomUUID();
+    Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "K8vZ9174y30", "U2");
+    ligne.put("necessite_intervention_le", java.time.Instant.now());
+    when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
+        .thenReturn(List.of(ligne));
+    when(tm.recupererNomAttraction("K8vZ9174y30")).thenReturn("U2 Experience");
+
+    ResultatReconciliation resultat = service.executer();
+
+    assertEquals(1, resultat.nomsIncoherentsTM());
+    verify(logsAdminWorker, never())
         .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("nom TM incohérent"), any());
   }
 
