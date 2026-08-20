@@ -240,6 +240,21 @@ test.describe("Scénario: nudge notifications — premier ajout", () => {
     const { page, ctx } = await creerCompteFraisEtSeConnecter(browser);
     try {
       await page.goto("/artistes");
+      // page.goto (rechargement complet) redéclenche la vérification onboarding à chaque fois
+      // tant que la modale n'a pas été fermée — un dialog natif ouvert rend le reste de la page
+      // inerte (formulaire de recherche inutilisable) sans elle.
+      // verifierOnboarding() (App.vue) est asynchrone : la modale peut s'ouvrir un instant après
+      // la résolution de page.goto — un simple isVisible() immédiat raterait la fenêtre où elle
+      // apparaît, laissant le dialog s'ouvrir APRÈS la tentative de clic/fill et la bloquer quand
+      // même. Attendre explicitement son apparition (ou son absence confirmée) avant de continuer.
+      const dialogOnboarding = page.locator("dialog#dialog-onboarding");
+      await dialogOnboarding
+        .waitFor({ state: "visible", timeout: 3000 })
+        .catch(() => {});
+      if (await dialogOnboarding.isVisible().catch(() => false)) {
+        await dialogOnboarding.locator(".btn-icone").click();
+        await expect(dialogOnboarding).not.toBeVisible({ timeout: 3000 });
+      }
       await page.fill("#q-artiste", "Radiohead");
       await page.getByRole("button", { name: "Rechercher" }).click();
       await expect(page.locator(".section-resultats")).toBeVisible({
