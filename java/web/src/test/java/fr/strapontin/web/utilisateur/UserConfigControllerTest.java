@@ -88,4 +88,20 @@ class UserConfigControllerTest {
 
     assertThat(rep.getBody()).isSameAs(config);
   }
+
+  @Test
+  void onboarding_delegueAuServiceAvecUserId() {
+    when(userConfigService.onboardingNonVu("u1")).thenReturn(true);
+
+    var rep = controller.onboarding(authPour("u1"));
+
+    assertThat(rep.getBody().get("nonVu")).isEqualTo(true);
+  }
+
+  @Test
+  void marquerOnboardingVu_delegueAuServiceAvecUserId() {
+    controller.marquerOnboardingVu(authPour("u1"));
+
+    verify(userConfigService).marquerOnboardingVu("u1");
+  }
 }

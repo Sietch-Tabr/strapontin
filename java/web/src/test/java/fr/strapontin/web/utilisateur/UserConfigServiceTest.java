@@ -149,4 +149,27 @@ class UserConfigServiceTest {
 
     assertThat(service.lireFiltreDisponibles("user-1")).isFalse();
   }
+
+  @Test
+  void onboardingNonVu_aucuneLigne_retourneVrai() {
+    when(jdbc.queryForList(anyString(), anyMap(), org.mockito.ArgumentMatchers.eq(Boolean.class)))
+        .thenReturn(List.of());
+
+    assertThat(service.onboardingNonVu("user-1")).isTrue();
+  }
+
+  @Test
+  void onboardingNonVu_ligneExistanteVue_retourneFaux() {
+    when(jdbc.queryForList(anyString(), anyMap(), org.mockito.ArgumentMatchers.eq(Boolean.class)))
+        .thenReturn(List.of(true));
+
+    assertThat(service.onboardingNonVu("user-1")).isFalse();
+  }
+
+  @Test
+  void marquerOnboardingVu_metAJourLaConfig() {
+    service.marquerOnboardingVu("user-1");
+
+    verify(jdbc).update(anyString(), anyMap());
+  }
 }
