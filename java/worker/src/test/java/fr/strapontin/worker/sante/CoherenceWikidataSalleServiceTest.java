@@ -85,6 +85,28 @@ class CoherenceWikidataSalleServiceTest {
             any(RowCallbackHandler.class));
   }
 
+  /// Simule le résultat de `chargerSignaturesDejaSignalees`, distinct de {@link
+  /// #simulerVillesConcertsReelles} par le texte SQL (`coherence_wikidata_signalee` vs `FROM
+  /// concerts`) pour ne pas router les deux `RowCallbackHandler` sur le même stub.
+  private void simulerSignaturesDejaSignalees(Map<UUID, String> signaturesParSalle) {
+    doAnswer(
+            invocation -> {
+              RowCallbackHandler handler = invocation.getArgument(2);
+              for (Map.Entry<UUID, String> entree : signaturesParSalle.entrySet()) {
+                ResultSet rs = mock(ResultSet.class);
+                when(rs.getObject("id", UUID.class)).thenReturn(entree.getKey());
+                when(rs.getString("coherence_wikidata_signalee")).thenReturn(entree.getValue());
+                handler.processRow(rs);
+              }
+              return null;
+            })
+        .when(jdbc)
+        .query(
+            org.mockito.ArgumentMatchers.contains("coherence_wikidata_signalee"),
+            org.mockito.ArgumentMatchers.<Map<String, ?>>any(),
+            any(RowCallbackHandler.class));
+  }
+
   @Test
   void verifier_aucunCandidat_neContactePasWikidataEtRetourneZero() {
     simulerCandidats(List.of());
@@ -303,5 +325,78 @@ class CoherenceWikidataSalleServiceTest {
 
     assertEquals(0, resultat);
     verify(logsAdminWorker, never()).inserer(any(), any(), any(), any());
+  }
+
+  // une salle déjà investiguée et confirmée légitime plusieurs nuits de suite ne doit pas
+  // continuer à générer le même WARN indéfiniment.
+  @Test
+  void verifier_incoherenceDejaSignaleeAvecMemeSignature_neJournalisePasDeNouveau() {
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q428765");
+    simulerCandidats(List.of(salle));
+    simulerSignaturesDejaSignalees(Map.of(id, "Nancy|false"));
+    when(wikidata.enrichirLot(anyList()))
+        .thenReturn(
+            Map.of(
+                id,
+                new EnrichissementSalle(
+                    "Q428765", "Musée des Beaux-Arts de Nancy", "Nancy", null, null)));
+
+    int resultat = service.verifier();
+
+    assertEquals(1, resultat);
+    verify(logsAdminWorker, never()).inserer(any(), any(), any(), any());
+  }
+
+  // une nouvelle incohérence (commune Wikidata différente de la dernière déjà signalée) doit
+  // rester journalisée, même si la salle avait déjà une ancienne incohérence connue.
+  @Test
+  void verifier_incoherenceDejaSignaleeAvecSignatureDifferente_journaliseDeNouveau() {
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q428765");
+    simulerCandidats(List.of(salle));
+    simulerSignaturesDejaSignalees(Map.of(id, "Ancienne Commune|false"));
+    when(wikidata.enrichirLot(anyList()))
+        .thenReturn(
+            Map.of(
+                id,
+                new EnrichissementSalle(
+                    "Q428765", "Musée des Beaux-Arts de Nancy", "Nancy", null, null)));
+
+    int resultat = service.verifier();
+
+    assertEquals(1, resultat);
+    verify(logsAdminWorker)
+        .inserer(
+            eq("warn"),
+            eq("coherence-wikidata"),
+            org.mockito.ArgumentMatchers.contains("Theatre Municipal"),
+            any());
+  }
+
+  // une incohérence résolue (redevenue cohérente) doit réinitialiser la signature mémorisée,
+  // pour qu'une future nouvelle incohérence soit à nouveau journalisée.
+  @Test
+  void verifier_incoherenceResolueMaisSignatureConnue_reinitialiseLaSignature() {
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Le Splendid", "le splendid", "Lille", "59", "Q1");
+    simulerCandidats(List.of(salle));
+    simulerSignaturesDejaSignalees(Map.of(id, "Ancienne Commune|false"));
+    when(wikidata.enrichirLot(anyList()))
+        .thenReturn(Map.of(id, new EnrichissementSalle("Q1", "Le Splendid", "Lille", null, null)));
+
+    int resultat = service.verifier();
+
+    assertEquals(0, resultat);
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("coherence_wikidata_signalee"),
+            org.mockito.ArgumentMatchers.<Map<String, ?>>argThat(
+                p -> p.get("signature") == null && id.toString().equals(p.get("id"))));
   }
 }
