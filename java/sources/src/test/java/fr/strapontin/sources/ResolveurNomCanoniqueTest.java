@@ -14,6 +14,8 @@ import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.ResolveurNomCanonique.ResultatResolution;
 import fr.strapontin.sources.ResolveurNomCanonique.SourceResolution;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -217,6 +219,32 @@ class ResolveurNomCanoniqueTest {
     ResultatResolution resultat = resolveur.resoudreNomCanonique("artiste", "Daft Punk");
 
     assertEquals("Daft Punk", resultat.nom());
+    assertEquals(SourceResolution.INCHANGE, resultat.source());
+    serveur.verify();
+  }
+
+  // non-régression : sans le vrai artiste dans le pool Deezer, un homonyme rimé mais mieux
+  // référencé ne doit plus franchir le seuil de confiance (corruption réelle constatée en
+  // production avant relèvement du seuil 0.7 -> 0.85).
+  @ParameterizedTest
+  @CsvSource({"Monolord,Jon Lord", "The Brooks,The Kooks", "Sara Correia,Sara Carreira"})
+  void resoudreNomCanonique_artiste_homonymeRimeAbsentDuPool_retourneInchange(
+      String nomReel, String homonyme) {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist")))
+        .andRespond(
+            withSuccess(
+                "{\"data\":[{\"name\":\"" + homonyme + "\",\"nb_fan\":999999}]}",
+                MediaType.APPLICATION_JSON));
+
+    ResolveurNomCanonique resolveur = resolveurAvecServeur(serveur, restClient);
+    ResultatResolution resultat = resolveur.resoudreNomCanonique("artiste", nomReel);
+
+    assertEquals(nomReel, resultat.nom());
     assertEquals(SourceResolution.INCHANGE, resultat.source());
     serveur.verify();
   }

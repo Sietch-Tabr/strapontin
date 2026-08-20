@@ -81,6 +81,13 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   private static final int NB_ESSAIS_MAX = 2;
   private static final long DELAI_APRES_ERREUR_MS = 5000;
   private static final long DELAI_APRES_429_MS = 20000;
+  // Constaté en production : une fenêtre d'indisponibilité de l'instance publique (connexion
+  // refusée pendant 1-2 minutes, probablement un redémarrage du dispatcher) fait échouer chaque
+  // lot départemental consécutif sans jamais s'arrêter, brûlant tout le reste du cycle en retries
+  // voués à l'échec. Après ce seuil d'échecs consécutifs, mieux vaut abandonner le cycle en cours
+  // (les candidats non traités restent éligibles au prochain, rotation jour_batch) que de
+  // continuer à marteler un service manifestement indisponible.
+  private static final int SEUIL_ECHECS_CONSECUTIFS = 3;
   // Le timeout serveur ([timeout:...] dans la requête OverpassQL) doit rester strictement
   // inférieur au timeout de lecture HTTP client pour laisser le temps à Overpass de renvoyer sa
   // propre réponse d'erreur "Query timed out" plutôt que de couper la connexion en premier.
@@ -135,6 +142,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
     Map<String, List<SalleAEnrichir>> parDept =
         aTraiter.stream().collect(Collectors.groupingBy(SalleAEnrichir::dept));
+    int echecsConsecutifs = 0;
     for (var entree : parDept.entrySet()) {
       CentreDept centre = CentresDepartement.PAR_DEPT.get(entree.getKey());
       if (centre == null) continue;
@@ -143,14 +151,30 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
         List<SalleAEnrichir> lot =
             sallesDept.subList(i, Math.min(i + TAILLE_LOT, sallesDept.size()));
         cadenceur.attendre();
-        resultats.putAll(enrichirUnLot(lot, centre));
+        ResultatLot resultat = enrichirUnLot(lot, centre);
+        resultats.putAll(resultat.resultats());
+        if (!resultat.succes()) {
+          echecsConsecutifs++;
+          if (echecsConsecutifs >= SEUIL_ECHECS_CONSECUTIFS) {
+            log.warn(
+                "Overpass — {} échecs consécutifs, instance probablement indisponible, cycle"
+                    + " interrompu (candidats restants retentés au prochain cycle)",
+                echecsConsecutifs);
+            return resultats;
+          }
+        } else {
+          echecsConsecutifs = 0;
+        }
       }
     }
     return resultats;
   }
 
-  private Map<UUID, EnrichissementSalle> enrichirUnLot(
-      List<SalleAEnrichir> lot, CentreDept centre) {
+  /// Résultat d'un lot Overpass, distinguant un échec définitif (retries épuisés) d'un succès — une
+  /// réponse réussie sans le moindre élément trouvé n'est pas un échec.
+  private record ResultatLot(Map<UUID, EnrichissementSalle> resultats, boolean succes) {}
+
+  private ResultatLot enrichirUnLot(List<SalleAEnrichir> lot, CentreDept centre) {
     String requete = construireRequeteOverpassQL(lot, centre);
     Exception derniereErreur = null;
     for (int essai = 1; essai <= NB_ESSAIS_MAX; essai++) {
@@ -167,7 +191,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
                 .body("data=" + URLEncoder.encode(requete, StandardCharsets.UTF_8))
                 .retrieve()
                 .body(Map.class);
-        return mapperReponse(data, lot);
+        return new ResultatLot(mapperReponse(data, lot), true);
       } catch (Exception e) {
         derniereErreur = e;
         compteurBilan.enregistrerErreur();
@@ -177,7 +201,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
       }
     }
     log.warn("Overpass erreur lot taille={} : {}", lot.size(), derniereErreur.getMessage());
-    return Map.of();
+    return new ResultatLot(Map.of(), false);
   }
 
   /// Détermine le délai avant retry selon la nature de l'échec — accessible aux tests sans

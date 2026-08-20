@@ -37,9 +37,9 @@ public class UserConfigService {
   private final ConfigService configService;
   private final LogAdminService logAdminService;
 
-  /// @param jdbc             accès JDBC
-  /// @param configService    lecture des clés applicatives (RESEND_API_KEY)
-  /// @param logAdminService  journalisation des actions utilisateur
+  /// @param jdbc accès JDBC
+  /// @param configService lecture des clés applicatives (RESEND_API_KEY)
+  /// @param logAdminService journalisation des actions utilisateur
   public UserConfigService(
       NamedParameterJdbcTemplate jdbc,
       ConfigService configService,
@@ -113,8 +113,8 @@ public class UserConfigService {
   ///
   /// <p>Les codes non reconnus sont retournés dans la liste {@code ignores}.
   ///
-  /// @param userId  identifiant de l'utilisateur
-  /// @param bruts   liste brute des codes département (peuvent être invalides)
+  /// @param userId identifiant de l'utilisateur
+  /// @param bruts liste brute des codes département (peuvent être invalides)
   /// @return résultat avec la liste des codes ignorés
   public ResultatMajDepartements majDepartements(String userId, List<String> bruts) {
     List<String> depts =
@@ -132,7 +132,7 @@ public class UserConfigService {
 
   /// Met à jour les préférences de notification.
   ///
-  /// @param userId  identifiant de l'utilisateur
+  /// @param userId identifiant de l'utilisateur
   /// @param requete données de la requête
   /// @throws ErreurMetier si la fréquence est invalide ou aucun canal de notification sélectionné
   public void majNotifications(String userId, RequeteNotifications requete) {
@@ -179,9 +179,29 @@ public class UserConfigService {
             "notifSallesPush", requete.notifSallesPush()));
   }
 
+  /// Indique si l'utilisateur n'a pas encore vu la modale d'onboarding.
+  ///
+  /// @param userId identifiant de l'utilisateur
+  /// @return {@code true} si la modale doit être affichée (absence de ligne = jamais vue)
+  public boolean onboardingNonVu(String userId) {
+    List<Boolean> lignes =
+        jdbc.queryForList(
+            "SELECT onboarding_vu FROM user_config WHERE user_id = :userId",
+            Map.of("userId", userId),
+            Boolean.class);
+    return lignes.isEmpty() || !lignes.get(0);
+  }
+
+  /// Marque la modale d'onboarding comme vue pour l'utilisateur.
+  ///
+  /// @param userId identifiant de l'utilisateur
+  public void marquerOnboardingVu(String userId) {
+    upsertConfig(userId, Map.of("onboardingVu", true));
+  }
+
   /// Met à jour le filtre de disponibilité.
   ///
-  /// @param userId            identifiant de l'utilisateur
+  /// @param userId identifiant de l'utilisateur
   /// @param filtreDisponibles nouvelle valeur du filtre
   public void majFiltres(String userId, boolean filtreDisponibles) {
     upsertConfig(userId, Map.of("filtreDisponibles", filtreDisponibles));
@@ -252,6 +272,7 @@ public class UserConfigService {
       case "notifArtistesPush" -> "notif_artistes_push";
       case "notifSallesPush" -> "notif_salles_push";
       case "theme" -> "theme";
+      case "onboardingVu" -> "onboarding_vu";
       default -> throw new IllegalArgumentException("Champ inconnu : " + champJava);
     };
   }

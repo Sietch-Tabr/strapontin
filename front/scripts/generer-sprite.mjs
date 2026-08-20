@@ -45,6 +45,8 @@ const ICONES = [
   'info',
   'triangle-alert',
   'circle-x',
+  'check',
+  'download',
 ];
 
 const pkgLucide = resolve(RACINE, 'node_modules/lucide-static/package.json');

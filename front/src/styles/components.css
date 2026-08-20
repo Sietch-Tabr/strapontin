@@ -259,6 +259,37 @@ textarea:focus {
   color: #991b1b;
 }
 
+/* ── Bannière d'installation PWA (InstallPwaBanner.vue) ──── */
+.pwa-install-banniere {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+}
+@media (min-width: 1025px) {
+  .pwa-install-banniere {
+    left: var(--sidebar-w);
+    bottom: 0;
+  }
+}
+.pwa-install-message {
+  flex: 1;
+  font-size: 0.875rem;
+}
+.pwa-install-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .dark .banniere-overlay--info {
   background: #0c1a3a;
   border-color: #1e3a8a;
@@ -994,6 +1025,35 @@ dialog::backdrop {
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1rem;
+}
+
+/* ── Modale à étapes (ModaleEtapes.vue) ──────────────────── */
+.etapes-corps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+.etapes-icone {
+  color: var(--primary);
+}
+.etapes-progression {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.etapes-point {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.15s;
+}
+.etapes-point--actif {
+  background: var(--primary);
 }
 
 /* ── Indicateur de chargement ─────────────────────────────── */

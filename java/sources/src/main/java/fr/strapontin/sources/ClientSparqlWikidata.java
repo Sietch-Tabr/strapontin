@@ -16,10 +16,11 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.UnknownContentTypeException;
 
 /// Client SPARQL Wikidata partagé entre {@link WikidataSalleSource} et {@link
 /// WikidataArtisteSource} : User-Agent obligatoire, timeout 60s, retry 429 (Retry-After + backoff
-/// exponentiel) et 503 (×3).
+/// exponentiel) et erreurs transitoires 502/503/content-type inattendu (×3).
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -30,7 +31,11 @@ final class ClientSparqlWikidata {
   static final String BASE_URL = "https://query.wikidata.org/sparql";
   private static final String USER_AGENT =
       "Strapontin/2.6.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr) SpringBoot/4.1";
-  private static final int RETRY_503_MAX = 3;
+  // 502 (nginx en amont de l'endpoint SPARQL) et un content-type inattendu (application/octet-
+  // stream au lieu de application/sparql-results+json — constaté en production, réponse
+  // vraisemblablement tronquée ou mal formée par un proxy intermédiaire) partagent le même
+  // caractère transitoire que 503 : un simple retry les résout la plupart du temps.
+  private static final int RETRY_TRANSITOIRE_MAX = 3;
   private static final int RETRY_TOTAL_MAX = 5;
   private static final Duration TIMEOUT_LECTURE = Duration.ofSeconds(60);
   // espacement proactif entre appels, sur le même principe que
@@ -89,7 +94,7 @@ final class ClientSparqlWikidata {
     compteurBilan.enregistrerAppel();
     cadenceur.attendre();
     int tentative = 0;
-    int tentatives503 = 0;
+    int tentativesTransitoires = 0;
     while (tentative < RETRY_TOTAL_MAX) {
       tentative++;
       try {
@@ -98,14 +103,19 @@ final class ClientSparqlWikidata {
         long attenteMs = extraireRetryAfterMs(e.getResponseHeaders()).orElse(1000L << tentative);
         log.warn("Wikidata 429 — attente {} ms avant retry", attenteMs);
         dormir(attenteMs);
-      } catch (HttpServerErrorException.ServiceUnavailable e) {
-        tentatives503++;
-        if (tentatives503 >= RETRY_503_MAX) {
-          log.warn("Wikidata 503 après {} tentatives, abandon", RETRY_503_MAX);
+      } catch (HttpServerErrorException.ServiceUnavailable
+          | HttpServerErrorException.BadGateway
+          | UnknownContentTypeException e) {
+        tentativesTransitoires++;
+        if (tentativesTransitoires >= RETRY_TRANSITOIRE_MAX) {
+          log.warn(
+              "Wikidata erreur transitoire après {} tentatives, abandon : {}",
+              RETRY_TRANSITOIRE_MAX,
+              e.getMessage());
           compteurBilan.enregistrerErreur();
           return null;
         }
-        dormir(1000L * tentatives503);
+        dormir(1000L * tentativesTransitoires);
       } catch (Exception e) {
         compteurBilan.enregistrerErreur();
         log.warn("Wikidata SPARQL erreur : {}", e.getMessage());

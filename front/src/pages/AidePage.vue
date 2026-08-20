@@ -5,6 +5,14 @@
     </div>
 
     <div class="max-w-2xl">
+      <ChecklistPremiersPas />
+
+      <p class="aide-footer">
+        <button type="button" class="btn btn-texte" @click="revoirOnboarding">
+          Revoir la présentation de bienvenue
+        </button>
+      </p>
+
       <section class="aide-section" aria-labelledby="titre-usage">
         <p id="titre-usage" class="aide-label">Usage courant</p>
         <div class="aide-grille">
@@ -210,8 +218,11 @@ defineOptions({ name: 'AidePage' })
 import { ref, shallowRef, onMounted } from 'vue'
 import { useToasts } from '../composables/useToasts.js'
 import { corpsJsonOuVide } from '../utils/reponseJson.js'
+import { useOnboarding } from '../composables/useOnboarding.js'
+import ChecklistPremiersPas from '../components/ChecklistPremiersPas.vue'
 
 const { afficherToast } = useToasts()
+const { ouvrir: revoirOnboarding } = useOnboarding()
 
 const config = shallowRef(null)
 const dialogRef = ref(null)

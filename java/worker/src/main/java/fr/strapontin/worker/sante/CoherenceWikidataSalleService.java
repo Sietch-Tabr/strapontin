@@ -80,8 +80,9 @@ public class CoherenceWikidataSalleService {
     }
 
     Map<UUID, EnrichissementSalle> resultats = wikidata.enrichirLot(candidats);
-    Map<UUID, List<String>> villesConcertsReelles =
-        chargerVillesConcertsReelles(candidats.stream().map(SalleAEnrichir::id).toList());
+    List<UUID> salleIds = candidats.stream().map(SalleAEnrichir::id).toList();
+    Map<UUID, List<String>> villesConcertsReelles = chargerVillesConcertsReelles(salleIds);
+    Map<UUID, String> signaturesDejaSignalees = chargerSignaturesDejaSignalees(salleIds);
 
     int incoherences = 0;
     for (SalleAEnrichir salle : candidats) {
@@ -91,12 +92,47 @@ public class CoherenceWikidataSalleService {
       if (communeWikidata == null || communeWikidata.isBlank()) continue;
       Coherence coherence =
           evaluerCoherence(salle, communeWikidata, villesConcertsReelles.get(salle.id()));
-      if (coherence == Coherence.COHERENTE) continue;
+      String signatureConnue = signaturesDejaSignalees.get(salle.id());
+      if (coherence == Coherence.COHERENTE) {
+        if (signatureConnue != null) memoriserSignature(salle.id(), null);
+        continue;
+      }
       incoherences++;
-      loggerIncoherence(salle, communeWikidata, coherence == Coherence.INCOHERENTE_PARTIELLE);
+      boolean partielle = coherence == Coherence.INCOHERENTE_PARTIELLE;
+      String signature = communeWikidata + "|" + partielle;
+      if (signature.equals(signatureConnue)) continue;
+      memoriserSignature(salle.id(), signature);
+      loggerIncoherence(salle, communeWikidata, partielle);
     }
     log.info("coherence:wikidata candidats={} incoherences={}", candidats.size(), incoherences);
     return incoherences;
+  }
+
+  /// Charge, pour chaque salle candidate, la signature de la dernière incohérence déjà journalisée
+  /// (commune Wikidata + type de contamination), absente si jamais signalée ou si la dernière
+  /// incohérence signalée a depuis été résolue.
+  private Map<UUID, String> chargerSignaturesDejaSignalees(List<UUID> salleIds) {
+    if (salleIds.isEmpty()) return Map.of();
+    Map<UUID, String> parSalle = new HashMap<>();
+    jdbc.query(
+        "SELECT id, coherence_wikidata_signalee FROM salles"
+            + " WHERE id IN (:ids) AND coherence_wikidata_signalee IS NOT NULL",
+        Map.of("ids", salleIds),
+        (RowCallbackHandler)
+            rs ->
+                parSalle.put(
+                    rs.getObject("id", UUID.class), rs.getString("coherence_wikidata_signalee")));
+    return parSalle;
+  }
+
+  // Map.of() refuse une valeur null (réinitialisation d'une signature résolue) — HashMap requis.
+  private void memoriserSignature(UUID salleId, String signature) {
+    Map<String, Object> params = new HashMap<>();
+    params.put("signature", signature);
+    params.put("id", salleId.toString());
+    jdbc.update(
+        "UPDATE salles SET coherence_wikidata_signalee = :signature WHERE id = CAST(:id AS uuid)",
+        params);
   }
 
   /// Charge, pour chaque salle candidate, les villes réelles distinctes de ses concerts

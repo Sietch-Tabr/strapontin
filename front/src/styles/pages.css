@@ -358,6 +358,40 @@
   text-decoration: underline;
 }
 
+.checklist-premiers-pas {
+  margin-bottom: 1.5rem;
+}
+.checklist-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+}
+.checklist-item--fait {
+  color: var(--fg-muted);
+  text-decoration: line-through;
+}
+.checklist-marque {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  color: var(--primary-fg);
+}
+.checklist-marque--fait {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
 /* ── Container query — Découverte ───────────────────────── */
 .decouverte-conteneur {
   container-type: inline-size;

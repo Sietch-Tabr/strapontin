@@ -518,6 +518,31 @@ class TicketmasterSourceTest {
     serveur.verify();
   }
 
+  // un nom sans correspondance ne doit pas re-déclencher indéfiniment le même WARN à chaque
+  // appel : le cache de throttle retient le nom déjà signalé.
+  @Test
+  void rechercherAttractionId_aucuneCorrespondance_memoriseNomDansLeCacheDeThrottle() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
+        .andRespond(
+            withSuccess(
+                """
+                {"_embedded":{"attractions":[{"id":"K8vZ917xyz","name":"Furiez"}]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    com.github.benmanes.caffeine.cache.Cache<String, Boolean> cache =
+        com.github.benmanes.caffeine.cache.Caffeine.newBuilder().build();
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient, cache);
+    String id = source.rechercherAttractionId("Furies");
+
+    assertNull(id);
+    assertEquals(Boolean.TRUE, cache.getIfPresent("furies"));
+  }
+
   @Test
   void rechercherAttractionId_correspondanceExacteApresDecalage_retourneId() {
     // non-régression : TM retourne "Shy" avant "Shy'm" (tri popularité) → doit trouver Shy'm

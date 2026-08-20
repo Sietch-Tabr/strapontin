@@ -112,7 +112,7 @@ public class ReconciliationNocturneService {
     List<Map<String, Object>> lies =
         jdbc.queryForList(
             """
-            SELECT asrc.artiste_id, asrc.identifiant_externe, a.nom
+            SELECT asrc.artiste_id, asrc.identifiant_externe, asrc.necessite_intervention_le, a.nom
             FROM artistes a JOIN artiste_sources asrc ON asrc.artiste_id = a.id
             WHERE asrc.source = 'ticketmaster'
             """,
@@ -123,25 +123,32 @@ public class ReconciliationNocturneService {
       UUID artisteId = (UUID) ligne.get("artiste_id");
       String attractionId = (String) ligne.get("identifiant_externe");
       String nom = (String) ligne.get("nom");
+      boolean dejaSignale = ligne.get("necessite_intervention_le") != null;
       String nomAttraction = tm.recupererNomAttraction(attractionId);
       if (nomAttraction == null) continue;
       if (Normalisation.normaliserTexte(nom).equals(Normalisation.normaliserTexte(nomAttraction))) {
         continue;
       }
       incoherences++;
-      signalerNomIncoherent(artisteId, attractionId, nom, nomAttraction);
+      signalerNomIncoherent(artisteId, attractionId, nom, nomAttraction, dejaSignale);
     }
     return incoherences;
   }
 
+  /// Marque l'artiste comme nécessitant une intervention et journalise l'incohérence.
+  ///
+  /// <p>Le WARN n'est journalisé qu'à la première détection ({@code dejaSignale} faux) — un état
+  /// déjà connu et stable (le flag reste posé tant qu'aucun fetch positif cohérent ou résolution
+  /// manuelle ne l'efface) ne doit pas générer indéfiniment le même WARN à chaque cycle nocturne.
   private void signalerNomIncoherent(
-      UUID artisteId, String attractionId, String nom, String nomAttraction) {
+      UUID artisteId, String attractionId, String nom, String nomAttraction, boolean dejaSignale) {
     jdbc.update(
         """
-        UPDATE artiste_sources SET necessite_intervention_le = now()
+        UPDATE artiste_sources SET necessite_intervention_le = COALESCE(necessite_intervention_le, now())
         WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
         """,
         Map.of("artisteId", artisteId.toString()));
+    if (dejaSignale) return;
     logsAdminWorker.inserer(
         "warn",
         "reconciliation-nocturne",

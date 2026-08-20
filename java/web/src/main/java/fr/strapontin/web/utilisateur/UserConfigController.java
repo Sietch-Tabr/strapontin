@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -108,6 +109,27 @@ public class UserConfigController {
     String userId = utilisateur(auth).id();
     userConfigService.majTheme(userId, requete.valeur());
     return ResponseEntity.ok(Map.of("succes", "theme", "theme", requete.valeur()));
+  }
+
+  /// Indique si l'utilisateur n'a pas encore vu la modale d'onboarding.
+  ///
+  /// @param auth contexte d'authentification
+  /// @return {@code {"nonVu": true|false}}
+  @GetMapping("/onboarding")
+  public ResponseEntity<Map<String, Object>> onboarding(Authentication auth) {
+    String userId = utilisateur(auth).id();
+    return ResponseEntity.ok(Map.of("nonVu", userConfigService.onboardingNonVu(userId)));
+  }
+
+  /// Marque la modale d'onboarding comme vue pour l'utilisateur courant.
+  ///
+  /// @param auth contexte d'authentification
+  /// @return 204 No Content
+  @PostMapping("/onboarding-vu")
+  public ResponseEntity<Void> marquerOnboardingVu(Authentication auth) {
+    String userId = utilisateur(auth).id();
+    userConfigService.marquerOnboardingVu(userId);
+    return ResponseEntity.noContent().build();
   }
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
