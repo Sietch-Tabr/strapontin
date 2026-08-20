@@ -29,7 +29,14 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   private static final Logger log = LoggerFactory.getLogger(ResolveurNomCanonique.class);
 
   private static final String DEEZER_BASE = "https://api.deezer.com";
-  private static final double SEUIL_CONFIANCE_DEEZER = 0.7;
+  // Un seuil trop permissif expose au cas où le vrai artiste n'apparaît pas du tout dans le pool
+  // de candidats Deezer : seul un homonyme sans rapport mais mieux référencé franchit alors le
+  // seuil et est retenu par défaut. Constaté à 0.7 sur des paires réellement corrompues en
+  // production (similarité Levenshtein normalisée) : Monolord/Jon Lord=0.750,
+  // The Brooks/The Kooks=0.800, Sara Correia/Sara Carreira=0.846 — toutes en dessous de 0.85.
+  // Un vrai rapprochement légitime (accent, casse, article) reste identique après normalisation
+  // (similarité 1.0), jamais dans cette zone grise.
+  private static final double SEUIL_CONFIANCE_DEEZER = 0.85;
   // Un seul résultat ne suffit pas à distinguer un artiste connu d'un homonyme marginal : Deezer
   // classe ses résultats par pertinence textuelle, pas par popularité — une recherche "Young Thug"
   // peut renvoyer en 1ère position "Young T.H.U.G." (id=1062315, nb_fan=323) avant le vrai rappeur
