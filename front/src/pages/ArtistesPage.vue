@@ -149,6 +149,17 @@ async function rechercher() {
 
 async function ajouter(nom, wikidataId = null) {
   erreur.value = ''
+  // le nudge doit se baser sur l'état AVANT l'ajout — un seul ajout ne doit pas se compter
+  // lui-même comme preuve d'un compte déjà actif.
+  let premierAjout = false
+  try {
+    const repStats = await fetch('/api/parametres/stats')
+    if (repStats.ok) {
+      const stats = await corpsJsonOuVide(repStats)
+      premierAjout = (stats.nbArtistes ?? 0) + (stats.nbSalles ?? 0) === 0
+    }
+  } catch (_) {}
+
   try {
     const rep = await fetch('/api/artistes', {
       method: 'POST',
@@ -166,6 +177,12 @@ async function ajouter(nom, wikidataId = null) {
       return
     }
     afficherToast(`Fetch en cours pour « ${nom} »… Les concerts apparaîtront dans quelques secondes.`, 'info')
+    if (premierAjout) {
+      afficherToast(
+        'Astuce : activez les notifications dans Paramètres pour être alerté de vos prochains concerts.',
+        'info',
+      )
+    }
     q.value = ''
     qSoumis.value = ''
     donnees.value = await charger()

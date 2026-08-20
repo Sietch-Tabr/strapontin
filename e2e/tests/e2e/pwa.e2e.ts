@@ -162,6 +162,71 @@ test.describe("Scénario: PWA — manifest et installabilité", () => {
   });
 });
 
+test.describe("Scénario: bannière d'installation PWA (usePwaInstall.js)", () => {
+  // beforeinstallprompt n'est réellement déclenché par aucun navigateur de test Playwright
+  // (heuristiques d'engagement Chrome) — un Event synthétique dispatché après chargement
+  // reproduit fidèlement le comportement du listener (preventDefault + logique de seuil), sans
+  // dépendre de .prompt()/.userChoice (propres à l'événement natif, hors périmètre ici).
+  function dispatcherEvenementDiffere(page: import("@playwright/test").Page) {
+    return page.evaluate(() => {
+      window.dispatchEvent(
+        new Event("beforeinstallprompt", { cancelable: true }),
+      );
+    });
+  }
+
+  test("pwaInstall_sousLeSeuilDeVisites_banniereMasquee", async ({ page }) => {
+    await page.addInitScript(() =>
+      localStorage.setItem("pwa_install_visites", "0"),
+    );
+    await page.goto("/");
+    await dispatcherEvenementDiffere(page);
+    await expect(page.locator(".pwa-install-banniere")).not.toBeVisible();
+  });
+
+  test("pwaInstall_seuilAtteint_banniereAffichee", async ({ page }) => {
+    await page.addInitScript(() =>
+      localStorage.setItem("pwa_install_visites", "2"),
+    );
+    await page.goto("/");
+    await dispatcherEvenementDiffere(page);
+    await expect(page.locator(".pwa-install-banniere")).toBeVisible({
+      timeout: 3000,
+    });
+  });
+
+  test("pwaInstall_plusTard_masqueEtReinitialiseLeCompteurDeVisites", async ({
+    page,
+  }) => {
+    await page.addInitScript(() =>
+      localStorage.setItem("pwa_install_visites", "2"),
+    );
+    await page.goto("/");
+    await dispatcherEvenementDiffere(page);
+    const banniere = page.locator(".pwa-install-banniere");
+    await expect(banniere).toBeVisible({ timeout: 3000 });
+
+    await banniere.getByRole("button", { name: "Plus tard" }).click();
+    await expect(banniere).not.toBeVisible();
+    const visites = await page.evaluate(() =>
+      localStorage.getItem("pwa_install_visites"),
+    );
+    expect(visites).toBe("0");
+  });
+
+  test("pwaInstall_dejaInstalle_neReapparaitJamaisMemeAuSeuil", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("pwa_install_visites", "2");
+      localStorage.setItem("pwa_install_installe", "1");
+    });
+    await page.goto("/");
+    await dispatcherEvenementDiffere(page);
+    await expect(page.locator(".pwa-install-banniere")).not.toBeVisible();
+  });
+});
+
 test.describe("Scénario: PWA — cache HTTP assets Vite", () => {
   test("assets_vite_servis_avec_cache_immutable", async ({ request }) => {
     const indexRep = await request.get("/");
