@@ -197,6 +197,44 @@ class OverpassSalleSourceTest {
     serveur.verify();
   }
 
+  // Une fenêtre d'indisponibilité de l'instance publique (connexion refusée sur plusieurs lots
+  // consécutifs) ne doit pas brûler tout le reste du cycle en retries voués à l'échec — le
+  // 4e département, jamais interrogé (aucune expectation déclarée pour lui), le prouve.
+  @Test
+  void enrichirLot_echecsConsecutifs_interromptLeCycleSansInterrogerLaSuite() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    List<SalleAEnrichir> salles =
+        List.of(
+            salleDept("Salle 01", "01"),
+            salleDept("Salle 02", "02"),
+            salleDept("Salle 03", "03"),
+            salleDept("Salle 04", "04"));
+
+    for (int i = 0; i < 3; i++) {
+      serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
+      serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
+    }
+
+    OverpassSalleSource source = new OverpassSalleSource(restClient);
+    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(salles);
+
+    assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
+  private static SalleAEnrichir salleDept(String nom, String dept) {
+    return new SalleAEnrichir(
+        UUID.randomUUID(),
+        nom,
+        fr.strapontin.core.Normalisation.normaliserTexte(nom),
+        null,
+        dept,
+        null);
+  }
+
   @Test
   void enrichirLot_nomAvecApostropheDroite_matchApostropheCourbeOsm() {
     RestClient.Builder builder = RestClient.builder();
