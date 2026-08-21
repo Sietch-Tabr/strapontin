@@ -142,7 +142,12 @@ class ReferentielArtistesServiceTest {
 
     assertTrue(maj);
     verify(jdbc)
-        .update(contains("UPDATE artiste_sources SET necessite_intervention_le = NULL"), anyMap());
+        .update(
+            org.mockito.ArgumentMatchers.argThat(
+                (String sql) ->
+                    sql.contains("necessite_intervention_le = NULL")
+                        && sql.contains("nom_tm_ignore = nom_tm_incoherent")),
+            anyMap());
     verify(logAdminService).logAdmin(eq("info"), eq("admin"), anyString(), anyMap());
   }
 

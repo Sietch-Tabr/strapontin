@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.sante;
 
+import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.sources.TicketmasterSource.CandidatVenueTM;
@@ -107,12 +108,19 @@ public class ReconciliationNocturneService {
   /// **tous** les artistes liés TM, pas seulement les `suspect_depuis` : un tribute/homonyme a des
   /// événements à venir, il ne déclenche donc jamais le compteur passif `nb_zero_consecutifs`.
   ///
+  /// <p>La comparaison passe par {@link CorrespondanceArtiste#estDoublonArtiste} (même algorithme
+  /// flou que la réconciliation) plutôt qu'une égalité stricte post-normalisation — un écart
+  /// purement cosmétique (espace, article) n'est jamais signalé. Un écart réel (nom de scène) n'est
+  /// resignalé que si le nom TM diffère de {@code nom_tm_ignore}, la dernière valeur explicitement
+  /// acceptée par un admin.
+  ///
   /// @return nombre d'incohérences détectées
   private int healthCheckNomsArtistesTM() {
     List<Map<String, Object>> lies =
         jdbc.queryForList(
             """
-            SELECT asrc.artiste_id, asrc.identifiant_externe, asrc.necessite_intervention_le, a.nom
+            SELECT asrc.artiste_id, asrc.identifiant_externe, asrc.necessite_intervention_le,
+                   asrc.nom_tm_ignore, a.nom
             FROM artistes a JOIN artiste_sources asrc ON asrc.artiste_id = a.id
             WHERE asrc.source = 'ticketmaster'
             """,
@@ -123,12 +131,15 @@ public class ReconciliationNocturneService {
       UUID artisteId = (UUID) ligne.get("artiste_id");
       String attractionId = (String) ligne.get("identifiant_externe");
       String nom = (String) ligne.get("nom");
+      String nomTmIgnore = (String) ligne.get("nom_tm_ignore");
       boolean dejaSignale = ligne.get("necessite_intervention_le") != null;
       String nomAttraction = tm.recupererNomAttraction(attractionId);
       if (nomAttraction == null) continue;
-      if (Normalisation.normaliserTexte(nom).equals(Normalisation.normaliserTexte(nomAttraction))) {
+      if (CorrespondanceArtiste.estDoublonArtiste(
+          Normalisation.normaliserTexte(nom), Normalisation.normaliserTexte(nomAttraction))) {
         continue;
       }
+      if (nomAttraction.equals(nomTmIgnore)) continue;
       incoherences++;
       signalerNomIncoherent(artisteId, attractionId, nom, nomAttraction, dejaSignale);
     }
@@ -140,14 +151,19 @@ public class ReconciliationNocturneService {
   /// <p>Le WARN n'est journalisé qu'à la première détection ({@code dejaSignale} faux) — un état
   /// déjà connu et stable (le flag reste posé tant qu'aucun fetch positif cohérent ou résolution
   /// manuelle ne l'efface) ne doit pas générer indéfiniment le même WARN à chaque cycle nocturne.
+  /// {@code nom_tm_incoherent} est en revanche toujours rafraîchi, y compris quand le flag était
+  /// déjà posé — {@code ignorerIntervention} (module web) doit pouvoir mémoriser le nom TM
+  /// *courant* comme accepté, pas une valeur obsolète d'une nuit précédente.
   private void signalerNomIncoherent(
       UUID artisteId, String attractionId, String nom, String nomAttraction, boolean dejaSignale) {
     jdbc.update(
         """
-        UPDATE artiste_sources SET necessite_intervention_le = COALESCE(necessite_intervention_le, now())
+        UPDATE artiste_sources
+        SET necessite_intervention_le = COALESCE(necessite_intervention_le, now()),
+            nom_tm_incoherent = :nomAttraction
         WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
         """,
-        Map.of("artisteId", artisteId.toString()));
+        Map.of("artisteId", artisteId.toString(), "nomAttraction", nomAttraction));
     if (dejaSignale) return;
     logsAdminWorker.inserer(
         "warn",
