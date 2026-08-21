@@ -23,14 +23,14 @@ import org.springframework.stereotype.Service;
 /// Orchestrateur d'enrichissement des artistes (étape 3 +).
 ///
 /// Boucle sur les {@link SourceEnrichissementArtiste} injectées (une nouvelle source = un bean
-/// Spring, sans modification de ce service). L'ordre de déclaration des beans dans
-/// {@code EnrichissementConfiguration} importe : {@code WikidataArtisteSource} doit être déclaré
-/// avant {@code DeezerArtisteSource} — le {@code deezerId} (P2722) découvert par Wikidata est
-/// propagé aux sources suivantes dans la même passe pour que Deezer puisse confirmer le nom.
+/// Spring, sans modification de ce service). L'ordre de déclaration des beans dans {@code
+/// EnrichissementConfiguration} importe : {@code WikidataArtisteSource} doit être déclaré avant
+/// {@code DeezerArtisteSource} — le {@code deezerId} (P2722) découvert par Wikidata est propagé aux
+/// sources suivantes dans la même passe pour que Deezer puisse confirmer le nom.
 ///
-/// Contient la logique : le P6262 Wikidata sert de cross-validation indépendante de TM
-/// pour l'entrée {@code artiste_sources(source='ticketmaster')} — absent → insertion auto,
-/// identique → rien, différent → log seul (pas d'écrasement automatique d'un lien déjà établi).
+/// Contient la logique : le P6262 Wikidata sert de cross-validation indépendante de TM pour
+/// l'entrée {@code artiste_sources(source='ticketmaster')} — absent → insertion auto, identique →
+/// rien, différent → log seul (pas d'écrasement automatique d'un lien déjà établi).
 ///
 /// Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : la
 /// découverte Wikidata sans Q-ID connu est séquentielle (une requête par artiste, rate-limitée) —
@@ -63,10 +63,10 @@ public class EnrichissementArtistesService {
     this.logsAdminWorker = logsAdminWorker;
   }
 
-  /// Enrichit les artistes sans {@code wikidata_id} dont {@code jour_batch} correspond au jour
-  /// ISO courant (rotation hebdomadaire, — remplace l'ancien plafond fixe de 500/nuit),
-  /// priorisés par nombre de concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un
-  /// {@code nom_affiche} déjà présent (override manuel admin).
+  /// Enrichit les artistes sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
+  /// courant (rotation hebdomadaire, — remplace l'ancien plafond fixe de 500/nuit), priorisés par
+  /// nombre de concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un {@code
+  /// nom_affiche} déjà présent (override manuel admin).
   ///
   /// @return nombre d'artistes effectivement mis à jour
   public int enrichir() {
@@ -88,10 +88,10 @@ public class EnrichissementArtistesService {
     return nbEnrichis;
   }
 
-  /// Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source
-  /// implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer —
-  /// même mécanisme générique que {@code WorkerStatsService.remonterBilan} et
-  /// {@link EnrichissementSallesService#remonterBilans}.
+  /// Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source implémentant
+  /// {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer — même mécanisme générique
+  /// que {@code WorkerStatsService.remonterBilan} et {@link
+  /// EnrichissementSallesService#remonterBilans}.
   private void remonterBilans() {
     for (SourceEnrichissementArtiste source : sources) {
       if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
@@ -100,7 +100,7 @@ public class EnrichissementArtistesService {
           .evaluer(
               "reconciliation:nocturne",
               capitaliser(source.nom()),
-              BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT)
+              avecBilan.seuilAppelsMinAlerte())
           .ifPresent(
               entree ->
                   logsAdminWorker.inserer(
@@ -207,12 +207,11 @@ public class EnrichissementArtistesService {
             : a.ticketmasterAttractionId());
   }
 
-  /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code
-  ///     wikidataId} découvert est déjà porté par un autre artiste (contrainte {@code
-  ///     idx_artistes_wikidata_id}) — signe d'un faux positif de correspondance ou d'un doublon
-  /// non encore fusionné; le conflit est loggé plutôt que de faire échouer tout le
-  ///     cycle de réconciliation, et la cross-validation P6262 associée est également sautée
-  ///     (basée sur le même enrichissement).
+  /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
+  ///   découvert est déjà porté par un autre artiste (contrainte {@code idx_artistes_wikidata_id})
+  ///   — signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le conflit
+  ///   est loggé plutôt que de faire échouer tout le cycle de réconciliation, et la
+  ///   cross-validation P6262 associée est également sautée (basée sur le même enrichissement).
   private boolean mettreAJourArtiste(UUID artisteId, String nom, EnrichissementArtiste e) {
     Map<String, Object> params = new HashMap<>();
     params.put("wikidataId", e.wikidataId());

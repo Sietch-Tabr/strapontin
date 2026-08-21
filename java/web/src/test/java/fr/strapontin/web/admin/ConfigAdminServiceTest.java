@@ -5,11 +5,13 @@
 package fr.strapontin.web.admin;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.config.ConfigService;
@@ -31,7 +33,12 @@ class ConfigAdminServiceTest {
   void setUp() {
     configService = mock(ConfigService.class);
     logAdminService = mock(LogAdminService.class);
-    service = new ConfigAdminService(configService, logAdminService, mock(RestClient.class));
+    service =
+        new ConfigAdminService(
+            configService,
+            logAdminService,
+            mock(RestClient.class),
+            mock(fr.strapontin.sources.CadenceurAppels.class));
   }
 
   @Test
@@ -92,5 +99,36 @@ class ConfigAdminServiceTest {
     String clePrivee = "A".repeat(43);
     service.sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee, "admin-1");
     verify(configService).sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee);
+  }
+
+  // Ticketmaster est aussi appelé directement par le worker (processus indépendant) : sans passer
+  // par le cadenceur partagé avant l'appel HTTP, les deux processus ne peuvent pas coordonner leur
+  // rythme d'appel et le rate-limit TM (Spike Arrest) reste exposé.
+  @Test
+  void testerApiTm_cleConfiguree_attendLeCadenceurAvantLAppelHttp() {
+    when(configService.lireConfig("TICKETMASTER_API_KEY"))
+        .thenReturn(java.util.Optional.of("fake-key"));
+    fr.strapontin.sources.CadenceurAppels cadenceur =
+        mock(fr.strapontin.sources.CadenceurAppels.class);
+
+    RestClient.Builder builder = RestClient.builder();
+    org.springframework.test.web.client.MockRestServiceServer serveur =
+        org.springframework.test.web.client.MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+    serveur
+        .expect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(
+                org.hamcrest.Matchers.containsString("app.ticketmaster.com")))
+        .andRespond(
+            org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess());
+
+    ConfigAdminService serviceCadence =
+        new ConfigAdminService(configService, logAdminService, restClient, cadenceur);
+
+    boolean resultat = serviceCadence.testerApiTm();
+
+    assertTrue(resultat);
+    verify(cadenceur).attendre();
+    serveur.verify();
   }
 }

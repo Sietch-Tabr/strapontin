@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -52,14 +53,31 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   private static final Logger log = LoggerFactory.getLogger(OverpassSalleSource.class);
 
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
+  // Champ (et non variable locale d'enrichirLot) pour que le disjoncteur protège tout le cycle
+  // nocturne, pas seulement le lot de persistance courant (EnrichissementSallesService rappelle
+  // enrichirLot une fois par lot de TAILLE_LOT_PERSISTANCE) — remis à zéro par preleverBilan, déjà
+  // appelé une seule fois par cycle, pour se réarmer automatiquement au cycle suivant.
+  private final AtomicInteger echecsConsecutifsCycle = new AtomicInteger();
 
   /// Retourne le bilan agrégé des appels HTTP Overpass depuis le dernier prélèvement et remet les
-  /// compteurs à zéro.
+  /// compteurs à zéro — réarme aussi le disjoncteur pour le prochain cycle.
   ///
   /// @return le bilan depuis le dernier prélèvement
   @Override
   public BilanFetch preleverBilan() {
+    echecsConsecutifsCycle.set(0);
     return compteurBilan.preleverBilan();
+  }
+
+  // Un seul déclenchement du disjoncteur (SEUIL_ECHECS_CONSECUTIFS échecs, jusqu'à NB_ESSAIS_MAX
+  // tentatives chacun) suffit à atteindre BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT (3) : sans
+  // seuil dédié plus élevé, toute coupure brève de l'instance publique escaladerait
+  // systématiquement en alerte email "panne totale", alors que le WARN du disjoncteur signale déjà
+  // l'incident. Une dégradation qui persiste sur plusieurs cycles reste couverte par
+  // alerterSiCycleImproductif (EnrichissementSallesService), mécanisme distinct.
+  @Override
+  public int seuilAppelsMinAlerte() {
+    return SEUIL_ECHECS_CONSECUTIFS * NB_ESSAIS_MAX + 1;
   }
 
   private static final String BASE_URL = "https://overpass-api.de/api/interpreter";
@@ -102,7 +120,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   private static final Pattern APOSTROPHE_DROITE = Pattern.compile("'");
 
   private final RestClient restClient;
-  private final CadenceurAppels cadenceur = new CadenceurAppels(DELAI_MIN_ENTRE_APPELS_MS);
+  private final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS);
 
   /// Crée une instance avec un RestClient par défaut (timeout connexion 5s, lecture 35s).
   public OverpassSalleSource() {
@@ -138,11 +156,14 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
       log.debug("Overpass — {} salle(s) ignorée(s), département inconnu", sansDept);
     }
     if (aTraiter.isEmpty()) return Map.of();
+    if (echecsConsecutifsCycle.get() >= SEUIL_ECHECS_CONSECUTIFS) {
+      log.debug("Overpass — disjoncteur déjà ouvert pour ce cycle, lot ignoré sans appel HTTP");
+      return Map.of();
+    }
 
     Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
     Map<String, List<SalleAEnrichir>> parDept =
         aTraiter.stream().collect(Collectors.groupingBy(SalleAEnrichir::dept));
-    int echecsConsecutifs = 0;
     for (var entree : parDept.entrySet()) {
       CentreDept centre = CentresDepartement.PAR_DEPT.get(entree.getKey());
       if (centre == null) continue;
@@ -154,16 +175,16 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
         ResultatLot resultat = enrichirUnLot(lot, centre);
         resultats.putAll(resultat.resultats());
         if (!resultat.succes()) {
-          echecsConsecutifs++;
-          if (echecsConsecutifs >= SEUIL_ECHECS_CONSECUTIFS) {
+          int echecs = echecsConsecutifsCycle.incrementAndGet();
+          if (echecs >= SEUIL_ECHECS_CONSECUTIFS) {
             log.warn(
                 "Overpass — {} échecs consécutifs, instance probablement indisponible, cycle"
                     + " interrompu (candidats restants retentés au prochain cycle)",
-                echecsConsecutifs);
+                echecs);
             return resultats;
           }
         } else {
-          echecsConsecutifs = 0;
+          echecsConsecutifsCycle.set(0);
         }
       }
     }

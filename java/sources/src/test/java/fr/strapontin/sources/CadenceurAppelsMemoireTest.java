@@ -8,12 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link CadenceurAppels}.
-class CadenceurAppelsTest {
+/// Tests unitaires de {@link CadenceurAppelsMemoire}.
+class CadenceurAppelsMemoireTest {
 
   @Test
   void attendre_deuxAppelsRapproches_respecteLeDelaiMinimal() {
-    CadenceurAppels cadenceur = new CadenceurAppels(100);
+    CadenceurAppels cadenceur = new CadenceurAppelsMemoire(100);
     long debut = System.currentTimeMillis();
     cadenceur.attendre();
     cadenceur.attendre();
@@ -23,7 +23,7 @@ class CadenceurAppelsTest {
 
   @Test
   void attendre_appelsEspacesNaturellement_neBloquePas() throws InterruptedException {
-    CadenceurAppels cadenceur = new CadenceurAppels(50);
+    CadenceurAppels cadenceur = new CadenceurAppelsMemoire(50);
     cadenceur.attendre();
     Thread.sleep(60);
     long debut = System.currentTimeMillis();

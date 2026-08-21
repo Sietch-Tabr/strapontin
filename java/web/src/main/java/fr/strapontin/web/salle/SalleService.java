@@ -7,6 +7,7 @@ package fr.strapontin.web.salle;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.config.ConfigService;
@@ -67,6 +68,7 @@ public class SalleService {
   private final ConfigService configService;
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
+  private final CadenceurAppels cadenceurTicketmaster;
   private SalleService self;
 
   /// @param salleRepository accès aux données salles
@@ -74,15 +76,19 @@ public class SalleService {
   /// @param objectMapper désérialiseur JSON (pour l'API Ticketmaster)
   /// @param restClient client HTTP partagé (timeout 5s/10s défini dans {@link
   ///   fr.strapontin.web.WebConfiguration})
+  /// @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker (voir {@link
+  ///   fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
   public SalleService(
       SalleRepository salleRepository,
       ConfigService configService,
       ObjectMapper objectMapper,
-      RestClient restClient) {
+      RestClient restClient,
+      CadenceurAppels cadenceurTicketmaster) {
     this.salleRepository = salleRepository;
     this.configService = configService;
     this.objectMapper = objectMapper;
     this.restClient = restClient;
+    this.cadenceurTicketmaster = cadenceurTicketmaster;
   }
 
   /// Injection par setter de la référence proxifiée de ce bean — nécessaire pour que {@link
@@ -422,6 +428,7 @@ public class SalleService {
 
   /// Retourne les identifiants sources CSV d'une salle (ex. {@code
   /// "digitick:lempreinte,tm:rZ..."}).
+  ///
   /// @param salleId UUID de la salle
   /// @return CSV d'identifiants ou {@code null} si aucun
   public String lireIdentifiantsSources(UUID salleId) {
@@ -575,6 +582,7 @@ public class SalleService {
               + "&countryCode=FR&size=6&apikey="
               + URLEncoder.encode(tmKey.get(), StandardCharsets.UTF_8);
 
+      cadenceurTicketmaster.attendre();
       ReponseHttp reponse =
           restClient
               .get()

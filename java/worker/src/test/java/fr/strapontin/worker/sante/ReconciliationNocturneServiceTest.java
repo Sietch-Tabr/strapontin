@@ -332,4 +332,69 @@ class ReconciliationNocturneServiceTest {
 
     assertEquals(0, resultat.nomsIncoherentsTM());
   }
+
+  // écart purement cosmétique (espace) — absorbé par CorrespondanceArtiste.estDoublonArtiste,
+  // jamais signalé.
+  @Test
+  void executer_nomTMDiffereParEspaceSeulement_neSignalePas() {
+    UUID artisteId = UUID.randomUUID();
+    when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
+        .thenReturn(List.of(ligneArtisteLieTM(artisteId, "attractionKK", "KrashKarma")));
+    when(tm.recupererNomAttraction("attractionKK")).thenReturn("Krash Karma");
+
+    ResultatReconciliation resultat = service.executer();
+
+    assertEquals(0, resultat.nomsIncoherentsTM());
+    verify(logsAdminWorker, never())
+        .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("nom TM incohérent"), any());
+  }
+
+  // écart purement cosmétique (article) — absorbé par containment ratio, jamais signalé.
+  @Test
+  void executer_nomTMDiffereParArticleSeulement_neSignalePas() {
+    UUID artisteId = UUID.randomUUID();
+    when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
+        .thenReturn(List.of(ligneArtisteLieTM(artisteId, "attractionCB", "Chemical Brothers")));
+    when(tm.recupererNomAttraction("attractionCB")).thenReturn("The Chemical Brothers");
+
+    ResultatReconciliation resultat = service.executer();
+
+    assertEquals(0, resultat.nomsIncoherentsTM());
+  }
+
+  // divergence réelle déjà explicitement acceptée par un admin (nom_tm_ignore) pour cette même
+  // valeur de nom TM — ne doit ni reposer le flag ni rejournaliser.
+  @Test
+  void executer_nomTMDejaIgnoreParAdmin_neResignalePas() {
+    UUID artisteId = UUID.randomUUID();
+    Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid");
+    ligne.put("nom_tm_ignore", "-M-");
+    when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
+        .thenReturn(List.of(ligne));
+    when(tm.recupererNomAttraction("attractionM")).thenReturn("-M-");
+
+    ResultatReconciliation resultat = service.executer();
+
+    assertEquals(0, resultat.nomsIncoherentsTM());
+    verify(logsAdminWorker, never())
+        .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("nom TM incohérent"), any());
+  }
+
+  // le nom TM a de nouveau changé depuis le dernier accord admin — une divergence différente doit
+  // resignaler, même si une ancienne divergence avait été acceptée.
+  @Test
+  void executer_nomTMChangeApresAccordAdmin_resignale() {
+    UUID artisteId = UUID.randomUUID();
+    Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid");
+    ligne.put("nom_tm_ignore", "-M-");
+    when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
+        .thenReturn(List.of(ligne));
+    when(tm.recupererNomAttraction("attractionM")).thenReturn("M. Chedid Tribute");
+
+    ResultatReconciliation resultat = service.executer();
+
+    assertEquals(1, resultat.nomsIncoherentsTM());
+    verify(logsAdminWorker)
+        .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("nom TM incohérent"), any());
+  }
 }
