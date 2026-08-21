@@ -4,6 +4,18 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 2.8.1 — 21 août 2026",
+    categories: [
+      {
+        categorie: "Administration",
+        items: [
+          "Un écart purement cosmétique entre le nom suivi et le nom retourné par Ticketmaster (espace, article) ne fait plus apparaître à tort un artiste comme « Invalide » dans le référentiel Artistes.",
+          "Un nom de scène déjà explicitement accepté (bouton « Ignorer ») n'est plus resignalé indéfiniment à chaque vérification nocturne — seul un nouveau changement de nom déclenche à nouveau l'alerte.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 2.8.0 — 20 août 2026",
     categories: [
       {
