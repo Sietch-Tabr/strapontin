@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.config.ConfigService;
 import java.util.ArrayList;
@@ -17,11 +18,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
-/// Configuration applicative de l'onglet admin : statuts, sauvegarde, validation de format, test
-/// de la clé Ticketmaster.
+/// Configuration applicative de l'onglet admin : statuts, sauvegarde, validation de format, test de
+/// la clé Ticketmaster.
 ///
-/// <p>Extrait d'{@code AdminService} — `AdminService` reste dédié à la seule gestion des
-/// comptes utilisateurs.
+/// <p>Extrait d'{@code AdminService} — `AdminService` reste dédié à la seule gestion des comptes
+/// utilisateurs.
 ///
 /// @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
 /// @author Kwaite
@@ -60,15 +61,22 @@ public class ConfigAdminService {
   private final ConfigService configService;
   private final LogAdminService logAdminService;
   private final RestClient restClient;
+  private final CadenceurAppels cadenceurTicketmaster;
 
-  /// @param configService   lecture/écriture de la configuration applicative
+  /// @param configService lecture/écriture de la configuration applicative
   /// @param logAdminService journalisation des modifications de configuration
-  /// @param restClient      client HTTP pour les tests d'API externes
+  /// @param restClient client HTTP pour les tests d'API externes
+  /// @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker (voir {@link
+  ///   fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
   public ConfigAdminService(
-      ConfigService configService, LogAdminService logAdminService, RestClient restClient) {
+      ConfigService configService,
+      LogAdminService logAdminService,
+      RestClient restClient,
+      CadenceurAppels cadenceurTicketmaster) {
     this.configService = configService;
     this.logAdminService = logAdminService;
     this.restClient = restClient;
+    this.cadenceurTicketmaster = cadenceurTicketmaster;
   }
 
   /// Teste la validité de la clé Ticketmaster API en effectuant un appel minimal.
@@ -78,6 +86,7 @@ public class ConfigAdminService {
     Optional<String> cle = configService.lireConfig("TICKETMASTER_API_KEY");
     if (cle.isEmpty()) return false;
     try {
+      cadenceurTicketmaster.attendre();
       restClient.get().uri(TM_URL_TEST, cle.get()).retrieve().toBodilessEntity();
       return true;
     } catch (Exception e) {
@@ -105,8 +114,8 @@ public class ConfigAdminService {
 
   /// Valide et sauvegarde une clé de configuration.
   ///
-  /// @param cle     clé à mettre à jour
-  /// @param valeur  nouvelle valeur (null pour effacer)
+  /// @param cle clé à mettre à jour
+  /// @param valeur nouvelle valeur (null pour effacer)
   /// @param adminId identifiant de l'admin
   /// @throws ErreurMetier si la clé est non autorisée ou le format invalide
   public void sauvegarderConfig(String cle, String valeur, String adminId) {

@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.sources.DigitickSource;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
@@ -12,6 +13,7 @@ import fr.strapontin.sources.TicketmasterSource;
 import org.springframework.boot.quartz.autoconfigure.SchedulerFactoryBeanCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /// Beans applicatifs : sources de données et résolveur de noms canoniques.
 ///
@@ -37,15 +39,29 @@ public class WorkerConfiguration {
     return factory -> factory.setGlobalJobListeners(listener);
   }
 
+  /// Cadenceur des appels Ticketmaster partagé avec le module web (recherche interactive de salle,
+  /// test de clé API admin) — un verrou en mémoire ne coordonnerait pas deux processus
+  /// indépendants, voir {@link CadenceurAppelsPartage}.
+  ///
+  /// @param jdbc accès à la base partagée entre web et worker
+  /// @return cadenceur adossé à Postgres
+  @Bean
+  CadenceurAppels cadenceurTicketmaster(NamedParameterJdbcTemplate jdbc) {
+    return new CadenceurAppelsPartage(
+        jdbc, "ticketmaster", TicketmasterSource.DELAI_MIN_ENTRE_APPELS_MS);
+  }
+
   /// Client Ticketmaster Discovery v2.
   ///
-  /// Lit `TICKETMASTER_API_KEY` depuis `app_config` (AES-256-GCM).
-  /// Lève une `IllegalStateException` au démarrage si la clé est absente.
+  /// Lit `TICKETMASTER_API_KEY` depuis `app_config` (AES-256-GCM). Lève une `IllegalStateException`
+  /// au démarrage si la clé est absente.
   ///
   /// @param configService service de configuration chiffrée
+  /// @param cadenceurTicketmaster cadenceur partagé inter-processus
   /// @return instance configurée avec la clé API
   @Bean
-  TicketmasterSource ticketmasterSource(ConfigServiceWorker configService) {
+  TicketmasterSource ticketmasterSource(
+      ConfigServiceWorker configService, CadenceurAppels cadenceurTicketmaster) {
     String apiKey =
         configService
             .lireConfig("TICKETMASTER_API_KEY")
@@ -53,7 +69,7 @@ public class WorkerConfiguration {
                 () ->
                     new IllegalStateException(
                         "TICKETMASTER_API_KEY absent de app_config — démarrage impossible"));
-    return new TicketmasterSource(apiKey);
+    return new TicketmasterSource(apiKey, cadenceurTicketmaster);
   }
 
   /// Client Eventim France.

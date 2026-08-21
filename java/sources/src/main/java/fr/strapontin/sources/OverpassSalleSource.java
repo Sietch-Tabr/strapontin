@@ -120,7 +120,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   private static final Pattern APOSTROPHE_DROITE = Pattern.compile("'");
 
   private final RestClient restClient;
-  private final CadenceurAppels cadenceur = new CadenceurAppels(DELAI_MIN_ENTRE_APPELS_MS);
+  private final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS);
 
   /// Crée une instance avec un RestClient par défaut (timeout connexion 5s, lecture 35s).
   public OverpassSalleSource() {

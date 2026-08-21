@@ -48,7 +48,7 @@ final class ClientSparqlWikidata {
   private final RestClient restClient;
   private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
       new fr.strapontin.core.CompteurBilanFetch();
-  private final CadenceurAppels cadenceur = new CadenceurAppels(DELAI_MIN_ENTRE_APPELS_MS);
+  private final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS);
 
   /// Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture 60s).
   ClientSparqlWikidata() {

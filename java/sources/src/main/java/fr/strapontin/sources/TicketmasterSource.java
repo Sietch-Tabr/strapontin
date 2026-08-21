@@ -59,7 +59,10 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   // (maxBurstMessageCount=1.0) : le cadenceur n'espace que les instants de départ côté client, la
   // latence réseau peut donc faire percevoir deux appels espacés de 250ms comme trop rapprochés
   // côté serveur. Marge doublée à 100ms au-dessus du minimum strict.
-  private static final int DELAI_MIN_ENTRE_APPELS_MS = 300;
+  //
+  // Public : réutilisé par les cadenceurs partagés inter-processus (web, worker) pour rester
+  // aligné sur ce même délai plutôt que de dupliquer la valeur.
+  public static final int DELAI_MIN_ENTRE_APPELS_MS = 300;
   private static final String CHEMIN_EVENTS = "/events.json";
   private static final String TRI_DATE_ASC = "date,asc";
   private static final String CLE_EMBEDDED = "_embedded";
@@ -71,7 +74,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   // appels/erreurs porté par compteurBilan.
   private final AtomicInteger concertsManquesCumules = new AtomicInteger();
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
-  private final CadenceurAppels cadenceur = new CadenceurAppels(DELAI_MIN_ENTRE_APPELS_MS);
+  private final CadenceurAppels cadenceur;
   private final TicketmasterHealthCheck healthCheck;
   // Une absence de correspondance TM pour un nom donné est un résultat stable la plupart du temps
   // (rappelé à chaque cycle fetch:artistes:batch, aucun état négatif persisté pour permettre une
@@ -79,33 +82,57 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   // cycle pour le même nom déjà classé introuvable.
   private final Cache<String, Boolean> avertissementsAttractionIntrouvable;
 
-  /// Crée une instance avec la clé API fournie et un RestClient par défaut (timeout connexion 10s,
-  /// lecture 30s).
+  /// Crée une instance avec la clé API fournie, un RestClient par défaut (timeout connexion 10s,
+  /// lecture 30s) et un cadenceur en mémoire (mono-processus).
   ///
   /// @param apiKey clé API Ticketmaster Discovery v2
   public TicketmasterSource(String apiKey) {
+    this(apiKey, new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS));
+  }
+
+  /// Crée une instance avec la clé API et un cadenceur personnalisé (RestClient par défaut) —
+  /// utilisé en production pour injecter un cadenceur partagé inter-processus, voir {@link
+  /// CadenceurAppels} (Ticketmaster est aussi appelé directement par le module web, hors de ce
+  /// processus worker).
+  ///
+  /// @param apiKey clé API Ticketmaster Discovery v2
+  /// @param cadenceur stratégie d'espacement des appels HTTP à utiliser
+  public TicketmasterSource(String apiKey, CadenceurAppels cadenceur) {
     this(
         apiKey,
         RestClient.builder()
             .requestFactory(
                 ClientHttpFactory.creerRequestFactory(
                     Duration.ofSeconds(10), Duration.ofSeconds(30)))
-            .build());
+            .build(),
+        cadenceur);
   }
 
-  /// Crée une instance avec la clé API et un RestClient personnalisé (injection de test).
+  /// Crée une instance avec la clé API et un RestClient personnalisé (injection de test), cadencée
+  /// en mémoire.
   ///
   /// @param apiKey clé API Ticketmaster Discovery v2
   /// @param restClient client HTTP Spring à utiliser
   public TicketmasterSource(String apiKey, RestClient restClient) {
+    this(apiKey, restClient, new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS));
+  }
+
+  /// Crée une instance avec la clé API, le RestClient et le cadenceur personnalisés (injection de
+  /// test).
+  ///
+  /// @param apiKey clé API Ticketmaster Discovery v2
+  /// @param restClient client HTTP Spring à utiliser
+  /// @param cadenceur stratégie d'espacement des appels HTTP à utiliser
+  TicketmasterSource(String apiKey, RestClient restClient, CadenceurAppels cadenceur) {
     this(
         apiKey,
         restClient,
-        Caffeine.newBuilder().expireAfterWrite(Duration.ofDays(1)).maximumSize(1_000).build());
+        Caffeine.newBuilder().expireAfterWrite(Duration.ofDays(1)).maximumSize(1_000).build(),
+        cadenceur);
   }
 
   /// Crée une instance avec la clé API, le RestClient et le cache de throttle des avertissements
-  /// personnalisés (injection de test).
+  /// personnalisés (injection de test), cadencée en mémoire.
   ///
   /// @param apiKey clé API Ticketmaster Discovery v2
   /// @param restClient client HTTP Spring à utiliser
@@ -114,12 +141,32 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       String apiKey,
       RestClient restClient,
       Cache<String, Boolean> avertissementsAttractionIntrouvable) {
+    this(
+        apiKey,
+        restClient,
+        avertissementsAttractionIntrouvable,
+        new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS));
+  }
+
+  /// Crée une instance en spécifiant individuellement chacune de ses dépendances (injection de test
+  /// complète).
+  ///
+  /// @param apiKey clé API Ticketmaster Discovery v2
+  /// @param restClient client HTTP Spring à utiliser
+  /// @param avertissementsAttractionIntrouvable cache de throttle à utiliser
+  /// @param cadenceur stratégie d'espacement des appels HTTP à utiliser
+  TicketmasterSource(
+      String apiKey,
+      RestClient restClient,
+      Cache<String, Boolean> avertissementsAttractionIntrouvable,
+      CadenceurAppels cadenceur) {
     this.apiKey = Objects.requireNonNull(apiKey, "apiKey");
     this.restClient = Objects.requireNonNull(restClient, "restClient");
     this.avertissementsAttractionIntrouvable =
         Objects.requireNonNull(
             avertissementsAttractionIntrouvable, "avertissementsAttractionIntrouvable");
-    this.healthCheck = new TicketmasterHealthCheck(this.apiKey, this.restClient, cadenceur);
+    this.cadenceur = Objects.requireNonNull(cadenceur, "cadenceur");
+    this.healthCheck = new TicketmasterHealthCheck(this.apiKey, this.restClient, this.cadenceur);
   }
 
   /// Retourne le dernier quota TM extrait des headers HTTP, ou `null` si aucun appel n'a été fait.

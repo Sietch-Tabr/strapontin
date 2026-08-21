@@ -1,0 +1,64 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.worker;
+
+import fr.strapontin.sources.CadenceurAppels;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+
+/// Implémentation de {@link CadenceurAppels} adossée à Postgres — coordonne les appels vers un même
+/// service externe entre plusieurs processus indépendants. {@code CadenceurAppelsMemoire} (verrou
+/// en mémoire, module {@code sources}) ne coordonne que les appels d'un seul processus ;
+/// Ticketmaster est aussi appelé directement par le module web (recherche interactive de salle,
+/// test de clé API admin), hors de ce processus worker.
+///
+/// Réservation atomique par {@code UPDATE ... RETURNING} sur la ligne partagée identifiée par
+/// {@code cle} : chaque appelant avance le prochain instant autorisé d'au moins {@code delaiMinMs}
+/// en respectant l'instant déjà réservé par un appelant concurrent ({@code GREATEST}) — le verrou
+/// de ligne Postgres sérialise nativement les écritures concurrentes, sans transaction {@code
+/// SERIALIZABLE}.
+///
+/// @since 2.8.1
+/// @author Kwaite
+public final class CadenceurAppelsPartage implements CadenceurAppels {
+
+  private final NamedParameterJdbcTemplate jdbc;
+  private final String cle;
+  private final long delaiMinMs;
+
+  /// @param jdbc accès à la base partagée entre web et worker
+  /// @param cle identifiant du service externe cadencé (ex. {@code "ticketmaster"})
+  /// @param delaiMinMs écart minimal en millisecondes entre deux appels successifs
+  public CadenceurAppelsPartage(NamedParameterJdbcTemplate jdbc, String cle, long delaiMinMs) {
+    this.jdbc = jdbc;
+    this.cle = cle;
+    this.delaiMinMs = delaiMinMs;
+  }
+
+  @Override
+  public void attendre() {
+    Timestamp prochainAppelAutorise =
+        jdbc.queryForObject(
+            """
+            UPDATE cadences_appels_externes
+            SET prochain_appel_autorise = GREATEST(prochain_appel_autorise, now())
+                + (:delaiMs || ' milliseconds')::interval
+            WHERE cle = :cle
+            RETURNING prochain_appel_autorise
+            """,
+            Map.of("cle", cle, "delaiMs", delaiMinMs),
+            Timestamp.class);
+    long attenteMs = Duration.between(Instant.now(), prochainAppelAutorise.toInstant()).toMillis();
+    if (attenteMs <= 0) return;
+    try {
+      Thread.sleep(attenteMs);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+}
