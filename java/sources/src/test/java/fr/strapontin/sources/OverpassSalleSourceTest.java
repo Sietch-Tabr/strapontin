@@ -310,6 +310,71 @@ class OverpassSalleSourceTest {
     serveur.verify();
   }
 
+  // Le disjoncteur doit protéger tout le cycle, pas seulement l'appel courant : une fois ouvert
+  // par un premier appel à enrichirLot, un second appel (simulant le lot de persistance suivant
+  // dans le même cycle nocturne) ne doit déclencher aucun appel HTTP supplémentaire.
+  @Test
+  void enrichirLot_disjoncteurDejaOuvertParUnAppelPrecedent_neReinterrogePas() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    for (int i = 0; i < 3; i++) {
+      serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
+      serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
+    }
+
+    OverpassSalleSource source = new OverpassSalleSource(restClient);
+    List<SalleAEnrichir> premierLot =
+        List.of(
+            salleDept("Salle 01", "01"), salleDept("Salle 02", "02"), salleDept("Salle 03", "03"));
+    source.enrichirLot(premierLot);
+
+    // Aucune expectation supplémentaire déclarée ci-dessus pour ce second appel — serveur.verify()
+    // échouerait si le moindre appel HTTP était émis.
+    List<SalleAEnrichir> secondLot = List.of(salleDept("Salle 04", "04"));
+    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(secondLot);
+
+    assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
+  // preleverBilan (appelé une fois par cycle par EnrichissementSallesService.remonterBilans) doit
+  // réarmer le disjoncteur pour le cycle suivant.
+  @Test
+  void preleverBilan_apresDisjoncteurOuvert_reinitialiseLeDisjoncteurPourLeCycleSuivant() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    for (int i = 0; i < 3; i++) {
+      serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
+      serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
+    }
+    serveur
+        .expect(requestTo(urlOverpass()))
+        .andRespond(withSuccess("{\"elements\":[]}", MediaType.APPLICATION_JSON));
+
+    OverpassSalleSource source = new OverpassSalleSource(restClient);
+    source.enrichirLot(
+        List.of(
+            salleDept("Salle 01", "01"), salleDept("Salle 02", "02"), salleDept("Salle 03", "03")));
+    source.preleverBilan();
+
+    Map<UUID, EnrichissementSalle> resultat =
+        source.enrichirLot(List.of(salleDept("Salle 04", "04")));
+
+    assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
+  // Un seul déclenchement du disjoncteur (jusqu'à SEUIL_ECHECS_CONSECUTIFS × NB_ESSAIS_MAX appels)
+  // ne doit pas suffire seul à franchir le seuil d'alerte "panne totale" par email.
+  @Test
+  void seuilAppelsMinAlerte_superieurAUnSeulDeclenchementDuDisjoncteur() {
+    assertTrue(new OverpassSalleSource().seuilAppelsMinAlerte() > 6);
+  }
+
   // Deux salles de départements différents doivent générer deux requêtes distinctes (une zone
   // géographique par département), pas un seul appel mélangeant les deux.
   @Test

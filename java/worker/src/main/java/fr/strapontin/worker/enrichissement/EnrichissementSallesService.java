@@ -139,7 +139,7 @@ public class EnrichissementSallesService {
           .evaluer(
               "reconciliation:nocturne",
               capitaliser(source.nom()),
-              BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT)
+              avecBilan.seuilAppelsMinAlerte())
           .ifPresent(
               entree ->
                   logsAdminWorker.inserer(
