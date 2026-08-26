@@ -10,6 +10,7 @@ import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -214,6 +215,54 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       cache.put(qid, enrichissement);
     }
     return resultats;
+  }
+
+  /// Revalide le type Wikidata (P31) des {@code wikidataId} déjà stockés contre {@link
+  /// #TYPES_EXCLUS} — un garde-fou de type introduit après coup (ex. bar/restaurant, #1084) ne
+  /// s'applique qu'aux nouvelles découvertes, jamais rétroactivement aux {@code wikidata_id} posés
+  /// avant son existence.
+  ///
+  /// @param wikidataIds Q-IDs déjà stockés à revalider
+  /// @return le sous-ensemble de {@code wikidataIds} dont le type Wikidata est désormais exclu
+  public Set<String> typesInvalides(List<String> wikidataIds) {
+    Set<String> invalides = new HashSet<>();
+    for (int i = 0; i < wikidataIds.size(); i += TAILLE_LOT_MAX) {
+      List<String> lot = wikidataIds.subList(i, Math.min(i + TAILLE_LOT_MAX, wikidataIds.size()));
+      invalides.addAll(interrogerTypesInvalides(lot));
+    }
+    return invalides;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Set<String> interrogerTypesInvalides(List<String> qIds) {
+    String sparql = construireRequeteTypesInvalides(qIds);
+    Map<String, Object> data = client.executer(sparql);
+    if (data == null) return Set.of();
+
+    Set<String> invalides = new HashSet<>();
+    var results = (Map<String, Object>) data.get("results");
+    var bindings = results == null ? null : (List<Map<String, Object>>) results.get("bindings");
+    if (bindings == null) return invalides;
+    for (var binding : bindings) {
+      String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
+      if (itemUri == null) continue;
+      invalides.add(itemUri.substring(itemUri.lastIndexOf('/') + 1));
+    }
+    return invalides;
+  }
+
+  private static String construireRequeteTypesInvalides(List<String> qIds) {
+    String items = qIds.stream().map(q -> "wd:" + q).collect(Collectors.joining(" "));
+    String typesExclusSparql =
+        TYPES_EXCLUS.stream().map(qid -> "wd:" + qid).collect(Collectors.joining(" "));
+    return """
+    SELECT DISTINCT ?item WHERE {
+      VALUES ?item { %s }
+      ?item wdt:P31 ?type .
+      VALUES ?type { %s }
+    }
+    """
+        .formatted(items, typesExclusSparql);
   }
 
   // --- Mode découverte (Q-ID inconnu) ---

@@ -14,6 +14,8 @@ package fr.strapontin.worker.sante;
 /// @param enrichissementsArtiste nombre d'artistes enrichis (Wikidata/Deezer)
 /// @param incoherencesWikidata nombre de salles dont le {@code wikidata_id} déjà connu contredit la
 ///   {@code ville} connue
+/// @param typesWikidataInvalides nombre de {@code wikidata_id} déjà stockés invalidés car leur type
+///   Wikidata est désormais exclu (gare/tram/administratif/commerce)
 /// @param nomsIncoherentsTM nombre d'artistes suivis dont le nom retourné par TM diverge de
 ///   l'artiste suivi (tribute/homonyme rattaché par erreur)
 /// @param sallesOrphelinesResolues nombre de concerts sans {@code salle_id} résolus par une
@@ -27,5 +29,6 @@ public record ResultatReconciliation(
     int enrichissementsSalle,
     int enrichissementsArtiste,
     int incoherencesWikidata,
+    int typesWikidataInvalides,
     int nomsIncoherentsTM,
     int sallesOrphelinesResolues) {}

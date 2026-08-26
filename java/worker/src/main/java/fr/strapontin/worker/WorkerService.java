@@ -14,11 +14,11 @@ import org.springframework.stereotype.Service;
 
 /// Orchestration des jobs de recalcul de matches et de réconciliation nocturne.
 ///
-/// <p>Depuis, le fetch (voir {@link WorkerFetchService}), la purge (voir
-/// {@link WorkerPurgeService}) et la révocation admin (voir {@link WorkerRevocationService}) ont
-/// été extraits dans des services dédiés — cette classe reste le point d'entrée fin délégué par
-/// les jobs Quartz {@code RecalculerMatchesJob} et {@code ReconciliationNocturneJob}, les deux
-/// seules méthodes ne partageant pas de logique privée substantielle avec les autres familles.
+/// <p>Depuis, le fetch (voir {@link WorkerFetchService}), la purge (voir {@link
+/// WorkerPurgeService}) et la révocation admin (voir {@link WorkerRevocationService}) ont été
+/// extraits dans des services dédiés — cette classe reste le point d'entrée fin délégué par les
+/// jobs Quartz {@code RecalculerMatchesJob} et {@code ReconciliationNocturneJob}, les deux seules
+/// méthodes ne partageant pas de logique privée substantielle avec les autres familles.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -66,8 +66,8 @@ public class WorkerService {
     }
   }
 
-  /// Job nocturne de réconciliation des sources salles/artistes : health-check et
-  /// redécouverte des identifiants suspects, puis enrichissement Wikidata/OSM/Deezer.
+  /// Job nocturne de réconciliation des sources salles/artistes : health-check et redécouverte des
+  /// identifiants suspects, puis enrichissement Wikidata/OSM/Deezer.
   public void executerReconciliationNocturne() {
     log.info("reconciliation:nocturne démarré");
     long debut = System.currentTimeMillis();
@@ -83,12 +83,14 @@ public class WorkerService {
                   + bilan.enrichissementsArtiste());
       log.info(
           "reconciliation:nocturne terminé sallesVerifiees={} redecouvertes={} ambigues={}"
-              + " enrichissementsSalle={} enrichissementsArtiste={} nomsIncoherentsTM={}",
+              + " enrichissementsSalle={} enrichissementsArtiste={} typesWikidataInvalides={}"
+              + " nomsIncoherentsTM={}",
           bilan.sallesVerifiees(),
           bilan.sallesRedecouvertes(),
           bilan.ambigues(),
           bilan.enrichissementsSalle(),
           bilan.enrichissementsArtiste(),
+          bilan.typesWikidataInvalides(),
           bilan.nomsIncoherentsTM());
     } catch (Exception e) {
       erreur = e.getMessage();

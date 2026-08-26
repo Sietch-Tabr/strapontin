@@ -12,6 +12,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -998,6 +999,54 @@ class WikidataSalleSourceTest {
     WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
     src.enrichirLot(salles);
 
+    serveur.verify();
+  }
+
+  // --- typesInvalides (revalidation des wikidata_id déjà stockés) ---
+
+  @Test
+  void typesInvalides_typeExclu_retourneLeQid() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q110597455"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Set<String> resultat = src.typesInvalides(List.of("Q110597455"));
+
+    assertEquals(Set.of("Q110597455"), resultat);
+    serveur.verify();
+  }
+
+  @Test
+  void typesInvalides_typeValide_retourneEnsembleVide() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Set<String> resultat = src.typesInvalides(List.of("Q537720"));
+
+    assertEquals(Set.of(), resultat);
     serveur.verify();
   }
 }

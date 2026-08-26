@@ -399,4 +399,56 @@ class CoherenceWikidataSalleServiceTest {
             org.mockito.ArgumentMatchers.<Map<String, ?>>argThat(
                 p -> p.get("signature") == null && id.toString().equals(p.get("id"))));
   }
+
+  // --- revaliderTypes ---
+
+  @Test
+  void revaliderTypes_aucunWikidataId_neContactePasWikidataEtRetourneZero() {
+    when(jdbc.queryForList(
+            org.mockito.ArgumentMatchers.anyString(), any(Map.class), eq(String.class)))
+        .thenReturn(List.of());
+
+    int resultat = service.revaliderTypes();
+
+    assertEquals(0, resultat);
+    verify(wikidata, never()).typesInvalides(anyList());
+  }
+
+  @Test
+  void revaliderTypes_typeDesormaisExclu_metWikidataIdANullEtJournalise() {
+    when(jdbc.queryForList(
+            org.mockito.ArgumentMatchers.anyString(), any(Map.class), eq(String.class)))
+        .thenReturn(List.of("Q110597455"));
+    when(wikidata.typesInvalides(List.of("Q110597455"))).thenReturn(java.util.Set.of("Q110597455"));
+
+    int resultat = service.revaliderTypes();
+
+    assertEquals(1, resultat);
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("wikidata_id = NULL"),
+            org.mockito.ArgumentMatchers.<Map<String, ?>>argThat(
+                p -> "Q110597455".equals(p.get("qid"))));
+    verify(logsAdminWorker)
+        .inserer(
+            eq("warn"),
+            eq("coherence-wikidata"),
+            org.mockito.ArgumentMatchers.contains("Q110597455"),
+            any());
+  }
+
+  @Test
+  void revaliderTypes_typeToujoursValide_neModifieRienEtNeJournaliseRien() {
+    when(jdbc.queryForList(
+            org.mockito.ArgumentMatchers.anyString(), any(Map.class), eq(String.class)))
+        .thenReturn(List.of("Q537720"));
+    when(wikidata.typesInvalides(List.of("Q537720"))).thenReturn(java.util.Set.of());
+
+    int resultat = service.revaliderTypes();
+
+    assertEquals(0, resultat);
+    verify(jdbc, never())
+        .update(org.mockito.ArgumentMatchers.contains("wikidata_id = NULL"), any(Map.class));
+    verify(logsAdminWorker, never()).inserer(any(), any(), any(), any());
+  }
 }

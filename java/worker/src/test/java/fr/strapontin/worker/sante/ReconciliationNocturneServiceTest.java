@@ -98,6 +98,16 @@ class ReconciliationNocturneServiceTest {
   }
 
   @Test
+  void executer_typesWikidataInvalidesDetectes_propageLeCompteDansLeResultat() {
+    when(coherenceWikidataSalle.revaliderTypes()).thenReturn(2);
+
+    ResultatReconciliation resultat = service.executer();
+
+    assertEquals(2, resultat.typesWikidataInvalides());
+    verify(coherenceWikidataSalle).revaliderTypes();
+  }
+
+  @Test
   void executer_salleVivante_reinitialiseSuspectSansRedecouverte() {
     UUID salleId = UUID.randomUUID();
     when(jdbc.queryForList(contains("ss.source = 'ticketmaster'"), anyMap()))

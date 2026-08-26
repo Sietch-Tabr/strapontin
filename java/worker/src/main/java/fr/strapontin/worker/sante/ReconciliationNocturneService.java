@@ -88,6 +88,7 @@ public class ReconciliationNocturneService {
     int enrichisArtistes = enrichissementArtistes.enrichir();
     int enrichisSalles = enrichissementSalles.enrichir();
     int incoherencesWikidata = coherenceWikidataSalle.verifier();
+    int typesWikidataInvalides = coherenceWikidataSalle.revaliderTypes();
     int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
 
     return new ResultatReconciliation(
@@ -97,6 +98,7 @@ public class ReconciliationNocturneService {
         enrichisSalles,
         enrichisArtistes,
         incoherencesWikidata,
+        typesWikidataInvalides,
         nomsIncoherentsTM,
         sallesOrphelinesResolues);
   }

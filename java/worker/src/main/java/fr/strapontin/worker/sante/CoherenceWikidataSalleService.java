@@ -108,6 +108,48 @@ public class CoherenceWikidataSalleService {
     return incoherences;
   }
 
+  /// Revalide le type Wikidata de tous les `wikidata_id` déjà stockés contre les types actuellement
+  /// exclus par {@link WikidataSalleSource} — un garde-fou de type introduit après coup ne
+  /// s'applique qu'aux nouvelles découvertes, jamais rétroactivement. Un type structurel invalide
+  /// (gare, arrêt de tram, bar, restaurant...) est un signal sûr, contrairement à une incohérence
+  /// de ville qui peut avoir une cause légitime : `wikidata_id` est donc remis à `null`
+  /// directement, ce qui permettra une redécouverte au prochain cycle nocturne (`COALESCE` ne
+  /// réécrit jamais un `wikidata_id` déjà posé). `ville`/`nom_affiche` restent inchangés.
+  ///
+  /// @return nombre de `wikidata_id` invalidés
+  public int revaliderTypes() {
+    List<String> wikidataIds = selectionnerTousLesWikidataId();
+    if (wikidataIds.isEmpty()) {
+      log.info("coherence:wikidata:types — aucun candidat");
+      return 0;
+    }
+
+    Set<String> invalides = wikidata.typesInvalides(wikidataIds);
+    for (String qid : invalides) {
+      invaliderWikidataId(qid);
+    }
+    log.info(
+        "coherence:wikidata:types candidats={} invalides={}", wikidataIds.size(), invalides.size());
+    return invalides.size();
+  }
+
+  private List<String> selectionnerTousLesWikidataId() {
+    return jdbc.queryForList(
+        "SELECT wikidata_id FROM salles WHERE wikidata_id IS NOT NULL", Map.of(), String.class);
+  }
+
+  private void invaliderWikidataId(String qid) {
+    jdbc.update(
+        "UPDATE salles SET wikidata_id = NULL WHERE wikidata_id = :qid", Map.of("qid", qid));
+    logsAdminWorker.inserer(
+        "warn",
+        "coherence-wikidata",
+        "wikidata_id invalidé — type Wikidata désormais exclu (gare/tram/administratif/commerce)"
+            + " wikidataId="
+            + qid,
+        Map.of("wikidataId", qid));
+  }
+
   /// Charge, pour chaque salle candidate, la signature de la dernière incohérence déjà journalisée
   /// (commune Wikidata + type de contamination), absente si jamais signalée ou si la dernière
   /// incohérence signalée a depuis été résolue.
