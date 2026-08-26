@@ -7,11 +7,11 @@ package fr.strapontin.web.admin;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,14 +93,11 @@ public class AdminController {
   ///
   /// @param requete corps JSON avec l'email
   /// @param auth contexte d'authentification admin
-  /// @param request la requête HTTP (pour construire le lien d'invitation)
-  /// @return 201 avec l'identifiant temporaire (et le lien si email indisponible), ou 400 si
-  ///   l'email est déjà pris
+  /// @return 201 avec l'identifiant temporaire (et le lien si email indisponible), 400 si l'email
+  ///   est déjà pris, 503 si {@code PUBLIC_BASE_URL} n'est pas configurée
   @PostMapping("/utilisateurs")
   public ResponseEntity<Map<String, Object>> creerUtilisateur(
-      @Valid @RequestBody RequeteCreerUtilisateur requete,
-      Authentication auth,
-      HttpServletRequest request) {
+      @Valid @RequestBody RequeteCreerUtilisateur requete, Authentication auth) {
     String adminId = utilisateur(auth).id();
     String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
 
@@ -108,9 +105,14 @@ public class AdminController {
       return erreur(400, "Format d'email invalide.");
     }
 
+    Optional<String> baseUrl = resoudreBaseUrl();
+    if (baseUrl.isEmpty()) {
+      return erreur(503, "PUBLIC_BASE_URL n'est pas configurée. Impossible d'inviter un compte.");
+    }
+
     boolean emailDisponible = emailService.estDisponible();
     return adminService
-        .creerUtilisateur(email, adminId, baseUrlDepuisRequete(request))
+        .creerUtilisateur(email, adminId, baseUrl.get())
         .map(
             r -> {
               Map<String, Object> corps = new HashMap<>();
@@ -168,18 +170,22 @@ public class AdminController {
   ///
   /// @param userId identifiant de l'utilisateur
   /// @param auth contexte d'authentification admin
-  /// @param request la requête HTTP
-  /// @return 200 si envoyé, 400/404 en cas d'erreur
+  /// @return 200 si envoyé, 400/404 en cas d'erreur, 503 si {@code PUBLIC_BASE_URL} n'est pas
+  ///   configurée
   @PostMapping("/utilisateurs/{userId}/reset-mdp")
   public ResponseEntity<Map<String, Object>> reinitialiserMdp(
-      @PathVariable String userId, Authentication auth, HttpServletRequest request) {
+      @PathVariable String userId, Authentication auth) {
     String adminId = utilisateur(auth).id();
     if (userId.equals(adminId)) {
       return erreur(400, "Impossible de réinitialiser ce compte.");
     }
+    Optional<String> baseUrl = resoudreBaseUrl();
+    if (baseUrl.isEmpty()) {
+      return erreur(503, "PUBLIC_BASE_URL n'est pas configurée. Impossible d'envoyer le lien.");
+    }
     boolean emailDisponible = emailService.estDisponible();
     return adminService
-        .reinitialiserMdp(userId, adminId, baseUrlDepuisRequete(request))
+        .reinitialiserMdp(userId, adminId, baseUrl.get())
         .map(
             r -> {
               Map<String, Object> corps = new HashMap<>();
@@ -424,23 +430,7 @@ public class AdminController {
     return ResponseEntity.status(status).body(corps);
   }
 
-  private String baseUrlDepuisRequete(HttpServletRequest request) {
-    return configService
-        .lireConfig("PUBLIC_BASE_URL")
-        .filter(s -> !s.isBlank())
-        .orElseGet(
-            () -> {
-              log.warn(
-                  "PUBLIC_BASE_URL absente — URL construite depuis la requête (risque Host Header"
-                      + " Injection si derrière un proxy)");
-              String scheme = request.getScheme();
-              String host = request.getServerName();
-              int port = request.getServerPort();
-              if (("http".equals(scheme) && port == 80)
-                  || ("https".equals(scheme) && port == 443)) {
-                return scheme + "://" + host + request.getContextPath();
-              }
-              return scheme + "://" + host + ":" + port + request.getContextPath();
-            });
+  private Optional<String> resoudreBaseUrl() {
+    return configService.lireConfig("PUBLIC_BASE_URL").filter(s -> !s.isBlank());
   }
 }

@@ -876,6 +876,28 @@ class TicketmasterSourceTest {
     assertEquals(1, bilan.erreursHttp());
   }
 
+  // Un 429 (Spike Arrest) reste compté comme n'importe quelle autre erreur HTTP dans le bilan —
+  // seul le message de log distingue ce cas pour objectiver la latence réseau réelle, sans
+  // changer le comportement fonctionnel observable ici.
+  @Test
+  void preleverBilan_reponse429_compteUneErreurCommeToutAutreEchec() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withStatus(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS));
+
+    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+
+    assertTrue(resultats.isEmpty());
+    BilanFetch bilan = source.preleverBilan();
+    assertEquals(1, bilan.appels());
+    assertEquals(1, bilan.erreursHttp());
+  }
+
   @Test
   void preleverBilan_apresPrelevement_remetLesCompteursAZero() {
     RestClient.Builder builder = RestClient.builder();

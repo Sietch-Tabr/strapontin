@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -49,7 +50,8 @@ class WorkerPurgeServiceTest {
             resolveur,
             jdbc,
             logsAdminWorker,
-            new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+            new SuiviChroniciteService(jdbc, new ObjectMapper()));
     service = new WorkerPurgeService(jdbc, workerStatsService);
   }
 
@@ -62,6 +64,47 @@ class WorkerPurgeServiceTest {
     verify(jdbc).update(contains("DELETE FROM concerts"), anyMap());
     verify(jdbc).update(contains("INSERT INTO fetch_jobs (type_job"), anyMap());
     verify(jdbc).update(contains("INSERT INTO fetch_jobs_historique"), anyMap());
+  }
+
+  // 10× le seuil de simple signalement "à vérifier" (WorkerFetchService.SEUIL_ABSENCES_CONSECUTIVES
+  // = 5) — un état signalé ne doit pas rester affiché indéfiniment sans jamais évoluer.
+  @Test
+  void executerPurgerConcertsNonConfirmes_seuilCorrespondADixFoisLeSeuilDeSignalement() {
+    assertEquals(50, WorkerPurgeService.SEUIL_PURGE_ABSENCES);
+  }
+
+  @Test
+  void executerPurgerConcertsNonConfirmes_supprimeConcertsJamaisReconfirmesEtEnregistreStat() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(3);
+
+    service.executerPurgerConcertsNonConfirmes();
+
+    verify(jdbc)
+        .update(
+            contains("DELETE FROM concerts WHERE absences_consecutives >="),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> Integer.valueOf(50).equals(p.get("seuil"))));
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO fetch_jobs (type_job"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> "purger:concerts-non-confirmes".equals(p.get("typeJob"))));
+  }
+
+  @Test
+  void executerPurgerConcertsNonConfirmes_erreurJdbc_enregistreStatAvecErreur() {
+    when(jdbc.update(contains("DELETE FROM concerts WHERE absences_consecutives"), anyMap()))
+        .thenThrow(new RuntimeException("timeout"));
+
+    assertDoesNotThrow(() -> service.executerPurgerConcertsNonConfirmes());
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO fetch_jobs (type_job"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p ->
+                    "purger:concerts-non-confirmes".equals(p.get("typeJob"))
+                        && "timeout".equals(p.get("erreur"))));
   }
 
   @Test

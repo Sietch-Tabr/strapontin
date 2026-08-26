@@ -9,12 +9,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,9 +22,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires ciblés pour {@link AdminController#reinitialiserMdp} — filet de
-/// secours {@code lienReset} quand Resend n'est pas disponible, symétrique à
-/// {@link AdminController#creerUtilisateur}.
+/// Tests unitaires ciblés pour {@link AdminController#reinitialiserMdp} — filet de secours {@code
+/// lienReset} quand Resend n'est pas disponible, symétrique à {@link
+/// AdminController#creerUtilisateur}.
 ///
 /// @since 2.6.4
 /// @author Kwaite
@@ -34,14 +34,12 @@ class AdminControllerReinitialiserMdpTest {
   private EmailService emailService;
   private ConfigService configService;
   private AdminController controller;
-  private HttpServletRequest request;
 
   @BeforeEach
   void setUp() {
     adminService = mock(AdminService.class);
     emailService = mock(EmailService.class);
     configService = mock(ConfigService.class);
-    request = mock(HttpServletRequest.class);
     when(configService.lireConfig("PUBLIC_BASE_URL"))
         .thenReturn(Optional.of("https://strapontin.fr"));
     controller =
@@ -72,7 +70,7 @@ class AdminControllerReinitialiserMdpTest {
             Optional.of(new ResultatReset("user@exemple.fr", "https://strapontin.fr/reset")));
 
     ResponseEntity<Map<String, Object>> reponse =
-        controller.reinitialiserMdp("user-2", authPour("admin-1"), request);
+        controller.reinitialiserMdp("user-2", authPour("admin-1"));
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals("https://strapontin.fr/reset", reponse.getBody().get("lienReset"));
@@ -86,9 +84,20 @@ class AdminControllerReinitialiserMdpTest {
             Optional.of(new ResultatReset("user@exemple.fr", "https://strapontin.fr/reset")));
 
     ResponseEntity<Map<String, Object>> reponse =
-        controller.reinitialiserMdp("user-2", authPour("admin-1"), request);
+        controller.reinitialiserMdp("user-2", authPour("admin-1"));
 
     assertEquals(200, reponse.getStatusCode().value());
     assertFalse(reponse.getBody().containsKey("lienReset"));
+  }
+
+  @Test
+  void reinitialiserMdp_publicBaseUrlAbsente_retourne503SansAppelerLeService() {
+    when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(Optional.empty());
+
+    ResponseEntity<Map<String, Object>> reponse =
+        controller.reinitialiserMdp("user-2", authPour("admin-1"));
+
+    assertEquals(503, reponse.getStatusCode().value());
+    verifyNoInteractions(adminService);
   }
 }

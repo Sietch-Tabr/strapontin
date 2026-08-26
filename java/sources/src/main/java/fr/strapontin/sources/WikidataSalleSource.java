@@ -10,6 +10,7 @@ import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,7 +53,11 @@ import org.springframework.web.client.RestClient;
 ///       en premier résultat une œuvre culturelle homonyme (constaté en production : pour
 ///       « L'Olympia », le premier candidat mwapi est un <em>album</em> d'Émilie Simon sorti en
 ///       2007, pas la salle) — un album/single/livre n'a pas de coordonnées, une salle en a
-///       toujours une. La désambiguïsation finale réutilise {@link
+///       toujours une. Exception vérifiée : un candidat typé {@code wd:Q1060829} (bâtiment de
+///       salle de concert) est accepté même sans coordonnées — constaté en production sur « salle
+///       Paul-Fort » (Nantes), correcte mais structurellement exclue par l'exigence de coordonnées
+///       seule, laissant un homonyme sans rapport (« salle Paul Bouin », Basse-Goulaine) devenir
+///       l'unique candidat retourné. La désambiguïsation finale réutilise {@link
 // CorrespondanceSalle#estDoublonSalle}
 ///       (module {@code core}, même algorithme que {@code ReconciliateurSalles} côté worker :
 ///       Levenshtein ≥ 0.75, Jaccard tokens, critère pivot) plutôt qu'une simple égalité de chaîne
@@ -212,6 +217,54 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     return resultats;
   }
 
+  /// Revalide le type Wikidata (P31) des {@code wikidataId} déjà stockés contre {@link
+  /// #TYPES_EXCLUS} — un garde-fou de type introduit après coup (ex. bar/restaurant, #1084) ne
+  /// s'applique qu'aux nouvelles découvertes, jamais rétroactivement aux {@code wikidata_id} posés
+  /// avant son existence.
+  ///
+  /// @param wikidataIds Q-IDs déjà stockés à revalider
+  /// @return le sous-ensemble de {@code wikidataIds} dont le type Wikidata est désormais exclu
+  public Set<String> typesInvalides(List<String> wikidataIds) {
+    Set<String> invalides = new HashSet<>();
+    for (int i = 0; i < wikidataIds.size(); i += TAILLE_LOT_MAX) {
+      List<String> lot = wikidataIds.subList(i, Math.min(i + TAILLE_LOT_MAX, wikidataIds.size()));
+      invalides.addAll(interrogerTypesInvalides(lot));
+    }
+    return invalides;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Set<String> interrogerTypesInvalides(List<String> qIds) {
+    String sparql = construireRequeteTypesInvalides(qIds);
+    Map<String, Object> data = client.executer(sparql);
+    if (data == null) return Set.of();
+
+    Set<String> invalides = new HashSet<>();
+    var results = (Map<String, Object>) data.get("results");
+    var bindings = results == null ? null : (List<Map<String, Object>>) results.get("bindings");
+    if (bindings == null) return invalides;
+    for (var binding : bindings) {
+      String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
+      if (itemUri == null) continue;
+      invalides.add(itemUri.substring(itemUri.lastIndexOf('/') + 1));
+    }
+    return invalides;
+  }
+
+  private static String construireRequeteTypesInvalides(List<String> qIds) {
+    String items = qIds.stream().map(q -> "wd:" + q).collect(Collectors.joining(" "));
+    String typesExclusSparql =
+        TYPES_EXCLUS.stream().map(qid -> "wd:" + qid).collect(Collectors.joining(" "));
+    return """
+    SELECT DISTINCT ?item WHERE {
+      VALUES ?item { %s }
+      ?item wdt:P31 ?type .
+      VALUES ?type { %s }
+    }
+    """
+        .formatted(items, typesExclusSparql);
+  }
+
   // --- Mode découverte (Q-ID inconnu) ---
 
   /// Sépare le premier séparateur significatif de sous-salle/qualificatif (`-`, `/`, `(`) d'un nom
@@ -286,10 +339,15 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       if (itemUri == null) continue;
       String itemLabel = ClientSparqlWikidata.valeurBinding(binding, "itemLabel");
       String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
-      String labelCorrespondant = trouverLabelCorrespondant(salle.nomNorm(), itemLabel, aliases);
+      String communeLabel = ClientSparqlWikidata.valeurBinding(binding, "communeLabel");
+      String codePostal = ClientSparqlWikidata.valeurBinding(binding, "codePostal");
+      boolean localisationConnue =
+          (communeLabel != null && !communeLabel.isBlank())
+              || (codePostal != null && !codePostal.isBlank());
+      String labelCorrespondant =
+          trouverLabelCorrespondant(salle.nomNorm(), itemLabel, aliases, localisationConnue);
       if (labelCorrespondant == null) continue;
 
-      String communeLabel = ClientSparqlWikidata.valeurBinding(binding, "communeLabel");
       if (villeIncompatible(salle.ville(), communeLabel)) {
         log.info(
             "Wikidata découverte salle — rejet commune incompatible nom={} villeSalle={}"
@@ -299,7 +357,6 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
             communeLabel);
         continue;
       }
-      String codePostal = ClientSparqlWikidata.valeurBinding(binding, "codePostal");
       if (deptIncompatible(salle.dept(), codePostal)) {
         log.info(
             "Wikidata découverte salle — rejet département incompatible nom={} deptSalle={}"
@@ -380,16 +437,22 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   /// @param nomNormCible nom de la salle Strapontin, normalisé ({@link SalleAEnrichir#nomNorm})
   /// @param itemLabel libellé principal du candidat Wikidata (peut être {@code null})
   /// @param aliases alias du candidat séparés par {@code "|"} (peut être {@code null} ou vide)
+  /// @param localisationConnue {@code false} si le candidat n'a ni commune ni code postal Wikidata
+  ///   connus — désactive alors le critère pivot d'{@link CorrespondanceSalle}, sans aucun signal
+  ///   indépendant pour confirmer un candidat validé sur ce seul critère (voir {@link
+  ///   CorrespondanceSalle#estDoublonSalle(String, String, boolean)})
   /// @return le libellé (principal ou alias) qui correspond, ou {@code null} si aucun
   private static String trouverLabelCorrespondant(
-      String nomNormCible, String itemLabel, String aliases) {
+      String nomNormCible, String itemLabel, String aliases, boolean localisationConnue) {
     if (itemLabel != null
-        && estCorrespondanceAsymetrique(nomNormCible, Normalisation.normaliserTexte(itemLabel))) {
+        && estCorrespondanceAsymetrique(
+            nomNormCible, Normalisation.normaliserTexte(itemLabel), localisationConnue)) {
       return itemLabel;
     }
     if (aliases == null || aliases.isBlank()) return null;
     for (String alias : aliases.split("\\|")) {
-      if (estCorrespondanceAsymetrique(nomNormCible, Normalisation.normaliserTexte(alias))) {
+      if (estCorrespondanceAsymetrique(
+          nomNormCible, Normalisation.normaliserTexte(alias), localisationConnue)) {
         return alias;
       }
     }
@@ -416,17 +479,34 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   ///
   /// @param nomNormCible nom Strapontin normalisé
   /// @param candidatNorm libellé ou alias Wikidata normalisé
+  /// @param localisationConnue transmis tel quel à {@link
+  ///   CorrespondanceSalle#estDoublonSalle(String, String, boolean)}
   /// @return {@code true} si les tokens significatifs de {@code nomNormCible} sont tous inclus dans
   ///   ceux de {@code candidatNorm}
-  private static boolean estCorrespondanceAsymetrique(String nomNormCible, String candidatNorm) {
-    if (CorrespondanceSalle.estDoublonSalle(nomNormCible, candidatNorm)) return true;
+  private static boolean estCorrespondanceAsymetrique(
+      String nomNormCible, String candidatNorm, boolean localisationConnue) {
+    if (CorrespondanceSalle.estDoublonSalle(nomNormCible, candidatNorm, localisationConnue)) {
+      return true;
+    }
     Set<String> tokensCible = CorrespondanceSalle.tokensSignificatifs(nomNormCible);
     if (tokensCible.size() < TAILLE_MIN_TOKENS_CONTAINMENT) return false;
     Set<String> tokensCandidat = CorrespondanceSalle.tokensSignificatifs(candidatNorm);
     return tokensCandidat.containsAll(tokensCible);
   }
 
+  // Types Wikidata (P31) structurellement incompatibles avec un lieu de spectacle : gare
+  // (Q3455524), arrêt de tram (Q6465), commune française (Q484170), gare ferroviaire (Q55488),
+  // arrêt de transport en commun (Q2175765), bar (Q187456), restaurant (Q11707) — un candidat de
+  // l'un de ces types est nécessairement une fausse correspondance, quel que soit son score de
+  // similarité de nom. Exposée pour permettre à {@code CoherenceWikidataSalleService} de revalider
+  // les {@code wikidata_id} déjà stockés contre ces mêmes types (garde-fou introduit après coup ne
+  // s'appliquant pas rétroactivement aux découvertes antérieures).
+  public static final Set<String> TYPES_EXCLUS =
+      Set.of("Q3455524", "Q6465", "Q484170", "Q55488", "Q2175765", "Q187456", "Q11707");
+
   private static String construireRequeteDecouverte(String nom) {
+    String typesExclusSparql =
+        TYPES_EXCLUS.stream().map(qid -> "wd:" + qid).collect(Collectors.joining(" "));
     return """
     SELECT ?item ?itemLabel ?communeLabel ?num
       (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) (SAMPLE(?cp) AS ?codePostal)
@@ -439,11 +519,11 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
         ?item wikibase:apiOutputItem mwapi:item.
         ?num wikibase:apiOrdinal true.
       }
-      ?item wdt:P625 [] .
+      { ?item wdt:P625 [] . } UNION { ?item wdt:P31 wd:Q1060829 . }
       ?item wdt:P17 wd:Q142 .
       FILTER NOT EXISTS {
         ?item wdt:P31 ?typeExclu .
-        VALUES ?typeExclu { wd:Q3455524 wd:Q6465 wd:Q484170 wd:Q55488 wd:Q2175765 }
+        VALUES ?typeExclu { %s }
       }
       OPTIONAL { ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "fr") }
       OPTIONAL {
@@ -458,7 +538,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     ORDER BY ?num
     LIMIT 5
     """
-        .formatted(ClientSparqlWikidata.echapperLitteral(nom));
+        .formatted(ClientSparqlWikidata.echapperLitteral(nom), typesExclusSparql);
   }
 
   @SuppressWarnings("unchecked")

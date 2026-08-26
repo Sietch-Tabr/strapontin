@@ -10,6 +10,7 @@ import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementSalle;
 import fr.strapontin.worker.LogsAdminWorker;
+import fr.strapontin.worker.SuiviChroniciteService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,14 +53,17 @@ public class EnrichissementSallesService {
   private final NamedParameterJdbcTemplate jdbc;
   private final List<SourceEnrichissementSalle> sources;
   private final LogsAdminWorker logsAdminWorker;
+  private final SuiviChroniciteService suiviChronicite;
 
   public EnrichissementSallesService(
       NamedParameterJdbcTemplate jdbc,
       List<SourceEnrichissementSalle> sources,
-      LogsAdminWorker logsAdminWorker) {
+      LogsAdminWorker logsAdminWorker,
+      SuiviChroniciteService suiviChronicite) {
     this.jdbc = jdbc;
     this.sources = sources;
     this.logsAdminWorker = logsAdminWorker;
+    this.suiviChronicite = suiviChronicite;
   }
 
   /// Enrichit les salles sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
@@ -135,6 +139,10 @@ public class EnrichissementSallesService {
     for (SourceEnrichissementSalle source : sources) {
       if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
       BilanFetch bilan = avecBilan.preleverBilan();
+      if (bilan.appels() == 0) continue;
+      int streak =
+          suiviChronicite.enregistrerCycle(
+              "reconciliation:nocturne|" + capitaliser(source.nom()), bilan.erreursHttp() > 0);
       bilan
           .evaluer(
               "reconciliation:nocturne",
@@ -143,7 +151,10 @@ public class EnrichissementSallesService {
           .ifPresent(
               entree ->
                   logsAdminWorker.inserer(
-                      entree.niveau(), "worker", entree.message(), entree.meta()));
+                      entree.niveau(),
+                      "worker",
+                      suiviChronicite.enrichirSiChronique(entree.message(), streak),
+                      entree.meta()));
     }
   }
 

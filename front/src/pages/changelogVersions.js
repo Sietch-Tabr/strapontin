@@ -4,6 +4,17 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 2.8.2 — 26 août 2026",
+    categories: [
+      {
+        categorie: "Concerts",
+        items: [
+          "Un concert marqué « À vérifier » n'est plus affiché indéfiniment si aucune source ne le reconfirme jamais — il est retiré après plusieurs jours de silence continu.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 2.8.1 — 21 août 2026",
     categories: [
       {

@@ -57,7 +57,8 @@ class WorkerServiceTest {
             resolveur,
             jdbc,
             logsAdminWorker,
-            new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+            new SuiviChroniciteService(jdbc, new ObjectMapper()));
     workerService =
         new WorkerService(
             recalculerMatchesService,
@@ -89,7 +90,7 @@ class WorkerServiceTest {
   @Test
   void executerReconciliationNocturne_nominal_appelleLeServiceEtEnregistreLaStat() {
     when(reconciliationNocturneService.executer())
-        .thenReturn(new ResultatReconciliation(2, 1, 0, 3, 4, 0, 0, 0));
+        .thenReturn(new ResultatReconciliation(2, 1, 0, 3, 4, 0, 0, 0, 0));
 
     workerService.executerReconciliationNocturne();
 

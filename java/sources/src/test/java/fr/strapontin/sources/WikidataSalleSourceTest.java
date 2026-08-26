@@ -12,6 +12,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -176,6 +177,55 @@ class WikidataSalleSourceTest {
 
     assertEquals(1, resultat.size());
     assertEquals("Q61854481", resultat.get(id).wikidataId());
+    serveur.verify();
+  }
+
+  // Régression : « La Nouvelle Vague » (Saint-Malo) ne doit jamais être rapprochée de « La
+  // Nouvelle République » (un journal), un candidat sans commune ni code postal connus qui ne
+  // matche que sur le pivot générique "nouvelle" — aucune donnée de localisation pour un contrôle
+  // croisé indépendant.
+  @Test
+  void enrichirLot_pivotGeneriqueSansLocalisation_rejetteLeCandidat() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    String nomComplet = "La Nouvelle Vague";
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id,
+            nomComplet,
+            fr.strapontin.core.Normalisation.normaliserTexte(nomComplet),
+            null,
+            null,
+            null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q3211144"},
+                   "itemLabel":{"type":"literal","value":"La Nouvelle République"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertEquals(0, resultat.size());
     serveur.verify();
   }
 
@@ -649,6 +699,78 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // Un bar/restaurant homonyme situé sur le même site qu'une vraie salle de spectacle ne doit
+  // jamais être proposé comme candidat — constaté en production (bar restaurant de la Saline
+  // Royale, distinct du monument éponyme accueillant les concerts).
+  @Test
+  void construireRequeteDecouverte_excluLesCommerces() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Saline Royale", "saline royale", null, null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q187456")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q11707")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    src.enrichirLot(List.of(salle));
+
+    serveur.verify();
+  }
+
+  // Régression : une salle réelle sans coordonnées Wikidata (ex. « salle Paul-Fort », Nantes)
+  // était structurellement exclue par l'exigence de coordonnées seule, ne laissant qu'un
+  // homonyme sans rapport (« salle Paul Bouin ») comme candidat retourné. Le type « bâtiment de
+  // salle de concert » (Q1060829) sert d'alternative vérifiée aux coordonnées.
+  @Test
+  void construireRequeteDecouverte_accepteLeTypeBatimentSalleDeConcertSansCoordonnees() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Salle Paul Fort", "salle paul fort", null, null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q1060829")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q57315616"},
+                   "itemLabel":{"type":"literal","value":"salle Paul-Fort"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertEquals(1, resultat.size());
+    assertEquals("Q57315616", resultat.get(id).wikidataId());
+    serveur.verify();
+  }
+
   @Test
   void enrichirLot_decouverte_villeConnueEtCorrespondante_accepteCandidat() {
     RestClient.Builder builder = RestClient.builder();
@@ -877,6 +999,54 @@ class WikidataSalleSourceTest {
     WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
     src.enrichirLot(salles);
 
+    serveur.verify();
+  }
+
+  // --- typesInvalides (revalidation des wikidata_id déjà stockés) ---
+
+  @Test
+  void typesInvalides_typeExclu_retourneLeQid() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q110597455"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Set<String> resultat = src.typesInvalides(List.of("Q110597455"));
+
+    assertEquals(Set.of("Q110597455"), resultat);
+    serveur.verify();
+  }
+
+  @Test
+  void typesInvalides_typeValide_retourneEnsembleVide() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Set<String> resultat = src.typesInvalides(List.of("Q537720"));
+
+    assertEquals(Set.of(), resultat);
     serveur.verify();
   }
 }
