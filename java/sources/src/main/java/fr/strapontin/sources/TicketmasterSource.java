@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -240,6 +241,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             .toUriString();
 
     compteurBilan.enregistrerAppel();
+    Instant avantAppelHttp = Instant.now();
     try {
       var response = restClient.get().uri(uri).retrieve().toEntity(Map.class);
 
@@ -276,7 +278,17 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
     } catch (Exception e) {
       String uriSafe = uri.replaceAll("apikey=[^&]+", "apikey=***");
-      log.warn("erreur HTTP Ticketmaster url={} : {}", uriSafe, redigerApiKey(e.getMessage()));
+      long dureeAppelMs = Duration.between(avantAppelHttp, Instant.now()).toMillis();
+      // Diagnostic dédié au 429 (Spike Arrest) : la durée réelle de l'appel HTTP objective si le
+      // rejet survient après une latence réseau anormale (jitter) plutôt qu'immédiatement (autre
+      // cause) — le cadenceur n'espace que l'instant de départ côté client, jamais l'instant
+      // d'arrivée effective côté serveur TM.
+      if (e instanceof HttpClientErrorException httpEx && httpEx.getStatusCode().value() == 429) {
+        log.warn(
+            "Ticketmaster 429 (Spike Arrest) url={} dureeAppelHttpMs={}", uriSafe, dureeAppelMs);
+      } else {
+        log.warn("erreur HTTP Ticketmaster url={} : {}", uriSafe, redigerApiKey(e.getMessage()));
+      }
       compteurBilan.enregistrerErreur();
       return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
     }
