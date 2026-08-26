@@ -290,10 +290,15 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       if (itemUri == null) continue;
       String itemLabel = ClientSparqlWikidata.valeurBinding(binding, "itemLabel");
       String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
-      String labelCorrespondant = trouverLabelCorrespondant(salle.nomNorm(), itemLabel, aliases);
+      String communeLabel = ClientSparqlWikidata.valeurBinding(binding, "communeLabel");
+      String codePostal = ClientSparqlWikidata.valeurBinding(binding, "codePostal");
+      boolean localisationConnue =
+          (communeLabel != null && !communeLabel.isBlank())
+              || (codePostal != null && !codePostal.isBlank());
+      String labelCorrespondant =
+          trouverLabelCorrespondant(salle.nomNorm(), itemLabel, aliases, localisationConnue);
       if (labelCorrespondant == null) continue;
 
-      String communeLabel = ClientSparqlWikidata.valeurBinding(binding, "communeLabel");
       if (villeIncompatible(salle.ville(), communeLabel)) {
         log.info(
             "Wikidata découverte salle — rejet commune incompatible nom={} villeSalle={}"
@@ -303,7 +308,6 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
             communeLabel);
         continue;
       }
-      String codePostal = ClientSparqlWikidata.valeurBinding(binding, "codePostal");
       if (deptIncompatible(salle.dept(), codePostal)) {
         log.info(
             "Wikidata découverte salle — rejet département incompatible nom={} deptSalle={}"
@@ -384,16 +388,22 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   /// @param nomNormCible nom de la salle Strapontin, normalisé ({@link SalleAEnrichir#nomNorm})
   /// @param itemLabel libellé principal du candidat Wikidata (peut être {@code null})
   /// @param aliases alias du candidat séparés par {@code "|"} (peut être {@code null} ou vide)
+  /// @param localisationConnue {@code false} si le candidat n'a ni commune ni code postal Wikidata
+  ///   connus — désactive alors le critère pivot d'{@link CorrespondanceSalle}, sans aucun signal
+  ///   indépendant pour confirmer un candidat validé sur ce seul critère (voir {@link
+  ///   CorrespondanceSalle#estDoublonSalle(String, String, boolean)})
   /// @return le libellé (principal ou alias) qui correspond, ou {@code null} si aucun
   private static String trouverLabelCorrespondant(
-      String nomNormCible, String itemLabel, String aliases) {
+      String nomNormCible, String itemLabel, String aliases, boolean localisationConnue) {
     if (itemLabel != null
-        && estCorrespondanceAsymetrique(nomNormCible, Normalisation.normaliserTexte(itemLabel))) {
+        && estCorrespondanceAsymetrique(
+            nomNormCible, Normalisation.normaliserTexte(itemLabel), localisationConnue)) {
       return itemLabel;
     }
     if (aliases == null || aliases.isBlank()) return null;
     for (String alias : aliases.split("\\|")) {
-      if (estCorrespondanceAsymetrique(nomNormCible, Normalisation.normaliserTexte(alias))) {
+      if (estCorrespondanceAsymetrique(
+          nomNormCible, Normalisation.normaliserTexte(alias), localisationConnue)) {
         return alias;
       }
     }
@@ -420,10 +430,15 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   ///
   /// @param nomNormCible nom Strapontin normalisé
   /// @param candidatNorm libellé ou alias Wikidata normalisé
+  /// @param localisationConnue transmis tel quel à {@link
+  ///   CorrespondanceSalle#estDoublonSalle(String, String, boolean)}
   /// @return {@code true} si les tokens significatifs de {@code nomNormCible} sont tous inclus dans
   ///   ceux de {@code candidatNorm}
-  private static boolean estCorrespondanceAsymetrique(String nomNormCible, String candidatNorm) {
-    if (CorrespondanceSalle.estDoublonSalle(nomNormCible, candidatNorm)) return true;
+  private static boolean estCorrespondanceAsymetrique(
+      String nomNormCible, String candidatNorm, boolean localisationConnue) {
+    if (CorrespondanceSalle.estDoublonSalle(nomNormCible, candidatNorm, localisationConnue)) {
+      return true;
+    }
     Set<String> tokensCible = CorrespondanceSalle.tokensSignificatifs(nomNormCible);
     if (tokensCible.size() < TAILLE_MIN_TOKENS_CONTAINMENT) return false;
     Set<String> tokensCandidat = CorrespondanceSalle.tokensSignificatifs(candidatNorm);

@@ -206,4 +206,30 @@ class CorrespondanceSalleTest {
   void estDoublonSalle_casinoDeParisEtLuiMemeAvecSuffixeArrondissement_resteTrue() {
     assertTrue(CorrespondanceSalle.estDoublonSalle("casino de paris", "casino de paris paris 09"));
   }
+
+  // --- pivotAutorise=false : critère pivot désactivé (adjectif générique sans localisation) ---
+
+  @Test
+  void estDoublonSalle_pivotAutorise_adjectifGeneriqueCommun_resteTrue() {
+    // "nouvelle" (8 car., ≥ seuil pivot 7) déclenche le critère pivot par défaut — comportement
+    // inchangé tant que pivotAutorise n'est pas explicitement désactivé.
+    assertTrue(CorrespondanceSalle.estDoublonSalle("la nouvelle vague", "la nouvelle republique"));
+  }
+
+  @Test
+  void estDoublonSalle_pivotInterdit_adjectifGeneriqueCommun_retourneFalse() {
+    // "La Nouvelle Vague" (Saint-Malo) ne doit pas être confondue avec "La Nouvelle République"
+    // (un journal) sur le seul pivot "nouvelle" — aucune donnée de localisation pour trancher.
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle("la nouvelle vague", "la nouvelle republique", false));
+  }
+
+  @Test
+  void estDoublonSalle_pivotInterdit_autresCriteresResteInchanges() {
+    // Le retrait du critère pivot ne doit affaiblir aucun des quatre autres critères.
+    assertTrue(CorrespondanceSalle.estDoublonSalle("grand kursaal", "kursaal besancon", true));
+    assertFalse(CorrespondanceSalle.estDoublonSalle("grand kursaal", "kursaal besancon", false));
+    assertTrue(CorrespondanceSalle.estDoublonSalle("l olympia", "olympia", false));
+    assertFalse(CorrespondanceSalle.estDoublonSalle("zenith bordeaux", "zenith caen", false));
+  }
 }

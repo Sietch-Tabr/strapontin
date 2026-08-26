@@ -163,6 +163,23 @@ public final class CorrespondanceSalle {
   /// @param b deuxième nom normalisé
   /// @return {@code true} si les salles sont considérées identiques
   public static boolean estDoublonSalle(String a, String b) {
+    return estDoublonSalle(a, b, true);
+  }
+
+  /// Variante de {@link #estDoublonSalle(String, String)} permettant de désactiver le critère pivot
+  /// (le plus faible des cinq, seul token commun ≥ 7 caractères) — un adjectif générique français
+  /// très courant (ex. "nouvelle") peut satisfaire ce critère sans avoir de pouvoir discriminant
+  /// réel, constaté en production sur un rapprochement Wikidata sans aucune donnée de localisation
+  /// permettant un contrôle croisé indépendant. Les quatre autres critères restent inchangés dans
+  /// les deux cas.
+  ///
+  /// @param a premier nom normalisé
+  /// @param b deuxième nom normalisé
+  /// @param pivotAutorise {@code false} pour exclure le critère pivot de l'union — à réserver aux
+  ///   cas où aucun signal indépendant (ville, département) ne peut confirmer un candidat validé
+  ///   sur ce seul critère
+  /// @return {@code true} si les salles sont considérées identiques
+  public static boolean estDoublonSalle(String a, String b, boolean pivotAutorise) {
     if (estDoublonTexte(
         a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE, RATIO_MIN_CONTAINMENT_SALLE))
       return true;
@@ -176,7 +193,9 @@ public final class CorrespondanceSalle {
     double jaccardSpec = jaccard(specA, specB, intersectionSpec);
 
     if (estJaccardSpecifiqueSuffisant(specA, specB, jaccardSpec)) return true;
-    if (estPivotSpecifique(tokA, tokB, jaccardSpec, intersectionSpec)) return true;
+    if (pivotAutorise && estPivotSpecifique(tokA, tokB, jaccardSpec, intersectionSpec)) {
+      return true;
+    }
     return estContainmentPartielSuffisant(specA, specB);
   }
 

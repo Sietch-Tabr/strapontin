@@ -179,6 +179,55 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // Régression : « La Nouvelle Vague » (Saint-Malo) ne doit jamais être rapprochée de « La
+  // Nouvelle République » (un journal), un candidat sans commune ni code postal connus qui ne
+  // matche que sur le pivot générique "nouvelle" — aucune donnée de localisation pour un contrôle
+  // croisé indépendant.
+  @Test
+  void enrichirLot_pivotGeneriqueSansLocalisation_rejetteLeCandidat() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    String nomComplet = "La Nouvelle Vague";
+    SalleAEnrichir salle =
+        new SalleAEnrichir(
+            id,
+            nomComplet,
+            fr.strapontin.core.Normalisation.normaliserTexte(nomComplet),
+            null,
+            null,
+            null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q3211144"},
+                   "itemLabel":{"type":"literal","value":"La Nouvelle République"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertEquals(0, resultat.size());
+    serveur.verify();
+  }
+
   // Garde-fou : un nom de deux mots ne doit jamais être tronqué à un seul mot générique — aucun
   // second appel HTTP ne doit être tenté (vérifié par MockRestServiceServer : un appel non
   // attendu ferait échouer le test).
