@@ -52,7 +52,11 @@ import org.springframework.web.client.RestClient;
 ///       en premier résultat une œuvre culturelle homonyme (constaté en production : pour
 ///       « L'Olympia », le premier candidat mwapi est un <em>album</em> d'Émilie Simon sorti en
 ///       2007, pas la salle) — un album/single/livre n'a pas de coordonnées, une salle en a
-///       toujours une. La désambiguïsation finale réutilise {@link
+///       toujours une. Exception vérifiée : un candidat typé {@code wd:Q1060829} (bâtiment de
+///       salle de concert) est accepté même sans coordonnées — constaté en production sur « salle
+///       Paul-Fort » (Nantes), correcte mais structurellement exclue par l'exigence de coordonnées
+///       seule, laissant un homonyme sans rapport (« salle Paul Bouin », Basse-Goulaine) devenir
+///       l'unique candidat retourné. La désambiguïsation finale réutilise {@link
 // CorrespondanceSalle#estDoublonSalle}
 ///       (module {@code core}, même algorithme que {@code ReconciliateurSalles} côté worker :
 ///       Levenshtein ≥ 0.75, Jaccard tokens, critère pivot) plutôt qu'une simple égalité de chaîne
@@ -451,7 +455,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
         ?item wikibase:apiOutputItem mwapi:item.
         ?num wikibase:apiOrdinal true.
       }
-      ?item wdt:P625 [] .
+      { ?item wdt:P625 [] . } UNION { ?item wdt:P31 wd:Q1060829 . }
       ?item wdt:P17 wd:Q142 .
       FILTER NOT EXISTS {
         ?item wdt:P31 ?typeExclu .

@@ -683,6 +683,44 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // Régression : une salle réelle sans coordonnées Wikidata (ex. « salle Paul-Fort », Nantes)
+  // était structurellement exclue par l'exigence de coordonnées seule, ne laissant qu'un
+  // homonyme sans rapport (« salle Paul Bouin ») comme candidat retourné. Le type « bâtiment de
+  // salle de concert » (Q1060829) sert d'alternative vérifiée aux coordonnées.
+  @Test
+  void construireRequeteDecouverte_accepteLeTypeBatimentSalleDeConcertSansCoordonnees() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Salle Paul Fort", "salle paul fort", null, null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q1060829")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q57315616"},
+                   "itemLabel":{"type":"literal","value":"salle Paul-Fort"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertEquals(1, resultat.size());
+    assertEquals("Q57315616", resultat.get(id).wikidataId());
+    serveur.verify();
+  }
+
   @Test
   void enrichirLot_decouverte_villeConnueEtCorrespondante_accepteCandidat() {
     RestClient.Builder builder = RestClient.builder();
