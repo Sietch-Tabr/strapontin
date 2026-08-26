@@ -76,7 +76,8 @@ class WorkerFetchServiceTest {
             resolveur,
             jdbc,
             logsAdminWorker,
-            new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+            new SuiviChroniciteService(jdbc, new ObjectMapper()));
     fetchService =
         new WorkerFetchService(
             sources,

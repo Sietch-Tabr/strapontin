@@ -40,7 +40,14 @@ class WorkerRevocationServiceTest {
     ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
     LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
     WorkerStatsService workerStatsService =
-        new WorkerStatsService(List.<SourceConcerts>of(), tm, resolveur, jdbc, logsAdminWorker, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+        new WorkerStatsService(
+            List.<SourceConcerts>of(),
+            tm,
+            resolveur,
+            jdbc,
+            logsAdminWorker,
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+            new SuiviChroniciteService(jdbc, new ObjectMapper()));
     service = new WorkerRevocationService(jdbc, workerStatsService);
   }
 

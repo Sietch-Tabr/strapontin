@@ -56,7 +56,14 @@ class WorkerStatsServiceTest {
   }
 
   private WorkerStatsService creerService(List<SourceConcerts> sources) {
-    return new WorkerStatsService(sources, tm, resolveur, jdbc, logsAdminWorker, meterRegistry);
+    return new WorkerStatsService(
+        sources,
+        tm,
+        resolveur,
+        jdbc,
+        logsAdminWorker,
+        meterRegistry,
+        new SuiviChroniciteService(jdbc, new ObjectMapper()));
   }
 
   // bilan Eventim remonté via le mécanisme générique (instanceof SourceAvecBilanFetch),
@@ -283,6 +290,69 @@ class WorkerStatsServiceTest {
                 params ->
                     params.get("message") != null
                         && params.get("message").toString().contains("containment")));
+  }
+
+  // le streak de chronicité (persisté dans app_config, cf. SuiviChroniciteService) doit survivre
+  // entre deux appels à enregistrerStatJob — simulé ici par un stockage en mémoire derrière le
+  // jdbc mocké, fidèle au comportement réel (INSERT ... ON CONFLICT DO UPDATE).
+  private void simulerPersistanceAppConfig() {
+    java.util.concurrent.atomic.AtomicReference<String> valeur =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    when(jdbc.queryForObject(
+            anyString(),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, ?>>any(),
+            org.mockito.ArgumentMatchers.eq(String.class)))
+        .thenAnswer(invocation -> valeur.get());
+    when(jdbc.update(
+            contains("INSERT INTO app_config"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, ?>>any()))
+        .thenAnswer(
+            invocation -> {
+              java.util.Map<String, ?> params = invocation.getArgument(1);
+              valeur.set((String) params.get("json"));
+              return 1;
+            });
+  }
+
+  @Test
+  void enregistrerStatJob_echecPersistantSurTroisCycles_qualifieLeMessageDeChronique() {
+    simulerPersistanceAppConfig();
+    when(eventim.preleverBilan()).thenReturn(new BilanFetch(5, 2));
+
+    service.enregistrerStatJob("fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
+    service.enregistrerStatJob("fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
+    service.enregistrerStatJob("fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    params
+                        .get("message")
+                        .toString()
+                        .contains("chronique depuis 3 cycles consécutifs")));
+  }
+
+  @Test
+  void enregistrerStatJob_cycleReussiApresDesEchecs_reinitialiseLeStreak() {
+    simulerPersistanceAppConfig();
+    when(eventim.preleverBilan())
+        .thenReturn(new BilanFetch(5, 2))
+        .thenReturn(new BilanFetch(5, 2))
+        .thenReturn(new BilanFetch(5, 0))
+        .thenReturn(new BilanFetch(5, 2));
+
+    service.enregistrerStatJob("fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
+    service.enregistrerStatJob("fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
+    service.enregistrerStatJob("fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
+    service.enregistrerStatJob("fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
+
+    verify(jdbc, never())
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params -> params.get("message").toString().contains("chronique")));
   }
 
   @Test

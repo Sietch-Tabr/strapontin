@@ -49,7 +49,8 @@ class WorkerPurgeServiceTest {
             resolveur,
             jdbc,
             logsAdminWorker,
-            new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+            new SuiviChroniciteService(jdbc, new ObjectMapper()));
     service = new WorkerPurgeService(jdbc, workerStatsService);
   }
 

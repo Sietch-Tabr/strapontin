@@ -57,7 +57,8 @@ class WorkerServiceTest {
             resolveur,
             jdbc,
             logsAdminWorker,
-            new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+            new SuiviChroniciteService(jdbc, new ObjectMapper()));
     workerService =
         new WorkerService(
             recalculerMatchesService,

@@ -16,12 +16,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementSalle;
 import fr.strapontin.worker.LogsAdminWorker;
+import fr.strapontin.worker.SuiviChroniciteService;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,13 +52,20 @@ class EnrichissementSallesServiceTest {
     return mock(LogsAdminWorker.class);
   }
 
+  // instance réelle adossée au jdbc mocké du test (comportement passthrough par défaut, aucun
+  // streak persisté ne survit entre deux tests indépendants) — cf. WorkerStatsServiceTest.
+  private static SuiviChroniciteService suiviChronicite(NamedParameterJdbcTemplate jdbc) {
+    return new SuiviChroniciteService(jdbc, new ObjectMapper());
+  }
+
   @Test
   void enrichir_aucunCandidat_retourneZeroSansAppelerLesSources() {
     NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of());
     SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorkerMock());
+        new EnrichissementSallesService(
+            jdbc, List.of(source), logsAdminWorkerMock(), suiviChronicite(jdbc));
     int nb = service.enrichir();
 
     assertEquals(0, nb);
@@ -79,7 +88,8 @@ class EnrichissementSallesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+        new EnrichissementSallesService(
+            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
     int nb = service.enrichir();
 
     assertEquals(0, nb);
@@ -97,7 +107,8 @@ class EnrichissementSallesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+        new EnrichissementSallesService(
+            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
     service.enrichir();
 
     verify(logsAdminWorker, never())
@@ -135,7 +146,8 @@ class EnrichissementSallesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+        new EnrichissementSallesService(
+            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
     int nb = service.enrichir();
 
     assertEquals(3, nb);
@@ -171,7 +183,8 @@ class EnrichissementSallesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+        new EnrichissementSallesService(
+            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
     int nb = service.enrichir();
 
     assertEquals(10, nb);
@@ -197,7 +210,8 @@ class EnrichissementSallesServiceTest {
             Map.of(salleId, new EnrichissementSalle("Q123", "Zénith", "Nantes", null, null)));
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(overpass, wikidata), logsAdminWorkerMock());
+        new EnrichissementSallesService(
+            jdbc, List.of(overpass, wikidata), logsAdminWorkerMock(), suiviChronicite(jdbc));
     int nb = service.enrichir();
 
     assertEquals(1, nb);
@@ -229,7 +243,7 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source1, source2, source3), logsAdminWorkerMock());
+            jdbc, List.of(source1, source2, source3), logsAdminWorkerMock(), suiviChronicite(jdbc));
     int nb = service.enrichir();
 
     assertEquals(1, nb);
@@ -249,7 +263,8 @@ class EnrichissementSallesServiceTest {
     when(source2.enrichirLot(any())).thenReturn(Map.of());
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(source1, source2), logsAdminWorkerMock());
+        new EnrichissementSallesService(
+            jdbc, List.of(source1, source2), logsAdminWorkerMock(), suiviChronicite(jdbc));
     service.enrichir();
 
     verify(jdbc)
@@ -284,7 +299,8 @@ class EnrichissementSallesServiceTest {
             });
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorkerMock());
+        new EnrichissementSallesService(
+            jdbc, List.of(source), logsAdminWorkerMock(), suiviChronicite(jdbc));
     int nb = service.enrichir();
 
     assertEquals(30, nb);
@@ -324,7 +340,8 @@ class EnrichissementSallesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+        new EnrichissementSallesService(
+            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
     int nb = service.enrichir();
 
     assertEquals(1, nb);
@@ -351,7 +368,8 @@ class EnrichissementSallesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+        new EnrichissementSallesService(
+            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
     service.enrichir();
 
     verify(logsAdminWorker).inserer(eq("error"), eq("worker"), anyString(), anyMap());
@@ -373,9 +391,59 @@ class EnrichissementSallesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementSallesService service =
-        new EnrichissementSallesService(jdbc, List.of(source), logsAdminWorker);
+        new EnrichissementSallesService(
+            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
     service.enrichir();
 
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
+  }
+
+  // le streak de chronicité (persisté dans app_config) doit survivre entre deux cycles
+  // enrichir() distincts sur la même instance — un taux d'échec Overpass élevé répété à chaque
+  // nuit doit finir par être qualifié de chronique, pas traité comme un warn isolé à chaque fois.
+  @Test
+  void enrichir_echecOverpassPersistantSurTroisCycles_qualifieLeMessageDeChronique() {
+    UUID salleId = UUID.randomUUID();
+    SalleAEnrichir candidat = new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
+
+    java.util.concurrent.atomic.AtomicReference<String> valeurAppConfig =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    when(jdbc.queryForObject(
+            anyString(), org.mockito.ArgumentMatchers.<Map<String, ?>>any(), eq(String.class)))
+        .thenAnswer(invocation -> valeurAppConfig.get());
+    when(jdbc.update(
+            org.mockito.ArgumentMatchers.contains("INSERT INTO app_config"),
+            org.mockito.ArgumentMatchers.<Map<String, ?>>any()))
+        .thenAnswer(
+            invocation -> {
+              Map<String, ?> params = invocation.getArgument(1);
+              valeurAppConfig.set((String) params.get("json"));
+              return 1;
+            });
+
+    SourceEnrichissementSalle source =
+        mock(
+            SourceEnrichissementSalle.class,
+            org.mockito.Mockito.withSettings().extraInterfaces(SourceAvecBilanFetch.class));
+    when(source.enrichirLot(any())).thenReturn(Map.of());
+    when(source.nom()).thenReturn("overpass");
+    when(((SourceAvecBilanFetch) source).preleverBilan()).thenReturn(new BilanFetch(5, 2));
+    LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
+
+    EnrichissementSallesService service =
+        new EnrichissementSallesService(
+            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
+    service.enrichir();
+    service.enrichir();
+    service.enrichir();
+
+    verify(logsAdminWorker, times(3)).inserer(eq("warn"), eq("worker"), anyString(), anyMap());
+    verify(logsAdminWorker)
+        .inserer(
+            eq("warn"),
+            eq("worker"),
+            org.mockito.ArgumentMatchers.contains("chronique depuis 3 cycles consécutifs"),
+            anyMap());
   }
 }

@@ -40,6 +40,7 @@ public class WorkerStatsService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
   private final MeterRegistry meterRegistry;
+  private final SuiviChroniciteService suiviChronicite;
 
   /// @param sources sources de concerts (bilan de panne par source)
   /// @param tm source Ticketmaster (bilan des concerts manqués par pagination plafonnée)
@@ -47,19 +48,22 @@ public class WorkerStatsService {
   /// @param jdbc accès JDBC pour {@code fetch_jobs}/{@code fetch_jobs_historique}
   /// @param logsAdminWorker journalisation des bilans dans {@code logs_admin}
   /// @param meterRegistry registre Micrometer pour la métrique de durée par type de job
+  /// @param suiviChronicite suivi des cycles consécutifs en échec par job/source
   public WorkerStatsService(
       List<SourceConcerts> sources,
       TicketmasterSource tm,
       ResolveurNomCanonique resolveur,
       NamedParameterJdbcTemplate jdbc,
       LogsAdminWorker logsAdminWorker,
-      MeterRegistry meterRegistry) {
+      MeterRegistry meterRegistry,
+      SuiviChroniciteService suiviChronicite) {
     this.sources = sources;
     this.tm = tm;
     this.resolveur = resolveur;
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
     this.meterRegistry = meterRegistry;
+    this.suiviChronicite = suiviChronicite;
   }
 
   /// Enregistre le résultat d'un job dans {@code fetch_jobs}/{@code fetch_jobs_historique}, puis
@@ -140,17 +144,20 @@ public class WorkerStatsService {
   /// @param bilan bilan prélevé pour cette source depuis le dernier cycle
   /// @return {@code true} si une entrée a été insérée dans {@code logs_admin}
   private boolean remonterBilan(String typeJob, String nomSource, BilanFetch bilan) {
-    if (bilan == null) return false;
+    if (bilan == null || bilan.appels() == 0) return false;
     if (bilan.erreursHttp() > 0) {
       meterRegistry
           .counter("strapontin.worker.source.erreurs", "source", nomSource)
           .increment(bilan.erreursHttp());
     }
+    int streak =
+        suiviChronicite.enregistrerCycle(typeJob + "|" + nomSource, bilan.erreursHttp() > 0);
     return bilan
         .evaluer(typeJob, capitaliser(nomSource), BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT)
         .map(
             entree -> {
-              logsAdminWorker.inserer(entree.niveau(), "worker", entree.message(), entree.meta());
+              String message = suiviChronicite.enrichirSiChronique(entree.message(), streak);
+              logsAdminWorker.inserer(entree.niveau(), "worker", message, entree.meta());
               return true;
             })
         .orElse(false);
