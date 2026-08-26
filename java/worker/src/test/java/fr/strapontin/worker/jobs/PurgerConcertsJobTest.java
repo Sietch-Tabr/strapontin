@@ -22,5 +22,6 @@ class PurgerConcertsJobTest {
     job.executeInternal(mock(JobExecutionContext.class));
 
     verify(workerPurgeService).executerPurgerConcerts();
+    verify(workerPurgeService).executerPurgerConcertsNonConfirmes();
   }
 }

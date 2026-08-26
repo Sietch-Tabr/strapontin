@@ -192,8 +192,10 @@ public class WorkerFetchService {
   // qu'un concert précédemment vu ne réapparaisse) à partir duquel il est marqué comme non
   // confirmé récemment — évite un faux positif sur un simple aléa réseau isolé, tout en restant
   // assez bas pour signaler une disparition réelle dans un délai raisonnable (cron ~11 cycles/jour
-  // — 5 absences correspond à environ une demi-journée de silence continu).
-  private static final int SEUIL_ABSENCES_CONSECUTIVES = 5;
+  // — 5 absences correspond à environ une demi-journée de silence continu). Package-private :
+  // référencé par WorkerPurgeService pour dériver le seuil de purge définitive (voir
+  // WorkerPurgeService.SEUIL_PURGE_ABSENCES).
+  static final int SEUIL_ABSENCES_CONSECUTIVES = 5;
 
   /// Met à jour le compteur d'absences consécutives des concerts futurs liés aux entités
   /// effectivement retraitées dans ce cycle : remis à zéro pour tout concert réellement revu

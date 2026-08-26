@@ -64,6 +64,44 @@ public class WorkerPurgeService {
     }
   }
 
+  // Seuil de purge définitive d'un concert futur jamais reconfirmé — très supérieur au seuil de
+  // simple signalement "à vérifier" (WorkerFetchService.SEUIL_ABSENCES_CONSECUTIVES, une demi-
+  // journée de silence) : un état "à vérifier" posé par ce garde-fou anti-faux-positif ne doit pas
+  // rester affiché indéfiniment sans jamais évoluer. ×10 correspond à environ 5 jours de silence
+  // continu (cron ~11 cycles/jour), largement au-delà de toute panne transitoire de source déjà
+  // observée.
+  static final int SEUIL_PURGE_ABSENCES = WorkerFetchService.SEUIL_ABSENCES_CONSECUTIVES * 10;
+
+  /// Supprime les concerts futurs dont le compteur d'absences consécutives dépasse {@value
+  /// #SEUIL_PURGE_ABSENCES} — un concert signalé "à vérifier" (voir {@code
+  /// WorkerFetchService.mettreAJourAbsences}) qui n'a plus été confirmé par aucune source depuis
+  /// bien plus longtemps que le seuil de détection initial n'a manifestement plus de raison d'être
+  /// affiché indéfiniment.
+  public void executerPurgerConcertsNonConfirmes() {
+    log.info("purger:concerts-non-confirmes seuilAbsences={}", SEUIL_PURGE_ABSENCES);
+    long debut = System.currentTimeMillis();
+    try {
+      int supprimes =
+          jdbc.update(
+              "DELETE FROM concerts WHERE absences_consecutives >= :seuil AND date >="
+                  + " CURRENT_DATE",
+              Map.of("seuil", SEUIL_PURGE_ABSENCES));
+      log.info("purger:concerts-non-confirmes terminé supprimes={}", supprimes);
+      workerStatsService.enregistrerStatJob(
+          "purger:concerts-non-confirmes",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, supprimes),
+          null);
+    } catch (Exception e) {
+      log.error("purger:concerts-non-confirmes échoué", e);
+      workerStatsService.enregistrerStatJob(
+          "purger:concerts-non-confirmes",
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, 0),
+          e.getMessage());
+    }
+  }
+
   /// Supprime les salles orphelines (sans concerts futurs, sans utilisateurs et sans slug
   // Digitick).
   /// Une salle est conservée si :
