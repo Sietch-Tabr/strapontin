@@ -649,6 +649,40 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // Un bar/restaurant homonyme situé sur le même site qu'une vraie salle de spectacle ne doit
+  // jamais être proposé comme candidat — constaté en production (bar restaurant de la Saline
+  // Royale, distinct du monument éponyme accueillant les concerts).
+  @Test
+  void construireRequeteDecouverte_excluLesCommerces() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Saline Royale", "saline royale", null, null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q187456")))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q11707")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    src.enrichirLot(List.of(salle));
+
+    serveur.verify();
+  }
+
   @Test
   void enrichirLot_decouverte_villeConnueEtCorrespondante_accepteCandidat() {
     RestClient.Builder builder = RestClient.builder();

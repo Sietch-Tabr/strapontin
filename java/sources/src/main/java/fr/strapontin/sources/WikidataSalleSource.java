@@ -426,7 +426,19 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     return tokensCandidat.containsAll(tokensCible);
   }
 
+  // Types Wikidata (P31) structurellement incompatibles avec un lieu de spectacle : gare
+  // (Q3455524), arrêt de tram (Q6465), commune française (Q484170), gare ferroviaire (Q55488),
+  // arrêt de transport en commun (Q2175765), bar (Q187456), restaurant (Q11707) — un candidat de
+  // l'un de ces types est nécessairement une fausse correspondance, quel que soit son score de
+  // similarité de nom. Exposée pour permettre à {@code CoherenceWikidataSalleService} de revalider
+  // les {@code wikidata_id} déjà stockés contre ces mêmes types (garde-fou introduit après coup ne
+  // s'appliquant pas rétroactivement aux découvertes antérieures).
+  public static final Set<String> TYPES_EXCLUS =
+      Set.of("Q3455524", "Q6465", "Q484170", "Q55488", "Q2175765", "Q187456", "Q11707");
+
   private static String construireRequeteDecouverte(String nom) {
+    String typesExclusSparql =
+        TYPES_EXCLUS.stream().map(qid -> "wd:" + qid).collect(Collectors.joining(" "));
     return """
     SELECT ?item ?itemLabel ?communeLabel ?num
       (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) (SAMPLE(?cp) AS ?codePostal)
@@ -443,7 +455,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       ?item wdt:P17 wd:Q142 .
       FILTER NOT EXISTS {
         ?item wdt:P31 ?typeExclu .
-        VALUES ?typeExclu { wd:Q3455524 wd:Q6465 wd:Q484170 wd:Q55488 wd:Q2175765 }
+        VALUES ?typeExclu { %s }
       }
       OPTIONAL { ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "fr") }
       OPTIONAL {
@@ -458,7 +470,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     ORDER BY ?num
     LIMIT 5
     """
-        .formatted(ClientSparqlWikidata.echapperLitteral(nom));
+        .formatted(ClientSparqlWikidata.echapperLitteral(nom), typesExclusSparql);
   }
 
   @SuppressWarnings("unchecked")
