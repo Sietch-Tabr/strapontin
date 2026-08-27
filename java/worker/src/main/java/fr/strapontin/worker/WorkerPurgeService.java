@@ -72,25 +72,32 @@ public class WorkerPurgeService {
   // observée.
   static final int SEUIL_PURGE_ABSENCES = WorkerFetchService.SEUIL_ABSENCES_CONSECUTIVES * 10;
 
-  /// Supprime les concerts futurs dont le compteur d'absences consécutives dépasse {@value
-  /// #SEUIL_PURGE_ABSENCES} — un concert signalé "à vérifier" (voir {@code
+  /// Signale pour suppression les concerts futurs dont le compteur d'absences consécutives dépasse
+  /// {@value #SEUIL_PURGE_ABSENCES} — un concert signalé "à vérifier" (voir {@code
   /// WorkerFetchService.mettreAJourAbsences}) qui n'a plus été confirmé par aucune source depuis
   /// bien plus longtemps que le seuil de détection initial n'a manifestement plus de raison d'être
-  /// affiché indéfiniment.
+  /// affiché indéfiniment tel quel.
+  ///
+  /// <p>Pose {@code suppression_suggeree_le} plutôt que de supprimer directement — un doublon de
+  /// salle jamais fusionné entre sources, ou un concert catalogué sous une autre attraction que
+  /// l'artiste suivi, peuvent faire grimper ce compteur pour un concert pourtant réel et toujours
+  /// en vente. La suppression définitive reste une action manuelle, revue depuis l'admin (onglet
+  /// Concerts).
   public void executerPurgerConcertsNonConfirmes() {
     log.info("purger:concerts-non-confirmes seuilAbsences={}", SEUIL_PURGE_ABSENCES);
     long debut = System.currentTimeMillis();
     try {
-      int supprimes =
+      int signales =
           jdbc.update(
-              "DELETE FROM concerts WHERE absences_consecutives >= :seuil AND date >="
-                  + " CURRENT_DATE",
+              "UPDATE concerts SET suppression_suggeree_le = now()"
+                  + " WHERE absences_consecutives >= :seuil AND date >= CURRENT_DATE"
+                  + " AND suppression_suggeree_le IS NULL",
               Map.of("seuil", SEUIL_PURGE_ABSENCES));
-      log.info("purger:concerts-non-confirmes terminé supprimes={}", supprimes);
+      log.info("purger:concerts-non-confirmes terminé signales={}", signales);
       workerStatsService.enregistrerStatJob(
           "purger:concerts-non-confirmes",
           System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, supprimes),
+          new ResultatPersistance(0, signales),
           null);
     } catch (Exception e) {
       log.error("purger:concerts-non-confirmes échoué", e);

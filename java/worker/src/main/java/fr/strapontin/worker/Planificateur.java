@@ -15,6 +15,7 @@ import fr.strapontin.worker.jobs.PurgerSallesJob;
 import fr.strapontin.worker.jobs.RecalculerMatchesJob;
 import fr.strapontin.worker.jobs.ReconciliationNocturneJob;
 import fr.strapontin.worker.jobs.RevoquerAdminsJob;
+import fr.strapontin.worker.jobs.SuiviCyclesJobsJob;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
@@ -45,6 +46,7 @@ import org.springframework.context.annotation.Configuration;
 /// - `notifier:digest` — tous les jours à 8h
 /// - `revoquer:admins` — toutes les heures
 /// - `reconciliation:nocturne` — tous les jours à 3h
+/// - `suivi:cycles-jobs` — toutes les heures à H:30 (décalé de `revoquer:admins`)
 ///
 /// Le job `fetch:salle` est planifié dynamiquement par [WorkerService] selon les salles
 /// configurées. `fetch:salles:all` est le pendant périodique qui boucle sur toutes les salles ayant
@@ -194,5 +196,15 @@ public class Planificateur {
   Trigger triggerReconciliationNocturne(JobDetail jobDetailReconciliationNocturne) {
     return creerTrigger(
         jobDetailReconciliationNocturne, "triggerReconciliationNocturne", "0 0 3 * * ?");
+  }
+
+  @Bean
+  JobDetail jobDetailSuiviCyclesJobs() {
+    return creerJobDetail(SuiviCyclesJobsJob.class, "suiviCyclesJobs");
+  }
+
+  @Bean
+  Trigger triggerSuiviCyclesJobs(JobDetail jobDetailSuiviCyclesJobs) {
+    return creerTrigger(jobDetailSuiviCyclesJobs, "triggerSuiviCyclesJobs", "0 30 * * * ?");
   }
 }

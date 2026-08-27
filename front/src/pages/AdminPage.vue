@@ -30,6 +30,7 @@
       <KeepAlive><AdminSources      v-if="ongletActif === '#sources'"       /></KeepAlive>
       <KeepAlive><AdminSalles       v-if="ongletActif === '#salles'"        /></KeepAlive>
       <KeepAlive><AdminArtistes     v-if="ongletActif === '#artistes'"      /></KeepAlive>
+      <KeepAlive><AdminConcerts     v-if="ongletActif === '#concerts'"      /></KeepAlive>
       <KeepAlive><AdminLogs         v-if="ongletActif === '#logs'"          /></KeepAlive>
       <KeepAlive><AdminConfig       v-if="ongletActif === '#configuration'" /></KeepAlive>
       <KeepAlive><AdminBanniere     v-if="ongletActif === '#banniere'"      /></KeepAlive>
@@ -48,6 +49,7 @@ import AdminJobs          from '../components/admin/AdminJobs.vue'
 import AdminSources       from '../components/admin/AdminSources.vue'
 import AdminSalles        from '../components/admin/AdminSalles.vue'
 import AdminArtistes      from '../components/admin/AdminArtistes.vue'
+import AdminConcerts      from '../components/admin/AdminConcerts.vue'
 import AdminLogs          from '../components/admin/AdminLogs.vue'
 import AdminConfig        from '../components/admin/AdminConfig.vue'
 import AdminBanniere      from '../components/admin/AdminBanniere.vue'
@@ -62,6 +64,7 @@ const onglets = [
   { ancre: '#sources',       label: 'Sources' },
   { ancre: '#salles',        label: 'Salles' },
   { ancre: '#artistes',      label: 'Artistes' },
+  { ancre: '#concerts',      label: 'Concerts' },
   { ancre: '#logs',          label: 'Logs' },
   { ancre: '#configuration', label: 'Configuration' },
   { ancre: '#banniere',      label: 'Bannière' },

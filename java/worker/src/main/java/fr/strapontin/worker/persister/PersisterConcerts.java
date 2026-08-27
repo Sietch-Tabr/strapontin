@@ -218,8 +218,9 @@ public class PersisterConcerts {
     Map<String, UUID> cachesSallesParNom = new HashMap<>();
     for (ValeurConcert c : concerts) {
       if (c.salleSourceId() == null && !cachesSallesParNom.containsKey(c.salleNorm())) {
-        cachesSallesParNom.put(
-            c.salleNorm(), reconciliateurSalles.chercherSalleParTokens(c.salle(), c.dept()));
+        UUID salleId = reconciliateurSalles.chercherSalleParTokens(c.salle(), c.dept());
+        if (salleId == null) salleId = reconciliateurSalles.chercherSalleParCleForte(c);
+        cachesSallesParNom.put(c.salleNorm(), salleId);
       }
     }
 

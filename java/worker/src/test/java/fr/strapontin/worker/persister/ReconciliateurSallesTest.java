@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
@@ -263,6 +265,79 @@ class ReconciliateurSallesTest {
     int resolus = reconciliateur.retenterSallesOrphelines();
 
     assertEquals(0, resolus);
+  }
+
+  // Cas réel confirmé en production (Vincent Dedienne/Fréjus) : "Theatre le Forum Frejus"
+  // (Eventim) et "Le Forum - Salle Gounod" (TM) ne partagent aucun token — la clé forte
+  // artiste+date+heure+dept doit rattacher malgré l'absence totale de rapport textuel.
+  @SuppressWarnings("unchecked")
+  @Test
+  void chercherSalleParCleForte_memeArtisteDateHeureDept_retourneLaSalleExistante() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    UUID salleExistante = UUID.randomUUID();
+
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
+        .thenReturn(List.of(salleExistante));
+
+    ValeurConcert entrant =
+        concert(
+            "vincent dedienne",
+            LocalDate.of(2027, 5, 23),
+            LocalTime.of(20, 30),
+            "theatre le forum frejus",
+            "83");
+
+    assertEquals(salleExistante, reconciliateur.chercherSalleParCleForte(entrant));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void chercherSalleParCleForte_heureInconnue_neQuerypasEtRetourneNull() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+
+    ValeurConcert entrant = concert("vincent dedienne", LocalDate.of(2027, 5, 23), "theatre x");
+
+    assertNull(reconciliateur.chercherSalleParCleForte(entrant));
+    verify(jdbc, Mockito.never()).query(anyString(), anyMap(), any(RowMapper.class));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void chercherSalleParCleForte_deptInconnu_neQuerypasEtRetourneNull() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+
+    ValeurConcert entrant =
+        concert(
+            "vincent dedienne",
+            LocalDate.of(2027, 5, 23),
+            LocalTime.of(20, 30),
+            "theatre le forum frejus",
+            null);
+
+    assertNull(reconciliateur.chercherSalleParCleForte(entrant));
+    verify(jdbc, Mockito.never()).query(anyString(), anyMap(), any(RowMapper.class));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void chercherSalleParCleForte_aucunConcertCorrespondant_retourneNull() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+
+    ValeurConcert entrant =
+        concert(
+            "vincent dedienne",
+            LocalDate.of(2027, 5, 23),
+            LocalTime.of(20, 30),
+            "theatre le forum frejus",
+            "83");
+
+    assertNull(reconciliateur.chercherSalleParCleForte(entrant));
   }
 
   // (rattrapage) : raccrocherSallesParNomNorm faisait un rattachement par égalité exacte de
