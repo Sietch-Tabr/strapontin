@@ -211,7 +211,12 @@ public class WorkerFetchService {
           + " absence_detectee_le = CASE"
           + "   WHEN updated_at >= CAST(:debut AS timestamptz) THEN NULL"
           + "   WHEN absences_consecutives + 1 >= :seuil THEN COALESCE(absence_detectee_le, now())"
-          + "   ELSE absence_detectee_le END"
+          + "   ELSE absence_detectee_le END,"
+          // Un concert flagué pour suppression puis effectivement reconfirmé (ex. après fusion
+          // d'un doublon de salle) n'a plus de raison de rester marqué suppression_suggeree_le.
+          + " suppression_suggeree_le = CASE"
+          + "   WHEN updated_at >= CAST(:debut AS timestamptz) THEN NULL"
+          + "   ELSE suppression_suggeree_le END"
           + " WHERE %s::text IN (:ids) AND date >= CURRENT_DATE";
 
   private static final String SQL_ABSENCES_ARTISTE = SQL_ABSENCES_BASE.formatted("artiste_id");

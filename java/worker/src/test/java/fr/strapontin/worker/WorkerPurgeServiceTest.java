@@ -73,15 +73,20 @@ class WorkerPurgeServiceTest {
     assertEquals(50, WorkerPurgeService.SEUIL_PURGE_ABSENCES);
   }
 
+  // Depuis #1091 : les concerts jamais reconfirmés sont flagués (suppression_suggeree_le), plus
+  // jamais supprimés directement — un doublon de salle jamais fusionné entre sources, ou un
+  // concert catalogué sous une autre attraction que l'artiste suivi, peuvent faire grimper ce
+  // compteur pour un concert pourtant réel et toujours en vente. La suppression définitive
+  // devient une action manuelle (onglet admin Concerts).
   @Test
-  void executerPurgerConcertsNonConfirmes_supprimeConcertsJamaisReconfirmesEtEnregistreStat() {
+  void executerPurgerConcertsNonConfirmes_signaleConcertsJamaisReconfirmesEtEnregistreStat() {
     when(jdbc.update(anyString(), anyMap())).thenReturn(3);
 
     service.executerPurgerConcertsNonConfirmes();
 
     verify(jdbc)
         .update(
-            contains("DELETE FROM concerts WHERE absences_consecutives >="),
+            contains("UPDATE concerts SET suppression_suggeree_le = now()"),
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 p -> Integer.valueOf(50).equals(p.get("seuil"))));
     verify(jdbc)
@@ -93,7 +98,7 @@ class WorkerPurgeServiceTest {
 
   @Test
   void executerPurgerConcertsNonConfirmes_erreurJdbc_enregistreStatAvecErreur() {
-    when(jdbc.update(contains("DELETE FROM concerts WHERE absences_consecutives"), anyMap()))
+    when(jdbc.update(contains("UPDATE concerts SET suppression_suggeree_le"), anyMap()))
         .thenThrow(new RuntimeException("timeout"));
 
     assertDoesNotThrow(() -> service.executerPurgerConcertsNonConfirmes());
