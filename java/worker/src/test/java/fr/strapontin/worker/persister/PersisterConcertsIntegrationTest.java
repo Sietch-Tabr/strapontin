@@ -562,6 +562,106 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   @Test
+  void persisterConcerts_nomsDeSalleSansRapportMemeArtisteDateHeureDept_rattacheParCleForte() {
+    // Cas réel confirmé en production (Vincent Dedienne/Fréjus, Zazie/Sausheim) : Eventim nomme
+    // parfois la salle de façon abrégée/stylisée sans aucun rapport textuel avec le nom TM
+    // ("Theatre le Forum Frejus" / "Le Forum - Salle Gounod") — aucun critère textuel ne peut les
+    // rapprocher. artiste_norm+date+heure+dept identiques suffit à lui seul.
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Vincent Dedienne",
+                "2027-05-23",
+                "Le Forum - Salle Gounod",
+                "ticketmaster:leforum",
+                null)));
+
+    java.util.UUID salleTM =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'vincent dedienne'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Vincent Dedienne",
+                "2027-05-23",
+                "20:30",
+                "Theatre le Forum Frejus",
+                "Paris",
+                "75",
+                "https://example.com/dedienne-eventim",
+                "eventim",
+                "music",
+                "Pop",
+                "onsale",
+                null,
+                null,
+                "eventim:leforumfrejus",
+                null)));
+
+    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    assertEquals(
+        1L,
+        nbSalles,
+        "aucune salle dupliquée ne doit être créée malgré l'absence de" + " tout token commun");
+
+    // Même artiste+date+heure+salle_id que la ligne TM déjà en base : le second persist met à
+    // jour cette ligne (ON CONFLICT), il n'en insère pas une seconde.
+    Long nbConcerts =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM concerts WHERE artiste_norm = 'vincent dedienne'",
+            Map.of(),
+            Long.class);
+    assertEquals(1L, nbConcerts, "les deux concerts doivent fusionner sur la même ligne");
+
+    java.util.UUID salleFinale =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'vincent dedienne'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
+    assertEquals(
+        salleTM, salleFinale, "la ligne fusionnée doit pointer vers la salle TM existante");
+  }
+
+  @Test
+  void persisterConcerts_nomsDeSalleSansRapportDeptDifferent_neRattachePasParCleForte() {
+    // Même artiste/date/heure mais département différent : la clé forte ne doit pas fusionner —
+    // aucune preuve indépendante que c'est le même évènement réel.
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Vincent Dedienne",
+                "2027-05-23",
+                "Le Forum - Salle Gounod",
+                "ticketmaster:leforum2",
+                null)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Vincent Dedienne",
+                "2027-05-23",
+                "20:30",
+                "Theatre le Forum Frejus",
+                "Lyon",
+                "69",
+                "https://example.com/dedienne-eventim-lyon",
+                "eventim",
+                "music",
+                "Pop",
+                "onsale",
+                null,
+                null,
+                "eventim:leforumfrejus2",
+                null)));
+
+    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    assertEquals(2L, nbSalles, "deux salles distinctes doivent être créées, dept différent");
+  }
+
+  @Test
   void
       persisterConcerts_salleHomonymeDeptNullMaisConcertAttacheDeptDifferent_neFusionnePasParTokens() {
     // salles.dept n'est écrit qu'à la création et jamais mis à jour ensuite, contrairement

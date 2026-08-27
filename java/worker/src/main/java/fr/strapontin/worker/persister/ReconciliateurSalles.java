@@ -282,8 +282,9 @@ public class ReconciliateurSalles {
   /// Résout ou crée une salle et insère son mapping source dans {@code salle_sources}.
   ///
   /// <p>Cherche d'abord par {@code unaccent(lower(nom))} (égalité exacte), puis par tokens
-  /// significatifs via une requête unique {@code LIKE ANY} (corrige le pattern N+1). Si aucune
-  /// correspondance, crée une nouvelle salle.
+  /// significatifs via une requête unique {@code LIKE ANY} (corrige le pattern N+1), puis par clé
+  /// forte (voir {@link #chercherSalleParCleForte}). Si aucune correspondance, crée une nouvelle
+  /// salle.
   ///
   /// @param c concert portant le {@code salleSourceId} à résoudre
   /// @return UUID de la salle résolue ou créée, ou {@code null} si le {@code salleSourceId} est mal
@@ -303,6 +304,10 @@ public class ReconciliateurSalles {
 
     if (salleId == null) {
       salleId = chercherSalleParTokens(c.salle(), c.dept());
+    }
+
+    if (salleId == null) {
+      salleId = chercherSalleParCleForte(c);
     }
 
     if (salleId == null) {
@@ -414,6 +419,45 @@ public class ReconciliateurSalles {
       }
     }
     return null;
+  }
+
+  /// Recherche la salle d'un concert existant partageant exactement le même artiste, la même date,
+  /// la même heure et le même département qu'un concert à résoudre — dernier repli avant création
+  /// d'une salle, pour les cas où deux sources désignent le même évènement réel sous des noms de
+  /// salle sans aucun rapport textuel (ex. Eventim "Ed&n" / TM "Espace Dollfus Noack" pour la même
+  /// salle physique).
+  ///
+  /// <p>Deux sources indépendantes rapportant le même artiste à la minute et au département près ne
+  /// peuvent structurellement pas désigner deux évènements réels distincts — restreint aux cas où
+  /// l'heure et le département sont tous deux connus pour ne pas affaiblir la spécificité de la
+  /// clé.
+  ///
+  /// @param c concert dont la salle reste à résoudre
+  /// @return UUID de la salle du concert existant correspondant, ou {@code null} si aucun
+  UUID chercherSalleParCleForte(ValeurConcert c) {
+    if (c.heure() == null || c.dept() == null || c.artisteNorm() == null) return null;
+    List<UUID> resultats =
+        jdbc.query(
+            "SELECT salle_id FROM concerts"
+                + " WHERE artiste_norm = :artisteNorm AND date = :date AND heure = :heure"
+                + " AND dept = :dept AND salle_id IS NOT NULL"
+                + " LIMIT 1",
+            Map.of(
+                "artisteNorm", c.artisteNorm(),
+                "date", c.date(),
+                "heure", c.heure(),
+                "dept", c.dept()),
+            (rs, _) -> rs.getObject("salle_id", UUID.class));
+    if (resultats.isEmpty()) return null;
+    UUID salleId = resultats.get(0);
+    log.info(
+        "salle rattachée par clé forte (artiste+date+heure+dept) artiste={} date={} salle={}"
+            + " uuid={}",
+        c.artiste(),
+        c.date(),
+        c.salle(),
+        salleId);
+    return salleId;
   }
 
   /// Rattache les concerts sans {@code salleId} à leur salle via correspondance exacte sur {@code
