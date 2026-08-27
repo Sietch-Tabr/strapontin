@@ -25,7 +25,8 @@ final class NomsJobs {
           Map.entry("revoquerAdmins", "revoquer:admins"),
           Map.entry("recalculerMatches", "recalculer:matches"),
           Map.entry("notifierDigest", "notifier:digest"),
-          Map.entry("reconciliationNocturne", "reconciliation:nocturne"));
+          Map.entry("reconciliationNocturne", "reconciliation:nocturne"),
+          Map.entry("suiviCyclesJobs", "suivi:cycles-jobs"));
 
   static final Map<String, String> CLE_QUARTZ_PAR_TYPE_JOB =
       PAR_CLE_QUARTZ.entrySet().stream()
