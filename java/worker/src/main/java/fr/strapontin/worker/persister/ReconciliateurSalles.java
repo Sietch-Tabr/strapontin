@@ -409,16 +409,35 @@ public class ReconciliateurSalles {
                 + " LIMIT 50",
             params);
 
+    // Retient le candidat validé au Jaccard de tokens le plus élevé, pas le premier de la liste
+    // (l'ordre SQL n'est pas garanti) : un nom générique de complexe multi-salles (ex. "La Seine
+    // Musicale - Boulogne Billancourt") peut valider plusieurs salles physiquement distinctes du
+    // même complexe via le seul critère pivot — sans ce score, le choix entre elles n'était pas
+    // déterministe et pouvait rattacher au mauvais auditorium alors qu'une salle plus proche
+    // textuellement existait dans le même lot de candidats.
+    UUID meilleurUuid = null;
+    String meilleurNomNorm = null;
+    double meilleurScore = -1;
     for (var ligne : lignes) {
       UUID uuid = (UUID) ligne.get("id");
       String nomNormCandidat = (String) ligne.get("nom_norm");
-      if (estDoublonSalle(nomNorm, nomNormCandidat)) {
-        log.info(
-            "salle doublon détecté par tokens : '{}' ≈ '{}' uuid={}", nom, nomNormCandidat, uuid);
-        return uuid;
+      if (!estDoublonSalle(nomNorm, nomNormCandidat)) continue;
+      double score = jaccardTokens(nomNorm, nomNormCandidat);
+      if (score > meilleurScore) {
+        meilleurScore = score;
+        meilleurUuid = uuid;
+        meilleurNomNorm = nomNormCandidat;
       }
     }
-    return null;
+    if (meilleurUuid != null) {
+      log.info(
+          "salle doublon détecté par tokens : '{}' ≈ '{}' uuid={} score={}",
+          nom,
+          meilleurNomNorm,
+          meilleurUuid,
+          meilleurScore);
+    }
+    return meilleurUuid;
   }
 
   /// Recherche la salle d'un concert existant partageant exactement le même artiste, la même date,

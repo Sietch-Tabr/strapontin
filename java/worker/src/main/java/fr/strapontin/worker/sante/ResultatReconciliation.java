@@ -20,6 +20,9 @@ package fr.strapontin.worker.sante;
 ///   l'artiste suivi (tribute/homonyme rattaché par erreur)
 /// @param sallesOrphelinesResolues nombre de concerts sans {@code salle_id} résolus par une
 ///   nouvelle tentative de correspondance floue (voir {@code ReconciliateurSalles})
+/// @param sallesFusionneesParCleForte nombre de paires de salles déjà établies fusionnées
+///   automatiquement (même artiste+date+heure+dept partagé, voir {@code
+///   FusionSallesClePorteeService})
 /// @since 2.6.0
 /// @author Kwaite
 public record ResultatReconciliation(
@@ -31,4 +34,5 @@ public record ResultatReconciliation(
     int incoherencesWikidata,
     int typesWikidataInvalides,
     int nomsIncoherentsTM,
-    int sallesOrphelinesResolues) {}
+    int sallesOrphelinesResolues,
+    int sallesFusionneesParCleForte) {}

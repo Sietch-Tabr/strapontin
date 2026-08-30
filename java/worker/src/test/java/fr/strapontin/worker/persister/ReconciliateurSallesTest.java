@@ -125,6 +125,35 @@ class ReconciliateurSallesTest {
     assertNull(reconciliateur.chercherSalleParTokens("Salle inédite", null));
   }
 
+  // Cas réel documenté (La Seine Musicale) : un nom générique de complexe multi-salles valide
+  // deux salles physiquement distinctes du même complexe via le seul critère pivot ("musicale").
+  // Sans score de départage, le premier candidat de la liste (ordre SQL non garanti) l'emportait
+  // arbitrairement — ici volontairement placé en second pour prouver l'indépendance à l'ordre.
+  @Test
+  void chercherSalleParTokens_plusieursCandidatsValides_retientLeMeilleurScoreQuelQueSoitLOrdre() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    UUID grandeSeine = UUID.randomUUID();
+    UUID auditorium = UUID.randomUUID();
+
+    Map<String, Object> candidatAuditorium = new HashMap<>();
+    candidatAuditorium.put("id", auditorium);
+    candidatAuditorium.put("nom_norm", "seine musicale auditorium p devedjian");
+
+    Map<String, Object> candidatGrandeSeine = new HashMap<>();
+    candidatGrandeSeine.put("id", grandeSeine);
+    candidatGrandeSeine.put("nom_norm", "la seine musicale grande seine");
+
+    when(jdbc.queryForList(anyString(), any(SqlParameterSource.class)))
+        .thenReturn(List.of(candidatAuditorium, candidatGrandeSeine));
+
+    UUID resultat =
+        reconciliateur.chercherSalleParTokens("La Seine Musicale - Boulogne Billancourt", null);
+
+    assertEquals(
+        grandeSeine, resultat, "Le candidat au Jaccard de tokens le plus élevé doit gagner");
+  }
+
   // absorberRenommagesSalles mettait à jour salles.nom sans jamais recalculer nom_norm,
   // désynchronisant les deux colonnes avec le temps et cassant le matching Wikidata (comparaison
   // calibrée sur un nom_norm déjà normalisé — voir CorrespondanceSalle).

@@ -12,6 +12,7 @@ import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
+import fr.strapontin.worker.persister.FusionSallesClePorteeService;
 import fr.strapontin.worker.persister.ReconciliateurSalles;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,7 @@ public class ReconciliationNocturneService {
   private final EnrichissementArtistesService enrichissementArtistes;
   private final CoherenceWikidataSalleService coherenceWikidataSalle;
   private final ReconciliateurSalles reconciliateurSalles;
+  private final FusionSallesClePorteeService fusionSallesClePortee;
 
   public ReconciliationNocturneService(
       NamedParameterJdbcTemplate jdbc,
@@ -60,7 +62,8 @@ public class ReconciliationNocturneService {
       EnrichissementSallesService enrichissementSalles,
       EnrichissementArtistesService enrichissementArtistes,
       CoherenceWikidataSalleService coherenceWikidataSalle,
-      ReconciliateurSalles reconciliateurSalles) {
+      ReconciliateurSalles reconciliateurSalles,
+      FusionSallesClePorteeService fusionSallesClePortee) {
     this.jdbc = jdbc;
     this.tm = tm;
     this.logsAdminWorker = logsAdminWorker;
@@ -68,6 +71,7 @@ public class ReconciliationNocturneService {
     this.enrichissementArtistes = enrichissementArtistes;
     this.coherenceWikidataSalle = coherenceWikidataSalle;
     this.reconciliateurSalles = reconciliateurSalles;
+    this.fusionSallesClePortee = fusionSallesClePortee;
   }
 
   /// Exécute les deux phases du job nocturne.
@@ -90,6 +94,7 @@ public class ReconciliationNocturneService {
     int incoherencesWikidata = coherenceWikidataSalle.verifier();
     int typesWikidataInvalides = coherenceWikidataSalle.revaliderTypes();
     int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
+    int sallesFusionnees = fusionSallesClePortee.fusionner();
 
     return new ResultatReconciliation(
         bilanSalles[0],
@@ -100,7 +105,8 @@ public class ReconciliationNocturneService {
         incoherencesWikidata,
         typesWikidataInvalides,
         nomsIncoherentsTM,
-        sallesOrphelinesResolues);
+        sallesOrphelinesResolues,
+        sallesFusionnees);
   }
 
   /// Vérifie que le nom retourné par TM pour chaque attractionId lié correspond toujours à
