@@ -279,6 +279,57 @@ class TicketmasterSourceTest {
     assertEquals("971", resultat.dept());
   }
 
+  @Test
+  void mapEvenement_venueEtrangerCodePostalCollisionnantAvecDeptFrancais_neposePasDeDept() {
+    // Rockhal (Esch-sur-Alzette, Luxembourg) — code postal "4351" collisionne par troncature
+    // avec le département français 43 (Haute-Loire).
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(Map.of("name", "Artiste")),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name",
+                                "Rockhal",
+                                "city",
+                                Map.of("name", "Esch-sur-Alzette"),
+                                "postalCode",
+                                "4351",
+                                "country",
+                                Map.of("countryCode", "LU"))))));
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    assertNotNull(resultat);
+    assertNull(
+        resultat.dept(), "Une salle hors de France ne doit jamais recevoir de dept français");
+  }
+
+  @Test
+  void mapEvenement_venueFrancaiseCountryCodeExplicite_poseNormalementLeDept() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(Map.of("name", "Artiste")),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name",
+                                "Zénith Paris",
+                                "city",
+                                Map.of("name", "Paris"),
+                                "postalCode",
+                                "75019",
+                                "country",
+                                Map.of("countryCode", "FR"))))));
+    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    assertNotNull(resultat);
+    assertEquals("75", resultat.dept());
+  }
+
   // --- Tests HTTP ---
 
   @Test

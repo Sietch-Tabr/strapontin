@@ -141,8 +141,18 @@ final class MapeurEvenementTM {
                 : "Salle inconnue");
     Map<String, String> cityMap = venue != null ? (Map<String, String>) venue.get("city") : null;
     String ville = cityMap != null ? cityMap.get("name") : null;
+    // Un code postal étranger dont les deux premiers chiffres collisionnent avec un département
+    // français existant (ex. Luxembourg 43xx / Haute-Loire 43) produirait sinon un dept français
+    // plausible mais faux — countryCode absent traité comme française par défaut (comportement
+    // historique, aucun cas contraire connu).
+    Map<String, String> countryMap =
+        venue != null ? (Map<String, String>) venue.get("country") : null;
+    String countryCode = countryMap != null ? countryMap.get("countryCode") : null;
     String dept =
-        Normalisation.extraireDeptFrancais(venue != null ? (String) venue.get("postalCode") : null);
+        countryCode == null || "FR".equals(countryCode)
+            ? Normalisation.extraireDeptFrancais(
+                venue != null ? (String) venue.get("postalCode") : null)
+            : null;
     Object venueIdObj = venue != null ? venue.get("id") : null;
     String salleSourceId = venueIdObj != null ? "ticketmaster:" + venueIdObj : null;
     return new InfosVenueTM(salle, ville, dept, salleSourceId);
