@@ -156,28 +156,34 @@ final class EmailTemplates {
   /// @param baseUrl l'URL publique de base de l'application
   /// @return le HTML du digest
   static String digestConcerts(String sujet, List<LigneConcert> lignes, String baseUrl) {
-    String lignesHtml =
-        lignes.stream()
-            .map(
-                c -> {
-                  String urlBillets =
-                      c.url() != null
-                          ? (" — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"
-                              .formatted(e(c.url()), C_NOIR))
-                          : "";
-                  return """
-                  <tr>
-                    <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top">
-                      <div style="font-weight: 600; color: %s; font-size: 14px">%s</div>
-                      <div style="color: #666; font-size: 13px; margin-top: 2px"><span>%s</span>%s</div>
-                      <div style="color: #999; font-size: 12px; margin-top: 2px">%s</div>
-                    </td>
-                  </tr>
-                  """
-                      .formatted(
-                          C_NOIR, e(c.artiste()), e(c.dateFormatee()), urlBillets, e(c.lieu()));
-                })
-            .collect(Collectors.joining());
+    StringBuilder lignesHtml = new StringBuilder();
+    String artistePrecedent = null;
+    for (LigneConcert c : lignes) {
+      String urlBillets =
+          c.url() != null
+              ? (" — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"
+                  .formatted(e(c.url()), C_NOIR))
+              : "";
+      // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
+      // digest couvrant plusieurs artistes se lit comme une liste continue.
+      String stylecel =
+          artistePrecedent != null && !artistePrecedent.equals(c.artiste())
+              ? "padding: 16px 0 10px; border-top: 2px solid #ddd; vertical-align: top"
+              : "padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top";
+      lignesHtml.append(
+          """
+          <tr>
+            <td style="%s">
+              <div style="font-weight: 600; color: %s; font-size: 14px">%s</div>
+              <div style="color: #666; font-size: 13px; margin-top: 2px"><span>%s</span>%s</div>
+              <div style="color: #999; font-size: 12px; margin-top: 2px">%s</div>
+            </td>
+          </tr>
+          """
+              .formatted(
+                  stylecel, C_NOIR, e(c.artiste()), e(c.dateFormatee()), urlBillets, e(c.lieu())));
+      artistePrecedent = c.artiste();
+    }
     String corps =
         """
         <p style="color: %s; font-size: 14px; margin: 0 0 24px">Voici les nouveaux concerts ajoutés :</p>

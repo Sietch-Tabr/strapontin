@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
@@ -525,14 +524,7 @@ public class NotificationDigestService {
             ? ("presale".equals(premier.statut()) ? "Prévente · " : "")
                 + formaterDate(premier.date())
                 + (premier.ville() != null ? " · " + premier.ville() : "")
-            : concerts.stream()
-                .map(
-                    c ->
-                        c.artiste()
-                            + " · "
-                            + formaterDate(c.date())
-                            + ("presale".equals(c.statut()) ? " · Prévente" : ""))
-                .collect(Collectors.joining("\n"));
+            : construireLignesPreventePush(concerts);
     String url;
     if (concerts.size() == 1) {
       if ("SALLE".equals(premier.source())) {
@@ -553,6 +545,30 @@ public class NotificationDigestService {
             UtilitairesChaine.echapperJson(url));
   }
 
+  /// Construit le corps texte du push pour un digest à plusieurs concerts, une ligne par concert,
+  /// en insérant une ligne vide à chaque changement d'artiste — sans cette séparation, un digest
+  /// couvrant plusieurs artistes se lit comme une liste continue sans indication de regroupement.
+  ///
+  /// @param concerts concerts du digest (triés par date), au moins deux éléments
+  /// @param baseUrl l'URL publique de base de l'application
+  /// @return le corps texte du push, une ligne (éventuellement précédée d'une ligne vide) par
+  ///   concert
+  private static String construireLignesPreventePush(List<ConcertNotif> concerts) {
+    StringBuilder corps = new StringBuilder();
+    String artistePrecedent = null;
+    for (ConcertNotif c : concerts) {
+      if (artistePrecedent != null && !artistePrecedent.equals(c.artiste())) corps.append('\n');
+      if (!corps.isEmpty()) corps.append('\n');
+      corps
+          .append(c.artiste())
+          .append(" · ")
+          .append(formaterDate(c.date()))
+          .append("presale".equals(c.statut()) ? " · Prévente" : "");
+      artistePrecedent = c.artiste();
+    }
+    return corps.toString();
+  }
+
   private static String e(String valeur) {
     if (valeur == null) return "";
     return valeur
@@ -565,33 +581,38 @@ public class NotificationDigestService {
 
   private static String construireCorpsEmail(
       String sujet, List<ConcertNotif> concerts, String baseUrl) {
-    String lignes =
-        concerts.stream()
-            .map(
-                c -> {
-                  String lieu =
-                      c.ville() != null ? e(c.salle()) + " · " + e(c.ville()) : e(c.salle());
-                  String lien =
-                      c.url() != null
-                          ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
-                              .formatted(e(c.url()))
-                          : "";
-                  String prevente =
-                      "presale".equals(c.statut())
-                          ? " · <span style=\"color:#c026d3;font-weight:600\">Prévente</span>"
-                          : "";
-                  return """
-                  <tr>
-                    <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top">
-                      <div style="font-weight:600;color:#111;font-size:14px">%s</div>
-                      <div style="color:#666;font-size:13px;margin-top:2px">%s%s%s</div>
-                      <div style="color:#999;font-size:12px;margin-top:2px">%s</div>
-                    </td>
-                  </tr>\
-                  """
-                      .formatted(e(c.artiste()), formaterDate(c.date()), prevente, lien, lieu);
-                })
-            .collect(Collectors.joining("\n"));
+    StringBuilder lignes = new StringBuilder();
+    String artistePrecedent = null;
+    for (ConcertNotif c : concerts) {
+      String lieu = c.ville() != null ? e(c.salle()) + " · " + e(c.ville()) : e(c.salle());
+      String lien =
+          c.url() != null
+              ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
+                  .formatted(e(c.url()))
+              : "";
+      String prevente =
+          "presale".equals(c.statut())
+              ? " · <span style=\"color:#c026d3;font-weight:600\">Prévente</span>"
+              : "";
+      // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
+      // digest couvrant plusieurs artistes se lit comme une liste continue.
+      String stylecel =
+          artistePrecedent != null && !artistePrecedent.equals(c.artiste())
+              ? "padding:16px 0 10px;border-top:2px solid #ddd;vertical-align:top"
+              : "padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top";
+      lignes.append(
+          """
+          <tr>
+            <td style="%s">
+              <div style="font-weight:600;color:#111;font-size:14px">%s</div>
+              <div style="color:#666;font-size:13px;margin-top:2px">%s%s%s</div>
+              <div style="color:#999;font-size:12px;margin-top:2px">%s</div>
+            </td>
+          </tr>
+          """
+              .formatted(stylecel, e(c.artiste()), formaterDate(c.date()), prevente, lien, lieu));
+      artistePrecedent = c.artiste();
+    }
     return """
     <!DOCTYPE html>
     <html lang="fr">

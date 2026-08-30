@@ -205,6 +205,48 @@ class NotificationDigestServiceTest {
   }
 
   @Test
+  void construirePayloadPush_changementArtiste_insereLigneVideDeSeparation() throws Exception {
+    var c1 =
+        new NotificationDigestService.ConcertNotif(
+            "Stromae",
+            "2026-09-15",
+            "Olympia",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "stromae",
+            "ARTISTE",
+            null);
+    var c2 =
+        new NotificationDigestService.ConcertNotif(
+            "Stromae",
+            "2026-09-20",
+            "Accor Arena",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "stromae",
+            "ARTISTE",
+            null);
+    var c3 =
+        new NotificationDigestService.ConcertNotif(
+            "Aya Nakamura",
+            "2026-10-01",
+            "Zénith Paris",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "aya nakamura",
+            "ARTISTE",
+            null);
+
+    String payload = invoquerPayloadPush(List.of(c1, c2, c3), "https://strapontin.exemple.fr");
+    String corps = payload.split("\"body\":\"")[1].split("\",\"icon\"")[0];
+
+    assertEquals(1, corps.split("\\\\n\\\\n", -1).length - 1, "Une seule rupture entre artistes");
+  }
+
+  @Test
   void construirePayloadPush_concertDeSalle_urlPointeVersSpectacles() throws Exception {
     var concert =
         new NotificationDigestService.ConcertNotif(
@@ -275,6 +317,71 @@ class NotificationDigestServiceTest {
     assertTrue(html.contains("Indochine"), "L'email doit contenir l'artiste");
     assertTrue(html.contains("Zénith Paris"), "L'email doit contenir la salle");
     assertTrue(html.contains("https://example.com"), "L'email doit contenir le lien billet");
+  }
+
+  @Test
+  void construireCorpsEmail_changementArtiste_ajouteRuptureVisuelle() throws Exception {
+    var c1 =
+        new NotificationDigestService.ConcertNotif(
+            "Daft Punk",
+            "2026-09-15",
+            "Bercy",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "daft punk",
+            "ARTISTE",
+            null);
+    var c2 =
+        new NotificationDigestService.ConcertNotif(
+            "Téléphone",
+            "2026-10-01",
+            "Zénith Paris",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "telephone",
+            "ARTISTE",
+            null);
+
+    String html =
+        invoquerCorpsEmail("2 nouveaux concerts", List.of(c1, c2), "https://strapontin.exemple.fr");
+
+    assertEquals(
+        1,
+        html.split("border-top:2px solid #ddd", -1).length - 1,
+        "Une seule rupture visuelle doit être ajoutée, au changement d'artiste");
+  }
+
+  @Test
+  void construireCorpsEmail_memeArtiste_neContientAucuneRuptureVisuelle() throws Exception {
+    var c1 =
+        new NotificationDigestService.ConcertNotif(
+            "Daft Punk",
+            "2026-09-15",
+            "Bercy",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "daft punk",
+            "ARTISTE",
+            null);
+    var c2 =
+        new NotificationDigestService.ConcertNotif(
+            "Daft Punk",
+            "2026-10-01",
+            "AccorHotels Arena",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "daft punk",
+            "ARTISTE",
+            null);
+
+    String html =
+        invoquerCorpsEmail("2 nouveaux concerts", List.of(c1, c2), "https://strapontin.exemple.fr");
+
+    assertFalse(html.contains("border-top:2px solid #ddd"));
   }
 
   // --- : interprétation du statut HTTP push ---

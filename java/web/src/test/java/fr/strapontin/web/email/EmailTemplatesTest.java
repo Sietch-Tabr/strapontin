@@ -118,6 +118,27 @@ class EmailTemplatesTest {
     assertThat(html).doesNotContain("Billets →");
   }
 
+  @Test
+  void digestConcerts_changementArtiste_ajouteRuptureVisuelle() {
+    var lignes =
+        List.of(
+            new LigneConcert("Daft Punk", "samedi 1 mars 2025", "AccorHotels Arena", null),
+            new LigneConcert("Daft Punk", "dimanche 2 mars 2025", "Bercy", null),
+            new LigneConcert("Téléphone", "lundi 3 mars 2025", "Zénith Paris", null));
+    String html = EmailTemplates.digestConcerts("3 nouveaux concerts", lignes, "https://app.fr");
+    assertThat(html).containsOnlyOnce("border-top: 2px solid #ddd");
+  }
+
+  @Test
+  void digestConcerts_memeArtiste_neContientAucuneRuptureVisuelle() {
+    var lignes =
+        List.of(
+            new LigneConcert("Daft Punk", "samedi 1 mars 2025", "AccorHotels Arena", null),
+            new LigneConcert("Daft Punk", "dimanche 2 mars 2025", "Bercy", null));
+    String html = EmailTemplates.digestConcerts("2 nouveaux concerts", lignes, "https://app.fr");
+    assertThat(html).doesNotContain("border-top: 2px solid #ddd");
+  }
+
   // ---- alerteBackup() ----
 
   @Test
