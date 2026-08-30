@@ -154,4 +154,68 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
             Integer.class);
     assertEquals(1, absences);
   }
+
+  private void insererConcertAncienSurSalle(UUID salleId) {
+    jdbc.update(
+        "INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source,"
+            + " salle_id, updated_at)"
+            + " VALUES ('Artiste Salle', 'artiste salle', :date, 'Salle Test', 'salle test',"
+            + " 'ticketmaster', CAST(:salleId AS uuid), now() - interval '1 hour')",
+        Map.of("date", LocalDate.now().plusMonths(1), "salleId", salleId.toString()));
+  }
+
+  // Même régression que executerFetchArtistesBatch_concertNonReconfirme_..., côté salle suivie
+  // (fetch:salles:all) — SQL_ABSENCES_SALLE était du code mort, jamais atteint.
+  @Test
+  void executerFetchSallesAll_concertNonReconfirme_incrementeLesAbsencesConsecutives() {
+    insererUser("u1");
+    UUID salleSuivie = insererSalleAvecSourceTm("salle-suivie", "venue-suivie");
+    insererUserSalle("u1", salleSuivie);
+    insererConcertAncienSurSalle(salleSuivie);
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"))).thenReturn(List.<ConcertBrut>of());
+
+    fetchService.executerFetchSallesAll();
+
+    Integer absences =
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)",
+            Map.of("id", salleSuivie.toString()),
+            Integer.class);
+    assertEquals(1, absences);
+  }
+
+  private void insererUserConfigDept(String userId, String dept) {
+    jdbc.update(
+        "INSERT INTO user_config (user_id, departements) VALUES (:userId, ARRAY[:dept]::text[])",
+        Map.of("userId", userId, "dept", dept));
+  }
+
+  // Un concert découvert par fetch:region (browse-only) et jamais suivi (ni par artiste, ni par
+  // salle) doit quand même voir son compteur d'absences évoluer — sans quoi il reste
+  // indéfiniment invisible à toute détection de péremption.
+  @Test
+  void executerFetchRegion_concertNiArtisteNiSalleSuivi_incrementeLesAbsencesConsecutives() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    UUID salleNonSuivie = insererSalleAvecSourceTm("salle-decouverte", "venue-decouverte");
+    jdbc.update(
+        "UPDATE salles SET dept = '75' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salleNonSuivie.toString()));
+    insererConcertAncienSurSalle(salleNonSuivie);
+    jdbc.update(
+        "UPDATE concerts SET dept = '75' WHERE salle_id = CAST(:id AS uuid)",
+        Map.of("id", salleNonSuivie.toString()));
+    when(ticketmasterSource.fetchRegion(any(), any())).thenReturn(List.<ConcertBrut>of());
+    when(eventimSource.fetchRegion(any(), any())).thenReturn(List.<ConcertBrut>of());
+
+    fetchService.executerFetchRegion();
+
+    Integer absences =
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)",
+            Map.of("id", salleNonSuivie.toString()),
+            Integer.class);
+    assertEquals(1, absences);
+  }
 }

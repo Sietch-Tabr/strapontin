@@ -444,8 +444,14 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchSallesAll_avecSalle_fetchEtPersiste() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
-        .thenReturn(List.of("tm:venue-99"));
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(
+                java.util.Map.of(
+                    "salle_id",
+                    java.util.UUID.randomUUID().toString(),
+                    "identifiants",
+                    "tm:venue-99")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle("tm:venue-99")).thenReturn(true);
     when(tm.fetchSalle("tm:venue-99")).thenReturn(List.of());
@@ -464,8 +470,14 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchSallesAll_identifiantSourceTicketmaster_traduitEnPrefixeTmAvantFetch() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
-        .thenReturn(List.of("ticketmaster:venue-99"));
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(
+                java.util.Map.of(
+                    "salle_id",
+                    java.util.UUID.randomUUID().toString(),
+                    "identifiants",
+                    "ticketmaster:venue-99")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle("tm:venue-99")).thenReturn(true);
     when(tm.fetchSalle("tm:venue-99")).thenReturn(List.of());
@@ -481,8 +493,14 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchSallesAll_appelleSuiviSanteSourcesAvecLeResultat() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
-        .thenReturn(List.of("tm:venue-99"));
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(
+                java.util.Map.of(
+                    "salle_id",
+                    java.util.UUID.randomUUID().toString(),
+                    "identifiants",
+                    "tm:venue-99")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle("tm:venue-99")).thenReturn(true);
     when(tm.fetchSalle("tm:venue-99")).thenReturn(List.of());
@@ -498,9 +516,13 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchSallesAll_plusDeVingtSalles_persisteParLotDeVingt() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    java.util.List<String> identifiants = new java.util.ArrayList<>();
-    for (int i = 0; i < 25; i++) identifiants.add("tm:venue-" + i);
-    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(identifiants);
+    java.util.List<java.util.Map<String, Object>> lignes = new java.util.ArrayList<>();
+    for (int i = 0; i < 25; i++) {
+      lignes.add(
+          java.util.Map.of(
+              "salle_id", java.util.UUID.randomUUID().toString(), "identifiants", "tm:venue-" + i));
+    }
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(lignes);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
     when(tm.fetchSalle(anyString())).thenReturn(List.of());

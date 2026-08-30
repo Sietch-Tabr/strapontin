@@ -448,6 +448,11 @@ public class WorkerFetchService {
   /// #traiterLotArtistesBatch}) : le dédoublonnage cross-sources reste correct à cette granularité,
   /// un même concert n'étant jamais rapporté par deux sources dans deux départements différents.
   ///
+  /// <p>Met à jour les absences des salles du lot indépendamment de tout suivi utilisateur — {@code
+  /// fetch:region} est browse-only, un concert découvert ici peut n'être jamais suivi ni par
+  /// artiste ni par salle, auquel cas il n'entrerait autrement dans le périmètre d'aucun suivi de
+  /// péremption.
+  ///
   /// @param lotDepts sous-ensemble de départements (taille {@value TAILLE_LOT_DEPTS})
   /// @return bilan de persistance du lot
   private ResultatPersistance traiterLotDepartements(List<String> lotDepts) {
@@ -467,7 +472,20 @@ public class WorkerFetchService {
         tous.size(),
         dedoublonnes.size());
 
-    return persisterConcerts.persisterConcerts(dedoublonnes);
+    String debutLot = OffsetDateTime.now().toString();
+    ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+    mettreAJourAbsences("salle_id", sallesConnuesDesDepartements(lotDepts), debutLot);
+    return resultat;
+  }
+
+  /// Salles déjà connues (concerts futurs déjà en base) pour un lot de départements — inclut les
+  /// salles non suivies, contrairement à {@link #recupererIdentifiantsSallesSuivies}.
+  private List<String> sallesConnuesDesDepartements(List<String> depts) {
+    return jdbc.queryForList(
+        "SELECT DISTINCT salle_id::text FROM concerts"
+            + " WHERE dept IN (:depts) AND salle_id IS NOT NULL AND date >= CURRENT_DATE",
+        Map.of("depts", depts),
+        String.class);
   }
 
   /// Fetch les concerts d'une ou plusieurs salles identifiées par leurs identifiants préfixés.
@@ -522,13 +540,13 @@ public class WorkerFetchService {
         return;
       }
 
-      List<String> identifiantsParSalle = recupererIdentifiantsSallesSuivies();
-      if (identifiantsParSalle.isEmpty()) {
+      List<SalleAFetcher> sallesAFetcher = recupererIdentifiantsSallesSuivies();
+      if (sallesAFetcher.isEmpty()) {
         log.info("fetch:salles:all — aucune salle suivie avec source configurée");
         return;
       }
 
-      resultat = traiterTousLesLotsSalles(identifiantsParSalle);
+      resultat = traiterTousLesLotsSalles(sallesAFetcher);
       sauvegarderQuota();
       recalculerMatchesService.recalculerMatches(null);
       notificationDigestService.executerDigest("temps_reel");
@@ -542,35 +560,41 @@ public class WorkerFetchService {
     }
   }
 
+  /// Salle suivie à refetcher, avec ses identifiants préfixés agrégés toutes sources confondues.
+  ///
+  /// @param salleId UUID de la salle (texte), pour le suivi d'absences après persistance
+  /// @param identifiants identifiants préfixés séparés par des virgules
+  private record SalleAFetcher(String salleId, String identifiants) {}
+
   // Le préfixe émis ici doit correspondre à celui attendu par
   // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique "ticketmaster" de
   // salle_sources.source) — sans cette traduction, fetchSalle n'est jamais invoqué pour aucune
   // salle TM (mismatch silencieux, aucune exception, aucun log d'erreur). Restreint aux salles
   // suivies (user_salles) — voir Javadoc de executerFetchSallesAll.
-  private List<String> recupererIdentifiantsSallesSuivies() {
+  private List<SalleAFetcher> recupererIdentifiantsSallesSuivies() {
     return jdbc
         .queryForList(
-            "SELECT string_agg(ss.source || ':' || ss.identifiant_externe, ',')"
+            "SELECT ss.salle_id::text AS salle_id,"
+                + " string_agg(ss.source || ':' || ss.identifiant_externe, ',') AS identifiants"
                 + " FROM salle_sources ss"
                 + " WHERE EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id = ss.salle_id)"
                 + " GROUP BY ss.salle_id",
-            Map.of(),
-            String.class)
+            Map.of())
         .stream()
         .map(
-            csv ->
-                csv == null
-                    ? null
-                    : csv.replace("ticketmaster:", TicketmasterSource.PREFIXE_IDENTIFIANT + ":"))
+            ligne ->
+                new SalleAFetcher(
+                    (String) ligne.get("salle_id"),
+                    ((String) ligne.get("identifiants"))
+                        .replace("ticketmaster:", TicketmasterSource.PREFIXE_IDENTIFIANT + ":")))
         .toList();
   }
 
-  private ResultatPersistance traiterTousLesLotsSalles(List<String> identifiantsParSalle) {
+  private ResultatPersistance traiterTousLesLotsSalles(List<SalleAFetcher> sallesAFetcher) {
     ResultatPersistance resultat = new ResultatPersistance(0, 0);
-    for (int i = 0; i < identifiantsParSalle.size(); i += TAILLE_LOT_SALLES) {
-      List<String> lotSalles =
-          identifiantsParSalle.subList(
-              i, Math.min(i + TAILLE_LOT_SALLES, identifiantsParSalle.size()));
+    for (int i = 0; i < sallesAFetcher.size(); i += TAILLE_LOT_SALLES) {
+      List<SalleAFetcher> lotSalles =
+          sallesAFetcher.subList(i, Math.min(i + TAILLE_LOT_SALLES, sallesAFetcher.size()));
       try {
         resultat = accumuler(resultat, traiterLotSalles(lotSalles));
       } catch (Exception e) {
@@ -588,13 +612,12 @@ public class WorkerFetchService {
   /// d'une même salle ({@code GROUP BY ss.salle_id}), le dédoublonnage cross-sources reste donc
   /// correct à cette granularité.
   ///
-  /// @param lotSalles sous-ensemble de chaînes d'identifiants préfixés, une par salle
+  /// @param lotSalles sous-ensemble de salles suivies (taille {@value TAILLE_LOT_SALLES})
   /// @return bilan de persistance du lot
-  private ResultatPersistance traiterLotSalles(List<String> lotSalles) {
+  private ResultatPersistance traiterLotSalles(List<SalleAFetcher> lotSalles) {
     List<ConcertBrut> tous = new ArrayList<>();
-    for (String identifiantsStr : lotSalles) {
-      if (identifiantsStr == null) continue;
-      for (String id : identifiantsStr.split(",")) {
+    for (SalleAFetcher salle : lotSalles) {
+      for (String id : salle.identifiants().split(",")) {
         fetchEtSuivreSalle(id.trim(), tous);
       }
     }
@@ -606,7 +629,11 @@ public class WorkerFetchService {
         tous.size(),
         dedoublonnes.size());
 
-    return persisterConcerts.persisterConcerts(dedoublonnes);
+    String debutLot = OffsetDateTime.now().toString();
+    ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+    List<String> salleIds = lotSalles.stream().map(SalleAFetcher::salleId).toList();
+    mettreAJourAbsences("salle_id", salleIds, debutLot);
+    return resultat;
   }
 
   /// Détermine si un concert est éligible à la résolution du nom canonique via Deezer.
