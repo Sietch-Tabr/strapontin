@@ -150,6 +150,17 @@ final class MapeurEvenementTM {
 
   private record InfosVenteTM(String statut, String presaleDebut, String presaleNom) {}
 
+  // TM n'expose aucun champ documenté distinguant un event "package" (offre VIP/bundle, ex.
+  // package-angele-.../idpack/...) d'un event standard — repéré uniquement par ce segment d'URL,
+  // constant sur tous les cas observés en production. Un package n'est pas accessible à un achat
+  // de billetterie standard : son statut de vente ne doit jamais être notifié comme une prévente.
+  private static final java.util.regex.Pattern URL_PACKAGE_TM =
+      java.util.regex.Pattern.compile("(?i)/pack/");
+
+  private static boolean estEvenementPackage(String url) {
+    return url != null && URL_PACKAGE_TM.matcher(url).find();
+  }
+
   // "offsale" recouvre deux situations distinctes chez TM : un concert réellement complet, ou
   // une vente qui n'a simplement pas encore ouvert (prévente à venir, ou vente publique future) —
   // seule la seconde doit être requalifiée en "presale" plutôt que rester "offsale" à tort.
@@ -169,7 +180,7 @@ final class MapeurEvenementTM {
       var ventePublique = sales != null ? (Map<String, Object>) sales.get("public") : null;
       String ouverturePublique =
           ventePublique != null ? (String) ventePublique.get("startDateTime") : null;
-      if (presaleDebut != null) {
+      if (presaleDebut != null && estDansLeFutur(presaleDebut)) {
         statut = "presale";
       } else if (ouverturePublique != null && estDansLeFutur(ouverturePublique)) {
         statut = "presale";
@@ -199,7 +210,10 @@ final class MapeurEvenementTM {
     String artisteSourceId = extraireAttractionIdTM(embedded);
 
     String url = (String) evt.get("url");
-    InfosVenteTM infosVente = extraireInfosVenteTM(dates, evt);
+    InfosVenteTM infosVente =
+        estEvenementPackage(url)
+            ? new InfosVenteTM(null, null, null)
+            : extraireInfosVenteTM(dates, evt);
 
     List<Map<String, Object>> classificationsData =
         (List<Map<String, Object>>) evt.get("classifications");

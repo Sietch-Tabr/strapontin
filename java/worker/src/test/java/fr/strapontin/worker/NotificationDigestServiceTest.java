@@ -168,6 +168,43 @@ class NotificationDigestServiceTest {
   }
 
   @Test
+  void construirePayloadPush_plusieursConcertsAvecPrevente_mentionnePreventeSurLaLigneConcernee()
+      throws Exception {
+    var enPrevente =
+        new NotificationDigestService.ConcertNotif(
+            "Stromae",
+            "2026-09-15",
+            "Olympia",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "stromae",
+            "ARTISTE",
+            "presale");
+    var enVente =
+        new NotificationDigestService.ConcertNotif(
+            "Aya Nakamura",
+            "2026-10-01",
+            "Accor Arena",
+            "Paris",
+            null,
+            UUID.randomUUID().toString(),
+            "aya nakamura",
+            "ARTISTE",
+            "onsale");
+
+    String payload =
+        invoquerPayloadPush(List.of(enPrevente, enVente), "https://strapontin.exemple.fr");
+
+    assertTrue(
+        payload.contains("Stromae · mardi 15 septembre 2026 · Prévente"),
+        "La ligne du concert en prévente doit mentionner Prévente");
+    assertFalse(
+        payload.contains("Aya Nakamura · jeudi 1 octobre 2026 · Prévente"),
+        "La ligne du concert déjà en vente ne doit pas mentionner Prévente");
+  }
+
+  @Test
   void construirePayloadPush_concertDeSalle_urlPointeVersSpectacles() throws Exception {
     var concert =
         new NotificationDigestService.ConcertNotif(

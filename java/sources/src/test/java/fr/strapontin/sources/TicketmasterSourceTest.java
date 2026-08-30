@@ -664,6 +664,83 @@ class TicketmasterSourceTest {
     assertEquals("offsale", concert.statut());
   }
 
+  @Test
+  void mapEvenement_offsaleAvecPresaleFuture_retourneStatutPresale() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "dates",
+                    Map.of(
+                        "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
+                        "status", Map.of("code", "offsale")),
+                "sales",
+                    Map.of(
+                        "presales",
+                        List.of(
+                            Map.of(
+                                "startDateTime", "2099-01-01T12:00:00Z",
+                                "name", "Prévente carte bancaire")))));
+
+    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+
+    assertEquals("presale", concert.statut());
+    assertEquals("2099-01-01T12:00:00Z", concert.presaleDebut());
+  }
+
+  @Test
+  void mapEvenement_offsaleAvecPresalePassee_resteOffsale() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "dates",
+                    Map.of(
+                        "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
+                        "status", Map.of("code", "offsale")),
+                "sales",
+                    Map.of(
+                        "presales",
+                        List.of(
+                            Map.of(
+                                "startDateTime", "2020-01-01T12:00:00Z",
+                                "name", "Prévente carte bancaire")))));
+
+    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+
+    assertEquals("offsale", concert.statut());
+  }
+
+  @Test
+  void mapEvenement_urlEventPackage_neutraliseStatutEtPresale() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "url",
+                "https://www.ticketmaster.fr/fr/pack/package-angele-08-mars-billet/idpack/123",
+                "sales",
+                Map.of(
+                    "presales",
+                    List.of(Map.of("startDateTime", "2099-01-01T12:00:00Z", "name", "VIP")))));
+
+    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+
+    assertNotNull(concert);
+    assertNull(concert.statut());
+    assertNull(concert.presaleDebut());
+    assertNull(concert.presaleNom());
+  }
+
+  @Test
+  void mapEvenement_urlEventStandard_neNeutralisePasLeStatut() {
+    Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of("url", "https://www.ticketmaster.fr/fr/billet/angele-08-mars/event/456"));
+
+    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+
+    assertNotNull(concert);
+    assertEquals("onsale", concert.statut());
+  }
+
   // --- filtrage homonymes / partiels ---
 
   @Test

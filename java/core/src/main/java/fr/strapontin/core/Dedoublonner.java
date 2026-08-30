@@ -205,6 +205,10 @@ public final class Dedoublonner {
     return (c.heure() != null ? 1 : 0)
         + (c.ville() != null ? 1 : 0)
         + (c.dept() != null ? 1 : 0)
-        + (c.url() != null ? 1 : 0);
+        + (c.url() != null ? 1 : 0)
+        // Une source qui connaît le statut de vente (TM) ne doit jamais perdre cette
+        // information au profit d'une source qui ne le détermine pas (Eventim/Digitick,
+        // toujours null) lors d'un départage par complétude.
+        + (c.statut() != null ? 1 : 0);
   }
 }

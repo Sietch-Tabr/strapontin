@@ -40,13 +40,13 @@ import org.springframework.stereotype.Service;
 
 /// Service de notification digest (email + push VAPID) pour le worker.
 ///
-/// Lit les `user_matches` non notifiés, groupe par utilisateur, envoie
-/// email via Resend et push VAPID, puis met à jour `notifie_le`.
+/// Lit les `user_matches` non notifiés, groupe par utilisateur, envoie email via Resend et push
+/// VAPID, puis met à jour `notifie_le`.
 ///
-/// Si `RESEND_API_KEY` ou les clés VAPID sont absentes de `app_config`,
-/// la notification correspondante est ignorée sans erreur. Depuis, le canal email est de
-/// même ignoré sans erreur si le quota d'envoi Resend jour/mois est atteint
-/// ({@link GestionQuotaResendWorker}, compteur partagé avec le module web).
+/// Si `RESEND_API_KEY` ou les clés VAPID sont absentes de `app_config`, la notification
+/// correspondante est ignorée sans erreur. Depuis, le canal email est de même ignoré sans erreur si
+/// le quota d'envoi Resend jour/mois est atteint ({@link GestionQuotaResendWorker}, compteur
+/// partagé avec le module web).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -65,8 +65,8 @@ public class NotificationDigestService {
   // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans logs_admin.
   private final CompteurBilanFetch compteurPush = new CompteurBilanFetch();
 
-  /// Fabrique du client Resend — indirection nécessaire pour rendre {@code envoyerEmail}
-  /// testable sur son chemin nominal de succès, le SDK Resend n'étant pas injectable directement.
+  /// Fabrique du client Resend — indirection nécessaire pour rendre {@code envoyerEmail} testable
+  /// sur son chemin nominal de succès, le SDK Resend n'étant pas injectable directement.
   @FunctionalInterface
   interface FabriqueResend {
     Resend creer(String cle);
@@ -79,9 +79,9 @@ public class NotificationDigestService {
         throws java.security.GeneralSecurityException;
   }
 
-  /// Constructeur Spring — : les fabriques Resend/PushService ne sont explicitement
-  /// annotées {@code @Autowired} que sur ce constructeur, sans quoi Spring ne peut pas
-  /// déterminer lequel des deux constructeurs utiliser dès qu'il en existe plus d'un.
+  /// Constructeur Spring — : les fabriques Resend/PushService ne sont explicitement annotées
+  /// {@code @Autowired} que sur ce constructeur, sans quoi Spring ne peut pas déterminer lequel des
+  /// deux constructeurs utiliser dès qu'il en existe plus d'un.
   @org.springframework.beans.factory.annotation.Autowired
   public NotificationDigestService(
       ConfigServiceWorker configService,
@@ -99,8 +99,8 @@ public class NotificationDigestService {
         PushService::new);
   }
 
-  /// Constructeur de test — permet d'injecter des fabriques Resend/PushService
-  /// mockables pour exercer le chemin nominal de succès de l'envoi email/push.
+  /// Constructeur de test — permet d'injecter des fabriques Resend/PushService mockables pour
+  /// exercer le chemin nominal de succès de l'envoi email/push.
   NotificationDigestService(
       ConfigServiceWorker configService,
       NamedParameterJdbcTemplate jdbc,
@@ -120,14 +120,14 @@ public class NotificationDigestService {
 
   /// Données d'un concert pour le digest.
   ///
-  /// @param artiste     nom de l'artiste
-  /// @param date        date ISO (yyyy-MM-dd)
-  /// @param salle       nom de la salle
-  /// @param ville       ville (peut être nulle)
-  /// @param url         URL de billetterie (peut être nulle)
-  /// @param concertId   UUID du concert (string)
+  /// @param artiste nom de l'artiste
+  /// @param date date ISO (yyyy-MM-dd)
+  /// @param salle nom de la salle
+  /// @param ville ville (peut être nulle)
+  /// @param url URL de billetterie (peut être nulle)
+  /// @param concertId UUID du concert (string)
   /// @param artisteNorm nom de l'artiste normalisé (identique à `artiste_norm` en base)
-  /// @param source      origine du match : `"ARTISTE"` ou `"SALLE"`
+  /// @param source origine du match : `"ARTISTE"` ou `"SALLE"`
   public record ConcertNotif(
       String artiste,
       String date,
@@ -139,10 +139,9 @@ public class NotificationDigestService {
       String source,
       String statut) {}
 
-  /// Résultat d'un envoi de digest, avec le sous-ensemble de concerts effectivement tenté par
-  /// canal — nécessaire pour ne marquer {@code notification_envoyee_le} que sur les
-  /// concerts réellement délivrés par un canal en succès, pas sur l'ensemble du digest dès qu'un
-  /// seul canal a réussi.
+  /// Résultat d'un envoi de digest, avec le sous-ensemble de concerts effectivement tenté par canal
+  /// — nécessaire pour ne marquer {@code notification_envoyee_le} que sur les concerts réellement
+  /// délivrés par un canal en succès, pas sur l'ensemble du digest dès qu'un seul canal a réussi.
   private record ResultatDigest(
       boolean emailOk,
       boolean pushOk,
@@ -156,8 +155,8 @@ public class NotificationDigestService {
       boolean notifSallesPush,
       String frequenceNotifications) {}
 
-  /// Parcourt les matches non notifiés pour une fréquence donnée, envoie le digest,
-  /// met à jour `notifie_le`.
+  /// Parcourt les matches non notifiés pour une fréquence donnée, envoie le digest, met à jour
+  /// `notifie_le`.
   ///
   /// @param frequence `"temps_reel"` (après chaque recalcul) ou `"quotidien"` (cron 8h)
   public void executerDigest(String frequence) {
@@ -243,16 +242,16 @@ public class NotificationDigestService {
 
   /// Matches non notifiés regroupés par utilisateur, prêts pour l'envoi du digest.
   ///
-  /// @param emailsUtilisateurs  email de chaque utilisateur concerné
+  /// @param emailsUtilisateurs email de chaque utilisateur concerné
   /// @param configsUtilisateurs préférences de notification de chaque utilisateur
-  /// @param parUtilisateur      concerts non notifiés, groupés par utilisateur
+  /// @param parUtilisateur concerts non notifiés, groupés par utilisateur
   private record MatchesGroupes(
       Map<String, String> emailsUtilisateurs,
       Map<String, ConfigNotifUser> configsUtilisateurs,
       Map<String, List<ConcertNotif>> parUtilisateur) {}
 
-  /// Charge et regroupe par utilisateur les matches non notifiés pour une fréquence donnée
-  /// (extrait de {@link #executerDigest}).
+  /// Charge et regroupe par utilisateur les matches non notifiés pour une fréquence donnée (extrait
+  /// de {@link #executerDigest}).
   ///
   /// @param frequence `"temps_reel"` ou `"quotidien"`
   /// @return les matches non notifiés, groupés par utilisateur
@@ -349,9 +348,9 @@ public class NotificationDigestService {
     return new MatchesGroupes(emailsUtilisateurs, configsUtilisateurs, parUtilisateur);
   }
 
-  /// Remonte dans `logs_admin` le bilan agrégé des envois push pour le cycle de digest qui vient
-  /// de se terminer, même mécanisme générique que le bilan de panne des sources de
-  /// concerts (voir {@code WorkerStatsService#remonterBilan}).
+  /// Remonte dans `logs_admin` le bilan agrégé des envois push pour le cycle de digest qui vient de
+  /// se terminer, même mécanisme générique que le bilan de panne des sources de concerts (voir
+  /// {@code WorkerStatsService#remonterBilan}).
   private void remonterBilanPush() {
     BilanFetch bilan = compteurPush.preleverBilan();
     bilan
@@ -427,8 +426,7 @@ public class NotificationDigestService {
     }
   }
 
-  /// Issue possible d'un envoi push individuel, selon le statut HTTP retourné par le push
-  /// service.
+  /// Issue possible d'un envoi push individuel, selon le statut HTTP retourné par le push service.
   enum ResultatEnvoiPush {
     SUCCES,
     ABONNEMENT_MORT,
@@ -437,9 +435,9 @@ public class NotificationDigestService {
 
   /// Interprète le statut HTTP d'un envoi push.
   ///
-  /// <p>Seul un statut 2xx est un succès. 404/410 signent un abonnement mort (à supprimer). Tout
-  /// le reste (400, 429, 5xx…) est un échec — avant, seuls 404/410 étaient exclus du
-  /// succès, comptant à tort tout autre code d'erreur comme un envoi réussi.
+  /// <p>Seul un statut 2xx est un succès. 404/410 signent un abonnement mort (à supprimer). Tout le
+  /// reste (400, 429, 5xx…) est un échec — avant, seuls 404/410 étaient exclus du succès, comptant
+  /// à tort tout autre code d'erreur comme un envoi réussi.
   ///
   /// @param status statut HTTP retourné par le push service
   /// @return issue de l'envoi
@@ -528,7 +526,12 @@ public class NotificationDigestService {
                 + formaterDate(premier.date())
                 + (premier.ville() != null ? " · " + premier.ville() : "")
             : concerts.stream()
-                .map(c -> c.artiste() + " · " + formaterDate(c.date()))
+                .map(
+                    c ->
+                        c.artiste()
+                            + " · "
+                            + formaterDate(c.date())
+                            + ("presale".equals(c.statut()) ? " · Prévente" : ""))
                 .collect(Collectors.joining("\n"));
     String url;
     if (concerts.size() == 1) {

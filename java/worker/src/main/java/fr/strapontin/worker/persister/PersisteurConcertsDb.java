@@ -62,9 +62,7 @@ public class PersisteurConcertsDb {
           statut         = CASE
                              WHEN concerts.statut IN ('cancelled', 'rescheduled', 'postponed')
                                   THEN concerts.statut
-                             WHEN concerts.source = 'ticketmaster' AND EXCLUDED.source = 'eventim'
-                                  THEN concerts.statut
-                             ELSE EXCLUDED.statut END,
+                             ELSE COALESCE(EXCLUDED.statut, concerts.statut) END,
           presale_debut  = COALESCE(EXCLUDED.presale_debut, concerts.presale_debut),
           presale_nom    = COALESCE(EXCLUDED.presale_nom, concerts.presale_nom),
           salle_id     = COALESCE(EXCLUDED.salle_id, concerts.salle_id),
