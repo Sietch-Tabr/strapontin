@@ -54,7 +54,13 @@ public final class CorrespondanceSalle {
           "municipal",
           "antique",
           "parc",
-          "barriere");
+          "barriere",
+          // "eglise"/"saint" : des dizaines d'édifices religieux français partagent ces deux
+          // tokens sans aucun rapport entre eux (ex. "Eglise Saint-Ephrem" / "Eglise
+          // Saint-Eustache") — leur seule présence gonflait le Jaccard spécifique bien au-delà
+          // du seuil entre deux salles réellement distinctes.
+          "eglise",
+          "saint");
 
   private CorrespondanceSalle() {}
 
@@ -63,10 +69,16 @@ public final class CorrespondanceSalle {
       String b,
       double seuilSimilarite,
       int longueurMinContainment,
-      double ratioMinContainment) {
+      double ratioMinContainment,
+      boolean containmentAutorise) {
     if (a.equals(b)) return true;
     if (Normalisation.similarite(a, b) >= seuilSimilarite) return true;
-    return UtilitairesChaine.estContainmentRatio(a, b, longueurMinContainment, ratioMinContainment);
+    // Le containment de caractères (un nom court entièrement préfixe/suffixe d'un nom plus long)
+    // n'a aucun pouvoir discriminant propre — "la prade" est un préfixe strict de "la pradella",
+    // deux lieux réels sans rapport — désactivé au même titre que le pivot quand aucun signal de
+    // localisation indépendant ne peut confirmer le candidat.
+    return containmentAutorise
+        && UtilitairesChaine.estContainmentRatio(a, b, longueurMinContainment, ratioMinContainment);
   }
 
   /// Découpe une chaîne normalisée en tokens significatifs (filtre les mots de moins de {@value
@@ -166,23 +178,28 @@ public final class CorrespondanceSalle {
     return estDoublonSalle(a, b, true);
   }
 
-  /// Variante de {@link #estDoublonSalle(String, String)} permettant de désactiver le critère pivot
-  /// (le plus faible des cinq, seul token commun ≥ 7 caractères) — un adjectif générique français
-  /// très courant (ex. "nouvelle") peut satisfaire ce critère sans avoir de pouvoir discriminant
-  /// réel, constaté en production sur un rapprochement Wikidata sans aucune donnée de localisation
-  /// permettant un contrôle croisé indépendant. Les quatre autres critères restent inchangés dans
-  /// les deux cas.
+  /// Variante de {@link #estDoublonSalle(String, String)} permettant de désactiver, en plus du
+  /// critère pivot, le containment de caractères du premier critère (les deux plus faibles des
+  /// cinq) — un adjectif générique français très courant (ex. "nouvelle") peut satisfaire le pivot
+  /// sans pouvoir discriminant réel, et un nom court peut se retrouver préfixe strict d'un nom plus
+  /// long sans rapport (ex. "la prade" / "la pradella") ; les deux cas constatés en production sur
+  /// un rapprochement Wikidata sans aucune donnée de localisation permettant un contrôle croisé
+  /// indépendant. Les trois autres critères restent inchangés dans les deux cas.
   ///
   /// @param a premier nom normalisé
   /// @param b deuxième nom normalisé
-  /// @param pivotAutorise {@code false} pour exclure le critère pivot de l'union — à réserver aux
-  ///   cas où aucun signal indépendant (ville, département) ne peut confirmer un candidat validé
-  ///   sur ce seul critère
+  /// @param pivotAutorise {@code false} pour exclure le pivot et le containment de caractères de
+  ///   l'union — à réserver aux cas où aucun signal indépendant (ville, département) ne peut
+  ///   confirmer un candidat validé sur l'un de ces deux seuls critères
   /// @return {@code true} si les salles sont considérées identiques
   public static boolean estDoublonSalle(String a, String b, boolean pivotAutorise) {
     if (estDoublonTexte(
-        a, b, SEUIL_SIMILARITE_SALLE, LONGUEUR_MIN_CONTAINMENT_SALLE, RATIO_MIN_CONTAINMENT_SALLE))
-      return true;
+        a,
+        b,
+        SEUIL_SIMILARITE_SALLE,
+        LONGUEUR_MIN_CONTAINMENT_SALLE,
+        RATIO_MIN_CONTAINMENT_SALLE,
+        pivotAutorise)) return true;
     if (estEgaliteSansEspaces(a, b)) return true;
 
     Set<String> tokA = tokensSignificatifs(a);

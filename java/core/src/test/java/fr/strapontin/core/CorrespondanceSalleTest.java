@@ -232,4 +232,34 @@ class CorrespondanceSalleTest {
     assertTrue(CorrespondanceSalle.estDoublonSalle("l olympia", "olympia", false));
     assertFalse(CorrespondanceSalle.estDoublonSalle("zenith bordeaux", "zenith caen", false));
   }
+
+  @Test
+  void estDoublonSalle_containmentInterdit_prefixeStrictSansLocalisation_retourneFalse() {
+    // "la prade" (Pradines, salle réelle) est un préfixe strict de "la pradella" (une localité
+    // catalane sans rapport) : le containment de caractères seul ne doit plus suffire sans
+    // signal de localisation indépendant.
+    assertFalse(CorrespondanceSalle.estDoublonSalle("la prade", "la pradella", false));
+  }
+
+  @Test
+  void estDoublonSalle_containmentAutorise_prefixeStrict_resteTrue() {
+    // Comportement inchangé quand pivotAutorise vaut true (défaut, réconciliation intra-lot).
+    assertTrue(CorrespondanceSalle.estDoublonSalle("la prade", "la pradella"));
+  }
+
+  // --- "eglise"/"saint" génériques : deux édifices religieux distincts sans rapport ---
+
+  @Test
+  void estDoublonSalle_eglisesParisiennesDistinctesPartageantEgliseSaint_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "eglise saint ephrem paris 05", "eglise saint eustache de paris"));
+  }
+
+  @Test
+  void estDoublonSalle_eglisesSaintPaulEtSaintLouisSansRapport_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "eglise saint paul saint louis", "eglise saint louis en l ile"));
+  }
 }
