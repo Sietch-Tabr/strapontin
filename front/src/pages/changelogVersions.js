@@ -4,6 +4,25 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 2.8.4 — 31 août 2026",
+    categories: [
+      {
+        categorie: "Notifications",
+        items: [
+          "Dans un digest regroupant plusieurs artistes, une séparation visuelle plus nette apparaît désormais entre les concerts d'artistes différents (email et notification push).",
+          "La mention « Prévente » apparaît désormais dans la notification push même quand plusieurs concerts sont regroupés dans le même digest — jusqu'ici visible uniquement dans l'email.",
+          "Une offre VIP/pack liée à un concert n'est plus notifiée à tort comme une ouverture de vente standard.",
+        ],
+      },
+      {
+        categorie: "Compte",
+        items: [
+          "Un problème de connexion réseau lors d'une demande de réinitialisation de mot de passe affiche désormais un message d'erreur clair, au lieu du message de confirmation habituel.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 2.8.2 — 26 août 2026",
     categories: [
       {

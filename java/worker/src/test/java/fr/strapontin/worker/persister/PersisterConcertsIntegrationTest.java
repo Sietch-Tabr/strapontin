@@ -148,6 +148,56 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   @Test
+  void persisterConcerts_statutPreventeApresDeuxCyclesEventimSuccessifs_resteProtege() {
+    // Eventim envoie systématiquement un statut null (pas de distinction prévente/vente
+    // complète côté API) — un premier cycle Eventim change déjà concerts.source, un second
+    // cycle Eventim ne doit pas pour autant écraser le statut détecté par TM.
+    ConcertBrut viaTm =
+        new ConcertBrut(
+            "Angele",
+            "2026-11-06",
+            "20:30",
+            "Zenith",
+            "Paris",
+            "75",
+            null,
+            "ticketmaster",
+            "music",
+            "Pop",
+            "presale",
+            null,
+            null,
+            null,
+            null);
+    ConcertBrut viaEventim =
+        new ConcertBrut(
+            "Angele",
+            "2026-11-06",
+            "20:30",
+            "Zenith",
+            "Paris",
+            "75",
+            null,
+            "eventim",
+            "music",
+            "Pop",
+            null,
+            null,
+            null,
+            null,
+            null);
+
+    persisterConcerts.persisterConcerts(List.of(viaTm));
+    persisterConcerts.persisterConcerts(List.of(viaEventim));
+    persisterConcerts.persisterConcerts(List.of(viaEventim));
+
+    String statut =
+        jdbc.queryForObject(
+            "SELECT statut FROM concerts WHERE artiste_norm = 'angele'", Map.of(), String.class);
+    assertEquals("presale", statut);
+  }
+
+  @Test
   void persisterConcerts_upsertConflitSalleRenommee_metsAJourSalleNormAvecSalle() {
     // salle_norm doit rester cohérent avec salle sur la branche de conflit de l'upsert, pas
     // seulement à l'insertion initiale

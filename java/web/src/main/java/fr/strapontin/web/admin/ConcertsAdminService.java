@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.admin;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -53,7 +52,7 @@ public class ConcertsAdminService {
                 rs.getObject("date", LocalDate.class),
                 rs.getObject("heure", LocalTime.class),
                 rs.getInt("absences_consecutives"),
-                rs.getObject("suppression_suggeree_le", Instant.class)));
+                rs.getTimestamp("suppression_suggeree_le").toInstant()));
   }
 
   /// Supprime définitivement un concert flagué.

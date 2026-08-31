@@ -155,6 +155,36 @@ test.describe("Scénario: API auth — endpoints Vue", () => {
     await ctx.close();
   });
 
+  test("forgotPassword_soumissionNormale_afficheSucces", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ storageState: undefined });
+    const page = await ctx.newPage();
+    await page.goto("/forgot-password");
+    await page.fill("#email", "inconnu@inexistant.fr");
+    await page.click('button[type="submit"]');
+    await expect(page.locator(".alerte-succes")).toBeVisible();
+    await expect(page.locator(".alerte-erreur")).not.toBeVisible();
+    await ctx.close();
+  });
+
+  // Distingue un échec de la requête réseau elle-même (hors ligne, avant d'atteindre le
+  // serveur) du message de succès générique — sans jamais révéler l'existence d'un compte
+  // (même comportement pour un email inconnu, voir ci-dessus).
+  test("forgotPassword_echecReseau_afficheErreurDistinctDuSucces", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ storageState: undefined });
+    const page = await ctx.newPage();
+    await page.goto("/forgot-password");
+    await page.route("**/api/auth/forgot-password", (route) => route.abort());
+    await page.fill("#email", "quelconque@exemple.fr");
+    await page.click('button[type="submit"]');
+    await expect(page.locator(".alerte-erreur")).toBeVisible();
+    await expect(page.locator(".alerte-succes")).not.toBeVisible();
+    await ctx.close();
+  });
+
   test("page_reset_password_sans_token_redirige_vers_forgot", async ({
     browser,
   }) => {

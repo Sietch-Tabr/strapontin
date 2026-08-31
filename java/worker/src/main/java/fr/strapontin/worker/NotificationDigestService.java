@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
@@ -40,13 +39,13 @@ import org.springframework.stereotype.Service;
 
 /// Service de notification digest (email + push VAPID) pour le worker.
 ///
-/// Lit les `user_matches` non notifiés, groupe par utilisateur, envoie
-/// email via Resend et push VAPID, puis met à jour `notifie_le`.
+/// Lit les `user_matches` non notifiés, groupe par utilisateur, envoie email via Resend et push
+/// VAPID, puis met à jour `notifie_le`.
 ///
-/// Si `RESEND_API_KEY` ou les clés VAPID sont absentes de `app_config`,
-/// la notification correspondante est ignorée sans erreur. Depuis, le canal email est de
-/// même ignoré sans erreur si le quota d'envoi Resend jour/mois est atteint
-/// ({@link GestionQuotaResendWorker}, compteur partagé avec le module web).
+/// Si `RESEND_API_KEY` ou les clés VAPID sont absentes de `app_config`, la notification
+/// correspondante est ignorée sans erreur. Depuis, le canal email est de même ignoré sans erreur si
+/// le quota d'envoi Resend jour/mois est atteint ({@link GestionQuotaResendWorker}, compteur
+/// partagé avec le module web).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -65,8 +64,8 @@ public class NotificationDigestService {
   // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans logs_admin.
   private final CompteurBilanFetch compteurPush = new CompteurBilanFetch();
 
-  /// Fabrique du client Resend — indirection nécessaire pour rendre {@code envoyerEmail}
-  /// testable sur son chemin nominal de succès, le SDK Resend n'étant pas injectable directement.
+  /// Fabrique du client Resend — indirection nécessaire pour rendre {@code envoyerEmail} testable
+  /// sur son chemin nominal de succès, le SDK Resend n'étant pas injectable directement.
   @FunctionalInterface
   interface FabriqueResend {
     Resend creer(String cle);
@@ -79,9 +78,9 @@ public class NotificationDigestService {
         throws java.security.GeneralSecurityException;
   }
 
-  /// Constructeur Spring — : les fabriques Resend/PushService ne sont explicitement
-  /// annotées {@code @Autowired} que sur ce constructeur, sans quoi Spring ne peut pas
-  /// déterminer lequel des deux constructeurs utiliser dès qu'il en existe plus d'un.
+  /// Constructeur Spring — : les fabriques Resend/PushService ne sont explicitement annotées
+  /// {@code @Autowired} que sur ce constructeur, sans quoi Spring ne peut pas déterminer lequel des
+  /// deux constructeurs utiliser dès qu'il en existe plus d'un.
   @org.springframework.beans.factory.annotation.Autowired
   public NotificationDigestService(
       ConfigServiceWorker configService,
@@ -99,8 +98,8 @@ public class NotificationDigestService {
         PushService::new);
   }
 
-  /// Constructeur de test — permet d'injecter des fabriques Resend/PushService
-  /// mockables pour exercer le chemin nominal de succès de l'envoi email/push.
+  /// Constructeur de test — permet d'injecter des fabriques Resend/PushService mockables pour
+  /// exercer le chemin nominal de succès de l'envoi email/push.
   NotificationDigestService(
       ConfigServiceWorker configService,
       NamedParameterJdbcTemplate jdbc,
@@ -120,14 +119,14 @@ public class NotificationDigestService {
 
   /// Données d'un concert pour le digest.
   ///
-  /// @param artiste     nom de l'artiste
-  /// @param date        date ISO (yyyy-MM-dd)
-  /// @param salle       nom de la salle
-  /// @param ville       ville (peut être nulle)
-  /// @param url         URL de billetterie (peut être nulle)
-  /// @param concertId   UUID du concert (string)
+  /// @param artiste nom de l'artiste
+  /// @param date date ISO (yyyy-MM-dd)
+  /// @param salle nom de la salle
+  /// @param ville ville (peut être nulle)
+  /// @param url URL de billetterie (peut être nulle)
+  /// @param concertId UUID du concert (string)
   /// @param artisteNorm nom de l'artiste normalisé (identique à `artiste_norm` en base)
-  /// @param source      origine du match : `"ARTISTE"` ou `"SALLE"`
+  /// @param source origine du match : `"ARTISTE"` ou `"SALLE"`
   public record ConcertNotif(
       String artiste,
       String date,
@@ -139,10 +138,9 @@ public class NotificationDigestService {
       String source,
       String statut) {}
 
-  /// Résultat d'un envoi de digest, avec le sous-ensemble de concerts effectivement tenté par
-  /// canal — nécessaire pour ne marquer {@code notification_envoyee_le} que sur les
-  /// concerts réellement délivrés par un canal en succès, pas sur l'ensemble du digest dès qu'un
-  /// seul canal a réussi.
+  /// Résultat d'un envoi de digest, avec le sous-ensemble de concerts effectivement tenté par canal
+  /// — nécessaire pour ne marquer {@code notification_envoyee_le} que sur les concerts réellement
+  /// délivrés par un canal en succès, pas sur l'ensemble du digest dès qu'un seul canal a réussi.
   private record ResultatDigest(
       boolean emailOk,
       boolean pushOk,
@@ -156,8 +154,8 @@ public class NotificationDigestService {
       boolean notifSallesPush,
       String frequenceNotifications) {}
 
-  /// Parcourt les matches non notifiés pour une fréquence donnée, envoie le digest,
-  /// met à jour `notifie_le`.
+  /// Parcourt les matches non notifiés pour une fréquence donnée, envoie le digest, met à jour
+  /// `notifie_le`.
   ///
   /// @param frequence `"temps_reel"` (après chaque recalcul) ou `"quotidien"` (cron 8h)
   public void executerDigest(String frequence) {
@@ -243,16 +241,16 @@ public class NotificationDigestService {
 
   /// Matches non notifiés regroupés par utilisateur, prêts pour l'envoi du digest.
   ///
-  /// @param emailsUtilisateurs  email de chaque utilisateur concerné
+  /// @param emailsUtilisateurs email de chaque utilisateur concerné
   /// @param configsUtilisateurs préférences de notification de chaque utilisateur
-  /// @param parUtilisateur      concerts non notifiés, groupés par utilisateur
+  /// @param parUtilisateur concerts non notifiés, groupés par utilisateur
   private record MatchesGroupes(
       Map<String, String> emailsUtilisateurs,
       Map<String, ConfigNotifUser> configsUtilisateurs,
       Map<String, List<ConcertNotif>> parUtilisateur) {}
 
-  /// Charge et regroupe par utilisateur les matches non notifiés pour une fréquence donnée
-  /// (extrait de {@link #executerDigest}).
+  /// Charge et regroupe par utilisateur les matches non notifiés pour une fréquence donnée (extrait
+  /// de {@link #executerDigest}).
   ///
   /// @param frequence `"temps_reel"` ou `"quotidien"`
   /// @return les matches non notifiés, groupés par utilisateur
@@ -349,9 +347,9 @@ public class NotificationDigestService {
     return new MatchesGroupes(emailsUtilisateurs, configsUtilisateurs, parUtilisateur);
   }
 
-  /// Remonte dans `logs_admin` le bilan agrégé des envois push pour le cycle de digest qui vient
-  /// de se terminer, même mécanisme générique que le bilan de panne des sources de
-  /// concerts (voir {@code WorkerStatsService#remonterBilan}).
+  /// Remonte dans `logs_admin` le bilan agrégé des envois push pour le cycle de digest qui vient de
+  /// se terminer, même mécanisme générique que le bilan de panne des sources de concerts (voir
+  /// {@code WorkerStatsService#remonterBilan}).
   private void remonterBilanPush() {
     BilanFetch bilan = compteurPush.preleverBilan();
     bilan
@@ -427,8 +425,7 @@ public class NotificationDigestService {
     }
   }
 
-  /// Issue possible d'un envoi push individuel, selon le statut HTTP retourné par le push
-  /// service.
+  /// Issue possible d'un envoi push individuel, selon le statut HTTP retourné par le push service.
   enum ResultatEnvoiPush {
     SUCCES,
     ABONNEMENT_MORT,
@@ -437,9 +434,9 @@ public class NotificationDigestService {
 
   /// Interprète le statut HTTP d'un envoi push.
   ///
-  /// <p>Seul un statut 2xx est un succès. 404/410 signent un abonnement mort (à supprimer). Tout
-  /// le reste (400, 429, 5xx…) est un échec — avant, seuls 404/410 étaient exclus du
-  /// succès, comptant à tort tout autre code d'erreur comme un envoi réussi.
+  /// <p>Seul un statut 2xx est un succès. 404/410 signent un abonnement mort (à supprimer). Tout le
+  /// reste (400, 429, 5xx…) est un échec — avant, seuls 404/410 étaient exclus du succès, comptant
+  /// à tort tout autre code d'erreur comme un envoi réussi.
   ///
   /// @param status statut HTTP retourné par le push service
   /// @return issue de l'envoi
@@ -527,9 +524,7 @@ public class NotificationDigestService {
             ? ("presale".equals(premier.statut()) ? "Prévente · " : "")
                 + formaterDate(premier.date())
                 + (premier.ville() != null ? " · " + premier.ville() : "")
-            : concerts.stream()
-                .map(c -> c.artiste() + " · " + formaterDate(c.date()))
-                .collect(Collectors.joining("\n"));
+            : construireLignesPreventePush(concerts);
     String url;
     if (concerts.size() == 1) {
       if ("SALLE".equals(premier.source())) {
@@ -550,6 +545,30 @@ public class NotificationDigestService {
             UtilitairesChaine.echapperJson(url));
   }
 
+  /// Construit le corps texte du push pour un digest à plusieurs concerts, une ligne par concert,
+  /// en insérant une ligne vide à chaque changement d'artiste — sans cette séparation, un digest
+  /// couvrant plusieurs artistes se lit comme une liste continue sans indication de regroupement.
+  ///
+  /// @param concerts concerts du digest (triés par date), au moins deux éléments
+  /// @param baseUrl l'URL publique de base de l'application
+  /// @return le corps texte du push, une ligne (éventuellement précédée d'une ligne vide) par
+  ///   concert
+  private static String construireLignesPreventePush(List<ConcertNotif> concerts) {
+    StringBuilder corps = new StringBuilder();
+    String artistePrecedent = null;
+    for (ConcertNotif c : concerts) {
+      if (artistePrecedent != null && !artistePrecedent.equals(c.artiste())) corps.append('\n');
+      if (!corps.isEmpty()) corps.append('\n');
+      corps
+          .append(c.artiste())
+          .append(" · ")
+          .append(formaterDate(c.date()))
+          .append("presale".equals(c.statut()) ? " · Prévente" : "");
+      artistePrecedent = c.artiste();
+    }
+    return corps.toString();
+  }
+
   private static String e(String valeur) {
     if (valeur == null) return "";
     return valeur
@@ -562,33 +581,38 @@ public class NotificationDigestService {
 
   private static String construireCorpsEmail(
       String sujet, List<ConcertNotif> concerts, String baseUrl) {
-    String lignes =
-        concerts.stream()
-            .map(
-                c -> {
-                  String lieu =
-                      c.ville() != null ? e(c.salle()) + " · " + e(c.ville()) : e(c.salle());
-                  String lien =
-                      c.url() != null
-                          ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
-                              .formatted(e(c.url()))
-                          : "";
-                  String prevente =
-                      "presale".equals(c.statut())
-                          ? " · <span style=\"color:#c026d3;font-weight:600\">Prévente</span>"
-                          : "";
-                  return """
-                  <tr>
-                    <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top">
-                      <div style="font-weight:600;color:#111;font-size:14px">%s</div>
-                      <div style="color:#666;font-size:13px;margin-top:2px">%s%s%s</div>
-                      <div style="color:#999;font-size:12px;margin-top:2px">%s</div>
-                    </td>
-                  </tr>\
-                  """
-                      .formatted(e(c.artiste()), formaterDate(c.date()), prevente, lien, lieu);
-                })
-            .collect(Collectors.joining("\n"));
+    StringBuilder lignes = new StringBuilder();
+    String artistePrecedent = null;
+    for (ConcertNotif c : concerts) {
+      String lieu = c.ville() != null ? e(c.salle()) + " · " + e(c.ville()) : e(c.salle());
+      String lien =
+          c.url() != null
+              ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
+                  .formatted(e(c.url()))
+              : "";
+      String prevente =
+          "presale".equals(c.statut())
+              ? " · <span style=\"color:#c026d3;font-weight:600\">Prévente</span>"
+              : "";
+      // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
+      // digest couvrant plusieurs artistes se lit comme une liste continue.
+      String stylecel =
+          artistePrecedent != null && !artistePrecedent.equals(c.artiste())
+              ? "padding:16px 0 10px;border-top:2px solid #ddd;vertical-align:top"
+              : "padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top";
+      lignes.append(
+          """
+          <tr>
+            <td style="%s">
+              <div style="font-weight:600;color:#111;font-size:14px">%s</div>
+              <div style="color:#666;font-size:13px;margin-top:2px">%s%s%s</div>
+              <div style="color:#999;font-size:12px;margin-top:2px">%s</div>
+            </td>
+          </tr>
+          """
+              .formatted(stylecel, e(c.artiste()), formaterDate(c.date()), prevente, lien, lieu));
+      artistePrecedent = c.artiste();
+    }
     return """
     <!DOCTYPE html>
     <html lang="fr">

@@ -150,6 +150,53 @@ class DedoublonnerTest {
     assertEquals("Julien Doré", resultat.get(0).artiste());
   }
 
+  @Test
+  void dedoublonner_completudeEgaleStatutConnuDuPerdantOrdreInitial_conserveStatut() {
+    // Champs identiques hors statut/source : sans le point de complétude dédié au statut,
+    // le départage tombe sur les diacritiques (égaux ici) et retient le premier élément de la
+    // liste quel que soit son statut — placer le concert sans statut en tête reproduit le biais
+    // d'ordre du bug.
+    var sansStatut =
+        new ConcertBrut(
+            "Angele",
+            "2026-11-06",
+            "20:30",
+            "Zenith",
+            "Paris",
+            "75",
+            "https://example.com",
+            "eventim",
+            "music",
+            "Pop",
+            null,
+            null,
+            null,
+            null,
+            null);
+    var avecStatut =
+        new ConcertBrut(
+            "Angele",
+            "2026-11-06",
+            "20:30",
+            "Zenith",
+            "Paris",
+            "75",
+            "https://example.com",
+            "ticketmaster",
+            "music",
+            "Pop",
+            "presale",
+            null,
+            null,
+            null,
+            null);
+
+    var resultat = Dedoublonner.dedoublonner(List.of(sansStatut, avecStatut));
+
+    assertEquals(1, resultat.size());
+    assertEquals("presale", resultat.get(0).statut());
+  }
+
   // --- Passe fuzzy ---
 
   @Test

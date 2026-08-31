@@ -141,14 +141,35 @@ final class MapeurEvenementTM {
                 : "Salle inconnue");
     Map<String, String> cityMap = venue != null ? (Map<String, String>) venue.get("city") : null;
     String ville = cityMap != null ? cityMap.get("name") : null;
+    // Un code postal étranger dont les deux premiers chiffres collisionnent avec un département
+    // français existant (ex. Luxembourg 43xx / Haute-Loire 43) produirait sinon un dept français
+    // plausible mais faux — countryCode absent traité comme française par défaut (comportement
+    // historique, aucun cas contraire connu).
+    Map<String, String> countryMap =
+        venue != null ? (Map<String, String>) venue.get("country") : null;
+    String countryCode = countryMap != null ? countryMap.get("countryCode") : null;
     String dept =
-        Normalisation.extraireDeptFrancais(venue != null ? (String) venue.get("postalCode") : null);
+        countryCode == null || "FR".equals(countryCode)
+            ? Normalisation.extraireDeptFrancais(
+                venue != null ? (String) venue.get("postalCode") : null)
+            : null;
     Object venueIdObj = venue != null ? venue.get("id") : null;
     String salleSourceId = venueIdObj != null ? "ticketmaster:" + venueIdObj : null;
     return new InfosVenueTM(salle, ville, dept, salleSourceId);
   }
 
   private record InfosVenteTM(String statut, String presaleDebut, String presaleNom) {}
+
+  // TM n'expose aucun champ documenté distinguant un event "package" (offre VIP/bundle, ex.
+  // package-angele-.../idpack/...) d'un event standard — repéré uniquement par ce segment d'URL,
+  // constant sur tous les cas observés en production. Un package n'est pas accessible à un achat
+  // de billetterie standard : son statut de vente ne doit jamais être notifié comme une prévente.
+  private static final java.util.regex.Pattern URL_PACKAGE_TM =
+      java.util.regex.Pattern.compile("(?i)/pack/");
+
+  private static boolean estEvenementPackage(String url) {
+    return url != null && URL_PACKAGE_TM.matcher(url).find();
+  }
 
   // "offsale" recouvre deux situations distinctes chez TM : un concert réellement complet, ou
   // une vente qui n'a simplement pas encore ouvert (prévente à venir, ou vente publique future) —
@@ -169,7 +190,7 @@ final class MapeurEvenementTM {
       var ventePublique = sales != null ? (Map<String, Object>) sales.get("public") : null;
       String ouverturePublique =
           ventePublique != null ? (String) ventePublique.get("startDateTime") : null;
-      if (presaleDebut != null) {
+      if (presaleDebut != null && estDansLeFutur(presaleDebut)) {
         statut = "presale";
       } else if (ouverturePublique != null && estDansLeFutur(ouverturePublique)) {
         statut = "presale";
@@ -199,7 +220,10 @@ final class MapeurEvenementTM {
     String artisteSourceId = extraireAttractionIdTM(embedded);
 
     String url = (String) evt.get("url");
-    InfosVenteTM infosVente = extraireInfosVenteTM(dates, evt);
+    InfosVenteTM infosVente =
+        estEvenementPackage(url)
+            ? new InfosVenteTM(null, null, null)
+            : extraireInfosVenteTM(dates, evt);
 
     List<Map<String, Object>> classificationsData =
         (List<Map<String, Object>>) evt.get("classifications");
