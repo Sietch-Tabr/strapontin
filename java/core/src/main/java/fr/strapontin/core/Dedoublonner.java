@@ -125,12 +125,19 @@ public final class Dedoublonner {
     return fusionnes;
   }
 
+  // Tolérance sous laquelle deux heures distinctes restent considérées compatibles pour la
+  // fusion — couvre un écart de saisie constaté entre deux fiches TM du même évènement réel
+  // (type "package" vs "prestation", écart d'1 minute), tout en restant très en dessous de tout
+  // écart matinée/soirée réel (toujours de l'ordre de l'heure).
+  private static final int TOLERANCE_HEURE_MINUTES = 3;
+
   /// Indique si deux concerts peuvent fusionner du point de vue de l'heure.
   ///
   /// <p>Empêche la passe 2 (fuzzy, groupée par date+ville sans heure) de refusionner deux concerts
   /// que la passe 1 vient de distinguer par heure (matinée + soirée) : deux heures renseignées et
-  /// différentes signent deux concerts distincts, une heure absente d'un côté (ou des deux) ne
-  /// permet ni de confirmer ni d'exclure la fusion.
+  /// distantes de plus de {@value #TOLERANCE_HEURE_MINUTES} minutes signent deux concerts
+  /// distincts, une heure absente d'un côté (ou des deux) ne permet ni de confirmer ni d'exclure la
+  /// fusion.
   ///
   /// @param a premier concert enrichi
   /// @param b second concert enrichi
@@ -138,7 +145,20 @@ public final class Dedoublonner {
   private static boolean heuresCompatibles(ConcertEnrichi a, ConcertEnrichi b) {
     var heureA = a.concert().heure();
     var heureB = b.concert().heure();
-    return heureA == null || heureB == null || heureA.equals(heureB);
+    if (heureA == null || heureB == null || heureA.equals(heureB)) return true;
+    Integer minutesA = minutesDepuisMinuit(heureA);
+    Integer minutesB = minutesDepuisMinuit(heureB);
+    if (minutesA == null || minutesB == null) return false;
+    return Math.abs(minutesA - minutesB) <= TOLERANCE_HEURE_MINUTES;
+  }
+
+  private static Integer minutesDepuisMinuit(String heure) {
+    try {
+      java.time.LocalTime lt = java.time.LocalTime.parse(heure);
+      return lt.getHour() * 60 + lt.getMinute();
+    } catch (java.time.format.DateTimeParseException e) {
+      return null;
+    }
   }
 
   private static ConcertEnrichi choisirMeilleur(ConcertEnrichi meilleur, ConcertEnrichi candidat) {

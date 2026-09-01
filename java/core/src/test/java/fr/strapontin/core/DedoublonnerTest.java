@@ -344,6 +344,86 @@ class DedoublonnerTest {
     assertEquals(2, Dedoublonner.dedoublonner(List.of(matinee, soiree)).size());
   }
 
+  // non-régression : deux fiches TM du même évènement réel (types "package"/"prestation")
+  // décalées d'1 minute exacte doivent fusionner malgré l'écart d'heure.
+  @Test
+  void dedoublonner_heuresEcartUneMinute_fusionneMalgreEcart() {
+    var prestation =
+        new ConcertBrut(
+            "Baby Keem",
+            "2026-09-03",
+            "20:31",
+            "L'Olympia",
+            "Paris",
+            null,
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    var pack =
+        new ConcertBrut(
+            "Baby Keem",
+            "2026-09-03",
+            "20:30",
+            "L'Olympia",
+            "Paris",
+            null,
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    assertEquals(1, Dedoublonner.dedoublonner(List.of(prestation, pack)).size());
+  }
+
+  @Test
+  void dedoublonner_heuresEcartAuDelaDeLaTolerance_nePasseFusionner() {
+    var vingtHeures =
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            "20:00",
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    var vingtHeuresDix =
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            "20:10",
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "eventim",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    assertEquals(2, Dedoublonner.dedoublonner(List.of(vingtHeures, vingtHeuresDix)).size());
+  }
+
   @Test
   void dedoublonner_heureAbsenteDunCote_fusionneMalgreTout() {
     var sansHeure =

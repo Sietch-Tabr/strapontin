@@ -71,9 +71,14 @@ final class MapeurProduitEventim {
   /// @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
   static String extraireNomArtiste(String titre) {
     Objects.requireNonNull(titre, "titre");
+    // Eventim utilise parfois une espace insécable (U+00A0) ou fine (U+202F) autour du tiret
+    // typographique plutôt qu'une espace normale (ex. "Baby Keem - The Ca$ino Tour") — le
+    // séparateur littéral " - " ne matche alors jamais et le titre entier est retenu comme nom
+    // d'artiste.
+    String titreNormalise = titre.replace('\u00A0', ' ').replace('\u202F', ' ');
     for (String sep : new String[] {" - ", " : "}) {
-      int idx = titre.indexOf(sep);
-      if (idx > 0) return titre.substring(0, idx).strip();
+      int idx = titreNormalise.indexOf(sep);
+      if (idx > 0) return titreNormalise.substring(0, idx).strip();
     }
     return titre;
   }
