@@ -22,11 +22,13 @@ function nettoyerAssets() {
 
 // #771 : deux avertissements de build non actionnables, investigués et documentés plutôt que
 // corrigés au jugé.
-// - `inlineDynamicImports option is deprecated` : émis par Rollup lors du bundling interne du
-//   service worker par workbox-build (dépendance de vite-plugin-pwa), pas par une option
-//   explicite de ce fichier — aucune option `injectManifest`/`VitePWA` documentée ne permet de
-//   le remplacer par `codeSplitting: false`. vite-plugin-pwa@1.3.0 (dernière version publiée,
-//   vérifié via `npm view vite-plugin-pwa versions`) ne l'a pas encore corrigé en interne.
+// - `inlineDynamicImports option is deprecated` : émis par Rollup/Rolldown lors du bundling
+//   interne du service worker par workbox-build (dépendance de vite-plugin-pwa, appel direct hors
+//   du pipeline principal de Vite), pas par une option explicite de ce fichier — aucune option
+//   `injectManifest`/`VitePWA` documentée ne permet de le remplacer par `codeSplitting: false`.
+//   vite-plugin-pwa@1.3.0 et workbox-build@7.4.1 (dernières versions publiées, revérifié) ne
+//   l'ont pas encore corrigé en interne — suivi upstream : github.com/vite-pwa/vite-plugin-pwa
+//   issues #912 et #920, ouvertes, aucun correctif publié à ce jour.
 // - `npm warn deprecated glob@11.1.0` / `source-map@0.8.0-beta.0` : dépendances transitives de
 //   workbox-build (via vite-plugin-pwa), aucune vulnérabilité (`npm audit` : 0 vulnérabilité).
 // À réévaluer à la prochaine mise à jour majeure de vite-plugin-pwa.
