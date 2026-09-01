@@ -22,7 +22,8 @@ import org.springframework.stereotype.Service;
 ///
 /// <p>Effectue l'upsert par lot en base avec la stratégie ON CONFLICT sur {@code (artiste_norm,
 /// date, heure, salle_id)} (NULLS NOT DISTINCT, migration V37). Gère la suppression des doublons
-/// par URL et par {@code salle_id} (TM+Eventim).
+/// par URL et par {@code salle_id} (TM+Eventim), ainsi que l'alignement d'heure d'un report
+/// Ticketmaster non ambigu (voir {@link #alignerHeureReportTM}).
 ///
 /// <p>Résout les UUIDs internes depuis les identifiants sources préfixés ({@code salle_sources},
 /// {@code artiste_sources}).
@@ -309,6 +310,77 @@ public class PersisteurConcertsDb {
       return idsDoublons.size();
     }
     return 0;
+  }
+
+  /// Statuts Ticketmaster signant le remplacement d'une représentation existante (report,
+  /// annulation) plutôt qu'une représentation supplémentaire.
+  private static final java.util.Set<String> STATUTS_REPORT_TM =
+      java.util.Set.of("rescheduled", "cancelled", "postponed");
+
+  /// Aligne l'heure d'un concert Ticketmaster déjà en base sur celle d'un report entrant (même
+  /// {@code url}, même {@code date}, heure différente, nouveau statut {@link #STATUTS_REPORT_TM}).
+  ///
+  /// <p>Ticketmaster réutilise le même idmanif (url stable) pour un évènement reporté à une autre
+  /// heure — sans cette étape, la clé de conflit d'upsert (qui inclut l'heure) crée une nouvelle
+  /// ligne à côté de l'ancienne au lieu de la mettre à jour.
+  ///
+  /// <p>Ne s'applique que si une seule heure distincte existe déjà pour ce couple {@code (url,
+  /// date)} : certaines productions à représentations multiples (théâtre, cirque, ballet) partagent
+  /// un seul idmanif Ticketmaster pour plusieurs séances le même jour (matinée/soirée) — en
+  /// présence de cette ambiguïté, impossible de déterminer laquelle est concernée par le report, la
+  /// ligne entrante reste alors une insertion distincte plutôt que de risquer d'altérer la mauvaise
+  /// représentation.
+  ///
+  /// @param concerts concerts après réconciliation, avant upsert
+  void alignerHeureReportTM(List<ValeurConcert> concerts) {
+    List<ValeurConcert> reports =
+        concerts.stream()
+            .filter(
+                c ->
+                    c.url() != null
+                        && c.heure() != null
+                        && "ticketmaster".equals(c.source())
+                        && STATUTS_REPORT_TM.contains(c.statut()))
+            .toList();
+    if (reports.isEmpty()) return;
+
+    List<String> urls = reports.stream().map(ValeurConcert::url).distinct().toList();
+    List<Map<String, Object>> existants =
+        jdbc.queryForList(
+            "SELECT id, url, date, heure FROM concerts"
+                + " WHERE source = 'ticketmaster' AND url IN (:urls)",
+            Map.of("urls", urls));
+
+    record CleUrlDate(String url, LocalDate date) {}
+    Map<CleUrlDate, List<Map<String, Object>>> parCle = new HashMap<>();
+    for (Map<String, Object> ligne : existants) {
+      CleUrlDate cle =
+          new CleUrlDate(
+              (String) ligne.get("url"), ((java.sql.Date) ligne.get("date")).toLocalDate());
+      parCle.computeIfAbsent(cle, _ -> new ArrayList<>()).add(ligne);
+    }
+
+    for (ValeurConcert c : reports) {
+      List<Map<String, Object>> candidats = parCle.get(new CleUrlDate(c.url(), c.date()));
+      if (candidats == null) continue;
+      var heuresDistinctes =
+          candidats.stream()
+              .map(l -> ((java.sql.Time) l.get("heure")).toLocalTime())
+              .collect(java.util.stream.Collectors.toSet());
+      if (heuresDistinctes.size() != 1) continue;
+      java.time.LocalTime heureExistante = heuresDistinctes.iterator().next();
+      if (heureExistante.equals(c.heure())) continue;
+      UUID idExistant = (UUID) candidats.get(0).get("id");
+      jdbc.update(
+          "UPDATE concerts SET heure = CAST(:heure AS time) WHERE id = CAST(:id AS uuid)",
+          Map.of("heure", c.heure(), "id", idExistant.toString()));
+      log.info(
+          "report Ticketmaster aligné url={} date={} heure {}->{}",
+          c.url(),
+          c.date(),
+          heureExistante,
+          c.heure());
+    }
   }
 
   /// Priorité de source (plus petit = conservé) pour {@link #supprimerDoublonsParSalleId}.

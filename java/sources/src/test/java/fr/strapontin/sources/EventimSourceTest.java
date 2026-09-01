@@ -127,6 +127,18 @@ class EventimSourceTest {
     assertEquals("Julien Clerc", EventimSource.extraireNomArtiste("Julien Clerc"));
   }
 
+  // Séparateur avec espace insécable (U+00A0) au lieu d'une espace normale — le titre entier
+  // était retenu comme nom d'artiste faute de matcher " - ".
+  @Test
+  void extraireNomArtiste_avecEspaceInsecableAvantTiret_retournePartieGauche() {
+    assertEquals("Baby Keem", EventimSource.extraireNomArtiste("Baby Keem - The Ca$ino Tour"));
+  }
+
+  @Test
+  void extraireNomArtiste_avecEspaceFineInsecableAvantTiret_retournePartieGauche() {
+    assertEquals("Artiste", EventimSource.extraireNomArtiste("Artiste - Tournée"));
+  }
+
   // --- mapProduit ---
 
   @Test

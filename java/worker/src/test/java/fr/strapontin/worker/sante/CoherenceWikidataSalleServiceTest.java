@@ -405,7 +405,9 @@ class CoherenceWikidataSalleServiceTest {
   @Test
   void revaliderTypes_aucunWikidataId_neContactePasWikidataEtRetourneZero() {
     when(jdbc.queryForList(
-            org.mockito.ArgumentMatchers.anyString(), any(Map.class), eq(String.class)))
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.anyMap(),
+            eq(String.class)))
         .thenReturn(List.of());
 
     int resultat = service.revaliderTypes();
@@ -417,7 +419,9 @@ class CoherenceWikidataSalleServiceTest {
   @Test
   void revaliderTypes_typeDesormaisExclu_metWikidataIdANullEtJournalise() {
     when(jdbc.queryForList(
-            org.mockito.ArgumentMatchers.anyString(), any(Map.class), eq(String.class)))
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.anyMap(),
+            eq(String.class)))
         .thenReturn(List.of("Q110597455"));
     when(wikidata.typesInvalides(List.of("Q110597455"))).thenReturn(java.util.Set.of("Q110597455"));
 
@@ -440,7 +444,9 @@ class CoherenceWikidataSalleServiceTest {
   @Test
   void revaliderTypes_typeToujoursValide_neModifieRienEtNeJournaliseRien() {
     when(jdbc.queryForList(
-            org.mockito.ArgumentMatchers.anyString(), any(Map.class), eq(String.class)))
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.anyMap(),
+            eq(String.class)))
         .thenReturn(List.of("Q537720"));
     when(wikidata.typesInvalides(List.of("Q537720"))).thenReturn(java.util.Set.of());
 
@@ -448,7 +454,9 @@ class CoherenceWikidataSalleServiceTest {
 
     assertEquals(0, resultat);
     verify(jdbc, never())
-        .update(org.mockito.ArgumentMatchers.contains("wikidata_id = NULL"), any(Map.class));
+        .update(
+            org.mockito.ArgumentMatchers.contains("wikidata_id = NULL"),
+            org.mockito.ArgumentMatchers.anyMap());
     verify(logsAdminWorker, never()).inserer(any(), any(), any(), any());
   }
 }

@@ -65,15 +65,17 @@ final class MapeurProduitEventim {
   /// Extrait le nom de l'artiste depuis un titre d'événement Eventim.
   ///
   /// Le titre Eventim est de la forme "Artiste - Tournée" ou "Artiste : Spectacle". On extrait la
-  /// partie avant le premier séparateur " - " ou " : ".
+  /// partie avant le premier séparateur " - " ou " : ", après normalisation des espaces
+  /// insécables/fines (U+00A0, U+202F) qu'Eventim place parfois autour du tiret.
   ///
   /// @param titre titre de l'événement Eventim
   /// @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
   static String extraireNomArtiste(String titre) {
     Objects.requireNonNull(titre, "titre");
+    String titreNormalise = titre.replace('\u00A0', ' ').replace('\u202F', ' ');
     for (String sep : new String[] {" - ", " : "}) {
-      int idx = titre.indexOf(sep);
-      if (idx > 0) return titre.substring(0, idx).strip();
+      int idx = titreNormalise.indexOf(sep);
+      if (idx > 0) return titreNormalise.substring(0, idx).strip();
     }
     return titre;
   }

@@ -90,19 +90,29 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
       String nomNormalise = Normalisation.normaliserTexte(nom);
       Map<String, Object> meilleurCandidat = null;
+      Map<String, Object> meilleurCandidatExact = null;
       double meilleurePopularite = -1;
+      double meilleurePopulariteExacte = -1;
       for (Map<String, Object> candidat : dataList) {
         String nomCandidat = (String) candidat.get("name");
         if (nomCandidat == null) continue;
-        double similarite =
-            Normalisation.similarite(nomNormalise, Normalisation.normaliserTexte(nomCandidat));
+        String nomCandidatNormalise = Normalisation.normaliserTexte(nomCandidat);
+        double similarite = Normalisation.similarite(nomNormalise, nomCandidatNormalise);
         if (similarite < SEUIL_CONFIANCE_DEEZER) continue;
         double popularite = popularite(candidat);
         if (meilleurCandidat == null || popularite > meilleurePopularite) {
           meilleurCandidat = candidat;
           meilleurePopularite = popularite;
         }
+        // Une correspondance exacte l'emporte toujours sur un homonyme approximatif plus
+        // populaire ; la popularité ne départage qu'entre candidats eux-mêmes exacts.
+        if (nomCandidatNormalise.equals(nomNormalise)
+            && (meilleurCandidatExact == null || popularite > meilleurePopulariteExacte)) {
+          meilleurCandidatExact = candidat;
+          meilleurePopulariteExacte = popularite;
+        }
       }
+      if (meilleurCandidatExact != null) meilleurCandidat = meilleurCandidatExact;
       if (meilleurCandidat == null) return null;
 
       String resultat = (String) meilleurCandidat.get("name");

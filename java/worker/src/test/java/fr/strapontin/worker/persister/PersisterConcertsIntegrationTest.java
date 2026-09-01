@@ -356,6 +356,64 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   @Test
+  void
+      persisterConcerts_mappingSalleSourcesIncoherentGeographiquement_ignoreLeMappingEtJournalise() {
+    // Un identifiant TM déjà mappé vers une salle d'un autre département que celui du concert
+    // entrant doit être écarté plutôt que suivi aveuglément.
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
+            + " VALUES ('parc expos quimper', 'Parc Des Expos De Penvillers',"
+            + " 'parc des expos de penvillers', '29')",
+        Map.of());
+    java.util.UUID salleQuimperId =
+        jdbc.queryForObject(
+            "SELECT id FROM salles WHERE salle_cle = 'parc expos quimper'",
+            Map.of(),
+            (rs, _) -> rs.getObject("id", java.util.UUID.class));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe) VALUES"
+            + " (CAST(:uuid AS uuid), 'ticketmaster', 'rZFSnyZAv1F')",
+        Map.of("uuid", salleQuimperId.toString()));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Chimène Badi",
+                "2027-12-18",
+                "20:30",
+                "Parc Des Expositions Brezillet",
+                "Saint-Brieuc",
+                "22",
+                "https://www.ticketmaster.fr/chimene-badi",
+                "ticketmaster",
+                "music",
+                "Pop",
+                "onsale",
+                null,
+                null,
+                "ticketmaster:rZFSnyZAv1F",
+                null)));
+
+    java.util.UUID salleEnBase =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'chimene badi'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
+    assertNotEquals(
+        salleQuimperId,
+        salleEnBase,
+        "le mapping salle_sources incohérent (dept 29) ne doit pas être suivi pour un concert"
+            + " dept 22");
+
+    Long nbAvertissements =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM logs_admin WHERE source = 'persistance'"
+                + " AND message LIKE '%incohérence géographique%'",
+            Map.of(), Long.class);
+    assertEquals(1L, nbAvertissements, "l'incohérence doit être journalisée, pas silencieuse");
+  }
+
+  @Test
   void persisterConcerts_salleRenommee_metAJourNomConserveSalleId() {
     // Scénario Plenitude Arena : même venueId TM, nom différent entre deux fetches
     jdbc.update(
@@ -1028,6 +1086,131 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         "holiday on ice",
         artisteEnBase,
         "la résolution corrigée du second fetch doit remplacer l'ancienne valeur corrompue");
+  }
+
+  @Test
+  void persisterConcerts_memeUrlTicketmasterHeureReportee_remplaceLAncienneLigne() {
+    // Un report Ticketmaster (même URL, heure changée) doit mettre à jour la ligne existante,
+    // pas en créer une nouvelle à côté.
+    String urlEvenement = "https://www.ticketmaster.fr/event/pussycat-dolls-653083";
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "The Pussycat Dolls",
+                DATE_RECENTE,
+                "20:00",
+                "Accor Arena",
+                "Paris",
+                "75",
+                urlEvenement,
+                "ticketmaster",
+                "music",
+                null,
+                "onsale",
+                null,
+                null,
+                null,
+                null)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "The Pussycat Dolls",
+                DATE_RECENTE,
+                "19:00",
+                "Accor Arena",
+                "Paris",
+                "75",
+                urlEvenement,
+                "ticketmaster",
+                "music",
+                null,
+                "rescheduled",
+                null,
+                null,
+                null,
+                null)));
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(1L, count, "l'ancienne ligne (20h, en vente) doit être absorbée, pas dupliquée");
+
+    Map<String, Object> ligne =
+        jdbc.queryForList("SELECT heure::text, statut::text FROM concerts", Map.of()).get(0);
+    assertEquals("19:00:00", ligne.get("heure"), "l'heure reportée doit être conservée");
+    assertEquals("rescheduled", ligne.get("statut"), "le statut à jour doit être conservé");
+  }
+
+  @Test
+  void persisterConcerts_memeUrlTicketmasterMatineeEtSoireeUneAnnulee_neModifiePasLAutre() {
+    // Certaines productions (théâtre, cirque) partagent un seul idmanif Ticketmaster pour
+    // plusieurs séances le même jour — l'annulation de l'une ne doit jamais toucher l'autre.
+    String urlProduction = "https://www.ticketmaster.fr/event/les-miserables-642735";
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Les Misérables",
+                DATE_RECENTE,
+                "15:00",
+                "Zenith Paris",
+                "Paris",
+                "75",
+                urlProduction,
+                "ticketmaster",
+                "theatre",
+                null,
+                "onsale",
+                null,
+                null,
+                null,
+                null),
+            new ConcertBrut(
+                "Les Misérables",
+                DATE_RECENTE,
+                "20:00",
+                "Zenith Paris",
+                "Paris",
+                "75",
+                urlProduction,
+                "ticketmaster",
+                "theatre",
+                null,
+                "onsale",
+                null,
+                null,
+                null,
+                null)));
+
+    // Annulation de la seule séance du soir, même URL/date, heure différente des deux existantes.
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Les Misérables",
+                DATE_RECENTE,
+                "20:00",
+                "Zenith Paris",
+                "Paris",
+                "75",
+                urlProduction,
+                "ticketmaster",
+                "theatre",
+                null,
+                "cancelled",
+                null,
+                null,
+                null,
+                null)));
+
+    List<String> heures =
+        jdbc.queryForList(
+            "SELECT heure::text FROM concerts WHERE url = :url ORDER BY heure",
+            Map.of("url", urlProduction),
+            String.class);
+    assertEquals(
+        List.of("15:00:00", "20:00:00"),
+        heures,
+        "la séance de 15h ne doit pas être altérée par l'annulation ambiguë de celle de 20h");
   }
 
   @Test
