@@ -85,6 +85,24 @@ public class PersisteurConcertsDb {
       WHERE c1.url IS NOT NULL
       """;
 
+  // Ticketmaster réutilise le même idmanif (url stable) pour un évènement reporté à une autre
+  // heure — sans ce repli, un report crée une nouvelle ligne à côté de l'ancienne au lieu de la
+  // remplacer, l'ancienne ligne périmée restant visible. Restreint à Ticketmaster (heure ignorée,
+  // contrairement à SQL_DOUBLONS_URL ci-dessus) : pour Eventim, une même URL de page festival peut
+  // exposer plusieurs performances réellement distinctes le même jour à des heures différentes —
+  // y appliquer ce repli supprimerait à tort l'une d'elles.
+  private static final String SQL_DOUBLONS_URL_REPORT_TM =
+      """
+      SELECT DISTINCT c1.id::text
+      FROM concerts c1
+      JOIN concerts c2
+        ON c1.url  = c2.url
+       AND c1.date = c2.date
+       AND c1.id  != c2.id
+       AND c1.updated_at < c2.updated_at
+      WHERE c1.source = 'ticketmaster' AND c2.source = 'ticketmaster' AND c1.url IS NOT NULL
+      """;
+
   private final NamedParameterJdbcTemplate jdbc;
 
   /// @param jdbc template JDBC injecté par Spring
@@ -298,13 +316,17 @@ public class PersisteurConcertsDb {
     params.addValue("artisteId_" + i, v.artisteId() != null ? v.artisteId().toString() : null);
   }
 
-  /// Supprime les concerts en doublon par {@code (source, url, date, heure)}.
+  /// Supprime les concerts en doublon par {@code (source, url, date, heure)}, complété pour
+  /// Ticketmaster par un repli ignorant l'heure (voir {@link #SQL_DOUBLONS_URL_REPORT_TM}).
   ///
   /// @return nombre de concerts supprimés
   int supprimerDoublonsParUrl() {
-    List<String> idsDoublons = jdbc.queryForList(SQL_DOUBLONS_URL, Map.of(), String.class);
+    java.util.LinkedHashSet<String> idsDoublons =
+        new java.util.LinkedHashSet<>(jdbc.queryForList(SQL_DOUBLONS_URL, Map.of(), String.class));
+    idsDoublons.addAll(jdbc.queryForList(SQL_DOUBLONS_URL_REPORT_TM, Map.of(), String.class));
     if (!idsDoublons.isEmpty()) {
-      jdbc.update("DELETE FROM concerts WHERE id::text IN (:ids)", Map.of("ids", idsDoublons));
+      jdbc.update(
+          "DELETE FROM concerts WHERE id::text IN (:ids)", Map.of("ids", List.copyOf(idsDoublons)));
       log.info("doublons url supprimés count={}", idsDoublons.size());
       return idsDoublons.size();
     }

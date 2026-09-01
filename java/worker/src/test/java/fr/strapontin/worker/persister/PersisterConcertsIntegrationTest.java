@@ -1031,6 +1031,61 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   @Test
+  void persisterConcerts_memeUrlTicketmasterHeureReportee_remplaceLAncienneLigne() {
+    // Reproduit le cas réel #1115 : un report Ticketmaster (même idmanif/URL, heure changée) crée
+    // une nouvelle ligne à côté de l'ancienne car la clé de conflit d'upsert inclut l'heure —
+    // supprimerDoublonsParUrl (repli SQL_DOUBLONS_URL_REPORT_TM, heure ignorée pour Ticketmaster)
+    // doit absorber la ligne périmée.
+    String urlEvenement = "https://www.ticketmaster.fr/event/pussycat-dolls-653083";
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "The Pussycat Dolls",
+                DATE_RECENTE,
+                "20:00",
+                "Accor Arena",
+                "Paris",
+                "75",
+                urlEvenement,
+                "ticketmaster",
+                "music",
+                null,
+                "onsale",
+                null,
+                null,
+                null,
+                null)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "The Pussycat Dolls",
+                DATE_RECENTE,
+                "19:00",
+                "Accor Arena",
+                "Paris",
+                "75",
+                urlEvenement,
+                "ticketmaster",
+                "music",
+                null,
+                "rescheduled",
+                null,
+                null,
+                null,
+                null)));
+
+    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    assertEquals(1L, count, "l'ancienne ligne (20h, en vente) doit être absorbée, pas dupliquée");
+
+    Map<String, Object> ligne =
+        jdbc.queryForList("SELECT heure::text, statut::text FROM concerts", Map.of()).get(0);
+    assertEquals("19:00:00", ligne.get("heure"), "l'heure reportée doit être conservée");
+    assertEquals("rescheduled", ligne.get("statut"), "le statut à jour doit être conservé");
+  }
+
+  @Test
   void persisterConcerts_digitickSansArtisteSourceId_resolutionParNomNorm() {
     // Digitick ne fournit pas d'artisteSourceId : la résolution doit quand même
     // retrouver l'artiste_id en base via correspondance exacte sur artiste_norm.
