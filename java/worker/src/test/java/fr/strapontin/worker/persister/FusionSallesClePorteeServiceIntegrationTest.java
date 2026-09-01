@@ -130,4 +130,21 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
     Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(2L, nbSalles);
   }
+
+  // non-régression #1113 : un seul concert coïncidant par erreur upstream (mapping salle_sources
+  // corrompu, cf. #1112) ne doit jamais suffire à fusionner deux salles réellement distinctes —
+  // cas réel confirmé (complexe sportif vs casino, adresses différentes).
+  @Test
+  void fusionner_sallesReellementDistinctesConcertCoincident_neFusionnePas() {
+    UUID arena = creerSalle("Arena du Pays d'Aix", "13", null);
+    UUID pasino = creerSalle("Pasino Grand Aix-en-Provence", "13", null);
+    creerConcert("collision upstream", "21:00", "13", arena);
+    creerConcert("collision upstream", "21:00", "13", pasino);
+
+    int fusions = fusionSallesClePortee.fusionner();
+
+    assertEquals(0, fusions, "des noms sans rapport ne doivent pas fusionner malgré la clé forte");
+    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    assertEquals(2L, nbSalles);
+  }
 }

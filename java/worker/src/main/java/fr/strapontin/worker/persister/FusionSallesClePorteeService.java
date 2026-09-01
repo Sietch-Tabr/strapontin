@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.persister;
 
+import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,7 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 /// Détecte et fusionne automatiquement, en cycle nocturne, des paires de salles déjà établies
 /// (chacune avec ses propres concerts déjà résolus) qui désignent en réalité le même bâtiment
 /// physique — repérées par un concert partageant exactement artiste+date+heure+dept entre les deux,
-/// sans aucun rapport textuel nécessaire entre leurs noms.
+/// et validées par {@link CorrespondanceSalle#estDoublonSalle} sur leurs noms. Le seul critère
+/// artiste+date+heure+dept, sans comparaison de nom, s'est révélé insuffisant en production : un
+/// concert coïncidant par erreur upstream (ex. un mapping {@code salle_sources} corrompu) suffisait
+/// à fusionner deux salles réellement distinctes.
 ///
 /// Complète {@link ReconciliateurSalles#chercherSalleParCleForte}, qui n'agit qu'au moment de la
 /// résolution d'un nouveau concert entrant : deux salles déjà établies sous des identités
@@ -75,12 +79,16 @@ public class FusionSallesClePorteeService {
   /// Repère, parmi les concerts à venir, les paires de {@code salle_id} distincts partageant
   /// exactement le même artiste, la même date, la même heure et le même département — même clé que
   /// {@link ReconciliateurSalles#chercherSalleParCleForte}, appliquée ici rétroactivement à des
-  /// salles déjà résolues chacune de leur côté plutôt qu'au moment de l'insertion.
+  /// salles déjà résolues chacune de leur côté plutôt qu'au moment de l'insertion — puis filtrées
+  /// par {@link CorrespondanceSalle#estDoublonSalle} sur les noms des deux salles : un seul concert
+  /// coïncidant par erreur upstream ne doit jamais suffire à fusionner deux salles sans rapport
+  /// réel (voir le rationale de classe).
   private List<PaireSalles> detecterPaires() {
     List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT DISTINCT c1.salle_id AS salle_a, c2.salle_id AS salle_b
+            SELECT DISTINCT c1.salle_id AS salle_a, c2.salle_id AS salle_b,
+                   sa.nom_norm AS nom_a, sb.nom_norm AS nom_b
             FROM concerts c1
             JOIN concerts c2
               ON c1.artiste_norm = c2.artiste_norm
@@ -88,6 +96,8 @@ public class FusionSallesClePorteeService {
              AND c1.heure = c2.heure
              AND c1.dept = c2.dept
              AND c1.salle_id < c2.salle_id
+            JOIN salles sa ON sa.id = c1.salle_id
+            JOIN salles sb ON sb.id = c2.salle_id
             WHERE c1.salle_id IS NOT NULL AND c2.salle_id IS NOT NULL
               AND c1.heure IS NOT NULL AND c1.dept IS NOT NULL
               AND c1.date >= CURRENT_DATE
@@ -95,6 +105,9 @@ public class FusionSallesClePorteeService {
             Map.of());
     List<PaireSalles> paires = new ArrayList<>();
     for (var ligne : lignes) {
+      String nomA = (String) ligne.get("nom_a");
+      String nomB = (String) ligne.get("nom_b");
+      if (!CorrespondanceSalle.estDoublonSalle(nomA, nomB)) continue;
       paires.add(new PaireSalles((UUID) ligne.get("salle_a"), (UUID) ligne.get("salle_b")));
     }
     return paires;
