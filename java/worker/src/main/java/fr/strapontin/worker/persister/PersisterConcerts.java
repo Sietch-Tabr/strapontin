@@ -390,6 +390,7 @@ public class PersisterConcerts {
 
     List<ValeurConcert> valeurs = resoudreIdentitesSources(valeursBrutes);
     valeurs = db.resoudreParUrl(valeurs);
+    db.alignerHeureReportTM(valeurs);
     valeurs = reconciliateurSalles.reconcilierSalles(valeurs);
     valeurs = reconciliateurArtistes.reconcilierArtistes(valeurs);
     // Deuxième passe salle : couvre le cas où artiste_norm et salle_norm varient simultanément.

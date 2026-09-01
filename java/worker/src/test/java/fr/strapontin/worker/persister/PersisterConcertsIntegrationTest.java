@@ -1093,8 +1093,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   void persisterConcerts_memeUrlTicketmasterHeureReportee_remplaceLAncienneLigne() {
     // Reproduit le cas réel #1115 : un report Ticketmaster (même idmanif/URL, heure changée) crée
     // une nouvelle ligne à côté de l'ancienne car la clé de conflit d'upsert inclut l'heure —
-    // supprimerDoublonsParUrl (repli SQL_DOUBLONS_URL_REPORT_TM, heure ignorée pour Ticketmaster)
-    // doit absorber la ligne périmée.
+    // alignerHeureReportTM doit aligner l'heure de l'ancienne ligne (seule candidate non ambiguë)
+    // avant l'upsert, pour qu'il la mette à jour au lieu d'en créer une nouvelle.
     String urlEvenement = "https://www.ticketmaster.fr/event/pussycat-dolls-653083";
 
     persisterConcerts.persisterConcerts(
@@ -1142,6 +1142,82 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         jdbc.queryForList("SELECT heure::text, statut::text FROM concerts", Map.of()).get(0);
     assertEquals("19:00:00", ligne.get("heure"), "l'heure reportée doit être conservée");
     assertEquals("rescheduled", ligne.get("statut"), "le statut à jour doit être conservé");
+  }
+
+  @Test
+  void persisterConcerts_memeUrlTicketmasterMatineeEtSoireeUneAnnulee_neModifiePasLAutre() {
+    // Non-régression trouvée en vérifiant #1115 sur données prod réelles : certaines productions
+    // à représentations multiples (théâtre, cirque, ballet) partagent un seul idmanif/URL
+    // Ticketmaster pour plusieurs séances le même jour (matinée/soirée) — l'annulation d'une seule
+    // séance ne doit jamais faire dériver l'heure d'une autre séance réellement distincte
+    // partageant
+    // la même URL.
+    String urlProduction = "https://www.ticketmaster.fr/event/les-miserables-642735";
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Les Misérables",
+                DATE_RECENTE,
+                "15:00",
+                "Zenith Paris",
+                "Paris",
+                "75",
+                urlProduction,
+                "ticketmaster",
+                "theatre",
+                null,
+                "onsale",
+                null,
+                null,
+                null,
+                null),
+            new ConcertBrut(
+                "Les Misérables",
+                DATE_RECENTE,
+                "20:00",
+                "Zenith Paris",
+                "Paris",
+                "75",
+                urlProduction,
+                "ticketmaster",
+                "theatre",
+                null,
+                "onsale",
+                null,
+                null,
+                null,
+                null)));
+
+    // Annulation de la seule séance du soir, même URL/date, heure différente des deux existantes.
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Les Misérables",
+                DATE_RECENTE,
+                "20:00",
+                "Zenith Paris",
+                "Paris",
+                "75",
+                urlProduction,
+                "ticketmaster",
+                "theatre",
+                null,
+                "cancelled",
+                null,
+                null,
+                null,
+                null)));
+
+    List<String> heures =
+        jdbc.queryForList(
+            "SELECT heure::text FROM concerts WHERE url = :url ORDER BY heure",
+            Map.of("url", urlProduction),
+            String.class);
+    assertEquals(
+        List.of("15:00:00", "20:00:00"),
+        heures,
+        "la séance de 15h ne doit pas être altérée par l'annulation ambiguë de celle de 20h");
   }
 
   @Test
