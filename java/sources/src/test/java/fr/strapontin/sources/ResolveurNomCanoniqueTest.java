@@ -148,6 +148,35 @@ class ResolveurNomCanoniqueTest {
     serveur.verify();
   }
 
+  // non-régression : un homonyme approximatif plus populaire ne doit jamais l'emporter sur une
+  // correspondance exacte du nom recherché (corruption réelle constatée en production — "The Halo
+  // Effect" réécrit en "The Hall Effect", 20 076 fans contre 10 837).
+  @Test
+  void resoudreNomCanonique_artiste_exactMatchMoinsPopulaire_priméSurHomonymePopulaire() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist")))
+        .andRespond(
+            withSuccess(
+                """
+                {"data":[
+                  {"name":"The Hall Effect","nb_fan":20076},
+                  {"name":"The Halo Effect","nb_fan":10837}
+                ]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    ResolveurNomCanonique resolveur = resolveurAvecServeur(serveur, restClient);
+    ResultatResolution resultat = resolveur.resoudreNomCanonique("artiste", "The Halo Effect");
+
+    assertEquals("The Halo Effect", resultat.nom());
+    assertEquals(SourceResolution.DEEZER, resultat.source());
+    serveur.verify();
+  }
+
   @Test
   void resoudreNomCanonique_artiste_candidatPopulaireSousLeSeuil_ignore() {
     RestClient.Builder builder = RestClient.builder();
