@@ -531,6 +531,30 @@ public class ReconciliateurSalles {
         .toList();
   }
 
+  /// Charge en une seule requête le département connu de chaque salle donnée (colonne {@code dept},
+  /// avec le même repli sur un concert déjà rattaché que {@link #chercherSalleParTokens}) — permet
+  /// de valider la cohérence géographique d'un mapping {@code salle_sources} réutilisé sans une
+  /// requête par concert.
+  ///
+  /// @param salleIds identifiants des salles à vérifier
+  /// @return département connu par salle, absente si aucun département connu (ni {@code
+  ///   salles.dept}, ni aucun concert déjà rattaché)
+  Map<UUID, String> deptsConnus(Set<UUID> salleIds) {
+    if (salleIds.isEmpty()) return Map.of();
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT s.id AS id, COALESCE(s.dept, (SELECT c.dept FROM concerts c"
+                + " WHERE c.salle_id = s.id AND c.dept IS NOT NULL LIMIT 1)) AS dept"
+                + " FROM salles s WHERE s.id IN (:ids)",
+            Map.of("ids", salleIds));
+    Map<UUID, String> resultat = new HashMap<>();
+    for (var ligne : lignes) {
+      String dept = (String) ligne.get("dept");
+      if (dept != null) resultat.put((UUID) ligne.get("id"), dept);
+    }
+    return resultat;
+  }
+
   /// Retente la résolution des concerts orphelins (`salle_id IS NULL`) déjà persistés.
   ///
   /// <p>Couvre le résidu structurel laissé par {@link #upsertSalleSource} : un concert sans {@code

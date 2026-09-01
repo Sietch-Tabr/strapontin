@@ -356,6 +356,65 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   @Test
+  void
+      persisterConcerts_mappingSalleSourcesIncoherentGeographiquement_ignoreLeMappingEtJournalise() {
+    // Reproduit le cas réel #1112 : un identifiant TM déjà mappé (salle_sources) vers une salle
+    // d'un département (29, Quimper) résout un concert entrant dont le département réel (22,
+    // Saint-Brieuc) contredit ce mapping — celui-ci doit être écarté plutôt que suivi aveuglément.
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
+            + " VALUES ('parc expos quimper', 'Parc Des Expos De Penvillers',"
+            + " 'parc des expos de penvillers', '29')",
+        Map.of());
+    java.util.UUID salleQuimperId =
+        jdbc.queryForObject(
+            "SELECT id FROM salles WHERE salle_cle = 'parc expos quimper'",
+            Map.of(),
+            (rs, _) -> rs.getObject("id", java.util.UUID.class));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe) VALUES"
+            + " (CAST(:uuid AS uuid), 'ticketmaster', 'rZFSnyZAv1F')",
+        Map.of("uuid", salleQuimperId.toString()));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Chimène Badi",
+                "2027-12-18",
+                "20:30",
+                "Parc Des Expositions Brezillet",
+                "Saint-Brieuc",
+                "22",
+                "https://www.ticketmaster.fr/chimene-badi",
+                "ticketmaster",
+                "music",
+                "Pop",
+                "onsale",
+                null,
+                null,
+                "ticketmaster:rZFSnyZAv1F",
+                null)));
+
+    java.util.UUID salleEnBase =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'chimene badi'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
+    assertNotEquals(
+        salleQuimperId,
+        salleEnBase,
+        "le mapping salle_sources incohérent (dept 29) ne doit pas être suivi pour un concert"
+            + " dept 22");
+
+    Long nbAvertissements =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM logs_admin WHERE source = 'persistance'"
+                + " AND message LIKE '%incohérence géographique%'",
+            Map.of(), Long.class);
+    assertEquals(1L, nbAvertissements, "l'incohérence doit être journalisée, pas silencieuse");
+  }
+
+  @Test
   void persisterConcerts_salleRenommee_metAJourNomConserveSalleId() {
     // Scénario Plenitude Arena : même venueId TM, nom différent entre deux fetches
     jdbc.update(

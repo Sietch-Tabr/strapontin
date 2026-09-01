@@ -6,6 +6,7 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.worker.LogsAdminWorker;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -14,7 +15,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,18 +55,22 @@ public class PersisterConcerts {
   private final PersisteurConcertsDb db;
   private final ReconciliateurSalles reconciliateurSalles;
   private final ReconciliateurArtistes reconciliateurArtistes;
+  private final LogsAdminWorker logsAdminWorker;
   private PersisterConcerts self;
 
   /// @param db service de persistance SQL
   /// @param reconciliateurSalles service de réconciliation des salles
   /// @param reconciliateurArtistes service de réconciliation des artistes
+  /// @param logsAdminWorker journalisation admin
   public PersisterConcerts(
       PersisteurConcertsDb db,
       ReconciliateurSalles reconciliateurSalles,
-      ReconciliateurArtistes reconciliateurArtistes) {
+      ReconciliateurArtistes reconciliateurArtistes,
+      LogsAdminWorker logsAdminWorker) {
     this.db = db;
     this.reconciliateurSalles = reconciliateurSalles;
     this.reconciliateurArtistes = reconciliateurArtistes;
+    this.logsAdminWorker = logsAdminWorker;
   }
 
   /// Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
@@ -215,9 +222,38 @@ public class PersisterConcerts {
       }
     }
 
+    // Un mapping salle_sources déjà établi (couple source+identifiant externe) est réutilisé
+    // sans passer par aucun des garde-fous géographiques appliqués à la création d'un nouveau
+    // mapping (estDoublonSalle, filtre dept) — un identifiant source réattribué en amont (TM) à
+    // un lieu différent du mapping historique doit être détecté plutôt que suivi aveuglément.
+    Set<UUID> sallesMappees =
+        concerts.stream()
+            .filter(c -> c.salleSourceId() != null)
+            .map(c -> cachesSalles.get(c.salleSourceId()))
+            .filter(java.util.Objects::nonNull)
+            .collect(Collectors.toSet());
+    Map<UUID, String> deptsConnus = reconciliateurSalles.deptsConnus(sallesMappees);
+
     Map<String, UUID> cachesSallesParNom = new HashMap<>();
     for (ValeurConcert c : concerts) {
-      if (c.salleSourceId() == null && !cachesSallesParNom.containsKey(c.salleNorm())) {
+      UUID salleMappee = c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
+      if (mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)) {
+        logsAdminWorker.inserer(
+            "warn",
+            "persistance",
+            "mapping salle_sources ignoré — incohérence géographique salleId="
+                + salleMappee
+                + " deptConnu="
+                + deptsConnus.get(salleMappee)
+                + " deptEntrant="
+                + c.dept()
+                + " artiste="
+                + c.artisteNorm(),
+            Map.of("salleId", salleMappee.toString(), "artiste", c.artisteNorm()));
+      }
+      boolean besoinFallback =
+          c.salleSourceId() == null || mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus);
+      if (besoinFallback && !cachesSallesParNom.containsKey(c.salleNorm())) {
         UUID salleId = reconciliateurSalles.chercherSalleParTokens(c.salle(), c.dept());
         if (salleId == null) salleId = reconciliateurSalles.chercherSalleParCleForte(c);
         cachesSallesParNom.put(c.salleNorm(), salleId);
@@ -228,9 +264,12 @@ public class PersisterConcerts {
         concerts.stream()
             .map(
                 c -> {
+                  UUID salleMappee =
+                      c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
                   UUID salleId =
                       c.salleSourceId() != null
-                          ? cachesSalles.get(c.salleSourceId())
+                              && !mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)
+                          ? salleMappee
                           : cachesSallesParNom.get(c.salleNorm());
                   UUID artisteId =
                       c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
@@ -242,6 +281,21 @@ public class PersisterConcerts {
             .toList();
 
     return reconciliateurArtistes.resoudreArtisteParNomNorm(resolus);
+  }
+
+  /// Indique si un mapping {@code salle_sources} réutilisé contredit le département déjà connu de
+  /// la salle qu'il désigne.
+  ///
+  /// @param salleMappee salle résolue via le mapping source, ou {@code null} si non résolue
+  /// @param deptEntrant département du concert entrant, ou {@code null} si inconnu
+  /// @param deptsConnus départements connus par salle (voir {@link
+  ///   ReconciliateurSalles#deptsConnus})
+  /// @return {@code true} si le mapping doit être écarté au profit d'une résolution par nom
+  private static boolean mappingSalleIncoherent(
+      UUID salleMappee, String deptEntrant, Map<UUID, String> deptsConnus) {
+    if (salleMappee == null || deptEntrant == null) return false;
+    String deptConnu = deptsConnus.get(salleMappee);
+    return deptConnu != null && !deptConnu.equals(deptEntrant);
   }
 
   /// Résultat de la persistance d'un lot de concerts.
