@@ -148,9 +148,8 @@ class ResolveurNomCanoniqueTest {
     serveur.verify();
   }
 
-  // non-régression : un homonyme approximatif plus populaire ne doit jamais l'emporter sur une
-  // correspondance exacte du nom recherché (corruption réelle constatée en production — "The Halo
-  // Effect" réécrit en "The Hall Effect", 20 076 fans contre 10 837).
+  // Un homonyme approximatif plus populaire ne doit jamais l'emporter sur une correspondance
+  // exacte du nom recherché.
   @Test
   void resoudreNomCanonique_artiste_exactMatchMoinsPopulaire_priméSurHomonymePopulaire() {
     RestClient.Builder builder = RestClient.builder();

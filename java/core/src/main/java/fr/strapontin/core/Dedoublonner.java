@@ -125,10 +125,8 @@ public final class Dedoublonner {
     return fusionnes;
   }
 
-  // Tolérance sous laquelle deux heures distinctes restent considérées compatibles pour la
-  // fusion — couvre un écart de saisie constaté entre deux fiches TM du même évènement réel
-  // (type "package" vs "prestation", écart d'1 minute), tout en restant très en dessous de tout
-  // écart matinée/soirée réel (toujours de l'ordre de l'heure).
+  // Tolérance sous laquelle deux heures distinctes restent compatibles pour la fusion, très en
+  // dessous de tout écart matinée/soirée réel (toujours de l'ordre de l'heure).
   private static final int TOLERANCE_HEURE_MINUTES = 3;
 
   /// Indique si deux concerts peuvent fusionner du point de vue de l'heure.

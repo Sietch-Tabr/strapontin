@@ -222,10 +222,8 @@ public class PersisterConcerts {
       }
     }
 
-    // Un mapping salle_sources déjà établi (couple source+identifiant externe) est réutilisé
-    // sans passer par aucun des garde-fous géographiques appliqués à la création d'un nouveau
-    // mapping (estDoublonSalle, filtre dept) — un identifiant source réattribué en amont (TM) à
-    // un lieu différent du mapping historique doit être détecté plutôt que suivi aveuglément.
+    // Un mapping salle_sources réutilisé contourne les garde-fous géographiques appliqués à la
+    // création d'un nouveau mapping — à valider avant de lui faire confiance.
     Set<UUID> sallesMappees =
         concerts.stream()
             .filter(c -> c.salleSourceId() != null)

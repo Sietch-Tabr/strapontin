@@ -131,9 +131,8 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
     assertEquals(2L, nbSalles);
   }
 
-  // non-régression #1113 : un seul concert coïncidant par erreur upstream (mapping salle_sources
-  // corrompu, cf. #1112) ne doit jamais suffire à fusionner deux salles réellement distinctes —
-  // cas réel confirmé (complexe sportif vs casino, adresses différentes).
+  // Un seul concert coïncidant par erreur ne doit jamais suffire à fusionner deux salles
+  // réellement distinctes.
   @Test
   void fusionner_sallesReellementDistinctesConcertCoincident_neFusionnePas() {
     UUID arena = creerSalle("Arena du Pays d'Aix", "13", null);

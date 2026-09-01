@@ -358,9 +358,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void
       persisterConcerts_mappingSalleSourcesIncoherentGeographiquement_ignoreLeMappingEtJournalise() {
-    // Reproduit le cas réel #1112 : un identifiant TM déjà mappé (salle_sources) vers une salle
-    // d'un département (29, Quimper) résout un concert entrant dont le département réel (22,
-    // Saint-Brieuc) contredit ce mapping — celui-ci doit être écarté plutôt que suivi aveuglément.
+    // Un identifiant TM déjà mappé vers une salle d'un autre département que celui du concert
+    // entrant doit être écarté plutôt que suivi aveuglément.
     jdbc.update(
         "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
             + " VALUES ('parc expos quimper', 'Parc Des Expos De Penvillers',"
@@ -1091,10 +1090,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_memeUrlTicketmasterHeureReportee_remplaceLAncienneLigne() {
-    // Reproduit le cas réel #1115 : un report Ticketmaster (même idmanif/URL, heure changée) crée
-    // une nouvelle ligne à côté de l'ancienne car la clé de conflit d'upsert inclut l'heure —
-    // alignerHeureReportTM doit aligner l'heure de l'ancienne ligne (seule candidate non ambiguë)
-    // avant l'upsert, pour qu'il la mette à jour au lieu d'en créer une nouvelle.
+    // Un report Ticketmaster (même URL, heure changée) doit mettre à jour la ligne existante,
+    // pas en créer une nouvelle à côté.
     String urlEvenement = "https://www.ticketmaster.fr/event/pussycat-dolls-653083";
 
     persisterConcerts.persisterConcerts(
@@ -1146,12 +1143,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_memeUrlTicketmasterMatineeEtSoireeUneAnnulee_neModifiePasLAutre() {
-    // Non-régression trouvée en vérifiant #1115 sur données prod réelles : certaines productions
-    // à représentations multiples (théâtre, cirque, ballet) partagent un seul idmanif/URL
-    // Ticketmaster pour plusieurs séances le même jour (matinée/soirée) — l'annulation d'une seule
-    // séance ne doit jamais faire dériver l'heure d'une autre séance réellement distincte
-    // partageant
-    // la même URL.
+    // Certaines productions (théâtre, cirque) partagent un seul idmanif Ticketmaster pour
+    // plusieurs séances le même jour — l'annulation de l'une ne doit jamais toucher l'autre.
     String urlProduction = "https://www.ticketmaster.fr/event/les-miserables-642735";
 
     persisterConcerts.persisterConcerts(

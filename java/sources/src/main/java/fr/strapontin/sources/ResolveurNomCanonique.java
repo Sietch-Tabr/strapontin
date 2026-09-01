@@ -104,10 +104,8 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
           meilleurCandidat = candidat;
           meilleurePopularite = popularite;
         }
-        // Une correspondance exacte du nom ne doit jamais être écartée au profit d'un homonyme
-        // approximatif mieux référencé sur Deezer (ex. "The Hall Effect", 20 076 fans, préféré à
-        // tort à l'exact match "The Halo Effect", 10 837 fans) : departagée par popularité
-        // uniquement entre plusieurs candidats eux-mêmes exacts.
+        // Une correspondance exacte l'emporte toujours sur un homonyme approximatif plus
+        // populaire ; la popularité ne départage qu'entre candidats eux-mêmes exacts.
         if (nomCandidatNormalise.equals(nomNormalise)
             && (meilleurCandidatExact == null || popularite > meilleurePopulariteExacte)) {
           meilleurCandidatExact = candidat;
