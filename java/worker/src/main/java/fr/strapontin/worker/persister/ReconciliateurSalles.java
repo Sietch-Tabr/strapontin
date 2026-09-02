@@ -455,20 +455,32 @@ public class ReconciliateurSalles {
   /// @return UUID de la salle du concert existant correspondant, ou {@code null} si aucun
   UUID chercherSalleParCleForte(ValeurConcert c) {
     if (c.heure() == null || c.dept() == null || c.artisteNorm() == null) return null;
-    List<UUID> resultats =
+    List<UUID> candidats =
         jdbc.query(
-            "SELECT salle_id FROM concerts"
+            "SELECT DISTINCT salle_id FROM concerts"
                 + " WHERE artiste_norm = :artisteNorm AND date = :date AND heure = :heure"
                 + " AND dept = :dept AND salle_id IS NOT NULL"
-                + " LIMIT 1",
+                + " ORDER BY salle_id"
+                + " LIMIT 20",
             Map.of(
                 "artisteNorm", c.artisteNorm(),
                 "date", c.date(),
                 "heure", c.heure(),
                 "dept", c.dept()),
             (rs, _) -> rs.getObject("salle_id", UUID.class));
-    if (resultats.isEmpty()) return null;
-    UUID salleId = resultats.get(0);
+    if (candidats.isEmpty()) return null;
+
+    UUID salleId = premierCandidatGeographiquementCoherent(candidats, c.dept());
+    if (salleId == null) {
+      log.warn(
+          "clé forte (artiste+date+heure+dept) sans candidat géographiquement cohérent"
+              + " artiste={} date={} candidats={}",
+          c.artiste(),
+          c.date(),
+          candidats);
+      return null;
+    }
+
     log.info(
         "salle rattachée par clé forte (artiste+date+heure+dept) artiste={} date={} salle={}"
             + " uuid={}",
@@ -477,6 +489,25 @@ public class ReconciliateurSalles {
         c.salle(),
         salleId);
     return salleId;
+  }
+
+  /// Retient, parmi plusieurs salles candidates partageant la même clé forte, la première dont le
+  /// département connu ne contredit pas celui du concert entrant.
+  ///
+  /// <p>Sans ce filtre, un concert déjà mal rattaché (département de sa salle incohérent avec le
+  /// sien) pouvait servir de référence et reconfirmer son propre mauvais rattachement — la requête
+  /// SQL source ne garantit qu'un ordre déterministe, pas la pertinence géographique du résultat.
+  ///
+  /// @param candidats identifiants de salle candidats, dans un ordre déterministe
+  /// @param deptEntrant département du concert à résoudre
+  /// @return premier candidat géographiquement cohérent, ou {@code null} si aucun ne l'est
+  private UUID premierCandidatGeographiquementCoherent(List<UUID> candidats, String deptEntrant) {
+    Map<UUID, String> depts = deptsConnus(new HashSet<>(candidats));
+    for (UUID candidat : candidats) {
+      String deptConnu = depts.get(candidat);
+      if (deptConnu == null || deptConnu.equals(deptEntrant)) return candidat;
+    }
+    return null;
   }
 
   /// Rattache les concerts sans {@code salleId} à leur salle via correspondance exacte sur {@code

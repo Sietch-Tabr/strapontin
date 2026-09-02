@@ -308,6 +308,8 @@ class ReconciliateurSallesTest {
 
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
         .thenReturn(List.of(salleExistante));
+    // Département de la salle candidate inconnu : ne doit pas bloquer le rattachement.
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
     ValeurConcert entrant =
         concert(
@@ -365,6 +367,71 @@ class ReconciliateurSallesTest {
             LocalTime.of(20, 30),
             "theatre le forum frejus",
             "83");
+
+    assertNull(reconciliateur.chercherSalleParCleForte(entrant));
+  }
+
+  // Le candidat cohérent (dept correspondant) doit être retenu quel que soit l'ordre SQL.
+  @SuppressWarnings("unchecked")
+  @Test
+  void chercherSalleParCleForte_candidatCoherentEnPremier_retientLeCandidatCoherent() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    UUID salleIncoherente = UUID.randomUUID();
+    UUID salleCoherente = UUID.randomUUID();
+
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
+        .thenReturn(List.of(salleCoherente, salleIncoherente));
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(
+                Map.of("id", salleCoherente, "dept", "22"),
+                Map.of("id", salleIncoherente, "dept", "29")));
+
+    ValeurConcert entrant =
+        concert("chimene badi", LocalDate.of(2027, 12, 18), LocalTime.of(20, 0), "salle", "22");
+
+    assertEquals(salleCoherente, reconciliateur.chercherSalleParCleForte(entrant));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void chercherSalleParCleForte_candidatCoherentEnSecond_retientLeCandidatCoherent() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    UUID salleIncoherente = UUID.randomUUID();
+    UUID salleCoherente = UUID.randomUUID();
+
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
+        .thenReturn(List.of(salleIncoherente, salleCoherente));
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(
+                Map.of("id", salleIncoherente, "dept", "29"),
+                Map.of("id", salleCoherente, "dept", "22")));
+
+    ValeurConcert entrant =
+        concert("chimene badi", LocalDate.of(2027, 12, 18), LocalTime.of(20, 0), "salle", "22");
+
+    assertEquals(salleCoherente, reconciliateur.chercherSalleParCleForte(entrant));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void chercherSalleParCleForte_tousLesCandidatsIncoherents_retourneNull() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
+    UUID salleA = UUID.randomUUID();
+    UUID salleB = UUID.randomUUID();
+
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
+        .thenReturn(List.of(salleA, salleB));
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(Map.of("id", salleA, "dept", "29"), Map.of("id", salleB, "dept", "75")));
+
+    ValeurConcert entrant =
+        concert("chimene badi", LocalDate.of(2027, 12, 18), LocalTime.of(20, 0), "salle", "22");
 
     assertNull(reconciliateur.chercherSalleParCleForte(entrant));
   }
