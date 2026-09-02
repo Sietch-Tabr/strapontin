@@ -340,6 +340,7 @@ public class PersisteurConcertsDb {
                     c.url() != null
                         && c.heure() != null
                         && "ticketmaster".equals(c.source())
+                        && c.statut() != null
                         && STATUTS_REPORT_TM.contains(c.statut()))
             .toList();
     if (reports.isEmpty()) return;

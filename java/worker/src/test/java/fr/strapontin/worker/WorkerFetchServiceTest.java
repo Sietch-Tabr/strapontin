@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -50,6 +51,7 @@ class WorkerFetchServiceTest {
   private NamedParameterJdbcTemplate jdbc;
   private SuiviSanteSourcesService suiviSanteSourcesService;
   private WorkerFetchService fetchService;
+  private LogsAdminWorker logsAdminWorker;
 
   @BeforeEach
   void setUp() {
@@ -68,7 +70,7 @@ class WorkerFetchServiceTest {
     // Instance réelle de WorkerStatsService (adossée au jdbc mocké) : le bloc finally
     // enregistrerStatJob doit s'exécuter sans lever d'exception, mais son détail est testé dans
     // WorkerStatsServiceTest.
-    LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
+    logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
     WorkerStatsService workerStatsService =
         new WorkerStatsService(
             sources,
@@ -89,7 +91,8 @@ class WorkerFetchServiceTest {
             notificationDigestService,
             jdbc,
             suiviSanteSourcesService,
-            workerStatsService);
+            workerStatsService,
+            logsAdminWorker);
   }
 
   @Test
@@ -135,6 +138,33 @@ class WorkerFetchServiceTest {
 
     verify(persisterConcerts, times(2)).persisterConcerts(any());
     verify(tm, times(2)).fetchArtistesLot(any());
+  }
+
+  // Un lot en échec doit rester visible même si le job dans son ensemble se termine sans
+  // exception (les autres lots, absents ici, ne masquent donc rien).
+  @Test
+  void executerFetchArtistesBatch_lotEnEchec_remonteLogsAdminNiveauError() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    row.put("artiste_id_str", "artiste-1");
+    row.put("artiste_affiche", "Artiste 1");
+    row.put("attraction_id", "attractionId1");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
+    when(tm.fetchArtistesLot(any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any()))
+        .thenThrow(new RuntimeException("panne persistance"));
+
+    fetchService.executerFetchArtistesBatch();
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    "error".equals(params.get("niveau"))
+                        && params.get("message").toString().contains("fetch:artistes:batch")
+                        && params.get("message").toString().contains("1/1 lot(s) échoué")));
   }
 
   // Le compteur d'absences consécutives doit être mis à jour pour l'artiste effectivement
@@ -422,6 +452,35 @@ class WorkerFetchServiceTest {
     verify(persisterConcerts, times(3)).persisterConcerts(any());
   }
 
+  // Le bilan agrégé du job reste positif grâce aux lots réussis — l'échec ne doit pas s'y noyer.
+  @Test
+  void executerFetchRegion_unLotEnEchecParmiPlusieurs_remonteLogsAdminNiveauWarn() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
+    when(jdbc.query(
+            anyString(),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any()))
+        .thenReturn(List.<String[]>of(depts));
+    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
+    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any()))
+        .thenReturn(new ResultatPersistance(1, 0))
+        .thenThrow(new RuntimeException("panne réseau"))
+        .thenReturn(new ResultatPersistance(1, 0));
+    when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
+
+    fetchService.executerFetchRegion();
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    "warn".equals(params.get("niveau"))
+                        && params.get("message").toString().contains("1/3 lot(s) échoué")));
+  }
+
   @Test
   void executerFetchSallesAll_quotaInsuffisant_neFetchPas() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(false);
@@ -532,5 +591,35 @@ class WorkerFetchServiceTest {
     fetchService.executerFetchSallesAll();
 
     verify(persisterConcerts, times(2)).persisterConcerts(any());
+  }
+
+  // Même motif que fetch:region — un lot en échec parmi plusieurs réussis doit rester visible.
+  @Test
+  void executerFetchSallesAll_unLotEnEchecParmiPlusieurs_remonteLogsAdminNiveauWarn() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.List<java.util.Map<String, Object>> lignes = new java.util.ArrayList<>();
+    for (int i = 0; i < 25; i++) {
+      lignes.add(
+          java.util.Map.of(
+              "salle_id", java.util.UUID.randomUUID().toString(), "identifiants", "tm:venue-" + i));
+    }
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(lignes);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+    when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
+    when(tm.fetchSalle(anyString())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any()))
+        .thenThrow(new RuntimeException("panne persistance"))
+        .thenReturn(new ResultatPersistance(1, 0));
+    when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
+
+    fetchService.executerFetchSallesAll();
+
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO logs_admin"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params ->
+                    "warn".equals(params.get("niveau"))
+                        && params.get("message").toString().contains("1/2 lot(s) échoué")));
   }
 }

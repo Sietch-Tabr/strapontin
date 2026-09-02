@@ -54,6 +54,7 @@ public class WorkerFetchService {
   private final NamedParameterJdbcTemplate jdbc;
   private final SuiviSanteSourcesService suiviSanteSourcesService;
   private final WorkerStatsService workerStatsService;
+  private final LogsAdminWorker logsAdminWorker;
 
   public WorkerFetchService(
       List<SourceConcerts> sources,
@@ -65,7 +66,8 @@ public class WorkerFetchService {
       NotificationDigestService notificationDigestService,
       NamedParameterJdbcTemplate jdbc,
       SuiviSanteSourcesService suiviSanteSourcesService,
-      WorkerStatsService workerStatsService) {
+      WorkerStatsService workerStatsService,
+      LogsAdminWorker logsAdminWorker) {
     this.sources = sources;
     this.tm = tm;
     this.resolveur = resolveur;
@@ -76,6 +78,31 @@ public class WorkerFetchService {
     this.jdbc = jdbc;
     this.suiviSanteSourcesService = suiviSanteSourcesService;
     this.workerStatsService = workerStatsService;
+    this.logsAdminWorker = logsAdminWorker;
+  }
+
+  /// Remonte dans `logs_admin` les échecs de lots d'un job multi-lots, indépendamment du résultat
+  /// des autres lots — sans cela, un lot en échec reste invisible tant que le job dans son ensemble
+  /// se termine sans exception et que son bilan agrégé reste positif grâce aux autres lots.
+  ///
+  /// <p>Niveau {@code error} si tous les lots du job ont échoué (panne totale), {@code warn} sinon
+  /// (échec partiel, même convention que {@code WorkerStatsService#remonterBilan}).
+  ///
+  /// @param typeJob type de job (ex. {@code "fetch:salles:all"})
+  /// @param echecs messages d'échec, un par lot en échec
+  /// @param totalLots nombre total de lots traités par le job
+  private void remonterEchecsLots(String typeJob, List<String> echecs, int totalLots) {
+    if (echecs.isEmpty()) return;
+    String niveau = echecs.size() == totalLots ? "error" : "warn";
+    String message =
+        typeJob
+            + " — "
+            + echecs.size()
+            + "/"
+            + totalLots
+            + " lot(s) échoué(s) : "
+            + String.join(" | ", echecs);
+    logsAdminWorker.inserer(niveau, "worker", message, Map.of("echecs", echecs));
   }
 
   /// Fetch global de tous les artistes suivis (TM par attraction ID + Eventim individuel).
@@ -119,6 +146,8 @@ public class WorkerFetchService {
       List<SourceConcerts> sourcesSimples =
           sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
 
+      List<String> echecsLots = new ArrayList<>();
+      int totalLots = (rows.size() + TAILLE_LOT_TM - 1) / TAILLE_LOT_TM;
       for (int i = 0; i < rows.size(); i += TAILLE_LOT_TM) {
         List<Map<String, Object>> lot = rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
         try {
@@ -126,8 +155,10 @@ public class WorkerFetchService {
         } catch (Exception e) {
           log.error(
               "fetch:artistes:batch lot {}-{} échoué : {}", i, i + lot.size(), e.getMessage(), e);
+          echecsLots.add("lot " + i + "-" + (i + lot.size()) + " : " + e.getMessage());
         }
       }
+      remonterEchecsLots("fetch:artistes:batch", echecsLots, totalLots);
       sauvegarderQuota();
       recalculerMatchesService.recalculerMatches(null);
       notificationDigestService.executerDigest("temps_reel");
@@ -407,6 +438,8 @@ public class WorkerFetchService {
       }
 
       List<String> deptsListe = new ArrayList<>(tousLesDepts);
+      List<String> echecsLots = new ArrayList<>();
+      int totalLots = (deptsListe.size() + TAILLE_LOT_DEPTS - 1) / TAILLE_LOT_DEPTS;
       for (int i = 0; i < deptsListe.size(); i += TAILLE_LOT_DEPTS) {
         List<String> lotDepts =
             deptsListe.subList(i, Math.min(i + TAILLE_LOT_DEPTS, deptsListe.size()));
@@ -414,8 +447,10 @@ public class WorkerFetchService {
           resultat = accumuler(resultat, traiterLotDepartements(lotDepts));
         } catch (Exception e) {
           log.error("fetch:region lot {} échoué : {}", lotDepts, e.getMessage(), e);
+          echecsLots.add("depts=" + lotDepts + " : " + e.getMessage());
         }
       }
+      remonterEchecsLots("fetch:region", echecsLots, totalLots);
       sauvegarderQuota();
       recalculerMatchesService.recalculerMatches(null);
       notificationDigestService.executerDigest("temps_reel");
@@ -592,6 +627,8 @@ public class WorkerFetchService {
 
   private ResultatPersistance traiterTousLesLotsSalles(List<SalleAFetcher> sallesAFetcher) {
     ResultatPersistance resultat = new ResultatPersistance(0, 0);
+    List<String> echecsLots = new ArrayList<>();
+    int totalLots = (sallesAFetcher.size() + TAILLE_LOT_SALLES - 1) / TAILLE_LOT_SALLES;
     for (int i = 0; i < sallesAFetcher.size(); i += TAILLE_LOT_SALLES) {
       List<SalleAFetcher> lotSalles =
           sallesAFetcher.subList(i, Math.min(i + TAILLE_LOT_SALLES, sallesAFetcher.size()));
@@ -600,8 +637,10 @@ public class WorkerFetchService {
       } catch (Exception e) {
         log.error(
             "fetch:salles:all lot {}-{} échoué : {}", i, i + lotSalles.size(), e.getMessage(), e);
+        echecsLots.add("lot " + i + "-" + (i + lotSalles.size()) + " : " + e.getMessage());
       }
     }
+    remonterEchecsLots("fetch:salles:all", echecsLots, totalLots);
     return resultat;
   }
 
