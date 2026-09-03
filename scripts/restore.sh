@@ -52,6 +52,12 @@ if grep -q "^\.env$" <<< "$CONTENU_ARCHIVE"; then
         echo "ERREUR : SPRING_DATASOURCE_USERNAME/PASSWORD absents du .env de l'archive" >&2
         exit 1
     fi
+    # APP_USER est interpolé tel quel dans des commandes shell/SQL ci-dessous (createdb -O,
+    # ALTER USER) : un .env d'archive compromis pourrait sinon y injecter du shell/SQL arbitraire.
+    if [[ ! "$APP_USER" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+        echo "ERREUR : SPRING_DATASOURCE_USERNAME invalide dans le .env de l'archive : $APP_USER" >&2
+        exit 1
+    fi
     ENV_PRESENT=1
     echo "  .env trouvé, utilisateur applicatif : $APP_USER"
 else
@@ -78,7 +84,17 @@ if [ "$ENV_PRESENT" = "1" ]; then
     # PostgreSQL actuel (ex. instance neuve provisionnée avec un mot de passe
     # aléatoire) — sans ce réalignement, l'application ne peut plus se
     # connecter à sa propre base malgré une restauration par ailleurs réussie.
-    su - postgres -c "psql -c \"ALTER USER $APP_USER WITH PASSWORD '$NOUVEAU_MDP';\""
+    #
+    # Passé par fichier temporaire + substitution psql -v (échappement SQL natif de :'pass')
+    # plutôt qu'interpolé directement dans la commande shell : le mot de passe peut contenir
+    # n'importe quel caractère (guillemet, $, backtick...), qui casserait sinon la commande
+    # imbriquée dans su -c ou permettrait une injection SQL dans l'ALTER USER.
+    MDP_TMP=$(mktemp)
+    trap 'rm -f "$MDP_TMP"' EXIT
+    printf '%s' "$NOUVEAU_MDP" > "$MDP_TMP"
+    chmod 600 "$MDP_TMP"
+    su - postgres -c 'psql -v pass="$(cat '"$MDP_TMP"')" -c "ALTER USER '"$APP_USER"' WITH PASSWORD :'"'"'pass'"'"';"'
+    rm -f "$MDP_TMP"
     mv /tmp/.env "$APP_DIR/.env"
     chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
     chmod 600 "$APP_DIR/.env"
