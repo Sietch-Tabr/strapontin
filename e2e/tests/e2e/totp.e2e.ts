@@ -108,7 +108,7 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
       });
       try {
         const liste = await adminCtx.request.get("/api/admin/utilisateurs");
-        const users = await liste.json();
+        const { utilisateurs: users } = await liste.json();
         const u = users.find((x: { username: string }) => x.username === USER);
         if (u) {
           await adminCtx.request.post(
@@ -195,7 +195,7 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
         storageState: FICHIER_AUTH_ADMIN,
       });
       const liste = await adminCtx.request.get("/api/admin/utilisateurs");
-      const users = await liste.json();
+      const { utilisateurs: users } = await liste.json();
       const u = users.find((x: { username: string }) => x.username === USER);
       const resetRep = await adminCtx.request.post(
         `/api/admin/utilisateurs/${u.id}/reset-totp`,
@@ -221,7 +221,7 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
       });
       try {
         const liste = await adminCtx.request.get("/api/admin/utilisateurs");
-        const users = await liste.json();
+        const { utilisateurs: users } = await liste.json();
         const u = users.find((x: { username: string }) => x.username === USER);
         if (u) {
           await adminCtx.request.post(

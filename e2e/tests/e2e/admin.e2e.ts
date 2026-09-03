@@ -430,9 +430,10 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await expect(tableOuVide).toBeVisible();
     if (await table.isVisible()) {
       await page.locator("input[type='search']").fill("zzzzinexistant");
-      await expect(
-        page.locator("table#table-sources-salles tbody tr"),
-      ).toContainText("Aucune salle ne correspond", { timeout: 3000 });
+      await expect(page.locator("p.etat-vide-texte")).toContainText(
+        "Aucune salle ne correspond",
+        { timeout: 3000 },
+      );
       await page.locator("input[type='search']").clear();
     } else {
       await expect(videTexte).toBeVisible();
@@ -612,10 +613,12 @@ test.describe("Scénario: admin — onglet Sources", () => {
       salleId = corps.salleId;
       expect(salleId).toBeTruthy();
 
-      const repSources = await ctx.get("/api/admin/sources");
-      expect(repSources.ok()).toBe(true);
-      const donnees = await repSources.json();
-      const sallesDigitick: { nom: string }[] = donnees.sallesDigitick ?? [];
+      const repSalles = await ctx.get(
+        "/api/admin/sources/salles?digitick=true&nom=Salle+Test+E2E+Digitick",
+      );
+      expect(repSalles.ok()).toBe(true);
+      const donnees = await repSalles.json();
+      const sallesDigitick: { nom: string }[] = donnees.salles ?? [];
       expect(
         sallesDigitick.some((s) => s.nom === "Salle Test E2E Digitick"),
       ).toBe(true);
@@ -823,7 +826,7 @@ test.describe("Scénario: admin — API endpoints", () => {
 
   test("api_admin_revoquerAdmin_seulAdmin_retourne409", async ({ request }) => {
     const repUsers = await request.get("/api/admin/utilisateurs");
-    const users = await repUsers.json();
+    const { utilisateurs: users } = await repUsers.json();
     const admins = users.filter((u: { role: string }) => u.role === "admin");
     if (admins.length !== 1) return;
     const rep = await request.post(

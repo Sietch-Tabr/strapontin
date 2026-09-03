@@ -13,7 +13,7 @@ async function supprimerUtilisateurParEmail(email: string): Promise<void> {
   try {
     const reps = await ctx.get("/api/admin/utilisateurs");
     if (!reps.ok()) return;
-    const users = await reps.json();
+    const { utilisateurs: users } = await reps.json();
     const cible = users.find((u: { email: string }) => u.email === email);
     if (cible) await ctx.delete(`/api/admin/utilisateurs/${cible.id}`);
   } finally {

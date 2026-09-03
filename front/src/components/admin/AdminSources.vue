@@ -111,14 +111,14 @@
             type="button"
             class="btn btn-sm"
             :class="vueDigitick ? 'btn-secondary' : 'btn-primary'"
-            @click="vueDigitick = false"
+            @click="basculerVue(false)"
           >Sans source</button>
           <button
             type="button"
             class="btn btn-sm"
             :class="vueDigitick ? 'btn-primary' : 'btn-secondary'"
-            @click="vueDigitick = true"
-          >Avec Digitick <span v-if="sallesDigitick.length" class="badge-compteur">{{ sallesDigitick.length }}</span></button>
+            @click="basculerVue(true)"
+          >Avec Digitick</button>
         </div>
       </div>
       <p class="param-aide">
@@ -132,13 +132,15 @@
         </div>
       </template>
 
-      <div v-if="listeCourante.length">
+      <EtatChargement v-if="chargementSalles" />
+      <div v-else-if="salles.length">
         <input
           v-model="recherche"
           type="search"
           class="source-recherche"
           placeholder="Rechercher une salle…"
           aria-label="Rechercher une salle"
+          @input="page = 0; chargerSalles()"
         />
         <div class="table-wrapper">
           <table id="table-sources-salles" :aria-label="vueDigitick ? 'Salles avec Digitick' : 'Salles sans Ticketmaster'">
@@ -151,7 +153,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="salle in sallesFiltrees" :key="salle.salleId">
+              <tr v-for="salle in salles" :key="salle.salleId">
                 <td class="source-salle-nom">{{ salle.nom }}</td>
                 <td v-if="vueDigitick" class="source-salle-loc">
                   <span v-if="salle.ville || salle.dept">{{ [salle.ville, salle.dept].filter(Boolean).join(' ') }}</span>
@@ -217,15 +219,19 @@
                   </template>
                 </td>
               </tr>
-              <tr v-if="sallesFiltrees.length === 0">
-                <td :colspan="vueDigitick ? 4 : 3" class="etat-vide-texte">Aucune salle ne correspond à la recherche.</td>
-              </tr>
             </tbody>
           </table>
         </div>
+
+        <div class="pagination" v-if="totalPages > 1">
+          <button type="button" class="btn btn-secondary btn-sm" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
+          <span>Page {{ page + 1 }} / {{ totalPages }} ({{ total }} salles)</span>
+          <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
+        </div>
       </div>
       <p v-else class="etat-vide-texte">
-        <template v-if="!vueDigitick">Toutes les salles ont un identifiant source (Ticketmaster ou Eventim).</template>
+        <template v-if="recherche.trim()">Aucune salle ne correspond à la recherche.</template>
+        <template v-else-if="!vueDigitick">Toutes les salles ont un identifiant source (Ticketmaster ou Eventim).</template>
         <template v-else>Aucune salle Digitick configurée. Cliquez sur « Ajouter une salle » pour commencer.</template>
       </p>
     </div>
@@ -310,7 +316,7 @@
 <script setup>
 defineOptions({ name: 'AdminSources' })
 
-import { ref, shallowRef, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, shallowRef, reactive, onMounted, onUnmounted } from 'vue'
 import EtatChargement from '../EtatChargement.vue'
 import { useToasts } from '../../composables/useToasts.js'
 import { useDialog } from '../../composables/useDialog.js'
@@ -321,9 +327,12 @@ import { extraireSlugDepuisUrl, slugDeduit } from '../../utils/digitickSlug.js'
 const { afficherToast } = useToasts()
 
 const chargement      = ref(true)
+const chargementSalles = ref(true)
 const sources         = shallowRef([])
 const salles          = shallowRef([])
-const sallesDigitick  = shallowRef([])
+const page            = ref(0)
+const totalPages      = ref(1)
+const total           = ref(0)
 const vueDigitick     = ref(false)
 const recherche       = ref('')
 const slugsEdites     = reactive({})
@@ -339,15 +348,11 @@ const dialogAjoutRef  = ref(null)
 const dialogEditionRef = ref(null)
 const dialogSupprRef  = ref(null)
 
-const listeCourante = computed(() => vueDigitick.value ? sallesDigitick.value : salles.value)
-
-const sallesFiltrees = computed(() => {
-  const q = recherche.value.trim().toLowerCase()
-  if (!q) return listeCourante.value
-  return listeCourante.value.filter((s) => s.nom.toLowerCase().includes(q))
-})
-
 const controleur = new AbortController()
+// controleurSalles : recréé à chaque appel de chargerSalles() — un changement rapide de vue/page
+// (basculerVue/allerPage) annule sinon seulement la requête précédente au démontage, laissant
+// deux réponses de pages différentes s'appliquer dans le désordre.
+let controleurSallesActuel = null
 
 function pctQuota(source) {
   if (!source.quotaTM || source.quotaTM.total === 0) return 0
@@ -371,20 +376,60 @@ async function charger() {
     const rep = await fetch('/api/admin/sources', { signal: controleur.signal })
     if (!rep.ok) return
     const d = await rep.json()
-    sources.value        = d.sources        ?? []
-    salles.value         = d.salles         ?? []
-    sallesDigitick.value = d.sallesDigitick ?? []
-    for (const s of [...salles.value, ...sallesDigitick.value]) {
-      if (slugsEdites[s.salleId] === undefined) {
-        slugsEdites[s.salleId] = s.digitickSlug ?? ''
-      }
-    }
+    sources.value = d.sources ?? []
   } catch (e) {
     if (e.name === 'AbortError') return
     afficherToast('Erreur lors du chargement des sources.', 'erreur')
   } finally {
     chargement.value = false
   }
+  await chargerSalles()
+}
+
+async function chargerSalles() {
+  controleurSallesActuel?.abort()
+  const controleurCourant = new AbortController()
+  controleurSallesActuel = controleurCourant
+
+  chargementSalles.value = true
+  try {
+    const params = new URLSearchParams()
+    params.set('digitick', vueDigitick.value)
+    params.set('page', page.value)
+    if (recherche.value.trim()) params.set('nom', recherche.value.trim())
+
+    const rep = await fetch(`/api/admin/sources/salles?${params}`, {
+      signal: controleurCourant.signal,
+    })
+    if (!rep.ok) return
+    const d = await rep.json()
+    salles.value = d.salles ?? []
+    page.value = d.page ?? 0
+    totalPages.value = d.totalPages ?? 1
+    total.value = d.total ?? 0
+    for (const s of salles.value) {
+      if (slugsEdites[s.salleId] === undefined) {
+        slugsEdites[s.salleId] = s.digitickSlug ?? ''
+      }
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return
+    afficherToast('Erreur lors du chargement des salles.', 'erreur')
+  } finally {
+    if (controleurSallesActuel === controleurCourant) chargementSalles.value = false
+  }
+}
+
+function basculerVue(digitick) {
+  vueDigitick.value = digitick
+  page.value = 0
+  recherche.value = ''
+  chargerSalles()
+}
+
+function allerPage(n) {
+  page.value = Math.max(0, Math.min(n, totalPages.value - 1))
+  chargerSalles()
 }
 
 function mettreAJourSlug(salle, valeur) {
@@ -404,7 +449,7 @@ async function sauvegarderSlug(salle) {
     if (rep.ok) {
       salle.digitickSlug = slugsEdites[salle.salleId] || null
       afficherToast('Slug mis à jour.', 'succes')
-      await charger()
+      await chargerSalles()
     } else {
       afficherToast('Erreur lors de la mise à jour du slug.', 'erreur')
     }
@@ -518,7 +563,7 @@ async function creerSalleDigitick() {
     if (rep.ok) {
       dialogAjoutRef.value?.close()
       afficherToast('Salle Digitick ajoutée — fetch en cours.', 'succes')
-      await charger()
+      await chargerSalles()
     } else {
       const data = await corpsJsonOuVide(rep)
       afficherToast(data.erreur || 'Erreur lors de la création.', 'erreur')
@@ -556,7 +601,7 @@ async function sauvegarderEdition() {
     if (rep.ok) {
       dialogEditionRef.value?.close()
       afficherToast('Salle mise à jour.', 'succes')
-      await charger()
+      await chargerSalles()
     } else {
       afficherToast('Erreur lors de la mise à jour.', 'erreur')
     }
@@ -585,7 +630,7 @@ async function confirmerSuppression() {
     dialogSupprRef.value?.close()
     if (rep.ok) {
       afficherToast('Salle supprimée.', 'succes')
-      await charger()
+      await chargerSalles()
     } else if (rep.status === 409) {
       const data = await corpsJsonOuVide(rep)
       afficherToast(data.erreur || 'Impossible de supprimer : salle suivie ou avec concerts.', 'erreur')
@@ -601,5 +646,8 @@ async function confirmerSuppression() {
 }
 
 onMounted(charger)
-onUnmounted(() => controleur.abort())
+onUnmounted(() => {
+  controleur.abort()
+  controleurSallesActuel?.abort()
+})
 </script>
