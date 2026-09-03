@@ -4,15 +4,8 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.web.VapidKeyGenerator;
 import fr.strapontin.web.config.ConfigService;
-import java.math.BigInteger;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.ECPublicKey;
-import java.security.spec.ECGenParameterSpec;
-import java.security.spec.ECPoint;
-import java.util.Base64;
 import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -48,26 +41,10 @@ public class VapidService {
   /// @return paire de clés encodées en Base64 URL-safe et nombre d'abonnements supprimés
   /// @throws Exception si la génération de clés échoue
   public ResultatVapid genererVapid() throws Exception {
-    KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
-    kpg.initialize(new ECGenParameterSpec("secp256r1"));
-    KeyPair paire = kpg.generateKeyPair();
+    VapidKeyGenerator.PaireVapid paire = VapidKeyGenerator.genererPaire();
 
-    ECPublicKey pubKey = (ECPublicKey) paire.getPublic();
-    ECPoint w = pubKey.getW();
-    byte[] uncompressed = new byte[65];
-    uncompressed[0] = 0x04;
-    byte[] x = vers32Octets(w.getAffineX());
-    byte[] y = vers32Octets(w.getAffineY());
-    System.arraycopy(x, 0, uncompressed, 1, 32);
-    System.arraycopy(y, 0, uncompressed, 33, 32);
-    String clePublique = Base64.getUrlEncoder().withoutPadding().encodeToString(uncompressed);
-
-    ECPrivateKey privKey = (ECPrivateKey) paire.getPrivate();
-    byte[] d = vers32Octets(privKey.getS());
-    String clePrivee = Base64.getUrlEncoder().withoutPadding().encodeToString(d);
-
-    configService.sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique);
-    configService.sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee);
+    configService.sauvegarderConfig("VAPID_PUBLIC_KEY", paire.clePublique());
+    configService.sauvegarderConfig("VAPID_PRIVATE_KEY", paire.clePrivee());
 
     int nbSupprimes = jdbc.update("DELETE FROM push_abonnements", Map.of());
     logAdminService.logAdmin(
@@ -76,19 +53,7 @@ public class VapidService {
         "Clés VAPID régénérées — " + nbSupprimes + " abonnement(s) supprimé(s)",
         Map.of("nbAbonnements", nbSupprimes));
 
-    return new ResultatVapid(clePublique, nbSupprimes);
-  }
-
-  private static byte[] vers32Octets(BigInteger n) {
-    byte[] raw = n.toByteArray();
-    if (raw.length == 32) return raw;
-    byte[] result = new byte[32];
-    if (raw.length > 32) {
-      System.arraycopy(raw, raw.length - 32, result, 0, 32);
-    } else {
-      System.arraycopy(raw, 0, result, 32 - raw.length, raw.length);
-    }
-    return result;
+    return new ResultatVapid(paire.clePublique(), nbSupprimes);
   }
 
   /// Résultat de la génération des clés VAPID.
