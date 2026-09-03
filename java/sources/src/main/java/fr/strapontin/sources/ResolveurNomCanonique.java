@@ -9,6 +9,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.Normalisation;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -61,10 +62,16 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   // Bilan de panne agrégé, remonté dans logs_admin par le worker.
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
-  /// Crée une instance avec les URLs distantes et un cache TTL 7 jours.
+  /// Crée une instance avec les URLs distantes, un RestClient borné (timeout connexion 10s, lecture
+  /// 30s — sans borne, un hoquet réseau ferait pendre indéfiniment un thread worker, même classe
+  /// d'incident que celle déjà corrigée pour TM/Eventim, #887) et un cache TTL 7 jours.
   public ResolveurNomCanonique() {
     this(
-        RestClient.create(),
+        RestClient.builder()
+            .requestFactory(
+                ClientHttpFactory.creerRequestFactory(
+                    Duration.ofSeconds(10), Duration.ofSeconds(30)))
+            .build(),
         Caffeine.newBuilder().expireAfterWrite(7, TimeUnit.DAYS).maximumSize(10_000).build());
   }
 

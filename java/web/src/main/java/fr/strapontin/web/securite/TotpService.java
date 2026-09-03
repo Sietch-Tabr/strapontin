@@ -9,6 +9,7 @@ import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import javax.crypto.Mac;
@@ -22,9 +23,9 @@ import uk.org.okapibarcode.output.SvgRenderer;
 
 /// Service TOTP (Time-based One-Time Password, RFC 6238) — implémentation Java pur.
 ///
-/// <p>Secret : 20 octets aléatoires encodés en Base32 (160 bits, conforme RFC 4648).
-/// Code : HMAC-SHA1 tronqué à 6 chiffres toutes les 30 secondes.
-/// Vérification : tolérance ±1 fenêtre (30 s) pour la dérive d'horloge.
+/// <p>Secret : 20 octets aléatoires encodés en Base32 (160 bits, conforme RFC 4648). Code :
+/// HMAC-SHA1 tronqué à 6 chiffres toutes les 30 secondes. Vérification : tolérance ±1 fenêtre (30
+/// s) pour la dérive d'horloge.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -58,7 +59,7 @@ public class TotpService {
 
   /// Construit l'URI {@code otpauth://} compatible Google Authenticator / Aegis.
   ///
-  /// @param secret      le secret Base32 du compte
+  /// @param secret le secret Base32 du compte
   /// @param identifiant le nom d'utilisateur affiché dans l'app TOTP
   /// @return l'URI otpauth://totp/...
   public String genererUriOtpAuth(String secret, String identifiant) {
@@ -93,13 +94,13 @@ public class TotpService {
 
   /// Vérifie un code TOTP saisi par l'utilisateur.
   ///
-  /// <p>Accepte une dérive de ±1 fenêtre (30 s) pour la tolérance réseau/horloge.
-  /// Un code valide ne peut être accepté qu'une seule fois dans sa fenêtre (prévention du rejeu).
+  /// <p>Accepte une dérive de ±1 fenêtre (30 s) pour la tolérance réseau/horloge. Un code valide ne
+  /// peut être accepté qu'une seule fois dans sa fenêtre (prévention du rejeu).
   ///
   /// @param secret le secret Base32 du compte
-  /// @param code   le code à 6 chiffres saisi
+  /// @param code le code à 6 chiffres saisi
   /// @return {@code true} si le code est valide dans la fenêtre courante ou adjacente, et non déjà
-  /// utilisé
+  ///   utilisé
   public boolean verifierCode(String secret, String code) {
     if (secret == null || code == null) return false;
     // Retire tous les espaces (et non seulement aux extrémités) : les applications TOTP comme
@@ -111,7 +112,9 @@ public class TotpService {
       long compteur = System.currentTimeMillis() / 1000L / PERIODE_SECONDES;
       for (int derive = -1; derive <= 1; derive++) {
         long pas = compteur + derive;
-        if (calculerCode(secretOctets, pas).equals(codeNorm)) {
+        if (MessageDigest.isEqual(
+            calculerCode(secretOctets, pas).getBytes(StandardCharsets.UTF_8),
+            codeNorm.getBytes(StandardCharsets.UTF_8))) {
           String cleCache = secret + ":" + pas;
           java.util.Set<String> utilises =
               codesConsommes.get(cleCache, _ -> java.util.concurrent.ConcurrentHashMap.newKeySet());

@@ -7,6 +7,7 @@ package fr.strapontin.sources;
 import fr.strapontin.core.Normalisation;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,12 +25,11 @@ import org.springframework.web.client.RestClient;
 /// - `deezerId` absent → recherche par nom (`GET /search/artist?q=`). Le P2722 Wikidata est
 ///   fréquemment absent en pratique (constaté en production sur Yelle, Mademoiselle K, Ycare —
 ///   Deezer référence pourtant bien ces artistes) : ne pas dépendre uniquement de Wikidata pour
-///   peupler {@code deezer_id} reviendrait à ignorer une source de données déjà exploitée
-///   ailleurs dans le projet. Seule une correspondance exacte de nom normalisé est retenue (pas
-///   de seuil de similarité comme dans {@link ResolveurNomCanonique}) : cette découverte assigne
-///   un identifiant persistant, un enjeu plus élevé qu'une simple confirmation cosmétique de nom
-/// affiché — même prudence que {@code TicketmasterSource.rechercherAttractionId} (anti-
-///   JAIN/ANUV JAIN).
+///   peupler {@code deezer_id} reviendrait à ignorer une source de données déjà exploitée ailleurs
+///   dans le projet. Seule une correspondance exacte de nom normalisé est retenue (pas de seuil de
+///   similarité comme dans {@link ResolveurNomCanonique}) : cette découverte assigne un identifiant
+///   persistant, un enjeu plus élevé qu'une simple confirmation cosmétique de nom affiché — même
+///   prudence que {@code TicketmasterSource.rechercherAttractionId} (anti- JAIN/ANUV JAIN).
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -51,9 +51,16 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
     return compteurBilan.preleverBilan();
   }
 
-  /// Crée une instance avec un RestClient par défaut.
+  /// Crée une instance avec un RestClient par défaut (timeout connexion 10s, lecture 30s) — sans
+  /// borne, un hoquet réseau ou une réponse lente de l'API Deezer ferait pendre indéfiniment un
+  /// thread worker (même classe d'incident que celle déjà corrigée pour TM/Eventim, #887).
   public DeezerArtisteSource() {
-    this(RestClient.create());
+    this(
+        RestClient.builder()
+            .requestFactory(
+                ClientHttpFactory.creerRequestFactory(
+                    Duration.ofSeconds(10), Duration.ofSeconds(30)))
+            .build());
   }
 
   /// Crée une instance avec un RestClient personnalisé (injection de test).

@@ -7,6 +7,8 @@ package fr.strapontin.web.utilisateur;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +30,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/preferences")
 public class PreferencesController {
 
+  private static final Logger log = LoggerFactory.getLogger(PreferencesController.class);
+
   private final PreferencesService preferencesService;
 
   /// @param preferencesService service d'import/export des préférences
@@ -37,10 +41,10 @@ public class PreferencesController {
 
   /// Importe les préférences depuis un fichier JSON exporté par Strapontin.
   ///
-  /// @param fichier        le fichier JSON (multipart)
-  /// @param mode           {@code fusionner} ou {@code ecraser}
+  /// @param fichier le fichier JSON (multipart)
+  /// @param mode {@code fusionner} ou {@code ecraser}
   /// @param importerConfig remplacer la config utilisateur si vrai
-  /// @param auth           contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 200 avec stats si importé, 400 si format invalide, 422 si version inconnue
   @PostMapping(value = "/importer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Map<String, Object>> importer(
@@ -61,6 +65,7 @@ public class PreferencesController {
     try {
       export = preferencesService.deserialiserExport(fichier.getBytes());
     } catch (Exception e) {
+      log.warn("Échec de désérialisation d'un export de préférences", e);
       return erreur(400, "Le fichier doit être au format JSON.");
     }
 
