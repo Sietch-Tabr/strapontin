@@ -61,7 +61,7 @@
           Vous suivez déjà « {{ qSoumis }} ».
         </div>
         <div v-else class="alerte alerte-info" role="status">
-          <p style="margin: 0 0 10px">Aucun résultat pour « {{ qSoumis }} ».</p>
+          <p>Aucun résultat pour « {{ qSoumis }} ».</p>
           <button
             type="button"
             class="btn btn-sm btn-secondary"

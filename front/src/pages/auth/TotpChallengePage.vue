@@ -5,7 +5,7 @@
       Saisissez le code de votre application d'authentification.
     </p>
 
-    <div v-if="erreur" class="alerte alerte-erreur">{{ erreur }}</div>
+    <div v-if="erreur" role="alert" aria-live="assertive" class="alerte alerte-erreur">{{ erreur }}</div>
 
     <form @submit.prevent="soumettre" autocomplete="off">
       <div class="form-group">

@@ -10,7 +10,7 @@
       </template>
     </p>
 
-    <div v-if="erreur" class="alerte alerte-erreur">{{ erreur }}</div>
+    <div v-if="erreur" role="alert" aria-live="assertive" class="alerte alerte-erreur">{{ erreur }}</div>
 
     <form v-if="!chargementType" @submit.prevent="soumettre">
       <input type="hidden" name="token" :value="token" />

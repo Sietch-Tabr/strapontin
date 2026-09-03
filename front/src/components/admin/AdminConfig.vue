@@ -247,20 +247,24 @@ async function testerEmail() {
 
 async function sauvegarderConfig(cle, event) {
   const valeur = event.target.querySelector('[name=valeur]')?.value ?? ''
-  const rep = await fetch('/api/admin/config', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cle, valeur }),
-  })
-  const corps = await rep.json()
-  if (rep.ok) {
-    afficherToast('Configuration sauvegardée.', 'succes')
-    if (cle === 'TICKETMASTER_API_KEY') etatTm.value = null
-    if (cle === 'RESEND_API_KEY') etatEmail.value = null
-    const repConfig = await fetch('/api/admin/config')
-    if (repConfig.ok) configs.value = await repConfig.json()
-  } else {
-    afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cle, valeur }),
+    })
+    const corps = await rep.json()
+    if (rep.ok) {
+      afficherToast('Configuration sauvegardée.', 'succes')
+      if (cle === 'TICKETMASTER_API_KEY') etatTm.value = null
+      if (cle === 'RESEND_API_KEY') etatEmail.value = null
+      const repConfig = await fetch('/api/admin/config')
+      if (repConfig.ok) configs.value = await repConfig.json()
+    } else {
+      afficherToast(corps.erreur || 'Erreur.', 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors de la sauvegarde.', 'erreur')
   }
 }
 
@@ -274,18 +278,22 @@ function fermerDialogVapid() {
 
 async function confirmerVapid() {
   fermerDialogVapid()
-  const rep = await fetch('/api/admin/vapid/generer', { method: 'POST' })
-  const corps = await rep.json()
-  if (rep.ok) {
-    const nb = corps.nbAbonnementsSupprimes ?? 0
-    afficherToast(
-      `Clés VAPID régénérées. ${nb} abonnement${nb !== 1 ? 's' : ''} push invalidé${nb !== 1 ? 's' : ''}.`,
-      'succes',
-    )
-    const repConfig = await fetch('/api/admin/config')
-    if (repConfig.ok) configs.value = await repConfig.json()
-  } else {
-    afficherToast(corps.erreur || 'Erreur lors de la génération.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/vapid/generer', { method: 'POST' })
+    const corps = await rep.json()
+    if (rep.ok) {
+      const nb = corps.nbAbonnementsSupprimes ?? 0
+      afficherToast(
+        `Clés VAPID régénérées. ${nb} abonnement${nb !== 1 ? 's' : ''} push invalidé${nb !== 1 ? 's' : ''}.`,
+        'succes',
+      )
+      const repConfig = await fetch('/api/admin/config')
+      if (repConfig.ok) configs.value = await repConfig.json()
+    } else {
+      afficherToast(corps.erreur || 'Erreur lors de la génération.', 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors de la génération.', 'erreur')
   }
 }
 

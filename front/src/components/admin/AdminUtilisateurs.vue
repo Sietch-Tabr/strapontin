@@ -219,24 +219,28 @@ function initialiserModifData() {
 async function creerUtilisateur() {
   const email = nouvelEmail.value.trim()
   if (!email) return
-  const rep = await fetch('/api/admin/utilisateurs', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
-  })
-  const corps = await rep.json()
-  if (rep.ok || rep.status === 201) {
-    nouvelEmail.value = ''
-    inviteEmail.value = corps.email ?? ''
-    lienInvitation.value = corps.lienReset ?? ''
-    ouvrirDialogInvitationModal()
-    const repUsers = await fetch('/api/admin/utilisateurs')
-    if (repUsers.ok) {
-      utilisateurs.value = await repUsers.json()
-      initialiserModifData()
+  try {
+    const rep = await fetch('/api/admin/utilisateurs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const corps = await rep.json()
+    if (rep.ok || rep.status === 201) {
+      nouvelEmail.value = ''
+      inviteEmail.value = corps.email ?? ''
+      lienInvitation.value = corps.lienReset ?? ''
+      ouvrirDialogInvitationModal()
+      const repUsers = await fetch('/api/admin/utilisateurs')
+      if (repUsers.ok) {
+        utilisateurs.value = await repUsers.json()
+        initialiserModifData()
+      }
+    } else {
+      afficherToast(corps.erreur || 'Impossible de créer le compte.', 'erreur')
     }
-  } else {
-    afficherToast(corps.erreur || 'Impossible de créer le compte.', 'erreur')
+  } catch (e) {
+    afficherToast('Erreur réseau lors de la création du compte.', 'erreur')
   }
 }
 
@@ -293,18 +297,22 @@ async function envoyerPatch(u, d, messageSucces = 'Utilisateur modifié.') {
     return
   }
 
-  const rep = await fetch('/api/admin/utilisateurs/' + u.id, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(corps),
-  })
-  const repCorps = await rep.json()
-  if (rep.ok) {
-    fermerModif(u.id)
-    await rechargerUtilisateurs()
-    afficherToast(messageSucces, 'succes')
-  } else {
-    modifErreurs[u.id] = repCorps.erreur || 'Erreur.'
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + u.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(corps),
+    })
+    const repCorps = await rep.json()
+    if (rep.ok) {
+      fermerModif(u.id)
+      await rechargerUtilisateurs()
+      afficherToast(messageSucces, 'succes')
+    } else {
+      modifErreurs[u.id] = repCorps.erreur || 'Erreur.'
+    }
+  } catch (e) {
+    modifErreurs[u.id] = 'Erreur réseau.'
   }
 }
 
@@ -329,49 +337,61 @@ async function confirmerChangementRole() {
     return
   }
 
-  const corpsNomEmail = {}
-  if (d.nom !== (u.displayUsername ?? '')) corpsNomEmail.nom = d.nom
-  if (d.email !== u.email) corpsNomEmail.email = d.email
-  if (Object.keys(corpsNomEmail).length > 0) {
-    const repNomEmail = await fetch('/api/admin/utilisateurs/' + u.id, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(corpsNomEmail),
-    })
-    if (!repNomEmail.ok) {
-      const corpsErreur = await corpsJsonOuVide(repNomEmail)
-      modifErreurs[u.id] = corpsErreur.erreur || 'Erreur.'
-      return
+  try {
+    const corpsNomEmail = {}
+    if (d.nom !== (u.displayUsername ?? '')) corpsNomEmail.nom = d.nom
+    if (d.email !== u.email) corpsNomEmail.email = d.email
+    if (Object.keys(corpsNomEmail).length > 0) {
+      const repNomEmail = await fetch('/api/admin/utilisateurs/' + u.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpsNomEmail),
+      })
+      if (!repNomEmail.ok) {
+        const corpsErreur = await corpsJsonOuVide(repNomEmail)
+        modifErreurs[u.id] = corpsErreur.erreur || 'Erreur.'
+        return
+      }
     }
-  }
 
-  const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'POST' })
-  const corps = await rep.json()
-  if (rep.ok) {
-    fermerModif(u.id)
-    await rechargerUtilisateurs()
-    afficherToast('Révocation initiée. L\'administrateur sera prévenu par email.', 'succes')
-  } else {
-    modifErreurs[u.id] = corps.erreur || 'Erreur.'
+    const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'POST' })
+    const corps = await rep.json()
+    if (rep.ok) {
+      fermerModif(u.id)
+      await rechargerUtilisateurs()
+      afficherToast('Révocation initiée. L\'administrateur sera prévenu par email.', 'succes')
+    } else {
+      modifErreurs[u.id] = corps.erreur || 'Erreur.'
+    }
+  } catch (e) {
+    modifErreurs[u.id] = 'Erreur réseau.'
   }
 }
 
 async function annulerRevocation(u) {
-  const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'DELETE' })
-  const corps = await rep.json()
-  if (rep.ok) {
-    await rechargerUtilisateurs()
-    afficherToast('Révocation annulée.', 'succes')
-  } else {
-    afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'DELETE' })
+    const corps = await rep.json()
+    if (rep.ok) {
+      await rechargerUtilisateurs()
+      afficherToast('Révocation annulée.', 'succes')
+    } else {
+      afficherToast(corps.erreur || 'Erreur.', 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau.', 'erreur')
   }
 }
 
 async function rechargerUtilisateurs() {
-  const repUsers = await fetch('/api/admin/utilisateurs')
-  if (repUsers.ok) {
-    utilisateurs.value = await repUsers.json()
-    initialiserModifData()
+  try {
+    const repUsers = await fetch('/api/admin/utilisateurs')
+    if (repUsers.ok) {
+      utilisateurs.value = await repUsers.json()
+      initialiserModifData()
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors du rechargement.', 'erreur')
   }
 }
 
@@ -389,10 +409,14 @@ async function confirmerReinitMdp() {
   if (!userAReinitMdp.value) return
   const userId = userAReinitMdp.value.id
   fermerDialogReinitMdp()
-  const rep = await fetch('/api/admin/utilisateurs/' + userId + '/reset-mdp', { method: 'POST' })
-  const corps = await rep.json()
-  if (rep.ok) afficherToast('Email de réinitialisation envoyé.', 'succes')
-  else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + userId + '/reset-mdp', { method: 'POST' })
+    const corps = await rep.json()
+    if (rep.ok) afficherToast('Email de réinitialisation envoyé.', 'succes')
+    else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  } catch (e) {
+    afficherToast('Erreur réseau.', 'erreur')
+  }
 }
 
 function reinitTotp(u) {
@@ -409,10 +433,14 @@ async function confirmerReinitTotp() {
   if (!userAReinitTotp.value) return
   const userId = userAReinitTotp.value.id
   fermerDialogReinitTotp()
-  const rep = await fetch('/api/admin/utilisateurs/' + userId + '/reset-totp', { method: 'POST' })
-  const corps = await rep.json()
-  if (rep.ok) afficherToast('2FA réinitialisée. L\'utilisateur pourra se reconnecter sans code.', 'succes')
-  else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + userId + '/reset-totp', { method: 'POST' })
+    const corps = await rep.json()
+    if (rep.ok) afficherToast('2FA réinitialisée. L\'utilisateur pourra se reconnecter sans code.', 'succes')
+    else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  } catch (e) {
+    afficherToast('Erreur réseau.', 'erreur')
+  }
 }
 
 function revoquerSessions(u) {
@@ -429,10 +457,14 @@ async function confirmerRevoquerSessions() {
   if (!userARevoquerSessions.value) return
   const userId = userARevoquerSessions.value.id
   fermerDialogRevoquerSessions()
-  const rep = await fetch('/api/admin/utilisateurs/' + userId + '/revoquer-sessions', { method: 'POST' })
-  const corps = await rep.json()
-  if (rep.ok) afficherToast('Sessions révoquées.', 'succes')
-  else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + userId + '/revoquer-sessions', { method: 'POST' })
+    const corps = await rep.json()
+    if (rep.ok) afficherToast('Sessions révoquées.', 'succes')
+    else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  } catch (e) {
+    afficherToast('Erreur réseau.', 'erreur')
+  }
 }
 
 function ouvrirDialogSupprimer(u) {
@@ -449,13 +481,17 @@ async function confirmerSuppression() {
   if (!userASupprimer.value) return
   const userId = userASupprimer.value.id
   fermerDialogSupprimer()
-  const rep = await fetch('/api/admin/utilisateurs/' + userId, { method: 'DELETE' })
-  const corps = await rep.json()
-  if (rep.ok) {
-    utilisateurs.value = utilisateurs.value.filter((u) => u.id !== userId)
-    afficherToast('Compte supprimé.', 'succes')
-  } else {
-    afficherToast(corps.erreur || 'Erreur lors de la suppression.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + userId, { method: 'DELETE' })
+    const corps = await rep.json()
+    if (rep.ok) {
+      utilisateurs.value = utilisateurs.value.filter((u) => u.id !== userId)
+      afficherToast('Compte supprimé.', 'succes')
+    } else {
+      afficherToast(corps.erreur || 'Erreur lors de la suppression.', 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors de la suppression.', 'erreur')
   }
 }
 

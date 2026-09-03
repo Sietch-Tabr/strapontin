@@ -103,39 +103,53 @@ async function charger() {
 }
 
 async function sauvegarderDepartements() {
-  const rep = await fetch('/api/user/config/departements', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ departements: departements.value }),
-  })
-  const corps = await rep.json()
-  if (rep.ok) {
-    if (corps.ignores?.length) {
-      afficherToast('Codes ignorés car non reconnus : ' + corps.ignores.join(', '), 'avertissement')
+  try {
+    const rep = await fetch('/api/user/config/departements', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ departements: departements.value }),
+    })
+    const corps = await rep.json()
+    if (rep.ok) {
+      if (corps.ignores?.length) {
+        afficherToast('Codes ignorés car non reconnus : ' + corps.ignores.join(', '), 'avertissement')
+      } else {
+        afficherToast('Départements enregistrés.', 'succes')
+      }
     } else {
-      afficherToast('Départements enregistrés.', 'succes')
+      afficherToast(corps.erreur || 'Erreur.', 'erreur')
     }
-  } else {
-    afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  } catch (e) {
+    afficherToast('Erreur réseau.', 'erreur')
   }
 }
 
 async function sauvegarderFiltres() {
-  await fetch('/api/user/config/filtres', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filtreDisponibles: filtreDisponibles.value }),
-  })
+  try {
+    const rep = await fetch('/api/user/config/filtres', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filtreDisponibles: filtreDisponibles.value }),
+    })
+    if (!rep.ok) afficherToast('Erreur lors de l\'enregistrement du filtre.', 'erreur')
+  } catch (e) {
+    afficherToast('Erreur réseau.', 'erreur')
+  }
 }
 
 async function changerTheme(valeur) {
   theme.value = valeur
   enregistrerTheme(valeur)
-  await fetch('/api/user/config/theme', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ valeur }),
-  })
+  try {
+    const rep = await fetch('/api/user/config/theme', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valeur }),
+    })
+    if (!rep.ok) afficherToast('Erreur lors de l\'enregistrement du thème.', 'erreur')
+  } catch (e) {
+    afficherToast('Erreur réseau.', 'erreur')
+  }
 }
 
 onMounted(charger)

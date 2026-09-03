@@ -318,6 +318,9 @@ textarea:focus {
   border-style: solid;
   position: relative;
 }
+.alerte p {
+  margin: 0 0 0.625rem;
+}
 
 .alerte-erreur {
   background: var(--danger-bg);

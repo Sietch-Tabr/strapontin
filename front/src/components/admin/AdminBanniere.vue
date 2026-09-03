@@ -64,36 +64,48 @@ const banniereType = ref('info')
 const banniereActive = ref(null)
 
 async function chargerBanniereActive() {
-  const rep = await fetch('/api/banniere/json')
-  const texte = rep.ok ? await rep.text() : ''
-  banniereActive.value = parseJsonOuNull(texte)
+  try {
+    const rep = await fetch('/api/banniere/json')
+    const texte = rep.ok ? await rep.text() : ''
+    banniereActive.value = parseJsonOuNull(texte)
+  } catch (e) {
+    afficherToast('Erreur réseau lors du chargement de la bannière.', 'erreur')
+  }
 }
 
 async function publierBanniere() {
   const msg = banniereMessage.value.trim()
   if (!msg) return
-  const rep = await fetch('/api/admin/banniere', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: msg, type: banniereType.value }),
-  })
-  const corps = await rep.json()
-  if (rep.ok) {
-    afficherToast('Bannière publiée.', 'succes')
-    await chargerBanniereActive()
-  } else {
-    afficherToast(corps.erreur || 'Erreur lors de la publication.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/banniere', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, type: banniereType.value }),
+    })
+    const corps = await rep.json()
+    if (rep.ok) {
+      afficherToast('Bannière publiée.', 'succes')
+      await chargerBanniereActive()
+    } else {
+      afficherToast(corps.erreur || 'Erreur lors de la publication.', 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors de la publication.', 'erreur')
   }
 }
 
 async function effacerBanniere() {
-  const rep = await fetch('/api/admin/banniere', { method: 'DELETE' })
-  const corps = await rep.json()
-  if (rep.ok) {
-    afficherToast('Bannière effacée.', 'succes')
-    await chargerBanniereActive()
-  } else {
-    afficherToast(corps.erreur || "Erreur lors de l'effacement.", 'erreur')
+  try {
+    const rep = await fetch('/api/admin/banniere', { method: 'DELETE' })
+    const corps = await rep.json()
+    if (rep.ok) {
+      afficherToast('Bannière effacée.', 'succes')
+      await chargerBanniereActive()
+    } else {
+      afficherToast(corps.erreur || "Erreur lors de l'effacement.", 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors de l\'effacement.', 'erreur')
   }
 }
 

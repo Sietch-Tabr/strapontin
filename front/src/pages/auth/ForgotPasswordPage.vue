@@ -5,7 +5,7 @@
       Entrez votre adresse email pour recevoir un lien de réinitialisation.
     </p>
 
-    <div v-if="erreur" class="alerte alerte-erreur">{{ erreur }}</div>
+    <div v-if="erreur" role="alert" aria-live="assertive" class="alerte alerte-erreur">{{ erreur }}</div>
 
     <div v-if="succes" class="alerte alerte-succes">
       Si cette adresse correspond à un compte, un email vous a été envoyé.

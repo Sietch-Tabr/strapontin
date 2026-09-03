@@ -141,6 +141,7 @@ watch(estPageAuth, (nouveau, ancien) => {
     chargerSession()
     chargerBanniere()
     verifierOnboarding()
+    chargerChangelogNonVu()
   }
 })
 
@@ -148,6 +149,7 @@ onMounted(async () => {
   await chargerSession()
   chargerBanniere()
   chargerChangelogNonVu()
+  verifierOnboarding()
   if ('serviceWorker' in navigator) {
     ecouterMiseAJourServiceWorker(miseAJourEnCours, navigator.serviceWorker, {
       naviguerVersAncre: (url) => router.push(url),

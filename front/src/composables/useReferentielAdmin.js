@@ -50,9 +50,19 @@ export function useReferentielAdmin({
   const cibleChoisie = ref(null);
   const enCoursFusion = ref(false);
 
+  // controleur : durée de vie du composant, pour les mutations ponctuelles ci-dessous
+  // (édition/réinitialisation/fusion), jamais rappelées en rafale contrairement à charger().
   const controleur = new AbortController();
+  // controleurActuel : recréé à chaque appel de charger() — un changement rapide de
+  // page/filtre (allerPage/rechargerPage0) annule sinon seulement la requête précédente au
+  // démontage, pas à la requête suivante, laissant deux réponses s'appliquer dans le désordre.
+  let controleurActuel = null;
 
   async function charger() {
+    controleurActuel?.abort();
+    const controleurCourant = new AbortController();
+    controleurActuel = controleurCourant;
+
     chargement.value = true;
     try {
       const params = new URLSearchParams();
@@ -65,7 +75,7 @@ export function useReferentielAdmin({
       }
 
       const rep = await fetch(`/api/admin/${endpoint}?${params}`, {
-        signal: controleur.signal,
+        signal: controleurCourant.signal,
       });
       if (!rep.ok) return;
       const data = await rep.json();
@@ -80,7 +90,7 @@ export function useReferentielAdmin({
         "erreur",
       );
     } finally {
-      chargement.value = false;
+      if (controleurActuel === controleurCourant) chargement.value = false;
     }
   }
 
@@ -215,7 +225,10 @@ export function useReferentielAdmin({
   }
 
   onMounted(charger);
-  onUnmounted(() => controleur.abort());
+  onUnmounted(() => {
+    controleur.abort();
+    controleurActuel?.abort();
+  });
 
   return {
     chargement,
