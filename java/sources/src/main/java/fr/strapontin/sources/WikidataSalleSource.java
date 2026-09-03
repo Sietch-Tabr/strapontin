@@ -504,13 +504,23 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
 
   // Types Wikidata (P31) structurellement incompatibles avec un lieu de spectacle : gare
   // (Q3455524), arrêt de tram (Q6465), commune française (Q484170), gare ferroviaire (Q55488),
-  // arrêt de transport en commun (Q2175765), bar (Q187456), restaurant (Q11707) — un candidat de
-  // l'un de ces types est nécessairement une fausse correspondance, quel que soit son score de
-  // similarité de nom. Exposée pour permettre à {@code CoherenceWikidataSalleService} de revalider
-  // les {@code wikidata_id} déjà stockés contre ces mêmes types (garde-fou introduit après coup ne
-  // s'appliquant pas rétroactivement aux découvertes antérieures).
+  // arrêt de transport en commun (Q2175765), bar (Q187456), restaurant (Q11707), quotidien
+  // régional (Q1002697), journal (Q11032) — un candidat de l'un de ces types est nécessairement
+  // une fausse correspondance, quel que soit son score de similarité de nom. Exposée pour permettre
+  // à {@code CoherenceWikidataSalleService} de revalider les {@code wikidata_id} déjà stockés
+  // contre ces mêmes types (garde-fou introduit après coup ne s'appliquant pas rétroactivement aux
+  // découvertes antérieures).
   public static final Set<String> TYPES_EXCLUS =
-      Set.of("Q3455524", "Q6465", "Q484170", "Q55488", "Q2175765", "Q187456", "Q11707");
+      Set.of(
+          "Q3455524",
+          "Q6465",
+          "Q484170",
+          "Q55488",
+          "Q2175765",
+          "Q187456",
+          "Q11707",
+          "Q1002697",
+          "Q11032");
 
   private static String construireRequeteDecouverte(String nom) {
     String typesExclusSparql =
