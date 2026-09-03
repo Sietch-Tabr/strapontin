@@ -79,7 +79,7 @@ public class UserConfigController {
   /// @return 200 si mis à jour — 400 si invalide (via {@link GlobalExceptionHandler})
   @PatchMapping("/notifications")
   public ResponseEntity<Map<String, Object>> majNotifications(
-      @RequestBody RequeteNotifications requete, Authentication auth) {
+      @Valid @RequestBody RequeteNotifications requete, Authentication auth) {
     String userId = utilisateur(auth).id();
     userConfigService.majNotifications(userId, requete);
     return ResponseEntity.ok(Map.of("succes", "notifications"));
@@ -92,7 +92,7 @@ public class UserConfigController {
   /// @return 200 si mis à jour
   @PatchMapping("/filtres")
   public ResponseEntity<Map<String, Object>> majFiltres(
-      @RequestBody RequeteFiltres requete, Authentication auth) {
+      @Valid @RequestBody RequeteFiltres requete, Authentication auth) {
     String userId = utilisateur(auth).id();
     userConfigService.majFiltres(userId, requete.filtreDisponibles());
     return ResponseEntity.ok(Map.of("succes", "filtres"));
@@ -105,7 +105,7 @@ public class UserConfigController {
   /// @return 200 si mis à jour — 400 si invalide (via {@link GlobalExceptionHandler})
   @PatchMapping("/theme")
   public ResponseEntity<Map<String, Object>> majTheme(
-      @RequestBody RequeteTheme requete, Authentication auth) {
+      @Valid @RequestBody RequeteTheme requete, Authentication auth) {
     String userId = utilisateur(auth).id();
     userConfigService.majTheme(userId, requete.valeur());
     return ResponseEntity.ok(Map.of("succes", "theme", "theme", requete.valeur()));
