@@ -52,17 +52,10 @@ class SourcesServiceTest {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
     when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
-        .thenReturn(List.of());
 
     Map<String, Object> resultat = sourcesService.lireSources();
 
     assertNotNull(resultat.get("sources"));
-    assertNotNull(resultat.get("salles"));
     List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
     assertEquals(5, sources.size());
 
@@ -102,12 +95,6 @@ class SourcesServiceTest {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
     ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     when(jdbc.queryForObject(anyString(), paramsCaptor.capture(), eq(Integer.class))).thenReturn(0);
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
-        .thenReturn(List.of());
 
     sourcesService.lireSources();
 
@@ -129,12 +116,6 @@ class SourcesServiceTest {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of(quotaJson));
     when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
-        .thenReturn(List.of());
 
     Map<String, Object> resultat = sourcesService.lireSources();
     List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
@@ -202,11 +183,7 @@ class SourcesServiceTest {
   }
 
   @Test
-  void lireSources_requetesSalles_excluenTMEtEventim() {
-    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-
+  void listerSalles_vueSansDigitick_excluTMEtEventim() {
     ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
     when(jdbc.query(
             sqlCaptor.capture(),
@@ -215,7 +192,7 @@ class SourcesServiceTest {
                 .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
         .thenReturn(List.of());
 
-    sourcesService.lireSources();
+    sourcesService.listerSalles(false, 0, null);
 
     String sqlSalles =
         sqlCaptor.getAllValues().stream()
@@ -226,8 +203,7 @@ class SourcesServiceTest {
         sqlSalles.contains("'ticketmaster'"),
         "La requête doit filtrer les salles sans source ticketmaster");
     assertTrue(
-        sqlSalles.contains("'eventim'"),
-        "La requête doit filtrer les salles sans source eventim (#685)");
+        sqlSalles.contains("'eventim'"), "La requête doit filtrer les salles sans source eventim");
   }
 
   @Test
@@ -237,11 +213,7 @@ class SourcesServiceTest {
   }
 
   @Test
-  void lireSources_requetesSalles_utilisentColonneId_pasSlleUuid() {
-    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-
+  void listerSalles_lesDeuxVues_utilisentColonneId_pasSalleUuid() {
     ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
     when(jdbc.query(
             sqlCaptor.capture(),
@@ -250,7 +222,8 @@ class SourcesServiceTest {
                 .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
         .thenReturn(List.of());
 
-    sourcesService.lireSources();
+    sourcesService.listerSalles(false, 0, null);
+    sourcesService.listerSalles(true, 0, null);
 
     sqlCaptor
         .getAllValues()
@@ -273,11 +246,20 @@ class SourcesServiceTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void lireSources_avecSalles_retourneSalles() {
+  void lireSources_comptageDigitick_reporteNbSallesConfigurees() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
     when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
 
+    Map<String, Object> resultat = sourcesService.lireSources();
+
+    List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
+    StatutSource digitick = sources.get(3);
+    assertEquals(2, digitick.nbSallesConfigurees());
+  }
+
+  @Test
+  void listerSalles_nominal_retourneLesSalles() {
     UUID uuid = UUID.randomUUID();
     when(jdbc.query(
             anyString(),
@@ -286,15 +268,10 @@ class SourcesServiceTest {
                 .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
         .thenReturn(List.of(new SalleSourceAdmin(uuid, "L'Olympia", null, null, null)));
 
-    Map<String, Object> resultat = sourcesService.lireSources();
-    List<SalleSourceAdmin> salles = (List<SalleSourceAdmin>) resultat.get("salles");
+    ReponseSallesSources reponse = sourcesService.listerSalles(false, 0, null);
 
-    assertEquals(1, salles.size());
-    assertEquals("L'Olympia", salles.get(0).nom());
-    assertNull(salles.get(0).digitickSlug());
-
-    List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
-    StatutSource digitick = sources.get(3);
-    assertEquals(2, digitick.nbSallesConfigurees());
+    assertEquals(1, reponse.salles().size());
+    assertEquals("L'Olympia", reponse.salles().get(0).nom());
+    assertNull(reponse.salles().get(0).digitickSlug());
   }
 }

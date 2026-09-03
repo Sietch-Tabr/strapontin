@@ -133,4 +133,15 @@ class SourcesControllerTest {
     assertEquals(200, reponse.getStatusCode().value());
     verify(sourcesService).modifierSalleDigitick(id, "Nouveau nom", null, null);
   }
+
+  @Test
+  void listerSalles_delegueAuServiceAvecLesParametres() {
+    when(sourcesService.listerSalles(true, 2, "olympia"))
+        .thenReturn(new ReponseSallesSources(java.util.List.of(), 2, 3, 120));
+
+    var reponse = controller.listerSalles(true, 2, "olympia");
+
+    assertEquals(200, reponse.getStatusCode().value());
+    verify(sourcesService).listerSalles(true, 2, "olympia");
+  }
 }

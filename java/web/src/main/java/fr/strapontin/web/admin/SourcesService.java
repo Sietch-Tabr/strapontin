@@ -10,6 +10,7 @@ import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.salle.SalleService;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,6 +34,7 @@ public class SourcesService {
   private static final Logger log = LoggerFactory.getLogger(SourcesService.class);
   private static final String URL_DIGITICK =
       "https://web.digitick.com/ext/billetterie5/index.php?site={slug}&action=ajax&op=1";
+  private static final int TAILLE_PAGE_SALLES = 50;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
@@ -54,15 +56,14 @@ public class SourcesService {
     this.salleService = salleService;
   }
 
-  /// Retourne les statuts agrégés de toutes les sources et les deux listes de salles.
+  /// Retourne les statuts agrégés de toutes les sources.
   ///
-  /// @return map {@code {sources, salles (sans TM ni Eventim), sallesDigitick (avec slug
-  ///   configuré)}}
+  /// <p>Les deux listes de salles (sans TM ni Eventim / avec Digitick) sont paginées séparément via
+  /// {@link #listerSalles}, désormais consommées par un endpoint dédié.
+  ///
+  /// @return map {@code {sources}}
   public Map<String, Object> lireSources() {
-    return Map.of(
-        "sources", construireSources(),
-        "salles", listerSallesAvecSources(),
-        "sallesDigitick", listerSallesAvecDigitick());
+    return Map.of("sources", construireSources());
   }
 
   /// Retourne le quota TM et l'état du quota pour réutilisation dans d'autres endpoints.
@@ -343,46 +344,119 @@ public class SourcesService {
     }
   }
 
-  private List<SalleSourceAdmin> listerSallesAvecDigitick() {
-    return jdbc.query(
-        """
-        SELECT s.id, s.nom, s.ville, s.dept, ss.identifiant_externe AS digitick_slug
-        FROM salles s
-        JOIN salle_sources ss ON ss.salle_id = s.id AND ss.source = 'digitick'
-        ORDER BY lower(s.nom)
-        """,
-        Map.of(),
-        (rs, _) ->
-            new SalleSourceAdmin(
-                rs.getObject("id", UUID.class),
-                rs.getString("nom"),
-                rs.getString("digitick_slug"),
-                rs.getString("ville"),
-                rs.getString("dept")));
+  /// Liste paginée des salles pour l'onglet admin « Sources ».
+  ///
+  /// @param digitick {@code true} pour les salles déjà configurées avec un slug Digitick, {@code
+  ///   false} pour celles sans identifiant Ticketmaster ni Eventim (candidates à une configuration
+  ///   manuelle)
+  /// @param page numéro de page (0-indexé)
+  /// @param nom filtre nom partiel (insensible à la casse), peut être null
+  /// @return page de résultats
+  public ReponseSallesSources listerSalles(boolean digitick, int page, String nom) {
+    return digitick ? listerSallesAvecDigitick(page, nom) : listerSallesSansTmNiEventim(page, nom);
   }
 
-  private List<SalleSourceAdmin> listerSallesAvecSources() {
-    return jdbc.query(
-        """
-        SELECT s.id,
-               s.nom,
-               s.ville,
-               s.dept,
-               MAX(CASE WHEN ss.source = 'digitick' THEN ss.identifiant_externe END) AS digitick_slug
-        FROM salles s
-        LEFT JOIN salle_sources ss ON ss.salle_id = s.id
-        GROUP BY s.id, s.nom, s.ville, s.dept
-        HAVING MAX(CASE WHEN ss.source = 'ticketmaster' THEN ss.identifiant_externe END) IS NULL
-           AND MAX(CASE WHEN ss.source = 'eventim'      THEN ss.identifiant_externe END) IS NULL
-        ORDER BY lower(s.nom)
-        """,
-        Map.of(),
-        (rs, _) ->
-            new SalleSourceAdmin(
-                rs.getObject("id", UUID.class),
-                rs.getString("nom"),
-                rs.getString("digitick_slug"),
-                rs.getString("ville"),
-                rs.getString("dept")));
+  private ReponseSallesSources listerSallesAvecDigitick(int page, String nom) {
+    int pageNum = Math.max(0, page);
+    StringBuilder where = new StringBuilder();
+    Map<String, Object> params = new HashMap<>();
+    if (nom != null && !nom.isBlank()) {
+      where.append(" AND s.nom ILIKE :nom ");
+      params.put("nom", "%" + nom.strip() + "%");
+    }
+    params.put("taille", TAILLE_PAGE_SALLES);
+    params.put("offset", pageNum * TAILLE_PAGE_SALLES);
+    long[] total = {0};
+    List<SalleSourceAdmin> salles =
+        jdbc.query(
+            "SELECT s.id, s.nom, s.ville, s.dept, ss.identifiant_externe AS digitick_slug,"
+                + " COUNT(*) OVER() AS total_filtre"
+                + " FROM salles s"
+                + " JOIN salle_sources ss ON ss.salle_id = s.id AND ss.source = 'digitick'"
+                + " WHERE 1=1 "
+                + where
+                + " ORDER BY lower(s.nom) LIMIT :taille OFFSET :offset",
+            params,
+            (rs, _) -> {
+              total[0] = rs.getLong("total_filtre");
+              return new SalleSourceAdmin(
+                  rs.getObject("id", UUID.class),
+                  rs.getString("nom"),
+                  rs.getString("digitick_slug"),
+                  rs.getString("ville"),
+                  rs.getString("dept"));
+            });
+
+    if (salles.isEmpty() && pageNum > 0) {
+      total[0] =
+          compterAvecFallback(
+              "SELECT COUNT(*) FROM salles s JOIN salle_sources ss ON ss.salle_id = s.id AND"
+                  + " ss.source = 'digitick' WHERE 1=1 "
+                  + where,
+              params,
+              "salles avec Digitick");
+    }
+
+    int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_SALLES));
+    return new ReponseSallesSources(salles, pageNum, totalPages, total[0]);
+  }
+
+  private ReponseSallesSources listerSallesSansTmNiEventim(int page, String nom) {
+    int pageNum = Math.max(0, page);
+    StringBuilder where = new StringBuilder();
+    Map<String, Object> params = new HashMap<>();
+    if (nom != null && !nom.isBlank()) {
+      where.append(" AND s.nom ILIKE :nom ");
+      params.put("nom", "%" + nom.strip() + "%");
+    }
+    params.put("taille", TAILLE_PAGE_SALLES);
+    params.put("offset", pageNum * TAILLE_PAGE_SALLES);
+    long[] total = {0};
+    List<SalleSourceAdmin> salles =
+        jdbc.query(
+            "SELECT s.id, s.nom, s.ville, s.dept,"
+                + " MAX(CASE WHEN ss.source = 'digitick' THEN ss.identifiant_externe END) AS"
+                + " digitick_slug, COUNT(*) OVER() AS total_filtre"
+                + " FROM salles s"
+                + " LEFT JOIN salle_sources ss ON ss.salle_id = s.id"
+                + " WHERE 1=1 "
+                + where
+                + " GROUP BY s.id, s.nom, s.ville, s.dept"
+                + " HAVING MAX(CASE WHEN ss.source = 'ticketmaster' THEN ss.identifiant_externe"
+                + " END) IS NULL AND MAX(CASE WHEN ss.source = 'eventim' THEN"
+                + " ss.identifiant_externe END) IS NULL"
+                + " ORDER BY lower(s.nom) LIMIT :taille OFFSET :offset",
+            params,
+            (rs, _) -> {
+              total[0] = rs.getLong("total_filtre");
+              return new SalleSourceAdmin(
+                  rs.getObject("id", UUID.class),
+                  rs.getString("nom"),
+                  rs.getString("digitick_slug"),
+                  rs.getString("ville"),
+                  rs.getString("dept"));
+            });
+
+    // COUNT(*) OVER() porte ici sur les lignes post-HAVING (fenêtre appliquée après le filtrage
+    // par groupe), donc valide même avec ce HAVING — seul le repli page-vide doit le reproduire.
+    if (salles.isEmpty() && pageNum > 0) {
+      Long totalVide =
+          jdbc.queryForObject(
+              "SELECT COUNT(*) FROM (SELECT s.id"
+                  + " FROM salles s"
+                  + " LEFT JOIN salle_sources ss ON ss.salle_id = s.id"
+                  + " WHERE 1=1 "
+                  + where
+                  + " GROUP BY s.id"
+                  + " HAVING MAX(CASE WHEN ss.source = 'ticketmaster' THEN ss.identifiant_externe"
+                  + " END) IS NULL AND MAX(CASE WHEN ss.source = 'eventim' THEN"
+                  + " ss.identifiant_externe END) IS NULL) sous_requete",
+              params,
+              Long.class);
+      total[0] = totalVide != null ? totalVide : 0;
+    }
+
+    int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_SALLES));
+    return new ReponseSallesSources(salles, pageNum, totalPages, total[0]);
   }
 }

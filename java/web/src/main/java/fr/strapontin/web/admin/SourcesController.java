@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /// Contrôleur REST pour l'onglet admin « Sources ».
@@ -42,12 +43,27 @@ public class SourcesController {
     this.workerProxyService = workerProxyService;
   }
 
-  /// Retourne les statuts agrégés de toutes les sources et la liste des salles.
+  /// Retourne les statuts agrégés de toutes les sources.
   ///
-  /// @return 200 avec {@code {sources: [...], salles: [...]}}
+  /// @return 200 avec {@code {sources: [...]}}
   @GetMapping("/sources")
   public ResponseEntity<Map<String, Object>> lireSources() {
     return ResponseEntity.ok(sourcesService.lireSources());
+  }
+
+  /// Liste paginée des salles pour l'onglet admin « Sources ».
+  ///
+  /// @param digitick {@code true} pour les salles avec un slug Digitick configuré, {@code false}
+  ///   (défaut) pour celles sans identifiant Ticketmaster ni Eventim
+  /// @param page numéro de page (0-indexé, défaut 0)
+  /// @param nom filtre nom partiel
+  /// @return 200 avec la page de résultats
+  @GetMapping("/sources/salles")
+  public ResponseEntity<ReponseSallesSources> listerSalles(
+      @RequestParam(defaultValue = "false") boolean digitick,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(required = false) String nom) {
+    return ResponseEntity.ok(sourcesService.listerSalles(digitick, page, nom));
   }
 
   /// Met à jour le slug Digitick d'une salle.
