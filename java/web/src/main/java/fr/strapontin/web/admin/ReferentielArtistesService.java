@@ -74,35 +74,46 @@ public class ReferentielArtistesService {
       where.append(" AND wikidata_id IS NULL ");
     }
 
-    long total =
-        jdbc.queryForObject(
-            CTE_ARTISTES_AGREGES + "SELECT COUNT(*) FROM artistes_agr" + where, params, Long.class);
-
     Map<String, Object> paramsPage = new HashMap<>(params);
     paramsPage.put("taille", TAILLE_PAGE_DEFAUT);
     paramsPage.put("offset", pageNum * TAILLE_PAGE_DEFAUT);
+    long[] total = {0};
     List<ArtisteReferentiel> artistes =
         jdbc.query(
             CTE_ARTISTES_AGREGES
                 + "SELECT id, nom, nom_affiche, wikidata_id, deezer_id, nb_concerts, sources,"
-                + " statut, tm_identifiant_externe FROM artistes_agr"
+                + " statut, tm_identifiant_externe, COUNT(*) OVER() AS total_filtre FROM"
+                + " artistes_agr"
                 + where
                 + " ORDER BY nb_concerts DESC, nom ASC LIMIT :taille OFFSET :offset",
             paramsPage,
-            (rs, _) ->
-                new ArtisteReferentiel(
-                    rs.getObject("id", UUID.class),
-                    rs.getString("nom"),
-                    rs.getString("nom_affiche"),
-                    rs.getLong("nb_concerts"),
-                    lireSources(rs.getString("sources")),
-                    rs.getString("statut"),
-                    rs.getString("wikidata_id"),
-                    rs.getString("deezer_id"),
-                    rs.getString("tm_identifiant_externe")));
+            (rs, _) -> {
+              total[0] = rs.getLong("total_filtre");
+              return new ArtisteReferentiel(
+                  rs.getObject("id", UUID.class),
+                  rs.getString("nom"),
+                  rs.getString("nom_affiche"),
+                  rs.getLong("nb_concerts"),
+                  lireSources(rs.getString("sources")),
+                  rs.getString("statut"),
+                  rs.getString("wikidata_id"),
+                  rs.getString("deezer_id"),
+                  rs.getString("tm_identifiant_externe"));
+            });
 
-    int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_DEFAUT));
-    return new ReponseReferentielArtistes(artistes, pageNum, totalPages, total);
+    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
+    // second aller-retour reste alors nécessaire pour connaître le total réel.
+    if (artistes.isEmpty() && pageNum > 0) {
+      Long totalVide =
+          jdbc.queryForObject(
+              CTE_ARTISTES_AGREGES + "SELECT COUNT(*) FROM artistes_agr" + where,
+              params,
+              Long.class);
+      total[0] = totalVide != null ? totalVide : 0;
+    }
+
+    int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_DEFAUT));
+    return new ReponseReferentielArtistes(artistes, pageNum, totalPages, total[0]);
   }
 
   private static List<String> lireSources(String sourcesConcat) {

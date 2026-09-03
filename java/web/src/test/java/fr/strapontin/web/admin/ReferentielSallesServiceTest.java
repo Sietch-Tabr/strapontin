@@ -16,6 +16,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -44,20 +45,23 @@ class ReferentielSallesServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void lister_nominal_retournePageAvecTotal() {
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(3L);
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
-        .thenReturn(
-            List.of(
-                new SalleReferentiel(
-                    UUID.randomUUID(),
-                    "Zenith",
-                    "Zénith de Paris",
-                    "Paris",
-                    "75",
-                    5,
-                    List.of("ticketmaster"),
-                    "a_jour",
-                    "Q123")));
+        .thenAnswer(
+            invocation -> {
+              RowMapper<SalleReferentiel> mapper = invocation.getArgument(2);
+              ResultSet rs = mock(ResultSet.class);
+              when(rs.getObject("id", UUID.class)).thenReturn(UUID.randomUUID());
+              when(rs.getString("nom")).thenReturn("Zenith");
+              when(rs.getString("nom_affiche")).thenReturn("Zénith de Paris");
+              when(rs.getString("ville")).thenReturn("Paris");
+              when(rs.getString("dept")).thenReturn("75");
+              when(rs.getLong("nb_concerts")).thenReturn(5L);
+              when(rs.getString("sources")).thenReturn("ticketmaster");
+              when(rs.getString("statut")).thenReturn("a_jour");
+              when(rs.getString("wikidata_id")).thenReturn("Q123");
+              when(rs.getLong("total_filtre")).thenReturn(3L);
+              return List.of(mapper.mapRow(rs, 0));
+            });
 
     ReponseReferentielSalles reponse = service.lister(0, null, null, null, null, false);
 
@@ -71,20 +75,19 @@ class ReferentielSallesServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void lister_nominal_requeteUtiliseLesNouvellesValeursDeStatut() {
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(0L);
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
 
     service.lister(0, null, null, null, null, false);
 
     verify(jdbc)
-        .queryForObject(
+        .query(
             org.mockito.ArgumentMatchers.argThat(
                 (String sql) ->
                     sql.contains("'a_jour'")
                         && sql.contains("'a_verifier'")
                         && sql.contains("'invalide'")),
             anyMap(),
-            eq(Long.class));
+            any(RowMapper.class));
   }
 
   // Régression : facilite le repérage des candidats à corriger manuellement dans une pagination
@@ -92,13 +95,25 @@ class ReferentielSallesServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void lister_wikidataManquantVrai_filtreSurWikidataIdNull() {
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(0L);
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
 
     service.lister(0, null, null, null, null, true);
 
-    verify(jdbc).queryForObject(contains("wikidata_id IS NULL"), anyMap(), eq(Long.class));
     verify(jdbc).query(contains("wikidata_id IS NULL"), anyMap(), any(RowMapper.class));
+  }
+
+  // page au-delà du total (offset trop grand) : aucune ligne ne porte total_filtre, un second
+  // aller-retour COUNT reste nécessaire pour ne pas afficher un total à zéro trompeur.
+  @Test
+  @SuppressWarnings("unchecked")
+  void lister_pageAuDelaDuTotal_retombeSurUnCountSepare() {
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(3L);
+
+    ReponseReferentielSalles reponse = service.lister(5, null, null, null, null, false);
+
+    assertEquals(3L, reponse.totalSalles());
+    assertTrue(reponse.salles().isEmpty());
   }
 
   @Test

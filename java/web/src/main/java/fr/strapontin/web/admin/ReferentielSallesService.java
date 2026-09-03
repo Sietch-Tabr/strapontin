@@ -75,35 +75,43 @@ public class ReferentielSallesService {
       where.append(" AND wikidata_id IS NULL ");
     }
 
-    long total =
-        jdbc.queryForObject(
-            CTE_SALLES_AGREGEES + "SELECT COUNT(*) FROM salles_agr" + where, params, Long.class);
-
     Map<String, Object> paramsPage = new HashMap<>(params);
     paramsPage.put("taille", TAILLE_PAGE_DEFAUT);
     paramsPage.put("offset", pageNum * TAILLE_PAGE_DEFAUT);
+    long[] total = {0};
     List<SalleReferentiel> salles =
         jdbc.query(
             CTE_SALLES_AGREGEES
                 + "SELECT id, nom, nom_affiche, ville, dept, wikidata_id, nb_concerts, sources,"
-                + " statut FROM salles_agr"
+                + " statut, COUNT(*) OVER() AS total_filtre FROM salles_agr"
                 + where
                 + " ORDER BY nb_concerts DESC, nom ASC LIMIT :taille OFFSET :offset",
             paramsPage,
-            (rs, _) ->
-                new SalleReferentiel(
-                    rs.getObject("id", UUID.class),
-                    rs.getString("nom"),
-                    rs.getString("nom_affiche"),
-                    rs.getString("ville"),
-                    rs.getString("dept"),
-                    rs.getLong("nb_concerts"),
-                    lireSources(rs.getString("sources")),
-                    rs.getString("statut"),
-                    rs.getString("wikidata_id")));
+            (rs, _) -> {
+              total[0] = rs.getLong("total_filtre");
+              return new SalleReferentiel(
+                  rs.getObject("id", UUID.class),
+                  rs.getString("nom"),
+                  rs.getString("nom_affiche"),
+                  rs.getString("ville"),
+                  rs.getString("dept"),
+                  rs.getLong("nb_concerts"),
+                  lireSources(rs.getString("sources")),
+                  rs.getString("statut"),
+                  rs.getString("wikidata_id"));
+            });
 
-    int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_DEFAUT));
-    return new ReponseReferentielSalles(salles, pageNum, totalPages, total);
+    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
+    // second aller-retour reste alors nécessaire pour connaître le total réel.
+    if (salles.isEmpty() && pageNum > 0) {
+      Long totalVide =
+          jdbc.queryForObject(
+              CTE_SALLES_AGREGEES + "SELECT COUNT(*) FROM salles_agr" + where, params, Long.class);
+      total[0] = totalVide != null ? totalVide : 0;
+    }
+
+    int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_DEFAUT));
+    return new ReponseReferentielSalles(salles, pageNum, totalPages, total[0]);
   }
 
   private static List<String> lireSources(String sourcesConcat) {
