@@ -176,4 +176,17 @@ final class ClientSparqlWikidata {
   static String echapperLitteral(String s) {
     return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
+
+  private static final java.util.regex.Pattern MOTIF_Q_ID =
+      java.util.regex.Pattern.compile("^Q[0-9]+$");
+
+  /// Vérifie qu'une chaîne est un Q-ID Wikidata valide (ex. {@code Q3438008}), avant de la
+  /// concaténer nue (sans guillemets) dans une clause {@code VALUES ?item { wd:... }} —
+  /// contrairement à {@link #echapperLitteral}, qui ne protège que les littéraux entre guillemets.
+  ///
+  /// @param qId identifiant à vérifier
+  /// @return {@code true} si le format est un Q-ID valide
+  static boolean estQIdValide(String qId) {
+    return qId != null && MOTIF_Q_ID.matcher(qId).matches();
+  }
 }

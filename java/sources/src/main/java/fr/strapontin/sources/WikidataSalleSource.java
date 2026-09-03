@@ -173,7 +173,11 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   private static String construireRequeteSparql(List<String> qIds) {
-    String values = qIds.stream().map(q -> "wd:" + q).collect(Collectors.joining(" "));
+    String values =
+        qIds.stream()
+            .filter(ClientSparqlWikidata::estQIdValide)
+            .map(q -> "wd:" + q)
+            .collect(Collectors.joining(" "));
     return """
     SELECT ?item ?itemLabel ?communeLabel WHERE {
       VALUES ?item { %s }
@@ -252,7 +256,11 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   private static String construireRequeteTypesInvalides(List<String> qIds) {
-    String items = qIds.stream().map(q -> "wd:" + q).collect(Collectors.joining(" "));
+    String items =
+        qIds.stream()
+            .filter(ClientSparqlWikidata::estQIdValide)
+            .map(q -> "wd:" + q)
+            .collect(Collectors.joining(" "));
     String typesExclusSparql =
         TYPES_EXCLUS.stream().map(qid -> "wd:" + qid).collect(Collectors.joining(" "));
     return """

@@ -124,7 +124,11 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
   }
 
   private static String construireRequeteBatch(List<String> qIds) {
-    String values = qIds.stream().map(q -> "wd:" + q).collect(Collectors.joining(" "));
+    String values =
+        qIds.stream()
+            .filter(ClientSparqlWikidata::estQIdValide)
+            .map(q -> "wd:" + q)
+            .collect(Collectors.joining(" "));
     return """
     SELECT ?item ?itemLabel ?deezerId ?tmId WHERE {
       VALUES ?item { %s }

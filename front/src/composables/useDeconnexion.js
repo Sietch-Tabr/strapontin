@@ -8,7 +8,10 @@ export function useDeconnexion() {
 
   async function deconnecter() {
     try {
-      await fetch("/logout", { method: "POST" });
+      // /api/auth/logout (AuthController), pas /logout : effacement explicite et contrôlé
+      // du cookie SESSION, plutôt que de dépendre du filtre de logout par défaut de
+      // Spring Security (non désactivé mais non testé/documenté comme chemin officiel).
+      await fetch("/api/auth/logout", { method: "POST" });
       window.location.href = "/login";
     } catch (_) {
       afficherToast("Erreur réseau lors de la déconnexion.", "erreur");

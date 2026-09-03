@@ -73,7 +73,7 @@
         ></span>
       </a>
       <hr />
-      <form action="/logout" method="post" @submit.prevent="deconnecter">
+      <form action="/api/auth/logout" method="post" @submit.prevent="deconnecter">
         <button type="submit" class="btn-deconnexion">Déconnexion</button>
       </form>
     </div>
