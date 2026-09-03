@@ -4,8 +4,10 @@
  */
 package fr.strapontin.web.admin;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+import static fr.strapontin.web.ControllerUtils.parseUuid;
+
 import jakarta.validation.Valid;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -147,19 +149,5 @@ public class SourcesController {
       return erreur(409, "Cette salle est suivie par des utilisateurs ou possède des concerts.");
     }
     return ResponseEntity.noContent().build();
-  }
-
-  private static UUID parseUuid(String valeur) {
-    try {
-      return UUID.fromString(valeur);
-    } catch (IllegalArgumentException e) {
-      return null;
-    }
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

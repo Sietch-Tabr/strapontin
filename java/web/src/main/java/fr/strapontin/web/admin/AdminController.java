@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web.admin;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
@@ -422,12 +424,6 @@ public class AdminController {
       throw new IllegalStateException("Principal inattendu");
     }
     return ud;
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 
   private Optional<String> resoudreBaseUrl() {

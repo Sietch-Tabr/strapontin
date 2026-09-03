@@ -4,11 +4,12 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
 import java.net.URI;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.http.ResponseEntity;
@@ -124,11 +125,5 @@ public class ParametresRestController {
   /// @return l'URL configurée, vide si {@code PUBLIC_BASE_URL} n'est pas configurée
   private Optional<String> resoudreBaseUrl() {
     return configService.lireConfig("PUBLIC_BASE_URL").filter(s -> !s.isBlank());
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

@@ -4,7 +4,9 @@
  */
 package fr.strapontin.web.admin;
 
-import java.util.HashMap;
+import static fr.strapontin.web.ControllerUtils.erreur;
+import static fr.strapontin.web.ControllerUtils.parseUuid;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -65,19 +67,5 @@ public class ConcertsAdminController {
     boolean annule = service.annulerSuppression(id);
     if (!annule) return erreur(404, "Concert inconnu ou non flagué.");
     return ResponseEntity.ok(Map.of("succes", true));
-  }
-
-  private static UUID parseUuid(String valeur) {
-    try {
-      return UUID.fromString(valeur);
-    } catch (IllegalArgumentException e) {
-      return null;
-    }
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

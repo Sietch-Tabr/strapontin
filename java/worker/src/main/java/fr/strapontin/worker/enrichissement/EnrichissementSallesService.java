@@ -82,7 +82,7 @@ public class EnrichissementSallesService {
 
     int nbEnrichis = 0;
     for (int i = 0; i < candidats.size(); i += TAILLE_LOT_PERSISTANCE) {
-      if (i > 0) attendreEntreLots();
+      if (i > 0) EnrichissementUtils.attendreEntreLots(DELAI_ENTRE_LOTS_MS);
       List<SalleAEnrichir> lot =
           candidats.subList(i, Math.min(i + TAILLE_LOT_PERSISTANCE, candidats.size()));
       nbEnrichis += enrichirEtPersisterLot(lot);
@@ -142,11 +142,12 @@ public class EnrichissementSallesService {
       if (bilan.appels() == 0) continue;
       int streak =
           suiviChronicite.enregistrerCycle(
-              "reconciliation:nocturne|" + capitaliser(source.nom()), bilan.erreursHttp() > 0);
+              "reconciliation:nocturne|" + EnrichissementUtils.capitaliser(source.nom()),
+              bilan.erreursHttp() > 0);
       bilan
           .evaluer(
               "reconciliation:nocturne",
-              capitaliser(source.nom()),
+              EnrichissementUtils.capitaliser(source.nom()),
               avecBilan.seuilAppelsMinAlerte())
           .ifPresent(
               entree ->
@@ -155,18 +156,6 @@ public class EnrichissementSallesService {
                       "worker",
                       suiviChronicite.enrichirSiChronique(entree.message(), streak),
                       entree.meta()));
-    }
-  }
-
-  private static String capitaliser(String nom) {
-    return nom.isEmpty() ? nom : Character.toUpperCase(nom.charAt(0)) + nom.substring(1);
-  }
-
-  private static void attendreEntreLots() {
-    try {
-      Thread.sleep(DELAI_ENTRE_LOTS_MS);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
     }
   }
 

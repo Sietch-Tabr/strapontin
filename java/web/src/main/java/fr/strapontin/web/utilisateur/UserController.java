@@ -4,11 +4,12 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -185,11 +186,5 @@ public class UserController {
 
   private static UtilisateurDetails utilisateur(Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

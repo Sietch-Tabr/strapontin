@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web.vue;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.web.config.ConfigService;
@@ -91,12 +93,6 @@ public class AideRestController {
             : "question";
     emailService.envoyerSignalement(typeValide, msg, utilisateur.email());
     return ResponseEntity.noContent().build();
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 
   private Bucket creerBucketSignalement() {

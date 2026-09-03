@@ -4,10 +4,12 @@
  */
 package fr.strapontin.web.spectacle;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+import static fr.strapontin.web.ControllerUtils.parseUuid;
+
 import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -120,22 +122,7 @@ public class SpectacleController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  private static UUID parseUuid(String valeur) {
-    if (valeur == null || valeur.isBlank()) return null;
-    try {
-      return UUID.fromString(valeur);
-    } catch (IllegalArgumentException e) {
-      return null;
-    }
-  }
-
   private static UtilisateurDetails utilisateur(Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

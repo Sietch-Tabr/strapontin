@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.HashMap;
 import java.util.Map;
@@ -101,11 +103,5 @@ public class PreferencesController {
             "attachment; filename=\"" + PreferencesService.nomFichierExport() + "\"")
         .contentType(MediaType.APPLICATION_JSON)
         .body(export);
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }
