@@ -41,6 +41,12 @@
           </tbody>
         </table>
       </div>
+
+      <div class="pagination" v-if="totalPages > 1">
+        <button type="button" class="btn btn-secondary btn-sm" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
+        <span>Page {{ page + 1 }} / {{ totalPages }} ({{ total }} concerts)</span>
+        <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
+      </div>
     </div>
   </section>
 
@@ -78,6 +84,9 @@ const { afficherToast } = useToasts()
 
 const chargement = ref(true)
 const concerts = shallowRef([])
+const page = ref(0)
+const totalPages = ref(1)
+const total = ref(0)
 const controleur = new AbortController()
 
 const { dialogRef: dialogSuppressionRef, ouvrir: ouvrirDialogSuppression, fermer: fermerConfirmation } =
@@ -88,9 +97,16 @@ const enCoursSuppression = ref(false)
 async function charger() {
   chargement.value = true
   try {
-    const rep = await fetch('/api/admin/concerts-a-confirmer', { signal: controleur.signal })
-    if (rep.ok) concerts.value = await rep.json()
-    else afficherToast('Erreur lors du chargement des concerts à confirmer.', 'erreur')
+    const rep = await fetch(`/api/admin/concerts-a-confirmer?page=${page.value}`, { signal: controleur.signal })
+    if (rep.ok) {
+      const data = await rep.json()
+      concerts.value = data.concerts ?? []
+      page.value = data.page ?? 0
+      totalPages.value = data.totalPages ?? 1
+      total.value = data.total ?? 0
+    } else {
+      afficherToast('Erreur lors du chargement des concerts à confirmer.', 'erreur')
+    }
   } catch (e) {
     if (e.name !== 'AbortError') {
       afficherToast('Erreur réseau lors du chargement des concerts à confirmer.', 'erreur')
@@ -98,6 +114,11 @@ async function charger() {
   } finally {
     chargement.value = false
   }
+}
+
+function allerPage(n) {
+  page.value = Math.max(0, Math.min(n, totalPages.value - 1))
+  charger()
 }
 
 async function annuler(concert) {

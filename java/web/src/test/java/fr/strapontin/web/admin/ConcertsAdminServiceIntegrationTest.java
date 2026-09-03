@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
@@ -66,10 +65,11 @@ class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   void lister_concertFlague_mappeSuppressionSuggereeLeSansErreur() {
     creerConcertFlague("Vincent Dedienne");
 
-    List<ConcertSuppressionSuggeree> resultat = service.lister();
+    ReponseConcertsAConfirmer reponse = service.lister(0);
 
-    assertEquals(1, resultat.size());
-    assertEquals("Vincent Dedienne", resultat.get(0).artiste());
-    assertNotNull(resultat.get(0).suppressionSuggereeLe());
+    assertEquals(1, reponse.concerts().size());
+    assertEquals("Vincent Dedienne", reponse.concerts().get(0).artiste());
+    assertNotNull(reponse.concerts().get(0).suppressionSuggereeLe());
+    assertEquals(1L, reponse.total());
   }
 }

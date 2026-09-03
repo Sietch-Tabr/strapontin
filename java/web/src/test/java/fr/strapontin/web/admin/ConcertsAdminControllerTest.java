@@ -35,12 +35,12 @@ class ConcertsAdminControllerTest {
 
   @Test
   void lister_delegueAuService() {
-    when(service.lister()).thenReturn(List.of());
+    when(service.lister(0)).thenReturn(new ReponseConcertsAConfirmer(List.of(), 0, 1, 0));
 
-    ResponseEntity<List<ConcertSuppressionSuggeree>> reponse = controller.lister();
+    ResponseEntity<ReponseConcertsAConfirmer> reponse = controller.lister(0);
 
     assertEquals(200, reponse.getStatusCode().value());
-    verify(service).lister();
+    verify(service).lister(0);
   }
 
   @Test
