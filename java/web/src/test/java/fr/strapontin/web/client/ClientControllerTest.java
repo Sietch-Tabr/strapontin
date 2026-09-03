@@ -66,4 +66,20 @@ class ClientControllerTest {
     verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), captor.capture());
     assertTrue(captor.getValue().size() <= 20);
   }
+
+  // une clé meta arbitraire de plusieurs Mo permettait sinon de faire grossir sans borne une
+  // ligne logs_admin (jsonb), contrairement à message/url/userAgent déjà tronqués.
+  @Test
+  @SuppressWarnings("unchecked")
+  void signalerErreur_cleMetaTropLongue_estTronquee() {
+    Map<String, Object> corps = new HashMap<>();
+    corps.put("message", "erreur JS");
+    corps.put("cleArbitraire", "x".repeat(10_000));
+
+    controller.signalerErreur(corps, request);
+
+    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), captor.capture());
+    assertEquals(500, ((String) captor.getValue().get("cleArbitraire")).length());
+  }
 }

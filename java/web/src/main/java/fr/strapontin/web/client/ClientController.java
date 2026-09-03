@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Endpoint de remontée des erreurs JavaScript côté client.
 ///
-/// <p>Permet aux navigateurs des utilisateurs authentifiés de signaler les erreurs
-/// JS non catchées et les rejections de promesses.
-/// Les entrées sont stockées dans {@code logs_admin} avec la source {@code client-js}.
+/// <p>Permet aux navigateurs des utilisateurs authentifiés de signaler les erreurs JS non catchées
+/// et les rejections de promesses. Les entrées sont stockées dans {@code logs_admin} avec la source
+/// {@code client-js}.
 ///
 /// @since 2.1.2
 /// @author Kwaite
@@ -40,7 +40,7 @@ public class ClientController {
 
   /// Signale une erreur JavaScript depuis le navigateur.
   ///
-  /// @param corps   corps JSON de l'erreur
+  /// @param corps corps JSON de l'erreur
   /// @param request requête HTTP (pour récupérer le User-Agent)
   /// @return 201 Created avec {@code {"succes": true}}
   @PostMapping("/erreur")
@@ -71,7 +71,8 @@ public class ClientController {
           && !"type".equals(cle)
           && !"url".equals(cle)
           && !"userAgent".equals(cle)) {
-        meta.put(cle, entree.getValue() != null ? entree.getValue() : "");
+        Object valeur = entree.getValue();
+        meta.put(cle, valeur != null ? tronquer(String.valueOf(valeur), LONGUEUR_MAX_URL) : "");
       }
     }
 
