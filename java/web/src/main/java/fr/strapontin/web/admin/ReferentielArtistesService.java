@@ -84,7 +84,8 @@ public class ReferentielArtistesService {
     List<ArtisteReferentiel> artistes =
         jdbc.query(
             CTE_ARTISTES_AGREGES
-                + "SELECT * FROM artistes_agr"
+                + "SELECT id, nom, nom_affiche, wikidata_id, deezer_id, nb_concerts, sources,"
+                + " statut, tm_identifiant_externe FROM artistes_agr"
                 + where
                 + " ORDER BY nb_concerts DESC, nom ASC LIMIT :taille OFFSET :offset",
             paramsPage,

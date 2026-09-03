@@ -61,7 +61,7 @@ public class SuiviSanteSourcesService {
     if (sep < 0) return;
     String source = normaliserSource(identifiantPrefixe.substring(0, sep));
     String identifiant = identifiantPrefixe.substring(sep + 1);
-    mettreAJourCompteur("salle_sources", source, identifiant, nbResultats > 0);
+    mettreAJourCompteur(TypeEntiteSource.SALLE, source, identifiant, nbResultats > 0);
   }
 
   /// Enregistre le résultat d'un fetch TM par lot d'artistes : pour chaque attractionId du lot,
@@ -77,7 +77,7 @@ public class SuiviSanteSourcesService {
       String artisteSourceId = "ticketmaster:" + attractionId;
       boolean succes =
           concertsLot.stream().anyMatch(c -> artisteSourceId.equals(c.artisteSourceId()));
-      mettreAJourCompteur("artiste_sources", "ticketmaster", attractionId, succes);
+      mettreAJourCompteur(TypeEntiteSource.ARTISTE, "ticketmaster", attractionId, succes);
     }
   }
 
@@ -86,10 +86,10 @@ public class SuiviSanteSourcesService {
   }
 
   private void mettreAJourCompteur(
-      String table, String source, String identifiant, boolean succes) {
+      TypeEntiteSource type, String source, String identifiant, boolean succes) {
     // necessite_intervention_le n'existe que sur artiste_sources — résolution naturelle
     // dès qu'un fetch redevient positif ET que le nom TM revérifié reste cohérent.
-    boolean estArtisteSources = "artiste_sources".equals(table);
+    boolean estArtisteSources = type == TypeEntiteSource.ARTISTE;
     String colonneInterventionResolue =
         estArtisteSources
             ? ", necessite_intervention_le = CASE WHEN :effacerIntervention THEN NULL ELSE"
@@ -97,7 +97,7 @@ public class SuiviSanteSourcesService {
             : "";
     String sql =
         "UPDATE "
-            + table
+            + type.table()
             + " SET nb_zero_consecutifs = CASE WHEN :succes THEN 0 ELSE nb_zero_consecutifs + 1"
             + " END, suspect_depuis = CASE WHEN :succes THEN NULL WHEN nb_zero_consecutifs + 1 >="
             + " :seuil AND suspect_depuis IS NULL THEN now() ELSE suspect_depuis END"
