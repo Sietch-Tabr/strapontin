@@ -226,13 +226,4 @@ class ReferentielSallesServiceTest {
                     p.get("salleId").equals(source.toString())
                         && p.get("identifiantExterne").equals("tm-source-mort")));
   }
-
-  @Test
-  void laSourceEstPlusSaine_statutsIdentiquesEgaliteSante_gardeLaSource() {
-    Map<String, Object> conflit =
-        Map.of(
-            "sante_source", 2, "sante_cible", 2, "suspect_source", false, "suspect_cible", false);
-
-    assertTrue(ReferentielSallesService.laSourceEstPlusSaine(conflit));
-  }
 }

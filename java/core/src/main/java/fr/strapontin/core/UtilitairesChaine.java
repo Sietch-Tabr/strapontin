@@ -26,6 +26,24 @@ public final class UtilitairesChaine {
     return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
 
+  /// Échappe une chaîne pour insertion sûre dans du HTML — partagé entre {@code
+  /// web.email.EmailTemplates} et {@code worker.NotificationDigestService}, jusqu'ici dupliqué à
+  /// l'identique dans les deux (gabarits d'email HTML).
+  ///
+  /// @param valeur la valeur à échapper, convertie en chaîne via {@link String#valueOf} ({@code
+  ///   null} devient une chaîne vide)
+  /// @return la chaîne échappée
+  /// @since 2.8.7
+  public static String echapperHtml(Object valeur) {
+    if (valeur == null) return "";
+    return String.valueOf(valeur)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;");
+  }
+
   /// Vérifie si la plus courte des deux chaînes est incluse dans la plus longue, avec un ratio de
   /// longueur minimal — critère de repli couvrant les troncatures et variantes partielles entre
   /// deux formes d'un même nom (partagé par {@link CorrespondanceSalle} et {@link

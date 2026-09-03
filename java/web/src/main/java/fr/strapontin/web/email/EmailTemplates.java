@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.email;
 
+import fr.strapontin.core.UtilitairesChaine;
 import fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -602,12 +603,6 @@ final class EmailTemplates {
   /// @param valeur la valeur à échapper (null retourne une chaîne vide)
   /// @return la valeur échappée, sûre pour insertion dans un attribut ou un nœud HTML
   static String e(Object valeur) {
-    if (valeur == null) return "";
-    return String.valueOf(valeur)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
-        .replace("'", "&#39;");
+    return UtilitairesChaine.echapperHtml(valeur);
   }
 }

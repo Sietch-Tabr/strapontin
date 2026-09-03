@@ -278,7 +278,7 @@ public class ReferentielSallesService {
             Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
 
     for (Map<String, Object> conflit : conflits) {
-      boolean garderSource = laSourceEstPlusSaine(conflit);
+      boolean garderSource = FusionSourcesUtils.laSourceEstPlusSaine(conflit);
       Map<String, Object> paramsSuppression = new HashMap<>();
       paramsSuppression.put("source", conflit.get("source"));
       paramsSuppression.put("salleId", garderSource ? cibleId.toString() : sourceId.toString());
@@ -289,23 +289,5 @@ public class ReferentielSallesService {
               + " :source AND identifiant_externe = :identifiantExterne",
           paramsSuppression);
     }
-  }
-
-  /// Compare la santé de deux lignes {@code salle_sources} (ou {@code artiste_sources}) en conflit
-  /// lors d'une fusion : une ligne non suspecte l'emporte toujours sur une ligne suspecte, à
-  /// égalité de statut la ligne avec le moins d'échecs consécutifs l'emporte.
-  ///
-  /// @param conflit ligne agrégée contenant {@code suspect_source}/{@code suspect_cible} et {@code
-  ///   sante_source}/{@code sante_cible}
-  /// @return {@code true} si la ligne côté source doit être conservée
-  static boolean laSourceEstPlusSaine(Map<String, Object> conflit) {
-    boolean suspectSource = (boolean) conflit.get("suspect_source");
-    boolean suspectCible = (boolean) conflit.get("suspect_cible");
-    if (suspectSource != suspectCible) {
-      return !suspectSource;
-    }
-    int santeSource = ((Number) conflit.get("sante_source")).intValue();
-    int santeCible = ((Number) conflit.get("sante_cible")).intValue();
-    return santeSource <= santeCible;
   }
 }

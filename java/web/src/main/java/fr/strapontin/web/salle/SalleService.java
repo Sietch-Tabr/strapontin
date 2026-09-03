@@ -11,6 +11,7 @@ import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.WorkerTriggerUtils;
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -70,6 +71,7 @@ public class SalleService {
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
   private final CadenceurAppels cadenceurTicketmaster;
+  private final LogAdminService logAdminService;
   private SalleService self;
 
   /// @param salleRepository accès aux données salles
@@ -79,17 +81,20 @@ public class SalleService {
   ///   fr.strapontin.web.WebConfiguration})
   /// @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker (voir {@link
   ///   fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
+  /// @param logAdminService journalisation des suppressions dans {@code logs_admin}
   public SalleService(
       SalleRepository salleRepository,
       ConfigService configService,
       ObjectMapper objectMapper,
       RestClient restClient,
-      CadenceurAppels cadenceurTicketmaster) {
+      CadenceurAppels cadenceurTicketmaster,
+      LogAdminService logAdminService) {
     this.salleRepository = salleRepository;
     this.configService = configService;
     this.objectMapper = objectMapper;
     this.restClient = restClient;
     this.cadenceurTicketmaster = cadenceurTicketmaster;
+    this.logAdminService = logAdminService;
   }
 
   /// Injection par setter de la référence proxifiée de ce bean — nécessaire pour que {@link
@@ -383,7 +388,12 @@ public class SalleService {
   /// @param userId identifiant de l'utilisateur
   /// @param salleId UUID stable de la salle
   public void supprimer(String userId, UUID salleId) {
-    salleRepository.supprimerPourUtilisateur(userId, salleId);
+    if (salleRepository.supprimerPourUtilisateur(userId, salleId) == 0) {
+      return;
+    }
+    log.info("salle supprimée userId={} salleId={}", userId, salleId);
+    logAdminService.logAdmin(
+        "warn", "web", "salle supprimée", Map.of("userId", userId, "salleId", salleId.toString()));
   }
 
   /// Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.

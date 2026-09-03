@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.salle;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -11,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -21,6 +23,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.util.HashMap;
 import java.util.List;
@@ -38,18 +41,21 @@ import org.springframework.web.client.RestClient;
 class SalleServiceTest {
 
   private SalleRepository salleRepository;
+  private LogAdminService logAdminService;
   private SalleService salleService;
 
   @BeforeEach
   void setUp() {
     salleRepository = mock(SalleRepository.class);
+    logAdminService = mock(LogAdminService.class);
     salleService =
         new SalleService(
             salleRepository,
             mock(ConfigService.class),
             new ObjectMapper(),
             mock(RestClient.class),
-            mock(fr.strapontin.sources.CadenceurAppels.class));
+            mock(fr.strapontin.sources.CadenceurAppels.class),
+            logAdminService);
     salleService.setSelf(salleService);
   }
 
@@ -310,6 +316,38 @@ class SalleServiceTest {
   }
 
   @Test
+  void supprimer_delegueAuRepository_sansException() {
+    UUID salleId = UUID.randomUUID();
+    when(salleRepository.supprimerPourUtilisateur("u1", salleId)).thenReturn(1);
+
+    assertDoesNotThrow(() -> salleService.supprimer("u1", salleId));
+
+    verify(salleRepository).supprimerPourUtilisateur("u1", salleId);
+  }
+
+  // un DELETE no-op (salle déjà retirée, jamais suivie, ou appartenant à un autre
+  // utilisateur) ne doit produire aucune entrée d'audit trompeuse "salle supprimée".
+  @Test
+  void supprimer_salleNonSuivie_neLogguePas() {
+    UUID salleId = UUID.randomUUID();
+    when(salleRepository.supprimerPourUtilisateur("u1", salleId)).thenReturn(0);
+
+    salleService.supprimer("u1", salleId);
+
+    verify(logAdminService, never()).logAdmin(anyString(), anyString(), anyString(), anyMap());
+  }
+
+  @Test
+  void supprimer_salleReellementSupprimee_logguePourAudit() {
+    UUID salleId = UUID.randomUUID();
+    when(salleRepository.supprimerPourUtilisateur("u1", salleId)).thenReturn(1);
+
+    salleService.supprimer("u1", salleId);
+
+    verify(logAdminService).logAdmin(eq("warn"), eq("web"), anyString(), anyMap());
+  }
+
+  @Test
   void supprimerSalleDigitick_sansContrainte_retourneTrue() {
     UUID uuid = UUID.randomUUID();
     when(salleRepository.supprimerSalleDigitick(uuid)).thenReturn(true);
@@ -463,7 +501,13 @@ class SalleServiceTest {
                 org.springframework.http.MediaType.APPLICATION_JSON));
 
     SalleService service =
-        new SalleService(salleRepository, configService, new ObjectMapper(), restClient, cadenceur);
+        new SalleService(
+            salleRepository,
+            configService,
+            new ObjectMapper(),
+            restClient,
+            cadenceur,
+            mock(LogAdminService.class));
 
     service.rechercherSallesTM("Bataclan");
 
