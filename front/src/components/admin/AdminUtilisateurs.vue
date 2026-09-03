@@ -18,7 +18,7 @@
 
     <EtatChargement v-if="chargement" />
     <div v-else-if="utilisateurs.length" class="param-bloc">
-      <h3 class="param-label">Utilisateurs ({{ utilisateurs.length }})</h3>
+      <h3 class="param-label">Utilisateurs ({{ total }})</h3>
       <ul class="user-liste">
         <li v-for="u in utilisateurs" :key="u.id" class="user-carte">
           <div class="user-carte-entete">
@@ -66,6 +66,12 @@
           </div>
         </li>
       </ul>
+
+      <div class="pagination" v-if="totalPages > 1">
+        <button type="button" class="btn btn-secondary btn-sm" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
+        <span>Page {{ page + 1 }} / {{ totalPages }} ({{ total }} utilisateurs)</span>
+        <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
+      </div>
     </div>
 
   </section>
@@ -157,6 +163,9 @@ const { dialogRef: dialogRevoquerSessionsRef, ouvrir: ouvrirDialogRevoquerSessio
 const { dialogRef: dialogConfirmerRoleRef, ouvrir: ouvrirDialogConfirmerRoleModal, fermer: fermerDialogConfirmerRoleModal } = useDialog()
 
 const utilisateurs = shallowRef([])
+const page = ref(0)
+const totalPages = ref(1)
+const total = ref(0)
 const chargement = ref(true)
 const utilisateurCourantId = ref(null)
 const nouvelEmail = ref('')
@@ -190,11 +199,15 @@ function joursAvantRevocation(revocationAdminLe) {
 async function charger() {
   try {
     const [repUsers, repProfil] = await Promise.all([
-      fetch('/api/admin/utilisateurs'),
+      fetch(`/api/admin/utilisateurs?page=${page.value}`),
       fetch('/api/user/profile'),
     ])
     if (repUsers.ok) {
-      utilisateurs.value = await repUsers.json()
+      const data = await repUsers.json()
+      utilisateurs.value = data.utilisateurs ?? []
+      page.value = data.page ?? 0
+      totalPages.value = data.totalPages ?? 1
+      total.value = data.total ?? 0
       initialiserModifData()
     }
     if (repProfil.ok) {
@@ -206,6 +219,11 @@ async function charger() {
   } finally {
     chargement.value = false
   }
+}
+
+function allerPage(n) {
+  page.value = Math.max(0, Math.min(n, totalPages.value - 1))
+  charger()
 }
 
 function initialiserModifData() {
@@ -231,11 +249,7 @@ async function creerUtilisateur() {
       inviteEmail.value = corps.email ?? ''
       lienInvitation.value = corps.lienReset ?? ''
       ouvrirDialogInvitationModal()
-      const repUsers = await fetch('/api/admin/utilisateurs')
-      if (repUsers.ok) {
-        utilisateurs.value = await repUsers.json()
-        initialiserModifData()
-      }
+      await rechargerUtilisateurs()
     } else {
       afficherToast(corps.erreur || 'Impossible de créer le compte.', 'erreur')
     }
@@ -385,9 +399,13 @@ async function annulerRevocation(u) {
 
 async function rechargerUtilisateurs() {
   try {
-    const repUsers = await fetch('/api/admin/utilisateurs')
+    const repUsers = await fetch(`/api/admin/utilisateurs?page=${page.value}`)
     if (repUsers.ok) {
-      utilisateurs.value = await repUsers.json()
+      const data = await repUsers.json()
+      utilisateurs.value = data.utilisateurs ?? []
+      page.value = data.page ?? 0
+      totalPages.value = data.totalPages ?? 1
+      total.value = data.total ?? 0
       initialiserModifData()
     }
   } catch (e) {
@@ -485,7 +503,9 @@ async function confirmerSuppression() {
     const rep = await fetch('/api/admin/utilisateurs/' + userId, { method: 'DELETE' })
     const corps = await rep.json()
     if (rep.ok) {
-      utilisateurs.value = utilisateurs.value.filter((u) => u.id !== userId)
+      // recharge plutôt qu'un simple filtre local : total/totalPages doivent rester
+      // cohérents avec le serveur (pagination), pas seulement la page affichée.
+      await rechargerUtilisateurs()
       afficherToast('Compte supprimé.', 'succes')
     } else {
       afficherToast(corps.erreur || 'Erreur lors de la suppression.', 'erreur')
