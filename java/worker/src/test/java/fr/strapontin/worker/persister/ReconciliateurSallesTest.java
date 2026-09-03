@@ -255,6 +255,7 @@ class ReconciliateurSallesTest {
   // l'insertion) doit pouvoir être résolu plus tard si une salle correspondante apparaît entre
   // temps via une autre source.
   @Test
+  @SuppressWarnings("unchecked")
   void retenterSallesOrphelines_salleApparueEntreTemps_resoutLeConcert() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     ReconciliateurSalles reconciliateur = new ReconciliateurSalles(jdbc);
@@ -267,11 +268,18 @@ class ReconciliateurSallesTest {
     orphelin.put("dept", "31");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(orphelin));
 
-    Map<String, Object> candidat = new HashMap<>();
-    candidat.put("id", salleId);
-    candidat.put("nom_norm", "zenith toulouse metropole");
-    when(jdbc.queryForList(anyString(), any(SqlParameterSource.class)))
-        .thenReturn(List.of(candidat));
+    // candidats chargés en une seule requête (jdbc.query + RowMapper), plus par SqlParameterSource
+    // dynamique comme l'ancien chercherSalleParTokens par orphelin.
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
+        .thenAnswer(
+            invocation -> {
+              RowMapper<Object> mapper = invocation.getArgument(2);
+              java.sql.ResultSet rs = mock(java.sql.ResultSet.class);
+              when(rs.getObject("id", UUID.class)).thenReturn(salleId);
+              when(rs.getString("nom_norm")).thenReturn("zenith toulouse metropole");
+              when(rs.getString("dept_effectif")).thenReturn("31");
+              return List.of(mapper.mapRow(rs, 0));
+            });
 
     int resolus = reconciliateur.retenterSallesOrphelines();
 
