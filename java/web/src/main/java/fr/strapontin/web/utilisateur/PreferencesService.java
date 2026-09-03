@@ -10,11 +10,6 @@ import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.artiste.ArtisteService;
 import fr.strapontin.web.salle.SalleService;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -28,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.client.RestClient;
 
 /// Service d'import/export des préférences utilisateur.
 ///
@@ -44,33 +40,35 @@ public class PreferencesService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
-  private final HttpClient httpClient;
+  private final RestClient restClient;
   private final LogAdminService logAdminService;
   private final ArtisteService artisteService;
   private final SalleService salleService;
 
-  /// @param jdbc            accès JDBC
-  /// @param objectMapper    désérialiseur JSON
+  /// @param jdbc accès JDBC
+  /// @param objectMapper désérialiseur JSON
+  /// @param restClient client HTTP partagé (module web), pour déclencher le worker
   /// @param logAdminService journalisation des actions admin
   /// @param artisteService résolution d'UUID artiste avec dédup floue
   /// @param salleService résolution d'UUID salle avec dédup floue
   public PreferencesService(
       NamedParameterJdbcTemplate jdbc,
       ObjectMapper objectMapper,
+      RestClient restClient,
       LogAdminService logAdminService,
       ArtisteService artisteService,
       SalleService salleService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
+    this.restClient = restClient;
     this.logAdminService = logAdminService;
     this.artisteService = artisteService;
     this.salleService = salleService;
-    this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
   }
 
   /// Désérialise et valide un fichier d'export.
   ///
-  /// @param contenu  octets du fichier JSON
+  /// @param contenu octets du fichier JSON
   /// @return l'export désérialisé, ou {@code null} si invalide
   public ExportComplet deserialiserExport(byte[] contenu) {
     try {
@@ -83,9 +81,9 @@ public class PreferencesService {
 
   /// Importe les préférences dans une transaction atomique.
   ///
-  /// @param userId        identifiant de l'utilisateur
-  /// @param export        export désérialisé
-  /// @param ecraser       {@code true} pour remplacer artistes et salles existants
+  /// @param userId identifiant de l'utilisateur
+  /// @param export export désérialisé
+  /// @param ecraser {@code true} pour remplacer artistes et salles existants
   /// @param importerConfig {@code true} pour remplacer toute la config
   /// @return résultat de l'import (artistes et salles traités/rejetés)
   @Transactional
@@ -353,8 +351,8 @@ public class PreferencesService {
   private static final java.util.regex.Pattern VENUE_ID_PATTERN =
       java.util.regex.Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
 
-  /// Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction
-  /// d'import (même pattern que {@code ArtisteService.executerApresCommit}).
+  /// Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction d'import
+  /// (même pattern que {@code ArtisteService.executerApresCommit}).
   ///
   /// <p>Sans cela, le worker pouvait être sollicité avant que les artistes/salles importés ne
   /// soient visibles en base (isolation {@code READ COMMITTED}), faisant manquer l'import tout
@@ -387,19 +385,14 @@ public class PreferencesService {
   }
 
   private void envoyerPostWorker(String url) {
-    httpClient
-        .sendAsync(
-            HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .POST(HttpRequest.BodyPublishers.noBody())
-                .timeout(Duration.ofSeconds(5))
-                .build(),
-            HttpResponse.BodyHandlers.discarding())
-        .exceptionally(
-            e -> {
-              log.warn("Déclenchement worker impossible : {}", url, e);
-              return null;
-            });
+    Thread.startVirtualThread(
+        () -> {
+          try {
+            restClient.post().uri(url).retrieve().toBodilessEntity();
+          } catch (Exception e) {
+            log.warn("Déclenchement worker impossible : {}", url, e);
+          }
+        });
   }
 
   /// Résultat d'un import de préférences.
