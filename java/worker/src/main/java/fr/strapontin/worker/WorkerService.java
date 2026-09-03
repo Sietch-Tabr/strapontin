@@ -48,56 +48,42 @@ public class WorkerService {
   /// @param userIds IDs à recalculer, ou `null` pour tous
   public void executerRecalculerMatches(List<String> userIds) {
     log.info("recalculer:matches démarré userIds={}", userIds);
-    long debut = System.currentTimeMillis();
-    String erreur = null;
-    try {
-      int nbUsers = recalculerMatchesService.recalculerMatches(userIds);
-      notificationDigestService.executerDigest("temps_reel");
-      log.info("recalculer:matches terminé users={}", nbUsers);
-    } catch (Exception e) {
-      erreur = e.getMessage();
-      log.error("recalculer:matches échoué", e);
-    } finally {
-      workerStatsService.enregistrerStatJob(
-          "recalculer:matches",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, 0),
-          erreur);
-    }
+    workerStatsService.executerAvecStats(
+        log,
+        "recalculer:matches",
+        () -> {
+          int nbUsers = recalculerMatchesService.recalculerMatches(userIds);
+          notificationDigestService.executerDigest("temps_reel");
+          log.info("recalculer:matches terminé users={}", nbUsers);
+          return new ResultatPersistance(0, 0);
+        });
   }
 
   /// Job nocturne de réconciliation des sources salles/artistes : health-check et redécouverte des
   /// identifiants suspects, puis enrichissement Wikidata/OSM/Deezer.
   public void executerReconciliationNocturne() {
     log.info("reconciliation:nocturne démarré");
-    long debut = System.currentTimeMillis();
-    String erreur = null;
-    ResultatPersistance resultat = new ResultatPersistance(0, 0);
-    try {
-      var bilan = reconciliationNocturneService.executer();
-      resultat =
-          new ResultatPersistance(
+    workerStatsService.executerAvecStats(
+        log,
+        "reconciliation:nocturne",
+        () -> {
+          var bilan = reconciliationNocturneService.executer();
+          log.info(
+              "reconciliation:nocturne terminé sallesVerifiees={} redecouvertes={} ambigues={}"
+                  + " enrichissementsSalle={} enrichissementsArtiste={} typesWikidataInvalides={}"
+                  + " nomsIncoherentsTM={}",
+              bilan.sallesVerifiees(),
+              bilan.sallesRedecouvertes(),
+              bilan.ambigues(),
+              bilan.enrichissementsSalle(),
+              bilan.enrichissementsArtiste(),
+              bilan.typesWikidataInvalides(),
+              bilan.nomsIncoherentsTM());
+          return new ResultatPersistance(
               0,
               bilan.sallesRedecouvertes()
                   + bilan.enrichissementsSalle()
                   + bilan.enrichissementsArtiste());
-      log.info(
-          "reconciliation:nocturne terminé sallesVerifiees={} redecouvertes={} ambigues={}"
-              + " enrichissementsSalle={} enrichissementsArtiste={} typesWikidataInvalides={}"
-              + " nomsIncoherentsTM={}",
-          bilan.sallesVerifiees(),
-          bilan.sallesRedecouvertes(),
-          bilan.ambigues(),
-          bilan.enrichissementsSalle(),
-          bilan.enrichissementsArtiste(),
-          bilan.typesWikidataInvalides(),
-          bilan.nomsIncoherentsTM());
-    } catch (Exception e) {
-      erreur = e.getMessage();
-      log.error("reconciliation:nocturne échoué", e);
-    } finally {
-      workerStatsService.enregistrerStatJob(
-          "reconciliation:nocturne", System.currentTimeMillis() - debut, resultat, erreur);
-    }
+        });
   }
 }

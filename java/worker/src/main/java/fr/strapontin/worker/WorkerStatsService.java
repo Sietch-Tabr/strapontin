@@ -132,6 +132,73 @@ public class WorkerStatsService {
     }
   }
 
+  /// Exécute un job en mesurant sa durée et en enregistrant automatiquement le bilan via {@link
+  /// #enregistrerStatJob}, succès ou échec — motif jusqu'ici dupliqué dans
+  /// WorkerPurgeService/WorkerRevocationService/WorkerSuiviCyclesService/WorkerService/
+  /// WorkerFetchService (chronométrage manuel + try/catch identiques à chaque méthode de job).
+  ///
+  /// @param callerLog logger de l'appelant, pour journaliser un échec sous son propre nom de classe
+  ///   plutôt que celui de ce service
+  /// @param typeJob type de job (voir {@link #enregistrerStatJob})
+  /// @param travail travail à exécuter, retournant le bilan de persistance en cas de succès
+  public void executerAvecStats(
+      org.slf4j.Logger callerLog,
+      String typeJob,
+      java.util.function.Supplier<ResultatPersistance> travail) {
+    long debut = System.currentTimeMillis();
+    try {
+      ResultatPersistance resultat = travail.get();
+      enregistrerStatJob(typeJob, System.currentTimeMillis() - debut, resultat, null);
+    } catch (Exception e) {
+      callerLog.error("{} échoué", typeJob, e);
+      enregistrerStatJob(
+          typeJob,
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, 0),
+          e.getMessage());
+    }
+  }
+
+  /// Résultat d'un job pouvant se terminer normalement (sans exception) tout en signalant un échec
+  /// logique via un message d'erreur explicite — voir {@link #executerAvecStatsToleretErreur}.
+  ///
+  /// @param resultat bilan de persistance
+  /// @param erreur message d'erreur, ou {@code null} si le job s'est vraiment bien terminé
+  public record ResultatJob(ResultatPersistance resultat, String erreur) {
+    /// @param resultat bilan de persistance d'un job réellement réussi
+    /// @return un résultat sans erreur
+    public static ResultatJob succes(ResultatPersistance resultat) {
+      return new ResultatJob(resultat, null);
+    }
+  }
+
+  /// Variante de {@link #executerAvecStats} pour les jobs pouvant se terminer par un retour
+  /// anticipé sur un cas métier (ex. {@code WorkerFetchService} : "quota insuffisant") plutôt que
+  /// par une exception — leur contrôle de flux ne s'accommode pas du contrat plus simple d'{@link
+  /// #executerAvecStats} (erreur seulement en cas d'exception).
+  ///
+  /// @param callerLog logger de l'appelant, pour journaliser un échec sous son propre nom de classe
+  ///   plutôt que celui de ce service
+  /// @param typeJob type de job (voir {@link #enregistrerStatJob})
+  /// @param travail travail à exécuter, retournant le bilan et un message d'erreur optionnel
+  public void executerAvecStatsToleretErreur(
+      org.slf4j.Logger callerLog,
+      String typeJob,
+      java.util.function.Supplier<ResultatJob> travail) {
+    long debut = System.currentTimeMillis();
+    try {
+      ResultatJob rj = travail.get();
+      enregistrerStatJob(typeJob, System.currentTimeMillis() - debut, rj.resultat(), rj.erreur());
+    } catch (Exception e) {
+      callerLog.error("{} échoué", typeJob, e);
+      enregistrerStatJob(
+          typeJob,
+          System.currentTimeMillis() - debut,
+          new ResultatPersistance(0, 0),
+          e.getMessage());
+    }
+  }
+
   /// Remonte dans `logs_admin` le bilan agrégé d'appels/erreurs d'une source pour le cycle qui
   /// vient de se terminer — mécanisme générique remplaçant les anciennes méthodes dédiées
   /// `remonterBilanTm`/`remonterBilanEventim` : une panne totale (100% d'échecs sur un nombre

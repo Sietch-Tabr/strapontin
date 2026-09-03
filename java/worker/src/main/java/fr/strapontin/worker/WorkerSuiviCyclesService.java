@@ -66,23 +66,14 @@ public class WorkerSuiviCyclesService {
   /// attendue et journalise un warn pour chaque type resté silencieux au-delà.
   public void executerSuiviCycles() {
     log.info("suivi:cycles-jobs démarré");
-    long debut = System.currentTimeMillis();
-    try {
-      int enRetard = verifier();
-      log.info("suivi:cycles-jobs terminé enRetard={}", enRetard);
-      workerStatsService.enregistrerStatJob(
-          "suivi:cycles-jobs",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, enRetard),
-          null);
-    } catch (Exception e) {
-      log.error("suivi:cycles-jobs échoué", e);
-      workerStatsService.enregistrerStatJob(
-          "suivi:cycles-jobs",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, 0),
-          e.getMessage());
-    }
+    workerStatsService.executerAvecStats(
+        log,
+        "suivi:cycles-jobs",
+        () -> {
+          int enRetard = verifier();
+          log.info("suivi:cycles-jobs terminé enRetard={}", enRetard);
+          return new ResultatPersistance(0, enRetard);
+        });
   }
 
   /// @return nombre de types de job détectés en retard
