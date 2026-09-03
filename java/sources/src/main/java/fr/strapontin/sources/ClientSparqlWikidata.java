@@ -7,6 +7,8 @@ package fr.strapontin.sources;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,6 +167,20 @@ final class ClientSparqlWikidata {
   static String valeurBinding(java.util.Map<String, Object> binding, String cle) {
     var v = (java.util.Map<String, Object>) binding.get(cle);
     return v != null ? (String) v.get("value") : null;
+  }
+
+  /// Extrait la liste des bindings d'une réponse SPARQL JSON — partagé entre {@link
+  /// WikidataSalleSource} et {@link WikidataArtisteSource}, jusqu'ici dupliqué à l'identique dans
+  /// les deux classes.
+  ///
+  /// @param data réponse JSON désérialisée d'une requête SPARQL
+  /// @return la liste des bindings, vide si absente
+  @SuppressWarnings("unchecked")
+  static List<Map<String, Object>> extraireBindings(Map<String, Object> data) {
+    var results = (Map<String, Object>) data.get("results");
+    if (results == null) return List.of();
+    var bindings = (List<Map<String, Object>>) results.get("bindings");
+    return bindings != null ? bindings : List.of();
   }
 
   /// Échappe une chaîne pour insertion sûre dans un littéral SPARQL délimité par des guillemets

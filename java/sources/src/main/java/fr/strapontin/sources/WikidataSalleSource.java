@@ -342,7 +342,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     Map<String, Object> data = client.executer(sparql);
     if (data == null) return Optional.empty();
 
-    for (var binding : extraireBindings(data)) {
+    for (var binding : ClientSparqlWikidata.extraireBindings(data)) {
       String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
       if (itemUri == null) continue;
       String itemLabel = ClientSparqlWikidata.valeurBinding(binding, "itemLabel");
@@ -547,13 +547,5 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     LIMIT 5
     """
         .formatted(ClientSparqlWikidata.echapperLitteral(nom), typesExclusSparql);
-  }
-
-  @SuppressWarnings("unchecked")
-  private static List<Map<String, Object>> extraireBindings(Map<String, Object> data) {
-    var results = (Map<String, Object>) data.get("results");
-    if (results == null) return List.of();
-    var bindings = (List<Map<String, Object>>) results.get("bindings");
-    return bindings != null ? bindings : List.of();
   }
 }

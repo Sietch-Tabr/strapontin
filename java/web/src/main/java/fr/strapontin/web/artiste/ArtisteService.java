@@ -11,6 +11,7 @@ import fr.strapontin.core.FiltreArtiste;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
+import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.admin.LogAdminService;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -344,14 +345,15 @@ public class ArtisteService {
               + "?action=wbsearchentities&search="
               + URLEncoder.encode(terme, StandardCharsets.UTF_8)
               + "&language=fr&format=json&type=item&limit=6";
-      ReponseHttp reponse =
+      WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
               .header("User-Agent", WIKIDATA_USER_AGENT)
               .exchange(
                   (_, resp) ->
-                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+                      new WorkerTriggerUtils.ReponseHttp(
+                          resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) {
         log.warn("Wikidata Search erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
@@ -403,14 +405,15 @@ public class ArtisteService {
               + "?action=wbgetentities&ids="
               + URLEncoder.encode(wikidataId, StandardCharsets.UTF_8)
               + "&props=claims&format=json";
-      ReponseHttp reponse =
+      WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
               .header("User-Agent", WIKIDATA_USER_AGENT)
               .exchange(
                   (_, resp) ->
-                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+                      new WorkerTriggerUtils.ReponseHttp(
+                          resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) return null;
 
       Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
@@ -440,13 +443,14 @@ public class ArtisteService {
     try {
       String url =
           DEEZER_URL + "?q=" + URLEncoder.encode(terme, StandardCharsets.UTF_8) + "&limit=6";
-      ReponseHttp reponse =
+      WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
               .exchange(
                   (_, resp) ->
-                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+                      new WorkerTriggerUtils.ReponseHttp(
+                          resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) {
         log.warn("Deezer erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
@@ -482,27 +486,11 @@ public class ArtisteService {
     return resultats;
   }
 
-  /// Déclenche le worker en fire-and-forget, sur un thread virtuel — {@link RestClient} est
-  /// bloquant (contrairement à l'ancien {@code HttpClient.sendAsync}), le thread virtuel évite de
-  /// bloquer l'appelant sans avoir à gérer le cycle de vie d'un executor dédié pour un appel
-  /// ponctuel.
   private void declencherWorkerArtiste() {
-    Thread.startVirtualThread(
-        () -> {
-          try {
-            restClient
-                .post()
-                .uri("http://localhost:8081/trigger/artiste")
-                .retrieve()
-                .toBodilessEntity();
-          } catch (Exception e) {
-            log.warn("Déclenchement worker artiste impossible", e);
-          }
-        });
+    WorkerTriggerUtils.declencherWorkerAsync(
+        restClient,
+        log,
+        "http://localhost:8081/trigger/artiste",
+        "Déclenchement worker artiste impossible");
   }
-
-  /// Réponse HTTP brute (statut + corps), utilisée pour reproduire avec {@link RestClient} le
-  /// comportement de l'ancien {@code java.net.http.HttpClient} : lire le statut sans lever
-  /// d'exception sur les codes non-2xx (contrairement à {@code retrieve()} par défaut).
-  private record ReponseHttp(int statut, String corps) {}
 }

@@ -7,6 +7,7 @@ package fr.strapontin.web.utilisateur;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.FiltreArtiste;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.artiste.ArtisteService;
 import fr.strapontin.web.salle.SalleService;
@@ -385,14 +386,8 @@ public class PreferencesService {
   }
 
   private void envoyerPostWorker(String url) {
-    Thread.startVirtualThread(
-        () -> {
-          try {
-            restClient.post().uri(url).retrieve().toBodilessEntity();
-          } catch (Exception e) {
-            log.warn("Déclenchement worker impossible : {}", url, e);
-          }
-        });
+    WorkerTriggerUtils.declencherWorkerAsync(
+        restClient, log, url, "Déclenchement worker impossible : " + url);
   }
 
   /// Résultat d'un import de préférences.

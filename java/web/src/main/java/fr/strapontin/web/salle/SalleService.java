@@ -10,6 +10,7 @@ import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
+import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.config.ConfigService;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -488,14 +489,15 @@ public class SalleService {
               + "?q="
               + URLEncoder.encode(terme, StandardCharsets.UTF_8)
               + "&format=json&limit=6&extratags=1&addressdetails=1&countrycodes=fr";
-      ReponseHttp reponse =
+      WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
               .header("User-Agent", "Strapontin/2.6.3 (contact: " + contact + ")")
               .exchange(
                   (_, resp) ->
-                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+                      new WorkerTriggerUtils.ReponseHttp(
+                          resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) {
         log.warn("Nominatim erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
@@ -583,13 +585,14 @@ public class SalleService {
               + URLEncoder.encode(tmKey.get(), StandardCharsets.UTF_8);
 
       cadenceurTicketmaster.attendre();
-      ReponseHttp reponse =
+      WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
               .exchange(
                   (_, resp) ->
-                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+                      new WorkerTriggerUtils.ReponseHttp(
+                          resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) return List.of();
 
       Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
@@ -623,28 +626,12 @@ public class SalleService {
     }
   }
 
-  /// Déclenche le worker en fire-and-forget, sur un thread virtuel — voir {@link
-  /// fr.strapontin.web.artiste.ArtisteService#declencherWorkerArtiste} pour la même justification
-  /// (RestClient est bloquant, contrairement à l'ancien HttpClient.sendAsync).
   private void declencherWorkerSalle(String identifiants) {
-    Thread.startVirtualThread(
-        () -> {
-          try {
-            restClient
-                .post()
-                .uri(
-                    "http://localhost:8081/trigger/salle?identifiants="
-                        + URLEncoder.encode(identifiants, StandardCharsets.UTF_8))
-                .retrieve()
-                .toBodilessEntity();
-          } catch (Exception e) {
-            log.warn("Déclenchement worker salle impossible identifiants={}", identifiants, e);
-          }
-        });
+    WorkerTriggerUtils.declencherWorkerAsync(
+        restClient,
+        log,
+        "http://localhost:8081/trigger/salle?identifiants="
+            + URLEncoder.encode(identifiants, StandardCharsets.UTF_8),
+        "Déclenchement worker salle impossible identifiants=" + identifiants);
   }
-
-  /// Réponse HTTP brute (statut + corps), utilisée pour reproduire avec {@link RestClient} le
-  /// comportement de l'ancien {@code java.net.http.HttpClient} : lire le statut sans lever
-  /// d'exception sur les codes non-2xx (contrairement à {@code retrieve()} par défaut).
-  private record ReponseHttp(int statut, String corps) {}
 }

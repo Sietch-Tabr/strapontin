@@ -111,7 +111,7 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
     if (data == null) return Map.of();
 
     Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
-    for (Map<String, Object> binding : extraireBindings(data)) {
+    for (Map<String, Object> binding : ClientSparqlWikidata.extraireBindings(data)) {
       String qid = extraireQid(binding);
       if (qid == null) continue;
       UUID artisteId = qidVersUuid.get(qid);
@@ -155,7 +155,7 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
     Map<String, Object> data = client.executer(sparql);
     if (data == null) return Optional.empty();
 
-    List<Map<String, Object>> bindings = extraireBindings(data);
+    List<Map<String, Object>> bindings = ClientSparqlWikidata.extraireBindings(data);
     if (bindings.isEmpty()) {
       log.info("Wikidata découverte — aucun candidat nom={}", artiste.nom());
       return Optional.empty();
@@ -223,14 +223,6 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
   }
 
   // --- Commun ---
-
-  @SuppressWarnings("unchecked")
-  private static List<Map<String, Object>> extraireBindings(Map<String, Object> data) {
-    var results = (Map<String, Object>) data.get("results");
-    if (results == null) return List.of();
-    var bindings = (List<Map<String, Object>>) results.get("bindings");
-    return bindings != null ? bindings : List.of();
-  }
 
   private static String extraireQid(Map<String, Object> binding) {
     String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
