@@ -208,7 +208,7 @@ public class ReconciliationNocturneService {
       String nom = (String) ligne.get("nom");
       verifiees++;
       if (tm.verifierVenue(ancienVenueId) != StatutIdTM.MORT) {
-        reinitialiserSuspect("salle_sources", "salle_id", salleId);
+        reinitialiserSuspect(TypeEntiteSource.SALLE, salleId);
         continue;
       }
 
@@ -226,7 +226,7 @@ public class ReconciliationNocturneService {
         candidats.stream()
             .filter(c -> !c.id().equals(ancienVenueId))
             .filter(c -> tm.compterEventsVenue(c.id()) > 0)
-            .filter(c -> !dejaUtiliseParAutreEntite("salle_sources", "salle_id", salleId, c.id()))
+            .filter(c -> !dejaUtiliseParAutreEntite(TypeEntiteSource.SALLE, salleId, c.id()))
             .toList();
 
     if (valides.size() == 1) {
@@ -280,7 +280,7 @@ public class ReconciliationNocturneService {
       String ancienAttractionId = (String) ligne.get("identifiant_externe");
       String nom = (String) ligne.get("nom");
       if (tm.verifierAttraction(ancienAttractionId) != StatutIdTM.MORT) {
-        reinitialiserSuspect("artiste_sources", "artiste_id", artisteId);
+        reinitialiserSuspect(TypeEntiteSource.ARTISTE, artisteId);
         continue;
       }
       redecouvrirArtiste(artisteId, ancienAttractionId, nom);
@@ -292,13 +292,13 @@ public class ReconciliationNocturneService {
   /// vérification active de cette phase fait autorité et doit effacer ce faux positif dès qu'elle
   /// confirme que l'identifiant TM est toujours vivant, plutôt que de laisser le statut "suspect"
   /// perdurer jusqu'à expiration (24h, cf. {@link #executer()}).
-  private void reinitialiserSuspect(String table, String colonneId, UUID id) {
+  private void reinitialiserSuspect(TypeEntiteSource type, UUID id) {
     jdbc.update(
         "UPDATE "
-            + table
+            + type.table()
             + " SET nb_zero_consecutifs = 0, suspect_depuis = NULL"
             + " WHERE "
-            + colonneId
+            + type.colonneId()
             + " = CAST(:id AS uuid) AND source = 'ticketmaster'",
         Map.of("id", id.toString()));
   }
@@ -307,7 +307,7 @@ public class ReconciliationNocturneService {
     String nouveauId = tm.rechercherAttractionId(nom);
     if (nouveauId != null
         && !nouveauId.equals(ancienAttractionId)
-        && !dejaUtiliseParAutreEntite("artiste_sources", "artiste_id", artisteId, nouveauId)) {
+        && !dejaUtiliseParAutreEntite(TypeEntiteSource.ARTISTE, artisteId, nouveauId)) {
       jdbc.update(
           """
           UPDATE artiste_sources
@@ -336,14 +336,14 @@ public class ReconciliationNocturneService {
   }
 
   private boolean dejaUtiliseParAutreEntite(
-      String table, String colonneId, UUID idActuel, String candidatId) {
+      TypeEntiteSource type, UUID idActuel, String candidatId) {
     List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT 1 FROM "
-                + table
+                + type.table()
                 + " WHERE source = 'ticketmaster' AND identifiant_externe ="
                 + " :candidatId AND "
-                + colonneId
+                + type.colonneId()
                 + " != CAST(:idActuel AS uuid)",
             Map.of("candidatId", candidatId, "idActuel", idActuel.toString()));
     return !lignes.isEmpty();

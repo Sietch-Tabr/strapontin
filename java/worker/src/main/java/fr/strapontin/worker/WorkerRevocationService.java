@@ -43,48 +43,40 @@ public class WorkerRevocationService {
   /// ailleurs (voir {@code AdminService.listerUtilisateurs}). Loggue le bilan dans `logs_admin`.
   public void executerRevoquerAdmins() {
     log.info("revoquer:admins démarré");
-    long debut = System.currentTimeMillis();
-    try {
-      List<String> usernamesRevoques =
-          jdbc.queryForList(
-              "SELECT username FROM users WHERE revocation_admin_le < now() AND role = 'admin'",
-              Map.of(),
-              String.class);
-      int nb =
-          jdbc.update(
-              """
-              UPDATE users SET role = 'user', revocation_admin_le = NULL
-              WHERE revocation_admin_le < now() AND role = 'admin'
-              """,
-              Map.of());
-      log.info("revoquer:admins terminé nb={}", nb);
-      if (nb > 0) {
-        revoquerSessions(usernamesRevoques);
-        jdbc.update(
-            """
-            INSERT INTO logs_admin (ts, niveau, source, message, meta)
-            VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
-            """,
-            Map.of(
-                "ts", System.currentTimeMillis(),
-                "niveau", "warn",
-                "source", "admin",
-                "message", "révocation admin effective — " + nb + " compte(s) rétrogradé(s)",
-                "meta", "{}"));
-      }
-      workerStatsService.enregistrerStatJob(
-          "revoquer:admins",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, nb),
-          null);
-    } catch (Exception e) {
-      log.error("revoquer:admins échoué", e);
-      workerStatsService.enregistrerStatJob(
-          "revoquer:admins",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, 0),
-          e.getMessage());
-    }
+    workerStatsService.executerAvecStats(
+        log,
+        "revoquer:admins",
+        () -> {
+          List<String> usernamesRevoques =
+              jdbc.queryForList(
+                  "SELECT username FROM users WHERE revocation_admin_le < now() AND role ="
+                      + " 'admin'",
+                  Map.of(),
+                  String.class);
+          int nb =
+              jdbc.update(
+                  """
+                  UPDATE users SET role = 'user', revocation_admin_le = NULL
+                  WHERE revocation_admin_le < now() AND role = 'admin'
+                  """,
+                  Map.of());
+          log.info("revoquer:admins terminé nb={}", nb);
+          if (nb > 0) {
+            revoquerSessions(usernamesRevoques);
+            jdbc.update(
+                """
+                INSERT INTO logs_admin (ts, niveau, source, message, meta)
+                VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
+                """,
+                Map.of(
+                    "ts", System.currentTimeMillis(),
+                    "niveau", "warn",
+                    "source", "admin",
+                    "message", "révocation admin effective — " + nb + " compte(s) rétrogradé(s)",
+                    "meta", "{}"));
+          }
+          return new ResultatPersistance(0, nb);
+        });
   }
 
   /// Supprime les sessions Spring Session actives pour les identifiants fournis.

@@ -1,14 +1,14 @@
 <template>
   <AuthLayout>
-    <h1 class="auth-title">Strapontin</h1>
-    <p class="auth-subtitle">
+    <h1 class="auth-titre">Strapontin</h1>
+    <p class="auth-sous-titre">
       Saisissez le code de votre application d'authentification.
     </p>
 
-    <div v-if="erreur" class="alerte alerte-erreur">{{ erreur }}</div>
+    <div v-if="erreur" role="alert" aria-live="assertive" class="alerte alerte-erreur">{{ erreur }}</div>
 
     <form @submit.prevent="soumettre" autocomplete="off">
-      <div class="form-group">
+      <div class="form-groupe">
         <label for="code">Code à 6 chiffres</label>
         <input
           id="code"
@@ -21,12 +21,12 @@
           required
         />
       </div>
-      <button type="submit" class="btn btn-primary btn-full" :disabled="chargement">
+      <button type="submit" class="bouton bouton-primaire bouton-pleine-largeur" :disabled="chargement">
         Vérifier
       </button>
     </form>
 
-    <p class="mt-4 text-sm text-muted texte-centre">
+    <p class="auth-lien-secondaire">
       <a href="#" @click.prevent="seDeconnecter">Se déconnecter</a>
     </p>
   </AuthLayout>

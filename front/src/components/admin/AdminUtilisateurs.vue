@@ -2,7 +2,7 @@
   <section class="admin-section" id="utilisateurs">
 
     <div class="param-bloc">
-      <h3 class="param-label">Créer un compte</h3>
+      <h3 class="param-libelle">Créer un compte</h3>
       <form class="form-creer-utilisateur form-inline" @submit.prevent="creerUtilisateur">
         <input
           v-model="nouvelEmail"
@@ -12,13 +12,13 @@
           aria-label="Adresse email du nouvel utilisateur"
           autocomplete="off"
         />
-        <button type="submit" class="btn btn-secondary">Inviter</button>
+        <button type="submit" class="bouton bouton-secondaire">Inviter</button>
       </form>
     </div>
 
     <EtatChargement v-if="chargement" />
     <div v-else-if="utilisateurs.length" class="param-bloc">
-      <h3 class="param-label">Utilisateurs ({{ utilisateurs.length }})</h3>
+      <h3 class="param-libelle">Utilisateurs ({{ total }})</h3>
       <ul class="user-liste">
         <li v-for="u in utilisateurs" :key="u.id" class="user-carte">
           <div class="user-carte-entete">
@@ -26,8 +26,8 @@
               <div class="user-carte-badges">
                 <span v-if="u.username" class="badge badge-mono">@{{ u.username }}</span>
                 <span v-if="u.role === 'admin'" class="badge badge-info">admin</span>
-                <span v-if="u.mustChangeCredentials" class="badge badge-warn">activation en attente</span>
-                <span v-if="u.revocationAdminLe" class="badge badge-warn">révocation {{ joursAvantRevocation(u.revocationAdminLe) }}</span>
+                <span v-if="u.mustChangeCredentials" class="badge badge-avertissement">activation en attente</span>
+                <span v-if="u.revocationAdminLe" class="badge badge-avertissement">révocation {{ joursAvantRevocation(u.revocationAdminLe) }}</span>
               </div>
               <p v-if="u.displayUsername" class="user-carte-nom">{{ u.displayUsername }}</p>
               <p class="user-carte-email">{{ u.email }}</p>
@@ -38,17 +38,17 @@
               <p class="user-carte-suivi">{{ u.nbArtistes }} artiste{{ u.nbArtistes !== 1 ? 's' : '' }}, {{ u.nbSalles }} salle{{ u.nbSalles !== 1 ? 's' : '' }}</p>
             </div>
             <div v-if="u.id !== utilisateurCourantId" class="user-carte-actions">
-              <button type="button" class="btn btn-sm btn-secondary" @click="ouvrirModif(u.id)">Modifier</button>
-              <button type="button" class="btn btn-sm btn-secondary" @click="reinitMdp(u)">Réinit. MDP</button>
-              <button type="button" class="btn btn-sm btn-secondary" @click="reinitTotp(u)">Réinit. 2FA</button>
-              <button type="button" class="btn btn-sm btn-secondary" @click="revoquerSessions(u)">Révoquer sessions</button>
+              <button type="button" class="bouton bouton-petit bouton-secondaire" @click="ouvrirModif(u.id)">Modifier</button>
+              <button type="button" class="bouton bouton-petit bouton-secondaire" @click="reinitMdp(u)">Réinit. MDP</button>
+              <button type="button" class="bouton bouton-petit bouton-secondaire" @click="reinitTotp(u)">Réinit. 2FA</button>
+              <button type="button" class="bouton bouton-petit bouton-secondaire" @click="revoquerSessions(u)">Révoquer sessions</button>
               <button
                 v-if="u.revocationAdminLe"
                 type="button"
-                class="btn btn-sm btn-secondary"
+                class="bouton bouton-petit bouton-secondaire"
                 @click="annulerRevocation(u)"
               >Annuler la révocation</button>
-              <button type="button" class="btn btn-sm btn-danger" @click="ouvrirDialogSupprimer(u)">Supprimer</button>
+              <button type="button" class="bouton bouton-petit bouton-danger" @click="ouvrirDialogSupprimer(u)">Supprimer</button>
             </div>
           </div>
           <div :id="'modif-' + u.id" class="modif-ligne" :class="{ visible: modifOuverts.has(u.id) }">
@@ -59,13 +59,19 @@
                 <option value="user">user</option>
                 <option value="admin">admin</option>
               </select>
-              <button type="submit" class="btn btn-sm btn-primary">Enregistrer</button>
-              <button type="button" class="btn btn-sm btn-secondary" @click="fermerModif(u.id)">Annuler</button>
+              <button type="submit" class="bouton bouton-petit bouton-primaire">Enregistrer</button>
+              <button type="button" class="bouton bouton-petit bouton-secondaire" @click="fermerModif(u.id)">Annuler</button>
               <span v-if="modifErreurs[u.id]" class="erreur-modif">{{ modifErreurs[u.id] }}</span>
             </form>
           </div>
         </li>
       </ul>
+
+      <div class="pagination" v-if="totalPages > 1">
+        <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
+        <span>Page {{ page + 1 }} / {{ totalPages }} ({{ total }} utilisateurs)</span>
+        <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
+      </div>
     </div>
 
   </section>
@@ -74,8 +80,8 @@
     <p class="dialog-titre">Supprimer ce compte ?</p>
     <p id="dialog-supprimer-user-nom" class="dialog-corps">{{ userASupprimer?.email }}</p>
     <div class="dialog-pied">
-      <button type="button" id="dialog-supprimer-user-confirmer" class="btn btn-danger" @click="confirmerSuppression">Supprimer</button>
-      <button type="button" id="dialog-supprimer-user-annuler" class="btn btn-secondary" @click="fermerDialogSupprimer">Annuler</button>
+      <button type="button" id="dialog-supprimer-user-confirmer" class="bouton bouton-danger" @click="confirmerSuppression">Supprimer</button>
+      <button type="button" id="dialog-supprimer-user-annuler" class="bouton bouton-secondaire" @click="fermerDialogSupprimer">Annuler</button>
     </div>
   </dialog>
 
@@ -83,8 +89,8 @@
     <p class="dialog-titre">Réinitialiser le mot de passe ?</p>
     <p class="dialog-corps">Un email de réinitialisation sera envoyé à <strong>{{ userAReinitMdp?.email }}</strong>.</p>
     <div class="dialog-pied">
-      <button type="button" id="dialog-reinit-mdp-confirmer" class="btn btn-secondary" @click="confirmerReinitMdp">Envoyer</button>
-      <button type="button" id="dialog-reinit-mdp-annuler" class="btn btn-secondary" @click="fermerDialogReinitMdp">Annuler</button>
+      <button type="button" id="dialog-reinit-mdp-confirmer" class="bouton bouton-secondaire" @click="confirmerReinitMdp">Envoyer</button>
+      <button type="button" id="dialog-reinit-mdp-annuler" class="bouton bouton-secondaire" @click="fermerDialogReinitMdp">Annuler</button>
     </div>
   </dialog>
 
@@ -92,8 +98,8 @@
     <p class="dialog-titre">Désactiver la 2FA ?</p>
     <p class="dialog-corps">La double authentification de <strong>{{ userAReinitTotp?.email }}</strong> sera désactivée.</p>
     <div class="dialog-pied">
-      <button type="button" id="dialog-reinit-totp-confirmer" class="btn btn-secondary" @click="confirmerReinitTotp">Désactiver</button>
-      <button type="button" id="dialog-reinit-totp-annuler" class="btn btn-secondary" @click="fermerDialogReinitTotp">Annuler</button>
+      <button type="button" id="dialog-reinit-totp-confirmer" class="bouton bouton-secondaire" @click="confirmerReinitTotp">Désactiver</button>
+      <button type="button" id="dialog-reinit-totp-annuler" class="bouton bouton-secondaire" @click="fermerDialogReinitTotp">Annuler</button>
     </div>
   </dialog>
 
@@ -101,8 +107,8 @@
     <p class="dialog-titre">Révoquer toutes les sessions ?</p>
     <p class="dialog-corps">Toutes les sessions actives de <strong>{{ userARevoquerSessions?.email }}</strong> seront déconnectées.</p>
     <div class="dialog-pied">
-      <button type="button" id="dialog-revoquer-sessions-confirmer" class="btn btn-secondary" @click="confirmerRevoquerSessions">Révoquer</button>
-      <button type="button" id="dialog-revoquer-sessions-annuler" class="btn btn-secondary" @click="fermerDialogRevoquerSessions">Annuler</button>
+      <button type="button" id="dialog-revoquer-sessions-confirmer" class="bouton bouton-secondaire" @click="confirmerRevoquerSessions">Révoquer</button>
+      <button type="button" id="dialog-revoquer-sessions-annuler" class="bouton bouton-secondaire" @click="fermerDialogRevoquerSessions">Annuler</button>
     </div>
   </dialog>
 
@@ -110,8 +116,8 @@
     <p class="dialog-titre">Confirmer le changement de rôle ?</p>
     <p class="dialog-corps" id="dialog-confirmer-role-texte">{{ texteConfirmationRole }}</p>
     <div class="dialog-pied">
-      <button type="button" id="dialog-confirmer-role-ok" class="btn btn-secondary" @click="confirmerChangementRole">Confirmer</button>
-      <button type="button" id="dialog-confirmer-role-annuler" class="btn btn-secondary" @click="fermerDialogConfirmerRole">Annuler</button>
+      <button type="button" id="dialog-confirmer-role-ok" class="bouton bouton-secondaire" @click="confirmerChangementRole">Confirmer</button>
+      <button type="button" id="dialog-confirmer-role-annuler" class="bouton bouton-secondaire" @click="fermerDialogConfirmerRole">Annuler</button>
     </div>
   </dialog>
 
@@ -123,7 +129,7 @@
       </p>
       <div class="dialog-lien">
         <input id="lien-invitation" type="text" readonly :value="lienInvitation" aria-label="Lien d'invitation" />
-        <button type="button" class="btn btn-secondary" @click="copierLien">Copier</button>
+        <button type="button" class="bouton bouton-secondaire" @click="copierLien">Copier</button>
       </div>
     </template>
     <template v-else>
@@ -133,7 +139,7 @@
       </p>
     </template>
     <div class="dialog-pied">
-      <button type="button" id="btn-fermer-invitation" class="btn btn-primary" @click="fermerDialogInvitation">Fermer</button>
+      <button type="button" id="btn-fermer-invitation" class="bouton bouton-primaire" @click="fermerDialogInvitation">Fermer</button>
     </div>
   </dialog>
 </template>
@@ -157,6 +163,9 @@ const { dialogRef: dialogRevoquerSessionsRef, ouvrir: ouvrirDialogRevoquerSessio
 const { dialogRef: dialogConfirmerRoleRef, ouvrir: ouvrirDialogConfirmerRoleModal, fermer: fermerDialogConfirmerRoleModal } = useDialog()
 
 const utilisateurs = shallowRef([])
+const page = ref(0)
+const totalPages = ref(1)
+const total = ref(0)
 const chargement = ref(true)
 const utilisateurCourantId = ref(null)
 const nouvelEmail = ref('')
@@ -190,11 +199,15 @@ function joursAvantRevocation(revocationAdminLe) {
 async function charger() {
   try {
     const [repUsers, repProfil] = await Promise.all([
-      fetch('/api/admin/utilisateurs'),
+      fetch(`/api/admin/utilisateurs?page=${page.value}`),
       fetch('/api/user/profile'),
     ])
     if (repUsers.ok) {
-      utilisateurs.value = await repUsers.json()
+      const data = await repUsers.json()
+      utilisateurs.value = data.utilisateurs ?? []
+      page.value = data.page ?? 0
+      totalPages.value = data.totalPages ?? 1
+      total.value = data.total ?? 0
       initialiserModifData()
     }
     if (repProfil.ok) {
@@ -208,6 +221,11 @@ async function charger() {
   }
 }
 
+function allerPage(n) {
+  page.value = Math.max(0, Math.min(n, totalPages.value - 1))
+  charger()
+}
+
 function initialiserModifData() {
   for (const u of utilisateurs.value) {
     if (!modifData[u.id]) {
@@ -219,24 +237,30 @@ function initialiserModifData() {
 async function creerUtilisateur() {
   const email = nouvelEmail.value.trim()
   if (!email) return
-  const rep = await fetch('/api/admin/utilisateurs', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
-  })
-  const corps = await rep.json()
-  if (rep.ok || rep.status === 201) {
-    nouvelEmail.value = ''
-    inviteEmail.value = corps.email ?? ''
-    lienInvitation.value = corps.lienReset ?? ''
-    ouvrirDialogInvitationModal()
-    const repUsers = await fetch('/api/admin/utilisateurs')
-    if (repUsers.ok) {
-      utilisateurs.value = await repUsers.json()
-      initialiserModifData()
+  try {
+    const rep = await fetch('/api/admin/utilisateurs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const corps = await rep.json()
+    if (rep.ok || rep.status === 201) {
+      nouvelEmail.value = ''
+      inviteEmail.value = corps.email ?? ''
+      lienInvitation.value = corps.lienReset ?? ''
+      ouvrirDialogInvitationModal()
+      // trié par date de création croissante : le nouveau compte est toujours en dernière
+      // page, jamais sur la page actuellement affichée dès que le nombre d'utilisateurs
+      // dépasse une page.
+      await rechargerUtilisateurs()
+      if (page.value < totalPages.value - 1) {
+        await allerPage(totalPages.value - 1)
+      }
+    } else {
+      afficherToast(corps.erreur || 'Impossible de créer le compte.', 'erreur')
     }
-  } else {
-    afficherToast(corps.erreur || 'Impossible de créer le compte.', 'erreur')
+  } catch (e) {
+    afficherToast('Erreur réseau lors de la création du compte.', 'erreur')
   }
 }
 
@@ -293,18 +317,22 @@ async function envoyerPatch(u, d, messageSucces = 'Utilisateur modifié.') {
     return
   }
 
-  const rep = await fetch('/api/admin/utilisateurs/' + u.id, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(corps),
-  })
-  const repCorps = await rep.json()
-  if (rep.ok) {
-    fermerModif(u.id)
-    await rechargerUtilisateurs()
-    afficherToast(messageSucces, 'succes')
-  } else {
-    modifErreurs[u.id] = repCorps.erreur || 'Erreur.'
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + u.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(corps),
+    })
+    const repCorps = await rep.json()
+    if (rep.ok) {
+      fermerModif(u.id)
+      await rechargerUtilisateurs()
+      afficherToast(messageSucces, 'succes')
+    } else {
+      modifErreurs[u.id] = repCorps.erreur || 'Erreur.'
+    }
+  } catch (e) {
+    modifErreurs[u.id] = 'Erreur réseau.'
   }
 }
 
@@ -329,49 +357,65 @@ async function confirmerChangementRole() {
     return
   }
 
-  const corpsNomEmail = {}
-  if (d.nom !== (u.displayUsername ?? '')) corpsNomEmail.nom = d.nom
-  if (d.email !== u.email) corpsNomEmail.email = d.email
-  if (Object.keys(corpsNomEmail).length > 0) {
-    const repNomEmail = await fetch('/api/admin/utilisateurs/' + u.id, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(corpsNomEmail),
-    })
-    if (!repNomEmail.ok) {
-      const corpsErreur = await corpsJsonOuVide(repNomEmail)
-      modifErreurs[u.id] = corpsErreur.erreur || 'Erreur.'
-      return
+  try {
+    const corpsNomEmail = {}
+    if (d.nom !== (u.displayUsername ?? '')) corpsNomEmail.nom = d.nom
+    if (d.email !== u.email) corpsNomEmail.email = d.email
+    if (Object.keys(corpsNomEmail).length > 0) {
+      const repNomEmail = await fetch('/api/admin/utilisateurs/' + u.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpsNomEmail),
+      })
+      if (!repNomEmail.ok) {
+        const corpsErreur = await corpsJsonOuVide(repNomEmail)
+        modifErreurs[u.id] = corpsErreur.erreur || 'Erreur.'
+        return
+      }
     }
-  }
 
-  const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'POST' })
-  const corps = await rep.json()
-  if (rep.ok) {
-    fermerModif(u.id)
-    await rechargerUtilisateurs()
-    afficherToast('Révocation initiée. L\'administrateur sera prévenu par email.', 'succes')
-  } else {
-    modifErreurs[u.id] = corps.erreur || 'Erreur.'
+    const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'POST' })
+    const corps = await rep.json()
+    if (rep.ok) {
+      fermerModif(u.id)
+      await rechargerUtilisateurs()
+      afficherToast('Révocation initiée. L\'administrateur sera prévenu par email.', 'succes')
+    } else {
+      modifErreurs[u.id] = corps.erreur || 'Erreur.'
+    }
+  } catch (e) {
+    modifErreurs[u.id] = 'Erreur réseau.'
   }
 }
 
 async function annulerRevocation(u) {
-  const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'DELETE' })
-  const corps = await rep.json()
-  if (rep.ok) {
-    await rechargerUtilisateurs()
-    afficherToast('Révocation annulée.', 'succes')
-  } else {
-    afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + u.id + '/revoquer-admin', { method: 'DELETE' })
+    const corps = await rep.json()
+    if (rep.ok) {
+      await rechargerUtilisateurs()
+      afficherToast('Révocation annulée.', 'succes')
+    } else {
+      afficherToast(corps.erreur || 'Erreur.', 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau.', 'erreur')
   }
 }
 
 async function rechargerUtilisateurs() {
-  const repUsers = await fetch('/api/admin/utilisateurs')
-  if (repUsers.ok) {
-    utilisateurs.value = await repUsers.json()
-    initialiserModifData()
+  try {
+    const repUsers = await fetch(`/api/admin/utilisateurs?page=${page.value}`)
+    if (repUsers.ok) {
+      const data = await repUsers.json()
+      utilisateurs.value = data.utilisateurs ?? []
+      page.value = data.page ?? 0
+      totalPages.value = data.totalPages ?? 1
+      total.value = data.total ?? 0
+      initialiserModifData()
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors du rechargement.', 'erreur')
   }
 }
 
@@ -389,10 +433,14 @@ async function confirmerReinitMdp() {
   if (!userAReinitMdp.value) return
   const userId = userAReinitMdp.value.id
   fermerDialogReinitMdp()
-  const rep = await fetch('/api/admin/utilisateurs/' + userId + '/reset-mdp', { method: 'POST' })
-  const corps = await rep.json()
-  if (rep.ok) afficherToast('Email de réinitialisation envoyé.', 'succes')
-  else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + userId + '/reset-mdp', { method: 'POST' })
+    const corps = await rep.json()
+    if (rep.ok) afficherToast('Email de réinitialisation envoyé.', 'succes')
+    else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  } catch (e) {
+    afficherToast('Erreur réseau.', 'erreur')
+  }
 }
 
 function reinitTotp(u) {
@@ -409,10 +457,14 @@ async function confirmerReinitTotp() {
   if (!userAReinitTotp.value) return
   const userId = userAReinitTotp.value.id
   fermerDialogReinitTotp()
-  const rep = await fetch('/api/admin/utilisateurs/' + userId + '/reset-totp', { method: 'POST' })
-  const corps = await rep.json()
-  if (rep.ok) afficherToast('2FA réinitialisée. L\'utilisateur pourra se reconnecter sans code.', 'succes')
-  else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + userId + '/reset-totp', { method: 'POST' })
+    const corps = await rep.json()
+    if (rep.ok) afficherToast('2FA réinitialisée. L\'utilisateur pourra se reconnecter sans code.', 'succes')
+    else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  } catch (e) {
+    afficherToast('Erreur réseau.', 'erreur')
+  }
 }
 
 function revoquerSessions(u) {
@@ -429,10 +481,14 @@ async function confirmerRevoquerSessions() {
   if (!userARevoquerSessions.value) return
   const userId = userARevoquerSessions.value.id
   fermerDialogRevoquerSessions()
-  const rep = await fetch('/api/admin/utilisateurs/' + userId + '/revoquer-sessions', { method: 'POST' })
-  const corps = await rep.json()
-  if (rep.ok) afficherToast('Sessions révoquées.', 'succes')
-  else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + userId + '/revoquer-sessions', { method: 'POST' })
+    const corps = await rep.json()
+    if (rep.ok) afficherToast('Sessions révoquées.', 'succes')
+    else afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  } catch (e) {
+    afficherToast('Erreur réseau.', 'erreur')
+  }
 }
 
 function ouvrirDialogSupprimer(u) {
@@ -449,15 +505,148 @@ async function confirmerSuppression() {
   if (!userASupprimer.value) return
   const userId = userASupprimer.value.id
   fermerDialogSupprimer()
-  const rep = await fetch('/api/admin/utilisateurs/' + userId, { method: 'DELETE' })
-  const corps = await rep.json()
-  if (rep.ok) {
-    utilisateurs.value = utilisateurs.value.filter((u) => u.id !== userId)
-    afficherToast('Compte supprimé.', 'succes')
-  } else {
-    afficherToast(corps.erreur || 'Erreur lors de la suppression.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/utilisateurs/' + userId, { method: 'DELETE' })
+    const corps = await rep.json()
+    if (rep.ok) {
+      // recharge plutôt qu'un simple filtre local : total/totalPages doivent rester
+      // cohérents avec le serveur (pagination), pas seulement la page affichée.
+      await rechargerUtilisateurs()
+      afficherToast('Compte supprimé.', 'succes')
+    } else {
+      afficherToast(corps.erreur || 'Erreur lors de la suppression.', 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors de la suppression.', 'erreur')
   }
 }
 
 onMounted(charger)
 </script>
+
+<style scoped>
+  .badge-info {
+    background: var(--info-bg);
+    color: var(--info-text);
+  }
+  .badge-mono {
+    font-family: monospace;
+    background: var(--bg-muted);
+    color: var(--fg-muted);
+  }
+  .badge-avertissement {
+    background: var(--avertissement-bg);
+    color: var(--avertissement-text);
+  }
+  .user-liste {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .user-carte {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .user-carte-entete {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  @media (min-width: 521px) {
+    .user-carte-entete {
+      flex-wrap: nowrap;
+    }
+  }
+  .user-carte-info {
+    min-width: 0;
+    flex: 1;
+  }
+  .user-carte-badges {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 0.25rem;
+  }
+  .user-carte-email {
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .user-carte-activite {
+    font-size: 0.75rem;
+    color: var(--fg-subtle);
+    margin-top: 0.125rem;
+  }
+  .user-carte-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  @media (min-width: 521px) {
+    .user-carte-actions {
+      width: auto;
+      justify-content: normal;
+      flex-wrap: nowrap;
+    }
+  }
+  .modif-ligne {
+    border-top: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    background: var(--bg-card);
+    display: none;
+  }
+  .modif-ligne.visible {
+    display: block;
+  }
+  .form-modif-utilisateur {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    max-width: 28rem;
+  }
+  .form-modif-utilisateur input,
+.form-modif-utilisateur select {
+    width: auto;
+    font-size: 0.8125rem;
+    padding: 0.3125rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    background: var(--bg);
+    color: var(--fg);
+  }
+  .form-modif-utilisateur input[name="nom"] {
+    width: 9rem;
+    max-width: 100%;
+  }
+  .form-modif-utilisateur input[name="email"] {
+    width: 12rem;
+    max-width: 100%;
+  }
+  .erreur-modif {
+    font-size: 0.75rem;
+    color: var(--danger);
+  }
+  .dialog-lien {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .dialog-lien input {
+    flex: 1;
+    font-family: ui-monospace, monospace;
+    font-size: 0.8125rem;
+  }
+</style>

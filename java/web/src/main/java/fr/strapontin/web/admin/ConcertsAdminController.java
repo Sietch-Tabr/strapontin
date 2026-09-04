@@ -4,8 +4,9 @@
  */
 package fr.strapontin.web.admin;
 
-import java.util.HashMap;
-import java.util.List;
+import static fr.strapontin.web.ControllerUtils.erreur;
+import static fr.strapontin.web.ControllerUtils.parseUuid;
+
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /// Contrôleur REST pour l'onglet admin « Concerts » (revue des concerts flagués pour suppression).
@@ -33,12 +35,14 @@ public class ConcertsAdminController {
     this.service = service;
   }
 
-  /// Liste les concerts flagués pour suppression, en attente de revue.
+  /// Liste paginée les concerts flagués pour suppression, en attente de revue.
   ///
-  /// @return 200 avec la liste
+  /// @param page numéro de page (0-indexé, défaut 0)
+  /// @return 200 avec la page de résultats
   @GetMapping
-  public ResponseEntity<List<ConcertSuppressionSuggeree>> lister() {
-    return ResponseEntity.ok(service.lister());
+  public ResponseEntity<ReponseConcertsAConfirmer> lister(
+      @RequestParam(defaultValue = "0") int page) {
+    return ResponseEntity.ok(service.lister(page));
   }
 
   /// Supprime définitivement un concert flagué.
@@ -65,19 +69,5 @@ public class ConcertsAdminController {
     boolean annule = service.annulerSuppression(id);
     if (!annule) return erreur(404, "Concert inconnu ou non flagué.");
     return ResponseEntity.ok(Map.of("succes", true));
-  }
-
-  private static UUID parseUuid(String valeur) {
-    try {
-      return UUID.fromString(valeur);
-    } catch (IllegalArgumentException e) {
-      return null;
-    }
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

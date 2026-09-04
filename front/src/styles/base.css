@@ -1,32 +1,26 @@
 /* Strapontin — base : variables, reset, transitions */
-
 /* ── Transitions entre pages (View Transitions API) ────── */
 @view-transition {
   navigation: auto;
 }
-
 ::view-transition-old(root) {
   animation: 180ms ease-out both vt-sortie;
 }
-
 ::view-transition-new(root) {
   animation: 220ms ease-out both vt-entree;
 }
-
 @keyframes vt-sortie {
   to {
     opacity: 0;
     transform: scale(0.99);
   }
 }
-
 @keyframes vt-entree {
   from {
     opacity: 0;
     transform: scale(0.99);
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(*),
   ::view-transition-new(*) {
@@ -38,15 +32,12 @@
   .admin-section,
   .parametres-section,
   #dialog-nav-plus,
-  .banniere-overlay,
-  .banniere-progression,
-  .job-en-cours .spinner,
-  .nav-badge--point-pulse {
+  .job-en-cours .roue-chargement,
+  .nav-badge--point-pulsation {
     animation: none;
     transition: none;
   }
 }
-
 /* ── Variables ─────────────────────────────────────────── */
 :root {
   --bg: #ffffff;
@@ -83,8 +74,7 @@
   --nav-h: 56px;
   --font: system-ui, -apple-system, sans-serif;
 }
-
-.dark {
+.sombre {
   --bg: #0a0a0a;
   --bg-card: #111111;
   --bg-muted: #1a1a1a;
@@ -109,7 +99,6 @@
   --avertissement-border: #78350f;
   --avertissement-text: #fcd34d;
 }
-
 /* ── Reset ──────────────────────────────────────────────── */
 *,
 *::before,
@@ -122,19 +111,6 @@ html {
   font-size: 100%;
   overflow-x: clip;
   scroll-behavior: smooth;
-}
-.lien-evitement {
-  position: absolute;
-  left: -9999px;
-}
-.lien-evitement:focus {
-  left: 1rem;
-  top: 1rem;
-  z-index: 9999;
-  background: var(--bg);
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  outline: 2px solid var(--primary);
 }
 body {
   font-family: var(--font);

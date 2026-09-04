@@ -232,9 +232,9 @@ test.describe("Scénario: navigation Vue Router sans rechargement complet", () =
     });
 
     if (isMobile) {
-      await page.locator("#bottom-nav a[href='/decouverte']").click();
+      await page.locator("#nav-bas a[href='/decouverte']").click();
     } else {
-      await page.locator(".sidebar a[href='/decouverte']").click();
+      await page.locator(".barre-laterale a[href='/decouverte']").click();
     }
 
     await expect(page.locator("main#contenu-principal")).toBeVisible();
@@ -302,7 +302,7 @@ test.describe("Scénario: navigation Vue Router sans rechargement complet", () =
       await expect(page.locator("#dialog-nav-plus")).toBeVisible();
       await page.locator("#dialog-nav-plus a[href='/artistes']").click();
     } else {
-      await page.locator(".sidebar a[href='/artistes']").click();
+      await page.locator(".barre-laterale a[href='/artistes']").click();
     }
 
     await expect(page.locator("main#contenu-principal")).toBeVisible();

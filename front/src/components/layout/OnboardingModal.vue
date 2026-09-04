@@ -5,9 +5,9 @@
 <script setup>
 defineOptions({ name: 'OnboardingModal' })
 
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import ModaleEtapes from '../ModaleEtapes.vue'
-import { useOnboarding, verifierOnboarding } from '../../composables/useOnboarding.js'
+import { useOnboarding } from '../../composables/useOnboarding.js'
 
 const { ouvert, fermer: fermerOnboarding } = useOnboarding()
 const modaleRef = ref(null)
@@ -19,10 +19,6 @@ function fermer() {
 watch(ouvert, (val) => {
   if (val) modaleRef.value?.ouvrir()
   else modaleRef.value?.fermer()
-})
-
-onMounted(() => {
-  verifierOnboarding()
 })
 
 const ETAPES = [

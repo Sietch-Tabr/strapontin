@@ -46,7 +46,7 @@ test.describe("Scénario: admin — API concerts à confirmer", () => {
     const rep = await request.get("/api/admin/concerts-a-confirmer");
     expect(rep.status()).toBe(200);
     const corps = await rep.json();
-    expect(Array.isArray(corps)).toBe(true);
+    expect(Array.isArray(corps.concerts)).toBe(true);
   });
 
   test("api_admin_concertsAConfirmer_confirmer_uuidInvalide_retourne400", async ({

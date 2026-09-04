@@ -158,7 +158,7 @@ test.describe("Scénario: admin — gestion des utilisateurs", () => {
       .filter({ hasText: emailTest });
     await expect(carteUser).toBeVisible({ timeout: 3000 });
 
-    await carteUser.locator("button.btn-danger").click();
+    await carteUser.locator("button.bouton-danger").click();
     await expect(page.locator("dialog#dialog-supprimer-user")).toBeVisible({
       timeout: 3000,
     });
@@ -193,7 +193,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('input[placeholder="Nom d\'affichage"]')
       .fill("Alice Test");
     await carteUser
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
 
     await expect(
@@ -226,7 +226,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('select[aria-label="Rôle de l\'utilisateur"]')
       .selectOption("admin");
     await carteUser
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
 
     await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
@@ -263,7 +263,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('select[aria-label="Rôle de l\'utilisateur"]')
       .selectOption("admin");
     await carteUser
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
     await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
       timeout: 3000,
@@ -284,7 +284,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('select[aria-label="Rôle de l\'utilisateur"]')
       .selectOption("user");
     await carteAdmin
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
     await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
       timeout: 3000,
@@ -295,14 +295,14 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator(".user-carte")
       .filter({ hasText: emailTest });
     await expect(
-      carteRevoc.locator(".badge-warn", { hasText: "révocation" }),
+      carteRevoc.locator(".badge-avertissement", { hasText: "révocation" }),
     ).toBeVisible({ timeout: 5000 });
 
     await carteRevoc
       .locator("button", { hasText: "Annuler la révocation" })
       .click();
     await expect(
-      carteRevoc.locator(".badge-warn", { hasText: "révocation" }),
+      carteRevoc.locator(".badge-avertissement", { hasText: "révocation" }),
     ).not.toBeVisible({ timeout: 5000 });
   });
 
@@ -334,7 +334,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('select[aria-label="Rôle de l\'utilisateur"]')
       .selectOption("admin");
     await carteUser
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
     await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
       timeout: 3000,
@@ -362,7 +362,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('select[aria-label="Rôle de l\'utilisateur"]')
       .selectOption("user");
     await carteAdmin
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
     await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
       timeout: 3000,
@@ -430,9 +430,10 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await expect(tableOuVide).toBeVisible();
     if (await table.isVisible()) {
       await page.locator("input[type='search']").fill("zzzzinexistant");
-      await expect(
-        page.locator("table#table-sources-salles tbody tr"),
-      ).toContainText("Aucune salle ne correspond", { timeout: 3000 });
+      await expect(page.locator("p.etat-vide-texte")).toContainText(
+        "Aucune salle ne correspond",
+        { timeout: 3000 },
+      );
       await page.locator("input[type='search']").clear();
     } else {
       await expect(videTexte).toBeVisible();
@@ -444,7 +445,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    const toggle = page.locator(".source-vue-toggle button", {
+    const toggle = page.locator(".source-vue-bascule button", {
       hasText: /[Dd]igitick/,
     });
     await expect(toggle).toBeVisible();
@@ -472,7 +473,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
     await expect(
-      page.locator(".source-vue-toggle button", { hasText: "Sans source" }),
+      page.locator(".source-vue-bascule button", { hasText: "Sans source" }),
     ).toBeVisible();
   });
 
@@ -535,7 +536,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    const toggle = page.locator(".source-vue-toggle button", {
+    const toggle = page.locator(".source-vue-bascule button", {
       hasText: /[Dd]igitick/,
     });
     await toggle.click();
@@ -553,7 +554,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.selectOption("select.param-onglets-mobile", "#sources");
     await expect(page.locator("section#sources")).toBeVisible();
     await expect(
-      page.locator(".source-vue-toggle button", { hasText: "Sans source" }),
+      page.locator(".source-vue-bascule button", { hasText: "Sans source" }),
     ).toBeVisible();
   });
 
@@ -565,7 +566,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    const btnSansSource = page.locator(".source-vue-toggle button", {
+    const btnSansSource = page.locator(".source-vue-bascule button", {
       hasText: "Sans source",
     });
     await btnSansSource.click();
@@ -582,7 +583,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    const toggle = page.locator(".source-vue-toggle button", {
+    const toggle = page.locator(".source-vue-bascule button", {
       hasText: /[Dd]igitick/,
     });
     // Comme admin_sources_toggle_digitick ci-dessus : attendre le toggle avant de cliquer,
@@ -612,10 +613,12 @@ test.describe("Scénario: admin — onglet Sources", () => {
       salleId = corps.salleId;
       expect(salleId).toBeTruthy();
 
-      const repSources = await ctx.get("/api/admin/sources");
-      expect(repSources.ok()).toBe(true);
-      const donnees = await repSources.json();
-      const sallesDigitick: { nom: string }[] = donnees.sallesDigitick ?? [];
+      const repSalles = await ctx.get(
+        "/api/admin/sources/salles?digitick=true&nom=Salle+Test+E2E+Digitick",
+      );
+      expect(repSalles.ok()).toBe(true);
+      const donnees = await repSalles.json();
+      const sallesDigitick: { nom: string }[] = donnees.salles ?? [];
       expect(
         sallesDigitick.some((s) => s.nom === "Salle Test E2E Digitick"),
       ).toBe(true);
@@ -793,7 +796,6 @@ test.describe("Scénario: admin — API endpoints", () => {
     expect(rep.status()).toBe(200);
     const corps = await rep.json();
     expect(Array.isArray(corps.sources)).toBe(true);
-    expect(Array.isArray(corps.salles)).toBe(true);
     expect(corps.sources.length).toBe(5);
     const ids = corps.sources.map((s: { id: string }) => s.id);
     expect(ids).toContain("ticketmaster");
@@ -823,7 +825,7 @@ test.describe("Scénario: admin — API endpoints", () => {
 
   test("api_admin_revoquerAdmin_seulAdmin_retourne409", async ({ request }) => {
     const repUsers = await request.get("/api/admin/utilisateurs");
-    const users = await repUsers.json();
+    const { utilisateurs: users } = await repUsers.json();
     const admins = users.filter((u: { role: string }) => u.role === "admin");
     if (admins.length !== 1) return;
     const rep = await request.post(

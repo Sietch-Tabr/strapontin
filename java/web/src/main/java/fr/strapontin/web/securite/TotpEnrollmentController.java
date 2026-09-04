@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web.securite;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.utilisateur.UserController;
 import jakarta.servlet.http.HttpSession;
@@ -125,11 +127,5 @@ public class TotpEnrollmentController {
         Map.of("userId", details.id(), "username", details.identifiant()));
 
     return ResponseEntity.ok(Map.of("succes", true));
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

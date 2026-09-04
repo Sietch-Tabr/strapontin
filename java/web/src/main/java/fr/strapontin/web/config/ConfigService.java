@@ -8,7 +8,12 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.ConfigCipher;
 import java.time.Duration;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,14 +22,14 @@ import org.springframework.stereotype.Service;
 
 /// Service de configuration chiffrée (portage de `config.ts`).
 ///
-/// La clé AES-256 est dérivée de `APP_CONFIG_SECRET` via SCrypt
-/// (paramètres par défaut Node.js : N=16 384, r=8, p=1, dkLen=32).
+/// La clé AES-256 est dérivée de `APP_CONFIG_SECRET` via SCrypt (paramètres par défaut Node.js :
+/// N=16 384, r=8, p=1, dkLen=32).
 ///
-/// Format de stockage : `base64(IV(12) || TAG(16) || données_chiffrées)`.
-/// Compatible avec les valeurs chiffrées par le module TypeScript.
+/// Format de stockage : `base64(IV(12) || TAG(16) || données_chiffrées)`. Compatible avec les
+/// valeurs chiffrées par le module TypeScript.
 ///
-/// Les valeurs sont mises en cache Caffeine 5 minutes.
-/// [sauvegarderConfig] invalide immédiatement le cache de la clé modifiée.
+/// Les valeurs sont mises en cache Caffeine 5 minutes. [sauvegarderConfig] invalide immédiatement
+/// le cache de la clé modifiée.
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -58,7 +63,7 @@ public class ConfigService {
   ///
   /// Si `valeur` est vide, la clé est supprimée.
   ///
-  /// @param cle   la clé de configuration
+  /// @param cle la clé de configuration
   /// @param valeur la valeur en clair, ou `null` pour supprimer
   public void sauvegarderConfig(String cle, String valeur) {
     Objects.requireNonNull(cle, "La clé de configuration est requise");

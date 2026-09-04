@@ -1,9 +1,24 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
 import crypto from "node:crypto";
 import { FICHIER_AUTH_ADMIN } from "./global-setup";
 
 const USER = "e2euser";
 const MDP = process.env["E2E_USER_MOT_DE_PASSE"] ?? "e2e-user-2026";
+
+// GET /api/admin/utilisateurs est paginé (50/page) — parcourt les pages jusqu'à trouver le
+// username plutôt que de ne vérifier que la première.
+async function trouverUtilisateurParUsername(
+  request: APIRequestContext,
+  username: string,
+): Promise<{ id: string; username: string } | undefined> {
+  for (let page = 0; ; page++) {
+    const liste = await request.get(`/api/admin/utilisateurs?page=${page}`);
+    const { utilisateurs: users, totalPages } = await liste.json();
+    const u = users.find((x: { username: string }) => x.username === username);
+    if (u) return u;
+    if (page >= (totalPages ?? 1) - 1) return undefined;
+  }
+}
 
 function base32decode(s: string): Buffer {
   const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -107,9 +122,7 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
         storageState: FICHIER_AUTH_ADMIN,
       });
       try {
-        const liste = await adminCtx.request.get("/api/admin/utilisateurs");
-        const users = await liste.json();
-        const u = users.find((x: { username: string }) => x.username === USER);
+        const u = await trouverUtilisateurParUsername(adminCtx.request, USER);
         if (u) {
           await adminCtx.request.post(
             `/api/admin/utilisateurs/${u.id}/reset-totp`,
@@ -194,9 +207,7 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
       const adminCtx = await browser.newContext({
         storageState: FICHIER_AUTH_ADMIN,
       });
-      const liste = await adminCtx.request.get("/api/admin/utilisateurs");
-      const users = await liste.json();
-      const u = users.find((x: { username: string }) => x.username === USER);
+      const u = await trouverUtilisateurParUsername(adminCtx.request, USER);
       const resetRep = await adminCtx.request.post(
         `/api/admin/utilisateurs/${u.id}/reset-totp`,
       );
@@ -220,9 +231,7 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
         storageState: FICHIER_AUTH_ADMIN,
       });
       try {
-        const liste = await adminCtx.request.get("/api/admin/utilisateurs");
-        const users = await liste.json();
-        const u = users.find((x: { username: string }) => x.username === USER);
+        const u = await trouverUtilisateurParUsername(adminCtx.request, USER);
         if (u) {
           await adminCtx.request.post(
             `/api/admin/utilisateurs/${u.id}/reset-totp`,

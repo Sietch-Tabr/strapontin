@@ -24,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.web.client.RestClient;
 
 /// Tests unitaires de {@link DecouverteService}.
 ///
@@ -37,12 +38,13 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 class DecouverteServiceTest {
 
   @Mock private NamedParameterJdbcTemplate jdbc;
+  @Mock private RestClient restClient;
 
   private DecouverteService service;
 
   @BeforeEach
   void setUp() {
-    service = new DecouverteService(jdbc);
+    service = new DecouverteService(jdbc, restClient);
   }
 
   @Test

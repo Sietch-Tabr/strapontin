@@ -83,23 +83,14 @@ public class AuthController {
     tokenNonAuthentifie.setDetails(new WebAuthenticationDetails(httpRequest));
     Authentication auth = authenticationManager.authenticate(tokenNonAuthentifie);
 
-    HttpSession sessionExistante = httpRequest.getSession(false);
-    if (sessionExistante != null) sessionExistante.invalidate();
-
-    SecurityContext contexte = SecurityContextHolder.createEmptyContext();
-    contexte.setAuthentication(auth);
-    SecurityContextHolder.setContext(contexte);
-
-    HttpSession session = httpRequest.getSession(true);
-    session.setAttribute(
-        HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, contexte);
-
-    if (!(auth.getPrincipal() instanceof UtilisateurDetails details)) {
-      throw new IllegalStateException("Principal inattendu après authentification");
-    }
+    SessionOuverte sessionOuverte =
+        ouvrirSession(auth, httpRequest, "Principal inattendu après authentification");
+    UtilisateurDetails details = sessionOuverte.details();
     boolean totpRequis = details.twoFactorActif();
     if (totpRequis) {
-      session.setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
+      sessionOuverte
+          .session()
+          .setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
     }
     log.debug("Connexion réussie : {}", details.identifiant());
     return ResponseEntity.ok(
@@ -292,20 +283,9 @@ public class AuthController {
       tokenNonAuthentifie.setDetails(new WebAuthenticationDetails(httpRequest));
       Authentication auth = authenticationManager.authenticate(tokenNonAuthentifie);
 
-      HttpSession sessionExistante = httpRequest.getSession(false);
-      if (sessionExistante != null) sessionExistante.invalidate();
-
-      SecurityContext contexte = SecurityContextHolder.createEmptyContext();
-      contexte.setAuthentication(auth);
-      SecurityContextHolder.setContext(contexte);
-
-      HttpSession session = httpRequest.getSession(true);
-      session.setAttribute(
-          HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, contexte);
-
-      if (!(auth.getPrincipal() instanceof UtilisateurDetails details)) {
-        throw new IllegalStateException("Principal inattendu après activation invitation");
-      }
+      UtilisateurDetails details =
+          ouvrirSession(auth, httpRequest, "Principal inattendu après activation invitation")
+              .details();
       log.debug("Activation compte invitation, connexion : {}", details.identifiant());
       return ResponseEntity.ok(
           new UtilisateurDto(
@@ -329,4 +309,33 @@ public class AuthController {
   private Optional<String> resoudreBaseUrl() {
     return configService.lireConfig("PUBLIC_BASE_URL").filter(s -> !s.isBlank());
   }
+
+  /// Invalide toute session existante et en ouvre une nouvelle pour l'authentification donnée —
+  /// partagé entre {@link #login} et {@link #reinitialiserMotDePasse} (activation d'invitation).
+  ///
+  /// @param auth authentification déjà validée par {@link #authenticationManager}
+  /// @param httpRequest la requête HTTP (pour invalider/créer la session)
+  /// @param messageErreur message de l'exception si le principal n'est pas du type attendu
+  /// @return la session nouvellement créée et les détails de l'utilisateur authentifié
+  private SessionOuverte ouvrirSession(
+      Authentication auth, HttpServletRequest httpRequest, String messageErreur) {
+    HttpSession sessionExistante = httpRequest.getSession(false);
+    if (sessionExistante != null) sessionExistante.invalidate();
+
+    SecurityContext contexte = SecurityContextHolder.createEmptyContext();
+    contexte.setAuthentication(auth);
+    SecurityContextHolder.setContext(contexte);
+
+    HttpSession session = httpRequest.getSession(true);
+    session.setAttribute(
+        HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, contexte);
+
+    if (!(auth.getPrincipal() instanceof UtilisateurDetails details)) {
+      throw new IllegalStateException(messageErreur);
+    }
+    return new SessionOuverte(session, details);
+  }
+
+  /// Résultat de {@link #ouvrirSession} : la session nouvellement créée et l'utilisateur associé.
+  private record SessionOuverte(HttpSession session, UtilisateurDetails details) {}
 }

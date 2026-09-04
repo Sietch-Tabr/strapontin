@@ -40,7 +40,7 @@ test.describe("Scénario: navigation SPA vers paramètres", () => {
   }) => {
     if (isMobile) test.skip();
     await page.goto("/");
-    await page.locator("nav.sidebar a[href='/parametres']").click();
+    await page.locator("nav.barre-laterale a[href='/parametres']").click();
     await expect(page).toHaveURL(/\/parametres/);
     await expect(
       page.getByRole("heading", { name: "Paramètres", level: 1 }),
@@ -292,16 +292,16 @@ test.describe("Scénario: Préférences — thème", () => {
   }) => {
     if (isMobile) test.skip();
     await page.goto("/parametres#preferences");
-    await page.locator(".btn-theme", { hasText: "Sombre" }).click();
-    await expect(page.locator(".btn-theme", { hasText: "Sombre" })).toHaveClass(
+    await page.locator(".bouton-theme", { hasText: "Sombre" }).click();
+    await expect(page.locator(".bouton-theme", { hasText: "Sombre" })).toHaveClass(
       /actif/,
     );
     await expect(
-      page.locator(".btn-theme", { hasText: "Automatique" }),
+      page.locator(".bouton-theme", { hasText: "Automatique" }),
     ).not.toHaveClass(/actif/);
-    await page.locator(".btn-theme", { hasText: "Automatique" }).click();
+    await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
     await expect(
-      page.locator(".btn-theme", { hasText: "Automatique" }),
+      page.locator(".bouton-theme", { hasText: "Automatique" }),
     ).toHaveClass(/actif/);
   });
 
@@ -311,11 +311,11 @@ test.describe("Scénario: Préférences — thème", () => {
   }) => {
     if (isMobile) test.skip();
     await page.goto("/parametres#preferences");
-    await page.locator(".btn-theme", { hasText: "Clair" }).click();
-    await expect(page.locator(".btn-theme", { hasText: "Clair" })).toHaveClass(
+    await page.locator(".bouton-theme", { hasText: "Clair" }).click();
+    await expect(page.locator(".bouton-theme", { hasText: "Clair" })).toHaveClass(
       /actif/,
     );
-    await page.locator(".btn-theme", { hasText: "Automatique" }).click();
+    await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
   });
 
   test("theme_mobile_sombre_affiche_classe_actif", async ({
@@ -325,14 +325,14 @@ test.describe("Scénario: Préférences — thème", () => {
     if (!isMobile) test.skip();
     await page.goto("/parametres");
     await page.selectOption("select.param-onglets-mobile", "#preferences");
-    await page.locator(".btn-theme", { hasText: "Sombre" }).click();
-    await expect(page.locator(".btn-theme", { hasText: "Sombre" })).toHaveClass(
+    await page.locator(".bouton-theme", { hasText: "Sombre" }).click();
+    await expect(page.locator(".bouton-theme", { hasText: "Sombre" })).toHaveClass(
       /actif/,
     );
     await expect(
-      page.locator(".btn-theme", { hasText: "Automatique" }),
+      page.locator(".bouton-theme", { hasText: "Automatique" }),
     ).not.toHaveClass(/actif/);
-    await page.locator(".btn-theme", { hasText: "Automatique" }).click();
+    await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
   });
 
   test("theme_mobile_clair_affiche_classe_actif", async ({
@@ -342,11 +342,11 @@ test.describe("Scénario: Préférences — thème", () => {
     if (!isMobile) test.skip();
     await page.goto("/parametres");
     await page.selectOption("select.param-onglets-mobile", "#preferences");
-    await page.locator(".btn-theme", { hasText: "Clair" }).click();
-    await expect(page.locator(".btn-theme", { hasText: "Clair" })).toHaveClass(
+    await page.locator(".bouton-theme", { hasText: "Clair" }).click();
+    await expect(page.locator(".bouton-theme", { hasText: "Clair" })).toHaveClass(
       /actif/,
     );
-    await page.locator(".btn-theme", { hasText: "Automatique" }).click();
+    await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
   });
 });
 
@@ -394,9 +394,9 @@ test.describe("Scénario: Préférences — filtre disponibles", () => {
       "input[type='checkbox'][aria-labelledby='label-filtre-disponibles']",
     );
     const etatInitial = await toggle.isChecked();
-    await page.locator("label.switch").click();
+    await page.locator("label.bascule").click();
     await expect(toggle).toBeChecked({ checked: !etatInitial });
-    await page.locator("label.switch").click();
+    await page.locator("label.bascule").click();
     await expect(toggle).toBeChecked({ checked: etatInitial });
   });
 
@@ -517,10 +517,10 @@ test.describe("Scénario: Données — suppression de compte", () => {
   }) => {
     await page.goto("/parametres#donnees");
     await expect(page.locator("section#donnees")).toBeVisible();
-    await page.locator("section#donnees button.btn-danger").click();
+    await page.locator("section#donnees button.bouton-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
     await expect(dialog).toBeVisible();
-    await expect(dialog.locator("button.btn-danger")).toBeDisabled();
+    await expect(dialog.locator("button.bouton-danger")).toBeDisabled();
   });
 
   test("suppression_compte_dialog_actif_avec_texte_correct", async ({
@@ -530,15 +530,15 @@ test.describe("Scénario: Données — suppression de compte", () => {
     await expect(page.locator("section#donnees")).toBeVisible({
       timeout: 5000,
     });
-    await page.locator("section#donnees button.btn-danger").click();
+    await page.locator("section#donnees button.bouton-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
     // Attendre explicitement le dialog (pattern déjà utilisé par le test précédent) — sans cela,
     // .fill() peut retenter contre un élément pas encore visible sous charge parallèle et finir
     // par expirer plutôt que de laisser l'auto-wait de Playwright suffire.
     await expect(dialog).toBeVisible();
     await dialog.locator("input#confirmation-suppression").fill("supprimer");
-    await expect(dialog.locator("button.btn-danger")).not.toBeDisabled();
-    await dialog.locator("button.btn-secondary").click();
+    await expect(dialog.locator("button.bouton-danger")).not.toBeDisabled();
+    await dialog.locator("button.bouton-secondaire").click();
     await expect(dialog).not.toBeVisible();
   });
 
@@ -547,10 +547,10 @@ test.describe("Scénario: Données — suppression de compte", () => {
     await expect(page.locator("section#donnees")).toBeVisible({
       timeout: 5000,
     });
-    await page.locator("section#donnees button.btn-danger").click();
+    await page.locator("section#donnees button.bouton-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
     await expect(dialog).toBeVisible();
-    await dialog.locator("button.btn-secondary").click();
+    await dialog.locator("button.bouton-secondaire").click();
     await expect(dialog).not.toBeVisible();
   });
 });

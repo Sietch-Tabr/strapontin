@@ -6,15 +6,8 @@ package fr.strapontin.web.setup;
 
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
+import fr.strapontin.web.VapidKeyGenerator;
 import fr.strapontin.web.config.ConfigService;
-import java.math.BigInteger;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.ECPublicKey;
-import java.security.spec.ECGenParameterSpec;
-import java.security.spec.ECPoint;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -32,11 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 /// Service de configuration initiale de l'application.
 ///
-/// <p>Crée le premier administrateur et initialise les clés VAPID.
-/// L'opération {@link #initialiserTransactionnel} est atomique et isolée
-/// ({@code @Transactional(isolation = SERIALIZABLE)}) : sans cela, deux appels concurrents à
-/// {@code POST /api/setup} passent tous les deux la garde {@link #estDejaConfiguree} avant que
-/// l'un ou l'autre ne committe, créant deux comptes admin distincts.
+/// <p>Crée le premier administrateur et initialise les clés VAPID. L'opération {@link
+/// #initialiserTransactionnel} est atomique et isolée ({@code @Transactional(isolation =
+/// SERIALIZABLE)}) : sans cela, deux appels concurrents à {@code POST /api/setup} passent tous les
+/// deux la garde {@link #estDejaConfiguree} avant que l'un ou l'autre ne committe, créant deux
+/// comptes admin distincts.
 ///
 /// @since 2.1.0
 /// @author Kwaite
@@ -51,7 +44,7 @@ public class SetupService {
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
   private SetupService self;
 
-  /// @param jdbc          accès JDBC
+  /// @param jdbc accès JDBC
   /// @param configService lecture/écriture de la configuration applicative
   public SetupService(NamedParameterJdbcTemplate jdbc, ConfigService configService) {
     this.jdbc = jdbc;
@@ -59,10 +52,10 @@ public class SetupService {
   }
 
   /// Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
-  /// éviter le problème d'auto-référence à la construction — l'appel à
-  /// {@link #initialiserTransactionnel} passe ainsi par le proxy AOP Spring et bénéficie de
-  /// l'isolation {@code SERIALIZABLE}. En dehors d'un contexte Spring (tests unitaires), {@code
-  /// self} peut être positionné manuellement sur l'instance elle-même.
+  /// éviter le problème d'auto-référence à la construction — l'appel à {@link
+  /// #initialiserTransactionnel} passe ainsi par le proxy AOP Spring et bénéficie de l'isolation
+  /// {@code SERIALIZABLE}. En dehors d'un contexte Spring (tests unitaires), {@code self} peut être
+  /// positionné manuellement sur l'instance elle-même.
   ///
   /// @param self référence proxifiée de ce bean ({@code @Lazy})
   @Autowired
@@ -80,13 +73,13 @@ public class SetupService {
 
   /// Crée le premier administrateur et initialise la configuration.
   ///
-  /// <p>Réessaie jusqu'à {@value MAX_TENTATIVES} fois en cas d'échec de sérialisation
-  /// (deux appels concurrents détectés par PostgreSQL) — seul le perdant de la course réessaie et
-  /// échoue alors normalement sur {@link RessourceDejaExistante} puisque l'autre a déjà committé.
+  /// <p>Réessaie jusqu'à {@value MAX_TENTATIVES} fois en cas d'échec de sérialisation (deux appels
+  /// concurrents détectés par PostgreSQL) — seul le perdant de la course réessaie et échoue alors
+  /// normalement sur {@link RessourceDejaExistante} puisque l'autre a déjà committé.
   ///
   /// @param requete données d'initialisation
   /// @throws RessourceDejaExistante si l'application est déjà configurée
-  /// @throws ErreurMetier           si les données sont invalides
+  /// @throws ErreurMetier si les données sont invalides
   public void initialiser(RequeteSetup requete) {
     for (int tentative = 1; ; tentative++) {
       try {
@@ -106,7 +99,7 @@ public class SetupService {
   ///
   /// @param requete données d'initialisation
   /// @throws RessourceDejaExistante si l'application est déjà configurée
-  /// @throws ErreurMetier           si les données sont invalides
+  /// @throws ErreurMetier si les données sont invalides
   @Transactional(isolation = Isolation.SERIALIZABLE)
   void initialiserTransactionnel(RequeteSetup requete) {
     if (estDejaConfiguree()) {
@@ -169,37 +162,11 @@ public class SetupService {
 
   private void genererVapid() {
     try {
-      KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
-      kpg.initialize(new ECGenParameterSpec("secp256r1"));
-      KeyPair paire = kpg.generateKeyPair();
-
-      ECPublicKey pubKey = (ECPublicKey) paire.getPublic();
-      ECPoint w = pubKey.getW();
-      byte[] uncompressed = new byte[65];
-      uncompressed[0] = 0x04;
-      byte[] x = vers32Octets(w.getAffineX());
-      byte[] y = vers32Octets(w.getAffineY());
-      System.arraycopy(x, 0, uncompressed, 1, 32);
-      System.arraycopy(y, 0, uncompressed, 33, 32);
-      String clePublique = Base64.getUrlEncoder().withoutPadding().encodeToString(uncompressed);
-
-      ECPrivateKey privKey = (ECPrivateKey) paire.getPrivate();
-      byte[] d = vers32Octets(privKey.getS());
-      String clePrivee = Base64.getUrlEncoder().withoutPadding().encodeToString(d);
-
-      configService.sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique);
-      configService.sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee);
+      VapidKeyGenerator.PaireVapid paire = VapidKeyGenerator.genererPaire();
+      configService.sauvegarderConfig("VAPID_PUBLIC_KEY", paire.clePublique());
+      configService.sauvegarderConfig("VAPID_PRIVATE_KEY", paire.clePrivee());
     } catch (Exception e) {
       log.warn("Impossible de générer les clés VAPID lors du setup", e);
     }
-  }
-
-  private static byte[] vers32Octets(BigInteger n) {
-    byte[] raw = n.toByteArray();
-    if (raw.length == 32) return raw;
-    byte[] result = new byte[32];
-    if (raw.length > 32) System.arraycopy(raw, raw.length - 32, result, 0, 32);
-    else System.arraycopy(raw, 0, result, 32 - raw.length, raw.length);
-    return result;
   }
 }

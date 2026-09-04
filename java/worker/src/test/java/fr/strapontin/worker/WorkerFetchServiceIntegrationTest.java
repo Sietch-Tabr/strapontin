@@ -57,8 +57,8 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   private void insererUser(String id) {
     jdbc.update(
-        "INSERT INTO users (id, name, email) VALUES (:id, :name, :email)",
-        Map.of("id", id, "name", "User " + id, "email", id + "@test.fr"));
+        "INSERT INTO users (id, email) VALUES (:id, :email)",
+        Map.of("id", id, "email", id + "@test.fr"));
   }
 
   private UUID insererSalleAvecSourceTm(String salleCle, String venueId) {

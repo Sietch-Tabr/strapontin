@@ -1,7 +1,7 @@
 <template>
   <section class="admin-section" id="banniere">
     <div class="param-bloc">
-      <h3 class="param-label">Message système</h3>
+      <h3 class="param-libelle">Message système</h3>
       <p class="param-aide">
         Publiez un message visible par tous les utilisateurs connectés dans la minute.
         Le message réapparaît à chaque changement de page, sauf si l'utilisateur le ferme manuellement.
@@ -34,8 +34,8 @@
         </select>
       </div>
       <div class="form-actions">
-        <button type="button" class="btn btn-primary" @click="publierBanniere">Publier</button>
-        <button type="button" class="btn btn-danger-outline" @click="effacerBanniere">Effacer</button>
+        <button type="button" class="bouton bouton-primaire" @click="publierBanniere">Publier</button>
+        <button type="button" class="bouton bouton-danger-contour" @click="effacerBanniere">Effacer</button>
       </div>
     </div>
   </section>
@@ -64,38 +64,61 @@ const banniereType = ref('info')
 const banniereActive = ref(null)
 
 async function chargerBanniereActive() {
-  const rep = await fetch('/api/banniere/json')
-  const texte = rep.ok ? await rep.text() : ''
-  banniereActive.value = parseJsonOuNull(texte)
+  try {
+    const rep = await fetch('/api/banniere/json')
+    const texte = rep.ok ? await rep.text() : ''
+    banniereActive.value = parseJsonOuNull(texte)
+  } catch (e) {
+    afficherToast('Erreur réseau lors du chargement de la bannière.', 'erreur')
+  }
 }
 
 async function publierBanniere() {
   const msg = banniereMessage.value.trim()
   if (!msg) return
-  const rep = await fetch('/api/admin/banniere', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: msg, type: banniereType.value }),
-  })
-  const corps = await rep.json()
-  if (rep.ok) {
-    afficherToast('Bannière publiée.', 'succes')
-    await chargerBanniereActive()
-  } else {
-    afficherToast(corps.erreur || 'Erreur lors de la publication.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/banniere', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, type: banniereType.value }),
+    })
+    const corps = await rep.json()
+    if (rep.ok) {
+      afficherToast('Bannière publiée.', 'succes')
+      await chargerBanniereActive()
+    } else {
+      afficherToast(corps.erreur || 'Erreur lors de la publication.', 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors de la publication.', 'erreur')
   }
 }
 
 async function effacerBanniere() {
-  const rep = await fetch('/api/admin/banniere', { method: 'DELETE' })
-  const corps = await rep.json()
-  if (rep.ok) {
-    afficherToast('Bannière effacée.', 'succes')
-    await chargerBanniereActive()
-  } else {
-    afficherToast(corps.erreur || "Erreur lors de l'effacement.", 'erreur')
+  try {
+    const rep = await fetch('/api/admin/banniere', { method: 'DELETE' })
+    const corps = await rep.json()
+    if (rep.ok) {
+      afficherToast('Bannière effacée.', 'succes')
+      await chargerBanniereActive()
+    } else {
+      afficherToast(corps.erreur || "Erreur lors de l'effacement.", 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors de l\'effacement.', 'erreur')
   }
 }
 
 onMounted(chargerBanniereActive)
 </script>
+
+<style scoped>
+  .bouton-danger-contour {
+    background: none;
+    border: 1px solid var(--danger);
+    color: var(--danger-text);
+  }
+  .bouton-danger-contour:hover {
+    background: var(--danger-bg);
+  }
+</style>

@@ -118,10 +118,10 @@ test.describe("Scénario: PWA — manifest et installabilité", () => {
   test("manifest_json_icons_accessibles", async ({ request }) => {
     const manifest = await (await request.get("/manifest.json")).json();
     const vus = new Set<string>();
-    for (const icon of manifest.icons as { src: string }[]) {
-      if (vus.has(icon.src)) continue;
-      vus.add(icon.src);
-      const rep = await request.get(icon.src);
+    for (const icone of manifest.icons as { src: string }[]) {
+      if (vus.has(icone.src)) continue;
+      vus.add(icone.src);
+      const rep = await request.get(icone.src);
       expect(rep.status()).toBe(200);
     }
   });
@@ -146,8 +146,8 @@ test.describe("Scénario: PWA — manifest et installabilité", () => {
     }[]) {
       expect(shortcut.name).toBeTruthy();
       expect(shortcut.icons.length).toBeGreaterThan(0);
-      for (const icon of shortcut.icons) {
-        const repIcone = await request.get(icon.src);
+      for (const icone of shortcut.icons) {
+        const repIcone = await request.get(icone.src);
         expect(repIcone.status()).toBe(200);
       }
     }

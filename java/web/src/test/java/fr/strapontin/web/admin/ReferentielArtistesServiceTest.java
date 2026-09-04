@@ -16,6 +16,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -44,20 +45,23 @@ class ReferentielArtistesServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void lister_nominal_retournePageAvecTotal() {
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(1L);
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
-        .thenReturn(
-            List.of(
-                new ArtisteReferentiel(
-                    UUID.randomUUID(),
-                    "Jain",
-                    "Jain",
-                    2,
-                    List.of("ticketmaster"),
-                    "a_jour",
-                    "Q3161164",
-                    null,
-                    "K8vZ917G1B7")));
+        .thenAnswer(
+            invocation -> {
+              RowMapper<ArtisteReferentiel> mapper = invocation.getArgument(2);
+              ResultSet rs = mock(ResultSet.class);
+              when(rs.getObject("id", UUID.class)).thenReturn(UUID.randomUUID());
+              when(rs.getString("nom")).thenReturn("Jain");
+              when(rs.getString("nom_affiche")).thenReturn("Jain");
+              when(rs.getLong("nb_concerts")).thenReturn(2L);
+              when(rs.getString("sources")).thenReturn("ticketmaster");
+              when(rs.getString("statut")).thenReturn("a_jour");
+              when(rs.getString("wikidata_id")).thenReturn("Q3161164");
+              when(rs.getString("deezer_id")).thenReturn(null);
+              when(rs.getString("tm_identifiant_externe")).thenReturn("K8vZ917G1B7");
+              when(rs.getLong("total_filtre")).thenReturn(1L);
+              return List.of(mapper.mapRow(rs, 0));
+            });
 
     ReponseReferentielArtistes reponse = service.lister(0, "Jain", null, false);
 
@@ -72,13 +76,12 @@ class ReferentielArtistesServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void lister_nominal_requeteUtiliseLesNouvellesValeursDeStatut() {
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(0L);
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
 
     service.lister(0, null, null, false);
 
     verify(jdbc)
-        .queryForObject(
+        .query(
             org.mockito.ArgumentMatchers.argThat(
                 (String sql) ->
                     sql.contains("'a_jour'")
@@ -86,7 +89,7 @@ class ReferentielArtistesServiceTest {
                         && !sql.contains("'a_verifier'")
                         && sql.contains("necessite_intervention_le")),
             anyMap(),
-            eq(Long.class));
+            any(RowMapper.class));
   }
 
   // Régression : facilite le repérage des candidats à corriger manuellement dans une pagination
@@ -94,13 +97,25 @@ class ReferentielArtistesServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void lister_wikidataManquantVrai_filtreSurWikidataIdNull() {
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(0L);
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
 
     service.lister(0, null, null, true);
 
-    verify(jdbc).queryForObject(contains("wikidata_id IS NULL"), anyMap(), eq(Long.class));
     verify(jdbc).query(contains("wikidata_id IS NULL"), anyMap(), any(RowMapper.class));
+  }
+
+  // page au-delà du total (offset trop grand) : aucune ligne ne porte total_filtre, un second
+  // aller-retour COUNT reste nécessaire pour ne pas afficher un total à zéro trompeur.
+  @Test
+  @SuppressWarnings("unchecked")
+  void lister_pageAuDelaDuTotal_retombeSurUnCountSepare() {
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(1L);
+
+    ReponseReferentielArtistes reponse = service.lister(5, null, null, false);
+
+    assertEquals(1L, reponse.totalArtistes());
+    assertTrue(reponse.artistes().isEmpty());
   }
 
   // Régression : corrige une mauvaise correspondance automatique — l'enrichissement ne peut

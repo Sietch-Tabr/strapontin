@@ -1,9 +1,9 @@
 <template>
   <section class="parametres-section" id="donnees">
-    <h2 class="sr-only">Données</h2>
+    <h2 class="lecteur-ecran">Données</h2>
 
     <div class="param-bloc">
-      <h3 class="param-label">Exporter mes préférences</h3>
+      <h3 class="param-libelle">Exporter mes préférences</h3>
       <p class="param-aide">
         Télécharge un fichier JSON avec vos artistes, salles et configuration.
       </p>
@@ -11,17 +11,17 @@
       <p v-else-if="stats" class="param-aide">
         {{ stats.nbArtistes }}/500 artistes — {{ stats.nbSalles }}/200 salles
       </p>
-      <a href="/api/preferences" class="btn btn-secondary">Télécharger (JSON)</a>
+      <a href="/api/preferences" class="bouton bouton-secondaire">Télécharger (JSON)</a>
     </div>
 
     <div class="param-bloc">
-      <h3 class="param-label">Importer des préférences</h3>
+      <h3 class="param-libelle">Importer des préférences</h3>
       <p class="param-aide">
         Importez un fichier JSON exporté par Strapontin. Mode Fusionner conserve vos
         données existantes ; mode Écraser les remplace.
       </p>
       <form class="form-vertical form-compact" @submit.prevent="importerPreferences">
-        <div class="form-group">
+        <div class="form-groupe">
           <label for="import-fichier">Fichier JSON</label>
           <div class="form-fichier">
             <input
@@ -35,14 +35,14 @@
             />
             <button
               type="button"
-              class="btn btn-secondary"
+              class="bouton bouton-secondaire"
               @click="importFichierRef?.click()"
             >Choisir un fichier</button>
             <span class="form-fichier__nom">{{ nomFichier }}</span>
           </div>
           <p class="form-aide">Fichier .json exporté depuis Strapontin</p>
         </div>
-        <div class="form-group">
+        <div class="form-groupe">
           <label for="import-mode">Mode</label>
           <select id="import-mode" v-model="importMode">
             <option value="fusionner">Fusionner (conserver les données existantes)</option>
@@ -55,23 +55,23 @@
             Attention : vos artistes et salles actuels seront remplacés.
           </p>
         </div>
-        <div class="form-group form-checkboxes">
+        <div class="form-groupe form-checkboxes">
           <label>
             <input v-model="importerConfig" type="checkbox" />
             Importer la configuration (départements, notifications, thème)
           </label>
         </div>
-        <button type="submit" class="btn btn-secondary">Importer</button>
+        <button type="submit" class="bouton bouton-secondaire">Importer</button>
       </form>
     </div>
 
     <div class="param-bloc param-bloc-danger">
-      <h3 class="param-label">Supprimer mon compte</h3>
+      <h3 class="param-libelle">Supprimer mon compte</h3>
       <p class="param-aide">
         Supprime définitivement votre compte et toutes vos données. Cette action est
         irréversible.
       </p>
-      <button type="button" class="btn btn-danger" @click="ouvrirDialogSuppression">
+      <button type="button" class="bouton bouton-danger" @click="ouvrirDialogSuppression">
         Supprimer mon compte
       </button>
     </div>
@@ -82,7 +82,7 @@
       Supprime définitivement votre compte et toutes vos données.
       Cette action est irréversible.
     </p>
-    <div class="form-group">
+    <div class="form-groupe">
       <label for="confirmation-suppression">
         Saisissez <strong>supprimer</strong> pour confirmer
       </label>
@@ -96,12 +96,12 @@
       />
     </div>
     <div class="dialog-pied">
-      <button type="button" class="btn btn-secondary" @click="fermerDialogSuppression">
+      <button type="button" class="bouton bouton-secondaire" @click="fermerDialogSuppression">
         Annuler
       </button>
       <button
         type="button"
-        class="btn btn-danger"
+        class="bouton bouton-danger"
         :disabled="confirmationSuppression !== 'supprimer'"
         @click="supprimerCompte"
       >
@@ -216,3 +216,26 @@ async function supprimerCompte() {
 
 onMounted(charger)
 </script>
+
+<style scoped>
+  .form-aide-avertissement {
+    color: var(--avertissement);
+    font-weight: 500;
+  }
+  .form-fichier {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .form-fichier__input {
+    display: none;
+  }
+  .form-fichier__nom {
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+</style>

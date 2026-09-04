@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-entete">
       <h1>Paramètres</h1>
     </div>
 
@@ -92,3 +92,9 @@ onMounted(() => {
   traiterSuccesUrl()
 })
 </script>
+
+<style scoped>
+  .parametres-sections {
+    max-width: 42rem;
+  }
+</style>

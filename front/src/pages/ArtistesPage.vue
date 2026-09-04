@@ -1,14 +1,14 @@
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-entete">
       <h1>Mes artistes</h1>
-      <p v-if="donnees" class="page-subtitle">
+      <p v-if="donnees" class="page-sous-titre">
         {{ donnees.artistes.length }} artiste{{ donnees.artistes.length !== 1 ? 's' : '' }} suivi{{ donnees.artistes.length !== 1 ? 's' : '' }}
       </p>
     </div>
 
     <form class="form-recherche" @submit.prevent="rechercher">
-      <label for="q-artiste" class="sr-only">Rechercher un artiste</label>
+      <label for="q-artiste" class="lecteur-ecran">Rechercher un artiste</label>
       <input
         id="q-artiste"
         v-model="q"
@@ -17,7 +17,7 @@
         minlength="2"
         autocomplete="off"
       />
-      <button type="submit" class="btn btn-secondary" :disabled="q.trim().length < 2">
+      <button type="submit" class="bouton bouton-secondaire" :disabled="q.trim().length < 2">
         Rechercher
       </button>
     </form>
@@ -34,7 +34,7 @@
         aria-live="polite"
         aria-atomic="false"
       >
-        <h2 class="section-label">Résultats pour « {{ qSoumis }} »</h2>
+        <h2 class="section-libelle">Résultats pour « {{ qSoumis }} »</h2>
         <ul class="liste-cartes">
           <li v-for="s in donnees.suggestions" :key="s.nom + (s.wikidataId || '')" class="carte-item">
             <div>
@@ -46,7 +46,7 @@
             </div>
             <button
               type="button"
-              class="btn btn-sm btn-secondary"
+              class="bouton bouton-petit bouton-secondaire"
               :aria-label="'Suivre ' + s.nom"
               @click="ajouter(s.nom, s.wikidataId)"
             >Suivre</button>
@@ -64,7 +64,7 @@
         </div>
         <div v-else class="alerte alerte-info" role="status">
           <p>Aucun résultat pour « {{ qSoumis }} ».</p>
-          <button type="button" class="btn btn-primary" @click="ajouter(qSoumis)">
+          <button type="button" class="bouton bouton-primaire" @click="ajouter(qSoumis)">
             Ajouter « {{ qSoumis }} » quand même
           </button>
         </div>
@@ -76,13 +76,13 @@
       </div>
 
       <section v-else>
-        <h2 class="section-label">Artistes suivis</h2>
+        <h2 class="section-libelle">Artistes suivis</h2>
         <ul class="liste-cartes">
           <li v-for="artiste in donnees.artistes" :key="artiste.id" class="carte-item">
             <span class="carte-nom">{{ artiste.artisteAffiche }}</span>
             <button
               type="button"
-              class="btn btn-sm btn-danger-texte"
+              class="bouton bouton-petit bouton-danger-texte"
               :aria-label="'Supprimer ' + artiste.artisteAffiche"
               @click="demanderSuppression(artiste)"
             >Supprimer</button>
@@ -102,8 +102,8 @@
       </div>
       <p>Arrêter de suivre « <strong>{{ artisteASupprimer?.artisteAffiche }}</strong> » ?</p>
       <div class="dialog-pied">
-        <button type="button" class="btn btn-danger" @click="confirmerSuppression">Supprimer</button>
-        <button type="button" class="btn btn-texte" @click="dialogRef.close()">Annuler</button>
+        <button type="button" class="bouton bouton-danger" @click="confirmerSuppression">Supprimer</button>
+        <button type="button" class="bouton bouton-texte" @click="dialogRef.close()">Annuler</button>
       </div>
     </dialog>
   </div>

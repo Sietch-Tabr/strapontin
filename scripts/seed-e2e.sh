@@ -65,6 +65,16 @@ JOIN user_artistes ua ON ua.artiste_id = c.artiste_id AND ua.user_id = '${user_i
 WHERE c.date > CURRENT_DATE + INTERVAL '2 days'
 ON CONFLICT DO NOTHING;
 
+-- onboarding_vu=true pour les deux comptes : ce sont des comptes de test déjà établis, jamais
+-- de première visite réelle à simuler — sans cette ligne, la modale d'onboarding (dialog natif)
+-- intercepte tous les clics au premier chargement de chaque page et fait échouer en cascade la
+-- quasi-totalité des tests admin/utilisateur (constaté en production de ce script : DELETE FROM
+-- users cascade réellement user_config lors d'une suppression applicative, contrairement à une
+-- ré-exécution antérieure de ce script qui pouvait laisser une ligne orpheline réutilisée).
+INSERT INTO user_config (user_id, onboarding_vu)
+VALUES ('${admin_id}', true), ('${user_id}', true)
+ON CONFLICT (user_id) DO UPDATE SET onboarding_vu = true;
+
 -- Départements vidés pour e2euser : RecalculerMatchesService filtre les matches par
 -- user_config.departements. Un filtre non vide restreindrait les matches aux seuls concerts
 -- de l'artiste suivi situés dans ces départements précis — l'artiste suivi ci-dessus est

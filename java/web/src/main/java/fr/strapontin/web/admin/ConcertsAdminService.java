@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class ConcertsAdminService {
 
+  private static final int TAILLE_PAGE_DEFAUT = 50;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
@@ -30,29 +32,52 @@ public class ConcertsAdminService {
     this.logAdminService = logAdminService;
   }
 
-  /// Liste les concerts flagués, du plus récemment flagué au plus ancien.
+  /// Liste paginée des concerts flagués, du plus récemment flagué au plus ancien.
   ///
-  /// @return concerts en attente de revue
-  public List<ConcertSuppressionSuggeree> lister() {
-    return jdbc.query(
-        """
-        SELECT c.id, c.artiste, c.salle, c.ville, c.date, c.heure, c.absences_consecutives,
-               c.suppression_suggeree_le
-        FROM concerts c
-        WHERE c.suppression_suggeree_le IS NOT NULL
-        ORDER BY c.suppression_suggeree_le DESC
-        """,
-        Map.of(),
-        (rs, _) ->
-            new ConcertSuppressionSuggeree(
-                rs.getObject("id", UUID.class),
-                rs.getString("artiste"),
-                rs.getString("salle"),
-                rs.getString("ville"),
-                rs.getObject("date", LocalDate.class),
-                rs.getObject("heure", LocalTime.class),
-                rs.getInt("absences_consecutives"),
-                rs.getTimestamp("suppression_suggeree_le").toInstant()));
+  /// @param page numéro de page (0-indexé)
+  /// @return page de concerts en attente de revue
+  public ReponseConcertsAConfirmer lister(int page) {
+    int pageNum = Math.max(0, page);
+    Map<String, Object> paramsPage =
+        Map.of("taille", TAILLE_PAGE_DEFAUT, "offset", pageNum * TAILLE_PAGE_DEFAUT);
+    long[] total = {0};
+    List<ConcertSuppressionSuggeree> concerts =
+        jdbc.query(
+            """
+            SELECT c.id, c.artiste, c.salle, c.ville, c.date, c.heure, c.absences_consecutives,
+                   c.suppression_suggeree_le, COUNT(*) OVER() AS total_filtre
+            FROM concerts c
+            WHERE c.suppression_suggeree_le IS NOT NULL
+            ORDER BY c.suppression_suggeree_le DESC
+            LIMIT :taille OFFSET :offset
+            """,
+            paramsPage,
+            (rs, _) -> {
+              total[0] = rs.getLong("total_filtre");
+              return new ConcertSuppressionSuggeree(
+                  rs.getObject("id", UUID.class),
+                  rs.getString("artiste"),
+                  rs.getString("salle"),
+                  rs.getString("ville"),
+                  rs.getObject("date", LocalDate.class),
+                  rs.getObject("heure", LocalTime.class),
+                  rs.getInt("absences_consecutives"),
+                  rs.getTimestamp("suppression_suggeree_le").toInstant());
+            });
+
+    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
+    // second aller-retour reste alors nécessaire pour connaître le total réel.
+    if (concerts.isEmpty() && pageNum > 0) {
+      Long totalVide =
+          jdbc.queryForObject(
+              "SELECT COUNT(*) FROM concerts WHERE suppression_suggeree_le IS NOT NULL",
+              Map.of(),
+              Long.class);
+      total[0] = totalVide != null ? totalVide : 0;
+    }
+
+    int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_DEFAUT));
+    return new ReponseConcertsAConfirmer(concerts, pageNum, totalPages, total[0]);
   }
 
   /// Supprime définitivement un concert flagué.

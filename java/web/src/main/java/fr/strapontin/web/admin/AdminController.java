@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web.admin;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
@@ -76,12 +78,14 @@ public class AdminController {
     this.configService = configService;
   }
 
-  /// Retourne la liste des utilisateurs avec leur dernière activité.
+  /// Retourne une page d'utilisateurs avec leur dernière activité.
   ///
-  /// @return les utilisateurs triés par date de création
+  /// @param page numéro de page (0-indexé, défaut 0)
+  /// @return la page d'utilisateurs triés par date de création
   @GetMapping("/utilisateurs")
-  public ResponseEntity<List<UtilisateurAdmin>> listerUtilisateurs() {
-    return ResponseEntity.ok(adminService.listerUtilisateurs());
+  public ResponseEntity<ReponseUtilisateursAdmin> listerUtilisateurs(
+      @RequestParam(defaultValue = "0") int page) {
+    return ResponseEntity.ok(adminService.listerUtilisateurs(page));
   }
 
   /// Crée un nouveau compte utilisateur et envoie un email d'invitation.
@@ -422,12 +426,6 @@ public class AdminController {
       throw new IllegalStateException("Principal inattendu");
     }
     return ud;
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 
   private Optional<String> resoudreBaseUrl() {

@@ -10,6 +10,8 @@ import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
+import fr.strapontin.web.WorkerTriggerUtils;
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -69,6 +71,7 @@ public class SalleService {
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
   private final CadenceurAppels cadenceurTicketmaster;
+  private final LogAdminService logAdminService;
   private SalleService self;
 
   /// @param salleRepository accès aux données salles
@@ -78,17 +81,20 @@ public class SalleService {
   ///   fr.strapontin.web.WebConfiguration})
   /// @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker (voir {@link
   ///   fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
+  /// @param logAdminService journalisation des suppressions dans {@code logs_admin}
   public SalleService(
       SalleRepository salleRepository,
       ConfigService configService,
       ObjectMapper objectMapper,
       RestClient restClient,
-      CadenceurAppels cadenceurTicketmaster) {
+      CadenceurAppels cadenceurTicketmaster,
+      LogAdminService logAdminService) {
     this.salleRepository = salleRepository;
     this.configService = configService;
     this.objectMapper = objectMapper;
     this.restClient = restClient;
     this.cadenceurTicketmaster = cadenceurTicketmaster;
+    this.logAdminService = logAdminService;
   }
 
   /// Injection par setter de la référence proxifiée de ce bean — nécessaire pour que {@link
@@ -382,7 +388,12 @@ public class SalleService {
   /// @param userId identifiant de l'utilisateur
   /// @param salleId UUID stable de la salle
   public void supprimer(String userId, UUID salleId) {
-    salleRepository.supprimerPourUtilisateur(userId, salleId);
+    if (salleRepository.supprimerPourUtilisateur(userId, salleId) == 0) {
+      return;
+    }
+    log.info("salle supprimée userId={} salleId={}", userId, salleId);
+    logAdminService.logAdmin(
+        "warn", "web", "salle supprimée", Map.of("userId", userId, "salleId", salleId.toString()));
   }
 
   /// Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
@@ -488,14 +499,15 @@ public class SalleService {
               + "?q="
               + URLEncoder.encode(terme, StandardCharsets.UTF_8)
               + "&format=json&limit=6&extratags=1&addressdetails=1&countrycodes=fr";
-      ReponseHttp reponse =
+      WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
               .header("User-Agent", "Strapontin/2.6.3 (contact: " + contact + ")")
               .exchange(
                   (_, resp) ->
-                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+                      new WorkerTriggerUtils.ReponseHttp(
+                          resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) {
         log.warn("Nominatim erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
@@ -583,13 +595,14 @@ public class SalleService {
               + URLEncoder.encode(tmKey.get(), StandardCharsets.UTF_8);
 
       cadenceurTicketmaster.attendre();
-      ReponseHttp reponse =
+      WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
               .exchange(
                   (_, resp) ->
-                      new ReponseHttp(resp.getStatusCode().value(), resp.bodyTo(String.class)));
+                      new WorkerTriggerUtils.ReponseHttp(
+                          resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) return List.of();
 
       Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
@@ -623,28 +636,12 @@ public class SalleService {
     }
   }
 
-  /// Déclenche le worker en fire-and-forget, sur un thread virtuel — voir {@link
-  /// fr.strapontin.web.artiste.ArtisteService#declencherWorkerArtiste} pour la même justification
-  /// (RestClient est bloquant, contrairement à l'ancien HttpClient.sendAsync).
   private void declencherWorkerSalle(String identifiants) {
-    Thread.startVirtualThread(
-        () -> {
-          try {
-            restClient
-                .post()
-                .uri(
-                    "http://localhost:8081/trigger/salle?identifiants="
-                        + URLEncoder.encode(identifiants, StandardCharsets.UTF_8))
-                .retrieve()
-                .toBodilessEntity();
-          } catch (Exception e) {
-            log.warn("Déclenchement worker salle impossible identifiants={}", identifiants, e);
-          }
-        });
+    WorkerTriggerUtils.declencherWorkerAsync(
+        restClient,
+        log,
+        "http://localhost:8081/trigger/salle?identifiants="
+            + URLEncoder.encode(identifiants, StandardCharsets.UTF_8),
+        "Déclenchement worker salle impossible identifiants=" + identifiants);
   }
-
-  /// Réponse HTTP brute (statut + corps), utilisée pour reproduire avec {@link RestClient} le
-  /// comportement de l'ancien {@code java.net.http.HttpClient} : lire le statut sans lever
-  /// d'exception sur les codes non-2xx (contrairement à {@code retrieve()} par défaut).
-  private record ReponseHttp(int statut, String corps) {}
 }

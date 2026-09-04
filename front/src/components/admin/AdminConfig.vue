@@ -6,11 +6,11 @@
 
     <!-- Général -->
     <div class="param-bloc">
-      <h3 class="param-label">Général</h3>
+      <h3 class="param-libelle">Général</h3>
       <template v-for="cle in ['CONTACT_EMAIL', 'ADMIN_ALERT_EMAIL', 'PUBLIC_BASE_URL', 'SIGNAL_LIEN']" :key="cle">
         <div class="config-groupe-item">
-          <div class="param-label-ligne">
-            <span class="param-label">{{ cle }}</span>
+          <div class="param-libelle-ligne">
+            <span class="param-libelle">{{ cle }}</span>
             <span v-if="configParCle[cle]?.presente" class="badge badge-succes">Configurée</span>
             <span v-else class="badge badge-manquant" role="status">Non configurée</span>
           </div>
@@ -24,7 +24,7 @@
               autocomplete="off"
               :aria-label="'Valeur de ' + cle"
             />
-            <button type="submit" class="btn btn-secondary">Enregistrer</button>
+            <button type="submit" class="bouton bouton-secondaire">Enregistrer</button>
           </form>
         </div>
       </template>
@@ -32,10 +32,10 @@
 
     <!-- TM API -->
     <div class="param-bloc">
-      <h3 class="param-label">TM API</h3>
+      <h3 class="param-libelle">TM API</h3>
       <template v-if="configParCle['TICKETMASTER_API_KEY']">
-        <div class="param-label-ligne">
-          <span class="param-label">TICKETMASTER_API_KEY</span>
+        <div class="param-libelle-ligne">
+          <span class="param-libelle">TICKETMASTER_API_KEY</span>
           <span v-if="configParCle['TICKETMASTER_API_KEY'].presente" class="badge badge-succes">Configurée</span>
           <span v-else class="badge badge-manquant" role="status">Non configurée</span>
           <span v-if="etatTm === 'valide'" class="badge badge-succes">Valide</span>
@@ -44,12 +44,12 @@
         <p class="param-aide">Clé d'API Ticketmaster Discovery v2.</p>
         <form class="form-inline" @submit.prevent="sauvegarderConfig('TICKETMASTER_API_KEY', $event)">
           <input type="password" name="valeur" autocomplete="new-password" placeholder="Nouvelle valeur…" aria-label="Valeur de TICKETMASTER_API_KEY" />
-          <button type="submit" class="btn btn-secondary">Enregistrer</button>
+          <button type="submit" class="bouton bouton-secondaire">Enregistrer</button>
         </form>
         <button
           v-if="configParCle['TICKETMASTER_API_KEY'].presente"
           type="button"
-          class="btn btn-secondary"
+          class="bouton bouton-secondaire"
           :disabled="testTmEnCours"
           @click="testerTm"
         >{{ testTmEnCours ? 'Test en cours…' : 'Tester la clé' }}</button>
@@ -58,10 +58,10 @@
 
     <!-- Configuration Resend -->
     <div class="param-bloc">
-      <h3 class="param-label">Configuration Resend</h3>
+      <h3 class="param-libelle">Configuration Resend</h3>
       <template v-if="configParCle['RESEND_API_KEY']">
-        <div class="param-label-ligne">
-          <span class="param-label">RESEND_API_KEY</span>
+        <div class="param-libelle-ligne">
+          <span class="param-libelle">RESEND_API_KEY</span>
           <span v-if="configParCle['RESEND_API_KEY'].presente" class="badge badge-succes">Configurée</span>
           <span v-else class="badge badge-manquant" role="status">Non configurée</span>
           <span v-if="etatEmail === 'envoye'" class="badge badge-succes">Email envoyé</span>
@@ -70,27 +70,27 @@
         <p class="param-aide">Clé d'API Resend pour les notifications email.</p>
         <form class="form-inline" @submit.prevent="sauvegarderConfig('RESEND_API_KEY', $event)">
           <input type="password" name="valeur" autocomplete="new-password" placeholder="Nouvelle valeur…" aria-label="Valeur de RESEND_API_KEY" />
-          <button type="submit" class="btn btn-secondary">Enregistrer</button>
+          <button type="submit" class="bouton bouton-secondaire">Enregistrer</button>
         </form>
         <button
           v-if="configParCle['RESEND_API_KEY'].presente"
           type="button"
-          class="btn btn-secondary"
+          class="bouton bouton-secondaire"
           :disabled="testEmailEnCours"
           @click="testerEmail"
         >{{ testEmailEnCours ? 'Envoi en cours…' : 'Envoyer un email de test' }}</button>
       </template>
       <template v-if="configParCle['RESEND_WEBHOOK_SECRET']">
         <div class="config-groupe-item">
-          <div class="param-label-ligne">
-            <span class="param-label">RESEND_WEBHOOK_SECRET</span>
+          <div class="param-libelle-ligne">
+            <span class="param-libelle">RESEND_WEBHOOK_SECRET</span>
             <span v-if="configParCle['RESEND_WEBHOOK_SECRET'].presente" class="badge badge-succes">Configurée</span>
             <span v-else class="badge badge-manquant" role="status">Non configurée</span>
           </div>
           <p class="param-aide">{{ descriptionWebhookSecret }}</p>
           <form class="form-inline" @submit.prevent="sauvegarderConfig('RESEND_WEBHOOK_SECRET', $event)">
             <input type="password" name="valeur" autocomplete="new-password" placeholder="Nouvelle valeur…" aria-label="Valeur de RESEND_WEBHOOK_SECRET" />
-            <button type="submit" class="btn btn-secondary">Enregistrer</button>
+            <button type="submit" class="bouton bouton-secondaire">Enregistrer</button>
           </form>
         </div>
       </template>
@@ -98,7 +98,7 @@
 
     <!-- VAPID -->
     <div class="param-bloc param-bloc-danger">
-      <h3 class="param-label">VAPID</h3>
+      <h3 class="param-libelle">VAPID</h3>
       <details class="config-vapid-details">
         <summary>Qu'est-ce que les clés VAPID ?</summary>
         <p class="param-aide">
@@ -109,8 +109,8 @@
       </details>
       <template v-for="cle in ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY']" :key="cle">
         <div class="config-groupe-item">
-          <div class="param-label-ligne">
-            <span class="param-label">{{ cle }}</span>
+          <div class="param-libelle-ligne">
+            <span class="param-libelle">{{ cle }}</span>
             <span v-if="configParCle[cle]?.presente" class="badge badge-succes">Configurée</span>
             <span v-else class="badge badge-manquant" role="status">Non configurée</span>
           </div>
@@ -118,7 +118,7 @@
       </template>
       <div class="config-groupe-item">
         <p class="param-aide config-vapid-avertissement">Régénérer les clés invalide tous les abonnements push existants.</p>
-        <button type="button" class="btn btn-secondary" @click="ouvrirDialogVapid">
+        <button type="button" class="bouton bouton-secondaire" @click="ouvrirDialogVapid">
           Régénérer les clés VAPID (invalide tous les abonnements push)
         </button>
       </div>
@@ -126,8 +126,8 @@
 
     <!-- APP_CONFIG_SECRET -->
     <div class="param-bloc">
-      <h3 class="param-label">APP_CONFIG_SECRET</h3>
-      <div class="param-label-ligne">
+      <h3 class="param-libelle">APP_CONFIG_SECRET</h3>
+      <div class="param-libelle-ligne">
         <span v-if="appConfigSecretPresente" class="badge badge-succes" role="status">Clé configurée</span>
         <span v-else class="badge badge-manquant" role="status">Clé absente</span>
       </div>
@@ -143,8 +143,8 @@
       Tous les abonnements push existants seront invalidés. Les utilisateurs devront se réabonner aux notifications.
     </p>
     <div class="dialog-pied">
-      <button type="button" id="dialog-vapid-confirmer" class="btn btn-secondary" @click="confirmerVapid">Régénérer</button>
-      <button type="button" id="dialog-vapid-annuler" class="btn btn-secondary" @click="fermerDialogVapid">Annuler</button>
+      <button type="button" id="dialog-vapid-confirmer" class="bouton bouton-secondaire" @click="confirmerVapid">Régénérer</button>
+      <button type="button" id="dialog-vapid-annuler" class="bouton bouton-secondaire" @click="fermerDialogVapid">Annuler</button>
     </div>
   </dialog>
 </template>
@@ -247,20 +247,24 @@ async function testerEmail() {
 
 async function sauvegarderConfig(cle, event) {
   const valeur = event.target.querySelector('[name=valeur]')?.value ?? ''
-  const rep = await fetch('/api/admin/config', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cle, valeur }),
-  })
-  const corps = await rep.json()
-  if (rep.ok) {
-    afficherToast('Configuration sauvegardée.', 'succes')
-    if (cle === 'TICKETMASTER_API_KEY') etatTm.value = null
-    if (cle === 'RESEND_API_KEY') etatEmail.value = null
-    const repConfig = await fetch('/api/admin/config')
-    if (repConfig.ok) configs.value = await repConfig.json()
-  } else {
-    afficherToast(corps.erreur || 'Erreur.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cle, valeur }),
+    })
+    const corps = await rep.json()
+    if (rep.ok) {
+      afficherToast('Configuration sauvegardée.', 'succes')
+      if (cle === 'TICKETMASTER_API_KEY') etatTm.value = null
+      if (cle === 'RESEND_API_KEY') etatEmail.value = null
+      const repConfig = await fetch('/api/admin/config')
+      if (repConfig.ok) configs.value = await repConfig.json()
+    } else {
+      afficherToast(corps.erreur || 'Erreur.', 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors de la sauvegarde.', 'erreur')
   }
 }
 
@@ -274,20 +278,54 @@ function fermerDialogVapid() {
 
 async function confirmerVapid() {
   fermerDialogVapid()
-  const rep = await fetch('/api/admin/vapid/generer', { method: 'POST' })
-  const corps = await rep.json()
-  if (rep.ok) {
-    const nb = corps.nbAbonnementsSupprimes ?? 0
-    afficherToast(
-      `Clés VAPID régénérées. ${nb} abonnement${nb !== 1 ? 's' : ''} push invalidé${nb !== 1 ? 's' : ''}.`,
-      'succes',
-    )
-    const repConfig = await fetch('/api/admin/config')
-    if (repConfig.ok) configs.value = await repConfig.json()
-  } else {
-    afficherToast(corps.erreur || 'Erreur lors de la génération.', 'erreur')
+  try {
+    const rep = await fetch('/api/admin/vapid/generer', { method: 'POST' })
+    const corps = await rep.json()
+    if (rep.ok) {
+      const nb = corps.nbAbonnementsSupprimes ?? 0
+      afficherToast(
+        `Clés VAPID régénérées. ${nb} abonnement${nb !== 1 ? 's' : ''} push invalidé${nb !== 1 ? 's' : ''}.`,
+        'succes',
+      )
+      const repConfig = await fetch('/api/admin/config')
+      if (repConfig.ok) configs.value = await repConfig.json()
+    } else {
+      afficherToast(corps.erreur || 'Erreur lors de la génération.', 'erreur')
+    }
+  } catch (e) {
+    afficherToast('Erreur réseau lors de la génération.', 'erreur')
   }
 }
 
 onMounted(charger)
 </script>
+
+<style scoped>
+  .config-groupe-item {
+    border-top: 1px solid var(--border);
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
+  .config-vapid-details {
+    margin-bottom: 0.5rem;
+  }
+  .config-vapid-details summary {
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .config-vapid-details[open] summary {
+    margin-bottom: 0.25rem;
+  }
+  .config-vapid-avertissement {
+    font-weight: 500;
+    color: var(--danger);
+  }
+  .param-libelle-ligne {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+</style>

@@ -66,7 +66,7 @@ public class PushController {
   /// @return 200 si envoyée, 400 si aucun abonnement actif
   @PostMapping("/tester")
   public ResponseEntity<Map<String, Object>> tester(
-      @RequestBody(required = false) RequeteTesterPush requete, Authentication auth) {
+      @Valid @RequestBody(required = false) RequeteTesterPush requete, Authentication auth) {
     String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
     String endpoint = requete != null ? requete.endpoint() : null;
     boolean envoye = notificationPushService.envoyerNotificationTest(userId, endpoint);

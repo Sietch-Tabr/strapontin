@@ -4,9 +4,12 @@
  */
 package fr.strapontin.web.spectacle;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+import static fr.strapontin.web.ControllerUtils.parseUuid;
+
 import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.securite.UtilisateurDetails;
-import java.util.HashMap;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -75,12 +78,14 @@ public class SpectacleController {
   /// Masque ou démasque un concert pour l'utilisateur courant.
   ///
   /// @param concertId identifiant UUID du concert
-  /// @param requete   corps JSON avec {@code masquer}
-  /// @param auth      contexte d'authentification
+  /// @param requete corps JSON avec {@code masquer}
+  /// @param auth contexte d'authentification
   /// @return 200 si mis à jour
   @PatchMapping("/matches/{concertId}")
   public ResponseEntity<Map<String, Object>> modifierMatch(
-      @PathVariable String concertId, @RequestBody RequeteMasque requete, Authentication auth) {
+      @PathVariable String concertId,
+      @Valid @RequestBody RequeteMasque requete,
+      Authentication auth) {
     spectacleService.modifierMatch(utilisateur(auth).id(), concertId, requete.masquer());
     return ResponseEntity.ok(Map.of("succes", true));
   }
@@ -88,11 +93,11 @@ public class SpectacleController {
   /// Masque tous les concerts d'un artiste pour l'utilisateur courant.
   ///
   /// @param requete corps JSON avec {@code artisteId}
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 200 si mis à jour, 400 si artisteId manquant ou invalide
   @PostMapping("/masquer-artiste")
   public ResponseEntity<Map<String, Object>> masquerArtiste(
-      @RequestBody RequeteMasquerArtiste requete, Authentication auth) {
+      @Valid @RequestBody RequeteMasquerArtiste requete, Authentication auth) {
     UUID artisteId = parseUuid(requete.artisteId());
     if (artisteId == null) {
       return erreur(400, "Identifiant artiste manquant ou invalide.");
@@ -104,11 +109,11 @@ public class SpectacleController {
   /// Démasque tous les concerts d'un artiste pour l'utilisateur courant.
   ///
   /// @param requete corps JSON avec {@code artisteId}
-  /// @param auth    contexte d'authentification
+  /// @param auth contexte d'authentification
   /// @return 200 si mis à jour, 400 si artisteId manquant ou invalide
   @PostMapping("/demasquer-artiste")
   public ResponseEntity<Map<String, Object>> demasquerArtiste(
-      @RequestBody RequeteMasquerArtiste requete, Authentication auth) {
+      @Valid @RequestBody RequeteMasquerArtiste requete, Authentication auth) {
     UUID artisteId = parseUuid(requete.artisteId());
     if (artisteId == null) {
       return erreur(400, "Identifiant artiste manquant ou invalide.");
@@ -117,22 +122,7 @@ public class SpectacleController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  private static UUID parseUuid(String valeur) {
-    if (valeur == null || valeur.isBlank()) return null;
-    try {
-      return UUID.fromString(valeur);
-    } catch (IllegalArgumentException e) {
-      return null;
-    }
-  }
-
   private static UtilisateurDetails utilisateur(Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

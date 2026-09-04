@@ -1,14 +1,14 @@
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-entete">
       <h1>Mes salles</h1>
-      <p v-if="donnees" class="page-subtitle">
+      <p v-if="donnees" class="page-sous-titre">
         {{ donnees.salles.length }} salle{{ donnees.salles.length !== 1 ? 's' : '' }} suivie{{ donnees.salles.length !== 1 ? 's' : '' }}
       </p>
     </div>
 
     <form class="form-recherche" @submit.prevent="rechercher">
-      <label for="q-salle" class="sr-only">Rechercher une salle</label>
+      <label for="q-salle" class="lecteur-ecran">Rechercher une salle</label>
       <input
         id="q-salle"
         v-model="q"
@@ -17,7 +17,7 @@
         minlength="2"
         autocomplete="off"
       />
-      <button type="submit" class="btn btn-secondary">Rechercher</button>
+      <button type="submit" class="bouton bouton-secondaire">Rechercher</button>
     </form>
     <p class="form-aide">Saisissez au moins 2 caractères. La recherche porte sur les concerts en base, les salles Digitick configurées et les suggestions OpenStreetMap/Ticketmaster. Si une salle n'apparaît pas, vous pouvez l'ajouter directement par nom.</p>
 
@@ -32,7 +32,7 @@
         aria-live="polite"
         aria-atomic="false"
       >
-        <h2 class="section-label">Résultats pour « {{ qSoumis }} »</h2>
+        <h2 class="section-libelle">Résultats pour « {{ qSoumis }} »</h2>
         <ul class="liste-cartes">
           <li v-for="r in donnees.resultats" :key="r.salle + r.tmVenueId + r.digitickSlug + r.osmId" class="carte-item">
             <div>
@@ -44,7 +44,7 @@
             </div>
             <button
               type="button"
-              class="btn btn-sm btn-secondary"
+              class="bouton bouton-petit bouton-secondaire"
               :aria-label="'Suivre ' + r.salle"
               @click="ajouter(r.salle, r.tmVenueId, r.osmId, r.wikidataId)"
             >Suivre</button>
@@ -61,10 +61,10 @@
           Vous suivez déjà « {{ qSoumis }} ».
         </div>
         <div v-else class="alerte alerte-info" role="status">
-          <p style="margin: 0 0 10px">Aucun résultat pour « {{ qSoumis }} ».</p>
+          <p>Aucun résultat pour « {{ qSoumis }} ».</p>
           <button
             type="button"
-            class="btn btn-sm btn-secondary"
+            class="bouton bouton-petit bouton-secondaire"
             @click="ouvrirSignalement"
           >Signaler cette salle</button>
         </div>
@@ -76,7 +76,7 @@
       </div>
 
       <section v-else>
-        <h2 class="section-label">Salles suivies</h2>
+        <h2 class="section-libelle">Salles suivies</h2>
         <ul class="liste-cartes">
           <li v-for="salle in donnees.salles" :key="salle.id" class="carte-item">
             <span class="carte-nom">
@@ -85,7 +85,7 @@
             </span>
             <button
               type="button"
-              class="btn btn-sm btn-danger-texte"
+              class="bouton bouton-petit bouton-danger-texte"
               :aria-label="'Supprimer ' + salle.nom"
               @click="demanderSuppression(salle)"
             >Supprimer</button>
@@ -105,8 +105,8 @@
       </div>
       <p>Arrêter de suivre « <strong>{{ salleASupprimer?.nom }}</strong> » ?</p>
       <div class="dialog-pied">
-        <button type="button" class="btn btn-danger" @click="confirmerSuppression">Supprimer</button>
-        <button type="button" class="btn btn-texte" @click="dialogRef.close()">Annuler</button>
+        <button type="button" class="bouton bouton-danger" @click="confirmerSuppression">Supprimer</button>
+        <button type="button" class="bouton bouton-texte" @click="dialogRef.close()">Annuler</button>
       </div>
     </dialog>
 
@@ -137,8 +137,8 @@
           <textarea id="sig-commentaire" v-model="signalement.commentaire" rows="3" maxlength="1000"></textarea>
         </div>
         <div class="dialog-pied">
-          <button type="submit" class="btn btn-secondary" :disabled="signalementEnCours">Envoyer</button>
-          <button type="button" class="btn btn-texte" @click="dialogSignalementRef.close()">Annuler</button>
+          <button type="submit" class="bouton bouton-secondaire" :disabled="signalementEnCours">Envoyer</button>
+          <button type="button" class="bouton bouton-texte" @click="dialogSignalementRef.close()">Annuler</button>
         </div>
       </form>
     </dialog>
@@ -300,3 +300,14 @@ onMounted(async () => {
 
 onUnmounted(() => controleur.abort())
 </script>
+
+<style scoped>
+  .badge-source-digitick {
+    background: #ecfdf5;
+    color: #065f46;
+  }
+  .sombre .badge-source-digitick {
+    background: #064e3b;
+    color: #6ee7b7;
+  }
+</style>

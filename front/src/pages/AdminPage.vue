@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-entete">
       <h1>Administration</h1>
     </div>
 
@@ -82,3 +82,9 @@ onMounted(() => {
   ongletActif.value = onglets.some((o) => o.ancre === hash) ? hash : '#jobs'
 })
 </script>
+
+<style scoped>
+  .admin-sections {
+    max-width: 56rem;
+  }
+</style>

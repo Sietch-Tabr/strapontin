@@ -113,63 +113,64 @@ public class WorkerFetchService {
   /// cas d'échec partiel.
   public void executerFetchArtistesBatch() {
     log.info("fetch:artistes:batch démarré");
-    long debut = System.currentTimeMillis();
-    String erreur = null;
-    ResultatPersistance resultat = new ResultatPersistance(0, 0);
-    try {
-      if (!gestionQuotaTM.cronAutorise()) {
-        log.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
-        erreur = "quota insuffisant";
-        return;
-      }
+    workerStatsService.executerAvecStatsToleretErreur(
+        log,
+        "fetch:artistes:batch",
+        () -> {
+          if (!gestionQuotaTM.cronAutorise()) {
+            log.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
+            return new WorkerStatsService.ResultatJob(
+                new ResultatPersistance(0, 0), "quota insuffisant");
+          }
 
-      List<Map<String, Object>> rows =
-          jdbc.queryForList(
-              "SELECT ua.artiste_id::text AS artiste_id_str,"
-                  + " MAX(ua.artiste_affiche) AS artiste_affiche,"
-                  + " MAX(asm.identifiant_externe) AS attraction_id,"
-                  + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
-                  + " MAX(a.deezer_id) AS deezer_id,"
-                  + " MAX(a.wikidata_id) AS wikidata_id"
-                  + " FROM user_artistes ua"
-                  + " JOIN artistes a ON a.id = ua.artiste_id"
-                  + " LEFT JOIN artiste_sources asm"
-                  + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
-                  + " GROUP BY ua.artiste_id",
-              Map.of());
+          List<Map<String, Object>> rows =
+              jdbc.queryForList(
+                  "SELECT ua.artiste_id::text AS artiste_id_str,"
+                      + " MAX(ua.artiste_affiche) AS artiste_affiche,"
+                      + " MAX(asm.identifiant_externe) AS attraction_id,"
+                      + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
+                      + " MAX(a.deezer_id) AS deezer_id,"
+                      + " MAX(a.wikidata_id) AS wikidata_id"
+                      + " FROM user_artistes ua"
+                      + " JOIN artistes a ON a.id = ua.artiste_id"
+                      + " LEFT JOIN artiste_sources asm"
+                      + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
+                      + " GROUP BY ua.artiste_id",
+                  Map.of());
 
-      if (rows.isEmpty()) {
-        log.info("fetch:artistes:batch — aucun artiste suivi");
-        return;
-      }
+          if (rows.isEmpty()) {
+            log.info("fetch:artistes:batch — aucun artiste suivi");
+            return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
+          }
 
-      List<SourceConcerts> sourcesSimples =
-          sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
+          List<SourceConcerts> sourcesSimples =
+              sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
 
-      List<String> echecsLots = new ArrayList<>();
-      int totalLots = (rows.size() + TAILLE_LOT_TM - 1) / TAILLE_LOT_TM;
-      for (int i = 0; i < rows.size(); i += TAILLE_LOT_TM) {
-        List<Map<String, Object>> lot = rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
-        try {
-          resultat = accumuler(resultat, traiterLotArtistesBatch(lot, sourcesSimples));
-        } catch (Exception e) {
-          log.error(
-              "fetch:artistes:batch lot {}-{} échoué : {}", i, i + lot.size(), e.getMessage(), e);
-          echecsLots.add("lot " + i + "-" + (i + lot.size()) + " : " + e.getMessage());
-        }
-      }
-      remonterEchecsLots("fetch:artistes:batch", echecsLots, totalLots);
-      sauvegarderQuota();
-      recalculerMatchesService.recalculerMatches(null);
-      notificationDigestService.executerDigest("temps_reel");
-      log.info("fetch:artistes:batch terminé");
-    } catch (Exception e) {
-      erreur = e.getMessage();
-      log.error("fetch:artistes:batch échoué", e);
-    } finally {
-      workerStatsService.enregistrerStatJob(
-          "fetch:artistes:batch", System.currentTimeMillis() - debut, resultat, erreur);
-    }
+          ResultatPersistance resultat = new ResultatPersistance(0, 0);
+          List<String> echecsLots = new ArrayList<>();
+          int totalLots = (rows.size() + TAILLE_LOT_TM - 1) / TAILLE_LOT_TM;
+          for (int i = 0; i < rows.size(); i += TAILLE_LOT_TM) {
+            List<Map<String, Object>> lot =
+                rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
+            try {
+              resultat = accumuler(resultat, traiterLotArtistesBatch(lot, sourcesSimples));
+            } catch (Exception e) {
+              log.error(
+                  "fetch:artistes:batch lot {}-{} échoué : {}",
+                  i,
+                  i + lot.size(),
+                  e.getMessage(),
+                  e);
+              echecsLots.add("lot " + i + "-" + (i + lot.size()) + " : " + e.getMessage());
+            }
+          }
+          remonterEchecsLots("fetch:artistes:batch", echecsLots, totalLots);
+          sauvegarderQuota();
+          recalculerMatchesService.recalculerMatches(null);
+          notificationDigestService.executerDigest("temps_reel");
+          log.info("fetch:artistes:batch terminé");
+          return WorkerStatsService.ResultatJob.succes(resultat);
+        });
   }
 
   /// Fetch + dédoublonnage + persistance d'un lot d'artistes (taille {@value TAILLE_LOT_TM}).
@@ -414,54 +415,50 @@ public class WorkerFetchService {
   /// Suspendu si le quota TM est insuffisant.
   public void executerFetchRegion() {
     log.info("fetch:region démarré");
-    long debut = System.currentTimeMillis();
-    String erreur = null;
-    ResultatPersistance resultat = new ResultatPersistance(0, 0);
-    try {
-      if (!gestionQuotaTM.cronAutorise()) {
-        log.warn("fetch:region suspendu — quota TM insuffisant");
-        erreur = "quota insuffisant";
-        return;
-      }
+    workerStatsService.executerAvecStatsToleretErreur(
+        log,
+        "fetch:region",
+        () -> {
+          if (!gestionQuotaTM.cronAutorise()) {
+            log.warn("fetch:region suspendu — quota TM insuffisant");
+            return new WorkerStatsService.ResultatJob(
+                new ResultatPersistance(0, 0), "quota insuffisant");
+          }
 
-      List<String[]> allDepts =
-          jdbc.query(
-              "SELECT departements FROM user_config",
-              Map.of(),
-              (rs, _) -> (String[]) rs.getArray("departements").getArray());
+          List<String[]> allDepts =
+              jdbc.query(
+                  "SELECT departements FROM user_config",
+                  Map.of(),
+                  (rs, _) -> (String[]) rs.getArray("departements").getArray());
 
-      java.util.Set<String> tousLesDepts = collecterTousLesDepts(allDepts);
+          java.util.Set<String> tousLesDepts = collecterTousLesDepts(allDepts);
 
-      if (tousLesDepts.isEmpty()) {
-        log.info("fetch:region — aucun département configuré");
-        return;
-      }
+          if (tousLesDepts.isEmpty()) {
+            log.info("fetch:region — aucun département configuré");
+            return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
+          }
 
-      List<String> deptsListe = new ArrayList<>(tousLesDepts);
-      List<String> echecsLots = new ArrayList<>();
-      int totalLots = (deptsListe.size() + TAILLE_LOT_DEPTS - 1) / TAILLE_LOT_DEPTS;
-      for (int i = 0; i < deptsListe.size(); i += TAILLE_LOT_DEPTS) {
-        List<String> lotDepts =
-            deptsListe.subList(i, Math.min(i + TAILLE_LOT_DEPTS, deptsListe.size()));
-        try {
-          resultat = accumuler(resultat, traiterLotDepartements(lotDepts));
-        } catch (Exception e) {
-          log.error("fetch:region lot {} échoué : {}", lotDepts, e.getMessage(), e);
-          echecsLots.add("depts=" + lotDepts + " : " + e.getMessage());
-        }
-      }
-      remonterEchecsLots("fetch:region", echecsLots, totalLots);
-      sauvegarderQuota();
-      recalculerMatchesService.recalculerMatches(null);
-      notificationDigestService.executerDigest("temps_reel");
-      log.info("fetch:region terminé");
-    } catch (Exception e) {
-      erreur = e.getMessage();
-      log.error("fetch:region échoué", e);
-    } finally {
-      workerStatsService.enregistrerStatJob(
-          "fetch:region", System.currentTimeMillis() - debut, resultat, erreur);
-    }
+          List<String> deptsListe = new ArrayList<>(tousLesDepts);
+          ResultatPersistance resultat = new ResultatPersistance(0, 0);
+          List<String> echecsLots = new ArrayList<>();
+          int totalLots = (deptsListe.size() + TAILLE_LOT_DEPTS - 1) / TAILLE_LOT_DEPTS;
+          for (int i = 0; i < deptsListe.size(); i += TAILLE_LOT_DEPTS) {
+            List<String> lotDepts =
+                deptsListe.subList(i, Math.min(i + TAILLE_LOT_DEPTS, deptsListe.size()));
+            try {
+              resultat = accumuler(resultat, traiterLotDepartements(lotDepts));
+            } catch (Exception e) {
+              log.error("fetch:region lot {} échoué : {}", lotDepts, e.getMessage(), e);
+              echecsLots.add("depts=" + lotDepts + " : " + e.getMessage());
+            }
+          }
+          remonterEchecsLots("fetch:region", echecsLots, totalLots);
+          sauvegarderQuota();
+          recalculerMatchesService.recalculerMatches(null);
+          notificationDigestService.executerDigest("temps_reel");
+          log.info("fetch:region terminé");
+          return WorkerStatsService.ResultatJob.succes(resultat);
+        });
   }
 
   private static java.util.Set<String> collecterTousLesDepts(List<String[]> allDepts) {
@@ -565,34 +562,29 @@ public class WorkerFetchService {
   /// agrégeant les concerts avant persistance. Suspendu si le quota TM est insuffisant.
   public void executerFetchSallesAll() {
     log.info("fetch:salles:all démarré");
-    long debut = System.currentTimeMillis();
-    String erreur = null;
-    ResultatPersistance resultat = new ResultatPersistance(0, 0);
-    try {
-      if (!gestionQuotaTM.cronAutorise()) {
-        log.warn("fetch:salles:all suspendu — quota TM insuffisant");
-        erreur = "quota insuffisant";
-        return;
-      }
+    workerStatsService.executerAvecStatsToleretErreur(
+        log,
+        "fetch:salles:all",
+        () -> {
+          if (!gestionQuotaTM.cronAutorise()) {
+            log.warn("fetch:salles:all suspendu — quota TM insuffisant");
+            return new WorkerStatsService.ResultatJob(
+                new ResultatPersistance(0, 0), "quota insuffisant");
+          }
 
-      List<SalleAFetcher> sallesAFetcher = recupererIdentifiantsSallesSuivies();
-      if (sallesAFetcher.isEmpty()) {
-        log.info("fetch:salles:all — aucune salle suivie avec source configurée");
-        return;
-      }
+          List<SalleAFetcher> sallesAFetcher = recupererIdentifiantsSallesSuivies();
+          if (sallesAFetcher.isEmpty()) {
+            log.info("fetch:salles:all — aucune salle suivie avec source configurée");
+            return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
+          }
 
-      resultat = traiterTousLesLotsSalles(sallesAFetcher);
-      sauvegarderQuota();
-      recalculerMatchesService.recalculerMatches(null);
-      notificationDigestService.executerDigest("temps_reel");
-      log.info("fetch:salles:all terminé");
-    } catch (Exception e) {
-      erreur = e.getMessage();
-      log.error("fetch:salles:all échoué", e);
-    } finally {
-      workerStatsService.enregistrerStatJob(
-          "fetch:salles:all", System.currentTimeMillis() - debut, resultat, erreur);
-    }
+          ResultatPersistance resultat = traiterTousLesLotsSalles(sallesAFetcher);
+          sauvegarderQuota();
+          recalculerMatchesService.recalculerMatches(null);
+          notificationDigestService.executerDigest("temps_reel");
+          log.info("fetch:salles:all terminé");
+          return WorkerStatsService.ResultatJob.succes(resultat);
+        });
   }
 
   /// Salle suivie à refetcher, avec ses identifiants préfixés agrégés toutes sources confondues.

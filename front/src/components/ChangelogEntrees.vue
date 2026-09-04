@@ -17,3 +17,25 @@ defineProps({
   categories: { type: Array, required: true },
 })
 </script>
+
+<style scoped>
+  .changelog-entrees {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .changelog-categorie {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.375rem;
+  }
+  .changelog-entrees ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+</style>

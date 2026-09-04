@@ -9,7 +9,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import fr.strapontin.web.admin.LogAdminService;
-import java.util.Map;
+import fr.strapontin.web.utilisateur.UserController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -21,6 +21,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 class TotpChallengeServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
+  private UserController userController;
   private TotpService totpService;
   private LogAdminService logAdminService;
   private TotpChallengeService service;
@@ -28,15 +29,16 @@ class TotpChallengeServiceTest {
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
+    userController = mock(UserController.class);
     totpService = mock(TotpService.class);
     logAdminService = mock(LogAdminService.class);
-    service = new TotpChallengeService(jdbc, totpService, logAdminService);
+    service = new TotpChallengeService(jdbc, userController, totpService, logAdminService);
   }
 
   @Test
   void verifier_codeCorrect_retourneSuccesEtRemetCompteurAZero() {
-    when(jdbc.queryForMap(anyString(), anyMap()))
-        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 0));
+    when(userController.lireEchecsTotp("u1")).thenReturn(0);
+    when(userController.lireSecretTotp("u1")).thenReturn("SECRETBASE32");
     when(totpService.verifierCode("SECRETBASE32", "123456")).thenReturn(true);
 
     ResultatTotp resultat = service.verifier("u1", "alice", "123456", "127.0.0.1");
@@ -48,8 +50,8 @@ class TotpChallengeServiceTest {
 
   @Test
   void verifier_codeIncorrect_retourneEchecAvecEssaisRestants() {
-    when(jdbc.queryForMap(anyString(), anyMap()))
-        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 0));
+    when(userController.lireEchecsTotp("u1")).thenReturn(0);
+    when(userController.lireSecretTotp("u1")).thenReturn("SECRETBASE32");
     when(totpService.verifierCode("SECRETBASE32", "000000")).thenReturn(false);
 
     ResultatTotp resultat = service.verifier("u1", "alice", "000000", "127.0.0.1");
@@ -63,8 +65,8 @@ class TotpChallengeServiceTest {
   @Test
   void verifier_dernierEchecAvantSeuil_retourneVerrouilleMaintenant() {
     // 4 échecs déjà enregistrés → le 5e déclenche le verrouillage
-    when(jdbc.queryForMap(anyString(), anyMap()))
-        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 4));
+    when(userController.lireEchecsTotp("u1")).thenReturn(4);
+    when(userController.lireSecretTotp("u1")).thenReturn("SECRETBASE32");
     when(totpService.verifierCode("SECRETBASE32", "000000")).thenReturn(false);
 
     ResultatTotp resultat = service.verifier("u1", "alice", "000000", "127.0.0.1");
@@ -75,8 +77,7 @@ class TotpChallengeServiceTest {
   @Test
   void verifier_compteurDejaAuSeuil_retourneDejaVerrouilleSansVerifierLeCode() {
     // Compte déjà verrouillé en base (≥ MAX_ECHECS_TOTP) — aucun code ne doit être vérifié
-    when(jdbc.queryForMap(anyString(), anyMap()))
-        .thenReturn(Map.of("two_factor_secret", "SECRETBASE32", "totp_failure_count", 5));
+    when(userController.lireEchecsTotp("u1")).thenReturn(5);
 
     ResultatTotp resultat = service.verifier("u1", "alice", "000000", "127.0.0.1");
 

@@ -7,7 +7,7 @@
     @click="clicBackdrop"
     @close="$emit('fermer')"
   >
-    <div class="dialog-nav-handle" ref="handleRef" aria-hidden="true"></div>
+    <div class="dialog-nav-poignee" ref="handleRef" aria-hidden="true"></div>
     <div class="dialog-nav-contenu">
       <a
         v-for="item in navSecondaire"
@@ -17,7 +17,7 @@
         :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguerEtFermer(item.href)"
       >
-        <svg class="icon" aria-hidden="true">
+        <svg class="icone" aria-hidden="true">
           <use :href="'/icons/lucide-sprite.svg#' + item.icone" />
         </svg>
         <span>{{ item.label }}</span>
@@ -30,7 +30,7 @@
         :aria-current="estActif('/admin') ? 'page' : undefined"
         @click.prevent="naviguerEtFermer('/admin')"
       >
-        <svg class="icon" aria-hidden="true">
+        <svg class="icone" aria-hidden="true">
           <use href="/icons/lucide-sprite.svg#icon-shield-check" />
         </svg>
         Admin
@@ -44,8 +44,8 @@
         @click.prevent="naviguerEtFermer(item.href)"
       >
         <svg
-          class="icon"
-          :class="{ 'icon--nouveaute-actif': item.href === '/changelog' && changelogNonVu }"
+          class="icone"
+          :class="{ 'icone--nouveaute-actif': item.href === '/changelog' && changelogNonVu }"
           aria-hidden="true"
         >
           <use :href="'/icons/lucide-sprite.svg#' + item.icone" />
@@ -53,13 +53,13 @@
         <span>{{ item.label }}</span>
         <span
           v-if="item.href === '/changelog' && changelogNonVu"
-          class="nav-badge--point nav-badge--point-pulse"
+          class="nav-badge--point nav-badge--point-pulsation"
           aria-label="Nouveautés non lues"
         ></span>
       </a>
       <hr class="dialog-nav-sep" />
-      <form action="/logout" method="post" @submit.prevent="deconnecter">
-        <button type="submit" class="btn-deconnexion">Déconnexion</button>
+      <form action="/api/auth/logout" method="post" @submit.prevent="deconnecter">
+        <button type="submit" class="bouton-deconnexion">Déconnexion</button>
       </form>
     </div>
   </dialog>
@@ -155,3 +155,38 @@ function retirerSwipe() {
   swipeAbortController = null
 }
 </script>
+
+<style scoped>
+  .dialog-nav-poignee {
+    width: 2.5rem;
+    height: 0.25rem;
+    background: var(--border);
+    border-radius: 9999px;
+    margin: 0.75rem auto 0.25rem;
+  }
+  .dialog-nav-contenu {
+    padding: 0.25rem 0.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .dialog-nav-contenu a {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+    border-radius: var(--radius);
+    color: var(--fg-muted);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    position: relative;
+    transition:
+    background 0.15s,
+    color 0.15s;
+  }
+  .dialog-nav-sep {
+    margin: 0.25rem 0;
+    border-color: var(--border);
+  }
+</style>

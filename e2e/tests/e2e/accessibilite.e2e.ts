@@ -50,9 +50,9 @@ test.describe("Scénario: accessibilité WCAG #742 — aria-current navigation",
     await page.goto("/spectacles");
     await expect(page.locator("main")).toBeVisible();
     await expect(
-      page.locator(".sidebar-nav a[href='/spectacles']"),
+      page.locator(".barre-laterale-nav a[href='/spectacles']"),
     ).toHaveAttribute("aria-current", "page");
-    await expect(page.locator(".sidebar-nav a[href='/']")).not.toHaveAttribute(
+    await expect(page.locator(".barre-laterale-nav a[href='/']")).not.toHaveAttribute(
       "aria-current",
     );
   });
@@ -65,9 +65,9 @@ test.describe("Scénario: accessibilité WCAG #742 — aria-current navigation",
     await page.goto("/spectacles");
     await expect(page.locator("main")).toBeVisible();
     await expect(
-      page.locator("#bottom-nav a[href='/spectacles']"),
+      page.locator("#nav-bas a[href='/spectacles']"),
     ).toHaveAttribute("aria-current", "page");
-    await expect(page.locator("#bottom-nav a[href='/']")).not.toHaveAttribute(
+    await expect(page.locator("#nav-bas a[href='/']")).not.toHaveAttribute(
       "aria-current",
     );
   });
@@ -79,7 +79,7 @@ test.describe("Scénario: accessibilité WCAG #742 — aria-current navigation",
     if (isMobile) test.skip();
     await page.goto("/");
     await expect(page.locator("main")).toBeVisible();
-    const liensInactifs = page.locator(".sidebar-nav a:not([href='/'])");
+    const liensInactifs = page.locator(".barre-laterale-nav a:not([href='/'])");
     const nombre = await liensInactifs.count();
     for (let i = 0; i < nombre; i++) {
       await expect(liensInactifs.nth(i)).not.toHaveAttribute("aria-current");

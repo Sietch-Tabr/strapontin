@@ -1,8 +1,8 @@
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-entete">
       <h1>Mes spectacles</h1>
-      <p v-if="donnees" class="page-subtitle">
+      <p v-if="donnees" class="page-sous-titre">
         {{ donnees.totalConcerts }} concert{{ donnees.totalConcerts !== 1 ? 's' : '' }} à venir
       </p>
     </div>
@@ -49,15 +49,15 @@
       simultanément — les résultats affichés correspondent à leur intersection.
     </div>
 
-    <div class="filtres-toggle">
+    <div class="filtres-bascule">
       <button
         type="button"
-        class="btn btn-secondary btn-sm"
+        class="bouton bouton-secondaire bouton-petit"
         id="btn-filtres-vue"
         :aria-expanded="filtresVisibles ? 'true' : 'false'"
         @click="filtresVisibles = !filtresVisibles"
       >
-        <svg class="icon" aria-hidden="true">
+        <svg class="icone" aria-hidden="true">
           <use href="/icons/lucide-sprite.svg#icon-sliders-horizontal" />
         </svg>
         <span>Filtres{{ nbFiltresActifs > 0 ? ' · ' + nbFiltresActifs : '' }}</span>
@@ -78,32 +78,32 @@
           autocomplete="off"
         />
 
-        <label for="filtre-mois" class="sr-only">Filtrer par mois</label>
+        <label for="filtre-mois" class="lecteur-ecran">Filtrer par mois</label>
         <select id="filtre-mois" v-model="moisLocal" @change="appliquerFiltres">
           <option value="">Tous les mois</option>
           <option v-for="m in donnees?.moisDisponibles ?? []" :key="m" :value="m">{{ m }}</option>
         </select>
 
-        <label for="filtre-genre" class="sr-only">Filtrer par genre</label>
+        <label for="filtre-genre" class="lecteur-ecran">Filtrer par genre</label>
         <select id="filtre-genre" v-model="genreLocal" @change="appliquerFiltres">
           <option value="">Tous les genres</option>
           <option v-for="g in donnees?.genresDisponibles ?? []" :key="g" :value="g">{{ g }}</option>
         </select>
 
-        <label for="filtre-classification" class="sr-only">Filtrer par classification</label>
+        <label for="filtre-classification" class="lecteur-ecran">Filtrer par classification</label>
         <select id="filtre-classification" v-model="classificationLocal" @change="appliquerFiltres">
           <option value="">Toutes classifications</option>
           <option v-for="c in donnees?.classificationsDisponibles ?? []" :key="c" :value="c">{{ c }}</option>
         </select>
 
-        <label for="filtre-tri" class="sr-only">Trier les résultats</label>
+        <label for="filtre-tri" class="lecteur-ecran">Trier les résultats</label>
         <select id="filtre-tri" v-model="triLocal" @change="appliquerFiltres">
           <option value="date">Par date</option>
           <option value="nouveaute">Par nouveauté</option>
         </select>
 
-        <button type="submit" class="btn btn-secondary">Filtrer</button>
-        <RouterLink to="/spectacles" class="btn btn-texte">Réinitialiser</RouterLink>
+        <button type="submit" class="bouton bouton-secondaire">Filtrer</button>
+        <RouterLink to="/spectacles" class="bouton bouton-texte">Réinitialiser</RouterLink>
       </div>
     </form>
 
@@ -122,14 +122,14 @@
     </div>
 
     <div v-if="donnees && donnees.concerts.length > 0" class="spectacles-conteneur">
-      <div class="table-wrapper">
+      <div class="table-conteneur">
         <table>
           <thead>
             <tr>
               <th scope="col">Artiste</th>
               <th scope="col">Date</th>
               <th scope="col">Où</th>
-              <th scope="col"><span class="sr-only">Actions</span></th>
+              <th scope="col"><span class="lecteur-ecran">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -157,17 +157,17 @@
                   :href="concert.url"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="btn btn-xs btn-secondary"
+                  class="bouton bouton-tres-petit bouton-secondaire"
                   aria-label="Acheter des billets (ouvre dans un nouvel onglet)"
                 >
-                  <svg class="icon" aria-hidden="true">
+                  <svg class="icone" aria-hidden="true">
                     <use href="/icons/lucide-sprite.svg#icon-ticket" />
                   </svg>
                 </a>
                 <button
                   v-if="masquesActive"
                   type="button"
-                  class="btn btn-sm btn-texte"
+                  class="bouton bouton-petit bouton-texte"
                   @click="demasquerConcert(concert)"
                 >Réafficher</button>
               </td>
@@ -181,14 +181,14 @@
       <button
         v-if="donnees.page > 0"
         type="button"
-        class="btn btn-secondary"
+        class="bouton bouton-secondaire"
         @click="changerPage(donnees.page - 1)"
       >Précédent</button>
       <span>Page {{ donnees.page + 1 }} / {{ donnees.totalPages }}</span>
       <button
         v-if="donnees.page + 1 < donnees.totalPages"
         type="button"
-        class="btn btn-secondary"
+        class="bouton bouton-secondaire"
         @click="changerPage(donnees.page + 1)"
       >Suivant</button>
     </div>
@@ -380,3 +380,75 @@ onUnmounted(() => {
   controleurActuel?.abort()
 })
 </script>
+
+<style scoped>
+  .spectacles-conteneur {
+    container-type: inline-size;
+    container-name: spectacles;
+  }
+  @container spectacles (max-width: 600px) {
+    .spectacles-conteneur table,
+  .spectacles-conteneur tbody {
+      display: block;
+    }
+    .spectacles-conteneur thead {
+      display: none;
+    }
+    .spectacles-conteneur tr {
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-card);
+      margin-bottom: 0.5rem;
+      overflow: hidden;
+    }
+    .spectacles-conteneur td {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .spectacles-conteneur td:last-child {
+      border-bottom: none;
+    }
+    .spectacles-conteneur td::before {
+      content: attr(data-label);
+      font-weight: 500;
+      color: var(--fg-muted);
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    .spectacles-conteneur td[data-label=""]::before {
+      display: none;
+    }
+    .spectacles-conteneur td[data-label=""] {
+      justify-content: flex-end;
+      padding-top: 0.625rem;
+      padding-bottom: 0.625rem;
+    }
+  }
+  .badge-a-verifier {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+  .sombre .badge-a-verifier {
+    background: #27272a;
+    color: #a1a1aa;
+  }
+  .actions-cellule {
+    vertical-align: middle;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .actions-cellule > * {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+  }
+  .actions-cellule > * + * {
+    margin-left: 0.375rem;
+  }
+</style>

@@ -4,8 +4,10 @@
  */
 package fr.strapontin.web.admin;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+import static fr.strapontin.web.ControllerUtils.parseUuid;
+
 import jakarta.validation.Valid;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -102,19 +104,5 @@ public class ReferentielSallesController {
     boolean fusionnee = service.fusionner(cible, source);
     if (!fusionnee) return erreur(404, "Salle source ou cible inconnue.");
     return ResponseEntity.ok(Map.of("succes", true));
-  }
-
-  private static UUID parseUuid(String valeur) {
-    try {
-      return UUID.fromString(valeur);
-    } catch (IllegalArgumentException e) {
-      return null;
-    }
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    Map<String, Object> corps = new HashMap<>();
-    corps.put("erreur", message);
-    return ResponseEntity.status(status).body(corps);
   }
 }

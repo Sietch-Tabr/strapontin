@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web.salle;
 
+import static fr.strapontin.web.ControllerUtils.erreur;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.web.email.EmailService;
@@ -152,10 +154,6 @@ public class SalleController {
   public ResponseEntity<Void> reinitialiserBucketsSignalement() {
     bucketsSignalement.invalidateAll();
     return ResponseEntity.noContent().build();
-  }
-
-  private static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
-    return ResponseEntity.status(status).body(Map.of("erreur", message));
   }
 
   private Bucket creerBucketSignalement() {

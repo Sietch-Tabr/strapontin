@@ -17,7 +17,7 @@ function reponseOffline(request) {
   const theme = m ? decodeURIComponent(m[1]) : "auto";
   const classeHtml =
     theme === "sombre"
-      ? ' class="dark"'
+      ? ' class="sombre"'
       : theme === "clair"
         ? ' class="clair"'
         : "";
@@ -34,7 +34,7 @@ function reponseOffline(request) {
     <style>
       :root{--bg:#ffffff;--fg:#111827;--fg-muted:#6b7280;--border:#e5e7eb;--accent:#f3f4f6;--accent-fg:#111827;--radius:0.5rem}
       @media(prefers-color-scheme:dark){html:not(.clair){--bg:#0a0a0a;--fg:#fafafa;--fg-muted:#a1a1aa;--border:#27272a;--accent:#27272a;--accent-fg:#fafafa}}
-      html.dark{--bg:#0a0a0a;--fg:#fafafa;--fg-muted:#a1a1aa;--border:#27272a;--accent:#27272a;--accent-fg:#fafafa}
+      html.sombre{--bg:#0a0a0a;--fg:#fafafa;--fg-muted:#a1a1aa;--border:#27272a;--accent:#27272a;--accent-fg:#fafafa}
       *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
       body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);min-height:100vh}
       .conteneur{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:1rem;text-align:center;padding:2rem}

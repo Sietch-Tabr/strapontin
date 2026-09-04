@@ -18,9 +18,9 @@ import org.springframework.stereotype.Service;
 
 /// Service de journalisation admin (portage de {@code log-admin.ts}).
 ///
-/// <p>Remplace la liste Redis {@code strapontin:admin:logs} par la table PostgreSQL
-/// {@code logs_admin}. La rétention est temporelle : la purge des entrées de plus de
-/// 30 jours est planifiée côté worker ({@code PurgerLogsAdminJob}).
+/// <p>Remplace la liste Redis {@code strapontin:admin:logs} par la table PostgreSQL {@code
+/// logs_admin}. La rétention est temporelle : la purge des entrées de plus de 30 jours est
+/// planifiée côté worker ({@code PurgerLogsAdminJob}).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 public class LogAdminService {
 
   private static final Logger log = LoggerFactory.getLogger(LogAdminService.class);
+  private static final int LIMITE_ERREURS_DEPUIS = 1000;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
@@ -39,18 +40,18 @@ public class LogAdminService {
 
   /// Entrée de log admin.
   ///
-  /// @param ts       horodatage Unix en millisecondes
-  /// @param niveau   niveau de log (`debug`, `info`, `warn`, `error`)
-  /// @param source   module source
-  /// @param message  message
-  /// @param meta     métadonnées JSON brut (peut être null)
+  /// @param ts horodatage Unix en millisecondes
+  /// @param niveau niveau de log (`debug`, `info`, `warn`, `error`)
+  /// @param source module source
+  /// @param message message
+  /// @param meta métadonnées JSON brut (peut être null)
   public record EntreeLogAdmin(
       long ts, String niveau, String source, String message, String meta) {}
 
   /// Journalise un événement admin sans métadonnées.
   ///
-  /// @param niveau  niveau de log
-  /// @param source  module source
+  /// @param niveau niveau de log
+  /// @param source module source
   /// @param message message
   public void logAdmin(String niveau, String source, String message) {
     logAdmin(niveau, source, message, null);
@@ -58,10 +59,10 @@ public class LogAdminService {
 
   /// Journalise un événement admin avec métadonnées.
   ///
-  /// @param niveau  niveau de log
-  /// @param source  module source
+  /// @param niveau niveau de log
+  /// @param source module source
   /// @param message message
-  /// @param meta    métadonnées (sérialisées en JSON), ou null
+  /// @param meta métadonnées (sérialisées en JSON), ou null
   public void logAdmin(String niveau, String source, String message, Map<String, Object> meta) {
     try {
       PGobject pgMeta = new PGobject();
@@ -111,7 +112,10 @@ public class LogAdminService {
                 rs.getString("meta")));
   }
 
-  /// Retourne les entrées de niveau {@code error} postérieures à {@code tsDepuis}.
+  /// Retourne les entrées de niveau {@code error} postérieures à {@code tsDepuis}, plafonnées à
+  /// {@value #LIMITE_ERREURS_DEPUIS} — un retard important (destinataire d'alerte absent pendant
+  /// plusieurs cycles) est ainsi absorbé sur plusieurs digests successifs plutôt que de charger un
+  /// lot non borné, le curseur avançant jusqu'au dernier ts retourné sans rien perdre.
   ///
   /// @param tsDepuis horodatage Unix en millisecondes, exclusif
   /// @return les entrées d'erreur, de la plus ancienne à la plus récente
@@ -122,8 +126,9 @@ public class LogAdminService {
         FROM logs_admin
         WHERE niveau = 'error' AND ts > :tsDepuis
         ORDER BY ts
+        LIMIT :limite
         """,
-        Map.of("tsDepuis", tsDepuis),
+        Map.of("tsDepuis", tsDepuis, "limite", LIMITE_ERREURS_DEPUIS),
         (rs, _) ->
             new EntreeLogAdmin(
                 rs.getLong("ts"),

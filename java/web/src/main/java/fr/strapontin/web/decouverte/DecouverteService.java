@@ -8,10 +8,6 @@ import static fr.strapontin.web.concert.FiltreConcertsBuilder.CONCERTS_PAR_PAGE;
 
 import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.concert.FiltreConcertsBuilder;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,11 +21,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 /// Service de découverte de concerts par département.
 ///
-/// <p>Les requêtes indépendantes (COUNT, filtres disponibles, sync) sont parallélisées
-/// via {@link CompletableFuture} sur les threads virtuels Spring.
+/// <p>Les requêtes indépendantes (COUNT, filtres disponibles, sync) sont parallélisées via {@link
+/// CompletableFuture} sur les threads virtuels Spring.
 ///
 /// @since 2.1.0
 /// @author Kwaite
@@ -40,16 +38,19 @@ public class DecouverteService {
   private static final String CLE_DEPTS = "depts";
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final RestClient restClient;
 
   /// @param jdbc accès JDBC
-  public DecouverteService(NamedParameterJdbcTemplate jdbc) {
+  /// @param restClient client HTTP partagé (module web), pour déclencher le worker
+  public DecouverteService(NamedParameterJdbcTemplate jdbc, RestClient restClient) {
     this.jdbc = jdbc;
+    this.restClient = restClient;
   }
 
   /// Retourne les concerts filtrés par département et critères.
   ///
-  /// <p>COUNT(*), filtres disponibles et données de synchronisation sont calculés en parallèle
-  /// avec la requête principale pour réduire les round-trips séquentiels.
+  /// <p>COUNT(*), filtres disponibles et données de synchronisation sont calculés en parallèle avec
+  /// la requête principale pour réduire les round-trips séquentiels.
   ///
   /// @param userId identifiant de l'utilisateur (pour lire ses départements par défaut)
   /// @param filtre critères de filtrage ; {@code depts} null = utiliser ceux de l'utilisateur
@@ -150,21 +151,12 @@ public class DecouverteService {
   ///
   /// @return 200 si déclenché, 503 si le worker est inaccessible
   public ResponseEntity<Map<String, Object>> fetcher() {
-    try (HttpClient client = HttpClient.newHttpClient()) {
-      HttpRequest req =
-          HttpRequest.newBuilder()
-              .uri(URI.create("http://localhost:8081/trigger/tout"))
-              .POST(HttpRequest.BodyPublishers.noBody())
-              .build();
-      HttpResponse<String> rep = client.send(req, HttpResponse.BodyHandlers.ofString());
-      if (rep.statusCode() == 200) return ResponseEntity.ok(Map.of("statut", "déclenché"));
+    try {
+      restClient.post().uri("http://localhost:8081/trigger/tout").retrieve().toBodilessEntity();
+      return ResponseEntity.ok(Map.of("statut", "déclenché"));
+    } catch (RestClientResponseException e) {
       Map<String, Object> erreur = new HashMap<>();
-      erreur.put("erreur", "Worker inaccessible (statut " + rep.statusCode() + ").");
-      return ResponseEntity.status(503).body(erreur);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      Map<String, Object> erreur = new HashMap<>();
-      erreur.put("erreur", "Requête interrompue.");
+      erreur.put("erreur", "Worker inaccessible (statut " + e.getStatusCode().value() + ").");
       return ResponseEntity.status(503).body(erreur);
     } catch (Exception e) {
       log.warn("Erreur appel worker trigger (découverte)", e);

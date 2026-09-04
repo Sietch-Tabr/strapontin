@@ -2,13 +2,13 @@ import { onMounted, onUnmounted } from "vue";
 
 const prefSombre =
   typeof window !== "undefined"
-    ? window.matchMedia("(prefers-color-scheme: dark)")
+    ? window.matchMedia("(prefers-color-scheme: sombre)")
     : null;
 
 function appliquerTheme(valeur) {
   const sombre =
     valeur === "sombre" || (valeur === "auto" && !!prefSombre?.matches);
-  document.documentElement.classList.toggle("dark", sombre);
+  document.documentElement.classList.toggle("sombre", sombre);
 }
 
 function lireThemeCookie() {

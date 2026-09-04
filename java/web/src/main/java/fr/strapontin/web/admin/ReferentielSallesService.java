@@ -13,14 +13,14 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Gestion du référentiel salles pour l'onglet admin : liste paginée, édition du nom
-/// affiché, fusion de doublons.
+/// Gestion du référentiel salles pour l'onglet admin : liste paginée, édition du nom affiché,
+/// fusion de doublons.
 ///
-/// L'algorithme de fusion porte en service runtime le gabarit déjà utilisé pour les fusions
-/// ad hoc passées ({@code V27__fusionner_doublons_salles_eventim_tm.sql},
-/// {@code V28__fusionner_doublon_artiste_krashkarma.sql}) : réassignation des concerts avec
-/// dédoublonnage préalable des conflits, puis des abonnements utilisateurs, puis des sources
-/// externes, avant suppression de la salle source.
+/// L'algorithme de fusion porte en service runtime le gabarit déjà utilisé pour les fusions ad hoc
+/// passées ({@code V27__fusionner_doublons_salles_eventim_tm.sql}, {@code
+/// V28__fusionner_doublon_artiste_krashkarma.sql}) : réassignation des concerts avec dédoublonnage
+/// préalable des conflits, puis des abonnements utilisateurs, puis des sources externes, avant
+/// suppression de la salle source.
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -40,16 +40,15 @@ public class ReferentielSallesService {
 
   /// Liste paginée du référentiel salles, filtrée par nom/ville/dept/statut.
   ///
-  /// @param page             numéro de page (0-indexé)
-  /// @param nom              filtre nom partiel (insensible à la casse), peut être null
-  /// @param ville            filtre ville partielle, peut être null
-  /// @param dept             filtre département exact, peut être null
-  /// @param statut           filtre {@code "a_jour"}/{@code "a_verifier"}/{@code "invalide"}, peut
-  ///     être null
-  /// @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id}
-  ///     — facilite le repérage des candidats à corriger manuellement sans parcourir toute la
-  ///     pagination (une salle avec beaucoup de concerts liés peut être loin dans le tri par
-  ///     défaut si elle a déjà un {@code wikidata_id})
+  /// @param page numéro de page (0-indexé)
+  /// @param nom filtre nom partiel (insensible à la casse), peut être null
+  /// @param ville filtre ville partielle, peut être null
+  /// @param dept filtre département exact, peut être null
+  /// @param statut filtre {@code "a_jour"}/{@code "a_verifier"}/{@code "invalide"}, peut être null
+  /// @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id} —
+  ///   facilite le repérage des candidats à corriger manuellement sans parcourir toute la
+  ///   pagination (une salle avec beaucoup de concerts liés peut être loin dans le tri par défaut
+  ///   si elle a déjà un {@code wikidata_id})
   /// @return page de résultats
   public ReponseReferentielSalles lister(
       int page, String nom, String ville, String dept, String statut, boolean wikidataManquant) {
@@ -76,34 +75,43 @@ public class ReferentielSallesService {
       where.append(" AND wikidata_id IS NULL ");
     }
 
-    long total =
-        jdbc.queryForObject(
-            CTE_SALLES_AGREGEES + "SELECT COUNT(*) FROM salles_agr" + where, params, Long.class);
-
     Map<String, Object> paramsPage = new HashMap<>(params);
     paramsPage.put("taille", TAILLE_PAGE_DEFAUT);
     paramsPage.put("offset", pageNum * TAILLE_PAGE_DEFAUT);
+    long[] total = {0};
     List<SalleReferentiel> salles =
         jdbc.query(
             CTE_SALLES_AGREGEES
-                + "SELECT * FROM salles_agr"
+                + "SELECT id, nom, nom_affiche, ville, dept, wikidata_id, nb_concerts, sources,"
+                + " statut, COUNT(*) OVER() AS total_filtre FROM salles_agr"
                 + where
                 + " ORDER BY nb_concerts DESC, nom ASC LIMIT :taille OFFSET :offset",
             paramsPage,
-            (rs, _) ->
-                new SalleReferentiel(
-                    rs.getObject("id", UUID.class),
-                    rs.getString("nom"),
-                    rs.getString("nom_affiche"),
-                    rs.getString("ville"),
-                    rs.getString("dept"),
-                    rs.getLong("nb_concerts"),
-                    lireSources(rs.getString("sources")),
-                    rs.getString("statut"),
-                    rs.getString("wikidata_id")));
+            (rs, _) -> {
+              total[0] = rs.getLong("total_filtre");
+              return new SalleReferentiel(
+                  rs.getObject("id", UUID.class),
+                  rs.getString("nom"),
+                  rs.getString("nom_affiche"),
+                  rs.getString("ville"),
+                  rs.getString("dept"),
+                  rs.getLong("nb_concerts"),
+                  lireSources(rs.getString("sources")),
+                  rs.getString("statut"),
+                  rs.getString("wikidata_id"));
+            });
 
-    int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_DEFAUT));
-    return new ReponseReferentielSalles(salles, pageNum, totalPages, total);
+    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
+    // second aller-retour reste alors nécessaire pour connaître le total réel.
+    if (salles.isEmpty() && pageNum > 0) {
+      Long totalVide =
+          jdbc.queryForObject(
+              CTE_SALLES_AGREGEES + "SELECT COUNT(*) FROM salles_agr" + where, params, Long.class);
+      total[0] = totalVide != null ? totalVide : 0;
+    }
+
+    int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_DEFAUT));
+    return new ReponseReferentielSalles(salles, pageNum, totalPages, total[0]);
   }
 
   private static List<String> lireSources(String sourcesConcat) {
@@ -130,8 +138,8 @@ public class ReferentielSallesService {
       """;
 
   /// Efface l'enrichissement automatique d'une salle ({@code wikidata_id}, {@code nom_affiche},
-  /// {@code ville}) pour la remettre candidate à une nouvelle découverte au prochain cycle
-  /// nocturne — nécessaire pour corriger une mauvaise correspondance automatique (ex. homonyme
+  /// {@code ville}) pour la remettre candidate à une nouvelle découverte au prochain cycle nocturne
+  /// — nécessaire pour corriger une mauvaise correspondance automatique (ex. homonyme
   /// international, l'enrichissement ne pouvant jamais s'auto-corriger via {@code COALESCE}).
   ///
   /// @param salleId UUID de la salle
@@ -156,7 +164,7 @@ public class ReferentielSallesService {
 
   /// Modifie le nom affiché d'une salle (override manuel prioritaire sur l'enrichissement auto).
   ///
-  /// @param salleId    UUID de la salle
+  /// @param salleId UUID de la salle
   /// @param nomAffiche nouveau nom affiché, ou null pour revenir à l'enrichissement automatique
   /// @return {@code true} si la salle existe et a été mise à jour
   public boolean modifierNomAffiche(UUID salleId, String nomAffiche) {
@@ -170,10 +178,10 @@ public class ReferentielSallesService {
     return nb > 0;
   }
 
-  /// Fusionne deux salles : la salle source est absorbée par la salle cible (concerts,
-  /// abonnements, sources externes réassignés), puis supprimée.
+  /// Fusionne deux salles : la salle source est absorbée par la salle cible (concerts, abonnements,
+  /// sources externes réassignés), puis supprimée.
   ///
-  /// @param cibleId  UUID de la salle à conserver
+  /// @param cibleId UUID de la salle à conserver
   /// @param sourceId UUID de la salle à absorber
   /// @return {@code true} si la fusion a été effectuée, {@code false} si un UUID est inconnu
   @Transactional
@@ -252,13 +260,13 @@ public class ReferentielSallesService {
   }
 
   /// Supprime, avant réassignation, les doublons de {@code salle_sources} qu'une fusion créerait
-  /// sinon silencieusement : la PK {@code (source, identifiant_externe)} est indépendante
-  /// de {@code salle_id}, donc deux lignes portant le même {@code source} (ex. deux identifiants
-  /// {@code ticketmaster} différents) peuvent coexister indéfiniment sur la salle fusionnée sans
-  /// jamais entrer en conflit de PK. Garde la ligne la plus saine (non suspecte prioritaire, puis
-  /// {@code nb_zero_consecutifs} le plus bas) et supprime l'autre.
+  /// sinon silencieusement : la PK {@code (source, identifiant_externe)} est indépendante de {@code
+  /// salle_id}, donc deux lignes portant le même {@code source} (ex. deux identifiants {@code
+  /// ticketmaster} différents) peuvent coexister indéfiniment sur la salle fusionnée sans jamais
+  /// entrer en conflit de PK. Garde la ligne la plus saine (non suspecte prioritaire, puis {@code
+  /// nb_zero_consecutifs} le plus bas) et supprime l'autre.
   ///
-  /// @param cibleId  UUID de la salle à conserver
+  /// @param cibleId UUID de la salle à conserver
   /// @param sourceId UUID de la salle à absorber
   private void dedupliquerSallesSourcesAvantFusion(UUID cibleId, UUID sourceId) {
     List<Map<String, Object>> conflits =
@@ -278,7 +286,7 @@ public class ReferentielSallesService {
             Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
 
     for (Map<String, Object> conflit : conflits) {
-      boolean garderSource = laSourceEstPlusSaine(conflit);
+      boolean garderSource = FusionSourcesUtils.laSourceEstPlusSaine(conflit);
       Map<String, Object> paramsSuppression = new HashMap<>();
       paramsSuppression.put("source", conflit.get("source"));
       paramsSuppression.put("salleId", garderSource ? cibleId.toString() : sourceId.toString());
@@ -289,23 +297,5 @@ public class ReferentielSallesService {
               + " :source AND identifiant_externe = :identifiantExterne",
           paramsSuppression);
     }
-  }
-
-  /// Compare la santé de deux lignes {@code salle_sources} (ou {@code artiste_sources}) en
-  /// conflit lors d'une fusion : une ligne non suspecte l'emporte toujours sur une ligne suspecte,
-  /// à égalité de statut la ligne avec le moins d'échecs consécutifs l'emporte.
-  ///
-  /// @param conflit ligne agrégée contenant {@code suspect_source}/{@code suspect_cible} et
-  ///     {@code sante_source}/{@code sante_cible}
-  /// @return {@code true} si la ligne côté source doit être conservée
-  static boolean laSourceEstPlusSaine(Map<String, Object> conflit) {
-    boolean suspectSource = (boolean) conflit.get("suspect_source");
-    boolean suspectCible = (boolean) conflit.get("suspect_cible");
-    if (suspectSource != suspectCible) {
-      return !suspectSource;
-    }
-    int santeSource = ((Number) conflit.get("sante_source")).intValue();
-    int santeCible = ((Number) conflit.get("sante_cible")).intValue();
-    return santeSource <= santeCible;
   }
 }

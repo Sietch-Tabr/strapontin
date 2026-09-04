@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.web.client.RestClient;
 
 /// Tests unitaires pour {@link PreferencesService} — focus sur la dédup floue de l'import.
 ///
@@ -45,7 +46,12 @@ class PreferencesServiceTest {
     salleService = mock(SalleService.class);
     service =
         new PreferencesService(
-            jdbc, new ObjectMapper(), logAdminService, artisteService, salleService);
+            jdbc,
+            new ObjectMapper(),
+            mock(RestClient.class),
+            logAdminService,
+            artisteService,
+            salleService);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
   }
 

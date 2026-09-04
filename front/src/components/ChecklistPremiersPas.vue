@@ -1,6 +1,6 @@
 <template>
   <section v-if="visible" class="checklist-premiers-pas" aria-labelledby="titre-checklist">
-    <p id="titre-checklist" class="aide-label">Premiers pas</p>
+    <p id="titre-checklist" class="aide-libelle">Premiers pas</p>
     <ul class="checklist-liste">
       <li v-for="item in items" :key="item.cle" class="checklist-item" :class="{ 'checklist-item--fait': item.fait }">
         <span class="checklist-marque" :class="{ 'checklist-marque--fait': item.fait }">
@@ -60,3 +60,39 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+  .checklist-premiers-pas {
+    margin-bottom: 1.5rem;
+  }
+  .checklist-liste {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.875rem;
+  }
+  .checklist-item--fait {
+    color: var(--fg-muted);
+    text-decoration: line-through;
+  }
+  .checklist-marque {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    color: var(--primary-fg);
+  }
+  .checklist-marque--fait {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+</style>

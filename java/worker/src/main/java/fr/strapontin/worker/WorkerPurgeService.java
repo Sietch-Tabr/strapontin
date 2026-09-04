@@ -43,25 +43,17 @@ public class WorkerPurgeService {
   public void executerPurgerConcerts() {
     LocalDate dateLimite = LocalDate.now().minusDays(7);
     log.info("purger:concerts dateLimite={}", dateLimite);
-    long debut = System.currentTimeMillis();
-    try {
-      int supprimes =
-          jdbc.update(
-              "DELETE FROM concerts WHERE date < :dateLimite", Map.of("dateLimite", dateLimite));
-      log.info("purger:concerts terminé supprimes={}", supprimes);
-      workerStatsService.enregistrerStatJob(
-          "purger:concerts",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, supprimes),
-          null);
-    } catch (Exception e) {
-      log.error("purger:concerts échoué", e);
-      workerStatsService.enregistrerStatJob(
-          "purger:concerts",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, 0),
-          e.getMessage());
-    }
+    workerStatsService.executerAvecStats(
+        log,
+        "purger:concerts",
+        () -> {
+          int supprimes =
+              jdbc.update(
+                  "DELETE FROM concerts WHERE date < :dateLimite",
+                  Map.of("dateLimite", dateLimite));
+          log.info("purger:concerts terminé supprimes={}", supprimes);
+          return new ResultatPersistance(0, supprimes);
+        });
   }
 
   // Seuil de purge définitive d'un concert futur jamais reconfirmé — très supérieur au seuil de
@@ -85,28 +77,19 @@ public class WorkerPurgeService {
   /// Concerts).
   public void executerPurgerConcertsNonConfirmes() {
     log.info("purger:concerts-non-confirmes seuilAbsences={}", SEUIL_PURGE_ABSENCES);
-    long debut = System.currentTimeMillis();
-    try {
-      int signales =
-          jdbc.update(
-              "UPDATE concerts SET suppression_suggeree_le = now()"
-                  + " WHERE absences_consecutives >= :seuil AND date >= CURRENT_DATE"
-                  + " AND suppression_suggeree_le IS NULL",
-              Map.of("seuil", SEUIL_PURGE_ABSENCES));
-      log.info("purger:concerts-non-confirmes terminé signales={}", signales);
-      workerStatsService.enregistrerStatJob(
-          "purger:concerts-non-confirmes",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, signales),
-          null);
-    } catch (Exception e) {
-      log.error("purger:concerts-non-confirmes échoué", e);
-      workerStatsService.enregistrerStatJob(
-          "purger:concerts-non-confirmes",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, 0),
-          e.getMessage());
-    }
+    workerStatsService.executerAvecStats(
+        log,
+        "purger:concerts-non-confirmes",
+        () -> {
+          int signales =
+              jdbc.update(
+                  "UPDATE concerts SET suppression_suggeree_le = now()"
+                      + " WHERE absences_consecutives >= :seuil AND date >= CURRENT_DATE"
+                      + " AND suppression_suggeree_le IS NULL",
+                  Map.of("seuil", SEUIL_PURGE_ABSENCES));
+          log.info("purger:concerts-non-confirmes terminé signales={}", signales);
+          return new ResultatPersistance(0, signales);
+        });
   }
 
   /// Supprime les salles orphelines (sans concerts futurs, sans utilisateurs et sans slug
@@ -128,49 +111,40 @@ public class WorkerPurgeService {
   /// seulement celle en cause.
   public void executerPurgerSalles() {
     log.info("purger:salles démarré");
-    long debut = System.currentTimeMillis();
-    try {
-      List<UUID> candidats =
-          jdbc.query(
-              """
-              SELECT id FROM salles
-              WHERE NOT EXISTS (
-                  SELECT 1 FROM concerts WHERE salle_id = salles.id AND date >= CURRENT_DATE)
-                AND NOT EXISTS (
-                  SELECT 1 FROM user_salles WHERE salle_id = salles.id)
-                AND NOT EXISTS (
-                  SELECT 1 FROM salle_sources WHERE salle_id = salles.id AND source = 'digitick')
-              """,
-              Map.of(),
-              (rs, _) -> rs.getObject("id", UUID.class));
+    workerStatsService.executerAvecStats(
+        log,
+        "purger:salles",
+        () -> {
+          List<UUID> candidats =
+              jdbc.query(
+                  """
+                  SELECT id FROM salles
+                  WHERE NOT EXISTS (
+                      SELECT 1 FROM concerts WHERE salle_id = salles.id AND date >= CURRENT_DATE)
+                    AND NOT EXISTS (
+                      SELECT 1 FROM user_salles WHERE salle_id = salles.id)
+                    AND NOT EXISTS (
+                      SELECT 1 FROM salle_sources WHERE salle_id = salles.id AND source = 'digitick')
+                  """,
+                  Map.of(),
+                  (rs, _) -> rs.getObject("id", UUID.class));
 
-      int supprimes = 0;
-      for (UUID id : candidats) {
-        try {
-          jdbc.update("DELETE FROM salles WHERE id = CAST(:id AS uuid)", Map.of("id", id));
-          supprimes++;
-        } catch (DuplicateKeyException e) {
-          log.warn(
-              "purger:salles suppression bloquée salleId={} — probable doublon TM/Eventim jamais"
-                  + " fusionné",
-              id);
-        }
-      }
+          int supprimes = 0;
+          for (UUID id : candidats) {
+            try {
+              jdbc.update("DELETE FROM salles WHERE id = CAST(:id AS uuid)", Map.of("id", id));
+              supprimes++;
+            } catch (DuplicateKeyException e) {
+              log.warn(
+                  "purger:salles suppression bloquée salleId={} — probable doublon TM/Eventim"
+                      + " jamais fusionné",
+                  id);
+            }
+          }
 
-      log.info("purger:salles terminé supprimes={}", supprimes);
-      workerStatsService.enregistrerStatJob(
-          "purger:salles",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, supprimes),
-          null);
-    } catch (Exception e) {
-      log.error("purger:salles échoué", e);
-      workerStatsService.enregistrerStatJob(
-          "purger:salles",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, 0),
-          e.getMessage());
-    }
+          log.info("purger:salles terminé supprimes={}", supprimes);
+          return new ResultatPersistance(0, supprimes);
+        });
   }
 
   /// Supprime les artistes orphelins (sans concerts futurs ni utilisateurs).
@@ -182,32 +156,23 @@ public class WorkerPurgeService {
   /// Doit s'exécuter après {@link #executerPurgerSalles()} (cf. `PurgerArtistesJob`).
   public void executerPurgerArtistes() {
     log.info("purger:artistes démarré");
-    long debut = System.currentTimeMillis();
-    try {
-      int supprimes =
-          jdbc.update(
-              """
-              DELETE FROM artistes
-              WHERE NOT EXISTS (
-                  SELECT 1 FROM concerts WHERE artiste_id = artistes.id AND date >= CURRENT_DATE)
-                AND NOT EXISTS (
-                  SELECT 1 FROM user_artistes WHERE artiste_id = artistes.id)
-              """,
-              Map.of());
-      log.info("purger:artistes terminé supprimes={}", supprimes);
-      workerStatsService.enregistrerStatJob(
-          "purger:artistes",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, supprimes),
-          null);
-    } catch (Exception e) {
-      log.error("purger:artistes échoué", e);
-      workerStatsService.enregistrerStatJob(
-          "purger:artistes",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, 0),
-          e.getMessage());
-    }
+    workerStatsService.executerAvecStats(
+        log,
+        "purger:artistes",
+        () -> {
+          int supprimes =
+              jdbc.update(
+                  """
+                  DELETE FROM artistes
+                  WHERE NOT EXISTS (
+                      SELECT 1 FROM concerts WHERE artiste_id = artistes.id AND date >= CURRENT_DATE)
+                    AND NOT EXISTS (
+                      SELECT 1 FROM user_artistes WHERE artiste_id = artistes.id)
+                  """,
+                  Map.of());
+          log.info("purger:artistes terminé supprimes={}", supprimes);
+          return new ResultatPersistance(0, supprimes);
+        });
   }
 
   /// Supprime les entrées de `logs_admin` plus anciennes que 30 jours, les entrées de
@@ -221,36 +186,28 @@ public class WorkerPurgeService {
     Instant seuilHistorique = Instant.now().minusSeconds(7L * 24 * 60 * 60);
     Instant seuilVerifications = Instant.now().minusSeconds(7L * 24 * 60 * 60);
     log.info("purger:logs-admin seuilLogs={} seuilHistorique={}", seuilLogs, seuilHistorique);
-    long debut = System.currentTimeMillis();
-    try {
-      int supprimesLogs =
-          jdbc.update("DELETE FROM logs_admin WHERE ts < :seuil", Map.of("seuil", seuilLogs));
-      int supprimesHistorique =
-          jdbc.update(
-              "DELETE FROM fetch_jobs_historique WHERE exec_le < :seuil",
-              Map.of("seuil", Timestamp.from(seuilHistorique)));
-      int supprimesVerifications =
-          jdbc.update(
-              "DELETE FROM verifications WHERE expires_at < :seuil",
-              Map.of("seuil", Timestamp.from(seuilVerifications)));
-      log.info(
-          "purger:logs-admin terminé supprimesLogs={} supprimesHistorique={}"
-              + " supprimesVerifications={}",
-          supprimesLogs,
-          supprimesHistorique,
-          supprimesVerifications);
-      workerStatsService.enregistrerStatJob(
-          "purger:logs-admin",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, supprimesLogs + supprimesHistorique + supprimesVerifications),
-          null);
-    } catch (Exception e) {
-      log.error("purger:logs-admin échoué", e);
-      workerStatsService.enregistrerStatJob(
-          "purger:logs-admin",
-          System.currentTimeMillis() - debut,
-          new ResultatPersistance(0, 0),
-          e.getMessage());
-    }
+    workerStatsService.executerAvecStats(
+        log,
+        "purger:logs-admin",
+        () -> {
+          int supprimesLogs =
+              jdbc.update("DELETE FROM logs_admin WHERE ts < :seuil", Map.of("seuil", seuilLogs));
+          int supprimesHistorique =
+              jdbc.update(
+                  "DELETE FROM fetch_jobs_historique WHERE exec_le < :seuil",
+                  Map.of("seuil", Timestamp.from(seuilHistorique)));
+          int supprimesVerifications =
+              jdbc.update(
+                  "DELETE FROM verifications WHERE expires_at < :seuil",
+                  Map.of("seuil", Timestamp.from(seuilVerifications)));
+          log.info(
+              "purger:logs-admin terminé supprimesLogs={} supprimesHistorique={}"
+                  + " supprimesVerifications={}",
+              supprimesLogs,
+              supprimesHistorique,
+              supprimesVerifications);
+          return new ResultatPersistance(
+              0, supprimesLogs + supprimesHistorique + supprimesVerifications);
+        });
   }
 }

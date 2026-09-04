@@ -1,18 +1,18 @@
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-entete">
       <h1>Découverte</h1>
-      <p class="page-subtitle">Explorez tous les concerts disponibles par département.</p>
+      <p class="page-sous-titre">Explorez tous les concerts disponibles par département.</p>
     </div>
 
-    <div v-if="donnees" class="decouverte-header">
-      <span class="sync-info" v-if="donnees.derniereSyncRegion">
+    <div v-if="donnees" class="decouverte-entete">
+      <span class="synchro-info" v-if="donnees.derniereSyncRegion">
         Dernière synchro :
         <time :datetime="donnees.derniereSyncRegion">{{ formaterInstant(donnees.derniereSyncRegion) }}</time>
       </span>
-      <span class="sync-info" v-else>Jamais synchronisé</span>
-      <button type="button" class="btn btn-sm btn-secondary" @click="actualiser">
-        <svg class="icon" aria-hidden="true">
+      <span class="synchro-info" v-else>Jamais synchronisé</span>
+      <button type="button" class="bouton bouton-petit bouton-secondaire" @click="actualiser">
+        <svg class="icone" aria-hidden="true">
           <use href="/icons/lucide-sprite.svg#icon-refresh-cw" />
         </svg>
         Actualiser
@@ -20,7 +20,7 @@
     </div>
 
     <div v-if="donnees" class="decouverte-depts">
-      <span class="section-label">Départements :</span>
+      <span class="section-libelle">Départements :</span>
       <div class="chips">
         <a
           v-for="dept in donnees.deptsUtilisateur"
@@ -38,14 +38,14 @@
       </p>
     </div>
 
-    <div class="filtres-toggle">
+    <div class="filtres-bascule">
       <button
         type="button"
-        class="btn btn-secondary btn-sm"
+        class="bouton bouton-secondaire bouton-petit"
         :aria-expanded="filtresVisibles ? 'true' : 'false'"
         @click="filtresVisibles = !filtresVisibles"
       >
-        <svg class="icon" aria-hidden="true">
+        <svg class="icone" aria-hidden="true">
           <use href="/icons/lucide-sprite.svg#icon-sliders-horizontal" />
         </svg>
         <span>Filtres{{ nbFiltresActifs > 0 ? ' · ' + nbFiltresActifs : '' }}</span>
@@ -62,38 +62,38 @@
           autocomplete="off"
         />
 
-        <label for="filtre-mois-dec" class="sr-only">Filtrer par mois</label>
+        <label for="filtre-mois-dec" class="lecteur-ecran">Filtrer par mois</label>
         <select id="filtre-mois-dec" v-model="moisLocal" @change="appliquerFiltres">
           <option value="">Tous les mois</option>
           <option v-for="m in donnees?.moisDisponibles ?? []" :key="m" :value="m">{{ m }}</option>
         </select>
 
-        <label for="filtre-genre-dec" class="sr-only">Filtrer par genre</label>
+        <label for="filtre-genre-dec" class="lecteur-ecran">Filtrer par genre</label>
         <select id="filtre-genre-dec" v-model="genreLocal" @change="appliquerFiltres">
           <option value="">Tous les genres</option>
           <option v-for="g in donnees?.genresDisponibles ?? []" :key="g" :value="g">{{ g }}</option>
         </select>
 
-        <label for="filtre-classification-dec" class="sr-only">Filtrer par classification</label>
+        <label for="filtre-classification-dec" class="lecteur-ecran">Filtrer par classification</label>
         <select id="filtre-classification-dec" v-model="classificationLocal" @change="appliquerFiltres">
           <option value="">Toutes classifications</option>
           <option v-for="c in donnees?.classificationsDisponibles ?? []" :key="c" :value="c">{{ c }}</option>
         </select>
 
-        <label for="filtre-tri-dec" class="sr-only">Trier les résultats</label>
+        <label for="filtre-tri-dec" class="lecteur-ecran">Trier les résultats</label>
         <select id="filtre-tri-dec" v-model="triLocal" @change="appliquerFiltres">
           <option value="date">Par date</option>
           <option value="nouveaute">Par nouveauté</option>
         </select>
 
-        <button type="submit" class="btn btn-secondary">Filtrer</button>
-        <RouterLink to="/decouverte" class="btn btn-texte">Réinitialiser</RouterLink>
+        <button type="submit" class="bouton bouton-secondaire">Filtrer</button>
+        <RouterLink to="/decouverte" class="bouton bouton-texte">Réinitialiser</RouterLink>
       </div>
     </form>
 
     <p
       v-if="donnees"
-      class="page-subtitle"
+      class="page-sous-titre"
       aria-live="polite"
       aria-atomic="true"
     >
@@ -114,7 +114,7 @@
     </div>
 
     <div v-if="donnees && donnees.concerts.length > 0" class="decouverte-conteneur">
-      <div class="table-wrapper">
+      <div class="table-conteneur">
         <table>
           <thead>
             <tr>
@@ -122,7 +122,7 @@
               <th scope="col">Date</th>
               <th scope="col">Où</th>
               <th scope="col">Genre</th>
-              <th scope="col"><span class="sr-only">Lien</span></th>
+              <th scope="col"><span class="lecteur-ecran">Lien</span></th>
             </tr>
           </thead>
           <tbody>
@@ -148,10 +148,10 @@
                   :href="concert.url"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="btn btn-xs btn-secondary"
+                  class="bouton bouton-tres-petit bouton-secondaire"
                   aria-label="Acheter des billets (ouvre dans un nouvel onglet)"
                 >
-                  <svg class="icon" aria-hidden="true">
+                  <svg class="icone" aria-hidden="true">
                     <use href="/icons/lucide-sprite.svg#icon-ticket" />
                   </svg>
                 </a>
@@ -166,14 +166,14 @@
       <button
         v-if="donnees.page > 0"
         type="button"
-        class="btn btn-secondary"
+        class="bouton bouton-secondaire"
         @click="changerPage(donnees.page - 1)"
       >Précédent</button>
       <span>Page {{ donnees.page + 1 }} / {{ donnees.totalPages }}</span>
       <button
         v-if="donnees.page + 1 < donnees.totalPages"
         type="button"
-        class="btn btn-secondary"
+        class="bouton bouton-secondaire"
         @click="changerPage(donnees.page + 1)"
       >Suivant</button>
     </div>
@@ -328,3 +328,66 @@ onUnmounted(() => {
   controleurActuel?.abort()
 })
 </script>
+
+<style scoped>
+  .decouverte-conteneur {
+    container-type: inline-size;
+    container-name: decouverte;
+  }
+  @container decouverte (max-width: 700px) {
+    .decouverte-conteneur table,
+  .decouverte-conteneur tbody {
+      display: block;
+    }
+    .decouverte-conteneur thead {
+      display: none;
+    }
+    .decouverte-conteneur tr {
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-card);
+      margin-bottom: 0.5rem;
+      overflow: hidden;
+    }
+    .decouverte-conteneur td {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .decouverte-conteneur td:last-child {
+      border-bottom: none;
+    }
+    .decouverte-conteneur td::before {
+      content: attr(data-label);
+      font-weight: 500;
+      color: var(--fg-muted);
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    .decouverte-conteneur td[data-label=""]::before {
+      display: none;
+    }
+    .decouverte-conteneur td[data-label=""] {
+      justify-content: flex-end;
+    }
+  }
+  .decouverte-entete {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .decouverte-depts {
+    margin-bottom: 1rem;
+  }
+  .synchro-info {
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+  }
+</style>

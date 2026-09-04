@@ -240,9 +240,8 @@ class SalleRepository {
   /// Retourne les identifiants préfixés de toutes les sources d'une salle, séparés par une virgule.
   ///
   /// <p>Ex. : {@code "digitick:lempreinte"} ou {@code "tm:rZFSnyZdFvA,digitick:lempreinte"}. Le
-  /// préfixe Ticketmaster est abrégé ({@code "tm"}, pas {@code "ticketmaster"}, la valeur
-  /// canonique de {@code salle_sources.source}) — {@link
-  /// TicketmasterSource#accepteIdentifiantSalle}
+  /// préfixe Ticketmaster est abrégé ({@code "tm"}, pas {@code "ticketmaster"}, la valeur canonique
+  /// de {@code salle_sources.source}) — {@link TicketmasterSource#accepteIdentifiantSalle}
   /// n'accepte que ce préfixe court, sans quoi le fetch déclenché à l'ajout d'une salle TM ne fait
   /// jamais rien (mismatch silencieux, aucune exception).
   ///
@@ -360,8 +359,9 @@ class SalleRepository {
   ///
   /// @param userId identifiant de l'utilisateur
   /// @param salleId UUID stable de la salle
-  void supprimerPourUtilisateur(String userId, UUID salleId) {
-    jdbc.update(
+  /// @return le nombre de lignes réellement supprimées (0 si la salle n'était pas suivie)
+  int supprimerPourUtilisateur(String userId, UUID salleId) {
+    return jdbc.update(
         """
         DELETE FROM user_salles
         WHERE user_id = :userId AND salle_id = CAST(:salleId AS uuid)

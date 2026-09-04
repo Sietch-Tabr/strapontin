@@ -7,6 +7,8 @@ package fr.strapontin.sources;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -167,6 +169,20 @@ final class ClientSparqlWikidata {
     return v != null ? (String) v.get("value") : null;
   }
 
+  /// Extrait la liste des bindings d'une réponse SPARQL JSON — partagé entre {@link
+  /// WikidataSalleSource} et {@link WikidataArtisteSource}, jusqu'ici dupliqué à l'identique dans
+  /// les deux classes.
+  ///
+  /// @param data réponse JSON désérialisée d'une requête SPARQL
+  /// @return la liste des bindings, vide si absente
+  @SuppressWarnings("unchecked")
+  static List<Map<String, Object>> extraireBindings(Map<String, Object> data) {
+    var results = (Map<String, Object>) data.get("results");
+    if (results == null) return List.of();
+    var bindings = (List<Map<String, Object>>) results.get("bindings");
+    return bindings != null ? bindings : List.of();
+  }
+
   /// Échappe une chaîne pour insertion sûre dans un littéral SPARQL délimité par des guillemets
   /// doubles (ex. {@code mwapi:search "..."}). L'antislash est échappé avant le guillemet, sinon le
   /// {@code \"} produit par l'échappement du guillemet serait lui-même ré-échappé.
@@ -175,5 +191,18 @@ final class ClientSparqlWikidata {
   /// @return la chaîne échappée
   static String echapperLitteral(String s) {
     return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+  }
+
+  private static final java.util.regex.Pattern MOTIF_Q_ID =
+      java.util.regex.Pattern.compile("^Q[0-9]+$");
+
+  /// Vérifie qu'une chaîne est un Q-ID Wikidata valide (ex. {@code Q3438008}), avant de la
+  /// concaténer nue (sans guillemets) dans une clause {@code VALUES ?item { wd:... }} —
+  /// contrairement à {@link #echapperLitteral}, qui ne protège que les littéraux entre guillemets.
+  ///
+  /// @param qId identifiant à vérifier
+  /// @return {@code true} si le format est un Q-ID valide
+  static boolean estQIdValide(String qId) {
+    return qId != null && MOTIF_Q_ID.matcher(qId).matches();
   }
 }

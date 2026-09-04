@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-entete">
       <h1>Configurer l'authentification à deux facteurs</h1>
     </div>
 
@@ -11,9 +11,9 @@
     </div>
 
     <template v-else>
-      <div class="max-w-xl">
+      <div class="contenu-largeur-etroite">
         <div class="param-bloc">
-          <h2 class="param-label">Étape 1 — Scannez le QR code</h2>
+          <h2 class="param-libelle">Étape 1 — Scannez le QR code</h2>
           <p class="param-aide">
             Ouvrez votre application d'authentification (Google Authenticator,
             Aegis, etc.) et scannez le QR code ci-dessous.
@@ -38,7 +38,7 @@
         </div>
 
         <div class="param-bloc">
-          <h2 class="param-label">Étape 2 — Confirmez</h2>
+          <h2 class="param-libelle">Étape 2 — Confirmez</h2>
           <p class="param-aide">
             Saisissez le code à 6 chiffres affiché dans votre application pour
             valider la configuration.
@@ -49,7 +49,7 @@
           </div>
 
           <form autocomplete="off" @submit.prevent="confirmer">
-            <div class="form-group">
+            <div class="form-groupe">
               <label for="code">Code de vérification</label>
               <input
                 id="code"
@@ -66,10 +66,10 @@
               />
             </div>
             <div class="form-actions">
-              <button type="submit" class="btn btn-primary" :disabled="enCours">
+              <button type="submit" class="bouton bouton-primaire" :disabled="enCours">
                 Confirmer
               </button>
-              <RouterLink to="/parametres#compte" class="btn btn-secondary">
+              <RouterLink to="/parametres#compte" class="bouton bouton-secondaire">
                 Annuler
               </RouterLink>
             </div>
@@ -158,3 +158,33 @@ async function confirmer() {
 
 onMounted(chargerSetup);
 </script>
+
+<style scoped>
+  .param-aide--mt {
+    margin-top: 0.5rem;
+  }
+  .totp-qr {
+    width: 200px;
+    height: 200px;
+    margin: 1rem 0;
+  }
+  .totp-secret-code {
+    display: block;
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+    padding: 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    word-break: break-all;
+    margin: 0.5rem 0;
+  }
+  .totp-manuel {
+    margin-top: 0.75rem;
+  }
+  .totp-manuel summary {
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+</style>

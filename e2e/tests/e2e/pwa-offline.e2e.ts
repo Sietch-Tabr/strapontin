@@ -76,7 +76,7 @@ test.describe("Scénario: PWA — toast visible au-dessus de la bottom nav sur m
       .locator(".toast-conteneur .alerte")
       .filter({ hasText: "Vous êtes hors ligne" });
     await expect(toast).toBeVisible({ timeout: 3000 });
-    const bottomNav = page.locator("#bottom-nav");
+    const bottomNav = page.locator("#nav-bas");
     await expect(bottomNav).toBeVisible();
 
     const toastBox = await toast.boundingBox();

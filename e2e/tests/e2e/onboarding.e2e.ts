@@ -11,11 +11,19 @@ async function supprimerUtilisateurParEmail(email: string): Promise<void> {
     storageState: FICHIER_AUTH_ADMIN,
   });
   try {
-    const reps = await ctx.get("/api/admin/utilisateurs");
-    if (!reps.ok()) return;
-    const users = await reps.json();
-    const cible = users.find((u: { email: string }) => u.email === email);
-    if (cible) await ctx.delete(`/api/admin/utilisateurs/${cible.id}`);
+    // paginé (50/page, tri par date de création croissante) — un compte tout juste créé est
+    // toujours en dernière page dès que le total dépasse une page.
+    for (let page = 0; ; page++) {
+      const reps = await ctx.get(`/api/admin/utilisateurs?page=${page}`);
+      if (!reps.ok()) return;
+      const { utilisateurs: users, totalPages } = await reps.json();
+      const cible = users.find((u: { email: string }) => u.email === email);
+      if (cible) {
+        await ctx.delete(`/api/admin/utilisateurs/${cible.id}`);
+        return;
+      }
+      if (page >= (totalPages ?? 1) - 1) return;
+    }
   } finally {
     await ctx.dispose();
   }
@@ -165,7 +173,7 @@ test.describe("Scénario: modale d'onboarding — nouveau compte", () => {
     try {
       const dialog = page.locator("dialog#dialog-onboarding");
       await expect(dialog).toBeVisible({ timeout: 5000 });
-      await dialog.locator(".btn-icone").click();
+      await dialog.locator(".bouton-icone").click();
       await expect(dialog).not.toBeVisible({ timeout: 3000 });
 
       await page.goto("/aide");
@@ -252,7 +260,7 @@ test.describe("Scénario: nudge notifications — premier ajout", () => {
         .waitFor({ state: "visible", timeout: 3000 })
         .catch(() => {});
       if (await dialogOnboarding.isVisible().catch(() => false)) {
-        await dialogOnboarding.locator(".btn-icone").click();
+        await dialogOnboarding.locator(".bouton-icone").click();
         await expect(dialogOnboarding).not.toBeVisible({ timeout: 3000 });
       }
       await page.fill("#q-artiste", "Radiohead");

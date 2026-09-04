@@ -111,11 +111,11 @@ test.describe("Toasts — actions admin", () => {
     await expect(page.locator(".etat-chargement").first()).not.toBeVisible({
       timeout: 5000,
     });
-    const btn = page.getByRole("button", {
+    const bouton = page.getByRole("button", {
       name: "Relancer les fetches maintenant",
     });
-    await btn.scrollIntoViewIfNeeded();
-    await btn.click();
+    await bouton.scrollIntoViewIfNeeded();
+    await bouton.click();
     await expect(page.locator(".alerte-succes")).toContainText(
       "Fetches relancés",
       { timeout: 5000 },

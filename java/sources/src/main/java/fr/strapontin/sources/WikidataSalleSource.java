@@ -173,7 +173,11 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   private static String construireRequeteSparql(List<String> qIds) {
-    String values = qIds.stream().map(q -> "wd:" + q).collect(Collectors.joining(" "));
+    String values =
+        qIds.stream()
+            .filter(ClientSparqlWikidata::estQIdValide)
+            .map(q -> "wd:" + q)
+            .collect(Collectors.joining(" "));
     return """
     SELECT ?item ?itemLabel ?communeLabel WHERE {
       VALUES ?item { %s }
@@ -252,7 +256,11 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   private static String construireRequeteTypesInvalides(List<String> qIds) {
-    String items = qIds.stream().map(q -> "wd:" + q).collect(Collectors.joining(" "));
+    String items =
+        qIds.stream()
+            .filter(ClientSparqlWikidata::estQIdValide)
+            .map(q -> "wd:" + q)
+            .collect(Collectors.joining(" "));
     String typesExclusSparql =
         TYPES_EXCLUS.stream().map(qid -> "wd:" + qid).collect(Collectors.joining(" "));
     return """
@@ -334,7 +342,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     Map<String, Object> data = client.executer(sparql);
     if (data == null) return Optional.empty();
 
-    for (var binding : extraireBindings(data)) {
+    for (var binding : ClientSparqlWikidata.extraireBindings(data)) {
       String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
       if (itemUri == null) continue;
       String itemLabel = ClientSparqlWikidata.valeurBinding(binding, "itemLabel");
@@ -496,13 +504,23 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
 
   // Types Wikidata (P31) structurellement incompatibles avec un lieu de spectacle : gare
   // (Q3455524), arrêt de tram (Q6465), commune française (Q484170), gare ferroviaire (Q55488),
-  // arrêt de transport en commun (Q2175765), bar (Q187456), restaurant (Q11707) — un candidat de
-  // l'un de ces types est nécessairement une fausse correspondance, quel que soit son score de
-  // similarité de nom. Exposée pour permettre à {@code CoherenceWikidataSalleService} de revalider
-  // les {@code wikidata_id} déjà stockés contre ces mêmes types (garde-fou introduit après coup ne
-  // s'appliquant pas rétroactivement aux découvertes antérieures).
+  // arrêt de transport en commun (Q2175765), bar (Q187456), restaurant (Q11707), quotidien
+  // régional (Q1002697), journal (Q11032) — un candidat de l'un de ces types est nécessairement
+  // une fausse correspondance, quel que soit son score de similarité de nom. Exposée pour permettre
+  // à {@code CoherenceWikidataSalleService} de revalider les {@code wikidata_id} déjà stockés
+  // contre ces mêmes types (garde-fou introduit après coup ne s'appliquant pas rétroactivement aux
+  // découvertes antérieures).
   public static final Set<String> TYPES_EXCLUS =
-      Set.of("Q3455524", "Q6465", "Q484170", "Q55488", "Q2175765", "Q187456", "Q11707");
+      Set.of(
+          "Q3455524",
+          "Q6465",
+          "Q484170",
+          "Q55488",
+          "Q2175765",
+          "Q187456",
+          "Q11707",
+          "Q1002697",
+          "Q11032");
 
   private static String construireRequeteDecouverte(String nom) {
     String typesExclusSparql =
@@ -539,13 +557,5 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     LIMIT 5
     """
         .formatted(ClientSparqlWikidata.echapperLitteral(nom), typesExclusSparql);
-  }
-
-  @SuppressWarnings("unchecked")
-  private static List<Map<String, Object>> extraireBindings(Map<String, Object> data) {
-    var results = (Map<String, Object>) data.get("results");
-    if (results == null) return List.of();
-    var bindings = (List<Map<String, Object>>) results.get("bindings");
-    return bindings != null ? bindings : List.of();
   }
 }

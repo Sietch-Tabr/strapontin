@@ -51,6 +51,7 @@ public class AdminService {
   private static final Pattern FORMAT_EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
   private static final Set<String> ROLES_VALIDES = Set.of("user", "admin");
   private static final int MAX_TENTATIVES_REVOCATION = 3;
+  private static final int TAILLE_PAGE_UTILISATEURS = 50;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final EmailService emailService;
@@ -86,25 +87,36 @@ public class AdminService {
     this.self = self;
   }
 
-  /// Retourne la liste des utilisateurs avec leur dernière activité et compteurs de suivi.
+  /// Retourne une page d'utilisateurs avec leur dernière activité et compteurs de suivi.
   ///
-  /// @return utilisateurs triés par date de création
-  public List<UtilisateurAdmin> listerUtilisateurs() {
-    List<Map<String, Object>> tousLesUsers =
+  /// @param page numéro de page (0-indexé)
+  /// @return page d'utilisateurs triés par date de création
+  public ReponseUtilisateursAdmin listerUtilisateurs(int page) {
+    int pageNum = Math.max(0, page);
+    Map<String, Object> paramsPage =
+        Map.of("taille", TAILLE_PAGE_UTILISATEURS, "offset", pageNum * TAILLE_PAGE_UTILISATEURS);
+    List<Map<String, Object>> pageUsers =
         jdbc.queryForList(
             """
             SELECT u.id, u.email, u.role::text, u.username, u.display_username,
                    u.must_change_credentials, u.created_at, u.revocation_admin_le,
                    COUNT(DISTINCT us.salle_id) AS nb_salles,
-                   COUNT(DISTINCT ua.artiste_id) AS nb_artistes
+                   COUNT(DISTINCT ua.artiste_id) AS nb_artistes,
+                   COUNT(*) OVER() AS total_filtre
             FROM users u
             LEFT JOIN user_salles us ON us.user_id = u.id
             LEFT JOIN user_artistes ua ON ua.user_id = u.id
             GROUP BY u.id, u.email, u.role, u.username, u.display_username,
                      u.must_change_credentials, u.created_at, u.revocation_admin_le
             ORDER BY u.created_at
+            LIMIT :taille OFFSET :offset
             """,
-            Map.of());
+            paramsPage);
+
+    long total =
+        pageUsers.isEmpty()
+            ? compterUtilisateurs(pageNum)
+            : ((Number) pageUsers.get(0).get("total_filtre")).longValue();
 
     Map<String, Long> activiteParUsername = new HashMap<>();
     jdbc.query(
@@ -118,28 +130,41 @@ public class AdminService {
         (org.springframework.jdbc.core.RowCallbackHandler)
             rs -> activiteParUsername.put(rs.getString("PRINCIPAL_NAME"), rs.getLong("derniere")));
 
-    return tousLesUsers.stream()
-        .map(
-            u -> {
-              String username = (String) u.get("username");
-              Long derniereMs = activiteParUsername.get(username);
-              java.sql.Timestamp revocationTs = (java.sql.Timestamp) u.get("revocation_admin_le");
-              Number nbSallesNum = (Number) u.get("nb_salles");
-              Number nbArtistesNum = (Number) u.get("nb_artistes");
-              return new UtilisateurAdmin(
-                  (String) u.get("id"),
-                  (String) u.get("email"),
-                  (String) u.get("role"),
-                  username,
-                  (String) u.get("display_username"),
-                  (Boolean) u.get("must_change_credentials"),
-                  ((java.sql.Timestamp) u.get("created_at")).toInstant(),
-                  derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null,
-                  revocationTs != null ? revocationTs.toInstant() : null,
-                  nbSallesNum != null ? nbSallesNum.intValue() : 0,
-                  nbArtistesNum != null ? nbArtistesNum.intValue() : 0);
-            })
-        .toList();
+    List<UtilisateurAdmin> utilisateurs =
+        pageUsers.stream()
+            .map(
+                u -> {
+                  String username = (String) u.get("username");
+                  Long derniereMs = activiteParUsername.get(username);
+                  java.sql.Timestamp revocationTs =
+                      (java.sql.Timestamp) u.get("revocation_admin_le");
+                  Number nbSallesNum = (Number) u.get("nb_salles");
+                  Number nbArtistesNum = (Number) u.get("nb_artistes");
+                  return new UtilisateurAdmin(
+                      (String) u.get("id"),
+                      (String) u.get("email"),
+                      (String) u.get("role"),
+                      username,
+                      (String) u.get("display_username"),
+                      (Boolean) u.get("must_change_credentials"),
+                      ((java.sql.Timestamp) u.get("created_at")).toInstant(),
+                      derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null,
+                      revocationTs != null ? revocationTs.toInstant() : null,
+                      nbSallesNum != null ? nbSallesNum.intValue() : 0,
+                      nbArtistesNum != null ? nbArtistesNum.intValue() : 0);
+                })
+            .toList();
+
+    int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_UTILISATEURS));
+    return new ReponseUtilisateursAdmin(utilisateurs, pageNum, totalPages, total);
+  }
+
+  // page vide (offset au-delà du total, ex. dernier utilisateur supprimé depuis) : total_filtre
+  // n'est renvoyé par aucune ligne, un second aller-retour reste alors nécessaire.
+  private long compterUtilisateurs(int pageNum) {
+    if (pageNum == 0) return 0;
+    Long total = jdbc.queryForObject("SELECT COUNT(*) FROM users", Map.of(), Long.class);
+    return total != null ? total : 0;
   }
 
   /// Crée un compte utilisateur et envoie un email d'invitation (atomique).

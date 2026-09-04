@@ -18,15 +18,15 @@ import org.springframework.stereotype.Service;
 ///
 /// Chaque fetch (salle ou artiste) enregistre son résultat : 0 résultat incrémente le compteur
 /// d'échecs consécutifs, un résultat positif le remet à zéro. Au 3e échec consécutif (~6h à la
-/// cadence 11 fetch/jour), l'identifiant devient "suspect" et sera traité par
-/// {@link ReconciliationNocturneService} au prochain cycle nocturne.
+/// cadence 11 fetch/jour), l'identifiant devient "suspect" et sera traité par {@link
+/// ReconciliationNocturneService} au prochain cycle nocturne.
 ///
 /// Ce compteur passif reste volontairement générique aux deux tables, mais génère trop de faux
-/// positifs pour être exposé tel quel côté statut admin artistes (65% de faux positifs
-/// observés) : {@code artiste_sources.necessite_intervention_le}, posée uniquement par
-/// {@link ReconciliationNocturneService} en cas d'échec confirmé de la vérification active, fait
-/// désormais foi pour le statut affiché. Un fetch de nouveau positif sur un artiste TM efface
-/// cette colonne — la résolution est donc naturelle, sans attendre le prochain cycle nocturne.
+/// positifs pour être exposé tel quel côté statut admin artistes (65% de faux positifs observés) :
+/// {@code artiste_sources.necessite_intervention_le}, posée uniquement par {@link
+/// ReconciliationNocturneService} en cas d'échec confirmé de la vérification active, fait désormais
+/// foi pour le statut affiché. Un fetch de nouveau positif sur un artiste TM efface cette colonne —
+/// la résolution est donc naturelle, sans attendre le prochain cycle nocturne.
 ///
 /// @since 2.6.0
 /// @author Kwaite
@@ -39,8 +39,8 @@ public class SuiviSanteSourcesService {
 
   /// Préfixes abrégés utilisés par le déclenchement manuel (voir `TriggerController`,
   /// `"tm:venueId"`) vers la valeur canonique stockée dans `salle_sources.source`/
-  /// `artiste_sources.source` (`source_concert` enum). Normalisation défensive uniquement pour
-  /// ce suivi — ne corrige pas `TicketmasterSource.accepteIdentifiantSalle` (hors périmètre).
+  /// `artiste_sources.source` (`source_concert` enum). Normalisation défensive uniquement pour ce
+  /// suivi — ne corrige pas `TicketmasterSource.accepteIdentifiantSalle` (hors périmètre).
   private static final Map<String, String> PREFIXES_ABREGES = Map.of("tm", "ticketmaster");
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -51,33 +51,33 @@ public class SuiviSanteSourcesService {
     this.tm = tm;
   }
 
-  /// Enregistre le résultat d'un fetch pour une salle identifiée par son identifiant préfixé
-  /// (ex. {@code "ticketmaster:rZFSnyZdFvA"}, {@code "tm:rZFSnyZdFvA"}, {@code "digitick:slug"}).
+  /// Enregistre le résultat d'un fetch pour une salle identifiée par son identifiant préfixé (ex.
+  /// {@code "ticketmaster:rZFSnyZdFvA"}, {@code "tm:rZFSnyZdFvA"}, {@code "digitick:slug"}).
   ///
   /// @param identifiantPrefixe identifiant préfixé {@code source:identifiant_externe}
-  /// @param nbResultats        nombre de concerts retournés par ce fetch
+  /// @param nbResultats nombre de concerts retournés par ce fetch
   public void enregistrerResultatSalle(String identifiantPrefixe, int nbResultats) {
     int sep = identifiantPrefixe.indexOf(':');
     if (sep < 0) return;
     String source = normaliserSource(identifiantPrefixe.substring(0, sep));
     String identifiant = identifiantPrefixe.substring(sep + 1);
-    mettreAJourCompteur("salle_sources", source, identifiant, nbResultats > 0);
+    mettreAJourCompteur(TypeEntiteSource.SALLE, source, identifiant, nbResultats > 0);
   }
 
   /// Enregistre le résultat d'un fetch TM par lot d'artistes : pour chaque attractionId du lot,
-  /// détermine s'il a produit au moins un concert en cherchant sa présence dans
-  /// {@link ConcertBrut#artisteSourceId()} des résultats retournés (TM ne renvoie pas de compte
+  /// détermine s'il a produit au moins un concert en cherchant sa présence dans {@link
+  /// ConcertBrut#artisteSourceId()} des résultats retournés (TM ne renvoie pas de compte
   /// par-artiste dans un fetch groupé).
   ///
   /// @param attractionIds identifiants TM (bruts, sans préfixe) du lot envoyé à TM
-  /// @param concertsLot   concerts retournés par ce lot
+  /// @param concertsLot concerts retournés par ce lot
   public void enregistrerResultatArtistesLot(
       List<String> attractionIds, List<ConcertBrut> concertsLot) {
     for (String attractionId : attractionIds) {
       String artisteSourceId = "ticketmaster:" + attractionId;
       boolean succes =
           concertsLot.stream().anyMatch(c -> artisteSourceId.equals(c.artisteSourceId()));
-      mettreAJourCompteur("artiste_sources", "ticketmaster", attractionId, succes);
+      mettreAJourCompteur(TypeEntiteSource.ARTISTE, "ticketmaster", attractionId, succes);
     }
   }
 
@@ -86,10 +86,10 @@ public class SuiviSanteSourcesService {
   }
 
   private void mettreAJourCompteur(
-      String table, String source, String identifiant, boolean succes) {
+      TypeEntiteSource type, String source, String identifiant, boolean succes) {
     // necessite_intervention_le n'existe que sur artiste_sources — résolution naturelle
     // dès qu'un fetch redevient positif ET que le nom TM revérifié reste cohérent.
-    boolean estArtisteSources = "artiste_sources".equals(table);
+    boolean estArtisteSources = type == TypeEntiteSource.ARTISTE;
     String colonneInterventionResolue =
         estArtisteSources
             ? ", necessite_intervention_le = CASE WHEN :effacerIntervention THEN NULL ELSE"
@@ -97,7 +97,7 @@ public class SuiviSanteSourcesService {
             : "";
     String sql =
         "UPDATE "
-            + table
+            + type.table()
             + " SET nb_zero_consecutifs = CASE WHEN :succes THEN 0 ELSE nb_zero_consecutifs + 1"
             + " END, suspect_depuis = CASE WHEN :succes THEN NULL WHEN nb_zero_consecutifs + 1 >="
             + " :seuil AND suspect_depuis IS NULL THEN now() ELSE suspect_depuis END"
@@ -116,21 +116,18 @@ public class SuiviSanteSourcesService {
               "effacerIntervention", effacerIntervention));
     } catch (Exception e) {
       log.warn(
-          "Impossible de mettre à jour la santé source={} identifiant={} : {}",
-          source,
-          identifiant,
-          e.getMessage());
+          "Impossible de mettre à jour la santé source={} identifiant={}", source, identifiant, e);
     }
   }
 
   /// N'autorise l'effacement de {@code necessite_intervention_le} que si le nom TM revérifié
-  /// correspond toujours à l'artiste suivi — un fetch positif seul (au moins un concert
-  /// renvoyé pour cet {@code identifiant_externe}) ne suffit pas à confirmer l'identité : un
+  /// correspond toujours à l'artiste suivi — un fetch positif seul (au moins un concert renvoyé
+  /// pour cet {@code identifiant_externe}) ne suffit pas à confirmer l'identité : un
   /// tribute/homonyme mal rattaché peut se remettre à programmer des concerts sans que le mauvais
-  /// rapprochement soit corrigé. N'appelle l'API TM (coût/quota) que si le flag est réellement
-  /// posé — sinon rien à revérifier, comportement inchangé.
+  /// rapprochement soit corrigé. N'appelle l'API TM (coût/quota) que si le flag est réellement posé
+  /// — sinon rien à revérifier, comportement inchangé.
   ///
-  /// @param source      source de l'{@code artiste_sources} concerné
+  /// @param source source de l'{@code artiste_sources} concerné
   /// @param identifiant identifiant externe (TM : attractionId brut, sans préfixe)
   /// @return {@code true} si l'effacement peut avoir lieu
   private boolean peutEffacerIntervention(String source, String identifiant) {

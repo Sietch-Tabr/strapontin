@@ -570,13 +570,7 @@ public class NotificationDigestService {
   }
 
   private static String e(String valeur) {
-    if (valeur == null) return "";
-    return valeur
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
-        .replace("'", "&#x27;");
+    return UtilitairesChaine.echapperHtml(valeur);
   }
 
   private static String construireCorpsEmail(

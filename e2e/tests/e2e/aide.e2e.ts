@@ -24,8 +24,8 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
 
   test("aide_formulaire_signalement_present", async ({ page }) => {
     await page.goto("/aide");
-    const btn = page.locator("#btn-ouvrir-signalement");
-    if (!(await btn.isVisible())) {
+    const bouton = page.locator("#btn-ouvrir-signalement");
+    if (!(await bouton.isVisible())) {
       // Resend non configuré : soit un lien mailto (CONTACT_EMAIL configuré), soit le message
       // de repli #842 si aucun canal de contact n'est configuré du tout.
       const lien = page.locator("a[href^='mailto:']");
@@ -40,7 +40,7 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
       }
       return;
     }
-    await btn.click();
+    await bouton.click();
     await expect(page.locator("#form-signalement")).toBeVisible();
   });
 
@@ -53,9 +53,9 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
   }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium");
     await page.goto("/aide");
-    const btn = page.locator("#btn-ouvrir-signalement");
-    if (!(await btn.isVisible())) test.skip();
-    await btn.click();
+    const bouton = page.locator("#btn-ouvrir-signalement");
+    if (!(await bouton.isVisible())) test.skip();
+    await bouton.click();
     const dialog = page.locator("#dialog-signaler");
     await expect(dialog).toBeVisible();
 
@@ -80,7 +80,7 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
       ).toBeVisible();
       await page.keyboard.press("Escape");
     } else {
-      await expect(page.locator(".sidebar a[href='/changelog']")).toBeVisible();
+      await expect(page.locator(".barre-laterale a[href='/changelog']")).toBeVisible();
     }
   });
 

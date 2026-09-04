@@ -2,20 +2,20 @@
   <section class="admin-section" id="jobs">
 
     <div class="param-bloc">
-      <h3 class="param-label">Fetches</h3>
+      <h3 class="param-libelle">Fetches</h3>
       <EtatChargement v-if="chargement" />
       <div v-else-if="statsFetches.length" class="jobs-liste">
         <div v-for="stat in statsFetches" :key="stat.typeJob" class="job-carte">
           <div class="job-carte-entete">
             <span class="job-pastille" :class="classePastille(stat)" aria-hidden="true"></span>
-            <p class="job-carte-label">{{ LABELS_JOBS[stat.typeJob] ?? stat.typeJob }}</p>
+            <p class="job-carte-libelle">{{ LABELS_JOBS[stat.typeJob] ?? stat.typeJob }}</p>
             <span
               v-if="jobsEnCours.includes(stat.typeJob)"
               class="job-en-cours"
               aria-busy="true"
               aria-label="En cours"
             >
-              <svg class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <svg class="roue-chargement" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
             </span>
@@ -38,7 +38,7 @@
         <button
           type="button"
           id="btn-relancer"
-          class="btn btn-secondary"
+          class="bouton bouton-secondaire"
           :disabled="relancerEnCours"
           @click="relancerFetches"
         >
@@ -48,20 +48,20 @@
     </div>
 
     <div class="param-bloc">
-      <h3 class="param-label">Maintenance</h3>
+      <h3 class="param-libelle">Maintenance</h3>
       <EtatChargement v-if="chargement" />
       <div v-else-if="statsMaintenance.length" class="jobs-liste">
         <div v-for="stat in statsMaintenance" :key="stat.typeJob" class="job-carte">
           <div class="job-carte-entete">
             <span class="job-pastille" :class="classePastille(stat)" aria-hidden="true"></span>
-            <p class="job-carte-label">{{ LABELS_JOBS[stat.typeJob] ?? stat.typeJob }}</p>
+            <p class="job-carte-libelle">{{ LABELS_JOBS[stat.typeJob] ?? stat.typeJob }}</p>
             <span
               v-if="jobsEnCours.includes(stat.typeJob)"
               class="job-en-cours"
               aria-busy="true"
               aria-label="En cours"
             >
-              <svg class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <svg class="roue-chargement" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
             </span>
@@ -77,7 +77,7 @@
           </p>
           <button
             type="button"
-            class="btn btn-secondary btn-sm"
+            class="bouton bouton-secondaire bouton-petit"
             :disabled="jobsEnCours.includes(stat.typeJob) || relanceJobEnCours[stat.typeJob]"
             @click="relancerJob(stat.typeJob)"
           >Relancer</button>
@@ -87,10 +87,10 @@
     </div>
 
     <div class="param-bloc">
-      <h3 class="param-label">Worker</h3>
+      <h3 class="param-libelle">Worker</h3>
       <div class="worker-carte" :class="{ 'worker-alerte': workerEnAlerte }">
         <div v-if="workerDepuisTexte">
-          <p class="worker-carte-label">Dernier job complété</p>
+          <p class="worker-carte-libelle">Dernier job complété</p>
           <p class="worker-carte-detail">{{ workerDepuisTexte }}</p>
           <p v-if="workerEnAlerte" class="worker-alerte-texte" role="alert">Inactif depuis plus de 3 h</p>
         </div>
@@ -257,3 +257,69 @@ onUnmounted(() => {
   controleur.abort()
 })
 </script>
+
+<style scoped>
+  .jobs-liste {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .job-carte {
+    padding: 0.75rem 1rem;
+  }
+  .job-carte + .job-carte {
+    border-top: 1px solid var(--border);
+  }
+  .job-carte-entete {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .job-carte-libelle {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .job-carte-detail {
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    margin-top: 0.25rem;
+  }
+  .relancer-actions {
+    margin-top: 0.75rem;
+  }
+  .job-pastille {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .job-en-cours {
+    display: inline-flex;
+    align-items: center;
+    margin-left: auto;
+    color: var(--info-text);
+  }
+  .worker-carte {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+  .worker-carte.worker-alerte {
+    border-color: var(--warning);
+    background: var(--avertissement-bg);
+  }
+  .worker-carte-libelle {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .worker-carte-detail {
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+    margin-top: 0.25rem;
+  }
+  .worker-alerte-texte {
+    font-size: 0.75rem;
+    color: var(--avertissement-text);
+    margin-top: 0.375rem;
+  }
+</style>
