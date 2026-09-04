@@ -216,3 +216,26 @@ async function supprimerCompte() {
 
 onMounted(charger)
 </script>
+
+<style scoped>
+  .form-aide-avertissement {
+    color: var(--avertissement);
+    font-weight: 500;
+  }
+  .form-fichier {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .form-fichier__input {
+    display: none;
+  }
+  .form-fichier__nom {
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+</style>

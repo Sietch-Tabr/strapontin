@@ -18,3 +18,35 @@ import { usePwaInstall } from '../../composables/usePwaInstall.js'
 
 const { visible, installer, plusTard } = usePwaInstall()
 </script>
+
+<style scoped>
+  .pwa-install-banniere {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  }
+  @media (min-width: 1025px) {
+    .pwa-install-banniere {
+      left: var(--sidebar-w);
+      bottom: 0;
+    }
+  }
+  .pwa-install-message {
+    flex: 1;
+    font-size: 0.875rem;
+  }
+  .pwa-install-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+</style>

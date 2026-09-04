@@ -158,3 +158,33 @@ async function confirmer() {
 
 onMounted(chargerSetup);
 </script>
+
+<style scoped>
+  .param-aide--mt {
+    margin-top: 0.5rem;
+  }
+  .totp-qr {
+    width: 200px;
+    height: 200px;
+    margin: 1rem 0;
+  }
+  .totp-secret-code {
+    display: block;
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+    padding: 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    word-break: break-all;
+    margin: 0.5rem 0;
+  }
+  .totp-manuel {
+    margin-top: 0.75rem;
+  }
+  .totp-manuel summary {
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+</style>

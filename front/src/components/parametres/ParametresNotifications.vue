@@ -340,3 +340,73 @@ async function desabonnerPush() {
 onMounted(charger)
 onUnmounted(() => controleur.abort())
 </script>
+
+<style scoped>
+  .param-bloc-push {
+    margin-top: 1.5rem;
+  }
+  .notif-grille__entete,
+.notif-grille__ligne {
+    display: grid;
+    grid-template-columns: 1fr 3rem 3rem;
+    align-items: center;
+    gap: 0;
+    clear: left;
+  }
+  .notif-grille__entete {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--fg-muted);
+    text-align: center;
+    margin-bottom: 0.25rem;
+  }
+  .notif-grille__entete span:first-child {
+    text-align: left;
+  }
+  .notif-grille__ligne {
+    padding: 0.25rem 0;
+  }
+  .notif-grille__libelle {
+    font-size: 0.875rem;
+  }
+  .notif-grille__case {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+  .notif-radio {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    cursor: pointer;
+  }
+  .notif-radio input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    min-width: 1.125rem;
+    border: 1.5px solid var(--border);
+    border-radius: 50%;
+    background: var(--bg);
+    cursor: pointer;
+    transition:
+    background 0.15s,
+    border-color 0.15s;
+    position: relative;
+  }
+  .notif-radio input[type="radio"]:checked {
+    border-color: var(--primary);
+    background: var(--primary);
+    box-shadow: inset 0 0 0 3px var(--bg);
+  }
+  .notif-radio input[type="radio"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .notif-radio:has(input:disabled) {
+    cursor: not-allowed;
+  }
+</style>

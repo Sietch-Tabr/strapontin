@@ -178,3 +178,62 @@ onMounted(async () => {
 })
 
 </script>
+
+<style scoped>
+  .calque-mise-a-jour {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+  }
+  .calque-logo {
+    width: 96px;
+    height: 96px;
+    border-radius: 20px;
+    animation: pulsation 1s ease-in-out infinite;
+  }
+  .calque-texte {
+    margin-top: 1.25rem;
+    font-size: 0.875rem;
+    color: var(--texte-secondaire);
+  }
+  .structure-app {
+    display: flex;
+    min-height: 100vh;
+  }
+  .contenu-principal {
+    margin-left: 0;
+    flex: 1;
+    padding: 1rem;
+    padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 1rem);
+    max-width: 1100px;
+    view-transition-name: zone-principale;
+    overflow-x: clip;
+  }
+  @media (min-width: 1025px) {
+    .contenu-principal {
+      margin-left: max(
+      var(--sidebar-w),
+      calc((100vw + var(--sidebar-w) - 1100px) / 2)
+      );
+      padding: 2rem;
+    }
+  }
+  .lien-evitement {
+    position: absolute;
+    left: -9999px;
+  }
+  .lien-evitement:focus {
+    left: 1rem;
+    top: 1rem;
+    z-index: 9999;
+    background: var(--bg);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    outline: 2px solid var(--primary);
+  }
+</style>

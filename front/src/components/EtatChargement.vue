@@ -14,3 +14,13 @@ defineProps({
   texte: { type: String, default: 'Chargement…' }
 })
 </script>
+
+<style scoped>
+  .etat-chargement {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--texte-secondaire);
+    padding: 1rem 0;
+  }
+</style>

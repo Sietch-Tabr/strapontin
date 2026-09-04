@@ -651,3 +651,132 @@ onUnmounted(() => {
   controleurSallesActuel?.abort()
 })
 </script>
+
+<style scoped>
+  .quota-tm-carte {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+  .quota-tm-chiffres {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+  }
+  .quota-tm-chiffres strong {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .quota-tm-sep {
+    color: var(--fg-muted);
+    font-size: 0.875rem;
+    margin-left: 0.25rem;
+  }
+  .quota-tm-unite {
+    color: var(--fg-muted);
+    font-size: 0.75rem;
+    margin-left: 0.375rem;
+  }
+  .quota-tm-pct {
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+  .quota-tm-barre-fond {
+    height: 0.5rem;
+    background: var(--bg-muted);
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+  .quota-tm-barre-remplissage {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+  .badge-quota-critique {
+    color: var(--danger);
+  }
+  .badge-quota-attention {
+    color: var(--warning);
+  }
+  .sources-grille {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+  @media (min-width: 641px) {
+    .sources-grille {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .source-carte-large {
+    grid-column: 1 / -1;
+  }
+  .source-carte {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.875rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .source-nom {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin: 0 0 0.25rem;
+  }
+  .source-vue-bascule {
+    display: flex;
+    gap: 0.375rem;
+  }
+  .source-carte-detail {
+    font-size: 0.8rem;
+    color: var(--fg-muted);
+    margin: 0;
+  }
+  .source-slug-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+  }
+  .source-slug-input {
+    font-size: 0.82rem;
+    padding: 0.2rem 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--fg);
+    width: 5rem;
+  }
+  @media (min-width: 641px) {
+    .source-slug-inline {
+      flex-wrap: nowrap;
+    }
+    .source-slug-input {
+      width: 9rem;
+    }
+  }
+  .source-test-statut {
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .source-test-ok {
+    color: #166534;
+  }
+  .source-test-ko {
+    color: #991b1b;
+  }
+  .source-digitick-actions {
+    margin-bottom: 0.75rem;
+  }
+  .source-salle-loc {
+    font-size: 0.85rem;
+    color: var(--texte-secondaire, #6b7280);
+    white-space: nowrap;
+  }
+</style>

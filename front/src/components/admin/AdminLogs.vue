@@ -140,3 +140,141 @@ async function charger() {
 
 onMounted(charger)
 </script>
+
+<style scoped>
+  .logs-conteneur {
+    container-type: inline-size;
+    container-name: logs;
+  }
+  @container logs (max-width: 560px) {
+    .logs-conteneur table,
+  .logs-conteneur tbody {
+      display: block;
+    }
+    .logs-conteneur thead {
+      display: none;
+    }
+    .logs-conteneur tr {
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-card);
+      margin-bottom: 0.375rem;
+      overflow: hidden;
+    }
+    .logs-conteneur tr.log-erreur {
+      border-left: 3px solid var(--danger);
+    }
+    .logs-conteneur tr.log-avertissement {
+      border-left: 3px solid var(--warning);
+    }
+    .logs-conteneur td {
+      display: block;
+      padding: 0.375rem 0.75rem;
+      font-size: 0.8125rem;
+    }
+    .logs-conteneur td[data-label="Niveau"] {
+      display: none;
+    }
+    .logs-conteneur td[data-label="Source"] {
+      font-size: 0.75rem;
+      color: var(--fg-muted);
+      padding-top: 0;
+    }
+  }
+  .log-erreur td {
+    background: var(--danger-bg);
+  }
+  .log-avertissement td {
+    background: var(--avertissement-bg);
+  }
+  .logs-filtres {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .logs-filtres-source {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .logs-filtres-niveaux {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .logs-btn-action {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.625rem;
+  }
+  .logs-note-info {
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+    margin-bottom: 0.5rem;
+    font-style: italic;
+  }
+  .logs-filtre-libelle {
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+  }
+  .logs-filtre-select {
+    width: auto;
+    font-size: 0.8125rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    background: var(--bg);
+    color: var(--fg);
+  }
+  .log-filtre-btn {
+    border: none;
+    background: none;
+    border-radius: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition:
+    background 0.15s,
+    color 0.15s;
+  }
+  .log-filtre-btn:hover {
+    background: var(--accent);
+    color: var(--fg);
+  }
+  .log-filtre-btn[data-niveau="info"].actif {
+    background: var(--info-bg);
+    color: var(--info-text);
+  }
+  .log-filtre-btn[data-niveau="warn"].actif {
+    background: var(--avertissement-bg);
+    color: var(--avertissement-text);
+  }
+  .log-filtre-btn[data-niveau="error"].actif {
+    background: var(--danger-bg);
+    color: var(--danger-text);
+  }
+  .log-compte {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .log-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.25rem;
+  }
+  .log-meta-item {
+    font-size: 0.6875rem;
+    color: var(--fg-muted);
+    background: var(--bg-muted);
+    padding: 0.0625rem 0.375rem;
+    border-radius: 0.1875rem;
+    font-family: monospace;
+  }
+</style>

@@ -307,3 +307,93 @@ onUnmounted(() => {
   controleurActuel?.abort()
 })
 </script>
+
+<style scoped>
+  .concert-groupes {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 42rem;
+  }
+  .concert-groupe {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .groupe-entete {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-muted);
+    flex-wrap: wrap;
+  }
+  .groupe-artiste {
+    font-weight: 600;
+  }
+  .concert-ligne {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .concert-ligne:hover {
+    background: var(--bg-muted);
+  }
+  .concert-ligne:last-child {
+    border-bottom: none;
+  }
+  .concert-info {
+    min-width: 0;
+    flex: 1;
+  }
+  .concert-date-principale {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .concert-date-secondaire {
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+  .concert-lieu {
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    margin-top: 0.25rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: ellipsis;
+  }
+  @media (min-width: 1025px) {
+    .concert-lieu {
+      white-space: nowrap;
+      overflow: hidden;
+    }
+  }
+  .concert-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+    margin-left: 0.75rem;
+    flex-shrink: 0;
+  }
+  .badge-tournee {
+    background: #f0f9ff;
+    color: #0369a1;
+  }
+  .sombre .badge-tournee {
+    background: #0c2d4a;
+    color: #7dd3fc;
+  }
+  .etat-vide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+</style>

@@ -92,3 +92,9 @@ onMounted(() => {
   traiterSuccesUrl()
 })
 </script>
+
+<style scoped>
+  .parametres-sections {
+    max-width: 42rem;
+  }
+</style>

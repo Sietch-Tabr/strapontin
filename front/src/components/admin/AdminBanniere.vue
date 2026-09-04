@@ -111,3 +111,14 @@ async function effacerBanniere() {
 
 onMounted(chargerBanniereActive)
 </script>
+
+<style scoped>
+  .bouton-danger-contour {
+    background: none;
+    border: 1px solid var(--danger);
+    color: var(--danger-text);
+  }
+  .bouton-danger-contour:hover {
+    background: var(--danger-bg);
+  }
+</style>

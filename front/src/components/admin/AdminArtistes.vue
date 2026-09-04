@@ -291,3 +291,53 @@ async function sauvegarderIdentifiantTm() {
   }
 }
 </script>
+
+<style scoped>
+  .artistes-conteneur {
+    container-name: artistes;
+  }
+  @container artistes (max-width: 700px) {
+    .artistes-conteneur table,
+  .artistes-conteneur tbody {
+      display: block;
+    }
+    .artistes-conteneur thead {
+      display: none;
+    }
+    .artistes-conteneur tr {
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-card);
+      margin-bottom: 0.5rem;
+      overflow: hidden;
+    }
+    .artistes-conteneur td {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .artistes-conteneur td:last-child {
+      border-bottom: none;
+    }
+    .artistes-conteneur td::before {
+      content: attr(data-label);
+      font-weight: 500;
+      color: var(--fg-muted);
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    .artistes-conteneur td[data-label=""]::before {
+      display: none;
+    }
+    .artistes-conteneur td[data-label=""] {
+      justify-content: flex-end;
+      padding-top: 0.625rem;
+      padding-bottom: 0.625rem;
+    }
+  }
+</style>

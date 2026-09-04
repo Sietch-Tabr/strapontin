@@ -280,3 +280,57 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+  .contenu-largeur-moyenne {
+    max-width: 42rem;
+  }
+  .aide-section {
+    margin-bottom: 2.5rem;
+  }
+  .aide-grille {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  }
+  .carte {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+  .carte-titre {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+  .carte ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .carte p {
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+  .carte a {
+    text-decoration: underline;
+  }
+  .carte-large {
+    grid-column: 1 / -1;
+  }
+  .aide-pied {
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+  .aide-pied a {
+    text-decoration: underline;
+  }
+</style>

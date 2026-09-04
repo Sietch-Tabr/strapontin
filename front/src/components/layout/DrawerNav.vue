@@ -155,3 +155,38 @@ function retirerSwipe() {
   swipeAbortController = null
 }
 </script>
+
+<style scoped>
+  .dialog-nav-poignee {
+    width: 2.5rem;
+    height: 0.25rem;
+    background: var(--border);
+    border-radius: 9999px;
+    margin: 0.75rem auto 0.25rem;
+  }
+  .dialog-nav-contenu {
+    padding: 0.25rem 0.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .dialog-nav-contenu a {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+    border-radius: var(--radius);
+    color: var(--fg-muted);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    position: relative;
+    transition:
+    background 0.15s,
+    color 0.15s;
+  }
+  .dialog-nav-sep {
+    margin: 0.25rem 0;
+    border-color: var(--border);
+  }
+</style>

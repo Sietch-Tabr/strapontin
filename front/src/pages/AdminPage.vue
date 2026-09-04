@@ -82,3 +82,9 @@ onMounted(() => {
   ongletActif.value = onglets.some((o) => o.ancre === hash) ? hash : '#jobs'
 })
 </script>
+
+<style scoped>
+  .admin-sections {
+    max-width: 56rem;
+  }
+</style>

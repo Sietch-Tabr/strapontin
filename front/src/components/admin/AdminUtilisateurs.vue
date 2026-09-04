@@ -517,3 +517,130 @@ async function confirmerSuppression() {
 
 onMounted(charger)
 </script>
+
+<style scoped>
+  .badge-info {
+    background: var(--info-bg);
+    color: var(--info-text);
+  }
+  .badge-mono {
+    font-family: monospace;
+    background: var(--bg-muted);
+    color: var(--fg-muted);
+  }
+  .badge-avertissement {
+    background: var(--avertissement-bg);
+    color: var(--avertissement-text);
+  }
+  .user-liste {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .user-carte {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .user-carte-entete {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  @media (min-width: 521px) {
+    .user-carte-entete {
+      flex-wrap: nowrap;
+    }
+  }
+  .user-carte-info {
+    min-width: 0;
+    flex: 1;
+  }
+  .user-carte-badges {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 0.25rem;
+  }
+  .user-carte-email {
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .user-carte-activite {
+    font-size: 0.75rem;
+    color: var(--fg-subtle);
+    margin-top: 0.125rem;
+  }
+  .user-carte-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  @media (min-width: 521px) {
+    .user-carte-actions {
+      width: auto;
+      justify-content: normal;
+      flex-wrap: nowrap;
+    }
+  }
+  .modif-ligne {
+    border-top: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    background: var(--bg-card);
+    display: none;
+  }
+  .modif-ligne.visible {
+    display: block;
+  }
+  .form-modif-utilisateur {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    max-width: 28rem;
+  }
+  .form-modif-utilisateur input,
+.form-modif-utilisateur select {
+    width: auto;
+    font-size: 0.8125rem;
+    padding: 0.3125rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    background: var(--bg);
+    color: var(--fg);
+  }
+  .form-modif-utilisateur input[name="nom"] {
+    width: 9rem;
+    max-width: 100%;
+  }
+  .form-modif-utilisateur input[name="email"] {
+    width: 12rem;
+    max-width: 100%;
+  }
+  .erreur-modif {
+    font-size: 0.75rem;
+    color: var(--danger);
+  }
+  .dialog-lien {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .dialog-lien input {
+    flex: 1;
+    font-family: ui-monospace, monospace;
+    font-size: 0.8125rem;
+  }
+</style>

@@ -299,3 +299,33 @@ async function confirmerVapid() {
 
 onMounted(charger)
 </script>
+
+<style scoped>
+  .config-groupe-item {
+    border-top: 1px solid var(--border);
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
+  .config-vapid-details {
+    margin-bottom: 0.5rem;
+  }
+  .config-vapid-details summary {
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .config-vapid-details[open] summary {
+    margin-bottom: 0.25rem;
+  }
+  .config-vapid-avertissement {
+    font-weight: 500;
+    color: var(--danger);
+  }
+  .param-libelle-ligne {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+</style>

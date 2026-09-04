@@ -368,3 +368,31 @@ onMounted(() => {
 
 onUnmounted(() => controleur.abort())
 </script>
+
+<style scoped>
+  .liste-appareils {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .ligne-appareil {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .ligne-appareil:last-child {
+    border-bottom: none;
+  }
+  .appareil-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    font-size: 0.875rem;
+  }
+</style>

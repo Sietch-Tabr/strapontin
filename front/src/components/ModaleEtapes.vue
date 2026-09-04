@@ -89,3 +89,33 @@ function ouvrir() {
 
 defineExpose({ ouvrir, fermer })
 </script>
+
+<style scoped>
+  .etapes-corps {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    padding: 1rem 0;
+  }
+  .etapes-icone {
+    color: var(--primary);
+  }
+  .etapes-progression {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  .etapes-point {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.15s;
+  }
+  .etapes-point--actif {
+    background: var(--primary);
+  }
+</style>

@@ -154,3 +154,78 @@ async function changerTheme(valeur) {
 
 onMounted(charger)
 </script>
+
+<style scoped>
+  .theme-choix {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .bouton-theme {
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--fg-muted);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+  }
+  .bouton-theme.actif {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+  }
+  .bouton-theme:hover {
+    color: var(--fg);
+    border-color: var(--fg-muted);
+  }
+  .form-bascule {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .bascule {
+    display: inline-block;
+    position: relative;
+    width: 2.5rem;
+    height: 1.5rem;
+  }
+  .bascule input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+  .bascule-curseur {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 9999px;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .bascule-curseur::before {
+    content: "";
+    position: absolute;
+    left: 0.1875rem;
+    top: 0.1875rem;
+    width: 1.125rem;
+    height: 1.125rem;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .bascule input:checked + .bascule-curseur {
+    background: var(--primary);
+  }
+  .bascule input:checked + .bascule-curseur::before {
+    transform: translateX(1rem);
+  }
+  .bascule--succes input:checked + .bascule-curseur {
+    background: var(--succes);
+  }
+</style>

@@ -40,3 +40,63 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+  .changelog-version {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .changelog {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .changelog > section {
+    padding-bottom: 2.5rem;
+  }
+  .changelog > details {
+    padding-bottom: 2.5rem;
+  }
+  .changelog > section + details,
+  .changelog > details + details {
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--border);
+  }
+  .changelog > details > summary {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+  .changelog > details > summary::-webkit-details-marker {
+    display: none;
+  }
+  .changelog > details > summary .changelog-version {
+    margin-bottom: 0;
+  }
+  .changelog > details > summary .changelog-version::before {
+    content: "▶";
+    font-size: 0.5rem;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .changelog > details[open] > summary .changelog-version::before {
+    transform: rotate(90deg);
+  }
+  .changelog > details > .details-corps {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+  }
+  .changelog > details[open] > .details-corps {
+    grid-template-rows: 1fr;
+  }
+  .changelog > details > .details-corps > .changelog-entrees {
+    overflow: hidden;
+    min-height: 0;
+    padding-top: 1rem;
+  }
+</style>

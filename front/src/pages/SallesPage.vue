@@ -300,3 +300,14 @@ onMounted(async () => {
 
 onUnmounted(() => controleur.abort())
 </script>
+
+<style scoped>
+  .badge-source-digitick {
+    background: #ecfdf5;
+    color: #065f46;
+  }
+  .sombre .badge-source-digitick {
+    background: #064e3b;
+    color: #6ee7b7;
+  }
+</style>
