@@ -37,11 +37,19 @@ async function supprimerUtilisateurParEmail(email: string): Promise<void> {
     storageState: FICHIER_AUTH_ADMIN,
   });
   try {
-    const reps = await ctx.get("/api/admin/utilisateurs");
-    if (!reps.ok()) return;
-    const { utilisateurs: users } = await reps.json();
-    const cible = users.find((u: { email: string }) => u.email === email);
-    if (cible) await ctx.delete(`/api/admin/utilisateurs/${cible.id}`);
+    // paginé (50/page, tri par date de création croissante) — un compte tout juste créé est
+    // toujours en dernière page dès que le total dépasse une page.
+    for (let page = 0; ; page++) {
+      const reps = await ctx.get(`/api/admin/utilisateurs?page=${page}`);
+      if (!reps.ok()) return;
+      const { utilisateurs: users, totalPages } = await reps.json();
+      const cible = users.find((u: { email: string }) => u.email === email);
+      if (cible) {
+        await ctx.delete(`/api/admin/utilisateurs/${cible.id}`);
+        return;
+      }
+      if (page >= (totalPages ?? 1) - 1) return;
+    }
   } finally {
     await ctx.dispose();
   }

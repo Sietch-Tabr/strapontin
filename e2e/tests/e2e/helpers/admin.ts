@@ -24,11 +24,24 @@ export async function supprimerUtilisateurParEmail(
 ): Promise<void> {
   const ctx = await creerContexteAdmin();
   try {
-    const reps = await ctx.get("/api/admin/utilisateurs");
-    if (!reps.ok()) return;
-    const users = await reps.json();
-    const cible = users.find((u: { email: string }) => u.email === email);
-    if (cible) await ctx.delete(`/api/admin/utilisateurs/${cible.id}`);
+    // GET /api/admin/utilisateurs est paginé (50/page, trié par date de création croissante) —
+    // un compte de test tout juste créé est donc toujours en dernière page dès que le nombre
+    // total dépasse une page ; parcourt les pages jusqu'à trouver l'email plutôt que de ne
+    // vérifier que la première (silencieusement inefficace, cause réelle d'une accumulation de
+    // comptes de test jamais nettoyés).
+    for (let page = 0; ; page++) {
+      const reps = await ctx.get(`/api/admin/utilisateurs?page=${page}`);
+      if (!reps.ok()) return;
+      const { utilisateurs, totalPages } = await reps.json();
+      const cible = (utilisateurs as { id: string; email: string }[]).find(
+        (u) => u.email === email,
+      );
+      if (cible) {
+        await ctx.delete(`/api/admin/utilisateurs/${cible.id}`);
+        return;
+      }
+      if (page >= (totalPages ?? 1) - 1) return;
+    }
   } finally {
     await ctx.dispose();
   }

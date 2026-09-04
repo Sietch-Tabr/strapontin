@@ -249,7 +249,13 @@ async function creerUtilisateur() {
       inviteEmail.value = corps.email ?? ''
       lienInvitation.value = corps.lienReset ?? ''
       ouvrirDialogInvitationModal()
+      // trié par date de création croissante : le nouveau compte est toujours en dernière
+      // page, jamais sur la page actuellement affichée dès que le nombre d'utilisateurs
+      // dépasse une page.
       await rechargerUtilisateurs()
+      if (page.value < totalPages.value - 1) {
+        await allerPage(totalPages.value - 1)
+      }
     } else {
       afficherToast(corps.erreur || 'Impossible de créer le compte.', 'erreur')
     }
