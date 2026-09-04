@@ -133,7 +133,9 @@
       </template>
 
       <EtatChargement v-if="chargementSalles" />
-      <div v-else-if="salles.length">
+      <template v-else>
+        <!-- Hors du v-if salles.length : un filtrage réduisant le résultat à zéro ne doit pas
+             faire disparaître le champ, sinon plus aucun moyen de revenir en arrière (#1172). -->
         <input
           v-model="recherche"
           type="search"
@@ -142,98 +144,100 @@
           aria-label="Rechercher une salle"
           @input="page = 0; chargerSalles()"
         />
-        <div class="table-conteneur">
-          <table id="table-sources-salles" :aria-label="vueDigitick ? 'Salles avec Digitick' : 'Salles sans Ticketmaster'">
-            <thead>
-              <tr>
-                <th>Salle</th>
-                <th v-if="vueDigitick">Ville / CP</th>
-                <th>Slug Digitick</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="salle in salles" :key="salle.salleId">
-                <td class="source-salle-nom">{{ salle.nom }}</td>
-                <td v-if="vueDigitick" class="source-salle-loc">
-                  <span v-if="salle.ville || salle.dept">{{ [salle.ville, salle.dept].filter(Boolean).join(' ') }}</span>
-                  <span v-else class="etat-vide-texte">—</span>
-                </td>
-                <td>
-                  <div class="source-slug-inline">
-                    <input
-                      :value="slugsEdites[salle.salleId]"
-                      type="text"
-                      class="source-slug-input"
-                      :placeholder="slugDeduit(salle.nom)"
-                      :aria-label="'Slug Digitick pour ' + salle.nom"
-                      @input="mettreAJourSlug(salle, $event.target.value)"
-                      @keydown.enter="sauvegarderSlug(salle)"
-                    />
-                    <span
-                      v-if="statutTester[salle.salleId]"
-                      class="source-test-statut"
-                      :class="statutTester[salle.salleId]?.startsWith('ok') ? 'source-test-ok' : 'source-test-ko'"
-                      aria-live="polite"
-                    >
-                      {{ formatStatutTest(statutTester[salle.salleId]) }}
-                    </span>
-                  </div>
-                </td>
-                <td class="source-actions">
-                  <button
-                    type="button"
-                    class="bouton bouton-secondaire bouton-petit"
-                    :disabled="enCours[salle.salleId + ':slug']"
-                    @click="sauvegarderSlug(salle)"
-                    :aria-label="'Enregistrer le slug pour ' + salle.nom"
-                  >Enregistrer</button>
-                  <button
-                    type="button"
-                    class="bouton bouton-secondaire bouton-petit"
-                    :disabled="enCours[salle.salleId + ':test'] || !slugCourant(salle)"
-                    @click="testerSlug(salle)"
-                    :aria-label="'Tester le slug Digitick de ' + salle.nom"
-                  >Tester</button>
-                  <template v-if="vueDigitick">
+        <div v-if="salles.length">
+          <div class="table-conteneur">
+            <table id="table-sources-salles" :aria-label="vueDigitick ? 'Salles avec Digitick' : 'Salles sans Ticketmaster'">
+              <thead>
+                <tr>
+                  <th>Salle</th>
+                  <th v-if="vueDigitick">Ville / CP</th>
+                  <th>Slug Digitick</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="salle in salles" :key="salle.salleId">
+                  <td class="source-salle-nom">{{ salle.nom }}</td>
+                  <td v-if="vueDigitick" class="source-salle-loc">
+                    <span v-if="salle.ville || salle.dept">{{ [salle.ville, salle.dept].filter(Boolean).join(' ') }}</span>
+                    <span v-else class="etat-vide-texte">—</span>
+                  </td>
+                  <td>
+                    <div class="source-slug-inline">
+                      <input
+                        :value="slugsEdites[salle.salleId]"
+                        type="text"
+                        class="source-slug-input"
+                        :placeholder="slugDeduit(salle.nom)"
+                        :aria-label="'Slug Digitick pour ' + salle.nom"
+                        @input="mettreAJourSlug(salle, $event.target.value)"
+                        @keydown.enter="sauvegarderSlug(salle)"
+                      />
+                      <span
+                        v-if="statutTester[salle.salleId]"
+                        class="source-test-statut"
+                        :class="statutTester[salle.salleId]?.startsWith('ok') ? 'source-test-ok' : 'source-test-ko'"
+                        aria-live="polite"
+                      >
+                        {{ formatStatutTest(statutTester[salle.salleId]) }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="source-actions">
                     <button
                       type="button"
                       class="bouton bouton-secondaire bouton-petit"
-                      :disabled="enCours[salle.salleId + ':fetch'] || !slugCourant(salle)"
-                      @click="fetchSalle(salle)"
-                      :aria-label="'Déclencher un fetch pour ' + salle.nom"
-                    >Fetch</button>
+                      :disabled="enCours[salle.salleId + ':slug']"
+                      @click="sauvegarderSlug(salle)"
+                      :aria-label="'Enregistrer le slug pour ' + salle.nom"
+                    >Enregistrer</button>
                     <button
                       type="button"
                       class="bouton bouton-secondaire bouton-petit"
-                      @click="ouvrirEdition(salle)"
-                      :aria-label="'Éditer ' + salle.nom"
-                    >Éditer</button>
-                    <button
-                      type="button"
-                      class="bouton bouton-danger-texte bouton-petit"
-                      :disabled="enCours[salle.salleId + ':suppr']"
-                      @click="demanderSuppression(salle)"
-                      :aria-label="'Supprimer ' + salle.nom"
-                    >Supprimer</button>
-                  </template>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                      :disabled="enCours[salle.salleId + ':test'] || !slugCourant(salle)"
+                      @click="testerSlug(salle)"
+                      :aria-label="'Tester le slug Digitick de ' + salle.nom"
+                    >Tester</button>
+                    <template v-if="vueDigitick">
+                      <button
+                        type="button"
+                        class="bouton bouton-secondaire bouton-petit"
+                        :disabled="enCours[salle.salleId + ':fetch'] || !slugCourant(salle)"
+                        @click="fetchSalle(salle)"
+                        :aria-label="'Déclencher un fetch pour ' + salle.nom"
+                      >Fetch</button>
+                      <button
+                        type="button"
+                        class="bouton bouton-secondaire bouton-petit"
+                        @click="ouvrirEdition(salle)"
+                        :aria-label="'Éditer ' + salle.nom"
+                      >Éditer</button>
+                      <button
+                        type="button"
+                        class="bouton bouton-danger-texte bouton-petit"
+                        :disabled="enCours[salle.salleId + ':suppr']"
+                        @click="demanderSuppression(salle)"
+                        :aria-label="'Supprimer ' + salle.nom"
+                      >Supprimer</button>
+                    </template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-        <div class="pagination" v-if="totalPages > 1">
-          <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
-          <span>Page {{ page + 1 }} / {{ totalPages }} ({{ total }} salles)</span>
-          <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
+          <div class="pagination" v-if="totalPages > 1">
+            <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
+            <span>Page {{ page + 1 }} / {{ totalPages }} ({{ total }} salles)</span>
+            <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
+          </div>
         </div>
-      </div>
-      <p v-else class="etat-vide-texte">
-        <template v-if="recherche.trim()">Aucune salle ne correspond à la recherche.</template>
-        <template v-else-if="!vueDigitick">Toutes les salles ont un identifiant source (Ticketmaster ou Eventim).</template>
-        <template v-else>Aucune salle Digitick configurée. Cliquez sur « Ajouter une salle » pour commencer.</template>
-      </p>
+        <p v-else class="etat-vide-texte">
+          <template v-if="recherche.trim()">Aucune salle ne correspond à la recherche.</template>
+          <template v-else-if="!vueDigitick">Toutes les salles ont un identifiant source (Ticketmaster ou Eventim).</template>
+          <template v-else>Aucune salle Digitick configurée. Cliquez sur « Ajouter une salle » pour commencer.</template>
+        </p>
+      </template>
     </div>
 
     </template>

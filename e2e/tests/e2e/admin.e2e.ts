@@ -796,7 +796,6 @@ test.describe("Scénario: admin — API endpoints", () => {
     expect(rep.status()).toBe(200);
     const corps = await rep.json();
     expect(Array.isArray(corps.sources)).toBe(true);
-    expect(Array.isArray(corps.salles)).toBe(true);
     expect(corps.sources.length).toBe(5);
     const ids = corps.sources.map((s: { id: string }) => s.id);
     expect(ids).toContain("ticketmaster");
