@@ -103,7 +103,7 @@ test.describe("Scénario: catalogue — artistes", () => {
     await expect(btnSupprimer).toBeVisible({ timeout: 5000 });
     await btnSupprimer.click();
     await page.locator("dialog#dialog-confirmer-suppr-artiste").waitFor();
-    await page.click("dialog#dialog-confirmer-suppr-artiste button.btn-danger");
+    await page.click("dialog#dialog-confirmer-suppr-artiste button.bouton-danger");
     await expect(page.locator(".alerte-succes").first()).toBeVisible({
       timeout: 5000,
     });
@@ -164,7 +164,7 @@ test.describe("Scénario: catalogue — salles", () => {
     await expect(btnSupprimer).toBeVisible({ timeout: 5000 });
     await btnSupprimer.click();
     await page.locator("dialog#dialog-confirmer-suppr-salle").waitFor();
-    await page.click("dialog#dialog-confirmer-suppr-salle button.btn-danger");
+    await page.click("dialog#dialog-confirmer-suppr-salle button.bouton-danger");
     await expect(page.locator(".alerte-succes").first()).toBeVisible({
       timeout: 5000,
     });

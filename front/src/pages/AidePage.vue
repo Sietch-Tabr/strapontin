@@ -1,20 +1,20 @@
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-entete">
       <h1>Aide</h1>
     </div>
 
-    <div class="max-w-2xl">
+    <div class="contenu-largeur-moyenne">
       <ChecklistPremiersPas />
 
-      <p class="aide-footer">
-        <button type="button" class="btn btn-texte" @click="revoirOnboarding">
+      <p class="aide-pied">
+        <button type="button" class="bouton bouton-texte" @click="revoirOnboarding">
           Revoir la présentation de bienvenue
         </button>
       </p>
 
       <section class="aide-section" aria-labelledby="titre-usage">
-        <p id="titre-usage" class="aide-label">Usage courant</p>
+        <p id="titre-usage" class="aide-libelle">Usage courant</p>
         <div class="aide-grille">
           <div class="carte">
             <h2 class="carte-titre">
@@ -87,7 +87,7 @@
       </section>
 
       <section class="aide-section" aria-labelledby="titre-infos">
-        <p id="titre-infos" class="aide-label">Informations</p>
+        <p id="titre-infos" class="aide-libelle">Informations</p>
         <div class="aide-grille">
           <div class="carte">
             <h2 class="carte-titre">
@@ -132,7 +132,7 @@
             </h2>
             <div v-if="config && config.resendDisponible">
               <p class="param-aide">Un bug, une suggestion, une question ?</p>
-              <button id="btn-ouvrir-signalement" type="button" class="btn btn-secondary" @click="ouvrirSignalement">
+              <button id="btn-ouvrir-signalement" type="button" class="bouton bouton-secondaire" @click="ouvrirSignalement">
                 Ouvrir le formulaire
               </button>
             </div>
@@ -156,7 +156,7 @@
         </div>
       </section>
 
-      <p class="aide-footer">
+      <p class="aide-pied">
         <RouterLink to="/changelog">Voir les nouveautés →</RouterLink>
       </p>
     </div>
@@ -170,7 +170,7 @@
     >
       <div class="dialog-entete">
         <h2 id="titre-signalement" class="dialog-titre">Signaler un problème ou une suggestion</h2>
-        <button type="button" class="btn-icone" aria-label="Fermer" @click="dialogRef.close()">
+        <button type="button" class="bouton-icone" aria-label="Fermer" @click="dialogRef.close()">
           <svg width="18" height="18" aria-hidden="true">
             <use href="/icons/lucide-sprite.svg#icon-x" />
           </svg>
@@ -183,7 +183,7 @@
       <div v-if="erreurSignalement" class="alerte alerte-erreur" role="alert">{{ erreurSignalement }}</div>
 
       <form id="form-signalement" class="form-vertical" @submit.prevent="envoyerSignalement">
-        <div class="form-group">
+        <div class="form-groupe">
           <label for="type-signalement">Type</label>
           <select id="type-signalement" v-model="typeSignalement" autofocus>
             <option value="bug">Bug</option>
@@ -191,7 +191,7 @@
             <option value="question">Question</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-groupe">
           <label for="message-signalement">
             Message <span class="form-aide">(2000 caractères max)</span>
           </label>
@@ -204,8 +204,8 @@
           ></textarea>
         </div>
         <div class="dialog-pied">
-          <button type="submit" class="btn btn-primary" :disabled="envoiEnCours">Envoyer</button>
-          <button type="button" class="btn btn-texte" @click="dialogRef.close()">Annuler</button>
+          <button type="submit" class="bouton bouton-primaire" :disabled="envoiEnCours">Envoyer</button>
+          <button type="button" class="bouton bouton-texte" @click="dialogRef.close()">Annuler</button>
         </div>
       </form>
     </dialog>

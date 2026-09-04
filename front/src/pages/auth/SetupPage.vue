@@ -3,12 +3,12 @@
     <div class="auth-logo">
       <img src="/images/logo.webp" alt="Strapontin" />
     </div>
-    <p class="auth-subtitle">Créez le premier compte administrateur</p>
+    <p class="auth-sous-titre">Créez le premier compte administrateur</p>
 
     <div v-if="erreur" class="alerte alerte-erreur" role="alert">{{ erreur }}</div>
 
     <form @submit.prevent="soumettre">
-      <div class="form-group">
+      <div class="form-groupe">
         <label for="identifiant">Identifiant de connexion</label>
         <input
           id="identifiant"
@@ -23,7 +23,7 @@
           required
         />
       </div>
-      <div class="form-group">
+      <div class="form-groupe">
         <label for="email">Email</label>
         <input
           id="email"
@@ -35,7 +35,7 @@
           required
         />
       </div>
-      <div class="form-group">
+      <div class="form-groupe">
         <label for="mot-de-passe">Mot de passe</label>
         <input
           id="mot-de-passe"
@@ -48,7 +48,7 @@
           required
         />
       </div>
-      <div class="form-group">
+      <div class="form-groupe">
         <label for="base-url">URL publique de l'application</label>
         <input
           id="base-url"
@@ -59,7 +59,7 @@
           autocomplete="off"
         />
       </div>
-      <button type="submit" class="btn btn-primary btn-full" :disabled="chargement">
+      <button type="submit" class="bouton bouton-primaire bouton-pleine-largeur" :disabled="chargement">
         Créer le compte
       </button>
     </form>

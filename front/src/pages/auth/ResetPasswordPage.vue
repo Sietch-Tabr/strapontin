@@ -1,7 +1,7 @@
 <template>
   <AuthLayout>
-    <h1 class="auth-title">{{ estInvite ? 'Créer votre compte' : 'Nouveau mot de passe' }}</h1>
-    <p class="auth-subtitle">
+    <h1 class="auth-titre">{{ estInvite ? 'Créer votre compte' : 'Nouveau mot de passe' }}</h1>
+    <p class="auth-sous-titre">
       <template v-if="estInvite">
         Choisissez votre identifiant de connexion et un mot de passe d'au moins 12 caractères.
       </template>
@@ -14,7 +14,7 @@
 
     <form v-if="!chargementType" @submit.prevent="soumettre">
       <input type="hidden" name="token" :value="token" />
-      <div v-if="estInvite" class="form-group">
+      <div v-if="estInvite" class="form-groupe">
         <label for="identifiant">Identifiant de connexion</label>
         <input
           id="identifiant"
@@ -30,7 +30,7 @@
           placeholder="Entre 3 et 30 caractères (lettres, chiffres, . - _)"
         />
       </div>
-      <div class="form-group">
+      <div class="form-groupe">
         <label for="mot-de-passe">Nouveau mot de passe</label>
         <input
           id="mot-de-passe"
@@ -43,12 +43,12 @@
           required
         />
       </div>
-      <button type="submit" class="btn btn-primary btn-full" :disabled="chargement">
+      <button type="submit" class="bouton bouton-primaire bouton-pleine-largeur" :disabled="chargement">
         {{ estInvite ? 'Créer mon compte' : 'Enregistrer' }}
       </button>
     </form>
 
-    <p v-if="!estInvite" class="mt-4 text-sm text-muted texte-centre">
+    <p v-if="!estInvite" class="auth-lien-secondaire">
       <RouterLink to="/forgot-password">Renvoyer un lien</RouterLink>
     </p>
   </AuthLayout>

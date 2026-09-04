@@ -1,7 +1,7 @@
 <template>
   <AuthLayout>
-    <h1 class="auth-title">Mot de passe oublié</h1>
-    <p class="auth-subtitle">
+    <h1 class="auth-titre">Mot de passe oublié</h1>
+    <p class="auth-sous-titre">
       Entrez votre adresse email pour recevoir un lien de réinitialisation.
     </p>
 
@@ -12,7 +12,7 @@
     </div>
 
     <form v-if="!succes" @submit.prevent="soumettre">
-      <div class="form-group">
+      <div class="form-groupe">
         <label for="email">Adresse email</label>
         <input
           id="email"
@@ -24,12 +24,12 @@
           required
         />
       </div>
-      <button type="submit" class="btn btn-primary btn-full" :disabled="chargement">
+      <button type="submit" class="bouton bouton-primaire bouton-pleine-largeur" :disabled="chargement">
         Envoyer le lien
       </button>
     </form>
 
-    <p class="mt-4 text-sm text-muted texte-centre">
+    <p class="auth-lien-secondaire">
       <RouterLink to="/login">← Retour à la connexion</RouterLink>
     </p>
   </AuthLayout>

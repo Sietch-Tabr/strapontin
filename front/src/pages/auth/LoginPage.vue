@@ -1,10 +1,10 @@
 <template>
   <AuthLayout>
-    <h1 class="sr-only">Connexion</h1>
+    <h1 class="lecteur-ecran">Connexion</h1>
     <div class="auth-logo">
       <img src="/images/logo.webp" alt="Strapontin" />
     </div>
-    <p class="auth-subtitle">Connectez-vous à votre compte</p>
+    <p class="auth-sous-titre">Connectez-vous à votre compte</p>
 
     <div v-if="erreurSoumission" role="alert" aria-live="assertive" class="alerte alerte-erreur">
       {{ erreurSoumission }}
@@ -14,7 +14,7 @@
     </div>
 
     <form @submit.prevent="soumettre">
-      <div class="form-group">
+      <div class="form-groupe">
         <label for="identifiant">Identifiant</label>
         <input
           id="identifiant"
@@ -26,7 +26,7 @@
           required
         />
       </div>
-      <div class="form-group">
+      <div class="form-groupe">
         <label for="mot-de-passe">Mot de passe</label>
         <input
           id="mot-de-passe"
@@ -37,12 +37,12 @@
           required
         />
       </div>
-      <button type="submit" class="btn btn-primary btn-full" :disabled="chargement">
+      <button type="submit" class="bouton bouton-primaire bouton-pleine-largeur" :disabled="chargement">
         Se connecter
       </button>
     </form>
 
-    <p class="mt-4 text-sm text-muted texte-centre">
+    <p class="auth-lien-secondaire">
       <RouterLink to="/forgot-password">Mot de passe oublié ?</RouterLink>
     </p>
   </AuthLayout>

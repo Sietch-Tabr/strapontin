@@ -1,6 +1,6 @@
 <template>
   <section v-if="visible" class="checklist-premiers-pas" aria-labelledby="titre-checklist">
-    <p id="titre-checklist" class="aide-label">Premiers pas</p>
+    <p id="titre-checklist" class="aide-libelle">Premiers pas</p>
     <ul class="checklist-liste">
       <li v-for="item in items" :key="item.cle" class="checklist-item" :class="{ 'checklist-item--fait': item.fait }">
         <span class="checklist-marque" :class="{ 'checklist-marque--fait': item.fait }">

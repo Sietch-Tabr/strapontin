@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-entete">
       <h1>Mes prochains concerts</h1>
     </div>
 
@@ -35,8 +35,8 @@
             Ajoutez des artistes ou des salles pour découvrir vos prochains concerts.
           </p>
           <div class="etat-vide-actions">
-            <RouterLink to="/artistes" class="btn btn-primary">Ajouter des artistes</RouterLink>
-            <RouterLink to="/salles" class="btn btn-secondary">Ajouter des salles</RouterLink>
+            <RouterLink to="/artistes" class="bouton bouton-primaire">Ajouter des artistes</RouterLink>
+            <RouterLink to="/salles" class="bouton bouton-secondaire">Ajouter des salles</RouterLink>
           </div>
         </template>
         <template v-else>
@@ -60,7 +60,7 @@
           :id="'artiste-' + groupe.artisteNorm"
           class="concert-groupe"
         >
-          <div class="groupe-header">
+          <div class="groupe-entete">
             <span class="groupe-artiste">{{ groupe.artiste }}</span>
             <span v-if="groupe.estTournee" class="badge badge-tournee">
               Tournée · {{ groupe.concerts.length }} dates
@@ -69,14 +69,14 @@
             <button
               v-if="!filtreMasques"
               type="button"
-              class="btn-texte"
+              class="bouton-texte"
               :aria-label="'Masquer tous les concerts de ' + groupe.artiste"
               @click="masquerGroupe(groupe)"
             >Masquer</button>
             <button
               v-else
               type="button"
-              class="btn-texte"
+              class="bouton-texte"
               :aria-label="'Réafficher tous les concerts de ' + groupe.artiste"
               @click="demasquerGroupe(groupe)"
             >Réafficher</button>
@@ -107,19 +107,19 @@
                   :href="concert.url"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="btn btn-xs btn-secondary"
+                  class="bouton bouton-tres-petit bouton-secondaire"
                 >Billets</a>
                 <button
                   v-if="filtreMasques"
                   type="button"
-                  class="btn-texte btn-sm"
+                  class="bouton-texte bouton-petit"
                   aria-label="Réafficher ce concert"
                   @click="demasquerConcert(concert, groupe)"
                 >Réafficher</button>
                 <button
                   v-else
                   type="button"
-                  class="btn-texte btn-sm"
+                  class="bouton-texte bouton-petit"
                   aria-label="Masquer ce concert"
                   @click="masquerConcert(concert, groupe)"
                 >Masquer</button>

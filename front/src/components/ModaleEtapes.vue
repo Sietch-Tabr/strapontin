@@ -9,7 +9,7 @@
   >
     <div class="dialog-entete">
       <h2 id="titre-etape" class="dialog-titre">{{ etapeCourante.titre }}</h2>
-      <button type="button" class="btn-icone" aria-label="Fermer" @click="fermer">
+      <button type="button" class="bouton-icone" aria-label="Fermer" @click="fermer">
         <svg width="18" height="18" aria-hidden="true">
           <use href="/icons/lucide-sprite.svg#icon-x" />
         </svg>
@@ -33,11 +33,11 @@
     </div>
 
     <div class="dialog-pied">
-      <button v-if="index > 0" type="button" class="btn btn-texte" @click="precedent">Précédent</button>
-      <button v-if="index < etapes.length - 1" type="button" class="btn btn-primary" @click="suivant">
+      <button v-if="index > 0" type="button" class="bouton bouton-texte" @click="precedent">Précédent</button>
+      <button v-if="index < etapes.length - 1" type="button" class="bouton bouton-primaire" @click="suivant">
         Suivant
       </button>
-      <button v-else type="button" class="btn btn-primary" @click="terminer">Terminer</button>
+      <button v-else type="button" class="bouton bouton-primaire" @click="terminer">Terminer</button>
     </div>
   </dialog>
 </template>

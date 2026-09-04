@@ -2,7 +2,7 @@
   <section class="admin-section" id="salles">
 
     <div class="param-bloc">
-      <h3 class="param-label">Référentiel salles</h3>
+      <h3 class="param-libelle">Référentiel salles</h3>
       <p class="param-aide">
         Noms canoniques et statuts des sources externes. Le nom affiché écrase
         l'enrichissement automatique Wikidata/OSM — laissez vide pour le réactiver.
@@ -49,7 +49,7 @@
         </label>
         <button
           type="button"
-          class="btn btn-secondary btn-sm"
+          class="bouton bouton-secondaire bouton-petit"
           :disabled="selection.length !== 2"
           @click="ouvrirFusion"
         >Fusionner ({{ selection.length }}/2)</button>
@@ -58,11 +58,11 @@
       <EtatChargement v-if="chargement" />
       <template v-else>
         <div class="salles-conteneur">
-          <div class="table-wrapper">
+          <div class="table-conteneur">
             <table aria-label="Référentiel salles">
               <thead>
                 <tr>
-                  <th scope="col"><span class="sr-only">Sélection</span></th>
+                  <th scope="col"><span class="lecteur-ecran">Sélection</span></th>
                   <th scope="col">Salle</th>
                   <th scope="col">Ville / Dept</th>
                   <th scope="col">Concerts</th>
@@ -100,11 +100,11 @@
                     <span v-else class="etat-vide-texte">—</span>
                   </td>
                   <td class="source-actions" data-label="">
-                    <button type="button" class="btn btn-secondary btn-sm" @click="ouvrirEdition(salle)">Éditer</button>
+                    <button type="button" class="bouton bouton-secondaire bouton-petit" @click="ouvrirEdition(salle)">Éditer</button>
                     <button
                       v-if="salle.wikidataId"
                       type="button"
-                      class="btn btn-danger btn-sm"
+                      class="bouton bouton-danger bouton-petit"
                       title="Effacer wikidata_id/nom affiché/ville pour redécouvrir au prochain cycle"
                       @click="reinitialiserEnrichissement(salle)"
                     >Réinitialiser</button>
@@ -119,9 +119,9 @@
         </div>
 
         <div class="pagination" v-if="totalPages > 1">
-          <button type="button" class="btn btn-secondary btn-sm" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
+          <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
           <span>Page {{ page + 1 }} / {{ totalPages }} ({{ total }} salles)</span>
-          <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
+          <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
         </div>
       </template>
     </div>
@@ -139,8 +139,8 @@
         <p class="param-aide">Laisser vide pour revenir à l'enrichissement automatique.</p>
       </div>
       <div class="dialog-pied">
-        <button type="submit" class="btn btn-secondary" :disabled="enCoursEdition">Enregistrer</button>
-        <button type="button" class="btn btn-texte" @click="fermerEdition">Annuler</button>
+        <button type="submit" class="bouton bouton-secondaire" :disabled="enCoursEdition">Enregistrer</button>
+        <button type="button" class="bouton bouton-texte" @click="fermerEdition">Annuler</button>
       </div>
     </form>
   </dialog>
@@ -162,8 +162,8 @@
       </label>
     </div>
     <div class="dialog-pied">
-      <button type="button" class="btn btn-danger" :disabled="enCoursFusion || !cibleChoisie" @click="confirmerFusion">Fusionner</button>
-      <button type="button" class="btn btn-texte" @click="fermerFusion">Annuler</button>
+      <button type="button" class="bouton bouton-danger" :disabled="enCoursFusion || !cibleChoisie" @click="confirmerFusion">Fusionner</button>
+      <button type="button" class="bouton bouton-texte" @click="fermerFusion">Annuler</button>
     </div>
   </dialog>
 </template>

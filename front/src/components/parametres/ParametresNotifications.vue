@@ -1,12 +1,12 @@
 <template>
   <section class="parametres-section" id="notifications">
-    <h2 class="sr-only">Notifications</h2>
+    <h2 class="lecteur-ecran">Notifications</h2>
 
     <EtatChargement v-if="chargement" />
     <template v-else>
 
     <div class="param-bloc">
-      <h3 class="param-label">Notifications email</h3>
+      <h3 class="param-libelle">Notifications email</h3>
       <form class="form-vertical" @submit.prevent="sauvegarderNotifications">
         <fieldset class="form-checkboxes" :disabled="!resendDisponible">
           <legend class="form-label">Fréquence des emails</legend>
@@ -37,7 +37,7 @@
           <div class="notif-grille__ligne">
             <span class="notif-grille__libelle">Artistes suivis</span>
             <label class="notif-grille__case">
-              <span class="sr-only">Email — artistes suivis</span>
+              <span class="lecteur-ecran">Email — artistes suivis</span>
               <input
                 v-model="notifArtistes"
                 type="checkbox"
@@ -45,14 +45,14 @@
               />
             </label>
             <label class="notif-grille__case">
-              <span class="sr-only">Push — artistes suivis</span>
+              <span class="lecteur-ecran">Push — artistes suivis</span>
               <input v-model="notifArtistesPush" type="checkbox" />
             </label>
           </div>
           <div class="notif-grille__ligne">
             <span class="notif-grille__libelle">Salles suivies</span>
             <label class="notif-grille__case">
-              <span class="sr-only">Email — salles suivies</span>
+              <span class="lecteur-ecran">Email — salles suivies</span>
               <input
                 v-model="notifSalles"
                 type="checkbox"
@@ -60,18 +60,18 @@
               />
             </label>
             <label class="notif-grille__case">
-              <span class="sr-only">Push — salles suivies</span>
+              <span class="lecteur-ecran">Push — salles suivies</span>
               <input v-model="notifSallesPush" type="checkbox" />
             </label>
           </div>
         </fieldset>
 
-        <button type="submit" class="btn btn-secondary">Enregistrer</button>
+        <button type="submit" class="bouton bouton-secondaire">Enregistrer</button>
       </form>
     </div>
 
     <div v-if="pushSupporte" class="param-bloc param-bloc-push">
-      <h3 class="param-label">Notifications push</h3>
+      <h3 class="param-libelle">Notifications push</h3>
       <div v-if="!vapidDisponible">
         <p class="param-aide">
           Les notifications push ne sont pas configurées (clé VAPID manquante dans la
@@ -91,7 +91,7 @@
         <div class="param-actions">
           <button
             type="button"
-            class="btn btn-secondary btn-sm"
+            class="bouton bouton-secondaire bouton-petit"
             :disabled="testEnCours"
             @click="testerPush"
           >
@@ -99,7 +99,7 @@
           </button>
           <button
             type="button"
-            class="btn btn-secondary"
+            class="bouton bouton-secondaire"
             :disabled="pushEnCours"
             @click="desabonnerPush"
           >
@@ -118,7 +118,7 @@
         </p>
         <button
           type="button"
-          class="btn btn-secondary"
+          class="bouton bouton-secondaire"
           :disabled="pushEnCours || frequenceNotifications === 'jamais'"
           @click="abonnerPush"
         >

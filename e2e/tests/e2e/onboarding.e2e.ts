@@ -165,7 +165,7 @@ test.describe("Scénario: modale d'onboarding — nouveau compte", () => {
     try {
       const dialog = page.locator("dialog#dialog-onboarding");
       await expect(dialog).toBeVisible({ timeout: 5000 });
-      await dialog.locator(".btn-icone").click();
+      await dialog.locator(".bouton-icone").click();
       await expect(dialog).not.toBeVisible({ timeout: 3000 });
 
       await page.goto("/aide");
@@ -252,7 +252,7 @@ test.describe("Scénario: nudge notifications — premier ajout", () => {
         .waitFor({ state: "visible", timeout: 3000 })
         .catch(() => {});
       if (await dialogOnboarding.isVisible().catch(() => false)) {
-        await dialogOnboarding.locator(".btn-icone").click();
+        await dialogOnboarding.locator(".bouton-icone").click();
         await expect(dialogOnboarding).not.toBeVisible({ timeout: 3000 });
       }
       await page.fill("#q-artiste", "Radiohead");

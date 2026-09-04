@@ -3,8 +3,8 @@ defineOptions({ name: 'AuthLayout' })
 </script>
 
 <template>
-  <div class="auth-layout">
-    <div class="auth-card">
+  <div class="auth-structure">
+    <div class="auth-carte">
       <slot />
     </div>
   </div>

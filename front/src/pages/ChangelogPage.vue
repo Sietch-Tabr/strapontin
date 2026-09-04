@@ -1,11 +1,11 @@
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-entete">
       <h1>Nouveautés</h1>
     </div>
 
-    <div class="max-w-xl changelog">
-      <p class="page-subtitle">Historique des améliorations et corrections apportées à Strapontin.</p>
+    <div class="contenu-largeur-etroite changelog">
+      <p class="page-sous-titre">Historique des améliorations et corrections apportées à Strapontin.</p>
 
       <template v-for="(version, index) in versionsChangelog" :key="version.entete">
         <!-- La plus récente version reste toujours dépliée ; toutes les précédentes sont

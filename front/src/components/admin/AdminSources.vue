@@ -5,7 +5,7 @@
     <template v-else>
 
     <div class="param-bloc">
-      <h3 class="param-label">Sources de données</h3>
+      <h3 class="param-libelle">Sources de données</h3>
       <div class="sources-grille">
 
         <div v-for="source in sources" :key="source.id" :class="['source-carte', { 'source-carte-large': source.id === 'ticketmaster' }]">
@@ -105,18 +105,18 @@
 
     <div class="param-bloc">
       <div class="source-vue-entete">
-        <h3 class="param-label">Salles</h3>
-        <div class="source-vue-toggle" role="group" aria-label="Vue des salles">
+        <h3 class="param-libelle">Salles</h3>
+        <div class="source-vue-bascule" role="group" aria-label="Vue des salles">
           <button
             type="button"
-            class="btn btn-sm"
-            :class="vueDigitick ? 'btn-secondary' : 'btn-primary'"
+            class="bouton bouton-petit"
+            :class="vueDigitick ? 'bouton-secondaire' : 'bouton-primaire'"
             @click="basculerVue(false)"
           >Sans source</button>
           <button
             type="button"
-            class="btn btn-sm"
-            :class="vueDigitick ? 'btn-primary' : 'btn-secondary'"
+            class="bouton bouton-petit"
+            :class="vueDigitick ? 'bouton-primaire' : 'bouton-secondaire'"
             @click="basculerVue(true)"
           >Avec Digitick</button>
         </div>
@@ -128,7 +128,7 @@
 
       <template v-if="vueDigitick">
         <div class="source-digitick-actions">
-          <button type="button" class="btn btn-secondary btn-sm" @click="ouvrirAjout">Ajouter une salle</button>
+          <button type="button" class="bouton bouton-secondaire bouton-petit" @click="ouvrirAjout">Ajouter une salle</button>
         </div>
       </template>
 
@@ -142,7 +142,7 @@
           aria-label="Rechercher une salle"
           @input="page = 0; chargerSalles()"
         />
-        <div class="table-wrapper">
+        <div class="table-conteneur">
           <table id="table-sources-salles" :aria-label="vueDigitick ? 'Salles avec Digitick' : 'Salles sans Ticketmaster'">
             <thead>
               <tr>
@@ -183,14 +183,14 @@
                 <td class="source-actions">
                   <button
                     type="button"
-                    class="btn btn-secondary btn-sm"
+                    class="bouton bouton-secondaire bouton-petit"
                     :disabled="enCours[salle.salleId + ':slug']"
                     @click="sauvegarderSlug(salle)"
                     :aria-label="'Enregistrer le slug pour ' + salle.nom"
                   >Enregistrer</button>
                   <button
                     type="button"
-                    class="btn btn-secondary btn-sm"
+                    class="bouton bouton-secondaire bouton-petit"
                     :disabled="enCours[salle.salleId + ':test'] || !slugCourant(salle)"
                     @click="testerSlug(salle)"
                     :aria-label="'Tester le slug Digitick de ' + salle.nom"
@@ -198,20 +198,20 @@
                   <template v-if="vueDigitick">
                     <button
                       type="button"
-                      class="btn btn-secondary btn-sm"
+                      class="bouton bouton-secondaire bouton-petit"
                       :disabled="enCours[salle.salleId + ':fetch'] || !slugCourant(salle)"
                       @click="fetchSalle(salle)"
                       :aria-label="'Déclencher un fetch pour ' + salle.nom"
                     >Fetch</button>
                     <button
                       type="button"
-                      class="btn btn-secondary btn-sm"
+                      class="bouton bouton-secondaire bouton-petit"
                       @click="ouvrirEdition(salle)"
                       :aria-label="'Éditer ' + salle.nom"
                     >Éditer</button>
                     <button
                       type="button"
-                      class="btn btn-danger-texte btn-sm"
+                      class="bouton bouton-danger-texte bouton-petit"
                       :disabled="enCours[salle.salleId + ':suppr']"
                       @click="demanderSuppression(salle)"
                       :aria-label="'Supprimer ' + salle.nom"
@@ -224,9 +224,9 @@
         </div>
 
         <div class="pagination" v-if="totalPages > 1">
-          <button type="button" class="btn btn-secondary btn-sm" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
+          <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
           <span>Page {{ page + 1 }} / {{ totalPages }} ({{ total }} salles)</span>
-          <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
+          <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
         </div>
       </div>
       <p v-else class="etat-vide-texte">
@@ -270,9 +270,9 @@
         <input id="ajout-cp" v-model="ajout.dept" type="text" maxlength="3" autocomplete="off" placeholder="77" />
       </div>
       <div class="dialog-pied">
-        <button type="submit" class="btn btn-secondary" :disabled="enCours.ajout">Ajouter</button>
-        <button type="button" class="btn btn-secondary" :disabled="enCours.ajoutTest || !ajout.slug" @click="testerSlugAjout">Tester</button>
-        <button type="button" class="btn btn-texte" @click="dialogAjoutRef.close()">Annuler</button>
+        <button type="submit" class="bouton bouton-secondaire" :disabled="enCours.ajout">Ajouter</button>
+        <button type="button" class="bouton bouton-secondaire" :disabled="enCours.ajoutTest || !ajout.slug" @click="testerSlugAjout">Tester</button>
+        <button type="button" class="bouton bouton-texte" @click="dialogAjoutRef.close()">Annuler</button>
       </div>
     </form>
   </dialog>
@@ -295,8 +295,8 @@
         <input id="edit-cp" v-model="edition.dept" type="text" maxlength="3" autocomplete="off" placeholder="77" />
       </div>
       <div class="dialog-pied">
-        <button type="submit" class="btn btn-secondary" :disabled="enCours.edition">Enregistrer</button>
-        <button type="button" class="btn btn-texte" @click="dialogEditionRef.close()">Annuler</button>
+        <button type="submit" class="bouton bouton-secondaire" :disabled="enCours.edition">Enregistrer</button>
+        <button type="button" class="bouton bouton-texte" @click="dialogEditionRef.close()">Annuler</button>
       </div>
     </form>
   </dialog>
@@ -307,8 +307,8 @@
     </div>
     <p>Supprimer « <strong>{{ salleASupprimer?.nom }}</strong> » et son slug Digitick ?<br>Cette action est irréversible si la salle n'a pas de concerts.</p>
     <div class="dialog-pied">
-      <button type="button" class="btn btn-danger" :disabled="enCours[salleASupprimer?.salleId + ':suppr']" @click="confirmerSuppression">Supprimer</button>
-      <button type="button" class="btn btn-texte" @click="dialogSupprRef.close()">Annuler</button>
+      <button type="button" class="bouton bouton-danger" :disabled="enCours[salleASupprimer?.salleId + ':suppr']" @click="confirmerSuppression">Supprimer</button>
+      <button type="button" class="bouton bouton-texte" @click="dialogSupprRef.close()">Annuler</button>
     </div>
   </dialog>
 </template>
@@ -362,7 +362,7 @@ function pctQuota(source) {
 function classeBarre(source) {
   const p = pctQuota(source)
   if (p > 30) return 'barre-ok'
-  if (p > 10) return 'barre-warn'
+  if (p > 10) return 'barre-avertissement'
   return 'barre-danger'
 }
 

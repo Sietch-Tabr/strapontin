@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-entete">
       <h1>Administration</h1>
     </div>
 

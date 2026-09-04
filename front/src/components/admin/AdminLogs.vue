@@ -1,10 +1,10 @@
 <template>
   <section class="admin-section" id="logs">
     <div class="param-bloc">
-      <h3 class="param-label">Logs applicatifs</h3>
+      <h3 class="param-libelle">Logs applicatifs</h3>
       <div class="logs-filtres">
         <div class="logs-filtres-source">
-          <label for="filtre-source" class="logs-filtre-label">Source :</label>
+          <label for="filtre-source" class="logs-filtre-libelle">Source :</label>
           <select id="filtre-source" v-model="filtreSource" class="logs-filtre-select">
             <option value="">Toutes</option>
             <option value="auth">auth</option>
@@ -15,7 +15,7 @@
           </select>
         </div>
         <div class="logs-filtres-niveaux" role="group" aria-label="Filtrer par niveau de log">
-          <span class="logs-filtre-label">Niveau :</span>
+          <span class="logs-filtre-libelle">Niveau :</span>
           <button
             v-for="niv in ['info', 'warn', 'error']"
             :key="niv"
@@ -28,15 +28,15 @@
           >{{ niv }}</button>
         </div>
         <span class="log-compte" aria-live="polite">{{ logsVisibles }} / {{ logs.length }}</span>
-        <button type="button" class="btn btn-secondary logs-btn-action" @click="reinitialiserFiltres">Réinitialiser</button>
-        <button type="button" class="btn btn-secondary logs-btn-action" @click="charger">Rafraîchir</button>
+        <button type="button" class="bouton bouton-secondaire logs-btn-action" @click="reinitialiserFiltres">Réinitialiser</button>
+        <button type="button" class="bouton bouton-secondaire logs-btn-action" @click="charger">Rafraîchir</button>
       </div>
       <p v-if="!filtresNiveaux.has('info')" class="logs-note-info">
         Les logs de niveau info sont masqués par défaut. Activez-les via le filtre ci-dessus.
       </p>
       <EtatChargement v-if="chargement" />
       <div v-else-if="logs.length" class="logs-conteneur">
-        <div class="table-wrapper">
+        <div class="table-conteneur">
           <table id="table-logs">
             <thead>
               <tr>
@@ -50,7 +50,7 @@
               <template v-for="entree in logsAffiches" :key="entree.ts + entree.source + entree.message">
                 <tr
                   v-show="logVisible(entree)"
-                  :class="entree.niveau === 'error' ? 'log-error' : entree.niveau === 'warn' ? 'log-warn' : ''"
+                  :class="entree.niveau === 'error' ? 'log-erreur' : entree.niveau === 'warn' ? 'log-avertissement' : ''"
                 >
                   <td class="log-ts" data-label="Horodatage">{{ formaterTs(entree.ts) }}</td>
                   <td data-label="Niveau">{{ entree.niveau }}</td>

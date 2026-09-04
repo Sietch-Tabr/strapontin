@@ -158,7 +158,7 @@ test.describe("Scénario: admin — gestion des utilisateurs", () => {
       .filter({ hasText: emailTest });
     await expect(carteUser).toBeVisible({ timeout: 3000 });
 
-    await carteUser.locator("button.btn-danger").click();
+    await carteUser.locator("button.bouton-danger").click();
     await expect(page.locator("dialog#dialog-supprimer-user")).toBeVisible({
       timeout: 3000,
     });
@@ -193,7 +193,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('input[placeholder="Nom d\'affichage"]')
       .fill("Alice Test");
     await carteUser
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
 
     await expect(
@@ -226,7 +226,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('select[aria-label="Rôle de l\'utilisateur"]')
       .selectOption("admin");
     await carteUser
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
 
     await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
@@ -263,7 +263,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('select[aria-label="Rôle de l\'utilisateur"]')
       .selectOption("admin");
     await carteUser
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
     await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
       timeout: 3000,
@@ -284,7 +284,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('select[aria-label="Rôle de l\'utilisateur"]')
       .selectOption("user");
     await carteAdmin
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
     await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
       timeout: 3000,
@@ -295,14 +295,14 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator(".user-carte")
       .filter({ hasText: emailTest });
     await expect(
-      carteRevoc.locator(".badge-warn", { hasText: "révocation" }),
+      carteRevoc.locator(".badge-avertissement", { hasText: "révocation" }),
     ).toBeVisible({ timeout: 5000 });
 
     await carteRevoc
       .locator("button", { hasText: "Annuler la révocation" })
       .click();
     await expect(
-      carteRevoc.locator(".badge-warn", { hasText: "révocation" }),
+      carteRevoc.locator(".badge-avertissement", { hasText: "révocation" }),
     ).not.toBeVisible({ timeout: 5000 });
   });
 
@@ -334,7 +334,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('select[aria-label="Rôle de l\'utilisateur"]')
       .selectOption("admin");
     await carteUser
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
     await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
       timeout: 3000,
@@ -362,7 +362,7 @@ test.describe("Scénario: admin — modification utilisateur", () => {
       .locator('select[aria-label="Rôle de l\'utilisateur"]')
       .selectOption("user");
     await carteAdmin
-      .locator("button.btn-primary", { hasText: "Enregistrer" })
+      .locator("button.bouton-primaire", { hasText: "Enregistrer" })
       .click();
     await expect(page.locator("dialog#dialog-confirmer-role")).toBeVisible({
       timeout: 3000,
@@ -445,7 +445,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    const toggle = page.locator(".source-vue-toggle button", {
+    const toggle = page.locator(".source-vue-bascule button", {
       hasText: /[Dd]igitick/,
     });
     await expect(toggle).toBeVisible();
@@ -473,7 +473,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
     await expect(
-      page.locator(".source-vue-toggle button", { hasText: "Sans source" }),
+      page.locator(".source-vue-bascule button", { hasText: "Sans source" }),
     ).toBeVisible();
   });
 
@@ -536,7 +536,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    const toggle = page.locator(".source-vue-toggle button", {
+    const toggle = page.locator(".source-vue-bascule button", {
       hasText: /[Dd]igitick/,
     });
     await toggle.click();
@@ -554,7 +554,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.selectOption("select.param-onglets-mobile", "#sources");
     await expect(page.locator("section#sources")).toBeVisible();
     await expect(
-      page.locator(".source-vue-toggle button", { hasText: "Sans source" }),
+      page.locator(".source-vue-bascule button", { hasText: "Sans source" }),
     ).toBeVisible();
   });
 
@@ -566,7 +566,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    const btnSansSource = page.locator(".source-vue-toggle button", {
+    const btnSansSource = page.locator(".source-vue-bascule button", {
       hasText: "Sans source",
     });
     await btnSansSource.click();
@@ -583,7 +583,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    const toggle = page.locator(".source-vue-toggle button", {
+    const toggle = page.locator(".source-vue-bascule button", {
       hasText: /[Dd]igitick/,
     });
     // Comme admin_sources_toggle_digitick ci-dessus : attendre le toggle avant de cliquer,

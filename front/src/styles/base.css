@@ -40,8 +40,8 @@
   #dialog-nav-plus,
   .banniere-overlay,
   .banniere-progression,
-  .job-en-cours .spinner,
-  .nav-badge--point-pulse {
+  .job-en-cours .roue-chargement,
+  .nav-badge--point-pulsation {
     animation: none;
     transition: none;
   }
@@ -84,7 +84,7 @@
   --font: system-ui, -apple-system, sans-serif;
 }
 
-.dark {
+.sombre {
   --bg: #0a0a0a;
   --bg-card: #111111;
   --bg-muted: #1a1a1a;

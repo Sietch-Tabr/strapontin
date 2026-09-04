@@ -1,12 +1,12 @@
 <template>
   <section class="admin-section" id="concerts">
     <div class="param-bloc">
-      <h3 class="param-label">Concerts à confirmer</h3>
+      <h3 class="param-libelle">Concerts à confirmer</h3>
       <p class="etat-vide-texte" v-if="!chargement && !concerts.length">
         Aucun concert flagué pour suppression pour l'instant.
       </p>
       <EtatChargement v-if="chargement" />
-      <div v-else-if="concerts.length" class="table-wrapper">
+      <div v-else-if="concerts.length" class="table-conteneur">
         <table id="table-concerts-a-confirmer">
           <thead>
             <tr>
@@ -28,12 +28,12 @@
               <td data-label="Absences">{{ concert.absencesConsecutives }}</td>
               <td data-label="Flagué le">{{ formaterInstant(concert.suppressionSuggereeLe) }}</td>
               <td data-label="Actions" class="source-actions">
-                <button type="button" class="btn btn-secondary btn-sm" @click="annuler(concert)">
+                <button type="button" class="bouton bouton-secondaire bouton-petit" @click="annuler(concert)">
                   Annuler (garder)
                 </button>
                 <button
                   type="button"
-                  class="btn btn-danger btn-sm"
+                  class="bouton bouton-danger bouton-petit"
                   @click="ouvrirConfirmation(concert)"
                 >Supprimer</button>
               </td>
@@ -43,9 +43,9 @@
       </div>
 
       <div class="pagination" v-if="totalPages > 1">
-        <button type="button" class="btn btn-secondary btn-sm" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
+        <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
         <span>Page {{ page + 1 }} / {{ totalPages }} ({{ total }} concerts)</span>
-        <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
+        <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
       </div>
     </div>
   </section>
@@ -62,11 +62,11 @@
     <div class="dialog-pied">
       <button
         type="button"
-        class="btn btn-danger"
+        class="bouton bouton-danger"
         :disabled="enCoursSuppression"
         @click="confirmerSuppression"
       >Supprimer</button>
-      <button type="button" class="btn btn-texte" @click="fermerConfirmation">Annuler</button>
+      <button type="button" class="bouton bouton-texte" @click="fermerConfirmation">Annuler</button>
     </div>
   </dialog>
 </template>

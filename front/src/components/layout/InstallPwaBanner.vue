@@ -5,8 +5,8 @@
     </svg>
     <span class="pwa-install-message">Installez Strapontin pour un accès rapide, même hors ligne.</span>
     <div class="pwa-install-actions">
-      <button type="button" class="btn btn-primary btn-sm" @click="installer">Installer</button>
-      <button type="button" class="btn btn-texte btn-sm" @click="plusTard">Plus tard</button>
+      <button type="button" class="bouton bouton-primaire bouton-petit" @click="installer">Installer</button>
+      <button type="button" class="bouton bouton-texte bouton-petit" @click="plusTard">Plus tard</button>
     </div>
   </div>
 </template>

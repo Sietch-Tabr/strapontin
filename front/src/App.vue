@@ -1,7 +1,7 @@
 <template>
   <a href="#contenu-principal" class="lien-evitement">Aller au contenu</a>
   <template v-if="!estPageAuth">
-    <div class="app-layout">
+    <div class="structure-app">
       <SidebarNav
         v-if="!estMobile"
         :nav-principal="navPrincipal"
@@ -11,7 +11,7 @@
         :changelog-non-vu="changelogNonVu"
         :est-admin="estAdmin"
       />
-      <main id="contenu-principal" class="main-content">
+      <main id="contenu-principal" class="contenu-principal">
         <BanniereSysteme />
         <RouterView />
       </main>
@@ -40,10 +40,10 @@
   <OnboardingModal />
   <InstallPwaBanner />
 
-  <Transition name="overlay-maj">
-    <div v-if="miseAJourEnCours" class="overlay-mise-a-jour" role="status" aria-label="Mise à jour en cours">
-      <img src="/images/icon-192.png" alt="" class="overlay-logo" />
-      <p class="overlay-texte">Mise à jour en cours…</p>
+  <Transition name="calque-maj">
+    <div v-if="miseAJourEnCours" class="calque-mise-a-jour" role="status" aria-label="Mise à jour en cours">
+      <img src="/images/icon-192.png" alt="" class="calque-logo" />
+      <p class="calque-texte">Mise à jour en cours…</p>
     </div>
   </Transition>
 </template>

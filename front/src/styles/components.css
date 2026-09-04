@@ -1,7 +1,7 @@
 /* Strapontin — components : formulaires, boutons, alertes, tableaux, badges, toasts, modales */
 
 /* ── Composants formulaire ───────────────────────────────── */
-.form-group {
+.form-groupe {
   margin-bottom: 1rem;
 }
 
@@ -76,7 +76,7 @@ textarea:focus {
 }
 
 /* ── Boutons ─────────────────────────────────────────────── */
-.btn {
+.bouton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -89,55 +89,55 @@ textarea:focus {
   transition: opacity 0.15s;
 }
 
-.btn:hover {
+.bouton:hover {
   opacity: 0.85;
 }
-.btn:focus-visible,
-.btn-texte:focus-visible,
-.btn-icone:focus-visible,
-.sidebar-nav a:focus-visible,
-.bottom-nav-items a:focus-visible {
+.bouton:focus-visible,
+.bouton-texte:focus-visible,
+.bouton-icone:focus-visible,
+.barre-laterale-nav a:focus-visible,
+.nav-bas-elements a:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
-.btn:disabled {
+.bouton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.btn-primary {
+.bouton-primaire {
   background: var(--primary);
   color: var(--primary-fg);
 }
 
-.btn-secondary {
+.bouton-secondaire {
   background: var(--accent);
   color: var(--accent-fg);
   border: 1px solid var(--border);
 }
 
-.btn-danger {
+.bouton-danger {
   background: var(--danger);
   color: var(--danger-fg);
 }
 
-.btn-danger-outline {
+.bouton-danger-contour {
   background: none;
   border: 1px solid var(--danger);
   color: var(--danger-text);
 }
-.btn-danger-outline:hover {
+.bouton-danger-contour:hover {
   background: var(--danger-bg);
 }
 
-.btn-full {
+.bouton-pleine-largeur {
   width: 100%;
 }
-.btn-sm {
+.bouton-petit {
   padding: 0.375rem 0.75rem;
   font-size: 0.8125rem;
 }
-.btn-xs {
+.bouton-tres-petit {
   padding: 0.2rem 0.55rem;
   font-size: 0.75rem;
   font-weight: 500;
@@ -247,13 +247,13 @@ textarea:focus {
   color: #1e40af;
 }
 
-.banniere-overlay--warning {
+.banniere-overlay--avertissement {
   background: #fffbeb;
   border-color: #fde68a;
   color: #92400e;
 }
 
-.banniere-overlay--error {
+.banniere-overlay--erreur {
   background: #fef2f2;
   border-color: #fecaca;
   color: #991b1b;
@@ -290,19 +290,19 @@ textarea:focus {
   flex-shrink: 0;
 }
 
-.dark .banniere-overlay--info {
+.sombre .banniere-overlay--info {
   background: #0c1a3a;
   border-color: #1e3a8a;
   color: #93c5fd;
 }
 
-.dark .banniere-overlay--warning {
+.sombre .banniere-overlay--avertissement {
   background: #1c1400;
   border-color: #78350f;
   color: #fcd34d;
 }
 
-.dark .banniere-overlay--error {
+.sombre .banniere-overlay--erreur {
   background: #1c0a0a;
   border-color: #7f1d1d;
   color: #fca5a5;
@@ -344,7 +344,7 @@ textarea:focus {
 }
 
 /* ── Tableau ─────────────────────────────────────────────── */
-.table-wrapper {
+.table-conteneur {
   overflow-x: auto;
 }
 
@@ -410,23 +410,23 @@ tr:hover td {
   color: #0369a1;
 }
 
-.dark .badge-nouveau {
+.sombre .badge-nouveau {
   background: #1e3a8a;
   color: #93c5fd;
 }
-.dark .badge-annule {
+.sombre .badge-annule {
   background: #7f1d1d;
   color: #fca5a5;
 }
-.dark .badge-reporte {
+.sombre .badge-reporte {
   background: #78350f;
   color: #fde68a;
 }
-.dark .badge-complet {
+.sombre .badge-complet {
   background: #7c2d12;
   color: #fed7aa;
 }
-.dark .badge-tournee {
+.sombre .badge-tournee {
   background: #0c2d4a;
   color: #7dd3fc;
 }
@@ -438,17 +438,17 @@ tr:hover td {
   background: #f3f4f6;
   color: #4b5563;
 }
-.dark .badge-a-verifier {
+.sombre .badge-a-verifier {
   background: #27272a;
   color: #a1a1aa;
 }
-.dark .badge-prevente {
+.sombre .badge-prevente {
   background: #3b0764;
   color: #e9d5ff;
 }
 
 /* ── Utilitaires ─────────────────────────────────────────── */
-.sr-only {
+.lecteur-ecran {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -460,28 +460,22 @@ tr:hover td {
   border: 0;
 }
 
-.mt-4 {
+.auth-lien-secondaire {
   margin-top: 1rem;
-}
-.text-muted {
-  color: var(--fg-muted);
-}
-.text-sm {
   font-size: 0.875rem;
-}
-.texte-centre {
+  color: var(--fg-muted);
   text-align: center;
 }
 .cache {
   display: none;
 }
-.page-title {
+.page-titre {
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 1.5rem;
 }
 
-.section-title {
+.section-titre {
   font-size: 0.75rem;
   font-weight: 600;
   margin-bottom: 0.75rem;
@@ -491,15 +485,15 @@ tr:hover td {
 }
 
 /* ── En-tête de page ─────────────────────────────────────── */
-.page-header {
+.page-entete {
   margin-bottom: 1.5rem;
 }
-.page-header h1 {
+.page-entete h1 {
   font-size: 1.5rem;
   font-weight: 700;
   view-transition-name: titre-page;
 }
-.page-subtitle {
+.page-sous-titre {
   font-size: 0.875rem;
   color: var(--fg-muted);
   margin-bottom: 0.25rem;
@@ -562,7 +556,7 @@ tr:hover td {
 }
 
 /* ── Boutons texte ───────────────────────────────────────── */
-.btn-texte {
+.bouton-texte {
   background: none;
   border: none;
   color: var(--fg-muted);
@@ -573,16 +567,16 @@ tr:hover td {
     background 0.15s,
     color 0.15s;
 }
-.btn-texte:hover {
+.bouton-texte:hover {
   background: var(--accent);
   color: var(--fg);
 }
-.btn-texte.btn-sm {
+.bouton-texte.bouton-petit {
   font-size: 0.75rem;
   padding: 0.125rem 0.375rem;
 }
 
-.btn-danger-texte {
+.bouton-danger-texte {
   background: none;
   border: none;
   color: var(--fg-muted);
@@ -593,7 +587,7 @@ tr:hover td {
     background 0.15s,
     color 0.15s;
 }
-.btn-danger-texte:hover {
+.bouton-danger-texte:hover {
   background: var(--danger-bg);
   color: var(--danger-text);
 }
@@ -612,7 +606,7 @@ tr:hover td {
   background-position: left 0.625rem center;
   background-size: 1rem;
 }
-.dark .form-recherche input {
+.sombre .form-recherche input {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
 }
 
@@ -669,7 +663,7 @@ tr:hover td {
   min-width: 0;
 }
 
-.form-toggle {
+.form-bascule {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -712,8 +706,8 @@ tr:hover td {
   background-repeat: no-repeat;
   background-size: 75%;
 }
-.dark .form-checkboxes input[type="checkbox"]:checked,
-.dark .notif-grille__case input[type="checkbox"]:checked {
+.sombre .form-checkboxes input[type="checkbox"]:checked,
+.sombre .notif-grille__case input[type="checkbox"]:checked {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2309090b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' d='M3 8l3.5 3.5L13 5'/%3E%3C/svg%3E");
 }
 .form-checkboxes input[type="checkbox"]:disabled,
@@ -765,7 +759,7 @@ tr:hover td {
   margin-bottom: 2rem;
 }
 
-.section-label {
+.section-libelle {
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--fg-muted);
@@ -851,20 +845,20 @@ tr:hover td {
   margin-left: 0.375rem;
 }
 
-/* ── Toggle switch ───────────────────────────────────────── */
-.switch {
+/* ── Bascule (interrupteur à glissière) ─────────────────── */
+.bascule {
   display: inline-block;
   position: relative;
   width: 2.5rem;
   height: 1.5rem;
 }
-.switch input {
+.bascule input {
   opacity: 0;
   width: 0;
   height: 0;
   position: absolute;
 }
-.switch-curseur {
+.bascule-curseur {
   position: absolute;
   inset: 0;
   background: var(--border);
@@ -872,7 +866,7 @@ tr:hover td {
   transition: background 0.2s;
   cursor: pointer;
 }
-.switch-curseur::before {
+.bascule-curseur::before {
   content: "";
   position: absolute;
   left: 0.1875rem;
@@ -883,13 +877,13 @@ tr:hover td {
   border-radius: 50%;
   transition: transform 0.2s;
 }
-.switch input:checked + .switch-curseur {
+.bascule input:checked + .bascule-curseur {
   background: var(--primary);
 }
-.switch input:checked + .switch-curseur::before {
+.bascule input:checked + .bascule-curseur::before {
   transform: translateX(1rem);
 }
-.switch--succes input:checked + .switch-curseur {
+.bascule--succes input:checked + .bascule-curseur {
   background: var(--succes);
 }
 
@@ -948,7 +942,7 @@ tr:hover td {
   background: rgba(0, 0, 0, 0.08);
 }
 
-.dark .toast-fermer:hover {
+.sombre .toast-fermer:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -977,7 +971,7 @@ dialog {
 dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
 }
-.dark dialog::backdrop {
+.sombre dialog::backdrop {
   background: rgba(0, 0, 0, 0.7);
 }
 .dialog-entete {
@@ -990,7 +984,7 @@ dialog::backdrop {
   font-size: 1rem;
   font-weight: 600;
 }
-.btn-icone {
+.bouton-icone {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1004,7 +998,7 @@ dialog::backdrop {
     background 0.15s,
     color 0.15s;
 }
-.btn-icone:hover {
+.bouton-icone:hover {
   background: var(--bg-muted);
   color: var(--fg);
 }
@@ -1068,12 +1062,12 @@ dialog::backdrop {
   padding: 1rem 0;
 }
 
-.etat-chargement .spinner {
+.etat-chargement .roue-chargement {
   animation: tourner 0.9s linear infinite;
   flex-shrink: 0;
 }
 
-.overlay-mise-a-jour {
+.calque-mise-a-jour {
   position: fixed;
   inset: 0;
   z-index: 9999;
@@ -1084,14 +1078,14 @@ dialog::backdrop {
   background: var(--bg);
 }
 
-.overlay-logo {
+.calque-logo {
   width: 96px;
   height: 96px;
   border-radius: 20px;
   animation: pulsation 1s ease-in-out infinite;
 }
 
-.overlay-texte {
+.calque-texte {
   margin-top: 1.25rem;
   font-size: 0.875rem;
   color: var(--texte-secondaire);

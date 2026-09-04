@@ -1,12 +1,12 @@
 <template>
   <section class="parametres-section" id="preferences">
-    <h2 class="sr-only">Préférences</h2>
+    <h2 class="lecteur-ecran">Préférences</h2>
 
     <EtatChargement v-if="chargement" />
     <template v-else>
 
     <div class="param-bloc">
-      <h3 class="param-label">Départements de découverte</h3>
+      <h3 class="param-libelle">Départements de découverte</h3>
       <p class="param-aide">
         Séparés par des virgules (ex. : 75, 92, 93). Utilisés par la page Découverte.
         Pour la Corse, utilisez 2A ou 2B.
@@ -20,39 +20,39 @@
           autocomplete="off"
           maxlength="1000"
         />
-        <button type="submit" class="btn btn-secondary">Enregistrer</button>
+        <button type="submit" class="bouton bouton-secondaire">Enregistrer</button>
       </form>
     </div>
 
     <div class="param-bloc">
-      <h3 class="param-label" id="label-filtre-disponibles">
+      <h3 class="param-libelle" id="label-filtre-disponibles">
         Concerts disponibles uniquement
       </h3>
       <p class="param-aide">
         Masque les concerts dont la billetterie est fermée (annulés, complets…)
         sur l'accueil et Mes spectacles.
       </p>
-      <form class="form-toggle">
-        <label class="switch switch--succes">
+      <form class="form-bascule">
+        <label class="bascule bascule--succes">
           <input
             v-model="filtreDisponibles"
             type="checkbox"
             aria-labelledby="label-filtre-disponibles"
             @change="sauvegarderFiltres"
           />
-          <span class="switch-curseur"></span>
+          <span class="bascule-curseur"></span>
         </label>
       </form>
     </div>
 
     <div class="param-bloc">
-      <h3 class="param-label">Thème de l'interface</h3>
+      <h3 class="param-libelle">Thème de l'interface</h3>
       <div class="theme-choix" aria-label="Choisir le thème">
         <button
           v-for="opt in optionsTheme"
           :key="opt.valeur"
           type="button"
-          class="btn btn-theme"
+          class="bouton bouton-theme"
           :class="{ actif: theme === opt.valeur }"
           :aria-pressed="theme === opt.valeur ? 'true' : 'false'"
           @click="changerTheme(opt.valeur)"

@@ -1,7 +1,7 @@
 <template>
   <section class="admin-section" id="banniere">
     <div class="param-bloc">
-      <h3 class="param-label">Message système</h3>
+      <h3 class="param-libelle">Message système</h3>
       <p class="param-aide">
         Publiez un message visible par tous les utilisateurs connectés dans la minute.
         Le message réapparaît à chaque changement de page, sauf si l'utilisateur le ferme manuellement.
@@ -34,8 +34,8 @@
         </select>
       </div>
       <div class="form-actions">
-        <button type="button" class="btn btn-primary" @click="publierBanniere">Publier</button>
-        <button type="button" class="btn btn-danger-outline" @click="effacerBanniere">Effacer</button>
+        <button type="button" class="bouton bouton-primaire" @click="publierBanniere">Publier</button>
+        <button type="button" class="bouton bouton-danger-contour" @click="effacerBanniere">Effacer</button>
       </div>
     </div>
   </section>

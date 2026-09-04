@@ -2,7 +2,7 @@
   <section class="admin-section" id="artistes">
 
     <div class="param-bloc">
-      <h3 class="param-label">Référentiel artistes</h3>
+      <h3 class="param-libelle">Référentiel artistes</h3>
       <p class="param-aide">
         Noms canoniques et statuts des sources externes. Le nom affiché écrase
         l'enrichissement automatique Wikidata/Deezer — laissez vide pour le réactiver.
@@ -31,7 +31,7 @@
         </label>
         <button
           type="button"
-          class="btn btn-secondary btn-sm"
+          class="bouton bouton-secondaire bouton-petit"
           :disabled="selection.length !== 2"
           @click="ouvrirFusion"
         >Fusionner ({{ selection.length }}/2)</button>
@@ -40,11 +40,11 @@
       <EtatChargement v-if="chargement" />
       <template v-else>
         <div class="artistes-conteneur">
-          <div class="table-wrapper">
+          <div class="table-conteneur">
             <table aria-label="Référentiel artistes">
               <thead>
                 <tr>
-                  <th scope="col"><span class="sr-only">Sélection</span></th>
+                  <th scope="col"><span class="lecteur-ecran">Sélection</span></th>
                   <th scope="col">Artiste</th>
                   <th scope="col">Concerts</th>
                   <th scope="col">Sources</th>
@@ -85,25 +85,25 @@
                     <span v-else class="etat-vide-texte">—</span>
                   </td>
                   <td class="source-actions" data-label="">
-                    <button type="button" class="btn btn-secondary btn-sm" @click="ouvrirEdition(artiste)">Éditer</button>
+                    <button type="button" class="bouton bouton-secondaire bouton-petit" @click="ouvrirEdition(artiste)">Éditer</button>
                     <button
                       v-if="artiste.wikidataId || artiste.deezerId"
                       type="button"
-                      class="btn btn-danger btn-sm"
+                      class="bouton bouton-danger bouton-petit"
                       title="Effacer wikidata_id/deezer_id/nom affiché pour redécouvrir au prochain cycle"
                       @click="reinitialiserEnrichissement(artiste)"
                     >Réinitialiser</button>
                     <template v-if="artiste.statut === 'invalide'">
                       <button
                         type="button"
-                        class="btn btn-secondary btn-sm"
+                        class="bouton bouton-secondaire bouton-petit"
                         title="Effacer le signal d'intervention sans fusion (divergence de nom jugée acceptable)"
                         @click="ignorerIntervention(artiste)"
                       >Ignorer</button>
                       <button
                         v-if="artiste.identifiantTmExterne"
                         type="button"
-                        class="btn btn-secondary btn-sm"
+                        class="bouton bouton-secondaire bouton-petit"
                         title="Corriger directement l'identifiant Ticketmaster"
                         @click="ouvrirCorrectionTm(artiste)"
                       >Identifiant TM</button>
@@ -119,9 +119,9 @@
         </div>
 
         <div class="pagination" v-if="totalPages > 1">
-          <button type="button" class="btn btn-secondary btn-sm" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
+          <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page === 0" @click="allerPage(page - 1)">← Précédent</button>
           <span>Page {{ page + 1 }} / {{ totalPages }} ({{ total }} artistes)</span>
-          <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
+          <button type="button" class="bouton bouton-secondaire bouton-petit" :disabled="page >= totalPages - 1" @click="allerPage(page + 1)">Suivant →</button>
         </div>
       </template>
     </div>
@@ -139,8 +139,8 @@
         <p class="param-aide">Laisser vide pour revenir à l'enrichissement automatique.</p>
       </div>
       <div class="dialog-pied">
-        <button type="submit" class="btn btn-secondary" :disabled="enCoursEdition">Enregistrer</button>
-        <button type="button" class="btn btn-texte" @click="fermerEdition">Annuler</button>
+        <button type="submit" class="bouton bouton-secondaire" :disabled="enCoursEdition">Enregistrer</button>
+        <button type="button" class="bouton bouton-texte" @click="fermerEdition">Annuler</button>
       </div>
     </form>
   </dialog>
@@ -162,8 +162,8 @@
       </label>
     </div>
     <div class="dialog-pied">
-      <button type="button" class="btn btn-danger" :disabled="enCoursFusion || !cibleChoisie" @click="confirmerFusion">Fusionner</button>
-      <button type="button" class="btn btn-texte" @click="fermerFusion">Annuler</button>
+      <button type="button" class="bouton bouton-danger" :disabled="enCoursFusion || !cibleChoisie" @click="confirmerFusion">Fusionner</button>
+      <button type="button" class="bouton bouton-texte" @click="fermerFusion">Annuler</button>
     </div>
   </dialog>
 
@@ -178,8 +178,8 @@
         <p class="param-aide">Remplace le lien vers l'artiste Ticketmaster suivi et efface le signal d'intervention.</p>
       </div>
       <div class="dialog-pied">
-        <button type="submit" class="btn btn-secondary" :disabled="enCoursIdentifiantTm">Enregistrer</button>
-        <button type="button" class="btn btn-texte" @click="fermerCorrectionTm">Annuler</button>
+        <button type="submit" class="bouton bouton-secondaire" :disabled="enCoursIdentifiantTm">Enregistrer</button>
+        <button type="button" class="bouton bouton-texte" @click="fermerCorrectionTm">Annuler</button>
       </div>
     </form>
   </dialog>

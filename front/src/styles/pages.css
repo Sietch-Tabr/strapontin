@@ -15,7 +15,7 @@
   overflow: hidden;
 }
 
-.groupe-header {
+.groupe-entete {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -102,7 +102,7 @@
 }
 
 @container spectacles (max-width: 600px) {
-  .spectacles-conteneur .table-wrapper {
+  .spectacles-conteneur .table-conteneur {
     overflow-x: visible;
   }
 
@@ -182,7 +182,7 @@
 }
 
 @container logs (max-width: 560px) {
-  .logs-conteneur .table-wrapper {
+  .logs-conteneur .table-conteneur {
     overflow-x: visible;
   }
 
@@ -204,11 +204,11 @@
     overflow: hidden;
   }
 
-  .logs-conteneur tr.log-error {
+  .logs-conteneur tr.log-erreur {
     border-left: 3px solid var(--danger);
   }
 
-  .logs-conteneur tr.log-warn {
+  .logs-conteneur tr.log-avertissement {
     border-left: 3px solid var(--warning);
   }
 
@@ -242,7 +242,7 @@
 }
 
 /* ── Filtres spectacles — disclosure mobile ──────────────── */
-.filtres-toggle {
+.filtres-bascule {
   display: block;
   margin-bottom: 0.5rem;
 }
@@ -256,7 +256,7 @@
 }
 
 @media (min-width: 1025px) {
-  .filtres-toggle {
+  .filtres-bascule {
     display: none;
   }
 
@@ -286,22 +286,22 @@
   cursor: pointer;
   appearance: none;
 }
-.dark .param-onglets-mobile {
+.sombre .param-onglets-mobile {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 /* ── Page Aide ───────────────────────────────────────────── */
-.max-w-2xl {
+.contenu-largeur-moyenne {
   max-width: 42rem;
 }
-.max-w-xl {
+.contenu-largeur-etroite {
   max-width: 36rem;
 }
 
 .aide-section {
   margin-bottom: 2.5rem;
 }
-.aide-label {
+.aide-libelle {
   font-size: 0.75rem;
   font-weight: 500;
   text-transform: uppercase;
@@ -350,11 +350,11 @@
   grid-column: 1 / -1;
 }
 
-.aide-footer {
+.aide-pied {
   font-size: 0.875rem;
   color: var(--fg-muted);
 }
-.aide-footer a {
+.aide-pied a {
   text-decoration: underline;
 }
 
@@ -399,7 +399,7 @@
 }
 
 @container decouverte (max-width: 700px) {
-  .decouverte-conteneur .table-wrapper {
+  .decouverte-conteneur .table-conteneur {
     overflow-x: visible;
   }
 
@@ -580,7 +580,7 @@
   flex-wrap: wrap;
 }
 
-.btn-theme {
+.bouton-theme {
   border: 1px solid var(--border);
   background: none;
   color: var(--fg-muted);
@@ -594,12 +594,12 @@
     border-color 0.15s;
 }
 
-.btn-theme:hover {
+.bouton-theme:hover {
   color: var(--fg);
   border-color: var(--fg-muted);
 }
 
-.btn-theme.actif {
+.bouton-theme.actif {
   background: var(--fg);
   color: var(--bg);
   border-color: var(--fg);
@@ -636,7 +636,7 @@
 .param-bloc:last-child {
   margin-bottom: 0;
 }
-.param-bloc > h3.param-label:first-child {
+.param-bloc > h3.param-libelle:first-child {
   position: absolute;
   top: -0.75em;
   left: 1rem;
@@ -647,7 +647,7 @@
   margin: 0;
 }
 
-.param-label {
+.param-libelle {
   font-size: 0.875rem;
   font-weight: 500;
   margin-bottom: 0.25rem;
@@ -809,18 +809,18 @@ fieldset.notif-grille {
 }
 
 /* ── Badge inline avec le titre ──────────────────────────── */
-.param-label-ligne {
+.param-libelle-ligne {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.25rem;
 }
-.param-label-ligne .param-label {
+.param-libelle-ligne .param-libelle {
   margin-bottom: 0;
 }
 
 /* ── Formulaire vertical compact ─────────────────────────── */
-.form-vertical.form-compact .form-group {
+.form-vertical.form-compact .form-groupe {
   margin-bottom: 0;
 }
 
@@ -853,7 +853,7 @@ fieldset.notif-grille {
   background: var(--bg-muted);
   color: var(--fg-muted);
 }
-.badge-warn {
+.badge-avertissement {
   background: var(--avertissement-bg);
   color: var(--avertissement-text);
 }
@@ -905,7 +905,7 @@ fieldset.notif-grille {
 .barre-ok {
   background: var(--succes);
 }
-.barre-warn {
+.barre-avertissement {
   background: var(--warning);
 }
 .barre-danger {
@@ -941,7 +941,7 @@ fieldset.notif-grille {
   align-items: center;
   gap: 0.5rem;
 }
-.job-carte-label {
+.job-carte-libelle {
   font-size: 0.875rem;
   font-weight: 500;
 }
@@ -994,7 +994,7 @@ fieldset.notif-grille {
   margin-left: auto;
   color: var(--info-text);
 }
-.job-en-cours .spinner {
+.job-en-cours .roue-chargement {
   animation: tourner 0.9s linear infinite;
   flex-shrink: 0;
 }
@@ -1017,7 +1017,7 @@ fieldset.notif-grille {
   border-color: var(--warning);
   background: var(--avertissement-bg);
 }
-.worker-carte-label {
+.worker-carte-libelle {
   font-size: 0.875rem;
   font-weight: 500;
 }
@@ -1117,10 +1117,10 @@ fieldset.notif-grille {
   display: inline;
 }
 
-.log-error td {
+.log-erreur td {
   background: var(--danger-bg);
 }
-.log-warn td {
+.log-avertissement td {
   background: var(--avertissement-bg);
 }
 
@@ -1157,7 +1157,7 @@ fieldset.notif-grille {
   font-style: italic;
 }
 
-.logs-filtre-label {
+.logs-filtre-libelle {
   font-size: 0.8125rem;
   color: var(--fg-muted);
 }
@@ -1265,7 +1265,7 @@ fieldset.notif-grille {
 }
 
 /* ── Page Découverte ─────────────────────────────────────── */
-.decouverte-header {
+.decouverte-entete {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -1275,7 +1275,7 @@ fieldset.notif-grille {
 .decouverte-depts {
   margin-bottom: 1rem;
 }
-.sync-info {
+.synchro-info {
   font-size: 0.75rem;
   color: var(--fg-muted);
 }
@@ -1293,7 +1293,7 @@ fieldset.notif-grille {
   color: var(--fg-muted);
   user-select: none;
 }
-.form-details .form-group {
+.form-details .form-groupe {
   margin-top: 0.75rem;
 }
 
@@ -1334,10 +1334,10 @@ fieldset.notif-grille {
   flex-wrap: wrap;
   margin-bottom: 0.25rem;
 }
-.source-vue-entete .param-label {
+.source-vue-entete .param-libelle {
   margin: 0;
 }
-.source-vue-toggle {
+.source-vue-bascule {
   display: flex;
   gap: 0.375rem;
 }
@@ -1362,7 +1362,7 @@ fieldset.notif-grille {
 }
 
 @container salles (max-width: 700px) {
-  .salles-conteneur .table-wrapper {
+  .salles-conteneur .table-conteneur {
     overflow-x: visible;
   }
 
@@ -1422,7 +1422,7 @@ fieldset.notif-grille {
 }
 
 @container artistes (max-width: 700px) {
-  .artistes-conteneur .table-wrapper {
+  .artistes-conteneur .table-conteneur {
     overflow-x: visible;
   }
 
@@ -1522,15 +1522,15 @@ fieldset.notif-grille {
   background: #ecfdf5;
   color: #065f46;
 }
-.dark .badge-source-concerts {
+.sombre .badge-source-concerts {
   background: #1e3a8a;
   color: #93c5fd;
 }
-.dark .badge-source-metadonnees {
+.sombre .badge-source-metadonnees {
   background: #374151;
   color: #d1d5db;
 }
-.dark .badge-source-digitick {
+.sombre .badge-source-digitick {
   background: #064e3b;
   color: #6ee7b7;
 }
@@ -1597,7 +1597,7 @@ fieldset.notif-grille {
   flex-wrap: wrap;
   flex-direction: column;
 }
-.source-actions .btn-sm {
+.source-actions .bouton-petit {
   font-size: 0.72rem;
   padding: 0.15rem 0.35rem;
 }
@@ -1607,7 +1607,7 @@ fieldset.notif-grille {
     flex-direction: row;
     gap: 0.375rem;
   }
-  .source-actions .btn-sm {
+  .source-actions .bouton-petit {
     font-size: 0.8125rem;
     padding: 0.375rem 0.75rem;
   }

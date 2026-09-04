@@ -1,12 +1,12 @@
 <template>
-  <Transition name="banniere-slide">
+  <Transition name="banniere-glissement">
     <div
       v-if="visible && banniere"
       class="banniere-overlay"
       :class="'banniere-overlay--' + banniere.type"
       :role="banniere.type === 'error' ? 'alert' : 'status'"
     >
-      <svg class="banniere-icone icon" aria-hidden="true">
+      <svg class="banniere-icone icone" aria-hidden="true">
         <use :href="'/icons/lucide-sprite.svg#' + icone" />
       </svg>
       <span class="banniere-message">{{ banniere.message }}</span>
@@ -16,7 +16,7 @@
         aria-label="Fermer la bannière"
         @click="fermer"
       >
-        <svg class="icon" aria-hidden="true"><use href="/icons/lucide-sprite.svg#icon-x" /></svg>
+        <svg class="icone" aria-hidden="true"><use href="/icons/lucide-sprite.svg#icon-x" /></svg>
       </button>
       <div
         v-if="delai > 0"

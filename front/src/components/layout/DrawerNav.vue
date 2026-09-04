@@ -7,7 +7,7 @@
     @click="clicBackdrop"
     @close="$emit('fermer')"
   >
-    <div class="dialog-nav-handle" ref="handleRef" aria-hidden="true"></div>
+    <div class="dialog-nav-poignee" ref="handleRef" aria-hidden="true"></div>
     <div class="dialog-nav-contenu">
       <a
         v-for="item in navSecondaire"
@@ -17,7 +17,7 @@
         :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguerEtFermer(item.href)"
       >
-        <svg class="icon" aria-hidden="true">
+        <svg class="icone" aria-hidden="true">
           <use :href="'/icons/lucide-sprite.svg#' + item.icone" />
         </svg>
         <span>{{ item.label }}</span>
@@ -30,7 +30,7 @@
         :aria-current="estActif('/admin') ? 'page' : undefined"
         @click.prevent="naviguerEtFermer('/admin')"
       >
-        <svg class="icon" aria-hidden="true">
+        <svg class="icone" aria-hidden="true">
           <use href="/icons/lucide-sprite.svg#icon-shield-check" />
         </svg>
         Admin
@@ -44,8 +44,8 @@
         @click.prevent="naviguerEtFermer(item.href)"
       >
         <svg
-          class="icon"
-          :class="{ 'icon--nouveaute-actif': item.href === '/changelog' && changelogNonVu }"
+          class="icone"
+          :class="{ 'icone--nouveaute-actif': item.href === '/changelog' && changelogNonVu }"
           aria-hidden="true"
         >
           <use :href="'/icons/lucide-sprite.svg#' + item.icone" />
@@ -53,13 +53,13 @@
         <span>{{ item.label }}</span>
         <span
           v-if="item.href === '/changelog' && changelogNonVu"
-          class="nav-badge--point nav-badge--point-pulse"
+          class="nav-badge--point nav-badge--point-pulsation"
           aria-label="Nouveautés non lues"
         ></span>
       </a>
       <hr class="dialog-nav-sep" />
       <form action="/api/auth/logout" method="post" @submit.prevent="deconnecter">
-        <button type="submit" class="btn-deconnexion">Déconnexion</button>
+        <button type="submit" class="bouton-deconnexion">Déconnexion</button>
       </form>
     </div>
   </dialog>

@@ -1,14 +1,14 @@
 <template>
   <section class="parametres-section" id="compte">
-    <h2 class="sr-only">Compte</h2>
+    <h2 class="lecteur-ecran">Compte</h2>
 
     <EtatChargement v-if="chargement" />
     <template v-else>
 
     <div class="param-bloc">
-      <h3 class="param-label">Profil</h3>
+      <h3 class="param-libelle">Profil</h3>
       <form class="form-vertical form-compact" @submit.prevent="sauvegarderProfil">
-        <div class="form-group">
+        <div class="form-groupe">
           <label for="email">Email</label>
           <input
             id="email"
@@ -21,14 +21,14 @@
             En attente de confirmation : {{ profil.pendingEmail }}
           </p>
         </div>
-        <button type="submit" class="btn btn-secondary">Enregistrer</button>
+        <button type="submit" class="bouton bouton-secondaire">Enregistrer</button>
       </form>
     </div>
 
     <div class="param-bloc">
-      <h3 class="param-label" id="label-identifiant">Identifiant de connexion</h3>
+      <h3 class="param-libelle" id="label-identifiant">Identifiant de connexion</h3>
       <form class="form-inline" @submit.prevent="sauvegarderIdentifiant">
-        <label for="identifiant" class="sr-only">Identifiant de connexion</label>
+        <label for="identifiant" class="lecteur-ecran">Identifiant de connexion</label>
         <input
           id="identifiant"
           v-model="identifiant"
@@ -38,16 +38,16 @@
           pattern="[a-zA-Z0-9._-]+"
           autocomplete="username"
         />
-        <button type="submit" class="btn btn-secondary">Modifier</button>
+        <button type="submit" class="bouton bouton-secondaire">Modifier</button>
       </form>
     </div>
 
     <div class="param-bloc">
-      <h3 class="param-label">Authentification à deux facteurs (TOTP)</h3>
+      <h3 class="param-libelle">Authentification à deux facteurs (TOTP)</h3>
       <div v-if="deuxFacteursActif">
         <p class="param-aide">TOTP activé sur votre compte.</p>
         <form class="form-vertical form-compact" @submit.prevent="desactiverTotp">
-          <div class="form-group">
+          <div class="form-groupe">
             <label for="totp-desact-code">Code de confirmation</label>
             <input
               id="totp-desact-code"
@@ -61,7 +61,7 @@
               required
             />
           </div>
-          <button type="submit" class="btn btn-danger btn-sm">Désactiver le TOTP</button>
+          <button type="submit" class="bouton bouton-danger bouton-petit">Désactiver le TOTP</button>
         </form>
       </div>
       <div v-else>
@@ -69,17 +69,17 @@
           Protégez votre compte avec une application d'authentification
           (Google Authenticator, Aegis…).
         </p>
-        <RouterLink to="/parametres/totp" class="btn btn-secondary btn-sm">
+        <RouterLink to="/parametres/totp" class="bouton bouton-secondaire bouton-petit">
           Configurer le TOTP
         </RouterLink>
       </div>
     </div>
 
     <div class="param-bloc">
-      <h3 class="param-label">Mot de passe</h3>
+      <h3 class="param-libelle">Mot de passe</h3>
       <p class="param-aide">La session sera invalidée après le changement.</p>
       <form class="form-vertical form-compact" @submit.prevent="changerMotDePasse">
-        <div class="form-group">
+        <div class="form-groupe">
           <label for="mdp-actuel">Mot de passe actuel</label>
           <input
             id="mdp-actuel"
@@ -89,7 +89,7 @@
             autocomplete="current-password"
           />
         </div>
-        <div class="form-group">
+        <div class="form-groupe">
           <label for="mdp-nouveau">Nouveau mot de passe</label>
           <input
             id="mdp-nouveau"
@@ -104,12 +104,12 @@
             {{ mdpNouveau.length > 0 ? mdpNouveau.length + ' caractère' + (mdpNouveau.length > 1 ? 's' : '') : '' }}
           </span>
         </div>
-        <button type="submit" class="btn btn-secondary">Changer</button>
+        <button type="submit" class="bouton bouton-secondaire">Changer</button>
       </form>
     </div>
 
     <div class="param-bloc">
-      <h3 class="param-label">Appareils connectés</h3>
+      <h3 class="param-libelle">Appareils connectés</h3>
       <p class="param-aide">Sessions actives sur votre compte.</p>
       <ul class="liste-appareils">
         <li v-for="appareil in appareils" :key="appareil.appareilId" class="ligne-appareil">
@@ -121,7 +121,7 @@
           <button
             v-if="!appareil.sessionCourante"
             type="button"
-            class="btn btn-danger btn-sm"
+            class="bouton bouton-danger bouton-petit"
             @click="revoquerAppareil(appareil.appareilId)"
           >
             Révoquer
@@ -132,7 +132,7 @@
     </div>
 
     <div class="param-bloc">
-      <h3 class="param-label">Abonnements notifications push</h3>
+      <h3 class="param-libelle">Abonnements notifications push</h3>
       <ul class="liste-appareils">
         <li v-for="abonnement in abonnementsPush" :key="abonnement.endpoint" class="ligne-appareil">
           <span class="appareil-info">
@@ -140,7 +140,7 @@
           </span>
           <button
             type="button"
-            class="btn btn-danger btn-sm"
+            class="bouton bouton-danger bouton-petit"
             @click="revoquerAbonnementPush(abonnement.endpoint)"
           >
             Révoquer
