@@ -92,6 +92,37 @@ public class WorkerPurgeService {
         });
   }
 
+  // Un concert sans salle_id ni artiste_id n'est jamais retouché par aucun job de fetch (tous
+  // scopés par artiste suivi, salle suivie ou département suivi) — absences_consecutives reste
+  // figé à 0 et ne peut donc jamais atteindre SEUIL_PURGE_ABSENCES. 30 jours sans mise à jour
+  // signe une staleness réelle, indépendante de ce compteur inopérant pour ce cas.
+  private static final int SEUIL_JOURS_HORS_PORTEE = 30;
+
+  /// Signale pour suppression les concerts futurs sans {@code salle_id} ni {@code artiste_id},
+  /// jamais réévalués par aucun mécanisme de fetch (tous scopés par entité ou département suivi) et
+  /// donc jamais atteints par {@link #executerPurgerConcertsNonConfirmes} — plus de {@value
+  /// #SEUIL_JOURS_HORS_PORTEE} jours sans mise à jour sert de signal de substitution.
+  ///
+  /// <p>Même mécanisme non destructif que {@link #executerPurgerConcertsNonConfirmes} : {@code
+  /// suppression_suggeree_le}, revue manuelle depuis l'admin.
+  public void executerPurgerConcertsHorsPortee() {
+    log.info("purger:concerts-hors-portee seuilJours={}", SEUIL_JOURS_HORS_PORTEE);
+    workerStatsService.executerAvecStats(
+        log,
+        "purger:concerts-hors-portee",
+        () -> {
+          int signales =
+              jdbc.update(
+                  "UPDATE concerts SET suppression_suggeree_le = now()"
+                      + " WHERE salle_id IS NULL AND artiste_id IS NULL AND date >= CURRENT_DATE"
+                      + " AND updated_at < now() - make_interval(days => :seuilJours)"
+                      + " AND suppression_suggeree_le IS NULL",
+                  Map.of("seuilJours", SEUIL_JOURS_HORS_PORTEE));
+          log.info("purger:concerts-hors-portee terminé signales={}", signales);
+          return new ResultatPersistance(0, signales);
+        });
+  }
+
   /// Supprime les salles orphelines (sans concerts futurs, sans utilisateurs et sans slug
   // Digitick).
   /// Une salle est conservée si :
