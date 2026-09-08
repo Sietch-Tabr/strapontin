@@ -893,6 +893,103 @@ class WikidataSalleSourceTest {
   }
 
   @Test
+  void enrichirLot_reponseAvecCoordonnees_extraitLatitudeEtLongitude() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q3550188"},
+                   "itemLabel":{"type":"literal","value":"Zénith de Nantes Métropole"},
+                   "communeLabel":{"type":"literal","value":"Saint-Herblain"},
+                   "coord":{"type":"literal","value":"Point(-1.573 47.238)"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    EnrichissementSalle enrichissement = resultat.get(id);
+    assertEquals(47.238, enrichissement.latitude());
+    assertEquals(-1.573, enrichissement.longitude());
+    serveur.verify();
+  }
+
+  @Test
+  void enrichirLot_reponseSansCoordonnees_latitudeEtLongitudeNull() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q3550188"},
+                   "itemLabel":{"type":"literal","value":"Zénith de Nantes Métropole"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    EnrichissementSalle enrichissement = resultat.get(id);
+    assertNull(enrichissement.latitude());
+    assertNull(enrichissement.longitude());
+    serveur.verify();
+  }
+
+  // Régression : la découverte par nom (Q-ID inconnu) doit aussi extraire les coordonnées, pas
+  // seulement le mode batch (Q-ID déjà connu) — deux requêtes SPARQL distinctes.
+  @Test
+  void enrichirLot_decouverteAvecCoordonnees_extraitLatitudeEtLongitude() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    SalleAEnrichir salle = new SalleAEnrichir(id, "L'Aeronef", "l aeronef", null, null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q2831576"},
+                   "itemLabel":{"type":"literal","value":"L'Aéronef"},
+                   "communeLabel":{"type":"literal","value":"Lille"},
+                   "coord":{"type":"literal","value":"Point(3.045 50.641)"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    EnrichissementSalle enrichissement = resultat.get(id);
+    assertEquals(50.641, enrichissement.latitude());
+    assertEquals(3.045, enrichissement.longitude());
+    serveur.verify();
+  }
+
+  @Test
   void enrichirLot_resultatEnCache_retourneSansHttp() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
