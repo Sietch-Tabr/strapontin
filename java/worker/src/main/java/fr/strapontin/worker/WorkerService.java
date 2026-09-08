@@ -71,14 +71,17 @@ public class WorkerService {
           log.info(
               "reconciliation:nocturne terminé sallesVerifiees={} redecouvertes={} ambigues={}"
                   + " enrichissementsSalle={} enrichissementsArtiste={} typesWikidataInvalides={}"
-                  + " nomsIncoherentsTM={}",
+                  + " nomsIncoherentsTM={} contaminationsMultiSalleSignalees={}"
+                  + " doublonsMultiSalleSignales={}",
               bilan.sallesVerifiees(),
               bilan.sallesRedecouvertes(),
               bilan.ambigues(),
               bilan.enrichissementsSalle(),
               bilan.enrichissementsArtiste(),
               bilan.typesWikidataInvalides(),
-              bilan.nomsIncoherentsTM());
+              bilan.nomsIncoherentsTM(),
+              bilan.contaminationsMultiSalleSignalees(),
+              bilan.doublonsMultiSalleSignales());
           return new ResultatPersistance(
               0,
               bilan.sallesRedecouvertes()

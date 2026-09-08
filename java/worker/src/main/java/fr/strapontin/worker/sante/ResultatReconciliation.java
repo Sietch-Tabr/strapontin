@@ -23,6 +23,12 @@ package fr.strapontin.worker.sante;
 /// @param sallesFusionneesParCleForte nombre de paires de salles déjà établies fusionnées
 ///   automatiquement (même artiste+date+heure+dept partagé, voir {@code
 ///   FusionSallesClePorteeService})
+/// @param contaminationsMultiSalleSignalees nombre de salles signalées comme hébergeant
+///   probablement plusieurs lieux réels distincts (voir {@link
+///   CoherenceMultiSalleService#detecterContamination})
+/// @param doublonsMultiSalleSignales nombre de paires de salles signalées comme doublons potentiels
+///   sans {@code wikidata_id} ni concert partagé (voir {@link
+///   CoherenceMultiSalleService#detecterDoublons})
 /// @since 2.6.0
 /// @author Kwaite
 public record ResultatReconciliation(
@@ -35,4 +41,6 @@ public record ResultatReconciliation(
     int typesWikidataInvalides,
     int nomsIncoherentsTM,
     int sallesOrphelinesResolues,
-    int sallesFusionneesParCleForte) {}
+    int sallesFusionneesParCleForte,
+    int contaminationsMultiSalleSignalees,
+    int doublonsMultiSalleSignales) {}

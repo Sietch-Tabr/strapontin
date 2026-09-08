@@ -54,6 +54,7 @@ public class ReconciliationNocturneService {
   private final CoherenceWikidataSalleService coherenceWikidataSalle;
   private final ReconciliateurSalles reconciliateurSalles;
   private final FusionSallesClePorteeService fusionSallesClePortee;
+  private final CoherenceMultiSalleService coherenceMultiSalle;
 
   public ReconciliationNocturneService(
       NamedParameterJdbcTemplate jdbc,
@@ -63,7 +64,8 @@ public class ReconciliationNocturneService {
       EnrichissementArtistesService enrichissementArtistes,
       CoherenceWikidataSalleService coherenceWikidataSalle,
       ReconciliateurSalles reconciliateurSalles,
-      FusionSallesClePorteeService fusionSallesClePortee) {
+      FusionSallesClePorteeService fusionSallesClePortee,
+      CoherenceMultiSalleService coherenceMultiSalle) {
     this.jdbc = jdbc;
     this.tm = tm;
     this.logsAdminWorker = logsAdminWorker;
@@ -72,6 +74,7 @@ public class ReconciliationNocturneService {
     this.coherenceWikidataSalle = coherenceWikidataSalle;
     this.reconciliateurSalles = reconciliateurSalles;
     this.fusionSallesClePortee = fusionSallesClePortee;
+    this.coherenceMultiSalle = coherenceMultiSalle;
   }
 
   /// Exécute les deux phases du job nocturne.
@@ -95,6 +98,8 @@ public class ReconciliationNocturneService {
     int typesWikidataInvalides = coherenceWikidataSalle.revaliderTypes();
     int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
     int sallesFusionnees = fusionSallesClePortee.fusionner();
+    int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
+    int doublonsSignales = coherenceMultiSalle.detecterDoublons();
 
     return new ResultatReconciliation(
         bilanSalles[0],
@@ -106,7 +111,9 @@ public class ReconciliationNocturneService {
         typesWikidataInvalides,
         nomsIncoherentsTM,
         sallesOrphelinesResolues,
-        sallesFusionnees);
+        sallesFusionnees,
+        contaminationsSignalees,
+        doublonsSignales);
   }
 
   /// Vérifie que le nom retourné par TM pour chaque attractionId lié correspond toujours à
