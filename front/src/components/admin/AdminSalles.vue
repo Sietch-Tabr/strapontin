@@ -85,6 +85,7 @@
                   <td class="source-salle-nom" data-label="Salle">
                     {{ salle.nomAffiche || salle.nom }}
                     <span v-if="salle.nomAffiche && salle.nomAffiche !== salle.nom" class="param-aide"> ({{ salle.nom }})</span>
+                    <span v-if="salle.nomParent" class="param-aide"> — sous-salle de {{ salle.nomParent }}</span>
                   </td>
                   <td data-label="Ville / Dept">{{ [salle.ville, salle.dept].filter(Boolean).join(' ') || '—' }}</td>
                   <td data-label="Concerts">{{ salle.nbConcerts }}</td>

@@ -186,4 +186,32 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
 
     assertEquals(1, fusions, "des coordonnées proches ne doivent pas bloquer une fusion légitime");
   }
+
+  // Une salle fusionnée (source) peut déjà porter des sous-salles — leur salle_parent_id doit
+  // suivre vers la cible, sinon la suppression de la source échoue (contrainte FK) ou les laisse
+  // orphelines.
+  @Test
+  void fusionner_sourceAvecSousSalle_reassigneLeParentIdVersLaCible() {
+    UUID grandTheatre = creerSalle("Grand Theatre Limoges", "87", null);
+    UUID operaLimoges = creerSalle("Opera de Limoges", "87", "Q3354551");
+    UUID sousSalleDeLaSource = creerSalle("Grand Theatre Limoges - Petite Salle", "87", null);
+    jdbc.update(
+        "UPDATE salles SET salle_parent_id = CAST(:parentId AS uuid) WHERE id = CAST(:id AS uuid)",
+        Map.of("parentId", grandTheatre.toString(), "id", sousSalleDeLaSource.toString()));
+    creerConcert("laurent voulzy", "20:30", "87", grandTheatre);
+    creerConcert("laurent voulzy", "20:30", "87", operaLimoges);
+
+    int fusions = fusionSallesClePortee.fusionner();
+
+    assertEquals(1, fusions);
+    String parentIdApres =
+        jdbc.queryForObject(
+            "SELECT salle_parent_id::text FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", sousSalleDeLaSource.toString()),
+            String.class);
+    assertEquals(
+        operaLimoges.toString(),
+        parentIdApres,
+        "la sous-salle doit suivre vers la salle cible conservée après fusion");
+  }
 }

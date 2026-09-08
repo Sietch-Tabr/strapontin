@@ -239,7 +239,22 @@ public class FusionSallesClePorteeService {
         """,
         ids);
 
-    // 6. Suppression de la salle source
+    // 6. Sous-salles de la source réassignées à la cible — sinon la suppression de la source
+    // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible était elle-même
+    // une sous-salle de la source (cas limite : un enfant l'emporte sur son propre complexe par
+    // nombre de concerts), elle hérite du parent de la source plutôt que de rester rattachée à une
+    // salle sur le point d'être supprimée.
+    jdbc.update(
+        "UPDATE salles SET salle_parent_id ="
+            + " (SELECT salle_parent_id FROM salles WHERE id = CAST(:source AS uuid))"
+            + " WHERE id = CAST(:cible AS uuid) AND salle_parent_id = CAST(:source AS uuid)",
+        ids);
+    jdbc.update(
+        "UPDATE salles SET salle_parent_id = CAST(:cible AS uuid)"
+            + " WHERE salle_parent_id = CAST(:source AS uuid) AND id != CAST(:cible AS uuid)",
+        ids);
+
+    // 7. Suppression de la salle source
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
 
     log.info(

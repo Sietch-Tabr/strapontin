@@ -83,7 +83,7 @@ public class ReferentielSallesService {
         jdbc.query(
             CTE_SALLES_AGREGEES
                 + "SELECT id, nom, nom_affiche, ville, dept, wikidata_id, nb_concerts, sources,"
-                + " statut, COUNT(*) OVER() AS total_filtre FROM salles_agr"
+                + " statut, nom_parent, COUNT(*) OVER() AS total_filtre FROM salles_agr"
                 + where
                 + " ORDER BY nb_concerts DESC, nom ASC LIMIT :taille OFFSET :offset",
             paramsPage,
@@ -98,7 +98,8 @@ public class ReferentielSallesService {
                   rs.getLong("nb_concerts"),
                   lireSources(rs.getString("sources")),
                   rs.getString("statut"),
-                  rs.getString("wikidata_id"));
+                  rs.getString("wikidata_id"),
+                  rs.getString("nom_parent"));
             });
 
     // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
@@ -122,7 +123,7 @@ public class ReferentielSallesService {
   private static final String CTE_SALLES_AGREGEES =
       """
       WITH salles_agr AS (
-        SELECT s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id,
+        SELECT s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id, p.nom AS nom_parent,
                COUNT(DISTINCT c.id) FILTER (WHERE c.date >= CURRENT_DATE) AS nb_concerts,
                COALESCE(string_agg(DISTINCT ss.source, ','), '') AS sources,
                CASE
@@ -131,9 +132,10 @@ public class ReferentielSallesService {
                  ELSE 'a_verifier'
                END AS statut
         FROM salles s
+        LEFT JOIN salles p ON p.id = s.salle_parent_id
         LEFT JOIN concerts c ON c.salle_id = s.id
         LEFT JOIN salle_sources ss ON ss.salle_id = s.id
-        GROUP BY s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id
+        GROUP BY s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id, p.nom
       )
       """;
 
@@ -251,7 +253,21 @@ public class ReferentielSallesService {
         """,
         ids);
 
-    // 6. Suppression de la salle source
+    // 6. Sous-salles de la source réassignées à la cible — sinon la suppression de la source
+    // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible était elle-même
+    // une sous-salle de la source, elle hérite du parent de la source plutôt que de rester
+    // rattachée à une salle sur le point d'être supprimée.
+    jdbc.update(
+        "UPDATE salles SET salle_parent_id ="
+            + " (SELECT salle_parent_id FROM salles WHERE id = CAST(:source AS uuid))"
+            + " WHERE id = CAST(:cible AS uuid) AND salle_parent_id = CAST(:source AS uuid)",
+        ids);
+    jdbc.update(
+        "UPDATE salles SET salle_parent_id = CAST(:cible AS uuid)"
+            + " WHERE salle_parent_id = CAST(:source AS uuid) AND id != CAST(:cible AS uuid)",
+        ids);
+
+    // 7. Suppression de la salle source
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
 
     logAdminService.logAdmin(

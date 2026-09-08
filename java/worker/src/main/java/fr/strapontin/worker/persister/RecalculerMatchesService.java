@@ -190,10 +190,16 @@ public class RecalculerMatchesService {
     return jdbc.queryForList(sql, params, UUID.class);
   }
 
+  // Suivre le complexe (salle parent) doit aussi remonter les concerts de ses sous-salles — un nom
+  // sans qualificatif (voir ResolveurSalleParConcert) résout précisément vers ce parent, "site,
+  // salle non précisée". Suivre une sous-salle précise reste inchangé (pas de remontée aux frères).
   private List<UUID> rechercherConcertsParSalles(List<UUID> salleIds, String aujourdhui) {
     return jdbc.queryForList(
         "SELECT DISTINCT c.id FROM concerts c"
-            + " WHERE c.salle_id IN (:salleIds) AND c.date >= :aujourdhui"
+            + " WHERE (c.salle_id IN (:salleIds)"
+            + "        OR c.salle_id IN (SELECT id FROM salles WHERE salle_parent_id IN"
+            + " (:salleIds)))"
+            + " AND c.date >= :aujourdhui"
             + SQL_PAS_PACKAGE_ISOLE,
         Map.of("salleIds", salleIds, "aujourdhui", LocalDate.parse(aujourdhui)),
         UUID.class);

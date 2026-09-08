@@ -9,16 +9,18 @@ import java.util.UUID;
 
 /// Ligne du référentiel salles pour l'onglet admin « Salles ».
 ///
-/// @param id         UUID interne stable
-/// @param nom        nom brut (dernière valeur vue par une source)
+/// @param id UUID interne stable
+/// @param nom nom brut (dernière valeur vue par une source)
 /// @param nomAffiche nom canonique (enrichissement Wikidata/OSM ou override manuel admin)
-/// @param ville      commune connue
-/// @param dept       département connu
+/// @param ville commune connue
+/// @param dept département connu
 /// @param nbConcerts nombre de concerts à venir liés à cette salle
-/// @param sources    sources externes liées (ex. {@code ["ticketmaster", "digitick"]})
-/// @param statut     {@code "a_jour"}, {@code "a_verifier"} ou {@code "invalide"} (basé sur
-/// {@code suspect_depuis})
+/// @param sources sources externes liées (ex. {@code ["ticketmaster", "digitick"]})
+/// @param statut {@code "a_jour"}, {@code "a_verifier"} ou {@code "invalide"} (basé sur {@code
+///   suspect_depuis})
 /// @param wikidataId Q-ID Wikidata si présent
+/// @param nomParent nom de la salle complexe si cette salle est une sous-salle ({@code
+///   salle_parent_id} renseigné), sinon {@code null}
 /// @since 2.6.0
 /// @author Kwaite
 public record SalleReferentiel(
@@ -30,4 +32,5 @@ public record SalleReferentiel(
     long nbConcerts,
     List<String> sources,
     String statut,
-    String wikidataId) {}
+    String wikidataId,
+    String nomParent) {}

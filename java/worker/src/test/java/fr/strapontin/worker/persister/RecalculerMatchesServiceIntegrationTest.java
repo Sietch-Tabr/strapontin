@@ -69,6 +69,15 @@ class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationT
         (rs, _) -> rs.getObject("id", UUID.class));
   }
 
+  private UUID insererSousSalle(String salleCle, UUID parentId) {
+    return jdbc.queryForObject(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, salle_parent_id)"
+            + " VALUES (:id, :nom, :norm, CAST(:parentId AS uuid))"
+            + " ON CONFLICT (salle_cle) DO UPDATE SET nom = EXCLUDED.nom RETURNING id",
+        Map.of("id", salleCle, "nom", salleCle, "norm", salleCle, "parentId", parentId.toString()),
+        (rs, _) -> rs.getObject("id", UUID.class));
+  }
+
   private void insererUserSalle(String userId, UUID salleId) {
     jdbc.update(
         "INSERT INTO user_salles (user_id, salle_id)" + " VALUES (:userId, CAST(:salleId AS uuid))",
@@ -329,5 +338,49 @@ class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationT
         compterMatches("u32"),
         "les deux lignes restent visibles tant que supprimerDoublonsParSalleId ne les a pas"
             + " fusionnées (hors du périmètre de RecalculerMatchesService)");
+  }
+
+  @Test
+  void recalculerMatches_suiviDuComplexe_remonteLesConcertsDeLaSousSalle() {
+    insererUser("u33");
+    UUID complexe = insererSalle("la seine musicale");
+    UUID sousSalle = insererSousSalle("la seine musicale grande seine", complexe);
+    insererUserSalle("u33", complexe);
+    insererConcert(
+        "Artiste Grande Seine",
+        "artiste grande seine",
+        DATE_FUTURE,
+        "la seine musicale grande seine",
+        null,
+        sousSalle);
+
+    service.recalculerMatches(List.of("u33"));
+
+    assertEquals(
+        1, compterMatches("u33"), "suivre le complexe doit remonter les concerts de la sous-salle");
+  }
+
+  @Test
+  void recalculerMatches_suiviDeLaSousSalle_neRemontePasLesFreres() {
+    insererUser("u34");
+    UUID complexe = insererSalle("la seine musicale bis");
+    UUID grandeSeine = insererSousSalle("la seine musicale bis grande seine", complexe);
+    UUID auditorium = insererSousSalle("la seine musicale bis auditorium", complexe);
+    insererUserSalle("u34", grandeSeine);
+    insererConcert(
+        "Artiste Auditorium",
+        "artiste auditorium",
+        DATE_FUTURE,
+        "la seine musicale bis auditorium",
+        null,
+        auditorium);
+
+    service.recalculerMatches(List.of("u34"));
+
+    assertEquals(
+        0,
+        compterMatches("u34"),
+        "suivre une sous-salle précise ne doit pas remonter les concerts d'une autre sous-salle du"
+            + " même complexe");
   }
 }
