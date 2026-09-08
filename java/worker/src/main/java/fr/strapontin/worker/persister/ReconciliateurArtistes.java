@@ -113,6 +113,69 @@ public class ReconciliateurArtistes {
         .toList();
   }
 
+  /// Corrige un artiste corrompu déjà persisté en s'ancrant sur l'identité de l'URL de l'événement
+  /// plutôt que sur la similarité de nom.
+  ///
+  /// <p>{@link #reconcilierUnArtiste} ne guérit une ligne existante que si {@link
+  /// CorrespondanceArtiste#estDoublonArtiste} relie encore l'ancien nom corrompu au nouveau — un
+  /// mauvais rapprochement Deezer peut produire un nom sans aucune parenté textuelle avec
+  /// l'original (ex. "nino arial" → "nino arbol"), rendant cette guérison structurellement
+  /// impossible. Deux fiches de la même URL désignent nécessairement le même événement réel : cette
+  /// voie corrige donc la ligne existante indépendamment de toute similarité de nom, dès que
+  /// l'entrant est inéligible à la résolution Deezer (nom brut fiable par construction).
+  ///
+  /// @param lot concerts après résolution des identités sources
+  void corrigerParUrl(List<ValeurConcert> lot) {
+    List<ValeurConcert> candidats =
+        lot.stream()
+            .filter(
+                c ->
+                    c.url() != null
+                        && !EligibiliteResolutionDeezer.estEligible(c.classification(), c.source()))
+            .toList();
+    if (candidats.isEmpty()) return;
+
+    List<String> urls = candidats.stream().map(ValeurConcert::url).distinct().toList();
+    List<Map<String, Object>> existants =
+        jdbc.queryForList(
+            "SELECT DISTINCT url, artiste_norm FROM concerts WHERE url IN (:urls)",
+            Map.of("urls", urls));
+
+    Map<String, String> artisteNormParUrl = new HashMap<>();
+    for (Map<String, Object> ligne : existants) {
+      artisteNormParUrl.put((String) ligne.get("url"), (String) ligne.get("artiste_norm"));
+    }
+
+    for (ValeurConcert c : candidats) {
+      String artisteNormExistant = artisteNormParUrl.get(c.url());
+      if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) continue;
+      corrigerArtisteParUrl(c);
+    }
+  }
+
+  // Filtre par url plutôt que par (artiste_norm, date, salle_norm) comme
+  // corrigerArtisteExistantEnBase — deux fiches partageant la même url désignent nécessairement le
+  // même événement réel, quels que soient l'ancien nom corrompu et sa date/salle éventuellement
+  // elles-mêmes faussées par le même mauvais rapprochement.
+  private void corrigerArtisteParUrl(ValeurConcert concert) {
+    int nbCorrigees =
+        jdbc.update(
+            "UPDATE concerts SET artiste = :nouvelArtiste, artiste_norm = :nouvelArtisteNorm,"
+                + " updated_at = now()"
+                + " WHERE url = :url AND artiste_norm != :nouvelArtisteNorm",
+            new MapSqlParameterSource()
+                .addValue("nouvelArtiste", concert.artiste())
+                .addValue("nouvelArtisteNorm", concert.artisteNorm())
+                .addValue("url", concert.url()));
+    if (nbCorrigees > 0) {
+      log.info(
+          "artiste corrigé par url url={} nouveau={} count={}",
+          concert.url(),
+          concert.artisteNorm(),
+          nbCorrigees);
+    }
+  }
+
   private Map<String, String> construireRemplacementsArtisteIntraLot(List<ValeurConcert> lot) {
     Map<String, String> remplacements = new HashMap<>();
     Map<String, List<String>> parGroupe = new LinkedHashMap<>();
