@@ -4,6 +4,17 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 2.8.8 — 8 septembre 2026",
+    categories: [
+      {
+        categorie: "Apparence",
+        items: [
+          "Le thème « Automatique » suit à nouveau la préférence sombre/claire du système — il restait bloqué en clair depuis la dernière mise à jour.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 2.8.4 — 31 août 2026",
     categories: [
       {
