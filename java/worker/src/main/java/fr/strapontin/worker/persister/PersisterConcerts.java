@@ -345,6 +345,7 @@ public class PersisterConcerts {
 
     db.supprimerDoublonsParUrl();
     db.supprimerDoublonsParSalleId();
+    db.supprimerDoublonsSansArtisteId();
 
     log.info(
         "concerts persistés total={} inserts={} updates={}",

@@ -4,13 +4,17 @@
  */
 package fr.strapontin.worker.persister;
 
+import fr.strapontin.core.CorrespondanceArtiste;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -443,5 +447,99 @@ public class PersisteurConcertsDb {
     if (nbSupprimees > 0)
       log.info("doublons cross-sources (salle_id) supprimés count={}", nbSupprimees);
     return nbSupprimees;
+  }
+
+  // Tolérance identique à Dedoublonner.TOLERANCE_HEURE_MINUTES — les deux passes doivent rester
+  // cohérentes, une seule heure distincte par événement réel n'étant jamais garantie.
+  private static final int TOLERANCE_HEURE_MINUTES = 3;
+
+  /// Complète {@link #supprimerDoublonsParSalleId}, qui exige {@code artiste_id} non nul des deux
+  /// côtés : un concert dont l'artiste n'est suivi par aucun utilisateur (aucune ligne {@code
+  /// artistes} créée, matché uniquement via la salle suivie) reste perpétuellement {@code
+  /// artiste_id} NULL, quelle que soit la qualité de la résolution de {@code salle_id} — le SQL ne
+  /// peut alors plus comparer par égalité d'UUID. Compare {@code artiste_norm} en mémoire via
+  /// {@link CorrespondanceArtiste#estDoublonArtiste} pour les concerts partageant {@code
+  /// salle_id}+{@code date} sans {@code artiste_id} résolu.
+  ///
+  /// @return nombre de concerts supprimés
+  int supprimerDoublonsSansArtisteId() {
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT id, salle_id, artiste_norm, date, heure, url, source FROM concerts"
+                + " WHERE artiste_id IS NULL AND salle_id IS NOT NULL AND date >= CURRENT_DATE",
+            Map.of());
+
+    Map<String, List<Map<String, Object>>> parGroupe = new LinkedHashMap<>();
+    for (var ligne : lignes) {
+      String cle = ligne.get("salle_id") + "|" + ligne.get("date");
+      parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>()).add(ligne);
+    }
+
+    Set<UUID> aSupprimer = new LinkedHashSet<>();
+    for (var groupe : parGroupe.values()) {
+      if (groupe.size() < 2) continue;
+      for (int i = 0; i < groupe.size(); i++) {
+        Map<String, Object> a = groupe.get(i);
+        if (aSupprimer.contains((UUID) a.get("id"))) continue;
+        for (int j = i + 1; j < groupe.size(); j++) {
+          Map<String, Object> b = groupe.get(j);
+          if (aSupprimer.contains((UUID) b.get("id"))) continue;
+          if (!CorrespondanceArtiste.estDoublonArtiste(
+              (String) a.get("artiste_norm"), (String) b.get("artiste_norm"))) {
+            continue;
+          }
+          if (!heuresCompatiblesOuPackage(a, b)) continue;
+          aSupprimer.add(idPerdant(a, b));
+        }
+      }
+    }
+
+    if (aSupprimer.isEmpty()) return 0;
+    int nbSupprimees =
+        jdbc.update(
+            "DELETE FROM concerts WHERE id IN (:ids)",
+            Map.of("ids", aSupprimer.stream().map(UUID::toString).toList()));
+    log.info("doublons sans artiste_id supprimés count={}", nbSupprimees);
+    return nbSupprimees;
+  }
+
+  private static boolean heuresCompatiblesOuPackage(Map<String, Object> a, Map<String, Object> b) {
+    String urlA = (String) a.get("url");
+    String urlB = (String) b.get("url");
+    if (estPackage(urlA) || estPackage(urlB)) return true;
+    java.sql.Time heureA = (java.sql.Time) a.get("heure");
+    java.sql.Time heureB = (java.sql.Time) b.get("heure");
+    if (heureA == null || heureB == null) return true;
+    long diffMinutes =
+        Math.abs(
+            java.time.Duration.between(heureA.toLocalTime(), heureB.toLocalTime()).toMinutes());
+    return diffMinutes <= TOLERANCE_HEURE_MINUTES;
+  }
+
+  private static boolean estPackage(String url) {
+    return url != null && url.matches("(?i).*\\Q/pack/\\E.*");
+  }
+
+  // La ligne perdante est celle dont la priorité (package puis source) est la plus faible — même
+  // ordre que SQL_PRIORITE_SOURCE, ré-exprimé en Java puisque la comparaison se fait ici en
+  // mémoire.
+  private static UUID idPerdant(Map<String, Object> a, Map<String, Object> b) {
+    int prioriteA = priorite(a);
+    int prioriteB = priorite(b);
+    Map<String, Object> perdant = prioriteA >= prioriteB ? a : b;
+    return (UUID) perdant.get("id");
+  }
+
+  private static int priorite(Map<String, Object> ligne) {
+    int penalitePackage = estPackage((String) ligne.get("url")) ? 10 : 0;
+    String source = (String) ligne.get("source");
+    int prioriteSource =
+        switch (source) {
+          case "ticketmaster" -> 1;
+          case "eventim" -> 2;
+          case "digitick" -> 3;
+          default -> 4;
+        };
+    return penalitePackage + prioriteSource;
   }
 }

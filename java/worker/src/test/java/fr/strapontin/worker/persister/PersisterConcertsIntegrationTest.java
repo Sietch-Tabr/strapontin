@@ -1461,6 +1461,111 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         "la fiche non-package doit l'emporter comme référence conservée");
   }
 
+  // Cas réel confirmé en production : un artiste que personne ne suit par nom (aucune ligne
+  // artistes créée, match uniquement via la salle suivie) reste artiste_id NULL indéfiniment —
+  // supprimerDoublonsParSalleId (qui exige artiste_id non nul) ne peut alors jamais fusionner ses
+  // doublons ; supprimerDoublonsSansArtisteId doit prendre le relais en comparant artiste_norm.
+  @Test
+  void persisterConcerts_artisteNonSuiviCoTeteAffiche_fusionneSansArtisteId() {
+    List<ConcertBrut> liste =
+        List.of(
+            new ConcertBrut(
+                "Earl Sweatshirt",
+                DATE_RECENTE,
+                "20:00",
+                "Elysee Montmartre",
+                "Paris",
+                "75",
+                "https://tm.example/earl-sweatshirt-billet",
+                "ticketmaster",
+                "music",
+                "Rap",
+                "onsale",
+                null,
+                null,
+                "ticketmaster:venue-elysee-montmartre",
+                null),
+            new ConcertBrut(
+                "Earl Sweatshirt & Mike",
+                DATE_RECENTE,
+                "20:00",
+                "Elysee Montmartre",
+                "Paris",
+                "75",
+                "https://www.eventim.fr/earl-sweatshirt-mike-billet",
+                "eventim",
+                "music",
+                "Rap",
+                null,
+                null,
+                null,
+                "ticketmaster:venue-elysee-montmartre",
+                null));
+
+    persisterConcerts.persisterConcerts(liste);
+
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT url, artiste_id FROM concerts WHERE artiste_norm LIKE 'earl sweatshirt%'",
+            Map.of());
+    assertEquals(1, lignes.size(), "les deux fiches doivent fusionner malgré artiste_id NULL");
+    assertNull(
+        lignes.get(0).get("artiste_id"), "aucun utilisateur ne suit cet artiste par nom ici");
+  }
+
+  // Même cas que ci-dessus mais réparti sur deux cycles de fetch distincts (deux appels
+  // persisterConcerts séparés, comme en production réelle où TM et Eventim ne sont jamais fetchés
+  // à l'instant près) — la réconciliation intra-lot ne peut alors pas absorber le doublon,
+  // seul supprimerDoublonsSansArtisteId (cross-cycle, contre la base) le peut.
+  @Test
+  void persisterConcerts_artisteNonSuiviDeuxCyclesDeFetchDistincts_fusionneSansArtisteId() {
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Earl Sweatshirt",
+                DATE_RECENTE,
+                "20:00",
+                "Elysee Montmartre",
+                "Paris",
+                "75",
+                "https://tm.example/earl-sweatshirt-billet",
+                "ticketmaster",
+                "music",
+                "Rap",
+                "onsale",
+                null,
+                null,
+                "ticketmaster:venue-elysee-montmartre-2",
+                null)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Earl Sweatshirt & Mike",
+                DATE_RECENTE,
+                "20:00",
+                "Elysee Montmartre",
+                "Paris",
+                "75",
+                "https://www.eventim.fr/earl-sweatshirt-mike-billet-2",
+                "eventim",
+                "music",
+                "Rap",
+                null,
+                null,
+                null,
+                "ticketmaster:venue-elysee-montmartre-2",
+                null)));
+
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT url FROM concerts WHERE artiste_norm LIKE 'earl sweatshirt%'", Map.of());
+    assertEquals(
+        1,
+        lignes.size(),
+        "le second cycle doit fusionner avec la ligne déjà persistée au premier cycle");
+  }
+
   // Un complexe multi-salles (La Seine Musicale, #1180) ne doit jamais mélanger deux halls
   // physiquement distincts sous un même salle_id — la seconde sous-salle qualifiée rencontrée
   // devient un enfant du complexe plutôt que d'être fusionnée ou de rester ambiguë.
