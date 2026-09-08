@@ -1460,4 +1460,78 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         lignes.get(0).get("url"),
         "la fiche non-package doit l'emporter comme référence conservée");
   }
+
+  // Un complexe multi-salles (La Seine Musicale, #1180) ne doit jamais mélanger deux halls
+  // physiquement distincts sous un même salle_id — la seconde sous-salle qualifiée rencontrée
+  // devient un enfant du complexe plutôt que d'être fusionnée ou de rester ambiguë.
+  @Test
+  void persisterConcerts_complexeMultiSalles_creeUneSousSalleDistincteEnEnfant() {
+    ConcertBrut grandeSeine =
+        new ConcertBrut(
+            "Artiste Grande Seine",
+            DATE_RECENTE,
+            "20:30",
+            "La Seine Musicale - Grande Seine",
+            "Boulogne-Billancourt",
+            "92",
+            "https://tm.example/grande-seine",
+            "ticketmaster",
+            "music",
+            "Pop",
+            "onsale",
+            null,
+            null,
+            "ticketmaster:venue-grande-seine",
+            null);
+    persisterConcerts.persisterConcerts(List.of(grandeSeine));
+
+    ConcertBrut auditorium =
+        new ConcertBrut(
+            "Artiste Auditorium",
+            DATE_RECENTE,
+            "20:30",
+            "La Seine Musicale - Auditorium P.devedjian",
+            "Boulogne-Billancourt",
+            "92",
+            "https://tm.example/auditorium",
+            "ticketmaster",
+            "music",
+            "Pop",
+            "onsale",
+            null,
+            null,
+            "ticketmaster:venue-auditorium",
+            null);
+    persisterConcerts.persisterConcerts(List.of(auditorium));
+
+    List<Map<String, Object>> salles =
+        jdbc.queryForList(
+            "SELECT id::text, nom, salle_parent_id::text FROM salles ORDER BY nom", Map.of());
+    assertEquals(2, salles.size(), "les deux halls doivent rester deux salles distinctes");
+
+    Map<String, Object> salleGrandeSeine =
+        salles.stream()
+            .filter(s -> ((String) s.get("nom")).contains("Grande Seine"))
+            .findFirst()
+            .orElseThrow();
+    Map<String, Object> salleAuditorium =
+        salles.stream()
+            .filter(s -> ((String) s.get("nom")).contains("Auditorium"))
+            .findFirst()
+            .orElseThrow();
+
+    assertNull(
+        salleGrandeSeine.get("salle_parent_id"), "la première salle rencontrée reste le parent");
+    assertEquals(
+        salleGrandeSeine.get("id"),
+        salleAuditorium.get("salle_parent_id"),
+        "la seconde sous-salle doit être rattachée à la première comme complexe");
+
+    List<String> sallesDistinctesParConcert =
+        jdbc.queryForList("SELECT DISTINCT salle_id::text FROM concerts", Map.of(), String.class);
+    assertEquals(
+        2,
+        sallesDistinctesParConcert.size(),
+        "chaque concert doit rester rattaché à son propre hall, jamais confondu avec l'autre");
+  }
 }

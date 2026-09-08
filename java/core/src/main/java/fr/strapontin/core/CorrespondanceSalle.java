@@ -261,4 +261,44 @@ public final class CorrespondanceSalle {
     Set<String> specLong = specA.size() <= specB.size() ? specB : specA;
     return estContainmentTokensPartiel(specCourt, specLong);
   }
+
+  private static final String SEPARATEUR_QUALIFICATIF = " - ";
+
+  // Le séparateur ne survit pas à normaliserTexte (tirets remplacés par une espace) — l'extraction
+  // opère donc sur le nom brut, jamais sur nom_norm.
+  private static String extraireQualificatif(String nomBrut) {
+    int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
+    if (idx <= 0) return null;
+    String qualif = nomBrut.substring(idx + SEPARATEUR_QUALIFICATIF.length()).trim();
+    return qualif.isEmpty() ? null : qualif;
+  }
+
+  /// Extrait la partie complexe/base d'un nom de salle brut qualifié (ex. "La Seine Musicale -
+  /// Grande Seine" → "La Seine Musicale"), pour résoudre la salle du complexe avant de créer ou
+  /// retrouver la sous-salle correspondant au qualificatif.
+  ///
+  /// @param nomBrut nom brut (non normalisé)
+  /// @return le nom de base, ou {@code null} si {@code nomBrut} ne porte aucun qualificatif
+  public static String extraireBase(String nomBrut) {
+    int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
+    if (idx <= 0) return null;
+    String base = nomBrut.substring(0, idx).trim();
+    return base.isEmpty() ? null : base;
+  }
+
+  /// Indique si deux noms de salle bruts (non normalisés) portent chacun un qualificatif de
+  /// sous-salle distinct (ex. "La Seine Musicale - Grande Seine" / "Seine Musicale - Auditorium
+  /// P.devedjian") — un complexe multi-salles ne doit jamais fusionner deux halls physiquement
+  /// distincts au seul motif qu'ils partagent le nom du complexe.
+  ///
+  /// @param nomBrutA premier nom, non normalisé
+  /// @param nomBrutB second nom, non normalisé
+  /// @return {@code true} si les deux portent un qualificatif et que ceux-ci ne correspondent pas
+  public static boolean qualificatifsDivergents(String nomBrutA, String nomBrutB) {
+    String qualifA = extraireQualificatif(nomBrutA);
+    String qualifB = extraireQualificatif(nomBrutB);
+    if (qualifA == null || qualifB == null) return false;
+    return !estDoublonSalle(
+        Normalisation.normaliserTexte(qualifA), Normalisation.normaliserTexte(qualifB));
+  }
 }
