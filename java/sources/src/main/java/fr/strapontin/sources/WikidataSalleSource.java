@@ -179,13 +179,14 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
             .map(q -> "wd:" + q)
             .collect(Collectors.joining(" "));
     return """
-    SELECT ?item ?itemLabel ?communeLabel WHERE {
+    SELECT ?item ?itemLabel ?communeLabel ?coord WHERE {
       VALUES ?item { %s }
       OPTIONAL {
         ?item wdt:P131 ?commune .
         ?commune rdfs:label ?communeLabel .
         FILTER(LANG(?communeLabel) = "fr")
       }
+      OPTIONAL { ?item wdt:P625 ?coord }
       SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
     }
     """
@@ -208,13 +209,16 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       UUID salleId = qidVersUuid.get(qid);
       if (salleId == null) continue;
 
+      double[] coord = parserCoordonnees(ClientSparqlWikidata.valeurBinding(binding, "coord"));
       EnrichissementSalle enrichissement =
           new EnrichissementSalle(
               qid,
               ClientSparqlWikidata.valeurBinding(binding, "itemLabel"),
               ClientSparqlWikidata.valeurBinding(binding, "communeLabel"),
               null,
-              null);
+              null,
+              coord != null ? coord[1] : null,
+              coord != null ? coord[0] : null);
       resultats.put(salleId, enrichissement);
       cache.put(qid, enrichissement);
     }
@@ -271,6 +275,28 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     }
     """
         .formatted(items, typesExclusSparql);
+  }
+
+  // Wikidata renvoie P625 au format WKT "Point(lon lat)" (ordre longitude puis latitude, jamais
+  // l'inverse — convention géographique standard).
+  private static final Pattern COORDONNEES_WKT =
+      Pattern.compile("Point\\(([-\\d.]+)\\s+([-\\d.]+)\\)");
+
+  /// Parse une valeur WKT Wikidata en {@code [longitude, latitude]}.
+  ///
+  /// @param wkt valeur brute du binding {@code ?coord}, ou {@code null}
+  /// @return {@code [longitude, latitude]}, ou {@code null} si absent/mal formé
+  private static double[] parserCoordonnees(String wkt) {
+    if (wkt == null) return null;
+    var matcher = COORDONNEES_WKT.matcher(wkt);
+    if (!matcher.find()) return null;
+    try {
+      return new double[] {
+        Double.parseDouble(matcher.group(1)), Double.parseDouble(matcher.group(2))
+      };
+    } catch (NumberFormatException e) {
+      return null;
+    }
   }
 
   // --- Mode découverte (Q-ID inconnu) ---
@@ -349,6 +375,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
       String communeLabel = ClientSparqlWikidata.valeurBinding(binding, "communeLabel");
       String codePostal = ClientSparqlWikidata.valeurBinding(binding, "codePostal");
+      double[] coord = parserCoordonnees(ClientSparqlWikidata.valeurBinding(binding, "coord"));
       boolean localisationConnue =
           (communeLabel != null && !communeLabel.isBlank())
               || (codePostal != null && !codePostal.isBlank());
@@ -377,7 +404,14 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
 
       String qid = itemUri.substring(itemUri.lastIndexOf('/') + 1);
       EnrichissementSalle enrichissement =
-          new EnrichissementSalle(qid, labelCorrespondant, communeLabel, null, null);
+          new EnrichissementSalle(
+              qid,
+              labelCorrespondant,
+              communeLabel,
+              null,
+              null,
+              coord != null ? coord[1] : null,
+              coord != null ? coord[0] : null);
       cache.put(qid, enrichissement);
       return Optional.of(enrichissement);
     }
@@ -528,6 +562,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     return """
     SELECT ?item ?itemLabel ?communeLabel ?num
       (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) (SAMPLE(?cp) AS ?codePostal)
+      (SAMPLE(?coordValue) AS ?coord)
     WHERE {
       SERVICE wikibase:mwapi {
         bd:serviceParam wikibase:api "EntitySearch".
@@ -544,6 +579,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
         VALUES ?typeExclu { %s }
       }
       OPTIONAL { ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "fr") }
+      OPTIONAL { ?item wdt:P625 ?coordValue }
       OPTIONAL {
         ?item wdt:P131 ?commune .
         ?commune rdfs:label ?communeLabel .
