@@ -68,6 +68,29 @@ class CorrespondanceArtisteTest {
   }
 
   @Test
+  void estDoublonArtiste_coTeteAffichePrefixeMotComplet_retourneTrue() {
+    // ratio de containment 15/24 = 0.625 < 0.65, mais préfixe de mot complet valide
+    assertTrue(
+        CorrespondanceArtiste.estDoublonArtiste("earl sweatshirt", "earl sweatshirt and mike"));
+  }
+
+  @Test
+  void estDoublonArtiste_suffixeTourneeApresPrefixe_retourneTrue() {
+    assertTrue(CorrespondanceArtiste.estDoublonArtiste("jay z", "jay z 30"));
+  }
+
+  @Test
+  void estDoublonArtiste_prefixeCoupeEnPleinMotSansEspace_retourneFalse() {
+    // "earl sweat" continue en "sweatshirt" (pas d'espace) et le ratio 10/24 = 0.417 < 0.65
+    assertFalse(CorrespondanceArtiste.estDoublonArtiste("earl sweat", "earl sweatshirt and mike"));
+  }
+
+  @Test
+  void estDoublonArtiste_prefixeUnSeulMot_retourneFalse() {
+    assertFalse(CorrespondanceArtiste.estDoublonArtiste("mike", "mike tyson"));
+  }
+
+  @Test
   void estDoublonArtiste_premierParametreNull_leveNullPointerException() {
     assertThrows(
         NullPointerException.class, () -> CorrespondanceArtiste.estDoublonArtiste(null, "x"));

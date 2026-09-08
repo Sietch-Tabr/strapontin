@@ -29,7 +29,9 @@ public final class CorrespondanceArtiste {
   ///
   /// Jaro ≥ 0.95 (meilleur que Levenshtein pour les noms propres courts) complété par un
   /// containment avec ratio court/long ≥ 0.65 pour les troncatures TM ("aliz"/"alizee",
-  /// "fawn"/"fawnn") et les variations longues ("star academy"/"star academy 1").
+  /// "fawn"/"fawnn") et les variations longues ("star academy"/"star academy 1"), puis par un
+  /// préfixe de mot complet pour un ajout plus substantiel (co-tête d'affiche, suffixe de tournée)
+  /// qui fait chuter le ratio de containment sous le seuil.
   ///
   /// @param a premier nom normalisé
   /// @param b deuxième nom normalisé
@@ -39,7 +41,18 @@ public final class CorrespondanceArtiste {
     Objects.requireNonNull(b, "b");
     if (a.equals(b)) return true;
     if (Normalisation.jaro(a, b) >= SEUIL_JARO_ARTISTE) return true;
-    return UtilitairesChaine.estContainmentRatio(
-        a, b, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE);
+    if (UtilitairesChaine.estContainmentRatio(
+        a, b, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE)) {
+      return true;
+    }
+    return estPrefixeDeMotComplet(a, b);
+  }
+
+  // Le nom court doit comporter au moins deux mots ("jay z", pas "mike" seul, préfixe trivial
+  // d'un artiste sans rapport) et se couper sur un mot complet, sans exigence de ratio.
+  private static boolean estPrefixeDeMotComplet(String a, String b) {
+    String court = a.length() <= b.length() ? a : b;
+    String plusLong = a.length() <= b.length() ? b : a;
+    return court.contains(" ") && plusLong.startsWith(court + " ");
   }
 }
