@@ -1403,4 +1403,61 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         sourcesRestantes,
         "la ligne Digitick doit être supprimée au profit de la ligne Ticketmaster (priorité)");
   }
+
+  // Une fiche package TM (URL /pack/) référence souvent une heure distincte de la fiche
+  // principale du même événement réel — supprimerDoublonsParSalleId doit les fusionner malgré cet
+  // écart, en conservant la fiche non-package comme référence.
+  @Test
+  void persisterConcerts_ficheNormaleEtPackageMemeEvenement_gardeLaFicheNormale() {
+    // supprimerDoublonsParSalleId exige artiste_id non nul des deux côtés — résolu par nom
+    // uniquement si l'artiste existe déjà (jamais créé automatiquement à la persistance).
+    jdbc.update(
+        "INSERT INTO artistes (id, nom, nom_norm) VALUES (gen_random_uuid(), 'Jay Z', 'jay z')",
+        Map.of());
+
+    List<ConcertBrut> liste =
+        List.of(
+            new ConcertBrut(
+                "Jay Z",
+                DATE_RECENTE,
+                "19:00",
+                "Stade De France",
+                "Saint-Denis",
+                "93",
+                "https://tm.example/jay-z-billet",
+                "ticketmaster",
+                "music",
+                "Pop",
+                "onsale",
+                null,
+                null,
+                "ticketmaster:venue-stade-de-france",
+                null),
+            new ConcertBrut(
+                "Jay Z",
+                DATE_RECENTE,
+                "20:00",
+                "Stade De France",
+                "Saint-Denis",
+                "93",
+                "https://tm.example/pack/jay-z-vip-billet",
+                "ticketmaster",
+                "music",
+                "Pop",
+                null,
+                null,
+                null,
+                "ticketmaster:venue-stade-de-france",
+                null));
+
+    persisterConcerts.persisterConcerts(liste);
+
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList("SELECT url FROM concerts WHERE artiste_norm = 'jay z'", Map.of());
+    assertEquals(1, lignes.size(), "les deux fiches doivent fusionner en une seule ligne");
+    assertEquals(
+        "https://tm.example/jay-z-billet",
+        lignes.get(0).get("url"),
+        "la fiche non-package doit l'emporter comme référence conservée");
+  }
 }

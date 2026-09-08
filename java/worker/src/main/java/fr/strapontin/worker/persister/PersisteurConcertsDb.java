@@ -384,13 +384,23 @@ public class PersisteurConcertsDb {
     }
   }
 
-  /// Priorité de source (plus petit = conservé) pour {@link #supprimerDoublonsParSalleId}.
+  /// Motif d'URL Ticketmaster signant un événement "package"/VIP (voir {@code MapeurEvenementTM}) —
+  /// jamais accessible à un achat de billetterie standard, ne doit jamais l'emporter sur une fiche
+  /// normale du même événement réel.
+  private static final String SQL_EST_PACKAGE = "(%s ~* '/pack/')";
+
+  /// Priorité de rapprochement (plus petit = conservé) pour {@link #supprimerDoublonsParSalleId} :
+  /// une fiche package perd toujours face à une fiche normale, la priorité de source ne
+  /// départageant qu'ensuite (TM &gt; Eventim &gt; Digitick).
   private static final String SQL_PRIORITE_SOURCE =
-      "CASE %s::text"
+      "(CASE WHEN "
+          + SQL_EST_PACKAGE.formatted("%1$s")
+          + " THEN 10 ELSE 0 END"
+          + " + CASE %2$s::text"
           + " WHEN 'ticketmaster' THEN 1"
           + " WHEN 'eventim' THEN 2"
           + " WHEN 'digitick' THEN 3"
-          + " ELSE 4 END";
+          + " ELSE 4 END)";
 
   /// Supprime les doublons cross-sources non fusionnés par {@link ReconciliateurSalles}.
   ///
@@ -399,6 +409,10 @@ public class PersisteurConcertsDb {
   /// TM/Eventim — via une priorité TM &gt; Eventim &gt; Digitick : la ligne de la source la moins
   /// prioritaire est supprimée, celle de la source la plus prioritaire est conservée comme
   /// référence.
+  ///
+  /// <p>L'écart d'heure entre deux lignes n'exclut le rapprochement que si aucune des deux n'est un
+  /// package (voir {@link #SQL_EST_PACKAGE}) — Ticketmaster liste parfois un package à une heure
+  /// distincte de la fiche principale du même événement réel.
   ///
   /// @return nombre de concerts supprimés
   int supprimerDoublonsParSalleId() {
@@ -410,15 +424,20 @@ public class PersisteurConcertsDb {
                 + "  JOIN concerts c2"
                 + "    ON c1.artiste_id = c2.artiste_id"
                 + "    AND c1.date = c2.date"
-                + "    AND c1.heure IS NOT DISTINCT FROM c2.heure"
+                + "    AND (c1.heure IS NOT DISTINCT FROM c2.heure"
+                + "         OR "
+                + SQL_EST_PACKAGE.formatted("c1.url")
+                + "         OR "
+                + SQL_EST_PACKAGE.formatted("c2.url")
+                + "        )"
                 + "    AND c1.salle_id = c2.salle_id"
                 + "    AND c1.id != c2.id"
                 + "  WHERE c1.artiste_id IS NOT NULL"
                 + "    AND c1.salle_id IS NOT NULL"
                 + "    AND "
-                + SQL_PRIORITE_SOURCE.formatted("c1.source")
+                + SQL_PRIORITE_SOURCE.formatted("c1.url", "c1.source")
                 + "    < "
-                + SQL_PRIORITE_SOURCE.formatted("c2.source")
+                + SQL_PRIORITE_SOURCE.formatted("c2.url", "c2.source")
                 + ")",
             Map.of());
     if (nbSupprimees > 0)
