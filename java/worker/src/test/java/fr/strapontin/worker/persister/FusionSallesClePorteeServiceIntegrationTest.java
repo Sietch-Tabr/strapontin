@@ -45,19 +45,27 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   }
 
   private UUID creerSalle(String nom, String dept, String wikidataId) {
+    return creerSalle(nom, dept, wikidataId, null, null);
+  }
+
+  private UUID creerSalle(
+      String nom, String dept, String wikidataId, Double latitude, Double longitude) {
     UUID id = UUID.randomUUID();
-    // wikidataId peut être null (Map.of rejette les valeurs nulles) — MapSqlParameterSource
-    // accepte les valeurs nulles sans lever d'exception.
+    // wikidataId/latitude/longitude peuvent être null (Map.of rejette les valeurs nulles) —
+    // MapSqlParameterSource accepte les valeurs nulles sans lever d'exception.
     jdbc.update(
-        "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept, wikidata_id)"
-            + " VALUES (CAST(:id AS uuid), :cle, :nom, :nomNorm, :dept, :wikidataId)",
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept, wikidata_id, latitude, longitude)"
+            + " VALUES (CAST(:id AS uuid), :cle, :nom, :nomNorm, :dept, :wikidataId, :latitude,"
+            + " :longitude)",
         new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
             .addValue("id", id.toString())
             .addValue("cle", nom.toLowerCase())
             .addValue("nom", nom)
             .addValue("nomNorm", nom.toLowerCase())
             .addValue("dept", dept)
-            .addValue("wikidataId", wikidataId));
+            .addValue("wikidataId", wikidataId)
+            .addValue("latitude", latitude)
+            .addValue("longitude", longitude));
     return id;
   }
 
@@ -145,5 +153,37 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
     assertEquals(0, fusions, "des noms sans rapport ne doivent pas fusionner malgré la clé forte");
     Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(2L, nbSalles);
+  }
+
+  // Garde-fou GPS (#1177/#1180) : un nom similaire et une clé forte partagée ne doivent jamais
+  // suffire si les coordonnées connues placent les deux salles à plusieurs centaines de mètres
+  // l'une de l'autre (complexe multi-salles, ou deux bâtiments distincts par coïncidence).
+  @Test
+  void fusionner_coordonneesEloigneesNomsSimilaires_neFusionnePas() {
+    UUID salleParis = creerSalle("La Seine Musicale", "92", null, 48.8296, 2.2404);
+    UUID salleMarseille = creerSalle("La Seine Musicale Marseille", "13", null, 43.2965, 5.3698);
+    creerConcert("collision upstream", "21:00", "92", salleParis);
+    creerConcert("collision upstream", "21:00", "13", salleMarseille);
+
+    int fusions = fusionSallesClePortee.fusionner();
+
+    assertEquals(
+        0,
+        fusions,
+        "des coordonnées distantes doivent bloquer la fusion malgré la clé forte et le nom");
+    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    assertEquals(2L, nbSalles);
+  }
+
+  @Test
+  void fusionner_coordonneesProchesNomsSimilaires_fusionne() {
+    UUID salleA = creerSalle("Grand Theatre Limoges", "87", null, 45.8336, 1.2611);
+    UUID salleB = creerSalle("Opera de Limoges", "87", "Q3354551", 45.8337, 1.2612);
+    creerConcert("laurent voulzy", "20:30", "87", salleA);
+    creerConcert("laurent voulzy", "20:30", "87", salleB);
+
+    int fusions = fusionSallesClePortee.fusionner();
+
+    assertEquals(1, fusions, "des coordonnées proches ne doivent pas bloquer une fusion légitime");
   }
 }
