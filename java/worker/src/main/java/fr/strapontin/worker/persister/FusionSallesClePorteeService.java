@@ -135,6 +135,21 @@ public class FusionSallesClePorteeService {
     return distanceHaversineMetres(latA, lonA, latB, lonB) > DISTANCE_MAX_FUSION_METRES;
   }
 
+  /// Vérifie que deux salles ont chacune des coordonnées connues et suffisamment proches pour
+  /// justifier une fusion automatique sans aucun autre signal positif — contrairement à {@link
+  /// #distanceExcessive}, qui reste permissif quand une coordonnée manque (nom+dept déjà validés
+  /// par ailleurs), une collision {@code wikidata_id} seule n'a aucun autre garde-fou géographique
+  /// : l'absence de preuve positive doit alors empêcher la fusion plutôt que l'autoriser par
+  /// défaut.
+  ///
+  /// @return {@code true} si les deux salles ont des coordonnées connues et sont à moins de {@value
+  ///   #DISTANCE_MAX_FUSION_METRES} m l'une de l'autre
+  public static boolean coordonneesConnuesEtProches(
+      Double latA, Double lonA, Double latB, Double lonB) {
+    if (latA == null || lonA == null || latB == null || lonB == null) return false;
+    return distanceHaversineMetres(latA, lonA, latB, lonB) <= DISTANCE_MAX_FUSION_METRES;
+  }
+
   private static final double RAYON_TERRE_METRES = 6_371_000;
 
   private static double distanceHaversineMetres(
@@ -184,8 +199,15 @@ public class FusionSallesClePorteeService {
     return a.compareTo(b) <= 0 ? new UUID[] {a, b} : new UUID[] {b, a};
   }
 
+  /// Fusionne deux salles déjà établies : réassigne concerts/abonnements/sources externes/
+  /// sous-salles de la source vers la cible, récupère les métadonnées manquantes, puis supprime la
+  /// source. Rendu public pour être réutilisé par {@code EnrichissementSallesService} (collision
+  /// {@code wikidata_id}, #1189) — appelant distinct du cycle nocturne de cette classe.
+  ///
+  /// @param cibleId salle à conserver
+  /// @param sourceId salle à absorber puis supprimer
   @Transactional
-  void fusionnerUnePaire(UUID cibleId, UUID sourceId) {
+  public void fusionnerUnePaire(UUID cibleId, UUID sourceId) {
     Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
 
     // 1. Dédoublonner les concerts en conflit (même artiste/date/heure déjà présent côté cible)
