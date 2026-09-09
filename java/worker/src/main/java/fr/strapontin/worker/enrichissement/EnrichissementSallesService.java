@@ -179,10 +179,17 @@ public class EnrichissementSallesService {
     return nbEnrichis;
   }
 
+  // Repli sur le département d'un concert déjà rattaché quand salles.dept est vide — même pattern
+  // que ResolveurSalleParConcert (module worker.persister), sans quoi une salle sans ville ni dept
+  // renseignés n'a aucun signal de localisation pour écarter un homonyme Wikidata d'une autre
+  // ville (#1188).
   private List<SalleAEnrichir> selectionnerCandidats() {
     return jdbc.query(
         """
-        SELECT s.id, s.nom, s.nom_norm, s.ville, s.dept
+        SELECT s.id, s.nom, s.nom_norm, s.ville,
+               COALESCE(s.dept, (SELECT c2.dept FROM concerts c2
+                                 WHERE c2.salle_id = s.id AND c2.dept IS NOT NULL
+                                 LIMIT 1)) AS dept_effectif
         FROM salles s
         LEFT JOIN concerts c ON c.salle_id = s.id AND c.date >= CURRENT_DATE
         WHERE s.wikidata_id IS NULL AND s.jour_batch = EXTRACT(ISODOW FROM CURRENT_DATE)
@@ -196,7 +203,7 @@ public class EnrichissementSallesService {
                 rs.getString("nom"),
                 rs.getString("nom_norm"),
                 rs.getString("ville"),
-                rs.getString("dept"),
+                rs.getString("dept_effectif"),
                 null));
   }
 

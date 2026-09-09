@@ -87,4 +87,27 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
 
     verify(overpassSalleSource, org.mockito.Mockito.never()).enrichirLot(any());
   }
+
+  // #1188 : salles.dept n'est jamais mis à jour après création — une salle candidate sans dept
+  // connu doit hériter du département d'un concert déjà rattaché, seul signal de localisation
+  // disponible pour écarter un homonyme Wikidata d'une autre ville.
+  @Test
+  @SuppressWarnings("unchecked")
+  void enrichir_salleSansDeptAvecConcertRattache_heriteDuDeptDuConcert() {
+    UUID salleId = insererSalle("Salle Sans Dept", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    jdbc.update(
+        "INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, dept, source,"
+            + " salle_id)"
+            + " VALUES ('Artiste', 'artiste', CURRENT_DATE + 30, 'Salle Sans Dept',"
+            + " 'salle sans dept', '87', CAST('ticketmaster' AS source_concert), CAST(:salleId AS"
+            + " uuid))",
+        Map.of("salleId", salleId.toString()));
+
+    service.enrichir();
+
+    ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
+    verify(overpassSalleSource).enrichirLot(captor.capture());
+    SalleAEnrichir candidat = captor.getValue().getFirst();
+    assertEquals("87", candidat.dept());
+  }
 }
