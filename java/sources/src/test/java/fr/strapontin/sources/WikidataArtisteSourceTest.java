@@ -11,6 +11,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -261,10 +262,14 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    WikidataArtisteSource source = source(restClient);
+    Map<UUID, EnrichissementArtiste> resultat = source.enrichirLot(List.of(artiste));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
+    // #1194 : l'ambiguïté doit être distinguable d'une non-découverte ordinaire.
+    assertEquals(Set.of(id), source.preleverAmbiguites());
+    assertEquals(Set.of(), source.preleverAmbiguites(), "prélevé — ne doit pas resignaler");
   }
 
   @Test

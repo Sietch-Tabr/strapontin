@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -319,6 +320,34 @@ class EnrichissementArtistesServiceTest {
 
     verify(signalement)
         .signaler(eq("reattribution_tm_artiste"), eq("artiste"), eq(artisteId), anyString(), any());
+  }
+
+  // #1194 : une ambiguïté prélevée sur une source implémentant SourceAvecAmbiguitesDecouverte
+  // doit être signalée, distinguable d'une non-découverte ordinaire.
+  @Test
+  void enrichir_sourceAvecAmbiguitesPrelevees_signaleChacune() {
+    UUID artisteId = UUID.randomUUID();
+    ArtisteAEnrichir candidat =
+        new ArtisteAEnrichir(artisteId, "Van Halen", "van halen", null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
+
+    var wikidata =
+        mock(
+            SourceEnrichissementArtiste.class,
+            org.mockito.Mockito.withSettings()
+                .extraInterfaces(fr.strapontin.sources.SourceAvecAmbiguitesDecouverte.class));
+    when(wikidata.enrichirLot(any())).thenReturn(Map.of());
+    when(((fr.strapontin.sources.SourceAvecAmbiguitesDecouverte) wikidata).preleverAmbiguites())
+        .thenReturn(Set.of(artisteId));
+    SignalementMatchingService signalement = mock(SignalementMatchingService.class);
+
+    EnrichissementArtistesService service =
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorkerMock(), signalement);
+    service.enrichir();
+
+    verify(signalement)
+        .signaler(eq("wikidata_ambiguite"), eq("artiste"), eq(artisteId), anyString(), any());
   }
 
   // bilan de panne absent jusqu'ici sur les sources d'enrichissement artiste.

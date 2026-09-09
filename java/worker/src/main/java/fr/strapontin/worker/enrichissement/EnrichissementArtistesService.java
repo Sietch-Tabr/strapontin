@@ -7,6 +7,7 @@ package fr.strapontin.worker.enrichissement;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.ArtisteAEnrichir;
 import fr.strapontin.sources.EnrichissementArtiste;
+import fr.strapontin.sources.SourceAvecAmbiguitesDecouverte;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementArtiste;
 import fr.strapontin.worker.LogsAdminWorker;
@@ -109,6 +110,19 @@ public class EnrichissementArtistesService {
               entree ->
                   logsAdminWorker.inserer(
                       entree.niveau(), "worker", entree.message(), entree.meta()));
+    }
+    remonterAmbiguites();
+  }
+
+  /// Signale (#1194) chaque ambiguïté de découverte prélevée depuis le dernier cycle — distinct
+  /// d'une non-découverte ordinaire, pour permettre un traitement différencié.
+  private void remonterAmbiguites() {
+    for (SourceEnrichissementArtiste source : sources) {
+      if (!(source instanceof SourceAvecAmbiguitesDecouverte avecAmbiguites)) continue;
+      for (UUID artisteId : avecAmbiguites.preleverAmbiguites()) {
+        signalementMatchingService.signaler(
+            "wikidata_ambiguite", "artiste", artisteId, "basse", null);
+      }
     }
   }
 

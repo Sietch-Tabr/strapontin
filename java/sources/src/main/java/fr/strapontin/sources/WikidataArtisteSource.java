@@ -7,6 +7,7 @@ package fr.strapontin.sources;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,9 +38,21 @@ import org.springframework.web.client.RestClient;
 ///
 /// @since 2.6.0
 /// @author Kwaite
-public class WikidataArtisteSource implements SourceEnrichissementArtiste, SourceAvecBilanFetch {
+public class WikidataArtisteSource
+    implements SourceEnrichissementArtiste, SourceAvecBilanFetch, SourceAvecAmbiguitesDecouverte {
 
   private static final Logger log = LoggerFactory.getLogger(WikidataArtisteSource.class);
+
+  // Rempli par decouvrir() sur ambiguïté humain/groupe, vidé par preleverAmbiguites() — même
+  // patron "prélever" que preleverBilan (BilanFetch), pas de dépendance JDBC dans ce module.
+  private final Set<UUID> ambiguites = new HashSet<>();
+
+  @Override
+  public Set<UUID> preleverAmbiguites() {
+    Set<UUID> resultat = new HashSet<>(ambiguites);
+    ambiguites.clear();
+    return resultat;
+  }
 
   /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement.
   ///
@@ -171,6 +184,7 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
           "Wikidata découverte — candidats ambigus (types {}) nom={} — non rapproché",
           typesDistincts,
           artiste.nom());
+      ambiguites.add(artiste.id());
       return Optional.empty();
     }
 
