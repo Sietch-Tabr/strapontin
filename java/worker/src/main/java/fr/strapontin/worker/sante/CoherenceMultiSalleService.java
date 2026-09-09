@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,11 +118,11 @@ public class CoherenceMultiSalleService {
         params);
   }
 
-  /// Balayage pairwise de toutes les salles par containment de {@code nom_norm} (l'un contient
-  /// l'autre en sous-chaîne, comme {@code doublons_salle_suffixe.sql}) et département compatible,
-  /// sans exiger de {@code wikidata_id} ni de concert partagé — {@link
-  /// CorrespondanceSalle#estDoublonSalle} est trop strict pour ce cas précis (ratio de containment
-  /// borné), une source abrégeant fortement un nom déjà long ne le satisfait pas.
+  /// Balayage pairwise de toutes les salles par containment de tokens de {@code nom_norm} et
+  /// département compatible, sans exiger de {@code wikidata_id} ni de concert partagé — {@link
+  /// CorrespondanceSalle#estDoublonSalle} est trop strict pour ce cas précis (son propre critère de
+  /// containment exige un ratio de longueur minimal de 0.5), une source abrégeant fortement un nom
+  /// déjà long ne le satisfait pas.
   ///
   /// @return nombre de paires nouvellement signalées
   public int detecterDoublons() {
@@ -165,10 +166,17 @@ public class CoherenceMultiSalleService {
   // Longueur minimale pour éviter un containment trivial sur un nom déjà très court.
   private static final int LONGUEUR_MIN_CONTAINMENT_DOUBLON = 4;
 
+  // Containment par token complet plutôt que sous-chaîne brute (#1203) : un containment de
+  // caractères validait à tort un article court ("les") trivialement présent dans un token du nom
+  // long ("lessaion") sans aucun rapport sémantique réel — même classe de faux positif que
+  // CorrespondanceSalle#estContainmentTokensPartiel.
   private static boolean nomContenuDansLAutre(String nomNormA, String nomNormB) {
     String court = nomNormA.length() <= nomNormB.length() ? nomNormA : nomNormB;
     String plusLong = nomNormA.length() <= nomNormB.length() ? nomNormB : nomNormA;
-    return court.length() >= LONGUEUR_MIN_CONTAINMENT_DOUBLON && plusLong.contains(court);
+    if (court.length() < LONGUEUR_MIN_CONTAINMENT_DOUBLON) return false;
+    Set<String> tokensCourt = CorrespondanceSalle.tokensSignificatifs(court);
+    Set<String> tokensLong = CorrespondanceSalle.tokensSignificatifs(plusLong);
+    return !tokensCourt.isEmpty() && tokensLong.containsAll(tokensCourt);
   }
 
   private void memoriserDoublonSignale(UUID idA, UUID idB) {

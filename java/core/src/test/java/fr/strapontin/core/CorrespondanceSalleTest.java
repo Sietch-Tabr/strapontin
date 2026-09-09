@@ -165,6 +165,16 @@ class CorrespondanceSalleTest {
     assertFalse(CorrespondanceSalle.estDoublonSalle("accor arena", "zenith bordeaux"));
   }
 
+  // Régression #1204 : "lessaion" (Eventim, apostrophe omise dans "L'Essaion") contient
+  // trivialement l'article "les" — sans garde de longueur côté nom long, ce token de 3 caractères
+  // validait un containment entre deux salles parisiennes réelles et distinctes.
+  @Test
+  void estDoublonSalle_articleCourtIssuDUnNomMalDesapostrophe_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "les trois baudets paris 18", "theatre de lessaion paris 04"));
+  }
+
   // --- Containment partiel : garde-fou sur le nombre de tokens spécifiques (pas bruts) ---
 
   // "Casino de Paris" ne conserve qu'un seul token spécifique ("paris") une fois "casino" retiré
