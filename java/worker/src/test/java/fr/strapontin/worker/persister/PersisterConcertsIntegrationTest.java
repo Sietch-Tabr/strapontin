@@ -12,9 +12,11 @@ import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -33,6 +35,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @MockitoBean TicketmasterSource ticketmasterSource;
 
   @Autowired private PersisterConcerts persisterConcerts;
+
+  @Autowired private PersisteurConcertsDb persisteurConcertsDb;
 
   @Autowired private NamedParameterJdbcTemplate jdbc;
 
@@ -1220,7 +1224,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     java.util.UUID artisteId = java.util.UUID.randomUUID();
     jdbc.update(
         "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
-        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+        new MapSqlParameterSource()
             .addValue("id", artisteId.toString())
             .addValue("nom", "Mika")
             .addValue("nomNorm", "mika"));
@@ -1280,7 +1284,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     jdbc.update(
         "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept)"
             + " VALUES (CAST(:id AS uuid), :salleCle, :nom, :nomNorm, '75')",
-        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+        new MapSqlParameterSource()
             .addValue("id", salleId.toString())
             .addValue("salleCle", salleCle)
             .addValue("nom", "Zénith Paris La Villette")
@@ -1348,14 +1352,14 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     java.util.UUID salleId = java.util.UUID.randomUUID();
     jdbc.update(
         "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
-        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+        new MapSqlParameterSource()
             .addValue("id", artisteId.toString())
             .addValue("nom", "Coldplay")
             .addValue("nomNorm", "coldplay"));
     jdbc.update(
         "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept)"
             + " VALUES (CAST(:id AS uuid), :salleCle, :nom, :nomNorm, '75')",
-        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+        new MapSqlParameterSource()
             .addValue("id", salleId.toString())
             .addValue("salleCle", "salle-test-" + salleId)
             .addValue("nom", "Accor Arena")
@@ -1371,7 +1375,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         """;
     jdbc.update(
         sqlInsertConcert,
-        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+        new MapSqlParameterSource()
             .addValue("artiste", "Coldplay")
             .addValue("artisteNorm", "coldplay")
             .addValue("salle", "Accor Arena")
@@ -1380,7 +1384,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             .addValue("salleId", salleId.toString()));
     jdbc.update(
         sqlInsertConcert,
-        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+        new MapSqlParameterSource()
             .addValue("artiste", "Cold Play")
             .addValue("artisteNorm", "cold play")
             .addValue("salle", "Accor Arena Digitick")
@@ -1564,6 +1568,60 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         1,
         lignes.size(),
         "le second cycle doit fusionner avec la ligne déjà persistée au premier cycle");
+  }
+
+  // Régression prod (déploiement 2.8.8, fetch:salles:all) : supprimerDoublonsSansArtisteId
+  // passait ses UUID stringifiés dans un IN(:ids), rejeté par Postgres (« uuid = character
+  // varying », aucun opérateur, aucune conversion implicite) dès qu'au moins une ligne doublon
+  // existait réellement — jamais exercé par les tests ci-dessus, la réconciliation
+  // pré-persistance (ReconciliateurArtistes) y absorbe systématiquement le doublon avant qu'il
+  // n'atteigne la base. Seed direct en base (contourne volontairement persisterConcerts) pour
+  // reproduire l'état réel post-fusion de salles où deux lignes distinctes coexistent.
+  @Test
+  void supprimerDoublonsSansArtisteId_deuxLignesReellesEnBase_supprimeLaMoinsPrioritaire() {
+    UUID salleId =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm, dept) VALUES"
+                + " ('salle-test-doublon-sans-artiste', 'Salle Test', 'salle test', '75')"
+                + " RETURNING id",
+            new MapSqlParameterSource(),
+            UUID.class);
+
+    jdbc.update(
+        "INSERT INTO concerts (artiste, artiste_norm, date, heure, salle, salle_norm, url,"
+            + " source, salle_id)"
+            + " VALUES (:artisteTm, :normTm, CAST(:date AS date), '20:00', 'Salle Test',"
+            + " 'salle test', :urlTm, CAST('ticketmaster' AS source_concert), :salleId)",
+        new MapSqlParameterSource()
+            .addValue("artisteTm", "Earl Sweatshirt")
+            .addValue("normTm", "earl sweatshirt")
+            .addValue("date", DATE_RECENTE)
+            .addValue("urlTm", "https://tm.example/earl-sweatshirt-seed")
+            .addValue("salleId", salleId));
+    jdbc.update(
+        "INSERT INTO concerts (artiste, artiste_norm, date, heure, salle, salle_norm, url,"
+            + " source, salle_id)"
+            + " VALUES (:artisteEventim, :normEventim, CAST(:date AS date), '20:00', 'Salle"
+            + " Test', 'salle test', :urlEventim, CAST('eventim' AS source_concert), :salleId)",
+        new MapSqlParameterSource()
+            .addValue("artisteEventim", "Earl Sweatshirt & Mike")
+            .addValue("normEventim", "earl sweatshirt and mike")
+            .addValue("date", DATE_RECENTE)
+            .addValue("urlEventim", "https://www.eventim.fr/earl-sweatshirt-mike-seed")
+            .addValue("salleId", salleId));
+
+    int nbSupprimees = persisteurConcertsDb.supprimerDoublonsSansArtisteId();
+
+    assertEquals(1, nbSupprimees, "une seule ligne doit être supprimée");
+    List<Map<String, Object>> restantes =
+        jdbc.queryForList(
+            "SELECT source, url FROM concerts WHERE salle_id = :salleId",
+            Map.of("salleId", salleId));
+    assertEquals(1, restantes.size(), "une seule ligne doit rester en base");
+    assertEquals(
+        "ticketmaster",
+        restantes.get(0).get("source").toString(),
+        "la fiche Ticketmaster doit l'emporter sur Eventim");
   }
 
   // Un complexe multi-salles (La Seine Musicale, #1180) ne doit jamais mélanger deux halls

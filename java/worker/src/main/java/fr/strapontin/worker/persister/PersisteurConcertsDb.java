@@ -495,10 +495,13 @@ public class PersisteurConcertsDb {
     }
 
     if (aSupprimer.isEmpty()) return 0;
+    // Liste d'UUID directement, jamais stringifiée : « uuid = character varying » n'a pas
+    // d'opérateur Postgres, contrairement à la comparaison uuid = uuid déjà utilisée ailleurs
+    // (RecalculerMatchesService, CoherenceWikidataSalleService) pour un IN(:ids) sur une colonne
+    // uuid.
     int nbSupprimees =
         jdbc.update(
-            "DELETE FROM concerts WHERE id IN (:ids)",
-            Map.of("ids", aSupprimer.stream().map(UUID::toString).toList()));
+            "DELETE FROM concerts WHERE id IN (:ids)", Map.of("ids", List.copyOf(aSupprimer)));
     log.info("doublons sans artiste_id supprimés count={}", nbSupprimees);
     return nbSupprimees;
   }
