@@ -58,7 +58,9 @@ public abstract class AbstractWorkerIntegrationTest {
     jdbcNettoyage
         .getJdbcTemplate()
         .execute(
-            "TRUNCATE TABLE users, artistes, salles, concerts, fetch_jobs,"
+            // concerts est une vue depuis #1192 (evenements+observations) — TRUNCATE porte sur
+            // evenements, qui cascade vers observations et user_matches (ON DELETE CASCADE).
+            "TRUNCATE TABLE users, artistes, salles, evenements, fetch_jobs,"
                 + " fetch_jobs_historique, logs_admin, signalements_matching"
                 + " RESTART IDENTITY CASCADE");
   }
