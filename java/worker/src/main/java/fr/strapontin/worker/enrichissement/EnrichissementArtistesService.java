@@ -10,6 +10,7 @@ import fr.strapontin.sources.EnrichissementArtiste;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementArtiste;
 import fr.strapontin.worker.LogsAdminWorker;
+import fr.strapontin.worker.sante.SignalementMatchingService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,14 +54,17 @@ public class EnrichissementArtistesService {
   private final NamedParameterJdbcTemplate jdbc;
   private final List<SourceEnrichissementArtiste> sources;
   private final LogsAdminWorker logsAdminWorker;
+  private final SignalementMatchingService signalementMatchingService;
 
   public EnrichissementArtistesService(
       NamedParameterJdbcTemplate jdbc,
       List<SourceEnrichissementArtiste> sources,
-      LogsAdminWorker logsAdminWorker) {
+      LogsAdminWorker logsAdminWorker,
+      SignalementMatchingService signalementMatchingService) {
     this.jdbc = jdbc;
     this.sources = sources;
     this.logsAdminWorker = logsAdminWorker;
+    this.signalementMatchingService = signalementMatchingService;
   }
 
   /// Enrichit les artistes sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
@@ -198,8 +202,11 @@ public class EnrichissementArtistesService {
   /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
   ///   découvert est déjà porté par un autre artiste (contrainte {@code idx_artistes_wikidata_id})
   ///   — signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le conflit
-  ///   est loggé plutôt que de faire échouer tout le cycle de réconciliation, et la
-  ///   cross-validation P6262 associée est également sautée (basée sur le même enrichissement).
+  ///   est loggé et signalé ({@link SignalementMatchingService}) plutôt que de faire échouer tout
+  ///   le cycle de réconciliation, et la cross-validation P6262 associée est également sautée
+  ///   (basée sur le même enrichissement). Jamais de fusion automatique (#1190) — contrairement aux
+  ///   salles, aucun signal géographique de cross-validation n'existe pour départager un homonyme
+  ///   réel d'un doublon.
   private boolean mettreAJourArtiste(UUID artisteId, String nom, EnrichissementArtiste e) {
     Map<String, Object> params = new HashMap<>();
     params.put("wikidataId", e.wikidataId());
@@ -226,6 +233,12 @@ public class EnrichissementArtistesService {
               + " wikidataId="
               + e.wikidataId(),
           Map.of("artisteId", artisteId.toString(), "wikidataId", e.wikidataId()));
+      signalementMatchingService.signaler(
+          "collision_wikidata_artiste",
+          "artiste",
+          artisteId,
+          "basse",
+          Map.of("wikidataId", e.wikidataId()));
       return false;
     }
   }
@@ -237,14 +250,27 @@ public class EnrichissementArtistesService {
     if (tmIdWikidata == null) return;
 
     if (attractionIdExistant == null) {
-      jdbc.update(
-          """
-          INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)
-          VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :tmId)
-          ON CONFLICT DO NOTHING
-          """,
-          Map.of("artisteId", artiste.id().toString(), "tmId", tmIdWikidata));
-      log.info("P6262 — lien TM inséré artiste={} attractionId={}", artiste.nom(), tmIdWikidata);
+      int lignesInserees =
+          jdbc.update(
+              """
+              INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)
+              VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :tmId)
+              ON CONFLICT DO NOTHING
+              """,
+              Map.of("artisteId", artiste.id().toString(), "tmId", tmIdWikidata));
+      if (lignesInserees > 0) {
+        log.info("P6262 — lien TM inséré artiste={} attractionId={}", artiste.nom(), tmIdWikidata);
+      } else {
+        // #1191 : conflit réel sur la PK (source, identifiant_externe) — cet identifiant TM est
+        // déjà attribué à un autre artiste, contrairement à la collision wikidata_id, ce cas
+        // n'avait jusqu'ici aucune trace (ni log, ni signalement).
+        signalementMatchingService.signaler(
+            "reattribution_tm_artiste",
+            "artiste",
+            artiste.id(),
+            "basse",
+            Map.of("attractionIdTicketmaster", tmIdWikidata));
+      }
     } else if (!attractionIdExistant.equals(tmIdWikidata)) {
       logsAdminWorker.inserer(
           "warn",

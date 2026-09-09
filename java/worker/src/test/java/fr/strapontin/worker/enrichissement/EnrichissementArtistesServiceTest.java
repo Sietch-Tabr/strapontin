@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -19,6 +20,7 @@ import fr.strapontin.sources.ArtisteAEnrichir;
 import fr.strapontin.sources.EnrichissementArtiste;
 import fr.strapontin.sources.SourceEnrichissementArtiste;
 import fr.strapontin.worker.LogsAdminWorker;
+import fr.strapontin.worker.sante.SignalementMatchingService;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,6 +44,9 @@ class EnrichissementArtistesServiceTest {
       List<ArtisteAEnrichir> candidats, Map<UUID, String> attractionIdsExistants) {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(candidats);
+    // Par défaut une ligne affectée (succès) — sans quoi le défaut Mockito (0) ferait passer
+    // systématiquement l'INSERT artiste_sources pour un conflit réel (#1191).
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     List<Map<String, Object>> lignes =
         attractionIdsExistants.entrySet().stream()
             .map(
@@ -66,7 +71,8 @@ class EnrichissementArtistesServiceTest {
     SourceEnrichissementArtiste source = mock(SourceEnrichissementArtiste.class);
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(source), logsAdminWorkerMock());
+        new EnrichissementArtistesService(
+            jdbc, List.of(source), logsAdminWorkerMock(), mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(0, nb);
@@ -92,7 +98,11 @@ class EnrichissementArtistesServiceTest {
             Map.of(artisteId, new EnrichissementArtiste("Q167023", "Daft Punk", "27", null)));
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(wikidata, deezer), logsAdminWorkerMock());
+        new EnrichissementArtistesService(
+            jdbc,
+            List.of(wikidata, deezer),
+            logsAdminWorkerMock(),
+            mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(1, nb);
@@ -118,7 +128,8 @@ class EnrichissementArtistesServiceTest {
             Map.of(artisteId, new EnrichissementArtiste("Q3161164", "Jain", null, "K8vZ917oGV7")));
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(wikidata), logsAdminWorkerMock());
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorkerMock(), mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(jdbc)
@@ -142,7 +153,8 @@ class EnrichissementArtistesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(wikidata), logsAdminWorker);
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorker, mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(jdbc, never())
@@ -164,7 +176,8 @@ class EnrichissementArtistesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(wikidata), logsAdminWorker);
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorker, mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(jdbc, never())
@@ -202,7 +215,8 @@ class EnrichissementArtistesServiceTest {
             });
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(source), logsAdminWorkerMock());
+        new EnrichissementArtistesService(
+            jdbc, List.of(source), logsAdminWorkerMock(), mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(30, nb);
@@ -236,7 +250,8 @@ class EnrichissementArtistesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(wikidata), logsAdminWorker);
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorker, mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(0, nb);
@@ -248,6 +263,62 @@ class EnrichissementArtistesServiceTest {
             org.mockito.ArgumentMatchers.eq("enrichissement-wikidata"),
             anyString(),
             anyMap());
+  }
+
+  // #1190 : jamais de fusion automatique côté artiste (aucun signal géographique de
+  // cross-validation) — la collision doit au moins être signalée pour revue manuelle.
+  @Test
+  void enrichir_wikidataIdDejaAttribueAUnAutreArtiste_signaleLaCollision() {
+    UUID artisteEnConflit = UUID.randomUUID();
+    ArtisteAEnrichir candidat = new ArtisteAEnrichir(artisteEnConflit, "Jain", "jain", null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
+    when(jdbc.update(org.mockito.ArgumentMatchers.contains("UPDATE artistes"), anyMap()))
+        .thenThrow(new DuplicateKeyException("idx_artistes_wikidata_id"));
+
+    SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
+    when(wikidata.enrichirLot(any()))
+        .thenReturn(Map.of(artisteEnConflit, new EnrichissementArtiste("Q1", "Jain", null, null)));
+    SignalementMatchingService signalement = mock(SignalementMatchingService.class);
+
+    EnrichissementArtistesService service =
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorkerMock(), signalement);
+    service.enrichir();
+
+    verify(signalement)
+        .signaler(
+            eq("collision_wikidata_artiste"),
+            eq("artiste"),
+            eq(artisteEnConflit),
+            anyString(),
+            any());
+  }
+
+  // #1191 : cet identifiant Ticketmaster est déjà attribué à un autre artiste — l'INSERT ON
+  // CONFLICT DO NOTHING échoue silencieusement (0 ligne affectée), contrairement à la collision
+  // wikidata_id ce cas n'avait jusqu'ici aucune trace.
+  @Test
+  void enrichir_p6262IdentifiantTmDejaAttribueAUnAutreArtiste_signaleLaReattribution() {
+    UUID artisteId = UUID.randomUUID();
+    ArtisteAEnrichir candidat = new ArtisteAEnrichir(artisteId, "Jain", "jain", null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
+    when(jdbc.update(
+            org.mockito.ArgumentMatchers.contains("INSERT INTO artiste_sources"), anyMap()))
+        .thenReturn(0);
+
+    SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
+    when(wikidata.enrichirLot(any()))
+        .thenReturn(
+            Map.of(artisteId, new EnrichissementArtiste("Q3161164", "Jain", null, "K8vZ917oGV7")));
+    SignalementMatchingService signalement = mock(SignalementMatchingService.class);
+
+    EnrichissementArtistesService service =
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorkerMock(), signalement);
+    service.enrichir();
+
+    verify(signalement)
+        .signaler(eq("reattribution_tm_artiste"), eq("artiste"), eq(artisteId), anyString(), any());
   }
 
   // bilan de panne absent jusqu'ici sur les sources d'enrichissement artiste.
@@ -270,7 +341,8 @@ class EnrichissementArtistesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(source), logsAdminWorker);
+        new EnrichissementArtistesService(
+            jdbc, List.of(source), logsAdminWorker, mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(logsAdminWorker)
@@ -300,7 +372,8 @@ class EnrichissementArtistesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(source), logsAdminWorker);
+        new EnrichissementArtistesService(
+            jdbc, List.of(source), logsAdminWorker, mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
