@@ -214,4 +214,34 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
         parentIdApres,
         "la sous-salle doit suivre vers la salle cible conservée après fusion");
   }
+
+  // #1201 : réassigner en bloc tous les enfants de la source vers la cible peut créer un cycle
+  // à deux salles quand la cible est déjà une descendante (via un intermédiaire) de la source —
+  // cible -> intermediaire -> source deviendrait intermediaire -> cible -> intermediaire.
+  @Test
+  void fusionner_cibleDescendanteDeLaSourceViaIntermediaire_detacheSansCreerDeCycle() {
+    UUID source = creerSalle("Grand Theatre Limoges", "87", null);
+    UUID intermediaire = creerSalle("Grand Theatre Limoges - Aile Est", "87", null);
+    UUID cible = creerSalle("Grand Theatre Limoges - Aile Est - Loge", "87", null);
+    jdbc.update(
+        "UPDATE salles SET salle_parent_id = CAST(:parentId AS uuid) WHERE id = CAST(:id AS uuid)",
+        Map.of("parentId", source.toString(), "id", intermediaire.toString()));
+    jdbc.update(
+        "UPDATE salles SET salle_parent_id = CAST(:parentId AS uuid) WHERE id = CAST(:id AS uuid)",
+        Map.of("parentId", intermediaire.toString(), "id", cible.toString()));
+
+    fusionSallesClePortee.fusionnerUnePaire(cible, source);
+
+    String parentIntermediaire =
+        jdbc.queryForObject(
+            "SELECT salle_parent_id::text FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", intermediaire.toString()),
+            String.class);
+    assertNull(parentIntermediaire, "l'intermédiaire doit être détaché plutôt que créer un cycle");
+    Long nbLogsCycle =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM logs_admin WHERE message LIKE '%cycle salle_parent_id évité%'",
+            Map.of(), Long.class);
+    assertEquals(1L, nbLogsCycle);
+  }
 }

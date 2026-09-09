@@ -5,6 +5,7 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
+import fr.strapontin.core.SalleHierarchie;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -249,10 +250,7 @@ public class FusionSallesClePorteeService {
             + " (SELECT salle_parent_id FROM salles WHERE id = CAST(:source AS uuid))"
             + " WHERE id = CAST(:cible AS uuid) AND salle_parent_id = CAST(:source AS uuid)",
         ids);
-    jdbc.update(
-        "UPDATE salles SET salle_parent_id = CAST(:cible AS uuid)"
-            + " WHERE salle_parent_id = CAST(:source AS uuid) AND id != CAST(:cible AS uuid)",
-        ids);
+    reassignerSousSallesSansCycle(cibleId, sourceId);
 
     // 7. Suppression de la salle source
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
@@ -271,6 +269,54 @@ public class FusionSallesClePorteeService {
             + " source="
             + sourceId,
         Map.of("salleCible", cibleId.toString(), "salleSource", sourceId.toString()));
+  }
+
+  /// Réassigne à la cible chaque sous-salle de la source (hors cible elle-même, déjà traitée), sauf
+  /// celle dont la cible est déjà un descendant — la réassigner créerait un cycle {@code enfant →
+  /// cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL})
+  /// plutôt que laissée pointer vers la source sur le point d'être supprimée, et signalée pour
+  /// revue manuelle — cas limite jamais rencontré en pratique mais non exclu par le seul cas direct
+  /// déjà géré à l'étape 6.
+  private void reassignerSousSallesSansCycle(UUID cibleId, UUID sourceId) {
+    List<UUID> enfants =
+        jdbc.query(
+            "SELECT id FROM salles WHERE salle_parent_id = CAST(:source AS uuid) AND id !="
+                + " CAST(:cible AS uuid)",
+            Map.of("source", sourceId.toString(), "cible", cibleId.toString()),
+            (rs, _) -> rs.getObject("id", UUID.class));
+
+    for (UUID enfant : enfants) {
+      if (SalleHierarchie.creeraitCycle(cibleId, enfant, this::lireSalleParentId)) {
+        jdbc.update(
+            "UPDATE salles SET salle_parent_id = NULL WHERE id = CAST(:id AS uuid)",
+            Map.of("id", enfant.toString()));
+        logsAdminWorker.inserer(
+            "warn",
+            "reconciliation-nocturne",
+            "cycle salle_parent_id évité lors d'une fusion — sous-salle détachée enfant="
+                + enfant
+                + " cible="
+                + cibleId,
+            Map.of("enfant", enfant.toString(), "cible", cibleId.toString()));
+      } else {
+        jdbc.update(
+            "UPDATE salles SET salle_parent_id = CAST(:cible AS uuid) WHERE id = CAST(:id AS"
+                + " uuid)",
+            Map.of("cible", cibleId.toString(), "id", enfant.toString()));
+      }
+    }
+  }
+
+  // findFirst() sur un flux contenant un unique élément null lève une NullPointerException
+  // (Optional.of appelé en interne) — un accès direct à la liste évite ce piège pour une salle
+  // racine sans parent.
+  private UUID lireSalleParentId(UUID salleId) {
+    List<UUID> resultat =
+        jdbc.query(
+            "SELECT salle_parent_id FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salleId.toString()),
+            (rs, _) -> (UUID) rs.getObject("salle_parent_id"));
+    return resultat.isEmpty() ? null : resultat.get(0);
   }
 
   private void dedupliquerSallesSourcesAvantFusion(UUID cibleId, UUID sourceId) {
