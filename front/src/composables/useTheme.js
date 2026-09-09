@@ -1,8 +1,13 @@
 import { onMounted, onUnmounted } from "vue";
 
+// Valeur littérale imposée par la spec CSS media queries ("light"/"dark" uniquement) — jamais
+// traduisible, contrairement aux classes applicatives. Exportée pour rester vérifiable par un test
+// sans monter de composant (cf. useTheme.test.js).
+export const MEDIA_QUERY_PREFERENCE_SOMBRE = "(prefers-color-scheme: dark)";
+
 const prefSombre =
   typeof window !== "undefined"
-    ? window.matchMedia("(prefers-color-scheme: sombre)")
+    ? window.matchMedia(MEDIA_QUERY_PREFERENCE_SOMBRE)
     : null;
 
 function appliquerTheme(valeur) {

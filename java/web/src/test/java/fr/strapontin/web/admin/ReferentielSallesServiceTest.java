@@ -196,7 +196,8 @@ class ReferentielSallesServiceTest {
     verify(jdbc, times(1)).update(contains("DELETE FROM user_salles"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE user_salles SET salle_id"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE salle_sources SET salle_id"), anyMap());
-    verify(jdbc, times(1)).update(contains("UPDATE salles SET"), anyMap());
+    verify(jdbc, times(1)).update(contains("wikidata_id = COALESCE"), anyMap());
+    verify(jdbc, times(2)).update(contains("UPDATE salles SET salle_parent_id"), anyMap());
     verify(jdbc, times(1)).update(contains("DELETE FROM salles WHERE"), anyMap());
     verify(logAdminService).logAdmin(eq("info"), eq("admin"), any());
   }

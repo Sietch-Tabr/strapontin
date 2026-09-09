@@ -5,9 +5,12 @@
 package fr.strapontin.worker.persister;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
@@ -81,5 +84,88 @@ class ReconciliateurArtistesTest {
     assertEquals(1, resultat.size());
     assertEquals(idExact, resultat.get(0).artisteId());
     assertEquals("krash karma", resultat.get(0).artisteNorm());
+  }
+
+  private static ValeurConcert concertAvecUrlEtClassification(
+      String artiste, String url, String classification, String source) {
+    return new ValeurConcert(
+        artiste,
+        artiste.toLowerCase(),
+        LocalDate.of(2026, 12, 12),
+        null,
+        "Salle",
+        "salle",
+        null,
+        null,
+        url,
+        source,
+        classification,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
+  }
+
+  @Test
+  void corrigerParUrl_entrantIneligibleUrlExistanteNomDifferent_corrigeLaLigneExistante() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+
+    Map<String, Object> ligneExistante = new HashMap<>();
+    ligneExistante.put("url", "https://tm.example/nino-arial-billet");
+    ligneExistante.put("artiste_norm", "nino arbol");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneExistante));
+
+    ValeurConcert entrant =
+        concertAvecUrlEtClassification(
+            "Nino Arial", "https://tm.example/nino-arial-billet", "theatre", "ticketmaster");
+
+    reconciliateur.corrigerParUrl(List.of(entrant));
+
+    verify(jdbc)
+        .update(
+            anyString(),
+            org.mockito.ArgumentMatchers
+                .<org.springframework.jdbc.core.namedparam.SqlParameterSource>argThat(
+                    params ->
+                        "Nino Arial".equals(params.getValue("nouvelArtiste"))
+                            && "nino arial".equals(params.getValue("nouvelArtisteNorm"))
+                            && "https://tm.example/nino-arial-billet"
+                                .equals(params.getValue("url"))));
+  }
+
+  @Test
+  void corrigerParUrl_entrantEligibleDeezer_neCorrigePas() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+
+    ValeurConcert entrant =
+        concertAvecUrlEtClassification(
+            "Niño Árbol", "https://tm.example/nino-arial-billet", "music", "ticketmaster");
+
+    reconciliateur.corrigerParUrl(List.of(entrant));
+
+    verify(jdbc, never()).queryForList(anyString(), anyMap());
+  }
+
+  @Test
+  void corrigerParUrl_aucuneLigneExistantePourCetteUrl_neCorrigePas() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    ValeurConcert entrant =
+        concertAvecUrlEtClassification(
+            "Nino Arial", "https://tm.example/nino-arial-billet", "theatre", "ticketmaster");
+
+    reconciliateur.corrigerParUrl(List.of(entrant));
+
+    verify(jdbc, never())
+        .update(
+            anyString(), any(org.springframework.jdbc.core.namedparam.SqlParameterSource.class));
   }
 }

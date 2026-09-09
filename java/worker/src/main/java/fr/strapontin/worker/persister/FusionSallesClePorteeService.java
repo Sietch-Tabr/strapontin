@@ -88,7 +88,9 @@ public class FusionSallesClePorteeService {
         jdbc.queryForList(
             """
             SELECT DISTINCT c1.salle_id AS salle_a, c2.salle_id AS salle_b,
-                   sa.nom_norm AS nom_a, sb.nom_norm AS nom_b
+                   sa.nom_norm AS nom_a, sb.nom_norm AS nom_b,
+                   sa.latitude AS lat_a, sa.longitude AS lon_a,
+                   sb.latitude AS lat_b, sb.longitude AS lon_b
             FROM concerts c1
             JOIN concerts c2
               ON c1.artiste_norm = c2.artiste_norm
@@ -108,9 +110,46 @@ public class FusionSallesClePorteeService {
       String nomA = (String) ligne.get("nom_a");
       String nomB = (String) ligne.get("nom_b");
       if (!CorrespondanceSalle.estDoublonSalle(nomA, nomB)) continue;
+      if (distanceExcessive(ligne)) continue;
       paires.add(new PaireSalles((UUID) ligne.get("salle_a"), (UUID) ligne.get("salle_b")));
     }
     return paires;
+  }
+
+  // Distance au-delà de laquelle deux salles ne peuvent structurellement pas être le même
+  // bâtiment, même en cas de coïncidence artiste+date+heure+dept et de nom similaire — un
+  // complexe multi-salles (La Seine Musicale, #1180) peut partager un nom quasi identique entre
+  // deux halls physiquement distincts de plusieurs centaines de mètres.
+  private static final double DISTANCE_MAX_FUSION_METRES = 500;
+
+  /// @return {@code true} si les deux salles ont toutes deux des coordonnées connues et que leur
+  ///   distance dépasse {@value #DISTANCE_MAX_FUSION_METRES} m — {@code false} si l'une des deux
+  ///   coordonnées est inconnue (comportement actuel nom+dept inchangé dans ce cas).
+  private static boolean distanceExcessive(Map<String, Object> ligne) {
+    Double latA = (Double) ligne.get("lat_a");
+    Double lonA = (Double) ligne.get("lon_a");
+    Double latB = (Double) ligne.get("lat_b");
+    Double lonB = (Double) ligne.get("lon_b");
+    if (latA == null || lonA == null || latB == null || lonB == null) return false;
+    return distanceHaversineMetres(latA, lonA, latB, lonB) > DISTANCE_MAX_FUSION_METRES;
+  }
+
+  private static final double RAYON_TERRE_METRES = 6_371_000;
+
+  private static double distanceHaversineMetres(
+      double lat1, double lon1, double lat2, double lon2) {
+    double phi1 = Math.toRadians(lat1);
+    double phi2 = Math.toRadians(lat2);
+    double deltaPhi = Math.toRadians(lat2 - lat1);
+    double deltaLambda = Math.toRadians(lon2 - lon1);
+    double a =
+        Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2)
+            + Math.cos(phi1)
+                * Math.cos(phi2)
+                * Math.sin(deltaLambda / 2)
+                * Math.sin(deltaLambda / 2);
+    double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return RAYON_TERRE_METRES * c;
   }
 
   /// Choisit la salle à conserver (cible) entre les deux membres de la paire : priorité au {@code
@@ -200,7 +239,22 @@ public class FusionSallesClePorteeService {
         """,
         ids);
 
-    // 6. Suppression de la salle source
+    // 6. Sous-salles de la source réassignées à la cible — sinon la suppression de la source
+    // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible était elle-même
+    // une sous-salle de la source (cas limite : un enfant l'emporte sur son propre complexe par
+    // nombre de concerts), elle hérite du parent de la source plutôt que de rester rattachée à une
+    // salle sur le point d'être supprimée.
+    jdbc.update(
+        "UPDATE salles SET salle_parent_id ="
+            + " (SELECT salle_parent_id FROM salles WHERE id = CAST(:source AS uuid))"
+            + " WHERE id = CAST(:cible AS uuid) AND salle_parent_id = CAST(:source AS uuid)",
+        ids);
+    jdbc.update(
+        "UPDATE salles SET salle_parent_id = CAST(:cible AS uuid)"
+            + " WHERE salle_parent_id = CAST(:source AS uuid) AND id != CAST(:cible AS uuid)",
+        ids);
+
+    // 7. Suppression de la salle source
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
 
     log.info(

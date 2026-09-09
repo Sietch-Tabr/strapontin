@@ -65,6 +65,10 @@ class ResolveurSalleParConcert {
     }
 
     if (salleId == null) {
+      salleId = resoudreSousSalle(c.salle(), c.dept());
+    }
+
+    if (salleId == null) {
       salleId = chercherSalleParCleForte(c);
     }
 
@@ -159,7 +163,7 @@ class ResolveurSalleParConcert {
     // sur le département d'un concert déjà rattaché à la salle candidate quand salles.dept est
     // vide.
     return jdbc.queryForList(
-        "SELECT s.id AS id, s.nom_norm AS nom_norm FROM salles s"
+        "SELECT s.id AS id, s.nom AS nom, s.nom_norm AS nom_norm FROM salles s"
             + " WHERE "
             + whereTokens
             + " AND (:dept IS NULL"
@@ -180,6 +184,11 @@ class ResolveurSalleParConcert {
   /// pivot — sans ce score, le choix entre elles n'était pas déterministe et pouvait rattacher au
   /// mauvais auditorium alors qu'une salle plus proche textuellement existait dans le même lot de
   /// candidats.
+  ///
+  /// <p>{@link CorrespondanceSalle#qualificatifsDivergents} écarte en amont tout candidat dont le
+  /// qualificatif de sous-salle brut (ex. "- Grande Seine" / "- Auditorium P.devedjian") diverge du
+  /// nôtre — le nom du complexe seul ne doit jamais suffire à conclure à un doublon entre deux
+  /// halls physiquement distincts.
   private UUID meilleurCandidatValide(
       String nom, String nomNorm, List<Map<String, Object>> lignes) {
     UUID meilleurUuid = null;
@@ -187,8 +196,10 @@ class ResolveurSalleParConcert {
     double meilleurScore = -1;
     for (var ligne : lignes) {
       UUID uuid = (UUID) ligne.get("id");
+      String nomCandidat = (String) ligne.get("nom");
       String nomNormCandidat = (String) ligne.get("nom_norm");
       if (!CorrespondanceSalle.estDoublonSalle(nomNorm, nomNormCandidat)) continue;
+      if (CorrespondanceSalle.qualificatifsDivergents(nom, nomCandidat)) continue;
       double score = CorrespondanceSalle.jaccardTokens(nomNorm, nomNormCandidat);
       if (score > meilleurScore) {
         meilleurScore = score;
@@ -205,6 +216,53 @@ class ResolveurSalleParConcert {
           meilleurScore);
     }
     return meilleurUuid;
+  }
+
+  /// Résout ou crée une sous-salle rattachée à un complexe déjà connu, quand le nom entrant porte
+  /// un qualificatif de sous-salle (ex. "La Seine Musicale - Grande Seine") et qu'aucune sous-salle
+  /// exacte n'a encore été trouvée par {@link #chercherSalleParTokens}.
+  ///
+  /// <p>Rattache toujours le concert à une sous-salle nouvellement créée plutôt qu'au complexe lui
+  /// même — un nom sans qualificatif continue de résoudre vers le complexe (site, salle non
+  /// précisée), mais un nom qualifié ne doit jamais mélanger son événement avec ceux d'un autre
+  /// hall du même complexe.
+  ///
+  /// @param nom nom brut entrant, potentiellement qualifié
+  /// @param dept département connu du concert
+  /// @return UUID de la sous-salle résolue ou créée, ou {@code null} si {@code nom} ne porte aucun
+  ///   qualificatif ou si le complexe de base n'est pas encore connu
+  private UUID resoudreSousSalle(String nom, String dept) {
+    String base = CorrespondanceSalle.extraireBase(nom);
+    if (base == null) return null;
+
+    UUID complexeId = chercherSalleParTokens(base, dept);
+    if (complexeId == null) return null;
+
+    String salleCle = Normalisation.normaliserTexte(nom);
+    // MapSqlParameterSource plutôt que Map.of — dept peut être null ici (Map.of lève une NPE sur
+    // toute valeur null).
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept, salle_parent_id)"
+            + " VALUES (:salleCle, :nom, :nomNorm, :dept, CAST(:parentId AS uuid))"
+            + " ON CONFLICT (salle_cle) DO NOTHING",
+        new MapSqlParameterSource()
+            .addValue("salleCle", salleCle)
+            .addValue("nom", nom)
+            .addValue("nomNorm", salleCle)
+            .addValue("dept", dept)
+            .addValue("parentId", complexeId.toString()));
+    UUID sousSalleId =
+        jdbc.queryForObject(
+            "SELECT id FROM salles WHERE salle_cle = :salleCle",
+            Map.of("salleCle", salleCle),
+            UUID.class);
+    log.info(
+        "sous-salle créée pour complexe nom={} base={} complexeId={} sousSalleId={}",
+        nom,
+        base,
+        complexeId,
+        sousSalleId);
+    return sousSalleId;
   }
 
   /// Recherche la salle d'un concert existant partageant exactement le même artiste, la même date,

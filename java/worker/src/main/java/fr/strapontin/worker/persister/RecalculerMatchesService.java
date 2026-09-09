@@ -25,13 +25,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /// Service de recalcul des correspondances utilisateurs (table `user_matches`).
 ///
-/// Pour chaque utilisateur, calcule l'intersection entre ses artistes/salles suivis
-/// et les concerts futurs. Met à jour `user_matches` en conséquence.
-/// Les concerts indisponibles sont marqués `notification_envoyee_le = now()` immédiatement
-/// pour ne pas déclencher de badge "Nouveau".
+/// Pour chaque utilisateur, calcule l'intersection entre ses artistes/salles suivis et les concerts
+/// futurs. Met à jour `user_matches` en conséquence. Les concerts indisponibles sont marqués
+/// `notification_envoyee_le = now()` immédiatement pour ne pas déclencher de badge "Nouveau".
 ///
-/// <p>Les recalculs par utilisateur sont parallélisés via des threads virtuels,
-/// chacun dans sa propre transaction ({@link TransactionTemplate}).
+/// <p>Les recalculs par utilisateur sont parallélisés via des threads virtuels, chacun dans sa
+/// propre transaction ({@link TransactionTemplate}).
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -44,7 +43,7 @@ public class RecalculerMatchesService {
   private final NamedParameterJdbcTemplate jdbc;
   private final TransactionTemplate txParUser;
 
-  /// @param jdbc      accès JDBC
+  /// @param jdbc accès JDBC
   /// @param txManager gestionnaire de transactions (transaction par utilisateur)
   public RecalculerMatchesService(
       NamedParameterJdbcTemplate jdbc, PlatformTransactionManager txManager) {
@@ -54,9 +53,8 @@ public class RecalculerMatchesService {
 
   /// Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
   ///
-  /// <p>Les recalculs sont exécutés en parallèle via des threads virtuels.
-  /// Chaque utilisateur est traité dans sa propre transaction : un échec isolé
-  /// n'interrompt pas les autres recalculs.
+  /// <p>Les recalculs sont exécutés en parallèle via des threads virtuels. Chaque utilisateur est
+  /// traité dans sa propre transaction : un échec isolé n'interrompt pas les autres recalculs.
   ///
   /// @param userIds liste d'IDs à recalculer, ou {@code null} pour tous les utilisateurs
   /// @return nombre d'utilisateurs traités
@@ -157,6 +155,18 @@ public class RecalculerMatchesService {
     }
   }
 
+  /// Exclut une fiche package Ticketmaster (voir {@code PersisteurConcertsDb.SQL_EST_PACKAGE`) tant
+  /// qu'aucune fiche normale du même événement réel (même artiste/salle/date) n'existe — elle
+  /// redevient visible dès qu'une fiche normale apparaît et que {@code supprimerDoublonsParSalleId}
+  /// les fusionne.
+  private static final String SQL_PAS_PACKAGE_ISOLE =
+      " AND (c.url IS NULL OR c.url !~* '/pack/' OR EXISTS ("
+          + "   SELECT 1 FROM concerts c2"
+          + "   WHERE c2.artiste_id = c.artiste_id AND c2.salle_id = c.salle_id"
+          + "     AND c2.date = c.date AND c2.id != c.id"
+          + "     AND (c2.url IS NULL OR c2.url !~* '/pack/')"
+          + " ))";
+
   private List<UUID> rechercherConcertsParArtistes(
       List<UUID> artisteIds, List<String> departements, String aujourdhui) {
     Map<String, Object> params = new HashMap<>();
@@ -166,22 +176,31 @@ public class RecalculerMatchesService {
     String sql;
     if (departements.isEmpty()) {
       sql =
-          "SELECT DISTINCT id FROM concerts"
-              + " WHERE artiste_id IN (:artisteIds) AND date >= :aujourdhui";
+          "SELECT DISTINCT c.id FROM concerts c"
+              + " WHERE c.artiste_id IN (:artisteIds) AND c.date >= :aujourdhui"
+              + SQL_PAS_PACKAGE_ISOLE;
     } else {
       params.put("departements", departements);
       sql =
-          "SELECT DISTINCT id FROM concerts"
-              + " WHERE artiste_id IN (:artisteIds) AND date >= :aujourdhui"
-              + " AND dept = ANY(ARRAY[:departements])";
+          "SELECT DISTINCT c.id FROM concerts c"
+              + " WHERE c.artiste_id IN (:artisteIds) AND c.date >= :aujourdhui"
+              + " AND c.dept = ANY(ARRAY[:departements])"
+              + SQL_PAS_PACKAGE_ISOLE;
     }
     return jdbc.queryForList(sql, params, UUID.class);
   }
 
+  // Suivre le complexe (salle parent) doit aussi remonter les concerts de ses sous-salles — un nom
+  // sans qualificatif (voir ResolveurSalleParConcert) résout précisément vers ce parent, "site,
+  // salle non précisée". Suivre une sous-salle précise reste inchangé (pas de remontée aux frères).
   private List<UUID> rechercherConcertsParSalles(List<UUID> salleIds, String aujourdhui) {
     return jdbc.queryForList(
-        "SELECT DISTINCT id FROM concerts"
-            + " WHERE salle_id IN (:salleIds) AND date >= :aujourdhui",
+        "SELECT DISTINCT c.id FROM concerts c"
+            + " WHERE (c.salle_id IN (:salleIds)"
+            + "        OR c.salle_id IN (SELECT id FROM salles WHERE salle_parent_id IN"
+            + " (:salleIds)))"
+            + " AND c.date >= :aujourdhui"
+            + SQL_PAS_PACKAGE_ISOLE,
         Map.of("salleIds", salleIds, "aujourdhui", LocalDate.parse(aujourdhui)),
         UUID.class);
   }

@@ -69,6 +69,15 @@ class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationT
         (rs, _) -> rs.getObject("id", UUID.class));
   }
 
+  private UUID insererSousSalle(String salleCle, UUID parentId) {
+    return jdbc.queryForObject(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, salle_parent_id)"
+            + " VALUES (:id, :nom, :norm, CAST(:parentId AS uuid))"
+            + " ON CONFLICT (salle_cle) DO UPDATE SET nom = EXCLUDED.nom RETURNING id",
+        Map.of("id", salleCle, "nom", salleCle, "norm", salleCle, "parentId", parentId.toString()),
+        (rs, _) -> rs.getObject("id", UUID.class));
+  }
+
   private void insererUserSalle(String userId, UUID salleId) {
     jdbc.update(
         "INSERT INTO user_salles (user_id, salle_id)" + " VALUES (:userId, CAST(:salleId AS uuid))",
@@ -77,6 +86,29 @@ class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationT
 
   private void insererConcert(
       String artiste, String norm, String date, String salleNorm, UUID artisteId, UUID salleId) {
+    insererConcert(artiste, norm, date, salleNorm, artisteId, salleId, null);
+  }
+
+  private void insererConcert(
+      String artiste,
+      String norm,
+      String date,
+      String salleNorm,
+      UUID artisteId,
+      UUID salleId,
+      String url) {
+    insererConcert(artiste, norm, date, salleNorm, artisteId, salleId, url, null);
+  }
+
+  private void insererConcert(
+      String artiste,
+      String norm,
+      String date,
+      String salleNorm,
+      UUID artisteId,
+      UUID salleId,
+      String url,
+      String heure) {
     Map<String, Object> params = new HashMap<>();
     params.put("artiste", artiste);
     params.put("norm", norm);
@@ -85,11 +117,13 @@ class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationT
     params.put("salleNorm", salleNorm);
     params.put("artisteId", artisteId != null ? artisteId.toString() : null);
     params.put("salleId", salleId != null ? salleId.toString() : null);
+    params.put("url", url);
+    params.put("heure", heure);
     jdbc.update(
         """
-        INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source, artiste_id, salle_id)
-        VALUES (:artiste, :norm, CAST(:date AS date), :salle, :salleNorm,
-                CAST('ticketmaster' AS source_concert), CAST(:artisteId AS uuid), CAST(:salleId AS uuid))
+        INSERT INTO concerts (artiste, artiste_norm, date, heure, salle, salle_norm, source, artiste_id, salle_id, url)
+        VALUES (:artiste, :norm, CAST(:date AS date), CAST(:heure AS time), :salle, :salleNorm,
+                CAST('ticketmaster' AS source_concert), CAST(:artisteId AS uuid), CAST(:salleId AS uuid), :url)
         """,
         params);
   }
@@ -252,5 +286,101 @@ class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationT
     service.recalculerMatches(null);
 
     assertEquals(0, compterMatches("u8"), "Les matches orphelins doivent être purgés");
+  }
+
+  @Test
+  void recalculerMatches_packageIsole_pasDeMatch() {
+    insererUser("u31");
+    UUID aId = insererArtiste("u31", "jay z", "Jay Z");
+    UUID sId = insererSalle("stade de france");
+    insererConcert(
+        "Jay Z",
+        "jay z",
+        DATE_FUTURE,
+        "stade de france",
+        aId,
+        sId,
+        "https://tm.example/pack/jay-z-vip");
+
+    service.recalculerMatches(List.of("u31"));
+
+    assertEquals(0, compterMatches("u31"), "Une fiche package isolée ne doit générer aucun match");
+  }
+
+  @Test
+  void recalculerMatches_packageAvecFicheNormaleMemeEvenement_matchVisible() {
+    insererUser("u32");
+    UUID aId = insererArtiste("u32", "jay z", "Jay Z");
+    UUID sId = insererSalle("stade de france");
+    insererConcert(
+        "Jay Z",
+        "jay z",
+        DATE_FUTURE,
+        "stade de france",
+        aId,
+        sId,
+        "https://tm.example/pack/jay-z-vip",
+        "20:00");
+    insererConcert(
+        "Jay Z",
+        "jay z",
+        DATE_FUTURE,
+        "stade de france",
+        aId,
+        sId,
+        "https://tm.example/jay-z",
+        "19:00");
+
+    service.recalculerMatches(List.of("u32"));
+
+    assertEquals(
+        2,
+        compterMatches("u32"),
+        "les deux lignes restent visibles tant que supprimerDoublonsParSalleId ne les a pas"
+            + " fusionnées (hors du périmètre de RecalculerMatchesService)");
+  }
+
+  @Test
+  void recalculerMatches_suiviDuComplexe_remonteLesConcertsDeLaSousSalle() {
+    insererUser("u33");
+    UUID complexe = insererSalle("la seine musicale");
+    UUID sousSalle = insererSousSalle("la seine musicale grande seine", complexe);
+    insererUserSalle("u33", complexe);
+    insererConcert(
+        "Artiste Grande Seine",
+        "artiste grande seine",
+        DATE_FUTURE,
+        "la seine musicale grande seine",
+        null,
+        sousSalle);
+
+    service.recalculerMatches(List.of("u33"));
+
+    assertEquals(
+        1, compterMatches("u33"), "suivre le complexe doit remonter les concerts de la sous-salle");
+  }
+
+  @Test
+  void recalculerMatches_suiviDeLaSousSalle_neRemontePasLesFreres() {
+    insererUser("u34");
+    UUID complexe = insererSalle("la seine musicale bis");
+    UUID grandeSeine = insererSousSalle("la seine musicale bis grande seine", complexe);
+    UUID auditorium = insererSousSalle("la seine musicale bis auditorium", complexe);
+    insererUserSalle("u34", grandeSeine);
+    insererConcert(
+        "Artiste Auditorium",
+        "artiste auditorium",
+        DATE_FUTURE,
+        "la seine musicale bis auditorium",
+        null,
+        auditorium);
+
+    service.recalculerMatches(List.of("u34"));
+
+    assertEquals(
+        0,
+        compterMatches("u34"),
+        "suivre une sous-salle précise ne doit pas remonter les concerts d'une autre sous-salle du"
+            + " même complexe");
   }
 }

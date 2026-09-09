@@ -66,6 +66,7 @@ class ResolveurSalleParConcertTest {
 
     Map<String, Object> candidat = new HashMap<>();
     candidat.put("id", uuidExistant);
+    candidat.put("nom", "L'Olympia");
     candidat.put("nom_norm", "l olympia");
 
     when(jdbc.queryForList(anyString(), any(SqlParameterSource.class)))
@@ -86,33 +87,61 @@ class ResolveurSalleParConcertTest {
     assertNull(resolveur.chercherSalleParTokens("Salle inédite", null));
   }
 
-  // Cas réel documenté (La Seine Musicale) : un nom générique de complexe multi-salles valide
-  // deux salles physiquement distinctes du même complexe via le seul critère pivot ("musicale").
-  // Sans score de départage, le premier candidat de la liste (ordre SQL non garanti) l'emportait
-  // arbitrairement — ici volontairement placé en second pour prouver l'indépendance à l'ordre.
+  // Cas réel documenté (La Seine Musicale, #1180) : un nom générique de complexe multi-salles
+  // validait autrefois deux salles physiquement distinctes du même complexe via le seul critère
+  // pivot ("musicale"), départagées arbitrairement par le score Jaccard. qualificatifsDivergents
+  // rejette désormais les deux candidats dès que leurs qualificatifs de sous-salle bruts diffèrent
+  // — ni l'un ni l'autre halls ne doit être choisi au hasard.
   @Test
-  void chercherSalleParTokens_plusieursCandidatsValides_retientLeMeilleurScoreQuelQueSoitLOrdre() {
+  void chercherSalleParTokens_complexeMultiSallesQualificatifsDivergents_retourneNull() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
-    UUID grandeSeine = UUID.randomUUID();
-    UUID auditorium = UUID.randomUUID();
 
     Map<String, Object> candidatAuditorium = new HashMap<>();
-    candidatAuditorium.put("id", auditorium);
+    candidatAuditorium.put("id", UUID.randomUUID());
+    candidatAuditorium.put("nom", "Seine Musicale - Auditorium P.devedjian");
     candidatAuditorium.put("nom_norm", "seine musicale auditorium p devedjian");
 
     Map<String, Object> candidatGrandeSeine = new HashMap<>();
-    candidatGrandeSeine.put("id", grandeSeine);
+    candidatGrandeSeine.put("id", UUID.randomUUID());
+    candidatGrandeSeine.put("nom", "La Seine Musicale - Grande Seine");
     candidatGrandeSeine.put("nom_norm", "la seine musicale grande seine");
 
     when(jdbc.queryForList(anyString(), any(SqlParameterSource.class)))
         .thenReturn(List.of(candidatAuditorium, candidatGrandeSeine));
 
-    UUID resultat =
-        resolveur.chercherSalleParTokens("La Seine Musicale - Boulogne Billancourt", null);
+    UUID resultat = resolveur.chercherSalleParTokens("La Seine Musicale - Petit Seine", null);
 
-    assertEquals(
-        grandeSeine, resultat, "Le candidat au Jaccard de tokens le plus élevé doit gagner");
+    assertNull(
+        resultat, "aucun des deux halls existants ne doit être choisi pour un qualificatif tiers");
+  }
+
+  // Le score Jaccard départage toujours deux candidats dont le qualificatif correspond bel et
+  // bien (variantes de casse/ponctuation de la même sous-salle) — ordre volontairement inversé
+  // pour prouver l'indépendance à l'ordre SQL.
+  @Test
+  void chercherSalleParTokens_memeQualificatifPlusieursVariantes_retientLeMeilleurScore() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    UUID meilleur = UUID.randomUUID();
+    UUID moinsBon = UUID.randomUUID();
+
+    Map<String, Object> candidatMoinsBon = new HashMap<>();
+    candidatMoinsBon.put("id", moinsBon);
+    candidatMoinsBon.put("nom", "Seine Musicale Auditorium - Grande Seine");
+    candidatMoinsBon.put("nom_norm", "seine musicale auditorium grande seine");
+
+    Map<String, Object> candidatMeilleur = new HashMap<>();
+    candidatMeilleur.put("id", meilleur);
+    candidatMeilleur.put("nom", "La Seine Musicale - Grande Seine");
+    candidatMeilleur.put("nom_norm", "la seine musicale grande seine");
+
+    when(jdbc.queryForList(anyString(), any(SqlParameterSource.class)))
+        .thenReturn(List.of(candidatMoinsBon, candidatMeilleur));
+
+    UUID resultat = resolveur.chercherSalleParTokens("La Seine Musicale - Grande Seine", null);
+
+    assertEquals(meilleur, resultat);
   }
 
   // Cas réel confirmé en production (Vincent Dedienne/Fréjus) : "Theatre le Forum Frejus"

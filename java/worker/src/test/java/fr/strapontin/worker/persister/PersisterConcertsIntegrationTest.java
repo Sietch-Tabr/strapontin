@@ -1403,4 +1403,240 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         sourcesRestantes,
         "la ligne Digitick doit être supprimée au profit de la ligne Ticketmaster (priorité)");
   }
+
+  // Une fiche package TM (URL /pack/) référence souvent une heure distincte de la fiche
+  // principale du même événement réel — supprimerDoublonsParSalleId doit les fusionner malgré cet
+  // écart, en conservant la fiche non-package comme référence.
+  @Test
+  void persisterConcerts_ficheNormaleEtPackageMemeEvenement_gardeLaFicheNormale() {
+    // supprimerDoublonsParSalleId exige artiste_id non nul des deux côtés — résolu par nom
+    // uniquement si l'artiste existe déjà (jamais créé automatiquement à la persistance).
+    jdbc.update(
+        "INSERT INTO artistes (id, nom, nom_norm) VALUES (gen_random_uuid(), 'Jay Z', 'jay z')",
+        Map.of());
+
+    List<ConcertBrut> liste =
+        List.of(
+            new ConcertBrut(
+                "Jay Z",
+                DATE_RECENTE,
+                "19:00",
+                "Stade De France",
+                "Saint-Denis",
+                "93",
+                "https://tm.example/jay-z-billet",
+                "ticketmaster",
+                "music",
+                "Pop",
+                "onsale",
+                null,
+                null,
+                "ticketmaster:venue-stade-de-france",
+                null),
+            new ConcertBrut(
+                "Jay Z",
+                DATE_RECENTE,
+                "20:00",
+                "Stade De France",
+                "Saint-Denis",
+                "93",
+                "https://tm.example/pack/jay-z-vip-billet",
+                "ticketmaster",
+                "music",
+                "Pop",
+                null,
+                null,
+                null,
+                "ticketmaster:venue-stade-de-france",
+                null));
+
+    persisterConcerts.persisterConcerts(liste);
+
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList("SELECT url FROM concerts WHERE artiste_norm = 'jay z'", Map.of());
+    assertEquals(1, lignes.size(), "les deux fiches doivent fusionner en une seule ligne");
+    assertEquals(
+        "https://tm.example/jay-z-billet",
+        lignes.get(0).get("url"),
+        "la fiche non-package doit l'emporter comme référence conservée");
+  }
+
+  // Cas réel confirmé en production : un artiste que personne ne suit par nom (aucune ligne
+  // artistes créée, match uniquement via la salle suivie) reste artiste_id NULL indéfiniment —
+  // supprimerDoublonsParSalleId (qui exige artiste_id non nul) ne peut alors jamais fusionner ses
+  // doublons ; supprimerDoublonsSansArtisteId doit prendre le relais en comparant artiste_norm.
+  @Test
+  void persisterConcerts_artisteNonSuiviCoTeteAffiche_fusionneSansArtisteId() {
+    List<ConcertBrut> liste =
+        List.of(
+            new ConcertBrut(
+                "Earl Sweatshirt",
+                DATE_RECENTE,
+                "20:00",
+                "Elysee Montmartre",
+                "Paris",
+                "75",
+                "https://tm.example/earl-sweatshirt-billet",
+                "ticketmaster",
+                "music",
+                "Rap",
+                "onsale",
+                null,
+                null,
+                "ticketmaster:venue-elysee-montmartre",
+                null),
+            new ConcertBrut(
+                "Earl Sweatshirt & Mike",
+                DATE_RECENTE,
+                "20:00",
+                "Elysee Montmartre",
+                "Paris",
+                "75",
+                "https://www.eventim.fr/earl-sweatshirt-mike-billet",
+                "eventim",
+                "music",
+                "Rap",
+                null,
+                null,
+                null,
+                "ticketmaster:venue-elysee-montmartre",
+                null));
+
+    persisterConcerts.persisterConcerts(liste);
+
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT url, artiste_id FROM concerts WHERE artiste_norm LIKE 'earl sweatshirt%'",
+            Map.of());
+    assertEquals(1, lignes.size(), "les deux fiches doivent fusionner malgré artiste_id NULL");
+    assertNull(
+        lignes.get(0).get("artiste_id"), "aucun utilisateur ne suit cet artiste par nom ici");
+  }
+
+  // Même cas que ci-dessus mais réparti sur deux cycles de fetch distincts (deux appels
+  // persisterConcerts séparés, comme en production réelle où TM et Eventim ne sont jamais fetchés
+  // à l'instant près) — la réconciliation intra-lot ne peut alors pas absorber le doublon,
+  // seul supprimerDoublonsSansArtisteId (cross-cycle, contre la base) le peut.
+  @Test
+  void persisterConcerts_artisteNonSuiviDeuxCyclesDeFetchDistincts_fusionneSansArtisteId() {
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Earl Sweatshirt",
+                DATE_RECENTE,
+                "20:00",
+                "Elysee Montmartre",
+                "Paris",
+                "75",
+                "https://tm.example/earl-sweatshirt-billet",
+                "ticketmaster",
+                "music",
+                "Rap",
+                "onsale",
+                null,
+                null,
+                "ticketmaster:venue-elysee-montmartre-2",
+                null)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Earl Sweatshirt & Mike",
+                DATE_RECENTE,
+                "20:00",
+                "Elysee Montmartre",
+                "Paris",
+                "75",
+                "https://www.eventim.fr/earl-sweatshirt-mike-billet-2",
+                "eventim",
+                "music",
+                "Rap",
+                null,
+                null,
+                null,
+                "ticketmaster:venue-elysee-montmartre-2",
+                null)));
+
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT url FROM concerts WHERE artiste_norm LIKE 'earl sweatshirt%'", Map.of());
+    assertEquals(
+        1,
+        lignes.size(),
+        "le second cycle doit fusionner avec la ligne déjà persistée au premier cycle");
+  }
+
+  // Un complexe multi-salles (La Seine Musicale, #1180) ne doit jamais mélanger deux halls
+  // physiquement distincts sous un même salle_id — la seconde sous-salle qualifiée rencontrée
+  // devient un enfant du complexe plutôt que d'être fusionnée ou de rester ambiguë.
+  @Test
+  void persisterConcerts_complexeMultiSalles_creeUneSousSalleDistincteEnEnfant() {
+    ConcertBrut grandeSeine =
+        new ConcertBrut(
+            "Artiste Grande Seine",
+            DATE_RECENTE,
+            "20:30",
+            "La Seine Musicale - Grande Seine",
+            "Boulogne-Billancourt",
+            "92",
+            "https://tm.example/grande-seine",
+            "ticketmaster",
+            "music",
+            "Pop",
+            "onsale",
+            null,
+            null,
+            "ticketmaster:venue-grande-seine",
+            null);
+    persisterConcerts.persisterConcerts(List.of(grandeSeine));
+
+    ConcertBrut auditorium =
+        new ConcertBrut(
+            "Artiste Auditorium",
+            DATE_RECENTE,
+            "20:30",
+            "La Seine Musicale - Auditorium P.devedjian",
+            "Boulogne-Billancourt",
+            "92",
+            "https://tm.example/auditorium",
+            "ticketmaster",
+            "music",
+            "Pop",
+            "onsale",
+            null,
+            null,
+            "ticketmaster:venue-auditorium",
+            null);
+    persisterConcerts.persisterConcerts(List.of(auditorium));
+
+    List<Map<String, Object>> salles =
+        jdbc.queryForList(
+            "SELECT id::text, nom, salle_parent_id::text FROM salles ORDER BY nom", Map.of());
+    assertEquals(2, salles.size(), "les deux halls doivent rester deux salles distinctes");
+
+    Map<String, Object> salleGrandeSeine =
+        salles.stream()
+            .filter(s -> ((String) s.get("nom")).contains("Grande Seine"))
+            .findFirst()
+            .orElseThrow();
+    Map<String, Object> salleAuditorium =
+        salles.stream()
+            .filter(s -> ((String) s.get("nom")).contains("Auditorium"))
+            .findFirst()
+            .orElseThrow();
+
+    assertNull(
+        salleGrandeSeine.get("salle_parent_id"), "la première salle rencontrée reste le parent");
+    assertEquals(
+        salleGrandeSeine.get("id"),
+        salleAuditorium.get("salle_parent_id"),
+        "la seconde sous-salle doit être rattachée à la première comme complexe");
+
+    List<String> sallesDistinctesParConcert =
+        jdbc.queryForList("SELECT DISTINCT salle_id::text FROM concerts", Map.of(), String.class);
+    assertEquals(
+        2,
+        sallesDistinctesParConcert.size(),
+        "chaque concert doit rester rattaché à son propre hall, jamais confondu avec l'autre");
+  }
 }

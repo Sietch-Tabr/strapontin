@@ -4,7 +4,9 @@
  */
 package fr.strapontin.core;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -261,5 +263,43 @@ class CorrespondanceSalleTest {
     assertFalse(
         CorrespondanceSalle.estDoublonSalle(
             "eglise saint paul saint louis", "eglise saint louis en l ile"));
+  }
+
+  // --- qualificatifsDivergents : complexe multi-salles (La Seine Musicale) ---
+
+  @Test
+  void qualificatifsDivergents_qualificatifsDistinctsMemeComplexe_retourneTrue() {
+    assertTrue(
+        CorrespondanceSalle.qualificatifsDivergents(
+            "La Seine Musicale - Grande Seine", "Seine Musicale - Auditorium P.devedjian"));
+  }
+
+  @Test
+  void qualificatifsDivergents_memeQualificatif_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.qualificatifsDivergents(
+            "La Seine Musicale - Grande Seine", "Seine Musicale - Grande Seine"));
+  }
+
+  @Test
+  void qualificatifsDivergents_unSeulNomQualifie_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.qualificatifsDivergents("La Seine Musicale - Grande Seine", "Zenith"));
+  }
+
+  @Test
+  void qualificatifsDivergents_aucunQualificatif_retourneFalse() {
+    assertFalse(CorrespondanceSalle.qualificatifsDivergents("Zenith Paris", "Zenith de Paris"));
+  }
+
+  @Test
+  void extraireBase_nomQualifie_retourneLaPartieComplexe() {
+    assertEquals(
+        "La Seine Musicale", CorrespondanceSalle.extraireBase("La Seine Musicale - Grande Seine"));
+  }
+
+  @Test
+  void extraireBase_nomSansQualificatif_retourneNull() {
+    assertNull(CorrespondanceSalle.extraireBase("Zenith Paris"));
   }
 }

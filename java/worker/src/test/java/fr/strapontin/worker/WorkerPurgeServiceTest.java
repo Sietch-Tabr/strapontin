@@ -112,6 +112,27 @@ class WorkerPurgeServiceTest {
                         && "timeout".equals(p.get("erreur"))));
   }
 
+  // Un concert sans salle_id ni artiste_id n'est jamais retouché par aucun job de fetch —
+  // absences_consecutives reste figé à 0 et ne peut jamais déclencher
+  // executerPurgerConcertsNonConfirmes. Le seuil calendaire indépendant sert de substitut.
+  @Test
+  void executerPurgerConcertsHorsPortee_signaleConcertsSansSalleNiArtisteEtEnregistreStat() {
+    when(jdbc.update(anyString(), anyMap())).thenReturn(2);
+
+    service.executerPurgerConcertsHorsPortee();
+
+    verify(jdbc)
+        .update(
+            contains("UPDATE concerts SET suppression_suggeree_le = now()"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> Integer.valueOf(30).equals(p.get("seuilJours"))));
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO fetch_jobs (type_job"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> "purger:concerts-hors-portee".equals(p.get("typeJob"))));
+  }
+
   @Test
   void executerPurgerSalles_supprimeSallesOrphelinesEtEnregistreStat() {
     List<UUID> candidats = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());

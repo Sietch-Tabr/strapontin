@@ -4,13 +4,17 @@
  */
 package fr.strapontin.worker.persister;
 
+import fr.strapontin.core.CorrespondanceArtiste;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -384,13 +388,23 @@ public class PersisteurConcertsDb {
     }
   }
 
-  /// Priorité de source (plus petit = conservé) pour {@link #supprimerDoublonsParSalleId}.
+  /// Motif d'URL Ticketmaster signant un événement "package"/VIP (voir {@code MapeurEvenementTM}) —
+  /// jamais accessible à un achat de billetterie standard, ne doit jamais l'emporter sur une fiche
+  /// normale du même événement réel.
+  private static final String SQL_EST_PACKAGE = "(%s ~* '/pack/')";
+
+  /// Priorité de rapprochement (plus petit = conservé) pour {@link #supprimerDoublonsParSalleId} :
+  /// une fiche package perd toujours face à une fiche normale, la priorité de source ne
+  /// départageant qu'ensuite (TM &gt; Eventim &gt; Digitick).
   private static final String SQL_PRIORITE_SOURCE =
-      "CASE %s::text"
+      "(CASE WHEN "
+          + SQL_EST_PACKAGE.formatted("%1$s")
+          + " THEN 10 ELSE 0 END"
+          + " + CASE %2$s::text"
           + " WHEN 'ticketmaster' THEN 1"
           + " WHEN 'eventim' THEN 2"
           + " WHEN 'digitick' THEN 3"
-          + " ELSE 4 END";
+          + " ELSE 4 END)";
 
   /// Supprime les doublons cross-sources non fusionnés par {@link ReconciliateurSalles}.
   ///
@@ -399,6 +413,10 @@ public class PersisteurConcertsDb {
   /// TM/Eventim — via une priorité TM &gt; Eventim &gt; Digitick : la ligne de la source la moins
   /// prioritaire est supprimée, celle de la source la plus prioritaire est conservée comme
   /// référence.
+  ///
+  /// <p>L'écart d'heure entre deux lignes n'exclut le rapprochement que si aucune des deux n'est un
+  /// package (voir {@link #SQL_EST_PACKAGE}) — Ticketmaster liste parfois un package à une heure
+  /// distincte de la fiche principale du même événement réel.
   ///
   /// @return nombre de concerts supprimés
   int supprimerDoublonsParSalleId() {
@@ -410,19 +428,118 @@ public class PersisteurConcertsDb {
                 + "  JOIN concerts c2"
                 + "    ON c1.artiste_id = c2.artiste_id"
                 + "    AND c1.date = c2.date"
-                + "    AND c1.heure IS NOT DISTINCT FROM c2.heure"
+                + "    AND (c1.heure IS NOT DISTINCT FROM c2.heure"
+                + "         OR "
+                + SQL_EST_PACKAGE.formatted("c1.url")
+                + "         OR "
+                + SQL_EST_PACKAGE.formatted("c2.url")
+                + "        )"
                 + "    AND c1.salle_id = c2.salle_id"
                 + "    AND c1.id != c2.id"
                 + "  WHERE c1.artiste_id IS NOT NULL"
                 + "    AND c1.salle_id IS NOT NULL"
                 + "    AND "
-                + SQL_PRIORITE_SOURCE.formatted("c1.source")
+                + SQL_PRIORITE_SOURCE.formatted("c1.url", "c1.source")
                 + "    < "
-                + SQL_PRIORITE_SOURCE.formatted("c2.source")
+                + SQL_PRIORITE_SOURCE.formatted("c2.url", "c2.source")
                 + ")",
             Map.of());
     if (nbSupprimees > 0)
       log.info("doublons cross-sources (salle_id) supprimés count={}", nbSupprimees);
     return nbSupprimees;
+  }
+
+  // Tolérance identique à Dedoublonner.TOLERANCE_HEURE_MINUTES — les deux passes doivent rester
+  // cohérentes, une seule heure distincte par événement réel n'étant jamais garantie.
+  private static final int TOLERANCE_HEURE_MINUTES = 3;
+
+  /// Complète {@link #supprimerDoublonsParSalleId}, qui exige {@code artiste_id} non nul des deux
+  /// côtés : un concert dont l'artiste n'est suivi par aucun utilisateur (aucune ligne {@code
+  /// artistes} créée, matché uniquement via la salle suivie) reste perpétuellement {@code
+  /// artiste_id} NULL, quelle que soit la qualité de la résolution de {@code salle_id} — le SQL ne
+  /// peut alors plus comparer par égalité d'UUID. Compare {@code artiste_norm} en mémoire via
+  /// {@link CorrespondanceArtiste#estDoublonArtiste} pour les concerts partageant {@code
+  /// salle_id}+{@code date} sans {@code artiste_id} résolu.
+  ///
+  /// @return nombre de concerts supprimés
+  int supprimerDoublonsSansArtisteId() {
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT id, salle_id, artiste_norm, date, heure, url, source FROM concerts"
+                + " WHERE artiste_id IS NULL AND salle_id IS NOT NULL AND date >= CURRENT_DATE",
+            Map.of());
+
+    Map<String, List<Map<String, Object>>> parGroupe = new LinkedHashMap<>();
+    for (var ligne : lignes) {
+      String cle = ligne.get("salle_id") + "|" + ligne.get("date");
+      parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>()).add(ligne);
+    }
+
+    Set<UUID> aSupprimer = new LinkedHashSet<>();
+    for (var groupe : parGroupe.values()) {
+      if (groupe.size() < 2) continue;
+      for (int i = 0; i < groupe.size(); i++) {
+        Map<String, Object> a = groupe.get(i);
+        if (aSupprimer.contains((UUID) a.get("id"))) continue;
+        for (int j = i + 1; j < groupe.size(); j++) {
+          Map<String, Object> b = groupe.get(j);
+          if (aSupprimer.contains((UUID) b.get("id"))) continue;
+          if (!CorrespondanceArtiste.estDoublonArtiste(
+              (String) a.get("artiste_norm"), (String) b.get("artiste_norm"))) {
+            continue;
+          }
+          if (!heuresCompatiblesOuPackage(a, b)) continue;
+          aSupprimer.add(idPerdant(a, b));
+        }
+      }
+    }
+
+    if (aSupprimer.isEmpty()) return 0;
+    int nbSupprimees =
+        jdbc.update(
+            "DELETE FROM concerts WHERE id IN (:ids)",
+            Map.of("ids", aSupprimer.stream().map(UUID::toString).toList()));
+    log.info("doublons sans artiste_id supprimés count={}", nbSupprimees);
+    return nbSupprimees;
+  }
+
+  private static boolean heuresCompatiblesOuPackage(Map<String, Object> a, Map<String, Object> b) {
+    String urlA = (String) a.get("url");
+    String urlB = (String) b.get("url");
+    if (estPackage(urlA) || estPackage(urlB)) return true;
+    java.sql.Time heureA = (java.sql.Time) a.get("heure");
+    java.sql.Time heureB = (java.sql.Time) b.get("heure");
+    if (heureA == null || heureB == null) return true;
+    long diffMinutes =
+        Math.abs(
+            java.time.Duration.between(heureA.toLocalTime(), heureB.toLocalTime()).toMinutes());
+    return diffMinutes <= TOLERANCE_HEURE_MINUTES;
+  }
+
+  private static boolean estPackage(String url) {
+    return url != null && url.matches("(?i).*\\Q/pack/\\E.*");
+  }
+
+  // La ligne perdante est celle dont la priorité (package puis source) est la plus faible — même
+  // ordre que SQL_PRIORITE_SOURCE, ré-exprimé en Java puisque la comparaison se fait ici en
+  // mémoire.
+  private static UUID idPerdant(Map<String, Object> a, Map<String, Object> b) {
+    int prioriteA = priorite(a);
+    int prioriteB = priorite(b);
+    Map<String, Object> perdant = prioriteA >= prioriteB ? a : b;
+    return (UUID) perdant.get("id");
+  }
+
+  private static int priorite(Map<String, Object> ligne) {
+    int penalitePackage = estPackage((String) ligne.get("url")) ? 10 : 0;
+    String source = (String) ligne.get("source");
+    int prioriteSource =
+        switch (source) {
+          case "ticketmaster" -> 1;
+          case "eventim" -> 2;
+          case "digitick" -> 3;
+          default -> 4;
+        };
+    return penalitePackage + prioriteSource;
   }
 }

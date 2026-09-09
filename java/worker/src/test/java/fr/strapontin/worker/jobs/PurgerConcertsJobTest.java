@@ -23,5 +23,6 @@ class PurgerConcertsJobTest {
 
     verify(workerPurgeService).executerPurgerConcerts();
     verify(workerPurgeService).executerPurgerConcertsNonConfirmes();
+    verify(workerPurgeService).executerPurgerConcertsHorsPortee();
   }
 }

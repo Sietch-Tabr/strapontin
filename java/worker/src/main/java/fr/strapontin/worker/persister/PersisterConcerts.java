@@ -345,6 +345,7 @@ public class PersisterConcerts {
 
     db.supprimerDoublonsParUrl();
     db.supprimerDoublonsParSalleId();
+    db.supprimerDoublonsSansArtisteId();
 
     log.info(
         "concerts persistés total={} inserts={} updates={}",
@@ -388,6 +389,7 @@ public class PersisterConcerts {
 
     List<ValeurConcert> valeurs = resoudreIdentitesSources(valeursBrutes);
     valeurs = db.resoudreParUrl(valeurs);
+    reconciliateurArtistes.corrigerParUrl(valeurs);
     db.alignerHeureReportTM(valeurs);
     valeurs = reconciliateurSalles.reconcilierSalles(valeurs);
     valeurs = reconciliateurArtistes.reconcilierArtistes(valeurs);

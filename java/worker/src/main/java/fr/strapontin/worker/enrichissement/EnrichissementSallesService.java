@@ -218,7 +218,9 @@ public class EnrichissementSallesService {
         b.nomAffiche() != null ? b.nomAffiche() : a.nomAffiche(),
         b.ville() != null ? b.ville() : a.ville(),
         b.website() != null ? b.website() : a.website(),
-        b.capacite() != null ? b.capacite() : a.capacite());
+        b.capacite() != null ? b.capacite() : a.capacite(),
+        b.latitude() != null ? b.latitude() : a.latitude(),
+        b.longitude() != null ? b.longitude() : a.longitude());
   }
 
   /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
@@ -230,6 +232,8 @@ public class EnrichissementSallesService {
     params.put("wikidataId", e.wikidataId());
     params.put("nomAffiche", e.nomAffiche());
     params.put("ville", e.ville());
+    params.put("latitude", e.latitude());
+    params.put("longitude", e.longitude());
     params.put("id", salleId.toString());
     try {
       jdbc.update(
@@ -237,7 +241,9 @@ public class EnrichissementSallesService {
           UPDATE salles SET
             wikidata_id = COALESCE(wikidata_id, :wikidataId),
             nom_affiche = COALESCE(nom_affiche, :nomAffiche),
-            ville       = COALESCE(ville, :ville)
+            ville       = COALESCE(ville, :ville),
+            latitude    = COALESCE(latitude, :latitude),
+            longitude   = COALESCE(longitude, :longitude)
           WHERE id = CAST(:id AS uuid)
           """,
           params);
