@@ -126,14 +126,24 @@ class ReconciliateurArtistesTest {
 
     reconciliateur.corrigerParUrl(List.of(entrant));
 
+    // Identité (evenements) et affichage de l'observation concernée (observations) sont
+    // désormais deux mises à jour distinctes (#1192).
     verify(jdbc)
         .update(
-            anyString(),
+            org.mockito.ArgumentMatchers.contains("UPDATE evenements"),
+            org.mockito.ArgumentMatchers
+                .<org.springframework.jdbc.core.namedparam.SqlParameterSource>argThat(
+                    params ->
+                        "nino arial".equals(params.getValue("nouvelArtisteNorm"))
+                            && "https://tm.example/nino-arial-billet"
+                                .equals(params.getValue("url"))));
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("UPDATE observations"),
             org.mockito.ArgumentMatchers
                 .<org.springframework.jdbc.core.namedparam.SqlParameterSource>argThat(
                     params ->
                         "Nino Arial".equals(params.getValue("nouvelArtiste"))
-                            && "nino arial".equals(params.getValue("nouvelArtisteNorm"))
                             && "https://tm.example/nino-arial-billet"
                                 .equals(params.getValue("url"))));
   }

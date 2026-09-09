@@ -138,7 +138,9 @@ public class ReconciliateurArtistes {
     List<String> urls = candidats.stream().map(ValeurConcert::url).distinct().toList();
     List<Map<String, Object>> existants =
         jdbc.queryForList(
-            "SELECT DISTINCT url, artiste_norm FROM concerts WHERE url IN (:urls)",
+            "SELECT DISTINCT o.url AS url, e.artiste_norm AS artiste_norm"
+                + " FROM observations o JOIN evenements e ON e.id = o.evenement_id"
+                + " WHERE o.url IN (:urls)",
             Map.of("urls", urls));
 
     Map<String, String> artisteNormParUrl = new HashMap<>();
@@ -158,15 +160,24 @@ public class ReconciliateurArtistes {
   // même événement réel, quels que soient l'ancien nom corrompu et sa date/salle éventuellement
   // elles-mêmes faussées par le même mauvais rapprochement.
   private void corrigerArtisteParUrl(ValeurConcert concert) {
+    MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("nouvelArtiste", concert.artiste())
+            .addValue("nouvelArtisteNorm", concert.artisteNorm())
+            .addValue("url", concert.url());
+    // Identité (evenements.artiste_norm) et affichage de l'observation concernée
+    // (observations.artiste_brut) vivent désormais sur deux tables distinctes (#1192) — les deux
+    // doivent être corrigés, la seconde ne portant que sur l'observation partageant cette url.
     int nbCorrigees =
         jdbc.update(
-            "UPDATE concerts SET artiste = :nouvelArtiste, artiste_norm = :nouvelArtisteNorm,"
-                + " updated_at = now()"
-                + " WHERE url = :url AND artiste_norm != :nouvelArtisteNorm",
-            new MapSqlParameterSource()
-                .addValue("nouvelArtiste", concert.artiste())
-                .addValue("nouvelArtisteNorm", concert.artisteNorm())
-                .addValue("url", concert.url()));
+            "UPDATE evenements SET artiste_norm = :nouvelArtisteNorm, updated_at = now()"
+                + " WHERE id = (SELECT evenement_id FROM observations WHERE url = :url LIMIT 1)"
+                + " AND artiste_norm != :nouvelArtisteNorm",
+            params);
+    jdbc.update(
+        "UPDATE observations SET artiste_brut = :nouvelArtiste, updated_at = now()"
+            + " WHERE url = :url",
+        params);
     if (nbCorrigees > 0) {
       log.info(
           "artiste corrigé par url url={} nouveau={} count={}",
@@ -278,19 +289,28 @@ public class ReconciliateurArtistes {
   /// @param existant ancienne identité (erronée) à corriger
   /// @param concert concert entrant portant l'identité corrigée
   private void corrigerArtisteExistantEnBase(ArtisteExistant existant, ValeurConcert concert) {
+    MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("nouvelArtiste", concert.artiste())
+            .addValue("nouvelArtisteNorm", concert.artisteNorm())
+            .addValue("ancienArtisteNorm", existant.artisteNorm())
+            .addValue("date", concert.date().toString())
+            .addValue("salleNorm", concert.salleNorm());
+    // Identité (evenements.artiste_norm) et affichage par source (observations.artiste_brut)
+    // vivent désormais sur deux tables distinctes (#1192).
     int nbCorrigees =
         jdbc.update(
-            "UPDATE concerts SET artiste = :nouvelArtiste, artiste_norm = :nouvelArtisteNorm,"
-                + " updated_at = now()"
+            "UPDATE evenements SET artiste_norm = :nouvelArtisteNorm, updated_at = now()"
                 + " WHERE artiste_norm = :ancienArtisteNorm AND date = CAST(:date AS date)"
                 + " AND salle_norm = :salleNorm",
-            new MapSqlParameterSource()
-                .addValue("nouvelArtiste", concert.artiste())
-                .addValue("nouvelArtisteNorm", concert.artisteNorm())
-                .addValue("ancienArtisteNorm", existant.artisteNorm())
-                .addValue("date", concert.date().toString())
-                .addValue("salleNorm", concert.salleNorm()));
+            params);
     if (nbCorrigees > 0) {
+      jdbc.update(
+          "UPDATE observations SET artiste_brut = :nouvelArtiste, updated_at = now()"
+              + " WHERE evenement_id IN (SELECT id FROM evenements"
+              + "   WHERE artiste_norm = :nouvelArtisteNorm AND date = CAST(:date AS date)"
+              + "     AND salle_norm = :salleNorm)",
+          params);
       log.info(
           "artiste corrigé rétroactivement ancien={} nouveau={} count={}",
           existant.artisteNorm(),

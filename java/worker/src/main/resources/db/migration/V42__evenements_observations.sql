@@ -101,6 +101,10 @@ ALTER TABLE user_matches
 -- Compatibilité lecture : les 13 fichiers en lecture seule continuent de lire `concerts` sans
 -- modification (vue, pas de réécriture des flux `AccueilService`/`SpectacleService`/etc.).
 -- "Meilleure" observation par événement au sens de la même priorité de source que ci-dessus.
+-- LEFT JOIN LATERAL plutôt que JOIN : un evenement sans aucune observation (ne devrait jamais
+-- survenir via le chemin d'écriture normal, qui crée toujours l'un avec l'autre) reste visible
+-- avec des champs d'affichage à NULL plutôt que de disparaître silencieusement de tous les flux de
+-- lecture — cohérent avec l'objectif de ne jamais perdre d'information.
 DROP TABLE concerts;
 CREATE VIEW concerts AS
 SELECT
@@ -111,7 +115,7 @@ SELECT
     ev.salle_id, ev.artiste_id, ev.absences_consecutives, ev.absence_detectee_le,
     ev.suppression_suggeree_le
 FROM evenements ev
-JOIN LATERAL (
+LEFT JOIN LATERAL (
     SELECT o.artiste_brut, o.salle_brut, o.url, o.source
     FROM observations o
     WHERE o.evenement_id = ev.id
