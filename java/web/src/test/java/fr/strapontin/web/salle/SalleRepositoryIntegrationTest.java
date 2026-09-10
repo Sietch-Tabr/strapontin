@@ -48,7 +48,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
 
   @BeforeEach
   void setUp() {
-    jdbc.update("DELETE FROM concerts", Map.of());
+    jdbc.update("DELETE FROM evenements", Map.of());
     jdbc.update("DELETE FROM salle_sources", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
     repository = new SalleRepository(jdbc);
@@ -176,13 +176,26 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
   // concerts.salle_cle/salles.nom_cle (colonnes générées indexées, V49). Ces tests valident que
   // la requête retourne toujours les mêmes résultats après le passage aux nouvelles colonnes.
 
+  private void creerConcert(String artiste, String salle, UUID salleId) {
+    UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, salle_norm, salle_id)"
+                + " VALUES (:artisteNorm, '2026-06-15', :salleNorm, CAST(:salleId AS uuid))"
+                + " RETURNING id",
+            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+                .addValue("artisteNorm", artiste.toLowerCase())
+                .addValue("salleNorm", salle.toLowerCase())
+                .addValue("salleId", salleId != null ? salleId.toString() : null),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), 'ticketmaster', :artiste, :salle)",
+        Map.of("id", evenementId.toString(), "artiste", artiste, "salle", salle));
+  }
+
   @Test
   void rechercherEnBase_concertNonResolu_trouveParNomApprochant() {
-    jdbc.update(
-        "INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source)"
-            + " VALUES ('Radiohead', 'radiohead', '2026-06-15', 'Zenith Paris', 'zenith paris',"
-            + " 'ticketmaster')",
-        Map.of());
+    creerConcert("Radiohead", "Zenith Paris", null);
 
     List<Map<String, Object>> resultats = repository.rechercherEnBase("%zenithparis%");
 
@@ -196,11 +209,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
     // "concerts non résolus" (salle_id IS NULL) — il ne peut apparaître que via la branche
     // référentiel, une seule fois malgré le concert associé (DISTINCT sur l'union).
     UUID salleId = creerSalle("zenithparis");
-    jdbc.update(
-        "INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source, salle_id)"
-            + " VALUES ('Radiohead', 'radiohead', '2026-06-15', 'Zenith Paris', 'zenith paris',"
-            + " 'ticketmaster', CAST(:salleId AS uuid))",
-        Map.of("salleId", salleId.toString()));
+    creerConcert("Radiohead", "Zenith Paris", salleId);
 
     List<Map<String, Object>> resultats = repository.rechercherEnBase("%zenithparis%");
 

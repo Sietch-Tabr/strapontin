@@ -237,7 +237,7 @@ public class WorkerFetchService {
   /// @param ids identifiants (texte) des entités traitées dans ce cycle
   /// @param debutCycle horodatage capturé avant la persistance du lot
   private static final String SQL_ABSENCES_BASE =
-      "UPDATE concerts SET"
+      "UPDATE evenements SET"
           + " absences_consecutives = CASE WHEN updated_at >= CAST(:debut AS timestamptz)"
           + "   THEN 0 ELSE absences_consecutives + 1 END,"
           + " absence_detectee_le = CASE"

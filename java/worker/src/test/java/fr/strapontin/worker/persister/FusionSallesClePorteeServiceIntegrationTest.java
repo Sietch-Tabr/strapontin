@@ -38,7 +38,7 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   @BeforeEach
   void nettoyerBase() {
     jdbc.update("DELETE FROM user_matches", Map.of());
-    jdbc.update("DELETE FROM concerts", Map.of());
+    jdbc.update("DELETE FROM evenements", Map.of());
     jdbc.update("DELETE FROM salle_sources", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
     jdbc.update("DELETE FROM logs_admin", Map.of());
@@ -70,19 +70,23 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   }
 
   private void creerConcert(String artisteNorm, String heure, String dept, UUID salleId) {
+    UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, dept, salle_id)"
+                + " VALUES (:artisteNorm, CAST(:date AS date), CAST(:heure AS time), 'salle',"
+                + " :dept, CAST(:salleId AS uuid)) RETURNING id",
+            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+                .addValue("artisteNorm", artisteNorm)
+                .addValue("date", DATE_FUTURE)
+                .addValue("heure", heure)
+                .addValue("dept", dept)
+                .addValue("salleId", salleId.toString()),
+            UUID.class);
     jdbc.update(
-        "INSERT INTO concerts (artiste, artiste_norm, date, heure, salle, salle_norm, dept,"
-            + " source, salle_id)"
-            + " VALUES (:artiste, :artisteNorm, CAST(:date AS date), CAST(:heure AS time),"
-            + " 'Salle', 'salle', :dept, CAST('ticketmaster' AS source_concert),"
-            + " CAST(:salleId AS uuid))",
-        Map.of(
-            "artiste", artisteNorm,
-            "artisteNorm", artisteNorm,
-            "date", DATE_FUTURE,
-            "heure", heure,
-            "dept", dept,
-            "salleId", salleId.toString()));
+        "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert), :artiste,"
+            + " 'Salle')",
+        Map.of("id", evenementId.toString(), "artiste", artisteNorm));
   }
 
   @Test

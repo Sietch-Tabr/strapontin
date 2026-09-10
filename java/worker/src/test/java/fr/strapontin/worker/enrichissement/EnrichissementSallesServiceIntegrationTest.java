@@ -95,13 +95,19 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
   @SuppressWarnings("unchecked")
   void enrichir_salleSansDeptAvecConcertRattache_heriteDuDeptDuConcert() {
     UUID salleId = insererSalle("Salle Sans Dept", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, salle_norm, dept, salle_id)"
+                + " VALUES ('artiste', CURRENT_DATE + 30, 'salle sans dept', '87',"
+                + " CAST(:salleId AS uuid)) RETURNING id",
+            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+                .addValue("salleId", salleId.toString()),
+            UUID.class);
     jdbc.update(
-        "INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, dept, source,"
-            + " salle_id)"
-            + " VALUES ('Artiste', 'artiste', CURRENT_DATE + 30, 'Salle Sans Dept',"
-            + " 'salle sans dept', '87', CAST('ticketmaster' AS source_concert), CAST(:salleId AS"
-            + " uuid))",
-        Map.of("salleId", salleId.toString()));
+        "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert), 'Artiste',"
+            + " 'Salle Sans Dept')",
+        Map.of("id", evenementId.toString()));
 
     service.enrichir();
 

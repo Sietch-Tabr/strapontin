@@ -49,7 +49,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     jdbc.update("DELETE FROM user_artistes", Map.of());
     jdbc.update("DELETE FROM salle_sources", Map.of());
     jdbc.update("DELETE FROM artiste_sources", Map.of());
-    jdbc.update("DELETE FROM concerts", Map.of());
+    jdbc.update("DELETE FROM evenements", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
     jdbc.update("DELETE FROM artistes", Map.of());
     jdbc.update("DELETE FROM users", Map.of());
@@ -120,16 +120,20 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   private void insererConcertAncien(UUID artisteId, String artisteNorm) {
+    UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, salle_norm, artiste_id, updated_at)"
+                + " VALUES (:artisteNorm, :date, 'salle test', CAST(:artisteId AS uuid),"
+                + " now() - interval '1 hour') RETURNING id",
+            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+                .addValue("artisteNorm", artisteNorm.toLowerCase())
+                .addValue("date", LocalDate.now().plusMonths(1))
+                .addValue("artisteId", artisteId.toString()),
+            UUID.class);
     jdbc.update(
-        "INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source,"
-            + " artiste_id, updated_at)"
-            + " VALUES (:artiste, :artisteNorm, :date, 'Salle Test', 'salle test',"
-            + " 'ticketmaster', CAST(:artisteId AS uuid), now() - interval '1 hour')",
-        Map.of(
-            "artiste", artisteNorm,
-            "artisteNorm", artisteNorm.toLowerCase(),
-            "date", LocalDate.now().plusMonths(1),
-            "artisteId", artisteId.toString()));
+        "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), 'ticketmaster', :artiste, 'Salle Test')",
+        Map.of("id", evenementId.toString(), "artiste", artisteNorm));
   }
 
   // Un concert précédemment vu mais absent de la réponse fraîche de ce cycle doit voir son
@@ -156,12 +160,19 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   private void insererConcertAncienSurSalle(UUID salleId) {
+    UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, salle_norm, salle_id, updated_at)"
+                + " VALUES ('artiste salle', :date, 'salle test', CAST(:salleId AS uuid),"
+                + " now() - interval '1 hour') RETURNING id",
+            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+                .addValue("date", LocalDate.now().plusMonths(1))
+                .addValue("salleId", salleId.toString()),
+            UUID.class);
     jdbc.update(
-        "INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source,"
-            + " salle_id, updated_at)"
-            + " VALUES ('Artiste Salle', 'artiste salle', :date, 'Salle Test', 'salle test',"
-            + " 'ticketmaster', CAST(:salleId AS uuid), now() - interval '1 hour')",
-        Map.of("date", LocalDate.now().plusMonths(1), "salleId", salleId.toString()));
+        "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), 'ticketmaster', 'Artiste Salle', 'Salle Test')",
+        Map.of("id", evenementId.toString()));
   }
 
   // Même régression que executerFetchArtistesBatch_concertNonReconfirme_..., côté salle suivie
@@ -204,7 +215,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
         Map.of("id", salleNonSuivie.toString()));
     insererConcertAncienSurSalle(salleNonSuivie);
     jdbc.update(
-        "UPDATE concerts SET dept = '75' WHERE salle_id = CAST(:id AS uuid)",
+        "UPDATE evenements SET dept = '75' WHERE salle_id = CAST(:id AS uuid)",
         Map.of("id", salleNonSuivie.toString()));
     when(ticketmasterSource.fetchRegion(any(), any())).thenReturn(List.<ConcertBrut>of());
     when(eventimSource.fetchRegion(any(), any())).thenReturn(List.<ConcertBrut>of());

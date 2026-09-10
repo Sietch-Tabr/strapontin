@@ -191,8 +191,10 @@ class ReferentielSallesServiceTest {
     boolean fusionnee = service.fusionner(cible, source);
 
     assertTrue(fusionnee);
-    verify(jdbc, times(1)).update(contains("DELETE FROM concerts c1"), anyMap());
-    verify(jdbc, times(1)).update(contains("UPDATE concerts SET salle_id"), anyMap());
+    verify(jdbc, times(1)).update(contains("DELETE FROM observations o1"), anyMap());
+    verify(jdbc, times(1)).update(contains("UPDATE observations SET evenement_id"), anyMap());
+    verify(jdbc, times(1)).update(contains("DELETE FROM evenements"), anyMap());
+    verify(jdbc, times(1)).update(contains("UPDATE evenements SET salle_id"), anyMap());
     verify(jdbc, times(1)).update(contains("DELETE FROM user_salles"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE user_salles SET salle_id"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE salle_sources SET salle_id"), anyMap());

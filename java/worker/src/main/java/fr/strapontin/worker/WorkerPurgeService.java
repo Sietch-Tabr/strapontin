@@ -49,7 +49,7 @@ public class WorkerPurgeService {
         () -> {
           int supprimes =
               jdbc.update(
-                  "DELETE FROM concerts WHERE date < :dateLimite",
+                  "DELETE FROM evenements WHERE date < :dateLimite",
                   Map.of("dateLimite", dateLimite));
           log.info("purger:concerts terminé supprimes={}", supprimes);
           return new ResultatPersistance(0, supprimes);
@@ -83,7 +83,7 @@ public class WorkerPurgeService {
         () -> {
           int signales =
               jdbc.update(
-                  "UPDATE concerts SET suppression_suggeree_le = now()"
+                  "UPDATE evenements SET suppression_suggeree_le = now()"
                       + " WHERE absences_consecutives >= :seuil AND date >= CURRENT_DATE"
                       + " AND suppression_suggeree_le IS NULL",
                   Map.of("seuil", SEUIL_PURGE_ABSENCES));
@@ -113,7 +113,7 @@ public class WorkerPurgeService {
         () -> {
           int signales =
               jdbc.update(
-                  "UPDATE concerts SET suppression_suggeree_le = now()"
+                  "UPDATE evenements SET suppression_suggeree_le = now()"
                       + " WHERE salle_id IS NULL AND artiste_id IS NULL AND date >= CURRENT_DATE"
                       + " AND updated_at < now() - make_interval(days => :seuilJours)"
                       + " AND suppression_suggeree_le IS NULL",
@@ -134,12 +134,11 @@ public class WorkerPurgeService {
   /// cohérent (cf. `PurgerSallesJob`).
   ///
   /// <p>Supprime les candidates une par une plutôt qu'en un seul `DELETE` en masse : la suppression
-  /// d'une salle peut déclencher en cascade (FK `ON DELETE SET NULL`) un `UPDATE concerts SET
-  /// salle_id = NULL` qui entre en conflit avec la contrainte unique {@code
-  /// uq_concerts_artiste_date_heure_salle} si un doublon TM/Eventim du même concert existe déjà
-  /// avec `salle_id = NULL` — un seul cas de ce type faisait jusqu'ici échouer toute la transaction
-  /// du `DELETE` en masse, bloquant la purge de **toutes** les salles orphelines légitimes, pas
-  /// seulement celle en cause.
+  /// d'une salle peut déclencher en cascade (FK `ON DELETE SET NULL`) un `UPDATE evenements SET
+  /// salle_id = NULL` qui entre en conflit avec la contrainte unique {@code uq_evenements} si un
+  /// doublon TM/Eventim du même événement existe déjà avec `salle_id = NULL` — un seul cas de ce
+  /// type faisait jusqu'ici échouer toute la transaction du `DELETE` en masse, bloquant la purge de
+  /// **toutes** les salles orphelines légitimes, pas seulement celle en cause.
   public void executerPurgerSalles() {
     log.info("purger:salles démarré");
     workerStatsService.executerAvecStats(
