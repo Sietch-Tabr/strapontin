@@ -47,7 +47,8 @@ class WorkerRevocationServiceTest {
             jdbc,
             logsAdminWorker,
             new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
-            new SuiviChroniciteService(jdbc, new ObjectMapper()));
+            new SuiviChroniciteService(jdbc, new ObjectMapper()),
+            new DeriveVolumeFetchService(jdbc, logsAdminWorker));
     service = new WorkerRevocationService(jdbc, workerStatsService);
   }
 
