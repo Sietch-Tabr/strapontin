@@ -87,7 +87,7 @@ public class ConcertsAdminService {
   public boolean confirmerSuppression(UUID id) {
     int lignes =
         jdbc.update(
-            "DELETE FROM concerts WHERE id = CAST(:id AS uuid) AND suppression_suggeree_le IS NOT"
+            "DELETE FROM evenements WHERE id = CAST(:id AS uuid) AND suppression_suggeree_le IS NOT"
                 + " NULL",
             Map.of("id", id.toString()));
     if (lignes > 0) {
@@ -109,7 +109,7 @@ public class ConcertsAdminService {
     int lignes =
         jdbc.update(
             """
-            UPDATE concerts
+            UPDATE evenements
             SET suppression_suggeree_le = NULL, absences_consecutives = 0, absence_detectee_le = NULL
             WHERE id = CAST(:id AS uuid) AND suppression_suggeree_le IS NOT NULL
             """,

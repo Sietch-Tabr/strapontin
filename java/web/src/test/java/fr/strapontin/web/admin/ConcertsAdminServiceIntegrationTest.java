@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,17 +49,26 @@ class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   @BeforeEach
   void setUp() {
-    jdbc.update("DELETE FROM concerts", Map.of());
+    // evenements, pas concerts (vue depuis #1192) — cascade vers observations.
+    jdbc.update("DELETE FROM evenements", Map.of());
     service = new ConcertsAdminService(jdbc, new LogAdminService(jdbc, new ObjectMapper()));
   }
 
   private void creerConcertFlague(String artiste) {
+    UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, salle_norm, absences_consecutives,"
+                + " suppression_suggeree_le)"
+                + " VALUES (:artisteNorm, :date, 'salle test', 50, now()) RETURNING id",
+            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+                .addValue("artisteNorm", artiste.toLowerCase())
+                .addValue("date", LocalDate.now()),
+            UUID.class);
     jdbc.update(
-        "INSERT INTO concerts (artiste, artiste_norm, date, salle, salle_norm, source,"
-            + " absences_consecutives, suppression_suggeree_le)"
-            + " VALUES (:artiste, :artisteNorm, :date, 'Salle Test', 'salle test',"
-            + " CAST('ticketmaster' AS source_concert), 50, now())",
-        Map.of("artiste", artiste, "artisteNorm", artiste.toLowerCase(), "date", LocalDate.now()));
+        "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert), :artiste,"
+            + " 'Salle Test')",
+        Map.of("id", evenementId.toString(), "artiste", artiste));
   }
 
   @Test

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.core.SalleHierarchie;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -198,22 +199,42 @@ public class ReferentielSallesService {
 
     Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
 
-    // 1. Dédoublonner les concerts en conflit (même artiste/date/heure déjà présent côté cible)
+    // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible) : leurs
+    // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui
+    // entreraient en conflit sur (evenement_id, source, url) sont supprimées, déjà représentées
+    // côté cible. L'événement source, vidé de ses observations, est ensuite supprimé.
     jdbc.update(
         """
-        DELETE FROM concerts c1
-        USING concerts c2
-        WHERE c1.salle_id = CAST(:source AS uuid)
-          AND c2.salle_id = CAST(:cible AS uuid)
-          AND c1.artiste_norm = c2.artiste_norm
-          AND c1.date = c2.date
-          AND c1.heure IS NOT DISTINCT FROM c2.heure
+        DELETE FROM observations o1
+        USING observations o2, evenements e1, evenements e2
+        WHERE o1.evenement_id = e1.id AND o2.evenement_id = e2.id
+          AND e1.salle_id = CAST(:source AS uuid) AND e2.salle_id = CAST(:cible AS uuid)
+          AND e1.artiste_norm = e2.artiste_norm AND e1.date = e2.date
+          AND e1.heure IS NOT DISTINCT FROM e2.heure
+          AND o1.source = o2.source AND o1.url IS NOT DISTINCT FROM o2.url
+        """,
+        ids);
+    jdbc.update(
+        """
+        UPDATE observations SET evenement_id = e2.id
+        FROM evenements e1, evenements e2
+        WHERE observations.evenement_id = e1.id
+          AND e1.salle_id = CAST(:source AS uuid) AND e2.salle_id = CAST(:cible AS uuid)
+          AND e1.artiste_norm = e2.artiste_norm AND e1.date = e2.date
+          AND e1.heure IS NOT DISTINCT FROM e2.heure
+        """,
+        ids);
+    jdbc.update(
+        """
+        DELETE FROM evenements
+        WHERE salle_id = CAST(:source AS uuid)
+          AND NOT EXISTS (SELECT 1 FROM observations WHERE observations.evenement_id = evenements.id)
         """,
         ids);
 
-    // 2. Réassigner les concerts restants
+    // 2. Réassigner les événements restants (ceux sans doublon côté cible)
     jdbc.update(
-        "UPDATE concerts SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source AS"
+        "UPDATE evenements SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source AS"
             + " uuid)",
         ids);
 
@@ -262,10 +283,7 @@ public class ReferentielSallesService {
             + " (SELECT salle_parent_id FROM salles WHERE id = CAST(:source AS uuid))"
             + " WHERE id = CAST(:cible AS uuid) AND salle_parent_id = CAST(:source AS uuid)",
         ids);
-    jdbc.update(
-        "UPDATE salles SET salle_parent_id = CAST(:cible AS uuid)"
-            + " WHERE salle_parent_id = CAST(:source AS uuid) AND id != CAST(:cible AS uuid)",
-        ids);
+    reassignerSousSallesSansCycle(cibleId, sourceId);
 
     // 7. Suppression de la salle source
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
@@ -273,6 +291,52 @@ public class ReferentielSallesService {
     logAdminService.logAdmin(
         "info", "admin", "fusion salle cible=" + cibleId + " source=" + sourceId);
     return true;
+  }
+
+  /// Réassigne à la cible chaque sous-salle de la source (hors cible elle-même, déjà traitée), sauf
+  /// celle dont la cible est déjà un descendant — la réassigner créerait un cycle {@code enfant →
+  /// cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL})
+  /// plutôt que laissée pointer vers la source sur le point d'être supprimée, et signalée pour
+  /// revue manuelle.
+  private void reassignerSousSallesSansCycle(UUID cibleId, UUID sourceId) {
+    List<UUID> enfants =
+        jdbc.query(
+            "SELECT id FROM salles WHERE salle_parent_id = CAST(:source AS uuid) AND id !="
+                + " CAST(:cible AS uuid)",
+            Map.of("source", sourceId.toString(), "cible", cibleId.toString()),
+            (rs, _) -> rs.getObject("id", UUID.class));
+
+    for (UUID enfant : enfants) {
+      if (SalleHierarchie.creeraitCycle(cibleId, enfant, this::lireSalleParentId)) {
+        jdbc.update(
+            "UPDATE salles SET salle_parent_id = NULL WHERE id = CAST(:id AS uuid)",
+            Map.of("id", enfant.toString()));
+        logAdminService.logAdmin(
+            "warn",
+            "admin",
+            "cycle salle_parent_id évité lors d'une fusion — sous-salle détachée enfant="
+                + enfant
+                + " cible="
+                + cibleId);
+      } else {
+        jdbc.update(
+            "UPDATE salles SET salle_parent_id = CAST(:cible AS uuid) WHERE id = CAST(:id AS"
+                + " uuid)",
+            Map.of("cible", cibleId.toString(), "id", enfant.toString()));
+      }
+    }
+  }
+
+  // findFirst() sur un flux contenant un unique élément null lève une NullPointerException
+  // (Optional.of appelé en interne) — un accès direct à la liste évite ce piège pour une salle
+  // racine sans parent.
+  private UUID lireSalleParentId(UUID salleId) {
+    List<UUID> resultat =
+        jdbc.query(
+            "SELECT salle_parent_id FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salleId.toString()),
+            (rs, _) -> (UUID) rs.getObject("salle_parent_id"));
+    return resultat.isEmpty() ? null : resultat.get(0);
   }
 
   /// Supprime, avant réassignation, les doublons de {@code salle_sources} qu'une fusion créerait

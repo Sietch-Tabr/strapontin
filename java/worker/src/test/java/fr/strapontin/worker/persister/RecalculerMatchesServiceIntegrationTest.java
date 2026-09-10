@@ -37,7 +37,7 @@ class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationT
   void nettoyerBase() {
     jdbc.update("DELETE FROM users", Map.of());
     jdbc.update("DELETE FROM artistes", Map.of());
-    jdbc.update("DELETE FROM concerts", Map.of());
+    jdbc.update("DELETE FROM evenements", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
   }
 
@@ -110,22 +110,33 @@ class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationT
       String url,
       String heure) {
     Map<String, Object> params = new HashMap<>();
-    params.put("artiste", artiste);
     params.put("norm", norm);
     params.put("date", date);
-    params.put("salle", salleNorm);
     params.put("salleNorm", salleNorm);
     params.put("artisteId", artisteId != null ? artisteId.toString() : null);
     params.put("salleId", salleId != null ? salleId.toString() : null);
-    params.put("url", url);
     params.put("heure", heure);
+    UUID evenementId =
+        jdbc.queryForObject(
+            """
+            INSERT INTO evenements (artiste_norm, date, heure, salle_norm, artiste_id, salle_id)
+            VALUES (:norm, CAST(:date AS date), CAST(:heure AS time), :salleNorm,
+                    CAST(:artisteId AS uuid), CAST(:salleId AS uuid))
+            RETURNING id
+            """,
+            params,
+            UUID.class);
+    Map<String, Object> paramsObservation = new HashMap<>();
+    paramsObservation.put("id", evenementId.toString());
+    paramsObservation.put("artiste", artiste);
+    paramsObservation.put("salle", salleNorm);
+    paramsObservation.put("url", url);
     jdbc.update(
         """
-        INSERT INTO concerts (artiste, artiste_norm, date, heure, salle, salle_norm, source, artiste_id, salle_id, url)
-        VALUES (:artiste, :norm, CAST(:date AS date), CAST(:heure AS time), :salle, :salleNorm,
-                CAST('ticketmaster' AS source_concert), CAST(:artisteId AS uuid), CAST(:salleId AS uuid), :url)
+        INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut, url)
+        VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert), :artiste, :salle, :url)
         """,
-        params);
+        paramsObservation);
   }
 
   private long compterMatches(String userId) {

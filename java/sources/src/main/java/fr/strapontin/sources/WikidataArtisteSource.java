@@ -7,6 +7,7 @@ package fr.strapontin.sources;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,9 +38,21 @@ import org.springframework.web.client.RestClient;
 ///
 /// @since 2.6.0
 /// @author Kwaite
-public class WikidataArtisteSource implements SourceEnrichissementArtiste, SourceAvecBilanFetch {
+public class WikidataArtisteSource
+    implements SourceEnrichissementArtiste, SourceAvecBilanFetch, SourceAvecAmbiguitesDecouverte {
 
   private static final Logger log = LoggerFactory.getLogger(WikidataArtisteSource.class);
+
+  // Rempli par decouvrir() sur ambiguïté humain/groupe, vidé par preleverAmbiguites() — même
+  // patron "prélever" que preleverBilan (BilanFetch), pas de dépendance JDBC dans ce module.
+  private final Set<UUID> ambiguites = new HashSet<>();
+
+  @Override
+  public Set<UUID> preleverAmbiguites() {
+    Set<UUID> resultat = new HashSet<>(ambiguites);
+    ambiguites.clear();
+    return resultat;
+  }
 
   /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement.
   ///
@@ -129,9 +142,18 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
             .filter(ClientSparqlWikidata::estQIdValide)
             .map(q -> "wd:" + q)
             .collect(Collectors.joining(" "));
+    // Les alias (skos:altLabel) sont agrégés dans une sous-requête groupée par ?item avant la
+    // jointure avec deezerId/tmId et le SERVICE label — les grouper dans la requête principale
+    // forcerait un GROUP BY sur toutes les colonnes, y compris ?itemLabel produit procéduralement
+    // par le label service, ce qui n'est pas supporté proprement en SPARQL 1.1.
     return """
-    SELECT ?item ?itemLabel ?deezerId ?tmId WHERE {
-      VALUES ?item { %s }
+    SELECT ?item ?itemLabel ?deezerId ?tmId ?aliases WHERE {
+      {
+        SELECT ?item (GROUP_CONCAT(DISTINCT ?altLabel; separator="|") AS ?aliases) WHERE {
+          VALUES ?item { %s }
+          OPTIONAL { ?item skos:altLabel ?altLabel . FILTER(LANG(?altLabel) IN ("fr", "en")) }
+        } GROUP BY ?item
+      }
       OPTIONAL { ?item wdt:P2722 ?deezerId . }
       OPTIONAL { ?item wdt:P6262 ?tmId . }
       SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
@@ -171,6 +193,7 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
           "Wikidata découverte — candidats ambigus (types {}) nom={} — non rapproché",
           typesDistincts,
           artiste.nom());
+      ambiguites.add(artiste.id());
       return Optional.empty();
     }
 
@@ -235,6 +258,15 @@ public class WikidataArtisteSource implements SourceEnrichissementArtiste, Sourc
         qid,
         ClientSparqlWikidata.valeurBinding(binding, "itemLabel"),
         ClientSparqlWikidata.valeurBinding(binding, "deezerId"),
-        ClientSparqlWikidata.valeurBinding(binding, "tmId"));
+        ClientSparqlWikidata.valeurBinding(binding, "tmId"),
+        extraireAlias(binding));
+  }
+
+  // GROUP_CONCAT (séparateur "|") produit une chaîne vide, jamais absente, quand aucun alias n'est
+  // connu — filtrée explicitement plutôt que de produire une liste avec un unique élément vide.
+  private static List<String> extraireAlias(Map<String, Object> binding) {
+    String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
+    if (aliases == null || aliases.isBlank()) return List.of();
+    return java.util.Arrays.stream(aliases.split("\\|")).filter(a -> !a.isBlank()).toList();
   }
 }

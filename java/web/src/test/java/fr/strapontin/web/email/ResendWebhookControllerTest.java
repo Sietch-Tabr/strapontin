@@ -88,11 +88,12 @@ class ResendWebhookControllerTest {
         {"type":"email.bounced","data":{"to":["victime@exemple.fr"]}}
         """;
 
-    controller.traiterEvenement(corps);
+    controller.traiterEvenement(corps, "svix-id-bounce-1");
 
     ArgumentCaptor<Map<String, Object>> details = ArgumentCaptor.forClass(Map.class);
     verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), details.capture());
     assertEquals(String.valueOf("victime@exemple.fr".hashCode()), details.getValue().get("email"));
+    assertEquals("svix-id-bounce-1", details.getValue().get("svixId"));
     verify(emailAlerteService).envoyerNotificationBounce("victime@exemple.fr");
   }
 
@@ -106,12 +107,13 @@ class ResendWebhookControllerTest {
         {"type":"email.complained","data":{"to":["plaignant@exemple.fr"]}}
         """;
 
-    controller.traiterEvenement(corps);
+    controller.traiterEvenement(corps, "svix-id-complained-1");
 
     ArgumentCaptor<Map<String, Object>> details = ArgumentCaptor.forClass(Map.class);
     verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), details.capture());
     assertEquals(
         String.valueOf("plaignant@exemple.fr".hashCode()), details.getValue().get("email"));
+    assertEquals("svix-id-complained-1", details.getValue().get("svixId"));
     verify(emailAlerteService).envoyerNotificationPlainteSpam("plaignant@exemple.fr");
     verify(emailAlerteService, never()).envoyerNotificationBounce(anyString());
   }

@@ -5,16 +5,15 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceArtiste;
+import fr.strapontin.core.Normalisation;
 import java.sql.Types;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,12 +21,10 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Service de persistance SQL pur pour les concerts.
-///
-/// <p>Effectue l'upsert par lot en base avec la stratégie ON CONFLICT sur {@code (artiste_norm,
-/// date, heure, salle_id)} (NULLS NOT DISTINCT, migration V37). Gère la suppression des doublons
-/// par URL et par {@code salle_id} (TM+Eventim), ainsi que l'alignement d'heure d'un report
-/// Ticketmaster non ambigu (voir {@link #alignerHeureReportTM}).
+/// Service de persistance SQL pur pour les concerts, sur le modèle événement canonique ({@code
+/// evenements}) + observations par source ({@code observations}) — un événement réel est résolu (ou
+/// créé) avant toute écriture, jamais choisi après coup par suppression d'une source perdante
+/// (ancien modèle, trois mécanismes de suppression de doublon distincts).
 ///
 /// <p>Résout les UUIDs internes depuis les identifiants sources préfixés ({@code salle_sources},
 /// {@code artiste_sources}).
@@ -38,57 +35,6 @@ import org.springframework.stereotype.Service;
 public class PersisteurConcertsDb {
 
   private static final Logger log = LoggerFactory.getLogger(PersisteurConcertsDb.class);
-
-  private static final String SQL_UPSERT_ENTETE =
-      """
-      INSERT INTO concerts
-          (artiste, artiste_norm, date, heure, salle, salle_norm, ville, dept,
-           url, source, classification, genre, statut,
-           presale_debut, presale_nom, salle_id, artiste_id)
-      VALUES
-      """;
-
-  private static final String SQL_UPSERT_CONFLIT =
-      """
-      ON CONFLICT ON CONSTRAINT uq_concerts_artiste_date_heure_salle DO UPDATE SET
-          artiste        = CASE WHEN unaccent(EXCLUDED.artiste) != EXCLUDED.artiste
-                                THEN EXCLUDED.artiste ELSE concerts.artiste END,
-          salle          = CASE WHEN upper(EXCLUDED.salle) != EXCLUDED.salle
-                                THEN EXCLUDED.salle ELSE concerts.salle END,
-          salle_norm     = CASE WHEN upper(EXCLUDED.salle) != EXCLUDED.salle
-                                THEN EXCLUDED.salle_norm ELSE concerts.salle_norm END,
-          heure          = EXCLUDED.heure,
-          ville          = EXCLUDED.ville,
-          dept           = EXCLUDED.dept,
-          source         = EXCLUDED.source,
-          url            = COALESCE(EXCLUDED.url, concerts.url),
-          classification = COALESCE(EXCLUDED.classification, concerts.classification),
-          genre          = COALESCE(EXCLUDED.genre, concerts.genre),
-          statut         = CASE
-                             WHEN concerts.statut IN ('cancelled', 'rescheduled', 'postponed')
-                                  THEN concerts.statut
-                             ELSE COALESCE(EXCLUDED.statut, concerts.statut) END,
-          presale_debut  = COALESCE(EXCLUDED.presale_debut, concerts.presale_debut),
-          presale_nom    = COALESCE(EXCLUDED.presale_nom, concerts.presale_nom),
-          salle_id     = COALESCE(EXCLUDED.salle_id, concerts.salle_id),
-          artiste_id     = COALESCE(EXCLUDED.artiste_id, concerts.artiste_id),
-          updated_at     = now()
-      RETURNING (xmax = 0) AS est_insertion
-      """;
-
-  private static final String SQL_DOUBLONS_URL =
-      """
-      SELECT DISTINCT c1.id::text
-      FROM concerts c1
-      JOIN concerts c2
-        ON c1.source = c2.source
-       AND c1.url    = c2.url
-       AND c1.date   = c2.date
-       AND c1.heure IS NOT DISTINCT FROM c2.heure
-       AND c1.id    != c2.id
-       AND c1.updated_at < c2.updated_at
-      WHERE c1.url IS NOT NULL
-      """;
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -142,21 +88,16 @@ public class PersisteurConcertsDb {
     return cache;
   }
 
-  /// Résout les concerts Eventim dont l'URL existe déjà en base sous un {@code artiste_norm}
-  /// différent.
+  /// Résout les concerts Eventim dont l'URL existe déjà en base (via une observation) sous un
+  /// {@code artiste_norm} différent.
   ///
   /// <p>Couvre le cas des pages festival Eventim : une même URL peut exposer des artistes
-  /// différents selon le fetch. Sans cette résolution, deux lignes coexisteraient en base avec le
-  /// même {@code (source, url, date, heure)} mais des {@code artiste_norm} différents, déclenchant
-  /// une suppression cyclique dans {@link #supprimerDoublonsParUrl}.
+  /// différents selon le fetch. Sans cette résolution, deux événements coexisteraient en base avec
+  /// le même {@code (source, url, date)} mais des {@code artiste_norm} différents.
   ///
   /// <p>Restreint à Eventim (seule source concernée par le cas documenté ci-dessus) : appliqué à
-  /// toutes les sources, ce mécanisme empêchait aussi toute guérison d'une corruption de {@code
-  /// artiste_norm} déjà persistée une fois sa cause racine corrigée en amont — la ligne entrante,
-  /// désormais correcte, se voyait reforcée vers l'ancienne valeur avant même d'atteindre l'upsert.
-  /// Pour les autres sources, {@link #supprimerDoublonsParUrl} (qui conserve la ligne la plus
-  /// récemment mise à jour) suffit à absorber une éventuelle ligne dupliquée transitoire, tout en
-  /// laissant une résolution corrigée remplacer effectivement l'ancienne.
+  /// toutes les sources, ce mécanisme empêcherait toute guérison d'une corruption de {@code
+  /// artiste_norm} déjà persistée une fois sa cause racine corrigée en amont.
   ///
   /// @param concerts concerts après résolution des identités sources
   /// @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour
@@ -169,8 +110,12 @@ public class PersisteurConcertsDb {
     List<String> urls = avecUrl.stream().map(ValeurConcert::url).distinct().toList();
     List<Map<String, Object>> lignesExistantes =
         jdbc.queryForList(
-            "SELECT artiste_norm, artiste_id, date, heure, source, url"
-                + " FROM concerts WHERE url IN (:urls) AND source = 'eventim'",
+            """
+            SELECT e.artiste_norm AS artiste_norm, e.artiste_id AS artiste_id, e.date AS date,
+                   e.heure AS heure, o.source AS source, o.url AS url
+            FROM observations o JOIN evenements e ON e.id = o.evenement_id
+            WHERE o.url IN (:urls) AND o.source = 'eventim'
+            """,
             Map.of("urls", urls));
 
     if (lignesExistantes.isEmpty()) return concerts;
@@ -212,128 +157,24 @@ public class PersisteurConcertsDb {
         .toList();
   }
 
-  /// Insère ou met à jour un lot de concerts en une seule requête multi-lignes.
-  ///
-  /// <p>L'unicité de la clé de conflit dans le lot est garantie en amont par {@link
-  /// PersisterConcerts#deduplicerLotReconcilie}, ce qui rend l'ON CONFLICT multi-VALUES sûr.
-  ///
-  /// @param valeurs concerts réconciliés et dédupliqués du lot
-  /// @return décompte des insertions et mises à jour du lot
-  PersisterConcerts.ResultatPersistance upsertLot(List<ValeurConcert> valeurs) {
-    if (valeurs.isEmpty()) return new PersisterConcerts.ResultatPersistance(0, 0);
-
-    StringBuilder sql = new StringBuilder(SQL_UPSERT_ENTETE);
-    MapSqlParameterSource params = new MapSqlParameterSource();
-    for (int i = 0; i < valeurs.size(); i++) {
-      if (i > 0) sql.append(",\n");
-      sql.append(placeholdersLigne(i));
-      ajouterParametresUpsert(params, valeurs.get(i), i);
-    }
-    sql.append("\n").append(SQL_UPSERT_CONFLIT);
-
-    List<Map<String, Object>> lignes = jdbc.queryForList(sql.toString(), params);
-    int inserts = 0;
-    int updates = 0;
-    for (Map<String, Object> ligne : lignes) {
-      if (Boolean.TRUE.equals(ligne.get("est_insertion"))) inserts++;
-      else updates++;
-    }
-    return new PersisterConcerts.ResultatPersistance(inserts, updates);
-  }
-
-  private static String placeholdersLigne(int i) {
-    return "(:artiste_"
-        + i
-        + ", :artisteNorm_"
-        + i
-        + ", :date_"
-        + i
-        + ", :heure_"
-        + i
-        + ", :salle_"
-        + i
-        + ", :salleNorm_"
-        + i
-        + ", :ville_"
-        + i
-        + ", :dept_"
-        + i
-        + ", :url_"
-        + i
-        + ", CAST(:source_"
-        + i
-        + " AS source_concert)"
-        + ", :classification_"
-        + i
-        + ", :genre_"
-        + i
-        + ", :statut_"
-        + i
-        + ", CAST(:presaleDebut_"
-        + i
-        + " AS timestamptz)"
-        + ", :presaleNom_"
-        + i
-        + ", CAST(:salleId_"
-        + i
-        + " AS uuid)"
-        + ", CAST(:artisteId_"
-        + i
-        + " AS uuid))";
-  }
-
-  private static void ajouterParametresUpsert(
-      MapSqlParameterSource params, ValeurConcert v, int i) {
-    params.addValue("artiste_" + i, v.artiste());
-    params.addValue("artisteNorm_" + i, v.artisteNorm());
-    params.addValue("date_" + i, v.date(), Types.DATE);
-    params.addValue("heure_" + i, v.heure(), Types.TIME);
-    params.addValue("salle_" + i, v.salle());
-    params.addValue("salleNorm_" + i, v.salleNorm());
-    params.addValue("ville_" + i, v.ville());
-    params.addValue("dept_" + i, v.dept());
-    params.addValue("url_" + i, v.url());
-    params.addValue("source_" + i, v.source());
-    params.addValue("classification_" + i, v.classification());
-    params.addValue("genre_" + i, v.genre());
-    params.addValue("statut_" + i, v.statut());
-    params.addValue("presaleDebut_" + i, v.presaleDebut());
-    params.addValue("presaleNom_" + i, v.presaleNom());
-    params.addValue("salleId_" + i, v.salleId() != null ? v.salleId().toString() : null);
-    params.addValue("artisteId_" + i, v.artisteId() != null ? v.artisteId().toString() : null);
-  }
-
-  /// Supprime les concerts en doublon par {@code (source, url, date, heure)}.
-  ///
-  /// @return nombre de concerts supprimés
-  int supprimerDoublonsParUrl() {
-    List<String> idsDoublons = jdbc.queryForList(SQL_DOUBLONS_URL, Map.of(), String.class);
-    if (!idsDoublons.isEmpty()) {
-      jdbc.update("DELETE FROM concerts WHERE id::text IN (:ids)", Map.of("ids", idsDoublons));
-      log.info("doublons url supprimés count={}", idsDoublons.size());
-      return idsDoublons.size();
-    }
-    return 0;
-  }
-
   /// Statuts Ticketmaster signant le remplacement d'une représentation existante (report,
   /// annulation) plutôt qu'une représentation supplémentaire.
   private static final java.util.Set<String> STATUTS_REPORT_TM =
       java.util.Set.of("rescheduled", "cancelled", "postponed");
 
-  /// Aligne l'heure d'un concert Ticketmaster déjà en base sur celle d'un report entrant (même
-  /// {@code url}, même {@code date}, heure différente, nouveau statut {@link #STATUTS_REPORT_TM}).
+  /// Aligne l'heure d'un événement Ticketmaster déjà en base sur celle d'un report entrant (une de
+  /// ses observations partage la même {@code url}, même {@code date}, heure différente, nouveau
+  /// statut {@link #STATUTS_REPORT_TM}).
   ///
   /// <p>Ticketmaster réutilise le même idmanif (url stable) pour un évènement reporté à une autre
-  /// heure — sans cette étape, la clé de conflit d'upsert (qui inclut l'heure) crée une nouvelle
-  /// ligne à côté de l'ancienne au lieu de la mettre à jour.
+  /// heure — sans cette étape, la résolution par clé (qui inclut l'heure) créerait un nouvel
+  /// événement à côté de l'ancien au lieu de le mettre à jour.
   ///
   /// <p>Ne s'applique que si une seule heure distincte existe déjà pour ce couple {@code (url,
   /// date)} : certaines productions à représentations multiples (théâtre, cirque, ballet) partagent
   /// un seul idmanif Ticketmaster pour plusieurs séances le même jour (matinée/soirée) — en
-  /// présence de cette ambiguïté, impossible de déterminer laquelle est concernée par le report, la
-  /// ligne entrante reste alors une insertion distincte plutôt que de risquer d'altérer la mauvaise
-  /// représentation.
+  /// présence de cette ambiguïté, impossible de déterminer laquelle est concernée par le report, un
+  /// nouvel événement est alors créé plutôt que de risquer d'altérer la mauvaise représentation.
   ///
   /// @param concerts concerts après réconciliation, avant upsert
   void alignerHeureReportTM(List<ValeurConcert> concerts) {
@@ -352,8 +193,11 @@ public class PersisteurConcertsDb {
     List<String> urls = reports.stream().map(ValeurConcert::url).distinct().toList();
     List<Map<String, Object>> existants =
         jdbc.queryForList(
-            "SELECT id, url, date, heure FROM concerts"
-                + " WHERE source = 'ticketmaster' AND url IN (:urls)",
+            """
+            SELECT e.id AS id, o.url AS url, e.date AS date, e.heure AS heure
+            FROM observations o JOIN evenements e ON e.id = o.evenement_id
+            WHERE o.source = 'ticketmaster' AND o.url IN (:urls)
+            """,
             Map.of("urls", urls));
 
     record CleUrlDate(String url, LocalDate date) {}
@@ -373,11 +217,11 @@ public class PersisteurConcertsDb {
               .map(l -> ((java.sql.Time) l.get("heure")).toLocalTime())
               .collect(java.util.stream.Collectors.toSet());
       if (heuresDistinctes.size() != 1) continue;
-      java.time.LocalTime heureExistante = heuresDistinctes.iterator().next();
+      LocalTime heureExistante = heuresDistinctes.iterator().next();
       if (heureExistante.equals(c.heure())) continue;
       UUID idExistant = (UUID) candidats.get(0).get("id");
       jdbc.update(
-          "UPDATE concerts SET heure = CAST(:heure AS time) WHERE id = CAST(:id AS uuid)",
+          "UPDATE evenements SET heure = CAST(:heure AS time) WHERE id = CAST(:id AS uuid)",
           Map.of("heure", c.heure(), "id", idExistant.toString()));
       log.info(
           "report Ticketmaster aligné url={} date={} heure {}->{}",
@@ -388,161 +232,220 @@ public class PersisteurConcertsDb {
     }
   }
 
-  /// Motif d'URL Ticketmaster signant un événement "package"/VIP (voir {@code MapeurEvenementTM}) —
-  /// jamais accessible à un achat de billetterie standard, ne doit jamais l'emporter sur une fiche
-  /// normale du même événement réel.
-  private static final String SQL_EST_PACKAGE = "(%s ~* '/pack/')";
-
-  /// Priorité de rapprochement (plus petit = conservé) pour {@link #supprimerDoublonsParSalleId} :
-  /// une fiche package perd toujours face à une fiche normale, la priorité de source ne
-  /// départageant qu'ensuite (TM &gt; Eventim &gt; Digitick).
-  private static final String SQL_PRIORITE_SOURCE =
-      "(CASE WHEN "
-          + SQL_EST_PACKAGE.formatted("%1$s")
-          + " THEN 10 ELSE 0 END"
-          + " + CASE %2$s::text"
-          + " WHEN 'ticketmaster' THEN 1"
-          + " WHEN 'eventim' THEN 2"
-          + " WHEN 'digitick' THEN 3"
-          + " ELSE 4 END)";
-
-  /// Supprime les doublons cross-sources non fusionnés par {@link ReconciliateurSalles}.
-  ///
-  /// <p>Quand deux sources nomment la même salle différemment, deux lignes peuvent coexister malgré
-  /// un {@code salle_id} identique. Généralisé à toutes les paires de sources — pas seulement
-  /// TM/Eventim — via une priorité TM &gt; Eventim &gt; Digitick : la ligne de la source la moins
-  /// prioritaire est supprimée, celle de la source la plus prioritaire est conservée comme
-  /// référence.
-  ///
-  /// <p>L'écart d'heure entre deux lignes n'exclut le rapprochement que si aucune des deux n'est un
-  /// package (voir {@link #SQL_EST_PACKAGE}) — Ticketmaster liste parfois un package à une heure
-  /// distincte de la fiche principale du même événement réel.
-  ///
-  /// @return nombre de concerts supprimés
-  int supprimerDoublonsParSalleId() {
-    int nbSupprimees =
-        jdbc.update(
-            "DELETE FROM concerts WHERE id IN ("
-                + "  SELECT c2.id"
-                + "  FROM concerts c1"
-                + "  JOIN concerts c2"
-                + "    ON c1.artiste_id = c2.artiste_id"
-                + "    AND c1.date = c2.date"
-                + "    AND (c1.heure IS NOT DISTINCT FROM c2.heure"
-                + "         OR "
-                + SQL_EST_PACKAGE.formatted("c1.url")
-                + "         OR "
-                + SQL_EST_PACKAGE.formatted("c2.url")
-                + "        )"
-                + "    AND c1.salle_id = c2.salle_id"
-                + "    AND c1.id != c2.id"
-                + "  WHERE c1.artiste_id IS NOT NULL"
-                + "    AND c1.salle_id IS NOT NULL"
-                + "    AND "
-                + SQL_PRIORITE_SOURCE.formatted("c1.url", "c1.source")
-                + "    < "
-                + SQL_PRIORITE_SOURCE.formatted("c2.url", "c2.source")
-                + ")",
-            Map.of());
-    if (nbSupprimees > 0)
-      log.info("doublons cross-sources (salle_id) supprimés count={}", nbSupprimees);
-    return nbSupprimees;
-  }
-
-  // Tolérance identique à Dedoublonner.TOLERANCE_HEURE_MINUTES — les deux passes doivent rester
-  // cohérentes, une seule heure distincte par événement réel n'étant jamais garantie.
-  private static final int TOLERANCE_HEURE_MINUTES = 3;
-
-  /// Complète {@link #supprimerDoublonsParSalleId}, qui exige {@code artiste_id} non nul des deux
-  /// côtés : un concert dont l'artiste n'est suivi par aucun utilisateur (aucune ligne {@code
-  /// artistes} créée, matché uniquement via la salle suivie) reste perpétuellement {@code
-  /// artiste_id} NULL, quelle que soit la qualité de la résolution de {@code salle_id} — le SQL ne
-  /// peut alors plus comparer par égalité d'UUID. Compare {@code artiste_norm} en mémoire via
-  /// {@link CorrespondanceArtiste#estDoublonArtiste} pour les concerts partageant {@code
-  /// salle_id}+{@code date} sans {@code artiste_id} résolu.
-  ///
-  /// @return nombre de concerts supprimés
-  int supprimerDoublonsSansArtisteId() {
-    List<Map<String, Object>> lignes =
-        jdbc.queryForList(
-            "SELECT id, salle_id, artiste_norm, date, heure, url, source FROM concerts"
-                + " WHERE artiste_id IS NULL AND salle_id IS NOT NULL AND date >= CURRENT_DATE",
-            Map.of());
-
-    Map<String, List<Map<String, Object>>> parGroupe = new LinkedHashMap<>();
-    for (var ligne : lignes) {
-      String cle = ligne.get("salle_id") + "|" + ligne.get("date");
-      parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>()).add(ligne);
-    }
-
-    Set<UUID> aSupprimer = new LinkedHashSet<>();
-    for (var groupe : parGroupe.values()) {
-      if (groupe.size() < 2) continue;
-      for (int i = 0; i < groupe.size(); i++) {
-        Map<String, Object> a = groupe.get(i);
-        if (aSupprimer.contains((UUID) a.get("id"))) continue;
-        for (int j = i + 1; j < groupe.size(); j++) {
-          Map<String, Object> b = groupe.get(j);
-          if (aSupprimer.contains((UUID) b.get("id"))) continue;
-          if (!CorrespondanceArtiste.estDoublonArtiste(
-              (String) a.get("artiste_norm"), (String) b.get("artiste_norm"))) {
-            continue;
-          }
-          if (!heuresCompatiblesOuPackage(a, b)) continue;
-          aSupprimer.add(idPerdant(a, b));
-        }
-      }
-    }
-
-    if (aSupprimer.isEmpty()) return 0;
-    // Liste d'UUID directement, jamais stringifiée : « uuid = character varying » n'a pas
-    // d'opérateur Postgres, contrairement à la comparaison uuid = uuid déjà utilisée ailleurs
-    // (RecalculerMatchesService, CoherenceWikidataSalleService) pour un IN(:ids) sur une colonne
-    // uuid.
-    int nbSupprimees =
-        jdbc.update(
-            "DELETE FROM concerts WHERE id IN (:ids)", Map.of("ids", List.copyOf(aSupprimer)));
-    log.info("doublons sans artiste_id supprimés count={}", nbSupprimees);
-    return nbSupprimees;
-  }
-
-  private static boolean heuresCompatiblesOuPackage(Map<String, Object> a, Map<String, Object> b) {
-    String urlA = (String) a.get("url");
-    String urlB = (String) b.get("url");
-    if (estPackage(urlA) || estPackage(urlB)) return true;
-    java.sql.Time heureA = (java.sql.Time) a.get("heure");
-    java.sql.Time heureB = (java.sql.Time) b.get("heure");
-    if (heureA == null || heureB == null) return true;
-    long diffMinutes =
-        Math.abs(
-            java.time.Duration.between(heureA.toLocalTime(), heureB.toLocalTime()).toMinutes());
-    return diffMinutes <= TOLERANCE_HEURE_MINUTES;
-  }
-
+  /// Motif d'URL Ticketmaster signant un événement "package"/VIP — jamais accessible à un achat de
+  /// billetterie standard, ne doit jamais empêcher le rapprochement avec la fiche normale du même
+  /// événement réel.
   private static boolean estPackage(String url) {
     return url != null && url.matches("(?i).*\\Q/pack/\\E.*");
   }
 
-  // La ligne perdante est celle dont la priorité (package puis source) est la plus faible — même
-  // ordre que SQL_PRIORITE_SOURCE, ré-exprimé en Java puisque la comparaison se fait ici en
-  // mémoire.
-  private static UUID idPerdant(Map<String, Object> a, Map<String, Object> b) {
-    int prioriteA = priorite(a);
-    int prioriteB = priorite(b);
-    Map<String, Object> perdant = prioriteA >= prioriteB ? a : b;
-    return (UUID) perdant.get("id");
+  // Tolérance sur l'écart d'heure entre deux observations d'un même événement réel (fiches TM de
+  // types différents pour le même évènement) — très en dessous de tout écart matinée/soirée réel.
+  private static final int TOLERANCE_HEURE_MINUTES = 3;
+
+  private static boolean heuresCompatibles(
+      LocalTime existante, LocalTime entrante, boolean packageExistant, boolean packageEntrant) {
+    if (packageExistant || packageEntrant) return true;
+    if (existante == null || entrante == null) return true;
+    long diffMinutes = Math.abs(Duration.between(existante, entrante).toMinutes());
+    return diffMinutes <= TOLERANCE_HEURE_MINUTES;
   }
 
-  private static int priorite(Map<String, Object> ligne) {
-    int penalitePackage = estPackage((String) ligne.get("url")) ? 10 : 0;
-    String source = (String) ligne.get("source");
-    int prioriteSource =
-        switch (source) {
-          case "ticketmaster" -> 1;
-          case "eventim" -> 2;
-          case "digitick" -> 3;
-          default -> 4;
-        };
-    return penalitePackage + prioriteSource;
+  private record ResolutionEvenement(UUID id, boolean nouveau) {}
+
+  /// Résout l'événement canonique correspondant à un concert entrant, ou en crée un nouveau — point
+  /// unique de dédoublonnage (#1192), remplaçant les trois mécanismes de suppression a posteriori
+  /// de l'ancien modèle.
+  ///
+  /// <p>Trois niveaux : correspondance exacte sur la clé {@code (artiste_norm, date, heure,
+  /// salle_id)} (NULLS NOT DISTINCT) ; à défaut, repli flou parmi les événements de la même salle à
+  /// la même date, avec tolérance d'heure package/normal ({@link #heuresCompatibles}) et
+  /// comparaison floue de l'artiste ({@link CorrespondanceArtiste#estDoublonArtiste}) quand aucun
+  /// {@code artiste_id} n'est résolu des deux côtés — mêmes critères que les anciens {@code
+  /// supprimerDoublonsParSalleId}/{@code supprimerDoublonsSansArtisteId}, appliqués avant
+  /// l'écriture plutôt qu'en nettoyage après coup ; sinon, création.
+  private ResolutionEvenement resoudreOuCreerEvenement(ValeurConcert v) {
+    MapSqlParameterSource paramsExact =
+        new MapSqlParameterSource()
+            .addValue("artisteNorm", v.artisteNorm())
+            .addValue("date", v.date(), Types.DATE)
+            .addValue("heure", v.heure(), Types.TIME)
+            .addValue(
+                "salleId", v.salleId() != null ? v.salleId().toString() : null, Types.VARCHAR);
+    List<UUID> exact =
+        jdbc.query(
+            "SELECT id FROM evenements WHERE artiste_norm = :artisteNorm AND date = :date"
+                + " AND heure IS NOT DISTINCT FROM :heure"
+                + " AND salle_id IS NOT DISTINCT FROM CAST(:salleId AS uuid)",
+            paramsExact,
+            (rs, _) -> rs.getObject("id", UUID.class));
+    if (!exact.isEmpty()) return new ResolutionEvenement(exact.get(0), false);
+
+    if (v.salleId() != null) {
+      List<Map<String, Object>> candidats =
+          jdbc.queryForList(
+              """
+              SELECT e.id AS id, e.artiste_id AS artiste_id, e.artiste_norm AS artiste_norm,
+                     e.heure AS heure,
+                     EXISTS(SELECT 1 FROM observations o WHERE o.evenement_id = e.id
+                            AND o.url ~* '/pack/') AS a_observation_package
+              FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
+              """,
+              Map.of("salleId", v.salleId().toString(), "date", v.date()));
+      boolean entrantPackage = estPackage(v.url());
+      for (var c : candidats) {
+        UUID candArtisteId = (UUID) c.get("artiste_id");
+        String candArtisteNorm = (String) c.get("artiste_norm");
+        boolean artisteCorrespond =
+            v.artisteId() != null
+                ? v.artisteId().equals(candArtisteId)
+                : candArtisteId == null
+                    && CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, v.artisteNorm());
+        if (!artisteCorrespond) continue;
+        java.sql.Time heureSql = (java.sql.Time) c.get("heure");
+        LocalTime heureExistante = heureSql != null ? heureSql.toLocalTime() : null;
+        boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
+        if (!heuresCompatibles(heureExistante, v.heure(), candidatPackage, entrantPackage)) {
+          continue;
+        }
+        return new ResolutionEvenement((UUID) c.get("id"), false);
+      }
+    }
+
+    UUID nouveauId =
+        jdbc.queryForObject(
+            """
+            INSERT INTO evenements
+                (artiste_norm, date, heure, salle_id, salle_norm, ville, dept, classification,
+                 genre, statut, presale_debut, presale_nom, artiste_id)
+            VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm, :ville, :dept,
+                    :classification, :genre, :statut, CAST(:presaleDebut AS timestamptz),
+                    :presaleNom, CAST(:artisteId AS uuid))
+            RETURNING id
+            """,
+            paramsCreation(v),
+            UUID.class);
+    return new ResolutionEvenement(nouveauId, true);
+  }
+
+  private static MapSqlParameterSource paramsCreation(ValeurConcert v) {
+    return new MapSqlParameterSource()
+        .addValue("artisteNorm", v.artisteNorm())
+        .addValue("date", v.date(), Types.DATE)
+        .addValue("heure", v.heure(), Types.TIME)
+        .addValue("salleId", v.salleId() != null ? v.salleId().toString() : null)
+        .addValue("salle", v.salle())
+        .addValue("salleNorm", v.salleNorm())
+        .addValue("ville", v.ville())
+        .addValue("dept", v.dept())
+        .addValue("classification", v.classification())
+        .addValue("genre", v.genre())
+        .addValue("statut", v.statut())
+        .addValue("presaleDebut", v.presaleDebut())
+        .addValue("presaleNom", v.presaleNom())
+        .addValue("artisteId", v.artisteId() != null ? v.artisteId().toString() : null);
+  }
+
+  /// Met à jour les champs dénormalisés d'un événement déjà résolu — jamais {@code artiste_norm} ni
+  /// {@code heure} (identité stable une fois l'événement résolu) — priorité à la valeur entrante,
+  /// repli sur la valeur déjà connue si absente, même politique que l'ancien {@code
+  /// SQL_UPSERT_CONFLIT}. {@code statut} ne recule jamais depuis un état terminal ({@code
+  /// cancelled}/{@code rescheduled}/{@code postponed}). {@code salle_norm} est resynchronisé sur la
+  /// même observation que la vue {@code concerts} retiendrait comme référence ({@link
+  /// #meilleurSalleBrut}) — utile quand {@code salle_id} n'est pas encore résolu (l'identité repose
+  /// alors sur {@code artiste_norm}+date+heure seuls, {@code salle_norm} restant purement
+  /// informatif) ; appelé après {@link #upsertObservation} pour refléter l'observation qui vient
+  /// d'être upsertée.
+  private void mettreAJourChampsEvenement(UUID evenementId, ValeurConcert v) {
+    String salleBrutReference = meilleurSalleBrut(evenementId);
+    String salleNormReference =
+        salleBrutReference != null ? Normalisation.normaliserTexte(salleBrutReference) : null;
+    jdbc.update(
+        """
+        UPDATE evenements SET
+            salle_norm     = COALESCE(:salleNormReference, salle_norm),
+            ville          = COALESCE(:ville, ville),
+            dept           = COALESCE(:dept, dept),
+            classification = COALESCE(:classification, classification),
+            genre          = COALESCE(:genre, genre),
+            statut         = CASE
+                               WHEN statut IN ('cancelled', 'rescheduled', 'postponed') THEN statut
+                               ELSE COALESCE(:statut, statut) END,
+            presale_debut  = COALESCE(CAST(:presaleDebut AS timestamptz), presale_debut),
+            presale_nom    = COALESCE(:presaleNom, presale_nom),
+            salle_id       = COALESCE(CAST(:salleId AS uuid), salle_id),
+            artiste_id     = COALESCE(CAST(:artisteId AS uuid), artiste_id),
+            updated_at     = now()
+        WHERE id = CAST(:id AS uuid)
+        """,
+        paramsCreation(v)
+            .addValue("id", evenementId.toString())
+            .addValue("salleNormReference", salleNormReference));
+  }
+
+  private void upsertObservation(UUID evenementId, ValeurConcert v) {
+    jdbc.update(
+        """
+        INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)
+        VALUES (CAST(:evenementId AS uuid), CAST(:source AS source_concert), :url, :artiste, :salle)
+        ON CONFLICT ON CONSTRAINT uq_observations DO UPDATE SET
+            artiste_brut = CASE WHEN unaccent(EXCLUDED.artiste_brut) != EXCLUDED.artiste_brut
+                                THEN EXCLUDED.artiste_brut ELSE observations.artiste_brut END,
+            salle_brut   = CASE WHEN upper(EXCLUDED.salle_brut) != EXCLUDED.salle_brut
+                                THEN EXCLUDED.salle_brut ELSE observations.salle_brut END,
+            updated_at   = now()
+        """,
+        new MapSqlParameterSource()
+            .addValue("evenementId", evenementId.toString())
+            .addValue("source", v.source())
+            .addValue("url", v.url())
+            .addValue("artiste", v.artiste())
+            .addValue("salle", v.salle()));
+  }
+
+  /// Retrouve, parmi les observations déjà attachées à un événement, le {@code salle_brut} de celle
+  /// qui servirait de référence dans la vue {@code concerts} — même priorité (package puis TM &gt;
+  /// Eventim &gt; Digitick) que la vue elle-même, pour garder {@code evenements.salle_norm}
+  /// cohérent avec ce que {@code concerts.salle} affichera.
+  private String meilleurSalleBrut(UUID evenementId) {
+    List<String> resultat =
+        jdbc.query(
+            """
+            SELECT salle_brut FROM observations WHERE evenement_id = CAST(:id AS uuid)
+            ORDER BY (CASE WHEN url ~* '/pack/' THEN 10 ELSE 0 END
+                      + CASE source::text
+                          WHEN 'ticketmaster' THEN 1 WHEN 'eventim' THEN 2 WHEN 'digitick' THEN 3
+                          ELSE 4 END)
+            LIMIT 1
+            """,
+            Map.of("id", evenementId.toString()),
+            (rs, _) -> rs.getString("salle_brut"));
+    return resultat.isEmpty() ? null : resultat.get(0);
+  }
+
+  /// Résout ou crée l'événement canonique de chaque concert du lot, upsert l'observation de sa
+  /// source puis met à jour les champs dénormalisés de l'événement — un aller-retour par concert
+  /// plutôt qu'un unique {@code INSERT} multi-lignes (volume trivial en production, ~4000
+  /// événements), en échange d'une résolution correcte avant écriture plutôt qu'un nettoyage après
+  /// coup.
+  ///
+  /// @param valeurs concerts réconciliés et dédupliqués du lot
+  /// @return décompte des événements créés et mis à jour du lot
+  PersisterConcerts.ResultatPersistance upsertLot(List<ValeurConcert> valeurs) {
+    if (valeurs.isEmpty()) return new PersisterConcerts.ResultatPersistance(0, 0);
+
+    int inserts = 0;
+    int updates = 0;
+    for (ValeurConcert v : valeurs) {
+      ResolutionEvenement resolution = resoudreOuCreerEvenement(v);
+      upsertObservation(resolution.id(), v);
+      if (!resolution.nouveau()) {
+        mettreAJourChampsEvenement(resolution.id(), v);
+        updates++;
+      } else {
+        inserts++;
+      }
+    }
+    return new PersisterConcerts.ResultatPersistance(inserts, updates);
   }
 }

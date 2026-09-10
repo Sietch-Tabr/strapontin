@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 /// <p>Délègue les responsabilités spécialisées à trois services : <ul>
 ///   <li>{@link ReconciliateurSalles} — réconciliation des noms de salle
 ///   <li>{@link ReconciliateurArtistes} — réconciliation des noms d'artiste
-///   <li>{@link PersisteurConcertsDb} — opérations SQL (upsert, doublons, UUID) </ul>
+///   <li>{@link PersisteurConcertsDb} — opérations SQL (résolution d'événement, upsert, UUID) </ul>
 ///
 /// <p>Traitement par lots de 500. Pour chaque lot : <ol>
 ///   <li>Résolution des UUIDs par identifiants sources ({@code salle_sources}, {@code
@@ -40,8 +40,8 @@ import org.springframework.transaction.annotation.Transactional;
 ///   <li>Deuxième réconciliation des noms de salle (couvre les variantes simultanées)
 ///   <li>Déduplication sur la clé de conflit finale
 ///   <li>Rattachement des salles par {@code nom_norm} exact
-///   <li>Upsert ON CONFLICT avec préférence pour les diacritiques et la casse mixte
-///   <li>Suppression des doublons par URL et par {@code salle_id} </ol>
+///   <li>Résolution de l'événement canonique (existant ou nouveau) puis upsert de l'observation de
+///       la source (#1192, plus de suppression a posteriori) </ol>
 ///
 /// @since 2.0.0
 /// @author Kwaite
@@ -342,10 +342,6 @@ public class PersisterConcerts {
       totalInserts += resultatLot.nbInseres();
       totalUpdates += resultatLot.nbMisAJour();
     }
-
-    db.supprimerDoublonsParUrl();
-    db.supprimerDoublonsParSalleId();
-    db.supprimerDoublonsSansArtisteId();
 
     log.info(
         "concerts persistés total={} inserts={} updates={}",

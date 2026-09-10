@@ -191,15 +191,49 @@ class ReferentielSallesServiceTest {
     boolean fusionnee = service.fusionner(cible, source);
 
     assertTrue(fusionnee);
-    verify(jdbc, times(1)).update(contains("DELETE FROM concerts c1"), anyMap());
-    verify(jdbc, times(1)).update(contains("UPDATE concerts SET salle_id"), anyMap());
+    verify(jdbc, times(1)).update(contains("DELETE FROM observations o1"), anyMap());
+    verify(jdbc, times(1)).update(contains("UPDATE observations SET evenement_id"), anyMap());
+    verify(jdbc, times(1)).update(contains("DELETE FROM evenements"), anyMap());
+    verify(jdbc, times(1)).update(contains("UPDATE evenements SET salle_id"), anyMap());
     verify(jdbc, times(1)).update(contains("DELETE FROM user_salles"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE user_salles SET salle_id"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE salle_sources SET salle_id"), anyMap());
     verify(jdbc, times(1)).update(contains("wikidata_id = COALESCE"), anyMap());
-    verify(jdbc, times(2)).update(contains("UPDATE salles SET salle_parent_id"), anyMap());
+    // Le cas particulier (cible sous-salle de la source) s'exécute toujours ; aucune autre
+    // sous-salle à réassigner ici (query non stubbée retourne une liste vide par défaut).
+    verify(jdbc, times(1)).update(contains("UPDATE salles SET salle_parent_id"), anyMap());
     verify(jdbc, times(1)).update(contains("DELETE FROM salles WHERE"), anyMap());
     verify(logAdminService).logAdmin(eq("info"), eq("admin"), any());
+  }
+
+  // #1201 : réassigner en bloc les sous-salles de la source vers la cible peut créer un cycle
+  // quand la cible est déjà une descendante (via un intermédiaire) de la source.
+  @Test
+  @SuppressWarnings("unchecked")
+  void fusionner_sousSalleDescendanteDeLaCible_detacheSansCreerDeCycle() {
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
+    UUID cible = UUID.randomUUID();
+    UUID source = UUID.randomUUID();
+    UUID intermediaire = UUID.randomUUID();
+
+    when(jdbc.query(
+            contains("SELECT id FROM salles WHERE salle_parent_id"),
+            anyMap(),
+            any(RowMapper.class)))
+        .thenReturn(List.of(intermediaire));
+    // cible -> intermediaire déjà en base : réassigner intermediaire -> cible créerait un cycle.
+    when(jdbc.query(contains("SELECT salle_parent_id FROM salles"), anyMap(), any(RowMapper.class)))
+        .thenReturn(List.of(intermediaire));
+
+    boolean fusionnee = service.fusionner(cible, source);
+
+    assertTrue(fusionnee);
+    verify(jdbc)
+        .update(
+            contains("UPDATE salles SET salle_parent_id = NULL"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                params -> intermediaire.toString().equals(params.get("id"))));
+    verify(logAdminService).logAdmin(eq("warn"), eq("admin"), any());
   }
 
   // deux identifiants du même type de source (ex. deux ticketmaster) sur cible et source

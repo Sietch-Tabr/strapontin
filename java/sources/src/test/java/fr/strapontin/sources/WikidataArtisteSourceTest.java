@@ -11,6 +11,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -59,6 +60,62 @@ class WikidataArtisteSourceTest {
     assertEquals("Daft Punk", enrichissement.nomAffiche());
     assertEquals("27", enrichissement.deezerId());
     assertEquals("K8vZ9171Xf0", enrichissement.ticketmasterAttractionId());
+    serveur.verify();
+  }
+
+  @Test
+  void enrichirLot_wikidataIdConnu_extraitLesAliasSkosAltLabel() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "-M-", "m", "Q313039", null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q313039"},
+                   "itemLabel":{"type":"literal","value":"Matthieu Chédid"},
+                   "aliases":{"type":"literal","value":"-M-|Matthieu Chedid"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+
+    assertEquals(List.of("-M-", "Matthieu Chedid"), resultat.get(id).aliasWikidata());
+    serveur.verify();
+  }
+
+  @Test
+  void enrichirLot_wikidataIdConnu_aucunAlias_retourneListeVide() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    UUID id = UUID.randomUUID();
+    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q167023"},
+                   "itemLabel":{"type":"literal","value":"Daft Punk"},
+                   "aliases":{"type":"literal","value":""}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+
+    assertEquals(List.of(), resultat.get(id).aliasWikidata());
     serveur.verify();
   }
 
@@ -261,10 +318,14 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    WikidataArtisteSource source = source(restClient);
+    Map<UUID, EnrichissementArtiste> resultat = source.enrichirLot(List.of(artiste));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
+    // #1194 : l'ambiguïté doit être distinguable d'une non-découverte ordinaire.
+    assertEquals(Set.of(id), source.preleverAmbiguites());
+    assertEquals(Set.of(), source.preleverAmbiguites(), "prélevé — ne doit pas resignaler");
   }
 
   @Test

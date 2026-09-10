@@ -5,7 +5,9 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.Dedoublonner;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceAvecFetchLot;
 import fr.strapontin.sources.SourceConcerts;
@@ -55,6 +57,7 @@ public class WorkerFetchService {
   private final SuiviSanteSourcesService suiviSanteSourcesService;
   private final WorkerStatsService workerStatsService;
   private final LogsAdminWorker logsAdminWorker;
+  private final RetryLotsService retryLotsService;
 
   public WorkerFetchService(
       List<SourceConcerts> sources,
@@ -67,7 +70,8 @@ public class WorkerFetchService {
       NamedParameterJdbcTemplate jdbc,
       SuiviSanteSourcesService suiviSanteSourcesService,
       WorkerStatsService workerStatsService,
-      LogsAdminWorker logsAdminWorker) {
+      LogsAdminWorker logsAdminWorker,
+      RetryLotsService retryLotsService) {
     this.sources = sources;
     this.tm = tm;
     this.resolveur = resolveur;
@@ -79,6 +83,7 @@ public class WorkerFetchService {
     this.suiviSanteSourcesService = suiviSanteSourcesService;
     this.workerStatsService = workerStatsService;
     this.logsAdminWorker = logsAdminWorker;
+    this.retryLotsService = retryLotsService;
   }
 
   /// Remonte dans `logs_admin` les échecs de lots d'un job multi-lots, indépendamment du résultat
@@ -86,23 +91,29 @@ public class WorkerFetchService {
   /// se termine sans exception et que son bilan agrégé reste positif grâce aux autres lots.
   ///
   /// <p>Niveau {@code error} si tous les lots du job ont échoué (panne totale), {@code warn} sinon
-  /// (échec partiel, même convention que {@code WorkerStatsService#remonterBilan}).
+  /// (échec partiel, même convention que {@code WorkerStatsService#remonterBilan}). Délègue ensuite
+  /// à {@link RetryLotsService} la décision de retenter ou d'abandonner les identifiants en échec,
+  /// y compris quand ce cycle est propre (remise à zéro du compteur de tentatives).
   ///
   /// @param typeJob type de job (ex. {@code "fetch:salles:all"})
   /// @param echecs messages d'échec, un par lot en échec
   /// @param totalLots nombre total de lots traités par le job
-  private void remonterEchecsLots(String typeJob, List<String> echecs, int totalLots) {
-    if (echecs.isEmpty()) return;
-    String niveau = echecs.size() == totalLots ? "error" : "warn";
-    String message =
-        typeJob
-            + " — "
-            + echecs.size()
-            + "/"
-            + totalLots
-            + " lot(s) échoué(s) : "
-            + String.join(" | ", echecs);
-    logsAdminWorker.inserer(niveau, "worker", message, Map.of("echecs", echecs));
+  /// @param identifiantsEnEchec identifiants des entités des lots en échec, pour un retry ciblé
+  private void remonterEchecsLots(
+      String typeJob, List<String> echecs, int totalLots, List<String> identifiantsEnEchec) {
+    if (!echecs.isEmpty()) {
+      String niveau = echecs.size() == totalLots ? "error" : "warn";
+      String message =
+          typeJob
+              + " — "
+              + echecs.size()
+              + "/"
+              + totalLots
+              + " lot(s) échoué(s) : "
+              + String.join(" | ", echecs);
+      logsAdminWorker.inserer(niveau, "worker", message, Map.of("echecs", echecs));
+    }
+    retryLotsService.gererResultat(typeJob, identifiantsEnEchec);
   }
 
   /// Fetch global de tous les artistes suivis (TM par attraction ID + Eventim individuel).
@@ -112,7 +123,21 @@ public class WorkerFetchService {
   /// s'exécutent toujours sur la base des lots effectivement réussis, plutôt que d'être sautés en
   /// cas d'échec partiel.
   public void executerFetchArtistesBatch() {
-    log.info("fetch:artistes:batch démarré");
+    executerFetchArtistesBatchInterne(null);
+  }
+
+  /// Retente un sous-ensemble ciblé d'artistes suivis, en échec lors d'un cycle précédent — voir
+  /// {@link RetryLotsService}. Mêmes règles que le cycle complet (quota, dédoublonnage, persistance
+  /// par lot), restreintes aux identifiants donnés.
+  ///
+  /// @param artisteIdsCibles identifiants ({@code artistes.id}, texte) à retenter
+  public void executerFetchArtistesBatch(List<String> artisteIdsCibles) {
+    executerFetchArtistesBatchInterne(artisteIdsCibles);
+  }
+
+  private void executerFetchArtistesBatchInterne(List<String> artisteIdsCibles) {
+    boolean retry = artisteIdsCibles != null;
+    log.info("fetch:artistes:batch démarré{}", retry ? " (retry ciblé)" : "");
     workerStatsService.executerAvecStatsToleretErreur(
         log,
         "fetch:artistes:batch",
@@ -135,8 +160,9 @@ public class WorkerFetchService {
                       + " JOIN artistes a ON a.id = ua.artiste_id"
                       + " LEFT JOIN artiste_sources asm"
                       + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
+                      + (retry ? " WHERE ua.artiste_id::text IN (:ids)" : "")
                       + " GROUP BY ua.artiste_id",
-                  Map.of());
+                  retry ? Map.of("ids", artisteIdsCibles) : Map.of());
 
           if (rows.isEmpty()) {
             log.info("fetch:artistes:batch — aucun artiste suivi");
@@ -148,6 +174,7 @@ public class WorkerFetchService {
 
           ResultatPersistance resultat = new ResultatPersistance(0, 0);
           List<String> echecsLots = new ArrayList<>();
+          List<String> idsEnEchec = new ArrayList<>();
           int totalLots = (rows.size() + TAILLE_LOT_TM - 1) / TAILLE_LOT_TM;
           for (int i = 0; i < rows.size(); i += TAILLE_LOT_TM) {
             List<Map<String, Object>> lot =
@@ -162,9 +189,10 @@ public class WorkerFetchService {
                   e.getMessage(),
                   e);
               echecsLots.add("lot " + i + "-" + (i + lot.size()) + " : " + e.getMessage());
+              lot.forEach(row -> idsEnEchec.add((String) row.get("artiste_id_str")));
             }
           }
-          remonterEchecsLots("fetch:artistes:batch", echecsLots, totalLots);
+          remonterEchecsLots("fetch:artistes:batch", echecsLots, totalLots, idsEnEchec);
           sauvegarderQuota();
           recalculerMatchesService.recalculerMatches(null);
           notificationDigestService.executerDigest("temps_reel");
@@ -237,7 +265,7 @@ public class WorkerFetchService {
   /// @param ids identifiants (texte) des entités traitées dans ce cycle
   /// @param debutCycle horodatage capturé avant la persistance du lot
   private static final String SQL_ABSENCES_BASE =
-      "UPDATE concerts SET"
+      "UPDATE evenements SET"
           + " absences_consecutives = CASE WHEN updated_at >= CAST(:debut AS timestamptz)"
           + "   THEN 0 ELSE absences_consecutives + 1 END,"
           + " absence_detectee_le = CASE"
@@ -414,7 +442,20 @@ public class WorkerFetchService {
   ///
   /// Suspendu si le quota TM est insuffisant.
   public void executerFetchRegion() {
-    log.info("fetch:region démarré");
+    executerFetchRegionInterne(null);
+  }
+
+  /// Retente un sous-ensemble ciblé de départements, en échec lors d'un cycle précédent — voir
+  /// {@link RetryLotsService}.
+  ///
+  /// @param deptsCibles départements à retenter
+  public void executerFetchRegion(List<String> deptsCibles) {
+    executerFetchRegionInterne(deptsCibles);
+  }
+
+  private void executerFetchRegionInterne(List<String> deptsCibles) {
+    boolean retry = deptsCibles != null;
+    log.info("fetch:region démarré{}", retry ? " (retry ciblé)" : "");
     workerStatsService.executerAvecStatsToleretErreur(
         log,
         "fetch:region",
@@ -425,22 +466,26 @@ public class WorkerFetchService {
                 new ResultatPersistance(0, 0), "quota insuffisant");
           }
 
-          List<String[]> allDepts =
-              jdbc.query(
-                  "SELECT departements FROM user_config",
-                  Map.of(),
-                  (rs, _) -> (String[]) rs.getArray("departements").getArray());
+          List<String> deptsListe;
+          if (retry) {
+            deptsListe = deptsCibles;
+          } else {
+            List<String[]> allDepts =
+                jdbc.query(
+                    "SELECT departements FROM user_config",
+                    Map.of(),
+                    (rs, _) -> (String[]) rs.getArray("departements").getArray());
+            deptsListe = new ArrayList<>(collecterTousLesDepts(allDepts));
+          }
 
-          java.util.Set<String> tousLesDepts = collecterTousLesDepts(allDepts);
-
-          if (tousLesDepts.isEmpty()) {
+          if (deptsListe.isEmpty()) {
             log.info("fetch:region — aucun département configuré");
             return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
           }
 
-          List<String> deptsListe = new ArrayList<>(tousLesDepts);
           ResultatPersistance resultat = new ResultatPersistance(0, 0);
           List<String> echecsLots = new ArrayList<>();
+          List<String> deptsEnEchec = new ArrayList<>();
           int totalLots = (deptsListe.size() + TAILLE_LOT_DEPTS - 1) / TAILLE_LOT_DEPTS;
           for (int i = 0; i < deptsListe.size(); i += TAILLE_LOT_DEPTS) {
             List<String> lotDepts =
@@ -450,9 +495,10 @@ public class WorkerFetchService {
             } catch (Exception e) {
               log.error("fetch:region lot {} échoué : {}", lotDepts, e.getMessage(), e);
               echecsLots.add("depts=" + lotDepts + " : " + e.getMessage());
+              deptsEnEchec.addAll(lotDepts);
             }
           }
-          remonterEchecsLots("fetch:region", echecsLots, totalLots);
+          remonterEchecsLots("fetch:region", echecsLots, totalLots, deptsEnEchec);
           sauvegarderQuota();
           recalculerMatchesService.recalculerMatches(null);
           notificationDigestService.executerDigest("temps_reel");
@@ -561,7 +607,20 @@ public class WorkerFetchService {
   /// Boucle sur les salles suivies et exécute le même pipeline que {@link #executerFetchSalle} en
   /// agrégeant les concerts avant persistance. Suspendu si le quota TM est insuffisant.
   public void executerFetchSallesAll() {
-    log.info("fetch:salles:all démarré");
+    executerFetchSallesAllInterne(null);
+  }
+
+  /// Retente un sous-ensemble ciblé de salles suivies, en échec lors d'un cycle précédent — voir
+  /// {@link RetryLotsService}.
+  ///
+  /// @param salleIdsCibles identifiants ({@code salles.id}, texte) à retenter
+  public void executerFetchSallesAll(List<String> salleIdsCibles) {
+    executerFetchSallesAllInterne(salleIdsCibles);
+  }
+
+  private void executerFetchSallesAllInterne(List<String> salleIdsCibles) {
+    boolean retry = salleIdsCibles != null;
+    log.info("fetch:salles:all démarré{}", retry ? " (retry ciblé)" : "");
     workerStatsService.executerAvecStatsToleretErreur(
         log,
         "fetch:salles:all",
@@ -572,7 +631,7 @@ public class WorkerFetchService {
                 new ResultatPersistance(0, 0), "quota insuffisant");
           }
 
-          List<SalleAFetcher> sallesAFetcher = recupererIdentifiantsSallesSuivies();
+          List<SalleAFetcher> sallesAFetcher = recupererIdentifiantsSallesSuivies(salleIdsCibles);
           if (sallesAFetcher.isEmpty()) {
             log.info("fetch:salles:all — aucune salle suivie avec source configurée");
             return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
@@ -598,15 +657,17 @@ public class WorkerFetchService {
   // salle_sources.source) — sans cette traduction, fetchSalle n'est jamais invoqué pour aucune
   // salle TM (mismatch silencieux, aucune exception, aucun log d'erreur). Restreint aux salles
   // suivies (user_salles) — voir Javadoc de executerFetchSallesAll.
-  private List<SalleAFetcher> recupererIdentifiantsSallesSuivies() {
+  private List<SalleAFetcher> recupererIdentifiantsSallesSuivies(List<String> salleIdsCibles) {
+    boolean filtre = salleIdsCibles != null;
     return jdbc
         .queryForList(
             "SELECT ss.salle_id::text AS salle_id,"
                 + " string_agg(ss.source || ':' || ss.identifiant_externe, ',') AS identifiants"
                 + " FROM salle_sources ss"
                 + " WHERE EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id = ss.salle_id)"
+                + (filtre ? " AND ss.salle_id::text IN (:ids)" : "")
                 + " GROUP BY ss.salle_id",
-            Map.of())
+            filtre ? Map.of("ids", salleIdsCibles) : Map.of())
         .stream()
         .map(
             ligne ->
@@ -620,6 +681,7 @@ public class WorkerFetchService {
   private ResultatPersistance traiterTousLesLotsSalles(List<SalleAFetcher> sallesAFetcher) {
     ResultatPersistance resultat = new ResultatPersistance(0, 0);
     List<String> echecsLots = new ArrayList<>();
+    List<String> salleIdsEnEchec = new ArrayList<>();
     int totalLots = (sallesAFetcher.size() + TAILLE_LOT_SALLES - 1) / TAILLE_LOT_SALLES;
     for (int i = 0; i < sallesAFetcher.size(); i += TAILLE_LOT_SALLES) {
       List<SalleAFetcher> lotSalles =
@@ -630,9 +692,10 @@ public class WorkerFetchService {
         log.error(
             "fetch:salles:all lot {}-{} échoué : {}", i, i + lotSalles.size(), e.getMessage(), e);
         echecsLots.add("lot " + i + "-" + (i + lotSalles.size()) + " : " + e.getMessage());
+        lotSalles.forEach(salle -> salleIdsEnEchec.add(salle.salleId()));
       }
     }
-    remonterEchecsLots("fetch:salles:all", echecsLots, totalLots);
+    remonterEchecsLots("fetch:salles:all", echecsLots, totalLots, salleIdsEnEchec);
     return resultat;
   }
 
@@ -681,6 +744,37 @@ public class WorkerFetchService {
     return EligibiliteResolutionDeezer.estEligible(c.classification(), c.source());
   }
 
+  /// Rejette un candidat Deezer divergent du {@code nom_affiche} Wikidata déjà connu pour cet
+  /// artiste : un mauvais rapprochement Deezer est une cause de corruption déjà rencontrée (ex. «
+  /// Nino Arial » → « Niño Árbol »), détectable avant la persistance quand l'identité de l'artiste
+  /// est déjà établie ailleurs par une source plus fiable (Wikidata).
+  ///
+  /// @param nomBrut nom brut entrant, avant résolution Deezer
+  /// @param nomDeezer nom canonique proposé par {@link ResolveurNomCanonique}
+  /// @return {@code nomDeezer}, ou {@code nomBrut} si un {@code nom_affiche} déjà connu diverge
+  private String nomCanoniqueValideOuBrut(String nomBrut, String nomDeezer) {
+    if (nomDeezer.equals(nomBrut)) return nomDeezer;
+    List<String> nomsAffiches =
+        jdbc.query(
+            "SELECT nom_affiche FROM artistes WHERE nom_norm = :nomNorm AND nom_affiche IS NOT"
+                + " NULL",
+            Map.of("nomNorm", Normalisation.normaliserTexte(nomBrut)),
+            (rs, _) -> rs.getString("nom_affiche"));
+    if (nomsAffiches.isEmpty()) return nomDeezer;
+    String nomAffiche = nomsAffiches.get(0);
+    if (CorrespondanceArtiste.estDoublonArtiste(
+        Normalisation.normaliserTexte(nomAffiche), Normalisation.normaliserTexte(nomDeezer))) {
+      return nomDeezer;
+    }
+    log.info(
+        "résolution Deezer rejetée — divergence avec nom_affiche Wikidata connu brut={} deezer={}"
+            + " nomAffiche={}",
+        nomBrut,
+        nomDeezer,
+        nomAffiche);
+    return nomBrut;
+  }
+
   private List<ConcertBrut> resoudreEtDeduplicer(List<ConcertBrut> concerts) {
     List<ConcertBrut> dedoublonnes = Dedoublonner.dedoublonner(concerts);
 
@@ -695,7 +789,7 @@ public class WorkerFetchService {
     for (String nom : noms) {
       ResolveurNomCanonique.ResultatResolution resultat =
           resolveur.resoudreNomCanonique("artiste", nom);
-      tableauResolution.put(nom, resultat.nom());
+      tableauResolution.put(nom, nomCanoniqueValideOuBrut(nom, resultat.nom()));
     }
 
     return dedoublonnes.stream()

@@ -172,6 +172,23 @@ class CoherenceMultiSalleServiceTest {
     verify(jdbc, never()).update(anyString(), any(SqlParameterSource.class));
   }
 
+  // #1203 : le containment doit porter sur des tokens complets, pas sur une sous-chaîne brute —
+  // "kowa" est une sous-chaîne de "kowalski" sans être le même mot.
+  @Test
+  void detecterDoublons_sousChaineBruteSansTokenComplet_neJournalisePas() {
+    UUID a = UUID.randomUUID();
+    UUID b = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(
+                ligneSalle(a, "kowa", "75", null),
+                ligneSalle(b, "salle kowalski paris", "75", null)));
+
+    int resultat = service.detecterDoublons();
+
+    assertEquals(0, resultat);
+  }
+
   @Test
   void detecterDoublons_nomsSansRapport_neJournalisePas() {
     UUID a = UUID.randomUUID();

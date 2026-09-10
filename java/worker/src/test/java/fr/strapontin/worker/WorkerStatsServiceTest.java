@@ -5,8 +5,11 @@
 package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -38,6 +41,7 @@ class WorkerStatsServiceTest {
   private NamedParameterJdbcTemplate jdbc;
   private LogsAdminWorker logsAdminWorker;
   private SimpleMeterRegistry meterRegistry;
+  private DeriveVolumeFetchService deriveVolumeFetchService;
   private WorkerStatsService service;
 
   @BeforeEach
@@ -52,6 +56,7 @@ class WorkerStatsServiceTest {
     // fonctionner sans changer de cible.
     logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
     meterRegistry = new SimpleMeterRegistry();
+    deriveVolumeFetchService = mock(DeriveVolumeFetchService.class);
     service = creerService(List.of(tm, eventim));
   }
 
@@ -63,7 +68,8 @@ class WorkerStatsServiceTest {
         jdbc,
         logsAdminWorker,
         meterRegistry,
-        new SuiviChroniciteService(jdbc, new ObjectMapper()));
+        new SuiviChroniciteService(jdbc, new ObjectMapper()),
+        deriveVolumeFetchService);
   }
 
   // bilan Eventim remonté via le mécanisme générique (instanceof SourceAvecBilanFetch),
@@ -232,6 +238,20 @@ class WorkerStatsServiceTest {
                         && params.get("message").toString().contains("résultat vide")));
   }
 
+  @Test
+  void enregistrerStatJob_fetchReussi_appelleLaDeriveDeVolume() {
+    service.enregistrerStatJob("fetch:region", 10, new ResultatPersistance(3, 4), null);
+
+    verify(deriveVolumeFetchService).verifier(eq("fetch:region"), eq(7), any());
+  }
+
+  @Test
+  void enregistrerStatJob_fetchAvecErreur_nAppellePasLaDeriveDeVolume() {
+    service.enregistrerStatJob("fetch:region", 10, new ResultatPersistance(3, 4), "timeout");
+
+    verify(deriveVolumeFetchService, never()).verifier(anyString(), anyInt(), any());
+  }
+
   // métrique Micrometer de durée par type de job, exposée via /actuator/prometheus.
   @Test
   void enregistrerStatJob_nominal_enregistreLaDureeDansLeTimerMicrometer() {
@@ -302,7 +322,7 @@ class WorkerStatsServiceTest {
             anyString(),
             org.mockito.ArgumentMatchers.<java.util.Map<String, ?>>any(),
             org.mockito.ArgumentMatchers.eq(String.class)))
-        .thenAnswer(invocation -> valeur.get());
+        .thenAnswer(_ -> valeur.get());
     when(jdbc.update(
             contains("INSERT INTO app_config"),
             org.mockito.ArgumentMatchers.<java.util.Map<String, ?>>any()))

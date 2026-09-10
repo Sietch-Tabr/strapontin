@@ -14,27 +14,26 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /// Base commune pour **tous** les tests d'intégration Testcontainers du module worker — un seul
 /// conteneur PostgreSQL statique partagé entre les sous-classes plutôt qu'un par classe (le champ
-/// statique, hérité, désigne la même instance JVM pour toutes) : l'agent CI Woodpecker (1 Go RAM)
-/// a été tué (`Killed`, conteneurs Postgres orphelins jamais nettoyés par Ryuk après le kill)
-/// quand le module worker en a fait tourner 5 simultanément (2.7.3).
+/// statique, hérité, désigne la même instance JVM pour toutes) : l'agent CI Woodpecker (1 Go RAM) a
+/// été tué (`Killed`, conteneurs Postgres orphelins jamais nettoyés par Ryuk après le kill) quand
+/// le module worker en a fait tourner 5 simultanément (2.7.3).
 ///
-/// Étendu en 2.7.5 à `PersisterConcertsIntegrationTest`/
-/// `RecalculerMatchesServiceIntegrationTest` — jusque-là volontairement épargnées (stables en CI
-/// depuis des mois, périmètre restreint aux classes ajoutées en 2.7.3), mais un OOM équivalent
-/// constaté côté module `web` (2 conteneurs indépendants suffisent à saturer la même limite de
-/// 1 Go) a confirmé qu'aucune classe de ce module ne doit plus déclarer son propre conteneur,
-/// sans exception. **Toute nouvelle classe d'intégration Testcontainers du module worker doit
-/// étendre cette classe** — ne jamais déclarer un `@ServiceConnection static final
-/// PostgreSQLContainer` local.
+/// Étendu en 2.7.5 à `PersisterConcertsIntegrationTest`/ `RecalculerMatchesServiceIntegrationTest`
+/// — jusque-là volontairement épargnées (stables en CI depuis des mois, périmètre restreint aux
+/// classes ajoutées en 2.7.3), mais un OOM équivalent constaté côté module `web` (2 conteneurs
+/// indépendants suffisent à saturer la même limite de 1 Go) a confirmé qu'aucune classe de ce
+/// module ne doit plus déclarer son propre conteneur, sans exception. **Toute nouvelle classe
+/// d'intégration Testcontainers du module worker doit étendre cette classe** — ne jamais déclarer
+/// un `@ServiceConnection static final PostgreSQLContainer` local.
 ///
-/// <p>Nettoyage commun : un conteneur partagé signifie une base partagée entre toutes
-/// les sous-classes du module, exécutées dans un ordre non garanti — le `@BeforeEach` local de
-/// chaque sous-classe (souvent incomplet, ex. `DELETE FROM artistes` sans jamais toucher
-/// `user_artistes`) ne suffit plus à garantir l'isolement une fois plusieurs classes en jeu sur
-/// la même instance PostgreSQL (constaté en CI : une ligne `user_artistes` laissée par une classe
-/// fait échouer le `DELETE FROM artistes` d'une classe suivante, `user_artistes.artiste_id` étant
-/// `NOT NULL` malgré une FK `ON DELETE SET NULL` jamais alignée en V24 — incohérence sans impact
-/// prod, le code applicatif nettoyant toujours `user_artistes` avant de supprimer un artiste).
+/// <p>Nettoyage commun : un conteneur partagé signifie une base partagée entre toutes les
+/// sous-classes du module, exécutées dans un ordre non garanti — le `@BeforeEach` local de chaque
+/// sous-classe (souvent incomplet, ex. `DELETE FROM artistes` sans jamais toucher `user_artistes`)
+/// ne suffit plus à garantir l'isolement une fois plusieurs classes en jeu sur la même instance
+/// PostgreSQL (constaté en CI : une ligne `user_artistes` laissée par une classe fait échouer le
+/// `DELETE FROM artistes` d'une classe suivante, `user_artistes.artiste_id` étant `NOT NULL` malgré
+/// une FK `ON DELETE SET NULL` jamais alignée en V24 — incohérence sans impact prod, le code
+/// applicatif nettoyant toujours `user_artistes` avant de supprimer un artiste).
 /// `nettoyerBaseCommune` s'exécute avant le `@BeforeEach` de chaque sous-classe (ordre garanti par
 /// JUnit 5 : superclasse puis sous-classe) et vide toutes les tables via `TRUNCATE ... CASCADE`,
 /// insensible à ce type d'incohérence de FK (contrairement à `DELETE`).
@@ -59,7 +58,10 @@ public abstract class AbstractWorkerIntegrationTest {
     jdbcNettoyage
         .getJdbcTemplate()
         .execute(
-            "TRUNCATE TABLE users, artistes, salles, concerts, fetch_jobs,"
-                + " fetch_jobs_historique, logs_admin RESTART IDENTITY CASCADE");
+            // concerts est une vue depuis #1192 (evenements+observations) — TRUNCATE porte sur
+            // evenements, qui cascade vers observations et user_matches (ON DELETE CASCADE).
+            "TRUNCATE TABLE users, artistes, salles, evenements, fetch_jobs,"
+                + " fetch_jobs_historique, logs_admin, signalements_matching"
+                + " RESTART IDENTITY CASCADE");
   }
 }

@@ -14,6 +14,7 @@ import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
 import fr.strapontin.worker.persister.ReconciliateurSalles;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -55,6 +56,8 @@ public class ReconciliationNocturneService {
   private final ReconciliateurSalles reconciliateurSalles;
   private final FusionSallesClePorteeService fusionSallesClePortee;
   private final CoherenceMultiSalleService coherenceMultiSalle;
+  private final SuggestionMotsGenericsService suggestionMotsGenerics;
+  private final ControleIntegriteService controleIntegrite;
 
   public ReconciliationNocturneService(
       NamedParameterJdbcTemplate jdbc,
@@ -65,7 +68,9 @@ public class ReconciliationNocturneService {
       CoherenceWikidataSalleService coherenceWikidataSalle,
       ReconciliateurSalles reconciliateurSalles,
       FusionSallesClePorteeService fusionSallesClePortee,
-      CoherenceMultiSalleService coherenceMultiSalle) {
+      CoherenceMultiSalleService coherenceMultiSalle,
+      SuggestionMotsGenericsService suggestionMotsGenerics,
+      ControleIntegriteService controleIntegrite) {
     this.jdbc = jdbc;
     this.tm = tm;
     this.logsAdminWorker = logsAdminWorker;
@@ -75,6 +80,8 @@ public class ReconciliationNocturneService {
     this.reconciliateurSalles = reconciliateurSalles;
     this.fusionSallesClePortee = fusionSallesClePortee;
     this.coherenceMultiSalle = coherenceMultiSalle;
+    this.suggestionMotsGenerics = suggestionMotsGenerics;
+    this.controleIntegrite = controleIntegrite;
   }
 
   /// Exécute les deux phases du job nocturne.
@@ -100,6 +107,8 @@ public class ReconciliationNocturneService {
     int sallesFusionnees = fusionSallesClePortee.fusionner();
     int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
     int doublonsSignales = coherenceMultiSalle.detecterDoublons();
+    int motsGenericsSuggeres = suggestionMotsGenerics.suggerer();
+    int integriteSignalements = controleIntegrite.verifier();
 
     return new ResultatReconciliation(
         bilanSalles[0],
@@ -113,7 +122,9 @@ public class ReconciliationNocturneService {
         sallesOrphelinesResolues,
         sallesFusionnees,
         contaminationsSignalees,
-        doublonsSignales);
+        doublonsSignales,
+        motsGenericsSuggeres,
+        integriteSignalements);
   }
 
   /// Vérifie que le nom retourné par TM pour chaque attractionId lié correspond toujours à
@@ -155,10 +166,51 @@ public class ReconciliationNocturneService {
         continue;
       }
       if (nomAttraction.equals(nomTmIgnore)) continue;
+      if (preAccepterSiAliasWikidataConnu(artisteId, nomAttraction)) continue;
       incoherences++;
       signalerNomIncoherent(artisteId, attractionId, nom, nomAttraction, dejaSignale);
     }
     return incoherences;
+  }
+
+  /// Pré-accepte automatiquement un nom TM incohérent qui correspond en réalité à un alias Wikidata
+  /// déjà connu de l'artiste (nom de scène alternatif, ex. « -M- » pour Matthieu Chédid) — même
+  /// effet que {@code ReferentielArtistesService.ignorerIntervention}, sans attendre une première
+  /// validation manuelle admin puisque Wikidata fait déjà autorité sur cet alias.
+  ///
+  /// @return {@code true} si le nom a été pré-accepté (aucun signalement à faire)
+  private boolean preAccepterSiAliasWikidataConnu(UUID artisteId, String nomAttraction) {
+    List<String> alias = lireAliasWikidata(artisteId);
+    if (alias.isEmpty()) return false;
+    String nomAttractionNorm = Normalisation.normaliserTexte(nomAttraction);
+    boolean correspond =
+        alias.stream()
+            .anyMatch(
+                a ->
+                    CorrespondanceArtiste.estDoublonArtiste(
+                        Normalisation.normaliserTexte(a), nomAttractionNorm));
+    if (!correspond) return false;
+    jdbc.update(
+        """
+        UPDATE artiste_sources
+        SET necessite_intervention_le = NULL, nom_tm_ignore = :nomAttraction,
+            nom_tm_incoherent = :nomAttraction
+        WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
+        """,
+        Map.of("artisteId", artisteId.toString(), "nomAttraction", nomAttraction));
+    return true;
+  }
+
+  private List<String> lireAliasWikidata(UUID artisteId) {
+    List<String[]> resultats =
+        jdbc.query(
+            "SELECT alias_wikidata FROM artistes WHERE id = CAST(:id AS uuid)",
+            Map.of("id", artisteId.toString()),
+            (rs, _) -> {
+              java.sql.Array tableau = rs.getArray("alias_wikidata");
+              return tableau != null ? (String[]) tableau.getArray() : new String[0];
+            });
+    return resultats.isEmpty() ? List.of() : Arrays.asList(resultats.get(0));
   }
 
   /// Marque l'artiste comme nécessitant une intervention et journalise l'incohérence.

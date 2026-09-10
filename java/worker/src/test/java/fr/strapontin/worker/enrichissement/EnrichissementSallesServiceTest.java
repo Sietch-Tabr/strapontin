@@ -24,6 +24,8 @@ import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementSalle;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.SuiviChroniciteService;
+import fr.strapontin.worker.persister.FusionSallesClePorteeService;
+import fr.strapontin.worker.sante.SignalementMatchingService;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -65,7 +67,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source), logsAdminWorkerMock(), suiviChronicite(jdbc));
+            jdbc,
+            List.of(source),
+            logsAdminWorkerMock(),
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(0, nb);
@@ -89,7 +96,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
+            jdbc,
+            List.of(source),
+            logsAdminWorker,
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(0, nb);
@@ -108,7 +120,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
+            jdbc,
+            List.of(source),
+            logsAdminWorker,
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(logsAdminWorker, never())
@@ -147,7 +164,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
+            jdbc,
+            List.of(source),
+            logsAdminWorker,
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(3, nb);
@@ -184,7 +206,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
+            jdbc,
+            List.of(source),
+            logsAdminWorker,
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(10, nb);
@@ -211,7 +238,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(overpass, wikidata), logsAdminWorkerMock(), suiviChronicite(jdbc));
+            jdbc,
+            List.of(overpass, wikidata),
+            logsAdminWorkerMock(),
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(1, nb);
@@ -243,7 +275,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source1, source2, source3), logsAdminWorkerMock(), suiviChronicite(jdbc));
+            jdbc,
+            List.of(source1, source2, source3),
+            logsAdminWorkerMock(),
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(1, nb);
@@ -264,7 +301,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source1, source2), logsAdminWorkerMock(), suiviChronicite(jdbc));
+            jdbc,
+            List.of(source1, source2),
+            logsAdminWorkerMock(),
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(jdbc)
@@ -300,7 +342,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source), logsAdminWorkerMock(), suiviChronicite(jdbc));
+            jdbc,
+            List.of(source),
+            logsAdminWorkerMock(),
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(30, nb);
@@ -341,12 +388,90 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
+            jdbc,
+            List.of(source),
+            logsAdminWorker,
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(1, nb);
     verify(logsAdminWorker)
         .inserer(eq("warn"), eq("enrichissement-wikidata"), anyString(), anyMap());
+  }
+
+  // #1189 : une collision wikidata_id est un signal plus fort qu'une simple coïncidence de
+  // concert — fusion automatique si les deux salles ont des coordonnées connues et proches.
+  @Test
+  void enrichir_collisionWikidataIdCoordonneesProches_fusionneAutomatiquement() {
+    UUID salleId = UUID.randomUUID();
+    UUID porteuseId = UUID.randomUUID();
+    SalleAEnrichir candidat = new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
+    when(jdbc.update(anyString(), anyMap())).thenThrow(new DuplicateKeyException("idx"));
+    when(jdbc.queryForList(org.mockito.ArgumentMatchers.contains("WHERE wikidata_id"), anyMap()))
+        .thenReturn(List.of(Map.of("id", porteuseId, "latitude", 45.8336, "longitude", 1.2611)));
+    when(jdbc.queryForList(org.mockito.ArgumentMatchers.contains("WHERE id ="), anyMap()))
+        .thenReturn(List.of(new HashMap<>(Map.of("latitude", 45.8337, "longitude", 1.2612))));
+
+    SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
+    when(source.enrichirLot(any()))
+        .thenReturn(Map.of(salleId, new EnrichissementSalle("Q1", null, null, null, null)));
+    FusionSallesClePorteeService fusion = mock(FusionSallesClePorteeService.class);
+    SignalementMatchingService signalement = mock(SignalementMatchingService.class);
+
+    EnrichissementSallesService service =
+        new EnrichissementSallesService(
+            jdbc,
+            List.of(source),
+            logsAdminWorkerMock(),
+            suiviChronicite(jdbc),
+            fusion,
+            signalement);
+    int nb = service.enrichir();
+
+    assertEquals(1, nb);
+    verify(fusion).fusionnerUnePaire(porteuseId, salleId);
+    verify(signalement, never()).signaler(anyString(), anyString(), any(), anyString(), any());
+  }
+
+  // #1189 : sans coordonnées connues des deux côtés, aucune preuve positive ne justifie une
+  // fusion automatique — signalement seul pour revue manuelle.
+  @Test
+  void enrichir_collisionWikidataIdSansCoordonnees_signaleSansFusionner() {
+    UUID salleId = UUID.randomUUID();
+    UUID porteuseId = UUID.randomUUID();
+    SalleAEnrichir candidat = new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
+    when(jdbc.update(anyString(), anyMap())).thenThrow(new DuplicateKeyException("idx"));
+    Map<String, Object> porteuseSansCoordonnees = new HashMap<>();
+    porteuseSansCoordonnees.put("id", porteuseId);
+    porteuseSansCoordonnees.put("latitude", null);
+    porteuseSansCoordonnees.put("longitude", null);
+    when(jdbc.queryForList(org.mockito.ArgumentMatchers.contains("WHERE wikidata_id"), anyMap()))
+        .thenReturn(List.of(porteuseSansCoordonnees));
+
+    SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
+    when(source.enrichirLot(any()))
+        .thenReturn(Map.of(salleId, new EnrichissementSalle("Q1", null, null, null, null)));
+    FusionSallesClePorteeService fusion = mock(FusionSallesClePorteeService.class);
+    SignalementMatchingService signalement = mock(SignalementMatchingService.class);
+
+    EnrichissementSallesService service =
+        new EnrichissementSallesService(
+            jdbc,
+            List.of(source),
+            logsAdminWorkerMock(),
+            suiviChronicite(jdbc),
+            fusion,
+            signalement);
+    int nb = service.enrichir();
+
+    assertEquals(0, nb);
+    verify(fusion, never()).fusionnerUnePaire(any(), any());
+    verify(signalement)
+        .signaler(eq("collision_wikidata_salle"), eq("salle"), eq(salleId), anyString(), any());
   }
 
   // bilan de panne absent jusqu'ici sur les sources d'enrichissement — panne Overpass de
@@ -369,7 +494,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
+            jdbc,
+            List.of(source),
+            logsAdminWorker,
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(logsAdminWorker).inserer(eq("error"), eq("worker"), anyString(), anyMap());
@@ -392,7 +522,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
+            jdbc,
+            List.of(source),
+            logsAdminWorker,
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
@@ -411,7 +546,7 @@ class EnrichissementSallesServiceTest {
         new java.util.concurrent.atomic.AtomicReference<>();
     when(jdbc.queryForObject(
             anyString(), org.mockito.ArgumentMatchers.<Map<String, ?>>any(), eq(String.class)))
-        .thenAnswer(invocation -> valeurAppConfig.get());
+        .thenAnswer(_ -> valeurAppConfig.get());
     when(jdbc.update(
             org.mockito.ArgumentMatchers.contains("INSERT INTO app_config"),
             org.mockito.ArgumentMatchers.<Map<String, ?>>any()))
@@ -433,7 +568,12 @@ class EnrichissementSallesServiceTest {
 
     EnrichissementSallesService service =
         new EnrichissementSallesService(
-            jdbc, List.of(source), logsAdminWorker, suiviChronicite(jdbc));
+            jdbc,
+            List.of(source),
+            logsAdminWorker,
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
     service.enrichir();
     service.enrichir();
     service.enrichir();

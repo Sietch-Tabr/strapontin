@@ -61,7 +61,7 @@ class ReconciliateurSallesOrphelines {
       UUID salleId = meilleurCandidatEnMemoire(salle, dept, candidats);
       if (salleId == null) continue;
       jdbc.update(
-          "UPDATE concerts SET salle_id = CAST(:salleId AS uuid) WHERE id = :id",
+          "UPDATE evenements SET salle_id = CAST(:salleId AS uuid) WHERE id = :id",
           Map.of("salleId", salleId.toString(), "id", orphelin.get("id")));
       resolus++;
     }

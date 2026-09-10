@@ -38,7 +38,7 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   @BeforeEach
   void nettoyerBase() {
     jdbc.update("DELETE FROM user_matches", Map.of());
-    jdbc.update("DELETE FROM concerts", Map.of());
+    jdbc.update("DELETE FROM evenements", Map.of());
     jdbc.update("DELETE FROM salle_sources", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
     jdbc.update("DELETE FROM logs_admin", Map.of());
@@ -70,19 +70,23 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   }
 
   private void creerConcert(String artisteNorm, String heure, String dept, UUID salleId) {
+    UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, dept, salle_id)"
+                + " VALUES (:artisteNorm, CAST(:date AS date), CAST(:heure AS time), 'salle',"
+                + " :dept, CAST(:salleId AS uuid)) RETURNING id",
+            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+                .addValue("artisteNorm", artisteNorm)
+                .addValue("date", DATE_FUTURE)
+                .addValue("heure", heure)
+                .addValue("dept", dept)
+                .addValue("salleId", salleId.toString()),
+            UUID.class);
     jdbc.update(
-        "INSERT INTO concerts (artiste, artiste_norm, date, heure, salle, salle_norm, dept,"
-            + " source, salle_id)"
-            + " VALUES (:artiste, :artisteNorm, CAST(:date AS date), CAST(:heure AS time),"
-            + " 'Salle', 'salle', :dept, CAST('ticketmaster' AS source_concert),"
-            + " CAST(:salleId AS uuid))",
-        Map.of(
-            "artiste", artisteNorm,
-            "artisteNorm", artisteNorm,
-            "date", DATE_FUTURE,
-            "heure", heure,
-            "dept", dept,
-            "salleId", salleId.toString()));
+        "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert), :artiste,"
+            + " 'Salle')",
+        Map.of("id", evenementId.toString(), "artiste", artisteNorm));
   }
 
   @Test
@@ -213,5 +217,35 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
         operaLimoges.toString(),
         parentIdApres,
         "la sous-salle doit suivre vers la salle cible conservée après fusion");
+  }
+
+  // #1201 : réassigner en bloc tous les enfants de la source vers la cible peut créer un cycle
+  // à deux salles quand la cible est déjà une descendante (via un intermédiaire) de la source —
+  // cible -> intermediaire -> source deviendrait intermediaire -> cible -> intermediaire.
+  @Test
+  void fusionner_cibleDescendanteDeLaSourceViaIntermediaire_detacheSansCreerDeCycle() {
+    UUID source = creerSalle("Grand Theatre Limoges", "87", null);
+    UUID intermediaire = creerSalle("Grand Theatre Limoges - Aile Est", "87", null);
+    UUID cible = creerSalle("Grand Theatre Limoges - Aile Est - Loge", "87", null);
+    jdbc.update(
+        "UPDATE salles SET salle_parent_id = CAST(:parentId AS uuid) WHERE id = CAST(:id AS uuid)",
+        Map.of("parentId", source.toString(), "id", intermediaire.toString()));
+    jdbc.update(
+        "UPDATE salles SET salle_parent_id = CAST(:parentId AS uuid) WHERE id = CAST(:id AS uuid)",
+        Map.of("parentId", intermediaire.toString(), "id", cible.toString()));
+
+    fusionSallesClePortee.fusionnerUnePaire(cible, source);
+
+    String parentIntermediaire =
+        jdbc.queryForObject(
+            "SELECT salle_parent_id::text FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", intermediaire.toString()),
+            String.class);
+    assertNull(parentIntermediaire, "l'intermédiaire doit être détaché plutôt que créer un cycle");
+    Long nbLogsCycle =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM logs_admin WHERE message LIKE '%cycle salle_parent_id évité%'",
+            Map.of(), Long.class);
+    assertEquals(1L, nbLogsCycle);
   }
 }

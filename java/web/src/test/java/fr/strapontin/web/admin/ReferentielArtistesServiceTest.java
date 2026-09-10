@@ -249,8 +249,10 @@ class ReferentielArtistesServiceTest {
     boolean fusionne = service.fusionner(cible, source);
 
     assertTrue(fusionne);
-    verify(jdbc, times(1)).update(contains("DELETE FROM concerts c1"), anyMap());
-    verify(jdbc, times(1)).update(contains("UPDATE concerts SET artiste_id"), anyMap());
+    verify(jdbc, times(1)).update(contains("DELETE FROM observations o1"), anyMap());
+    verify(jdbc, times(1)).update(contains("UPDATE observations SET evenement_id"), anyMap());
+    verify(jdbc, times(1)).update(contains("DELETE FROM evenements"), anyMap());
+    verify(jdbc, times(1)).update(contains("UPDATE evenements SET artiste_id"), anyMap());
     verify(jdbc, times(1)).update(contains("DELETE FROM user_artistes"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE user_artistes SET artiste_id"), anyMap());
     verify(jdbc, times(1)).update(contains("UPDATE artiste_sources SET artiste_id"), anyMap());
@@ -261,12 +263,14 @@ class ReferentielArtistesServiceTest {
     verify(logAdminService).logAdmin(eq("info"), eq("admin"), any());
   }
 
-  // deux artistes fusionnés peuvent chacun avoir enregistré le même concert réel (même
+  // deux artistes fusionnés peuvent chacun avoir enregistré le même événement réel (même
   // salle, même date/heure) sous un artiste_norm textuel différent selon la source — sans ce
-  // nettoyage préalable, les deux lignes concerts subsistaient après fusion, dupliquant le
-  // concert sur la fiche de l'artiste cible. Aligné sur ReferentielSallesService.fusionner.
+  // nettoyage préalable, les deux événements subsistaient après fusion, dupliquant l'événement
+  // sur la fiche de l'artiste cible. Aligné sur ReferentielSallesService.fusionner. Les
+  // observations de l'événement en conflit sont reportées sur l'événement cible (#1192), jamais
+  // perdues.
   @Test
-  void fusionner_concertEnConflitCoteCible_dedoublonneAvantRemapping() {
+  void fusionner_evenementEnConflitCoteCible_reporteLesObservationsAvantRemapping() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
     UUID cible = UUID.randomUUID();
     UUID source = UUID.randomUUID();
@@ -277,12 +281,20 @@ class ReferentielArtistesServiceTest {
         .update(
             org.mockito.ArgumentMatchers.argThat(
                 (String sql) ->
-                    sql.contains("DELETE FROM concerts c1")
-                        && sql.contains("USING concerts c2")
-                        && sql.contains("c1.artiste_id = CAST(:source AS uuid)")
-                        && sql.contains("c2.artiste_id = CAST(:cible AS uuid)")
-                        && sql.contains("c1.salle_id = c2.salle_id")
-                        && sql.contains("c1.date = c2.date")),
+                    sql.contains("DELETE FROM observations o1")
+                        && sql.contains("USING observations o2, evenements e1, evenements e2")
+                        && sql.contains("e1.artiste_id = CAST(:source AS uuid)")
+                        && sql.contains("e2.artiste_id = CAST(:cible AS uuid)")
+                        && sql.contains("e1.salle_id = e2.salle_id")
+                        && sql.contains("e1.date = e2.date")),
+            anyMap());
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.argThat(
+                (String sql) ->
+                    sql.contains("UPDATE observations SET evenement_id = e2.id")
+                        && sql.contains("e1.artiste_id = CAST(:source AS uuid)")
+                        && sql.contains("e2.artiste_id = CAST(:cible AS uuid)")),
             anyMap());
   }
 

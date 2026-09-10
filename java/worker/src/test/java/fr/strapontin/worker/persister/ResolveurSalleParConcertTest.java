@@ -13,6 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.sources.ClientNominatim;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.HashMap;
@@ -61,7 +62,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void chercherSalleParTokens_apostropheOmiseParUneAutreSource_retrouveLaSalleExistante() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
     UUID uuidExistant = UUID.randomUUID();
 
     Map<String, Object> candidat = new HashMap<>();
@@ -80,7 +82,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void chercherSalleParTokens_aucunCandidat_retourneNull() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
 
     when(jdbc.queryForList(anyString(), any(SqlParameterSource.class))).thenReturn(List.of());
 
@@ -95,7 +98,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void chercherSalleParTokens_complexeMultiSallesQualificatifsDivergents_retourneNull() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
 
     Map<String, Object> candidatAuditorium = new HashMap<>();
     candidatAuditorium.put("id", UUID.randomUUID());
@@ -122,7 +126,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void chercherSalleParTokens_memeQualificatifPlusieursVariantes_retientLeMeilleurScore() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
     UUID meilleur = UUID.randomUUID();
     UUID moinsBon = UUID.randomUUID();
 
@@ -151,7 +156,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void chercherSalleParCleForte_memeArtisteDateHeureDept_retourneLaSalleExistante() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
     UUID salleExistante = UUID.randomUUID();
 
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
@@ -174,7 +180,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void chercherSalleParCleForte_heureInconnue_neQuerypasEtRetourneNull() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
 
     ValeurConcert entrant =
         concert("vincent dedienne", LocalDate.of(2027, 5, 23), null, "theatre x", null);
@@ -187,7 +194,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void chercherSalleParCleForte_deptInconnu_neQuerypasEtRetourneNull() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
 
     ValeurConcert entrant =
         concert(
@@ -205,7 +213,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void chercherSalleParCleForte_aucunConcertCorrespondant_retourneNull() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
 
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
 
@@ -225,7 +234,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void chercherSalleParCleForte_candidatCoherentEnPremier_retientLeCandidatCoherent() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
     UUID salleIncoherente = UUID.randomUUID();
     UUID salleCoherente = UUID.randomUUID();
 
@@ -247,7 +257,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void chercherSalleParCleForte_candidatCoherentEnSecond_retientLeCandidatCoherent() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
     UUID salleIncoherente = UUID.randomUUID();
     UUID salleCoherente = UUID.randomUUID();
 
@@ -269,7 +280,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void chercherSalleParCleForte_tousLesCandidatsIncoherents_retourneNull() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
     UUID salleA = UUID.randomUUID();
     UUID salleB = UUID.randomUUID();
 
@@ -292,7 +304,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void raccrocherSallesParNomNorm_candidatDeptDifferent_neRattachePas() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
 
     Map<String, Object> candidatLille = new HashMap<>();
     candidatLille.put("nom_norm", "casino barriere");
@@ -331,7 +344,8 @@ class ResolveurSalleParConcertTest {
   @Test
   void raccrocherSallesParNomNorm_candidatDeptCorrespondant_rattache() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
     UUID uuidToulouse = UUID.randomUUID();
 
     Map<String, Object> candidatToulouse = new HashMap<>();

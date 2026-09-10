@@ -41,6 +41,7 @@ public class WorkerStatsService {
   private final LogsAdminWorker logsAdminWorker;
   private final MeterRegistry meterRegistry;
   private final SuiviChroniciteService suiviChronicite;
+  private final DeriveVolumeFetchService deriveVolumeFetchService;
 
   /// @param sources sources de concerts (bilan de panne par source)
   /// @param tm source Ticketmaster (bilan des concerts manqués par pagination plafonnée)
@@ -49,6 +50,8 @@ public class WorkerStatsService {
   /// @param logsAdminWorker journalisation des bilans dans {@code logs_admin}
   /// @param meterRegistry registre Micrometer pour la métrique de durée par type de job
   /// @param suiviChronicite suivi des cycles consécutifs en échec par job/source
+  /// @param deriveVolumeFetchService détection de repli de volume significatif par rapport à
+  ///   l'historique récent
   public WorkerStatsService(
       List<SourceConcerts> sources,
       TicketmasterSource tm,
@@ -56,7 +59,8 @@ public class WorkerStatsService {
       NamedParameterJdbcTemplate jdbc,
       LogsAdminWorker logsAdminWorker,
       MeterRegistry meterRegistry,
-      SuiviChroniciteService suiviChronicite) {
+      SuiviChroniciteService suiviChronicite,
+      DeriveVolumeFetchService deriveVolumeFetchService) {
     this.sources = sources;
     this.tm = tm;
     this.resolveur = resolveur;
@@ -64,6 +68,7 @@ public class WorkerStatsService {
     this.logsAdminWorker = logsAdminWorker;
     this.meterRegistry = meterRegistry;
     this.suiviChronicite = suiviChronicite;
+    this.deriveVolumeFetchService = deriveVolumeFetchService;
   }
 
   /// Enregistre le résultat d'un job dans {@code fetch_jobs}/{@code fetch_jobs_historique}, puis
@@ -128,6 +133,10 @@ public class WorkerStatsService {
           && resultat.nbInseres() == 0
           && resultat.nbMisAJour() == 0) {
         remonterResultatVide(typeJob, maintenant);
+      }
+      if (erreur == null) {
+        deriveVolumeFetchService.verifier(
+            typeJob, resultat.nbInseres() + resultat.nbMisAJour(), maintenant);
       }
     }
   }

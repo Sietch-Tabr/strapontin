@@ -5,11 +5,14 @@
 package fr.strapontin.worker.persister;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.sources.ClientNominatim;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,6 +36,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   private static final String DATE_RECENTE = LocalDate.now().toString();
 
   @MockitoBean TicketmasterSource ticketmasterSource;
+  @MockitoBean ClientNominatim clientNominatim;
 
   @Autowired private PersisterConcerts persisterConcerts;
 
@@ -42,8 +46,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @BeforeEach
   void nettoyerBase() {
-    jdbc.update("DELETE FROM user_matches", Map.of());
-    jdbc.update("DELETE FROM concerts", Map.of());
+    // evenements, pas concerts (vue depuis #1192) — cascade vers observations et user_matches.
+    jdbc.update("DELETE FROM evenements", Map.of());
     jdbc.update("DELETE FROM salle_sources", Map.of());
     jdbc.update("DELETE FROM artiste_sources", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
@@ -110,6 +114,51 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         artisteSourceId);
   }
 
+  /// Seed direct d'un événement + son observation (#1192) — contourne volontairement {@link
+  /// PersisterConcerts#persisterConcerts} pour reproduire un état déjà en base (résidu, concert
+  /// existant), équivalent du seed direct {@code INSERT INTO concerts} de l'ancien modèle.
+  private UUID seedEvenementAvecObservation(
+      String artiste,
+      String artisteNorm,
+      String date,
+      String heure,
+      String salle,
+      String salleNorm,
+      String dept,
+      UUID salleId,
+      UUID artisteId,
+      String source,
+      String url) {
+    MapSqlParameterSource paramsEvenement =
+        new MapSqlParameterSource()
+            .addValue("artisteNorm", artisteNorm)
+            .addValue("date", date)
+            .addValue("heure", heure)
+            .addValue("salleNorm", salleNorm)
+            .addValue("dept", dept)
+            .addValue("salleId", salleId != null ? salleId.toString() : null)
+            .addValue("artisteId", artisteId != null ? artisteId.toString() : null);
+    UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, dept, salle_id,"
+                + " artiste_id)"
+                + " VALUES (:artisteNorm, CAST(:date AS date), CAST(:heure AS time), :salleNorm,"
+                + " :dept, CAST(:salleId AS uuid), CAST(:artisteId AS uuid)) RETURNING id",
+            paramsEvenement,
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:evenementId AS uuid), CAST(:source AS source_concert), :url,"
+            + " :artiste, :salle)",
+        new MapSqlParameterSource()
+            .addValue("evenementId", evenementId.toString())
+            .addValue("source", source)
+            .addValue("url", url)
+            .addValue("artiste", artiste)
+            .addValue("salle", salle));
+    return evenementId;
+  }
+
   @Test
   void persisterConcerts_concertValide_insereEnBase() {
     List<ConcertBrut> liste =
@@ -120,6 +169,91 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1, res.nbInseres());
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count);
+  }
+
+  private void insererSalleAvecCoordonnees(String nom, double latitude, double longitude) {
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, latitude, longitude)"
+            + " VALUES (:cle, :nom, :norm, :lat, :lon)",
+        new MapSqlParameterSource()
+            .addValue("cle", nom.toLowerCase())
+            .addValue("nom", nom)
+            .addValue("norm", nom.toLowerCase())
+            .addValue("lat", latitude)
+            .addValue("lon", longitude));
+  }
+
+  // upsertSalleSource (donc la résolution GPS-first) n'est atteint que si le concert porte un
+  // salleSourceId — sans lui, la résolution reste bornée à un rapprochement par nom déjà connu
+  // (raccrocherSallesParNomNorm), jamais une création. Aucun rapport textuel entre "Zenith
+  // Historique Inconnu" et "Salle GPS Existante" — seul le géocodage en dernier recours peut les
+  // rapprocher.
+  @Test
+  void persisterConcerts_salleInconnueGeocodageTrouveSalleProche_reutiliseLaSalleExistante() {
+    insererSalleAvecCoordonnees("Salle GPS Existante", 48.8566, 2.3522);
+    when(clientNominatim.geocoder("Zenith Historique Inconnu"))
+        .thenReturn(java.util.Optional.of(new ClientNominatim.Coordonnees(48.8567, 2.3523)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Artiste GPS",
+                "2026-09-20",
+                "Zenith Historique Inconnu",
+                "ticketmaster:venue-gps-1",
+                null)));
+
+    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    assertEquals(1L, nbSalles, "aucune nouvelle salle ne doit être créée");
+    Long nbLiees =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM concerts WHERE salle_norm = 'zenith historique inconnu'"
+                + " AND salle_id = (SELECT id FROM salles WHERE nom = 'Salle GPS Existante')",
+            Map.of(),
+            Long.class);
+    assertEquals(1L, nbLiees);
+  }
+
+  @Test
+  void persisterConcerts_salleInconnueGeocodageSansSalleProche_creeNouvelleSalleAvecCoordonnees() {
+    insererSalleAvecCoordonnees("Salle GPS Lointaine", 43.2965, 5.3698); // Marseille
+    when(clientNominatim.geocoder("Zenith Nouveau Lieu"))
+        .thenReturn(java.util.Optional.of(new ClientNominatim.Coordonnees(48.8566, 2.3522)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Artiste GPS 2",
+                "2026-09-21",
+                "Zenith Nouveau Lieu",
+                "ticketmaster:venue-gps-2",
+                null)));
+
+    Map<String, Object> salleCreee =
+        jdbc.queryForMap(
+            "SELECT latitude, longitude FROM salles WHERE nom = 'Zenith Nouveau Lieu'", Map.of());
+    assertEquals(48.8566, (Double) salleCreee.get("latitude"), 0.0001);
+    assertEquals(2.3522, (Double) salleCreee.get("longitude"), 0.0001);
+  }
+
+  @Test
+  void persisterConcerts_salleInconnueGeocodageEchoue_creeNouvelleSalleSansCoordonnees() {
+    when(clientNominatim.geocoder("Zenith Sans Geocodage")).thenReturn(java.util.Optional.empty());
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Artiste GPS 3",
+                "2026-09-22",
+                "Zenith Sans Geocodage",
+                "ticketmaster:venue-gps-3",
+                null)));
+
+    Map<String, Object> salleCreee =
+        jdbc.queryForMap(
+            "SELECT latitude, longitude FROM salles WHERE nom = 'Zenith Sans Geocodage'", Map.of());
+    assertNull(salleCreee.get("latitude"));
+    assertNull(salleCreee.get("longitude"));
   }
 
   @Test
@@ -203,9 +337,11 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_upsertConflitSalleRenommee_metsAJourSalleNormAvecSalle() {
-    // salle_norm doit rester cohérent avec salle sur la branche de conflit de l'upsert, pas
-    // seulement à l'insertion initiale
-    ConcertBrut v1 = concert("Mika", "2026-07-10", "THEATRE HEBERTOT", "ticketmaster");
+    // salle_norm (evenements) doit rester cohérent avec salle (vue concerts, meilleure
+    // observation par priorité de source) sur la branche de conflit de l'upsert, pas seulement à
+    // l'insertion initiale — Eventim arrive en premier, Ticketmaster (priorité supérieure)
+    // en second, devient donc la référence affichée aux deux upserts.
+    ConcertBrut v1 = concert("Mika", "2026-07-10", "THEATRE HEBERTOT", "eventim");
     ConcertBrut v2 =
         new ConcertBrut(
             "Mika",
@@ -215,7 +351,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             "Paris",
             "75",
             "https://example.com/mika-v2",
-            "eventim",
+            "ticketmaster",
             "music",
             "Pop",
             null,
@@ -788,13 +924,18 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             + " VALUES (CAST(:id AS uuid), 'casino barriere', 'Casino - Barriere',"
             + " 'casino barriere', NULL)",
         Map.of("id", salleLille.toString()));
-    jdbc.update(
-        "INSERT INTO concerts (artiste, artiste_norm, date, heure, salle, salle_norm, dept,"
-            + " source, salle_id)"
-            + " VALUES ('Artiste Lille', 'artiste lille', CAST(:date AS date), '20:30',"
-            + " 'Casino Barriere', 'casino barriere', '59',"
-            + " CAST('ticketmaster' AS source_concert), CAST(:salleId AS uuid))",
-        Map.of("date", DATE_RECENTE, "salleId", salleLille.toString()));
+    seedEvenementAvecObservation(
+        "Artiste Lille",
+        "artiste lille",
+        DATE_RECENTE,
+        "20:30",
+        "Casino Barriere",
+        "casino barriere",
+        "59",
+        salleLille,
+        null,
+        "ticketmaster",
+        null);
 
     // Nouveau concert homonyme, sans salleSourceId (déclenche chercherSalleParTokens), dept
     // Toulouse (31) — doit être rejeté par le filtre plutôt que fusionné à tort avec Lille.
@@ -1342,14 +1483,15 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, count, "les deux concerts doivent fusionner en un seul via salle_id");
   }
 
-  // supprimerDoublonsParSalleId ne couvrait que les paires TM/Eventim codées en dur.
-  // Ce test simule un doublon résiduel TM+Digitick (même artiste_id/date/heure/salle_id mais
-  // artiste_norm distinct — la contrainte unique porte sur artiste_norm, pas artiste_id, donc les
-  // deux lignes peuvent légitimement coexister en base malgré une résolution UUID identique).
+  // #1192 : même artiste_id/date/heure/salle_id mais artiste_norm distinct (TM/Digitick) doit
+  // désormais fusionner en un seul événement au moment de la résolution, sans supprimer aucune des
+  // deux observations (contrairement à l'ancien supprimerDoublonsParSalleId, qui ne couvrait que
+  // les paires TM/Eventim codées en dur et perdait la ligne perdante).
   @Test
-  void persisterConcerts_doublonResiduelTicketmasterDigitick_supprimeLaLigneDigitick() {
-    java.util.UUID artisteId = java.util.UUID.randomUUID();
-    java.util.UUID salleId = java.util.UUID.randomUUID();
+  void
+      upsertLot_memeArtisteIdSalleIdDateHeureArtisteNormDistinct_fusionneSansPerdreLesObservations() {
+    UUID artisteId = UUID.randomUUID();
+    UUID salleId = UUID.randomUUID();
     jdbc.update(
         "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
         new MapSqlParameterSource()
@@ -1365,56 +1507,81 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             .addValue("nom", "Accor Arena")
             .addValue("nomNorm", "accor arena"));
 
-    String sqlInsertConcert =
-        """
-        INSERT INTO concerts
-            (artiste, artiste_norm, date, heure, salle, salle_norm, source, artiste_id, salle_id)
-        VALUES
-            (:artiste, :artisteNorm, '2026-12-05', '20:00', :salle, 'accor arena',
-             CAST(:source AS source_concert), CAST(:artisteId AS uuid), CAST(:salleId AS uuid))
-        """;
-    jdbc.update(
-        sqlInsertConcert,
-        new MapSqlParameterSource()
-            .addValue("artiste", "Coldplay")
-            .addValue("artisteNorm", "coldplay")
-            .addValue("salle", "Accor Arena")
-            .addValue("source", "ticketmaster")
-            .addValue("artisteId", artisteId.toString())
-            .addValue("salleId", salleId.toString()));
-    jdbc.update(
-        sqlInsertConcert,
-        new MapSqlParameterSource()
-            .addValue("artiste", "Cold Play")
-            .addValue("artisteNorm", "cold play")
-            .addValue("salle", "Accor Arena Digitick")
-            .addValue("source", "digitick")
-            .addValue("artisteId", artisteId.toString())
-            .addValue("salleId", salleId.toString()));
+    LocalDate date = LocalDate.parse("2026-12-05");
+    LocalTime heure = LocalTime.parse("20:00");
+    ValeurConcert viaTm =
+        new ValeurConcert(
+            "Coldplay",
+            "coldplay",
+            date,
+            heure,
+            "Accor Arena",
+            "accor arena",
+            "Paris",
+            "75",
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            salleId,
+            artisteId);
+    ValeurConcert viaDigitick =
+        new ValeurConcert(
+            "Cold Play",
+            "cold play",
+            date,
+            heure,
+            "Accor Arena Digitick",
+            "accor arena digitick",
+            "Paris",
+            "75",
+            null,
+            "digitick",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            salleId,
+            artisteId);
 
-    // Un concert sans rapport déclenche le passage de persisterConcerts (et donc le nettoyage
-    // supprimerDoublonsParSalleId) sans interagir avec les deux lignes insérées ci-dessus.
-    persisterConcerts.persisterConcerts(
-        List.of(concert("Artiste Sans Rapport", "2026-12-06", "Autre Salle", "ticketmaster")));
+    persisteurConcertsDb.upsertLot(List.of(viaTm, viaDigitick));
 
-    List<String> sourcesRestantes =
-        jdbc.queryForList(
-            "SELECT source::text FROM concerts WHERE artiste_id = CAST(:artisteId AS uuid)",
-            Map.of("artisteId", artisteId.toString()),
+    Long nbEvenements =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM evenements WHERE artiste_id = CAST(:id AS uuid)",
+            Map.of("id", artisteId.toString()),
+            Long.class);
+    assertEquals(1L, nbEvenements, "un seul événement malgré artiste_norm distinct");
+    Long nbObservations =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM observations o JOIN evenements e ON e.id = o.evenement_id"
+                + " WHERE e.artiste_id = CAST(:id AS uuid)",
+            Map.of("id", artisteId.toString()),
+            Long.class);
+    assertEquals(2L, nbObservations, "les deux observations sont conservées, aucune supprimée");
+    String source =
+        jdbc.queryForObject(
+            "SELECT source::text FROM concerts WHERE artiste_id = CAST(:id AS uuid)",
+            Map.of("id", artisteId.toString()),
             String.class);
     assertEquals(
-        List.of("ticketmaster"),
-        sourcesRestantes,
-        "la ligne Digitick doit être supprimée au profit de la ligne Ticketmaster (priorité)");
+        "ticketmaster", source, "priorité Ticketmaster sur Digitick pour la référence affichée");
   }
 
   // Une fiche package TM (URL /pack/) référence souvent une heure distincte de la fiche
-  // principale du même événement réel — supprimerDoublonsParSalleId doit les fusionner malgré cet
-  // écart, en conservant la fiche non-package comme référence.
+  // principale du même événement réel — la résolution d'événement (#1192) doit les fusionner
+  // malgré cet écart, la fiche non-package servant de référence affichée sans que la fiche
+  // package soit perdue (contrairement à l'ancien supprimerDoublonsParSalleId, qui la supprimait).
   @Test
-  void persisterConcerts_ficheNormaleEtPackageMemeEvenement_gardeLaFicheNormale() {
-    // supprimerDoublonsParSalleId exige artiste_id non nul des deux côtés — résolu par nom
-    // uniquement si l'artiste existe déjà (jamais créé automatiquement à la persistance).
+  void persisterConcerts_ficheNormaleEtPackageMemeEvenement_gardeLesDeuxObservations() {
     jdbc.update(
         "INSERT INTO artistes (id, nom, nom_norm) VALUES (gen_random_uuid(), 'Jay Z', 'jay z')",
         Map.of());
@@ -1458,11 +1625,19 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     List<Map<String, Object>> lignes =
         jdbc.queryForList("SELECT url FROM concerts WHERE artiste_norm = 'jay z'", Map.of());
-    assertEquals(1, lignes.size(), "les deux fiches doivent fusionner en une seule ligne");
+    assertEquals(1, lignes.size(), "les deux fiches doivent fusionner en un seul événement");
     assertEquals(
         "https://tm.example/jay-z-billet",
         lignes.get(0).get("url"),
-        "la fiche non-package doit l'emporter comme référence conservée");
+        "la fiche non-package doit l'emporter comme référence affichée");
+
+    Long nbObservations =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM observations o"
+                + " JOIN evenements e ON e.id = o.evenement_id WHERE e.artiste_norm = 'jay z'",
+            Map.of(),
+            Long.class);
+    assertEquals(2L, nbObservations, "la fiche package doit être conservée, pas supprimée");
   }
 
   // Cas réel confirmé en production : un artiste que personne ne suit par nom (aucune ligne
@@ -1568,60 +1743,6 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         1,
         lignes.size(),
         "le second cycle doit fusionner avec la ligne déjà persistée au premier cycle");
-  }
-
-  // Régression prod (déploiement 2.8.8, fetch:salles:all) : supprimerDoublonsSansArtisteId
-  // passait ses UUID stringifiés dans un IN(:ids), rejeté par Postgres (« uuid = character
-  // varying », aucun opérateur, aucune conversion implicite) dès qu'au moins une ligne doublon
-  // existait réellement — jamais exercé par les tests ci-dessus, la réconciliation
-  // pré-persistance (ReconciliateurArtistes) y absorbe systématiquement le doublon avant qu'il
-  // n'atteigne la base. Seed direct en base (contourne volontairement persisterConcerts) pour
-  // reproduire l'état réel post-fusion de salles où deux lignes distinctes coexistent.
-  @Test
-  void supprimerDoublonsSansArtisteId_deuxLignesReellesEnBase_supprimeLaMoinsPrioritaire() {
-    UUID salleId =
-        jdbc.queryForObject(
-            "INSERT INTO salles (salle_cle, nom, nom_norm, dept) VALUES"
-                + " ('salle-test-doublon-sans-artiste', 'Salle Test', 'salle test', '75')"
-                + " RETURNING id",
-            new MapSqlParameterSource(),
-            UUID.class);
-
-    jdbc.update(
-        "INSERT INTO concerts (artiste, artiste_norm, date, heure, salle, salle_norm, url,"
-            + " source, salle_id)"
-            + " VALUES (:artisteTm, :normTm, CAST(:date AS date), '20:00', 'Salle Test',"
-            + " 'salle test', :urlTm, CAST('ticketmaster' AS source_concert), :salleId)",
-        new MapSqlParameterSource()
-            .addValue("artisteTm", "Earl Sweatshirt")
-            .addValue("normTm", "earl sweatshirt")
-            .addValue("date", DATE_RECENTE)
-            .addValue("urlTm", "https://tm.example/earl-sweatshirt-seed")
-            .addValue("salleId", salleId));
-    jdbc.update(
-        "INSERT INTO concerts (artiste, artiste_norm, date, heure, salle, salle_norm, url,"
-            + " source, salle_id)"
-            + " VALUES (:artisteEventim, :normEventim, CAST(:date AS date), '20:00', 'Salle"
-            + " Test', 'salle test', :urlEventim, CAST('eventim' AS source_concert), :salleId)",
-        new MapSqlParameterSource()
-            .addValue("artisteEventim", "Earl Sweatshirt & Mike")
-            .addValue("normEventim", "earl sweatshirt and mike")
-            .addValue("date", DATE_RECENTE)
-            .addValue("urlEventim", "https://www.eventim.fr/earl-sweatshirt-mike-seed")
-            .addValue("salleId", salleId));
-
-    int nbSupprimees = persisteurConcertsDb.supprimerDoublonsSansArtisteId();
-
-    assertEquals(1, nbSupprimees, "une seule ligne doit être supprimée");
-    List<Map<String, Object>> restantes =
-        jdbc.queryForList(
-            "SELECT source, url FROM concerts WHERE salle_id = :salleId",
-            Map.of("salleId", salleId));
-    assertEquals(1, restantes.size(), "une seule ligne doit rester en base");
-    assertEquals(
-        "ticketmaster",
-        restantes.get(0).get("source").toString(),
-        "la fiche Ticketmaster doit l'emporter sur Eventim");
   }
 
   // Un complexe multi-salles (La Seine Musicale, #1180) ne doit jamais mélanger deux halls

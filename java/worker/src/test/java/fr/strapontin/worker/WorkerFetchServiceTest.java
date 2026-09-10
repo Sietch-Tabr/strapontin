@@ -52,6 +52,7 @@ class WorkerFetchServiceTest {
   private SuiviSanteSourcesService suiviSanteSourcesService;
   private WorkerFetchService fetchService;
   private LogsAdminWorker logsAdminWorker;
+  private RetryLotsService retryLotsService;
 
   @BeforeEach
   void setUp() {
@@ -67,6 +68,7 @@ class WorkerFetchServiceTest {
     notificationDigestService = mock(NotificationDigestService.class);
     jdbc = mock(NamedParameterJdbcTemplate.class);
     suiviSanteSourcesService = mock(SuiviSanteSourcesService.class);
+    retryLotsService = mock(RetryLotsService.class);
     // Instance réelle de WorkerStatsService (adossée au jdbc mocké) : le bloc finally
     // enregistrerStatJob doit s'exécuter sans lever d'exception, mais son détail est testé dans
     // WorkerStatsServiceTest.
@@ -79,7 +81,8 @@ class WorkerFetchServiceTest {
             jdbc,
             logsAdminWorker,
             new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
-            new SuiviChroniciteService(jdbc, new ObjectMapper()));
+            new SuiviChroniciteService(jdbc, new ObjectMapper()),
+            new DeriveVolumeFetchService(jdbc, logsAdminWorker));
     fetchService =
         new WorkerFetchService(
             sources,
@@ -92,7 +95,8 @@ class WorkerFetchServiceTest {
             jdbc,
             suiviSanteSourcesService,
             workerStatsService,
-            logsAdminWorker);
+            logsAdminWorker,
+            retryLotsService);
   }
 
   @Test
@@ -165,6 +169,67 @@ class WorkerFetchServiceTest {
                     "error".equals(params.get("niveau"))
                         && params.get("message").toString().contains("fetch:artistes:batch")
                         && params.get("message").toString().contains("1/1 lot(s) échoué")));
+  }
+
+  // Le retry ciblé (RetryLotsService) doit recevoir les identifiants réels du lot en échec, pas
+  // seulement un message texte — condition nécessaire pour ne retenter que les entités concernées.
+  @Test
+  void executerFetchArtistesBatch_lotEnEchec_transmetLesIdsAuRetryLotsService() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    row.put("artiste_id_str", "artiste-1");
+    row.put("artiste_affiche", "Artiste 1");
+    row.put("attraction_id", "attractionId1");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
+    when(tm.fetchArtistesLot(any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any()))
+        .thenThrow(new RuntimeException("panne persistance"));
+
+    fetchService.executerFetchArtistesBatch();
+
+    verify(retryLotsService).gererResultat("fetch:artistes:batch", List.of("artiste-1"));
+  }
+
+  // La surcharge ciblée ne doit interroger que les artistes passés, pas tous les artistes suivis.
+  @Test
+  void executerFetchArtistesBatch_avecIdsCibles_neFetchQueCesArtistes() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    row.put("artiste_id_str", "artiste-1");
+    row.put("artiste_affiche", "Artiste 1");
+    row.put("attraction_id", "attractionId1");
+    when(jdbc.queryForList(
+            contains("artiste_id::text IN"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params -> List.of("artiste-1").equals(params.get("ids")))))
+        .thenReturn(List.of(row));
+    when(tm.fetchArtistesLot(any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchArtistesBatch(List.of("artiste-1"));
+
+    verify(eventim).fetchArtiste("Artiste 1", null, null);
+  }
+
+  // Un cycle propre doit remettre à zéro le compteur de tentatives de retry — sans quoi il
+  // resterait bloqué indéfiniment après la résolution d'un échec ponctuel.
+  @Test
+  void executerFetchArtistesBatch_cyclePropre_notifieRetryLotsServiceSansEchec() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    row.put("artiste_id_str", "artiste-1");
+    row.put("artiste_affiche", "Artiste 1");
+    row.put("attraction_id", "attractionId1");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
+    when(tm.fetchArtistesLot(any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchArtistesBatch();
+
+    verify(retryLotsService).gererResultat("fetch:artistes:batch", List.of());
   }
 
   // Le compteur d'absences consécutives doit être mis à jour pour l'artiste effectivement
@@ -404,6 +469,94 @@ class WorkerFetchServiceTest {
     verify(resolveur, never()).resoudreNomCanonique(eq("artiste"), eq("Paris is Magique"));
   }
 
+  // Un mauvais rapprochement Deezer (ex. "Nino Arial" -> "Niño Árbol") ne doit jamais l'emporter
+  // sur un nom_affiche déjà connu et divergent, établi par une source plus fiable (Wikidata).
+  @Test
+  void executerFetchSalle_candidatDeezerDivergeDuNomAfficheWikidataConnu_gardeLeNomBrut() {
+    when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
+    when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
+    fr.strapontin.core.ConcertBrut concert =
+        new fr.strapontin.core.ConcertBrut(
+            "Nino Arial",
+            "2026-09-01",
+            "20:00",
+            "Salle",
+            "Paris",
+            "75",
+            "http://x",
+            "ticketmaster",
+            "music",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of(concert));
+    when(resolveur.resoudreNomCanonique("artiste", "Nino Arial"))
+        .thenReturn(
+            new ResolveurNomCanonique.ResultatResolution(
+                "Niño Árbol", ResolveurNomCanonique.SourceResolution.DEEZER));
+    when(jdbc.query(
+            anyString(),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String>>any()))
+        .thenReturn(List.of("Nino Arial"));
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchSalle("tm:venue-42");
+
+    org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
+        org.mockito.ArgumentCaptor.captor();
+    verify(persisterConcerts).persisterConcerts(captor.capture());
+    assertTrue(captor.getValue().stream().allMatch(c -> "Nino Arial".equals(c.artiste())));
+  }
+
+  // Un nom_affiche connu cosmétiquement identique (casse/espace) au candidat Deezer ne doit pas
+  // bloquer la résolution — seule une vraie divergence (via
+  // CorrespondanceArtiste.estDoublonArtiste)
+  // rejette le candidat.
+  @Test
+  void executerFetchSalle_candidatDeezerCoherentAvecNomAfficheWikidataConnu_accepteLeNomDeezer() {
+    when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
+    when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
+    fr.strapontin.core.ConcertBrut concert =
+        new fr.strapontin.core.ConcertBrut(
+            "stromae",
+            "2026-09-01",
+            "20:00",
+            "Salle",
+            "Paris",
+            "75",
+            "http://x",
+            "ticketmaster",
+            "music",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of(concert));
+    when(resolveur.resoudreNomCanonique("artiste", "stromae"))
+        .thenReturn(
+            new ResolveurNomCanonique.ResultatResolution(
+                "Stromae", ResolveurNomCanonique.SourceResolution.DEEZER));
+    when(jdbc.query(
+            anyString(),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String>>any()))
+        .thenReturn(List.of("STROMAE "));
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchSalle("tm:venue-42");
+
+    org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
+        org.mockito.ArgumentCaptor.captor();
+    verify(persisterConcerts).persisterConcerts(captor.capture());
+    assertTrue(captor.getValue().stream().allMatch(c -> "Stromae".equals(c.artiste())));
+  }
+
   @Test
   void executerFetchSalle_appelleSuiviSanteSourcesAvecLeResultat() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
@@ -479,6 +632,47 @@ class WorkerFetchServiceTest {
                 params ->
                     "warn".equals(params.get("niveau"))
                         && params.get("message").toString().contains("1/3 lot(s) échoué")));
+  }
+
+  @Test
+  void executerFetchRegion_unLotEnEchec_transmetLesDeptsAuRetryLotsService() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
+    when(jdbc.query(
+            anyString(),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any()))
+        .thenReturn(List.<String[]>of(depts));
+    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
+    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any()))
+        .thenReturn(new ResultatPersistance(1, 0))
+        .thenThrow(new RuntimeException("panne réseau"))
+        .thenReturn(new ResultatPersistance(1, 0));
+    when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
+
+    fetchService.executerFetchRegion();
+
+    verify(retryLotsService).gererResultat("fetch:region", List.of("06", "07", "08", "09", "10"));
+  }
+
+  // La surcharge ciblée ne doit interroger que les départements passés, pas tous les départements
+  // configurés — sinon le retry rejouerait le cycle complet plutôt qu'un simple sous-ensemble.
+  @Test
+  void executerFetchRegion_avecDeptsCibles_neFetchQueCesDepts() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
+    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchRegion(List.of("75", "92"));
+
+    verify(tm).fetchRegion(eq(List.of("75", "92")), any());
+    verify(jdbc, never())
+        .query(
+            contains("user_config"),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any());
   }
 
   @Test
@@ -621,5 +815,40 @@ class WorkerFetchServiceTest {
                 params ->
                     "warn".equals(params.get("niveau"))
                         && params.get("message").toString().contains("1/2 lot(s) échoué")));
+  }
+
+  @Test
+  void executerFetchSallesAll_lotEnEchec_transmetLesSalleIdsAuRetryLotsService() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(List.of(java.util.Map.of("salle_id", "salle-1", "identifiants", "tm:venue-1")));
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+    when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
+    when(tm.fetchSalle(anyString())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any()))
+        .thenThrow(new RuntimeException("panne persistance"));
+
+    fetchService.executerFetchSallesAll();
+
+    verify(retryLotsService).gererResultat("fetch:salles:all", List.of("salle-1"));
+  }
+
+  // La surcharge ciblée ne doit interroger que les salles passées, pas toutes les salles suivies.
+  @Test
+  void executerFetchSallesAll_avecSalleIdsCibles_neFetchQueCesSalles() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    when(jdbc.queryForList(
+            contains("salle_id::text IN"),
+            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+                params -> List.of("salle-1").equals(params.get("ids")))))
+        .thenReturn(List.of(java.util.Map.of("salle_id", "salle-1", "identifiants", "tm:venue-1")));
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+    when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
+    when(tm.fetchSalle(anyString())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchSallesAll(List.of("salle-1"));
+
+    verify(tm).fetchSalle("tm:venue-1");
   }
 }

@@ -46,6 +46,8 @@ class ReconciliationNocturneServiceTest {
   private ReconciliateurSalles reconciliateurSalles;
   private FusionSallesClePorteeService fusionSallesClePortee;
   private CoherenceMultiSalleService coherenceMultiSalle;
+  private SuggestionMotsGenericsService suggestionMotsGenerics;
+  private ControleIntegriteService controleIntegrite;
   private ReconciliationNocturneService service;
 
   @BeforeEach
@@ -59,6 +61,8 @@ class ReconciliationNocturneServiceTest {
     reconciliateurSalles = mock(ReconciliateurSalles.class);
     fusionSallesClePortee = mock(FusionSallesClePorteeService.class);
     coherenceMultiSalle = mock(CoherenceMultiSalleService.class);
+    suggestionMotsGenerics = mock(SuggestionMotsGenericsService.class);
+    controleIntegrite = mock(ControleIntegriteService.class);
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
     when(enrichissementSalles.enrichir()).thenReturn(0);
     when(enrichissementArtistes.enrichir()).thenReturn(0);
@@ -67,6 +71,8 @@ class ReconciliationNocturneServiceTest {
     when(fusionSallesClePortee.fusionner()).thenReturn(0);
     when(coherenceMultiSalle.detecterContamination()).thenReturn(0);
     when(coherenceMultiSalle.detecterDoublons()).thenReturn(0);
+    when(suggestionMotsGenerics.suggerer()).thenReturn(0);
+    when(controleIntegrite.verifier()).thenReturn(0);
     service =
         new ReconciliationNocturneService(
             jdbc,
@@ -77,7 +83,9 @@ class ReconciliationNocturneServiceTest {
             coherenceWikidataSalle,
             reconciliateurSalles,
             fusionSallesClePortee,
-            coherenceMultiSalle);
+            coherenceMultiSalle,
+            suggestionMotsGenerics,
+            controleIntegrite);
   }
 
   private static Map<String, Object> ligneSalleSuspecte(UUID salleId, String venueId, String nom) {
@@ -398,6 +406,33 @@ class ReconciliationNocturneServiceTest {
     assertEquals(0, resultat.nomsIncoherentsTM());
     verify(logsAdminWorker, never())
         .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("nom TM incohérent"), any());
+  }
+
+  // un nom TM divergent qui correspond en réalité à un alias Wikidata déjà connu de l'artiste
+  // (nom de scène) est pré-accepté automatiquement, sans jamais poser necessite_intervention_le
+  // ni journaliser de warn — équivalent à une acceptation manuelle admin déjà faite.
+  @Test
+  void executer_nomTMCorrespondAUnAliasWikidataConnu_preAcceptesSansSignalement() {
+    UUID artisteId = UUID.randomUUID();
+    when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
+        .thenReturn(List.of(ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid")));
+    when(tm.recupererNomAttraction("attractionM")).thenReturn("-M-");
+    when(jdbc.query(
+            contains("alias_wikidata"),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any()))
+        .thenReturn(List.<String[]>of(new String[] {"-M-"}));
+
+    ResultatReconciliation resultat = service.executer();
+
+    assertEquals(0, resultat.nomsIncoherentsTM());
+    verify(logsAdminWorker, never())
+        .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("nom TM incohérent"), any());
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("nom_tm_ignore"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> "-M-".equals(p.get("nomAttraction"))));
   }
 
   // le nom TM a de nouveau changé depuis le dernier accord admin — une divergence différente doit

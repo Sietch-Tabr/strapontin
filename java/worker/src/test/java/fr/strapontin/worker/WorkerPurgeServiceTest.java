@@ -51,7 +51,8 @@ class WorkerPurgeServiceTest {
             jdbc,
             logsAdminWorker,
             new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
-            new SuiviChroniciteService(jdbc, new ObjectMapper()));
+            new SuiviChroniciteService(jdbc, new ObjectMapper()),
+            new DeriveVolumeFetchService(jdbc, logsAdminWorker));
     service = new WorkerPurgeService(jdbc, workerStatsService);
   }
 
@@ -61,7 +62,7 @@ class WorkerPurgeServiceTest {
 
     service.executerPurgerConcerts();
 
-    verify(jdbc).update(contains("DELETE FROM concerts"), anyMap());
+    verify(jdbc).update(contains("DELETE FROM evenements"), anyMap());
     verify(jdbc).update(contains("INSERT INTO fetch_jobs (type_job"), anyMap());
     verify(jdbc).update(contains("INSERT INTO fetch_jobs_historique"), anyMap());
   }
@@ -86,7 +87,7 @@ class WorkerPurgeServiceTest {
 
     verify(jdbc)
         .update(
-            contains("UPDATE concerts SET suppression_suggeree_le = now()"),
+            contains("UPDATE evenements SET suppression_suggeree_le = now()"),
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 p -> Integer.valueOf(50).equals(p.get("seuil"))));
     verify(jdbc)
@@ -98,7 +99,7 @@ class WorkerPurgeServiceTest {
 
   @Test
   void executerPurgerConcertsNonConfirmes_erreurJdbc_enregistreStatAvecErreur() {
-    when(jdbc.update(contains("UPDATE concerts SET suppression_suggeree_le"), anyMap()))
+    when(jdbc.update(contains("UPDATE evenements SET suppression_suggeree_le"), anyMap()))
         .thenThrow(new RuntimeException("timeout"));
 
     assertDoesNotThrow(() -> service.executerPurgerConcertsNonConfirmes());
@@ -123,7 +124,7 @@ class WorkerPurgeServiceTest {
 
     verify(jdbc)
         .update(
-            contains("UPDATE concerts SET suppression_suggeree_le = now()"),
+            contains("UPDATE evenements SET suppression_suggeree_le = now()"),
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 p -> Integer.valueOf(30).equals(p.get("seuilJours"))));
     verify(jdbc)

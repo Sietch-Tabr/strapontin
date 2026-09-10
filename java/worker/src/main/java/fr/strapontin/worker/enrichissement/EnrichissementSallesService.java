@@ -11,6 +11,8 @@ import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementSalle;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.SuiviChroniciteService;
+import fr.strapontin.worker.persister.FusionSallesClePorteeService;
+import fr.strapontin.worker.sante.SignalementMatchingService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,16 +56,22 @@ public class EnrichissementSallesService {
   private final List<SourceEnrichissementSalle> sources;
   private final LogsAdminWorker logsAdminWorker;
   private final SuiviChroniciteService suiviChronicite;
+  private final FusionSallesClePorteeService fusionSallesClePortee;
+  private final SignalementMatchingService signalementMatchingService;
 
   public EnrichissementSallesService(
       NamedParameterJdbcTemplate jdbc,
       List<SourceEnrichissementSalle> sources,
       LogsAdminWorker logsAdminWorker,
-      SuiviChroniciteService suiviChronicite) {
+      SuiviChroniciteService suiviChronicite,
+      FusionSallesClePorteeService fusionSallesClePortee,
+      SignalementMatchingService signalementMatchingService) {
     this.jdbc = jdbc;
     this.sources = sources;
     this.logsAdminWorker = logsAdminWorker;
     this.suiviChronicite = suiviChronicite;
+    this.fusionSallesClePortee = fusionSallesClePortee;
+    this.signalementMatchingService = signalementMatchingService;
   }
 
   /// Enrichit les salles sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
@@ -179,10 +187,17 @@ public class EnrichissementSallesService {
     return nbEnrichis;
   }
 
+  // Repli sur le département d'un concert déjà rattaché quand salles.dept est vide — même pattern
+  // que ResolveurSalleParConcert (module worker.persister), sans quoi une salle sans ville ni dept
+  // renseignés n'a aucun signal de localisation pour écarter un homonyme Wikidata d'une autre
+  // ville (#1188).
   private List<SalleAEnrichir> selectionnerCandidats() {
     return jdbc.query(
         """
-        SELECT s.id, s.nom, s.nom_norm, s.ville, s.dept
+        SELECT s.id, s.nom, s.nom_norm, s.ville,
+               COALESCE(s.dept, (SELECT c2.dept FROM concerts c2
+                                 WHERE c2.salle_id = s.id AND c2.dept IS NOT NULL
+                                 LIMIT 1)) AS dept_effectif
         FROM salles s
         LEFT JOIN concerts c ON c.salle_id = s.id AND c.date >= CURRENT_DATE
         WHERE s.wikidata_id IS NULL AND s.jour_batch = EXTRACT(ISODOW FROM CURRENT_DATE)
@@ -196,7 +211,7 @@ public class EnrichissementSallesService {
                 rs.getString("nom"),
                 rs.getString("nom_norm"),
                 rs.getString("ville"),
-                rs.getString("dept"),
+                rs.getString("dept_effectif"),
                 null));
   }
 
@@ -223,10 +238,11 @@ public class EnrichissementSallesService {
         b.longitude() != null ? b.longitude() : a.longitude());
   }
 
-  /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
-  ///   découvert est déjà porté par une autre salle (contrainte {@code idx_salles_wikidata_id}) —
-  ///   signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le conflit
-  ///   est loggé plutôt que de faire échouer tout le cycle de réconciliation.
+  /// @return {@code true} si la mise à jour a été appliquée (directement, ou via une fusion
+  ///   automatique en cas de collision {@code wikidata_id} avec une autre salle déjà établie),
+  ///   {@code false} si le conflit n'a pu être résolu automatiquement — auquel cas il est signalé
+  ///   ({@link SignalementMatchingService}) pour revue manuelle plutôt que de faire échouer tout le
+  ///   cycle de réconciliation.
   private boolean mettreAJourSalle(UUID salleId, String nom, EnrichissementSalle e) {
     Map<String, Object> params = new HashMap<>();
     params.put("wikidataId", e.wikidataId());
@@ -249,15 +265,70 @@ public class EnrichissementSallesService {
           params);
       return true;
     } catch (DuplicateKeyException ex) {
-      logsAdminWorker.inserer(
-          "warn",
-          "enrichissement-wikidata",
-          "wikidataId déjà attribué à une autre salle — conflit ignoré salle="
-              + nom
-              + " wikidataId="
-              + e.wikidataId(),
-          Map.of("salleId", salleId.toString(), "wikidataId", e.wikidataId()));
+      return gererCollisionWikidataId(salleId, nom, e);
+    }
+  }
+
+  /// Une collision {@code wikidata_id} est un signal plus fort qu'une simple coïncidence de concert
+  /// (Wikidata affirme explicitement l'identité) — traité comme {@link
+  /// FusionSallesClePorteeService}, avec le même garde-fou GPS, mais fusion automatique uniquement
+  /// si les deux salles ont des coordonnées connues et proches (#1189) : à la différence d'une
+  /// fusion par clé forte, aucun autre signal positif (nom, dept) ne cross-valide cette collision,
+  /// l'absence de preuve géographique doit donc empêcher la fusion plutôt que l'autoriser par
+  /// défaut.
+  private boolean gererCollisionWikidataId(UUID salleId, String nom, EnrichissementSalle e) {
+    Map<String, Object> porteuse = trouverPorteuseWikidataId(e.wikidataId());
+    if (porteuse != null && tenterFusionParCoordonnees(salleId, porteuse)) {
+      log.info(
+          "collision wikidata_id résolue par fusion automatique salle={} wikidataId={} cible={}",
+          nom,
+          e.wikidataId(),
+          porteuse.get("id"));
+      return true;
+    }
+
+    logsAdminWorker.inserer(
+        "warn",
+        "enrichissement-wikidata",
+        "wikidataId déjà attribué à une autre salle — conflit ignoré salle="
+            + nom
+            + " wikidataId="
+            + e.wikidataId(),
+        Map.of("salleId", salleId.toString(), "wikidataId", e.wikidataId()));
+    if (porteuse != null) {
+      signalementMatchingService.signaler(
+          "collision_wikidata_salle",
+          "salle",
+          salleId,
+          "basse",
+          Map.of("wikidataId", e.wikidataId(), "salleExistante", porteuse.get("id").toString()));
+    }
+    return false;
+  }
+
+  private Map<String, Object> trouverPorteuseWikidataId(String wikidataId) {
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT id, latitude, longitude FROM salles WHERE wikidata_id = :wikidataId",
+            Map.of("wikidataId", wikidataId));
+    return lignes.isEmpty() ? null : lignes.get(0);
+  }
+
+  private boolean tenterFusionParCoordonnees(UUID salleId, Map<String, Object> porteuse) {
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salleId.toString()));
+    if (lignes.isEmpty()) return false;
+    Double latSalle = (Double) lignes.get(0).get("latitude");
+    Double lonSalle = (Double) lignes.get(0).get("longitude");
+    Double latPorteuse = (Double) porteuse.get("latitude");
+    Double lonPorteuse = (Double) porteuse.get("longitude");
+    if (!FusionSallesClePorteeService.coordonneesConnuesEtProches(
+        latSalle, lonSalle, latPorteuse, lonPorteuse)) {
       return false;
     }
+    fusionSallesClePortee.fusionnerUnePaire((UUID) porteuse.get("id"), salleId);
+    return true;
   }
 }

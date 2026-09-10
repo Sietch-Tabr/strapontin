@@ -24,11 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 /// Endpoint de réception des webhooks Resend.
 ///
-/// Le endpoint est public (non authentifié) mais protégé par vérification HMAC
-/// via la librairie Svix embarquée dans le SDK resend-java.
+/// Le endpoint est public (non authentifié) mais protégé par vérification HMAC via la librairie
+/// Svix embarquée dans le SDK resend-java.
 ///
-/// La clé de signature doit être configurée dans `app_config` sous la clé
-/// `RESEND_WEBHOOK_SECRET` (visible depuis `/admin`).
+/// La clé de signature doit être configurée dans `app_config` sous la clé `RESEND_WEBHOOK_SECRET`
+/// (visible depuis `/admin`).
 ///
 /// @since 2.1.0
 /// @author Kwaite
@@ -55,13 +55,13 @@ public class ResendWebhookController {
 
   /// Reçoit et traite un événement webhook Resend.
   ///
-  /// Retourne 400 si la clé `RESEND_WEBHOOK_SECRET` n'est pas configurée,
-  /// 401 si la signature Svix est invalide, 200 sinon.
+  /// Retourne 400 si la clé `RESEND_WEBHOOK_SECRET` n'est pas configurée, 401 si la signature Svix
+  /// est invalide, 200 sinon.
   ///
-  /// @param svixId        header `svix-id` (identifiant unique de l'événement)
+  /// @param svixId header `svix-id` (identifiant unique de l'événement)
   /// @param svixTimestamp header `svix-timestamp`
   /// @param svixSignature header `svix-signature`
-  /// @param corpsRaw      corps brut de la requête (sensible à la moindre modification)
+  /// @param corpsRaw corps brut de la requête (sensible à la moindre modification)
   /// @return réponse HTTP
   @PostMapping(value = "/api/webhooks/resend", consumes = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<Void> recevoirEvenement(
@@ -98,7 +98,7 @@ public class ResendWebhookController {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-    traiterEvenement(corpsRaw);
+    traiterEvenement(corpsRaw, svixId);
     return ResponseEntity.ok().build();
   }
 
@@ -108,7 +108,9 @@ public class ResendWebhookController {
   /// signature Svix ({@link #recevoirEvenement}) ne peut pas être simulée simplement en test.
   ///
   /// @param corpsRaw corps JSON brut de l'événement
-  void traiterEvenement(String corpsRaw) {
+  /// @param svixId identifiant de l'événement (header {@code svix-id}), mémorisé dans le meta
+  ///   {@code logs_admin} pour permettre un rejeu ciblé depuis l'admin
+  void traiterEvenement(String corpsRaw, String svixId) {
     try {
       JsonNode racine = objectMapper.readTree(corpsRaw);
       String type = racine.path("type").asText("");
@@ -117,10 +119,10 @@ public class ResendWebhookController {
       // email.bounced et email.complained (plainte spam) reçoivent le même traitement :
       // une plainte spam menace la réputation d'envoi du domaine au moins autant qu'un bounce.
       if ("email.bounced".equals(type)) {
-        traiterIncidentEmail("Bounce", "bounce email reçu", emailDestinataire);
+        traiterIncidentEmail("Bounce", "bounce email reçu", emailDestinataire, svixId);
         emailAlerteService.envoyerNotificationBounce(emailDestinataire);
       } else if ("email.complained".equals(type)) {
-        traiterIncidentEmail("Plainte spam", "plainte spam email reçue", emailDestinataire);
+        traiterIncidentEmail("Plainte spam", "plainte spam email reçue", emailDestinataire, svixId);
         emailAlerteService.envoyerNotificationPlainteSpam(emailDestinataire);
       }
     } catch (Exception e) {
@@ -128,12 +130,16 @@ public class ResendWebhookController {
     }
   }
 
-  /// Journalise un incident email (bounce ou plainte spam) avec l'adresse hachée — jamais en
-  /// clair dans {@code logs_admin}, cohérent avec le hachage déjà appliqué côté SLF4J.
-  private void traiterIncidentEmail(String libelle, String messageLogAdmin, String email) {
+  /// Journalise un incident email (bounce ou plainte spam) avec l'adresse hachée — jamais en clair
+  /// dans {@code logs_admin}, cohérent avec le hachage déjà appliqué côté SLF4J. Mémorise aussi
+  /// {@code svixId} : seul identifiant permettant de retrouver puis rejouer cet événement précis
+  /// via l'API Resend (cf. {@code ResendWebhooksAdminService}).
+  private void traiterIncidentEmail(
+      String libelle, String messageLogAdmin, String email, String svixId) {
     String emailHash = String.valueOf(email.hashCode());
     log.warn("{} email Resend : emailHash={}", libelle, emailHash);
-    logAdminService.logAdmin("warn", "web", messageLogAdmin, Map.of("email", emailHash));
+    logAdminService.logAdmin(
+        "warn", "web", messageLogAdmin, Map.of("email", emailHash, "svixId", nvl(svixId)));
   }
 
   private static String nvl(String valeur) {

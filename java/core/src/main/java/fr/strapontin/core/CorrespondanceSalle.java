@@ -35,7 +35,10 @@ public final class CorrespondanceSalle {
   // sans rapport (des dizaines de "Palais des Congrès"/"Zénith"/"Théâtre Municipal" existent en
   // France) — exclus du calcul de similarité par tokens (Jaccard et pivot), qui doit porter sur
   // ce qui distingue réellement deux salles, pas sur leur type architectural commun.
-  private static final Set<String> MOTS_GENERIQUES_SALLE =
+  //
+  // Visibilité publique : réutilisé tel quel par la suggestion de mots génériques (worker), qui
+  // ne doit jamais re-suggérer un mot déjà connu de cette liste.
+  public static final Set<String> MOTS_GENERIQUES_SALLE =
       Set.of(
           "theatre",
           "chateau",
@@ -146,8 +149,13 @@ public final class CorrespondanceSalle {
     if (specCourt.isEmpty() || specLong.isEmpty()) return false;
     for (String tokenCourt : specCourt) {
       if (tokenCourt.length() < LONGUEUR_MIN_CONTAINMENT_TOKEN) return false;
+      // La garde de longueur doit aussi s'appliquer au token du nom long : sans elle, un article
+      // court comme "les" (issu d'un nom mal désapostrophé, ex. "lessaion") valide trivialement un
+      // containment sans aucun rapport sémantique réel avec le nom recherché.
       boolean couvert =
-          specLong.stream().anyMatch(t -> t.contains(tokenCourt) || tokenCourt.contains(t));
+          specLong.stream()
+              .filter(t -> t.length() >= LONGUEUR_MIN_CONTAINMENT_TOKEN)
+              .anyMatch(t -> t.contains(tokenCourt) || tokenCourt.contains(t));
       if (!couvert) return false;
     }
     return true;

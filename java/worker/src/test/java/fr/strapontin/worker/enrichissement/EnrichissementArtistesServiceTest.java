@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -19,10 +20,12 @@ import fr.strapontin.sources.ArtisteAEnrichir;
 import fr.strapontin.sources.EnrichissementArtiste;
 import fr.strapontin.sources.SourceEnrichissementArtiste;
 import fr.strapontin.worker.LogsAdminWorker;
+import fr.strapontin.worker.sante.SignalementMatchingService;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -42,6 +45,9 @@ class EnrichissementArtistesServiceTest {
       List<ArtisteAEnrichir> candidats, Map<UUID, String> attractionIdsExistants) {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(candidats);
+    // Par défaut une ligne affectée (succès) — sans quoi le défaut Mockito (0) ferait passer
+    // systématiquement l'INSERT artiste_sources pour un conflit réel (#1191).
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     List<Map<String, Object>> lignes =
         attractionIdsExistants.entrySet().stream()
             .map(
@@ -66,7 +72,8 @@ class EnrichissementArtistesServiceTest {
     SourceEnrichissementArtiste source = mock(SourceEnrichissementArtiste.class);
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(source), logsAdminWorkerMock());
+        new EnrichissementArtistesService(
+            jdbc, List.of(source), logsAdminWorkerMock(), mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(0, nb);
@@ -82,17 +89,22 @@ class EnrichissementArtistesServiceTest {
 
     SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
     when(wikidata.enrichirLot(List.of(candidat)))
-        .thenReturn(Map.of(artisteId, new EnrichissementArtiste("Q167023", null, "27", null)));
+        .thenReturn(
+            Map.of(artisteId, new EnrichissementArtiste("Q167023", null, "27", null, null)));
 
     SourceEnrichissementArtiste deezer = mock(SourceEnrichissementArtiste.class);
     ArtisteAEnrichir candidatAvecDeezer =
         new ArtisteAEnrichir(artisteId, "Daft Punk", "daft punk", "Q167023", "27");
     when(deezer.enrichirLot(List.of(candidatAvecDeezer)))
         .thenReturn(
-            Map.of(artisteId, new EnrichissementArtiste("Q167023", "Daft Punk", "27", null)));
+            Map.of(artisteId, new EnrichissementArtiste("Q167023", "Daft Punk", "27", null, null)));
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(wikidata, deezer), logsAdminWorkerMock());
+        new EnrichissementArtistesService(
+            jdbc,
+            List.of(wikidata, deezer),
+            logsAdminWorkerMock(),
+            mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(1, nb);
@@ -107,6 +119,76 @@ class EnrichissementArtistesServiceTest {
   }
 
   @Test
+  void enrichir_wikidataFournitAlias_persisteAliasWikidata() {
+    UUID artisteId = UUID.randomUUID();
+    ArtisteAEnrichir candidat = new ArtisteAEnrichir(artisteId, "-M-", "m", null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
+
+    SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
+    when(wikidata.enrichirLot(any()))
+        .thenReturn(
+            Map.of(
+                artisteId,
+                new EnrichissementArtiste(
+                    "Q313039", "Matthieu Chédid", null, null, List.of("-M-", "Matthieu Chedid"))));
+
+    EnrichissementArtistesService service =
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorkerMock(), mock(SignalementMatchingService.class));
+    service.enrichir();
+
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("alias_wikidata"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                params ->
+                    java.util.Arrays.equals(
+                        new String[] {"-M-", "Matthieu Chedid"},
+                        (String[]) params.get("aliasWikidata"))));
+  }
+
+  // La fusion multi-sources (wikidata puis deezer) ne doit jamais perdre un alias découvert par
+  // wikidata au profit d'une source suivante qui n'en fournit aucun.
+  @Test
+  void enrichir_deuxSourcesSeuleWikidataFournitAlias_fusionConserveLAlias() {
+    UUID artisteId = UUID.randomUUID();
+    ArtisteAEnrichir candidat = new ArtisteAEnrichir(artisteId, "-M-", "m", null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
+
+    SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
+    when(wikidata.enrichirLot(List.of(candidat)))
+        .thenReturn(
+            Map.of(
+                artisteId,
+                new EnrichissementArtiste("Q313039", null, "12345", null, List.of("-M-"))));
+
+    SourceEnrichissementArtiste deezer = mock(SourceEnrichissementArtiste.class);
+    ArtisteAEnrichir candidatAvecDeezer =
+        new ArtisteAEnrichir(artisteId, "-M-", "m", "Q313039", "12345");
+    when(deezer.enrichirLot(List.of(candidatAvecDeezer)))
+        .thenReturn(
+            Map.of(
+                artisteId,
+                new EnrichissementArtiste("Q313039", "Matthieu Chédid", "12345", null, null)));
+
+    EnrichissementArtistesService service =
+        new EnrichissementArtistesService(
+            jdbc,
+            List.of(wikidata, deezer),
+            logsAdminWorkerMock(),
+            mock(SignalementMatchingService.class));
+    service.enrichir();
+
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("alias_wikidata"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                params ->
+                    java.util.Arrays.equals(
+                        new String[] {"-M-"}, (String[]) params.get("aliasWikidata"))));
+  }
+
+  @Test
   void enrichir_p6262Absent_insereAutomatiquement() {
     UUID artisteId = UUID.randomUUID();
     ArtisteAEnrichir candidat = new ArtisteAEnrichir(artisteId, "Jain", "jain", null, null);
@@ -115,10 +197,13 @@ class EnrichissementArtistesServiceTest {
     SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
     when(wikidata.enrichirLot(any()))
         .thenReturn(
-            Map.of(artisteId, new EnrichissementArtiste("Q3161164", "Jain", null, "K8vZ917oGV7")));
+            Map.of(
+                artisteId,
+                new EnrichissementArtiste("Q3161164", "Jain", null, "K8vZ917oGV7", null)));
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(wikidata), logsAdminWorkerMock());
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorkerMock(), mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(jdbc)
@@ -138,11 +223,14 @@ class EnrichissementArtistesServiceTest {
     SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
     when(wikidata.enrichirLot(any()))
         .thenReturn(
-            Map.of(artisteId, new EnrichissementArtiste("Q3161164", "Jain", null, "K8vZ917oGV7")));
+            Map.of(
+                artisteId,
+                new EnrichissementArtiste("Q3161164", "Jain", null, "K8vZ917oGV7", null)));
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(wikidata), logsAdminWorker);
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorker, mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(jdbc, never())
@@ -160,11 +248,14 @@ class EnrichissementArtistesServiceTest {
     SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
     when(wikidata.enrichirLot(any()))
         .thenReturn(
-            Map.of(artisteId, new EnrichissementArtiste("Q3161164", "Jain", null, "K8vZ917oGV7")));
+            Map.of(
+                artisteId,
+                new EnrichissementArtiste("Q3161164", "Jain", null, "K8vZ917oGV7", null)));
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(wikidata), logsAdminWorker);
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorker, mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(jdbc, never())
@@ -187,7 +278,7 @@ class EnrichissementArtistesServiceTest {
     for (int i = 0; i < 30; i++) {
       UUID id = UUID.randomUUID();
       candidats.add(new ArtisteAEnrichir(id, "Artiste" + i, "artiste" + i, null, null));
-      reponseAttendue.put(id, new EnrichissementArtiste("Q" + i, null, null, null));
+      reponseAttendue.put(id, new EnrichissementArtiste("Q" + i, null, null, null, null));
     }
     NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(candidats, Map.of());
 
@@ -202,7 +293,8 @@ class EnrichissementArtistesServiceTest {
             });
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(source), logsAdminWorkerMock());
+        new EnrichissementArtistesService(
+            jdbc, List.of(source), logsAdminWorkerMock(), mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(30, nb);
@@ -232,11 +324,14 @@ class EnrichissementArtistesServiceTest {
     SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
     when(wikidata.enrichirLot(any()))
         .thenReturn(
-            Map.of(artisteEnConflit, new EnrichissementArtiste("Q1", "Jain", null, "K8vZ917oGV7")));
+            Map.of(
+                artisteEnConflit,
+                new EnrichissementArtiste("Q1", "Jain", null, "K8vZ917oGV7", null)));
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(wikidata), logsAdminWorker);
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorker, mock(SignalementMatchingService.class));
     int nb = service.enrichir();
 
     assertEquals(0, nb);
@@ -248,6 +343,93 @@ class EnrichissementArtistesServiceTest {
             org.mockito.ArgumentMatchers.eq("enrichissement-wikidata"),
             anyString(),
             anyMap());
+  }
+
+  // #1190 : jamais de fusion automatique côté artiste (aucun signal géographique de
+  // cross-validation) — la collision doit au moins être signalée pour revue manuelle.
+  @Test
+  void enrichir_wikidataIdDejaAttribueAUnAutreArtiste_signaleLaCollision() {
+    UUID artisteEnConflit = UUID.randomUUID();
+    ArtisteAEnrichir candidat = new ArtisteAEnrichir(artisteEnConflit, "Jain", "jain", null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
+    when(jdbc.update(org.mockito.ArgumentMatchers.contains("UPDATE artistes"), anyMap()))
+        .thenThrow(new DuplicateKeyException("idx_artistes_wikidata_id"));
+
+    SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
+    when(wikidata.enrichirLot(any()))
+        .thenReturn(
+            Map.of(artisteEnConflit, new EnrichissementArtiste("Q1", "Jain", null, null, null)));
+    SignalementMatchingService signalement = mock(SignalementMatchingService.class);
+
+    EnrichissementArtistesService service =
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorkerMock(), signalement);
+    service.enrichir();
+
+    verify(signalement)
+        .signaler(
+            eq("collision_wikidata_artiste"),
+            eq("artiste"),
+            eq(artisteEnConflit),
+            anyString(),
+            any());
+  }
+
+  // #1191 : cet identifiant Ticketmaster est déjà attribué à un autre artiste — l'INSERT ON
+  // CONFLICT DO NOTHING échoue silencieusement (0 ligne affectée), contrairement à la collision
+  // wikidata_id ce cas n'avait jusqu'ici aucune trace.
+  @Test
+  void enrichir_p6262IdentifiantTmDejaAttribueAUnAutreArtiste_signaleLaReattribution() {
+    UUID artisteId = UUID.randomUUID();
+    ArtisteAEnrichir candidat = new ArtisteAEnrichir(artisteId, "Jain", "jain", null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
+    when(jdbc.update(
+            org.mockito.ArgumentMatchers.contains("INSERT INTO artiste_sources"), anyMap()))
+        .thenReturn(0);
+
+    SourceEnrichissementArtiste wikidata = mock(SourceEnrichissementArtiste.class);
+    when(wikidata.enrichirLot(any()))
+        .thenReturn(
+            Map.of(
+                artisteId,
+                new EnrichissementArtiste("Q3161164", "Jain", null, "K8vZ917oGV7", null)));
+    SignalementMatchingService signalement = mock(SignalementMatchingService.class);
+
+    EnrichissementArtistesService service =
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorkerMock(), signalement);
+    service.enrichir();
+
+    verify(signalement)
+        .signaler(eq("reattribution_tm_artiste"), eq("artiste"), eq(artisteId), anyString(), any());
+  }
+
+  // #1194 : une ambiguïté prélevée sur une source implémentant SourceAvecAmbiguitesDecouverte
+  // doit être signalée, distinguable d'une non-découverte ordinaire.
+  @Test
+  void enrichir_sourceAvecAmbiguitesPrelevees_signaleChacune() {
+    UUID artisteId = UUID.randomUUID();
+    ArtisteAEnrichir candidat =
+        new ArtisteAEnrichir(artisteId, "Van Halen", "van halen", null, null);
+    NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
+
+    var wikidata =
+        mock(
+            SourceEnrichissementArtiste.class,
+            org.mockito.Mockito.withSettings()
+                .extraInterfaces(fr.strapontin.sources.SourceAvecAmbiguitesDecouverte.class));
+    when(wikidata.enrichirLot(any())).thenReturn(Map.of());
+    when(((fr.strapontin.sources.SourceAvecAmbiguitesDecouverte) wikidata).preleverAmbiguites())
+        .thenReturn(Set.of(artisteId));
+    SignalementMatchingService signalement = mock(SignalementMatchingService.class);
+
+    EnrichissementArtistesService service =
+        new EnrichissementArtistesService(
+            jdbc, List.of(wikidata), logsAdminWorkerMock(), signalement);
+    service.enrichir();
+
+    verify(signalement)
+        .signaler(eq("wikidata_ambiguite"), eq("artiste"), eq(artisteId), anyString(), any());
   }
 
   // bilan de panne absent jusqu'ici sur les sources d'enrichissement artiste.
@@ -270,7 +452,8 @@ class EnrichissementArtistesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(source), logsAdminWorker);
+        new EnrichissementArtistesService(
+            jdbc, List.of(source), logsAdminWorker, mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(logsAdminWorker)
@@ -300,7 +483,8 @@ class EnrichissementArtistesServiceTest {
     LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
     EnrichissementArtistesService service =
-        new EnrichissementArtistesService(jdbc, List.of(source), logsAdminWorker);
+        new EnrichissementArtistesService(
+            jdbc, List.of(source), logsAdminWorker, mock(SignalementMatchingService.class));
     service.enrichir();
 
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());

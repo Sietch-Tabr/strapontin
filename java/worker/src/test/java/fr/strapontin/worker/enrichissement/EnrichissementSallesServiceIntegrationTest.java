@@ -87,4 +87,33 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
 
     verify(overpassSalleSource, org.mockito.Mockito.never()).enrichirLot(any());
   }
+
+  // #1188 : salles.dept n'est jamais mis à jour après création — une salle candidate sans dept
+  // connu doit hériter du département d'un concert déjà rattaché, seul signal de localisation
+  // disponible pour écarter un homonyme Wikidata d'une autre ville.
+  @Test
+  @SuppressWarnings("unchecked")
+  void enrichir_salleSansDeptAvecConcertRattache_heriteDuDeptDuConcert() {
+    UUID salleId = insererSalle("Salle Sans Dept", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, salle_norm, dept, salle_id)"
+                + " VALUES ('artiste', CURRENT_DATE + 30, 'salle sans dept', '87',"
+                + " CAST(:salleId AS uuid)) RETURNING id",
+            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+                .addValue("salleId", salleId.toString()),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert), 'Artiste',"
+            + " 'Salle Sans Dept')",
+        Map.of("id", evenementId.toString()));
+
+    service.enrichir();
+
+    ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
+    verify(overpassSalleSource).enrichirLot(captor.capture());
+    SalleAEnrichir candidat = captor.getValue().getFirst();
+    assertEquals("87", candidat.dept());
+  }
 }
