@@ -29,6 +29,8 @@ package fr.strapontin.worker.sante;
 /// @param doublonsMultiSalleSignales nombre de paires de salles signalées comme doublons potentiels
 ///   sans {@code wikidata_id} ni concert partagé (voir {@link
 ///   CoherenceMultiSalleService#detecterDoublons})
+/// @param motsGenericsSuggeres nombre de mots-types de salle génériques nouvellement suggérés (voir
+///   {@link SuggestionMotsGenericsService})
 /// @since 2.6.0
 /// @author Kwaite
 public record ResultatReconciliation(
@@ -43,4 +45,5 @@ public record ResultatReconciliation(
     int sallesOrphelinesResolues,
     int sallesFusionneesParCleForte,
     int contaminationsMultiSalleSignalees,
-    int doublonsMultiSalleSignales) {}
+    int doublonsMultiSalleSignales,
+    int motsGenericsSuggeres) {}

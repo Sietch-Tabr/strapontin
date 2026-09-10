@@ -46,6 +46,7 @@ class ReconciliationNocturneServiceTest {
   private ReconciliateurSalles reconciliateurSalles;
   private FusionSallesClePorteeService fusionSallesClePortee;
   private CoherenceMultiSalleService coherenceMultiSalle;
+  private SuggestionMotsGenericsService suggestionMotsGenerics;
   private ReconciliationNocturneService service;
 
   @BeforeEach
@@ -59,6 +60,7 @@ class ReconciliationNocturneServiceTest {
     reconciliateurSalles = mock(ReconciliateurSalles.class);
     fusionSallesClePortee = mock(FusionSallesClePorteeService.class);
     coherenceMultiSalle = mock(CoherenceMultiSalleService.class);
+    suggestionMotsGenerics = mock(SuggestionMotsGenericsService.class);
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
     when(enrichissementSalles.enrichir()).thenReturn(0);
     when(enrichissementArtistes.enrichir()).thenReturn(0);
@@ -67,6 +69,7 @@ class ReconciliationNocturneServiceTest {
     when(fusionSallesClePortee.fusionner()).thenReturn(0);
     when(coherenceMultiSalle.detecterContamination()).thenReturn(0);
     when(coherenceMultiSalle.detecterDoublons()).thenReturn(0);
+    when(suggestionMotsGenerics.suggerer()).thenReturn(0);
     service =
         new ReconciliationNocturneService(
             jdbc,
@@ -77,7 +80,8 @@ class ReconciliationNocturneServiceTest {
             coherenceWikidataSalle,
             reconciliateurSalles,
             fusionSallesClePortee,
-            coherenceMultiSalle);
+            coherenceMultiSalle,
+            suggestionMotsGenerics);
   }
 
   private static Map<String, Object> ligneSalleSuspecte(UUID salleId, String venueId, String nom) {

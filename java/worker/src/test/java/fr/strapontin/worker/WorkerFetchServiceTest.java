@@ -435,7 +435,7 @@ class WorkerFetchServiceTest {
     when(jdbc.query(
             anyString(),
             anyMap(),
-            org.mockito.ArgumentMatchers.any(org.springframework.jdbc.core.RowMapper.class)))
+            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String>>any()))
         .thenReturn(List.of("Nino Arial"));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
@@ -480,7 +480,7 @@ class WorkerFetchServiceTest {
     when(jdbc.query(
             anyString(),
             anyMap(),
-            org.mockito.ArgumentMatchers.any(org.springframework.jdbc.core.RowMapper.class)))
+            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String>>any()))
         .thenReturn(List.of("STROMAE "));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
