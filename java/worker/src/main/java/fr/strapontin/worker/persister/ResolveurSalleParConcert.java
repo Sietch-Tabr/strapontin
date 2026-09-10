@@ -6,12 +6,14 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.sources.ClientNominatim;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -32,9 +34,11 @@ class ResolveurSalleParConcert {
   private static final Logger log = LoggerFactory.getLogger(ResolveurSalleParConcert.class);
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final ClientNominatim clientNominatim;
 
-  ResolveurSalleParConcert(NamedParameterJdbcTemplate jdbc) {
+  ResolveurSalleParConcert(NamedParameterJdbcTemplate jdbc, ClientNominatim clientNominatim) {
     this.jdbc = jdbc;
+    this.clientNominatim = clientNominatim;
   }
 
   /// Résout ou crée une salle et insère son mapping source dans {@code salle_sources}.
@@ -72,13 +76,33 @@ class ResolveurSalleParConcert {
       salleId = chercherSalleParCleForte(c);
     }
 
+    Optional<ClientNominatim.Coordonnees> coordsGeocodees = Optional.empty();
+    if (salleId == null) {
+      coordsGeocodees = clientNominatim.geocoder(c.salle());
+      if (coordsGeocodees.isPresent()) {
+        salleId = chercherSalleParProximiteGps(coordsGeocodees.get(), c.dept());
+      }
+    }
+
     if (salleId == null) {
       String salleCle = Normalisation.normaliserTexte(c.salle());
+      MapSqlParameterSource params =
+          new MapSqlParameterSource()
+              .addValue("salleCle", salleCle)
+              .addValue("nom", c.salle())
+              .addValue("nomNorm", salleCle)
+              .addValue("dept", c.dept())
+              .addValue(
+                  "latitude",
+                  coordsGeocodees.map(ClientNominatim.Coordonnees::latitude).orElse(null))
+              .addValue(
+                  "longitude",
+                  coordsGeocodees.map(ClientNominatim.Coordonnees::longitude).orElse(null));
       jdbc.update(
-          "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
-              + " VALUES (:salleCle, :nom, :nomNorm, :dept)"
+          "INSERT INTO salles (salle_cle, nom, nom_norm, dept, latitude, longitude)"
+              + " VALUES (:salleCle, :nom, :nomNorm, :dept, :latitude, :longitude)"
               + " ON CONFLICT (salle_cle) DO NOTHING",
-          Map.of("salleCle", salleCle, "nom", c.salle(), "nomNorm", salleCle, "dept", c.dept()));
+          params);
       salleId =
           jdbc.queryForObject(
               "SELECT id FROM salles WHERE salle_cle = :salleCle",
@@ -111,6 +135,37 @@ class ResolveurSalleParConcert {
         identifiant,
         salleId);
     return salleId;
+  }
+
+  /// Dernier recours avant de conclure à une salle réellement nouvelle (aucune correspondance par
+  /// nom ni par clé forte) : cherche, parmi les salles déjà connues dont les coordonnées sont
+  /// connues, une salle proche des coordonnées géocodées du nom entrant — même seuil que {@link
+  /// FusionSallesClePorteeService#coordonneesConnuesEtProches}, réutilisé tel quel. Couvre le cas
+  /// où deux sources désignent le même lieu physique sous des noms sans aucun rapport textuel, sans
+  /// même partager d'artiste/date/heure/dept déjà en base.
+  ///
+  /// @param coords coordonnées géocodées du nom entrant
+  /// @param dept département connu du concert (filtre les candidats, désactivé si absent)
+  /// @return UUID de la salle existante la plus proche dans le rayon autorisé, ou {@code null} si
+  ///   aucune
+  private UUID chercherSalleParProximiteGps(ClientNominatim.Coordonnees coords, String dept) {
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT id, latitude, longitude FROM salles"
+                + " WHERE latitude IS NOT NULL AND longitude IS NOT NULL"
+                + " AND (:dept IS NULL OR dept IS NULL OR dept = :dept)",
+            new MapSqlParameterSource().addValue("dept", dept, Types.VARCHAR));
+    for (var ligne : lignes) {
+      Double latitude = (Double) ligne.get("latitude");
+      Double longitude = (Double) ligne.get("longitude");
+      if (FusionSallesClePorteeService.coordonneesConnuesEtProches(
+          coords.latitude(), coords.longitude(), latitude, longitude)) {
+        UUID salleId = (UUID) ligne.get("id");
+        log.info("salle résolue par proximité GPS (géocodage dernier recours) uuid={}", salleId);
+        return salleId;
+      }
+    }
+    return null;
   }
 
   /// Cherche une salle existante dont le {@code nom_norm} est un doublon du nom fourni.

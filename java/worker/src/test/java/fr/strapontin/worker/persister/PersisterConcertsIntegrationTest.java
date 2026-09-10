@@ -5,8 +5,10 @@
 package fr.strapontin.worker.persister;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.sources.ClientNominatim;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
@@ -34,6 +36,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   private static final String DATE_RECENTE = LocalDate.now().toString();
 
   @MockitoBean TicketmasterSource ticketmasterSource;
+  @MockitoBean ClientNominatim clientNominatim;
 
   @Autowired private PersisterConcerts persisterConcerts;
 
@@ -166,6 +169,91 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1, res.nbInseres());
     Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count);
+  }
+
+  private void insererSalleAvecCoordonnees(String nom, double latitude, double longitude) {
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, latitude, longitude)"
+            + " VALUES (:cle, :nom, :norm, :lat, :lon)",
+        new MapSqlParameterSource()
+            .addValue("cle", nom.toLowerCase())
+            .addValue("nom", nom)
+            .addValue("norm", nom.toLowerCase())
+            .addValue("lat", latitude)
+            .addValue("lon", longitude));
+  }
+
+  // upsertSalleSource (donc la résolution GPS-first) n'est atteint que si le concert porte un
+  // salleSourceId — sans lui, la résolution reste bornée à un rapprochement par nom déjà connu
+  // (raccrocherSallesParNomNorm), jamais une création. Aucun rapport textuel entre "Zenith
+  // Historique Inconnu" et "Salle GPS Existante" — seul le géocodage en dernier recours peut les
+  // rapprocher.
+  @Test
+  void persisterConcerts_salleInconnueGeocodageTrouveSalleProche_reutiliseLaSalleExistante() {
+    insererSalleAvecCoordonnees("Salle GPS Existante", 48.8566, 2.3522);
+    when(clientNominatim.geocoder("Zenith Historique Inconnu"))
+        .thenReturn(java.util.Optional.of(new ClientNominatim.Coordonnees(48.8567, 2.3523)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Artiste GPS",
+                "2026-09-20",
+                "Zenith Historique Inconnu",
+                "ticketmaster:venue-gps-1",
+                null)));
+
+    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    assertEquals(1L, nbSalles, "aucune nouvelle salle ne doit être créée");
+    Long nbLiees =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM concerts WHERE salle_norm = 'zenith historique inconnu'"
+                + " AND salle_id = (SELECT id FROM salles WHERE nom = 'Salle GPS Existante')",
+            Map.of(),
+            Long.class);
+    assertEquals(1L, nbLiees);
+  }
+
+  @Test
+  void persisterConcerts_salleInconnueGeocodageSansSalleProche_creeNouvelleSalleAvecCoordonnees() {
+    insererSalleAvecCoordonnees("Salle GPS Lointaine", 43.2965, 5.3698); // Marseille
+    when(clientNominatim.geocoder("Zenith Nouveau Lieu"))
+        .thenReturn(java.util.Optional.of(new ClientNominatim.Coordonnees(48.8566, 2.3522)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Artiste GPS 2",
+                "2026-09-21",
+                "Zenith Nouveau Lieu",
+                "ticketmaster:venue-gps-2",
+                null)));
+
+    Map<String, Object> salleCreee =
+        jdbc.queryForMap(
+            "SELECT latitude, longitude FROM salles WHERE nom = 'Zenith Nouveau Lieu'", Map.of());
+    assertEquals(48.8566, (Double) salleCreee.get("latitude"), 0.0001);
+    assertEquals(2.3522, (Double) salleCreee.get("longitude"), 0.0001);
+  }
+
+  @Test
+  void persisterConcerts_salleInconnueGeocodageEchoue_creeNouvelleSalleSansCoordonnees() {
+    when(clientNominatim.geocoder("Zenith Sans Geocodage")).thenReturn(java.util.Optional.empty());
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Artiste GPS 3",
+                "2026-09-22",
+                "Zenith Sans Geocodage",
+                "ticketmaster:venue-gps-3",
+                null)));
+
+    Map<String, Object> salleCreee =
+        jdbc.queryForMap(
+            "SELECT latitude, longitude FROM salles WHERE nom = 'Zenith Sans Geocodage'", Map.of());
+    assertNull(salleCreee.get("latitude"));
+    assertNull(salleCreee.get("longitude"));
   }
 
   @Test

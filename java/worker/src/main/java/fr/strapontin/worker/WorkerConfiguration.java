@@ -6,6 +6,7 @@ package fr.strapontin.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.sources.CadenceurAppels;
+import fr.strapontin.sources.ClientNominatim;
 import fr.strapontin.sources.DigitickSource;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
@@ -94,5 +95,14 @@ public class WorkerConfiguration {
   @Bean
   ResolveurNomCanonique resolveurNomCanonique() {
     return new ResolveurNomCanonique();
+  }
+
+  /// Client de géocodage Nominatim, réservé au dernier recours de résolution de salle (voir {@code
+  /// persister.ResolveurSalleParConcert}) — jamais sur le chemin courant de résolution.
+  ///
+  /// @return instance avec RestClient et cadenceur (1 req/s) par défaut
+  @Bean
+  ClientNominatim clientNominatim() {
+    return new ClientNominatim();
   }
 }
