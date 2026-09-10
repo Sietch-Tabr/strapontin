@@ -5,7 +5,9 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.Dedoublonner;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceAvecFetchLot;
 import fr.strapontin.sources.SourceConcerts;
@@ -681,6 +683,37 @@ public class WorkerFetchService {
     return EligibiliteResolutionDeezer.estEligible(c.classification(), c.source());
   }
 
+  /// Rejette un candidat Deezer divergent du {@code nom_affiche} Wikidata déjà connu pour cet
+  /// artiste : un mauvais rapprochement Deezer est une cause de corruption déjà rencontrée (ex. «
+  /// Nino Arial » → « Niño Árbol »), détectable avant la persistance quand l'identité de l'artiste
+  /// est déjà établie ailleurs par une source plus fiable (Wikidata).
+  ///
+  /// @param nomBrut nom brut entrant, avant résolution Deezer
+  /// @param nomDeezer nom canonique proposé par {@link ResolveurNomCanonique}
+  /// @return {@code nomDeezer}, ou {@code nomBrut} si un {@code nom_affiche} déjà connu diverge
+  private String nomCanoniqueValideOuBrut(String nomBrut, String nomDeezer) {
+    if (nomDeezer.equals(nomBrut)) return nomDeezer;
+    List<String> nomsAffiches =
+        jdbc.query(
+            "SELECT nom_affiche FROM artistes WHERE nom_norm = :nomNorm AND nom_affiche IS NOT"
+                + " NULL",
+            Map.of("nomNorm", Normalisation.normaliserTexte(nomBrut)),
+            (rs, _) -> rs.getString("nom_affiche"));
+    if (nomsAffiches.isEmpty()) return nomDeezer;
+    String nomAffiche = nomsAffiches.get(0);
+    if (CorrespondanceArtiste.estDoublonArtiste(
+        Normalisation.normaliserTexte(nomAffiche), Normalisation.normaliserTexte(nomDeezer))) {
+      return nomDeezer;
+    }
+    log.info(
+        "résolution Deezer rejetée — divergence avec nom_affiche Wikidata connu brut={} deezer={}"
+            + " nomAffiche={}",
+        nomBrut,
+        nomDeezer,
+        nomAffiche);
+    return nomBrut;
+  }
+
   private List<ConcertBrut> resoudreEtDeduplicer(List<ConcertBrut> concerts) {
     List<ConcertBrut> dedoublonnes = Dedoublonner.dedoublonner(concerts);
 
@@ -695,7 +728,7 @@ public class WorkerFetchService {
     for (String nom : noms) {
       ResolveurNomCanonique.ResultatResolution resultat =
           resolveur.resoudreNomCanonique("artiste", nom);
-      tableauResolution.put(nom, resultat.nom());
+      tableauResolution.put(nom, nomCanoniqueValideOuBrut(nom, resultat.nom()));
     }
 
     return dedoublonnes.stream()

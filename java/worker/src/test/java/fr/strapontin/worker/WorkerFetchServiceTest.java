@@ -404,6 +404,94 @@ class WorkerFetchServiceTest {
     verify(resolveur, never()).resoudreNomCanonique(eq("artiste"), eq("Paris is Magique"));
   }
 
+  // Un mauvais rapprochement Deezer (ex. "Nino Arial" -> "Niño Árbol") ne doit jamais l'emporter
+  // sur un nom_affiche déjà connu et divergent, établi par une source plus fiable (Wikidata).
+  @Test
+  void executerFetchSalle_candidatDeezerDivergeDuNomAfficheWikidataConnu_gardeLeNomBrut() {
+    when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
+    when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
+    fr.strapontin.core.ConcertBrut concert =
+        new fr.strapontin.core.ConcertBrut(
+            "Nino Arial",
+            "2026-09-01",
+            "20:00",
+            "Salle",
+            "Paris",
+            "75",
+            "http://x",
+            "ticketmaster",
+            "music",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of(concert));
+    when(resolveur.resoudreNomCanonique("artiste", "Nino Arial"))
+        .thenReturn(
+            new ResolveurNomCanonique.ResultatResolution(
+                "Niño Árbol", ResolveurNomCanonique.SourceResolution.DEEZER));
+    when(jdbc.query(
+            anyString(),
+            anyMap(),
+            org.mockito.ArgumentMatchers.any(org.springframework.jdbc.core.RowMapper.class)))
+        .thenReturn(List.of("Nino Arial"));
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchSalle("tm:venue-42");
+
+    org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
+        org.mockito.ArgumentCaptor.captor();
+    verify(persisterConcerts).persisterConcerts(captor.capture());
+    assertTrue(captor.getValue().stream().allMatch(c -> "Nino Arial".equals(c.artiste())));
+  }
+
+  // Un nom_affiche connu cosmétiquement identique (casse/espace) au candidat Deezer ne doit pas
+  // bloquer la résolution — seule une vraie divergence (via
+  // CorrespondanceArtiste.estDoublonArtiste)
+  // rejette le candidat.
+  @Test
+  void executerFetchSalle_candidatDeezerCoherentAvecNomAfficheWikidataConnu_accepteLeNomDeezer() {
+    when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
+    when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
+    fr.strapontin.core.ConcertBrut concert =
+        new fr.strapontin.core.ConcertBrut(
+            "stromae",
+            "2026-09-01",
+            "20:00",
+            "Salle",
+            "Paris",
+            "75",
+            "http://x",
+            "ticketmaster",
+            "music",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of(concert));
+    when(resolveur.resoudreNomCanonique("artiste", "stromae"))
+        .thenReturn(
+            new ResolveurNomCanonique.ResultatResolution(
+                "Stromae", ResolveurNomCanonique.SourceResolution.DEEZER));
+    when(jdbc.query(
+            anyString(),
+            anyMap(),
+            org.mockito.ArgumentMatchers.any(org.springframework.jdbc.core.RowMapper.class)))
+        .thenReturn(List.of("STROMAE "));
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchSalle("tm:venue-42");
+
+    org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
+        org.mockito.ArgumentCaptor.captor();
+    verify(persisterConcerts).persisterConcerts(captor.capture());
+    assertTrue(captor.getValue().stream().allMatch(c -> "Stromae".equals(c.artiste())));
+  }
+
   @Test
   void executerFetchSalle_appelleSuiviSanteSourcesAvecLeResultat() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
