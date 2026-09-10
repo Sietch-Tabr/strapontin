@@ -96,6 +96,44 @@
       </template>
     </div>
 
+    <!-- Webhooks Resend -->
+    <div class="param-bloc" v-if="configParCle['RESEND_API_KEY']?.presente">
+      <h3 class="param-libelle">Événements webhook Resend</h3>
+      <p class="param-aide">Derniers événements reçus par l'endpoint Resend configuré — un événement en échec de livraison peut être rejoué manuellement.</p>
+      <p class="etat-vide-texte" v-if="!chargementWebhooks && !evenementsWebhook.length">
+        Aucun événement récent (ou webhook Resend non configuré côté endpoint).
+      </p>
+      <EtatChargement v-if="chargementWebhooks" />
+      <div v-else-if="evenementsWebhook.length" class="table-conteneur">
+        <table id="table-webhooks-resend">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Statut</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="e in evenementsWebhook" :key="e.id">
+              <td data-label="Type">{{ e.type }}</td>
+              <td data-label="Statut">{{ e.statut ?? '—' }}</td>
+              <td data-label="Date">{{ e.creeLe ? formaterInstant(e.creeLe) : '—' }}</td>
+              <td data-label="Actions">
+                <button
+                  v-if="e.statut === 'failed'"
+                  type="button"
+                  class="bouton bouton-secondaire bouton-petit"
+                  :disabled="rejeuEnCours === e.id"
+                  @click="rejouerEvenementWebhook(e.id)"
+                >{{ rejeuEnCours === e.id ? 'Rejeu…' : 'Rejouer' }}</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- VAPID -->
     <div class="param-bloc param-bloc-danger">
       <h3 class="param-libelle">VAPID</h3>
@@ -156,6 +194,7 @@ import { shallowRef, ref, computed, onMounted } from 'vue'
 import EtatChargement from '../EtatChargement.vue'
 import { useDialog } from '../../composables/useDialog.js'
 import { useToasts } from '../../composables/useToasts.js'
+import { formaterInstant } from '../../composables/useDates.js'
 
 const { afficherToast } = useToasts()
 const { dialogRef: dialogVapidRef, ouvrir: ouvrirDialogVapidModal, fermer: fermerDialogVapidModal } = useDialog()
@@ -174,6 +213,9 @@ const etatTm = ref(null)
 const testTmEnCours = ref(false)
 const etatEmail = ref(null)
 const testEmailEnCours = ref(false)
+const chargementWebhooks = ref(false)
+const evenementsWebhook = shallowRef([])
+const rejeuEnCours = ref(null)
 
 const configParCle = computed(() => {
   const map = {}
@@ -202,10 +244,44 @@ async function charger() {
       const info = await repInfo.json()
       appConfigSecretPresente.value = info.appConfigSecretPresente ?? false
     }
+    if (configParCle.value['RESEND_API_KEY']?.presente) chargerWebhooks()
   } catch (_) {
     afficherToast('Erreur lors du chargement de la configuration.', 'erreur')
   } finally {
     chargement.value = false
+  }
+}
+
+async function chargerWebhooks() {
+  chargementWebhooks.value = true
+  try {
+    const rep = await fetch('/api/admin/webhooks/resend/evenements')
+    if (rep.ok) {
+      evenementsWebhook.value = await rep.json()
+    } else {
+      afficherToast('Erreur lors du chargement des événements webhook.', 'erreur')
+    }
+  } catch (_) {
+    afficherToast('Erreur réseau lors du chargement des événements webhook.', 'erreur')
+  } finally {
+    chargementWebhooks.value = false
+  }
+}
+
+async function rejouerEvenementWebhook(id) {
+  rejeuEnCours.value = id
+  try {
+    const rep = await fetch(`/api/admin/webhooks/resend/evenements/${id}/rejouer`, { method: 'POST' })
+    if (rep.ok) {
+      afficherToast('Événement rejoué.', 'succes')
+    } else {
+      const corps = await rep.json()
+      afficherToast(corps.erreur || 'Rejeu impossible.', 'erreur')
+    }
+  } catch (_) {
+    afficherToast('Erreur réseau lors du rejeu.', 'erreur')
+  } finally {
+    rejeuEnCours.value = null
   }
 }
 
