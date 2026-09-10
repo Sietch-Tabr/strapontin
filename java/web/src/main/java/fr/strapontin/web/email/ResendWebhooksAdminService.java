@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /// Liste et rejoue les événements du webhook Resend configuré (`RESEND_API_KEY`) — capacité admin
@@ -35,6 +36,7 @@ public class ResendWebhooksAdminService {
   private final ConfigService configService;
   private final Function<String, Resend> fabriqueResend;
 
+  @Autowired
   public ResendWebhooksAdminService(ConfigService configService) {
     this(configService, Resend::new);
   }
