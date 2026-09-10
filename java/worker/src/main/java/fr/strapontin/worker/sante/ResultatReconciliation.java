@@ -31,6 +31,8 @@ package fr.strapontin.worker.sante;
 ///   CoherenceMultiSalleService#detecterDoublons})
 /// @param motsGenericsSuggeres nombre de mots-types de salle génériques nouvellement suggérés (voir
 ///   {@link SuggestionMotsGenericsService})
+/// @param integriteSignalements nombre de signalements posés par les 4 invariants généralistes de
+///   {@link ControleIntegriteService}
 /// @since 2.6.0
 /// @author Kwaite
 public record ResultatReconciliation(
@@ -46,4 +48,5 @@ public record ResultatReconciliation(
     int sallesFusionneesParCleForte,
     int contaminationsMultiSalleSignalees,
     int doublonsMultiSalleSignales,
-    int motsGenericsSuggeres) {}
+    int motsGenericsSuggeres,
+    int integriteSignalements) {}

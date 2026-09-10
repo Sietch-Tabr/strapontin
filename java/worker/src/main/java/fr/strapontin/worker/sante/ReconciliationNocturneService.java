@@ -57,6 +57,7 @@ public class ReconciliationNocturneService {
   private final FusionSallesClePorteeService fusionSallesClePortee;
   private final CoherenceMultiSalleService coherenceMultiSalle;
   private final SuggestionMotsGenericsService suggestionMotsGenerics;
+  private final ControleIntegriteService controleIntegrite;
 
   public ReconciliationNocturneService(
       NamedParameterJdbcTemplate jdbc,
@@ -68,7 +69,8 @@ public class ReconciliationNocturneService {
       ReconciliateurSalles reconciliateurSalles,
       FusionSallesClePorteeService fusionSallesClePortee,
       CoherenceMultiSalleService coherenceMultiSalle,
-      SuggestionMotsGenericsService suggestionMotsGenerics) {
+      SuggestionMotsGenericsService suggestionMotsGenerics,
+      ControleIntegriteService controleIntegrite) {
     this.jdbc = jdbc;
     this.tm = tm;
     this.logsAdminWorker = logsAdminWorker;
@@ -79,6 +81,7 @@ public class ReconciliationNocturneService {
     this.fusionSallesClePortee = fusionSallesClePortee;
     this.coherenceMultiSalle = coherenceMultiSalle;
     this.suggestionMotsGenerics = suggestionMotsGenerics;
+    this.controleIntegrite = controleIntegrite;
   }
 
   /// Exécute les deux phases du job nocturne.
@@ -105,6 +108,7 @@ public class ReconciliationNocturneService {
     int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
     int doublonsSignales = coherenceMultiSalle.detecterDoublons();
     int motsGenericsSuggeres = suggestionMotsGenerics.suggerer();
+    int integriteSignalements = controleIntegrite.verifier();
 
     return new ResultatReconciliation(
         bilanSalles[0],
@@ -119,7 +123,8 @@ public class ReconciliationNocturneService {
         sallesFusionnees,
         contaminationsSignalees,
         doublonsSignales,
-        motsGenericsSuggeres);
+        motsGenericsSuggeres,
+        integriteSignalements);
   }
 
   /// Vérifie que le nom retourné par TM pour chaque attractionId lié correspond toujours à
