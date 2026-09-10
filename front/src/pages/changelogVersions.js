@@ -4,6 +4,24 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 2.9.0 — 10 septembre 2026",
+    categories: [
+      {
+        categorie: "Administration",
+        items: [
+          "Un nouvel onglet « Signalements » recense les incohérences détectées automatiquement dans le référentiel (salles, artistes) et permet de les résoudre manuellement.",
+          "Un événement webhook Resend (email) en échec de livraison peut désormais être rejoué manuellement depuis la configuration.",
+        ],
+      },
+      {
+        categorie: "Salles",
+        items: [
+          "Deux salles distinctes dont le nom ne diffère que par un mot très court (ex. un simple article) ne sont plus mélangées à tort lors du rapprochement automatique.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 2.8.8 — 8 septembre 2026",
     categories: [
       {
