@@ -302,7 +302,7 @@ class WorkerStatsServiceTest {
             anyString(),
             org.mockito.ArgumentMatchers.<java.util.Map<String, ?>>any(),
             org.mockito.ArgumentMatchers.eq(String.class)))
-        .thenAnswer(invocation -> valeur.get());
+        .thenAnswer(_ -> valeur.get());
     when(jdbc.update(
             contains("INSERT INTO app_config"),
             org.mockito.ArgumentMatchers.<java.util.Map<String, ?>>any()))

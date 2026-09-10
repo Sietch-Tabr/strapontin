@@ -546,7 +546,7 @@ class EnrichissementSallesServiceTest {
         new java.util.concurrent.atomic.AtomicReference<>();
     when(jdbc.queryForObject(
             anyString(), org.mockito.ArgumentMatchers.<Map<String, ?>>any(), eq(String.class)))
-        .thenAnswer(invocation -> valeurAppConfig.get());
+        .thenAnswer(_ -> valeurAppConfig.get());
     when(jdbc.update(
             org.mockito.ArgumentMatchers.contains("INSERT INTO app_config"),
             org.mockito.ArgumentMatchers.<Map<String, ?>>any()))

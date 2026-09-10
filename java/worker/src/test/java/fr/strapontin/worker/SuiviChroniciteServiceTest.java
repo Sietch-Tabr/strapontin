@@ -37,7 +37,7 @@ class SuiviChroniciteServiceTest {
             anyString(),
             org.mockito.ArgumentMatchers.<Map<String, ?>>any(),
             org.mockito.ArgumentMatchers.eq(String.class)))
-        .thenAnswer(invocation -> valeurAppConfig.get());
+        .thenAnswer(_ -> valeurAppConfig.get());
     when(jdbc.update(
             contains("INSERT INTO app_config"), org.mockito.ArgumentMatchers.<Map<String, ?>>any()))
         .thenAnswer(
