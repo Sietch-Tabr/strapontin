@@ -106,7 +106,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
         if (idCandidat == null) continue;
         return Optional.of(
             new EnrichissementArtiste(
-                artiste.wikidataId(), nomCandidat, String.valueOf(idCandidat), null));
+                artiste.wikidataId(), nomCandidat, String.valueOf(idCandidat), null, null));
       }
       return Optional.empty();
     } catch (Exception e) {
@@ -135,7 +135,8 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
       }
       String nomCanonique = (String) data.get("name");
       return Optional.of(
-          new EnrichissementArtiste(artiste.wikidataId(), nomCanonique, artiste.deezerId(), null));
+          new EnrichissementArtiste(
+              artiste.wikidataId(), nomCanonique, artiste.deezerId(), null, null));
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
       log.warn("Deezer erreur artistId={} : {}", artiste.deezerId(), e.getMessage());

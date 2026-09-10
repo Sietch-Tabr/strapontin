@@ -404,6 +404,33 @@ class ReconciliationNocturneServiceTest {
         .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("nom TM incohérent"), any());
   }
 
+  // un nom TM divergent qui correspond en réalité à un alias Wikidata déjà connu de l'artiste
+  // (nom de scène) est pré-accepté automatiquement, sans jamais poser necessite_intervention_le
+  // ni journaliser de warn — équivalent à une acceptation manuelle admin déjà faite.
+  @Test
+  void executer_nomTMCorrespondAUnAliasWikidataConnu_preAcceptesSansSignalement() {
+    UUID artisteId = UUID.randomUUID();
+    when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
+        .thenReturn(List.of(ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid")));
+    when(tm.recupererNomAttraction("attractionM")).thenReturn("-M-");
+    when(jdbc.query(
+            contains("alias_wikidata"),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any()))
+        .thenReturn(List.<String[]>of(new String[] {"-M-"}));
+
+    ResultatReconciliation resultat = service.executer();
+
+    assertEquals(0, resultat.nomsIncoherentsTM());
+    verify(logsAdminWorker, never())
+        .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("nom TM incohérent"), any());
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("nom_tm_ignore"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> "-M-".equals(p.get("nomAttraction"))));
+  }
+
   // le nom TM a de nouveau changé depuis le dernier accord admin — une divergence différente doit
   // resignaler, même si une ancienne divergence avait été acceptée.
   @Test

@@ -142,9 +142,18 @@ public class WikidataArtisteSource
             .filter(ClientSparqlWikidata::estQIdValide)
             .map(q -> "wd:" + q)
             .collect(Collectors.joining(" "));
+    // Les alias (skos:altLabel) sont agrégés dans une sous-requête groupée par ?item avant la
+    // jointure avec deezerId/tmId et le SERVICE label — les grouper dans la requête principale
+    // forcerait un GROUP BY sur toutes les colonnes, y compris ?itemLabel produit procéduralement
+    // par le label service, ce qui n'est pas supporté proprement en SPARQL 1.1.
     return """
-    SELECT ?item ?itemLabel ?deezerId ?tmId WHERE {
-      VALUES ?item { %s }
+    SELECT ?item ?itemLabel ?deezerId ?tmId ?aliases WHERE {
+      {
+        SELECT ?item (GROUP_CONCAT(DISTINCT ?altLabel; separator="|") AS ?aliases) WHERE {
+          VALUES ?item { %s }
+          OPTIONAL { ?item skos:altLabel ?altLabel . FILTER(LANG(?altLabel) IN ("fr", "en")) }
+        } GROUP BY ?item
+      }
       OPTIONAL { ?item wdt:P2722 ?deezerId . }
       OPTIONAL { ?item wdt:P6262 ?tmId . }
       SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
@@ -249,6 +258,15 @@ public class WikidataArtisteSource
         qid,
         ClientSparqlWikidata.valeurBinding(binding, "itemLabel"),
         ClientSparqlWikidata.valeurBinding(binding, "deezerId"),
-        ClientSparqlWikidata.valeurBinding(binding, "tmId"));
+        ClientSparqlWikidata.valeurBinding(binding, "tmId"),
+        extraireAlias(binding));
+  }
+
+  // GROUP_CONCAT (séparateur "|") produit une chaîne vide, jamais absente, quand aucun alias n'est
+  // connu — filtrée explicitement plutôt que de produire une liste avec un unique élément vide.
+  private static List<String> extraireAlias(Map<String, Object> binding) {
+    String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
+    if (aliases == null || aliases.isBlank()) return List.of();
+    return java.util.Arrays.stream(aliases.split("\\|")).filter(a -> !a.isBlank()).toList();
   }
 }

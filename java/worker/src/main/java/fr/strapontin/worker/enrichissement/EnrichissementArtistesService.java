@@ -114,8 +114,8 @@ public class EnrichissementArtistesService {
     remonterAmbiguites();
   }
 
-  /// Signale (#1194) chaque ambiguïté de découverte prélevée depuis le dernier cycle — distinct
-  /// d'une non-découverte ordinaire, pour permettre un traitement différencié.
+  /// Signale chaque ambiguïté de découverte prélevée depuis le dernier cycle — distinct d'une
+  /// non-découverte ordinaire, pour permettre un traitement différencié.
   private void remonterAmbiguites() {
     for (SourceEnrichissementArtiste source : sources) {
       if (!(source instanceof SourceAvecAmbiguitesDecouverte avecAmbiguites)) continue;
@@ -210,7 +210,8 @@ public class EnrichissementArtistesService {
         b.deezerId() != null ? b.deezerId() : a.deezerId(),
         b.ticketmasterAttractionId() != null
             ? b.ticketmasterAttractionId()
-            : a.ticketmasterAttractionId());
+            : a.ticketmasterAttractionId(),
+        !b.aliasWikidata().isEmpty() ? b.aliasWikidata() : a.aliasWikidata());
   }
 
   /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
@@ -218,22 +219,26 @@ public class EnrichissementArtistesService {
   ///   — signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le conflit
   ///   est loggé et signalé ({@link SignalementMatchingService}) plutôt que de faire échouer tout
   ///   le cycle de réconciliation, et la cross-validation P6262 associée est également sautée
-  ///   (basée sur le même enrichissement). Jamais de fusion automatique (#1190) — contrairement aux
-  ///   salles, aucun signal géographique de cross-validation n'existe pour départager un homonyme
-  ///   réel d'un doublon.
+  ///   (basée sur le même enrichissement). Jamais de fusion automatique — contrairement aux salles,
+  ///   aucun signal géographique de cross-validation n'existe pour départager un homonyme réel d'un
+  ///   doublon.
   private boolean mettreAJourArtiste(UUID artisteId, String nom, EnrichissementArtiste e) {
     Map<String, Object> params = new HashMap<>();
     params.put("wikidataId", e.wikidataId());
     params.put("nomAffiche", e.nomAffiche());
     params.put("deezerId", e.deezerId());
+    params.put(
+        "aliasWikidata",
+        e.aliasWikidata().isEmpty() ? null : e.aliasWikidata().toArray(String[]::new));
     params.put("id", artisteId.toString());
     try {
       jdbc.update(
           """
           UPDATE artistes SET
-            wikidata_id = COALESCE(wikidata_id, :wikidataId),
-            nom_affiche = COALESCE(nom_affiche, :nomAffiche),
-            deezer_id   = COALESCE(deezer_id, :deezerId)
+            wikidata_id    = COALESCE(wikidata_id, :wikidataId),
+            nom_affiche    = COALESCE(nom_affiche, :nomAffiche),
+            deezer_id      = COALESCE(deezer_id, :deezerId),
+            alias_wikidata = COALESCE(alias_wikidata, :aliasWikidata)
           WHERE id = CAST(:id AS uuid)
           """,
           params);
@@ -275,9 +280,9 @@ public class EnrichissementArtistesService {
       if (lignesInserees > 0) {
         log.info("P6262 — lien TM inséré artiste={} attractionId={}", artiste.nom(), tmIdWikidata);
       } else {
-        // #1191 : conflit réel sur la PK (source, identifiant_externe) — cet identifiant TM est
-        // déjà attribué à un autre artiste, contrairement à la collision wikidata_id, ce cas
-        // n'avait jusqu'ici aucune trace (ni log, ni signalement).
+        // Conflit réel sur la PK (source, identifiant_externe) — cet identifiant TM est déjà
+        // attribué à un autre artiste, contrairement à la collision wikidata_id, ce cas n'avait
+        // jusqu'ici aucune trace (ni log, ni signalement).
         signalementMatchingService.signaler(
             "reattribution_tm_artiste",
             "artiste",
