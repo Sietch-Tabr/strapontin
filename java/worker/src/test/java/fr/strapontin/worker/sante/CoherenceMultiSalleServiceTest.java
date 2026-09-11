@@ -158,11 +158,17 @@ class CoherenceMultiSalleServiceTest {
 
   private static Map<String, Object> ligneSalle(
       UUID id, String nomNorm, String dept, String doublonSignale) {
+    return ligneSalle(id, nomNorm, dept, doublonSignale, null);
+  }
+
+  private static Map<String, Object> ligneSalle(
+      UUID id, String nomNorm, String dept, String doublonSignale, UUID salleParentId) {
     Map<String, Object> ligne = new HashMap<>();
     ligne.put("id", id);
     ligne.put("nom_norm", nomNorm);
     ligne.put("dept", dept);
     ligne.put("doublon_signale", doublonSignale);
+    ligne.put("salle_parent_id", salleParentId);
     return ligne;
   }
 
@@ -200,6 +206,25 @@ class CoherenceMultiSalleServiceTest {
             List.of(
                 ligneSalle(a, "le kilowatt", "94", null),
                 ligneSalle(b, "le kilowatt vitry sur seine", "75", null)));
+
+    int resultat = service.detecterDoublons();
+
+    assertEquals(0, resultat);
+    verify(jdbc, never()).update(anyString(), any(SqlParameterSource.class));
+  }
+
+  @Test
+  void detecterDoublons_complexeEtSousSalleDejaRelies_neJournalisePas() {
+    // "La Seine Musicale" / "La Seine Musicale - Grande Seine" satisferait le containment de
+    // tokens par construction, mais salle_parent_id les relie déjà comme complexe/sous-salle
+    // légitimes — pas un résidu de fusion antérieur.
+    UUID complexe = UUID.randomUUID();
+    UUID sousSalle = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(
+                ligneSalle(complexe, "la seine musicale", "92", null),
+                ligneSalle(sousSalle, "la seine musicale grande seine", "92", null, complexe)));
 
     int resultat = service.detecterDoublons();
 

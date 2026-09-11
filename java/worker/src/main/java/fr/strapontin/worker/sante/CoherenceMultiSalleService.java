@@ -157,19 +157,30 @@ public class CoherenceMultiSalleService {
   /// département compatible, sans exiger de {@code wikidata_id} ni de concert partagé — {@link
   /// CorrespondanceSalle#estDoublonSalle} est trop strict pour ce cas précis (son propre critère de
   /// containment exige un ratio de longueur minimal de 0.5), une source abrégeant fortement un nom
-  /// déjà long ne le satisfait pas.
+  /// déjà long ne le satisfait pas. Exclut les paires déjà reliées par {@code salle_parent_id}
+  /// (complexe/sous-salle) — leur nom qualifié ("X - Y") satisfait presque toujours ce containment
+  /// par construction, sans rapport avec un résidu de fusion antérieur.
   ///
   /// @return nombre de paires nouvellement signalées
   public int detecterDoublons() {
     List<Map<String, Object>> salles =
         jdbc.queryForList(
-            "SELECT id, nom_norm, dept, doublon_signale FROM salles ORDER BY id", Map.of());
+            "SELECT id, nom_norm, dept, doublon_signale, salle_parent_id FROM salles ORDER BY id",
+            Map.of());
 
     int signalees = 0;
     for (int i = 0; i < salles.size(); i++) {
       for (int j = i + 1; j < salles.size(); j++) {
         var a = salles.get(i);
         var b = salles.get(j);
+        UUID idA = (UUID) a.get("id");
+        UUID idB = (UUID) b.get("id");
+        UUID parentA = (UUID) a.get("salle_parent_id");
+        UUID parentB = (UUID) b.get("salle_parent_id");
+        // Un complexe et sa sous-salle légitime (salle_parent_id déjà posé) ne sont jamais des
+        // doublons — leurs noms qualifiés ("X - Y") satisfont presque toujours le containment de
+        // tokens ci-dessous par construction, sans rapport avec un résidu de fusion antérieur.
+        if (idA.equals(parentB) || idB.equals(parentA)) continue;
         String deptA = (String) a.get("dept");
         String deptB = (String) b.get("dept");
         if (deptA != null && deptB != null && !deptA.equals(deptB)) continue;
@@ -177,8 +188,6 @@ public class CoherenceMultiSalleService {
           continue;
         }
 
-        UUID idA = (UUID) a.get("id");
-        UUID idB = (UUID) b.get("id");
         String dejaSignale = (String) a.get("doublon_signale");
         if (idB.toString().equals(dejaSignale)) continue;
 
