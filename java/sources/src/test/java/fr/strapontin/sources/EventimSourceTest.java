@@ -383,6 +383,43 @@ class EventimSourceTest {
     assertTrue(source.preleverContainmentsAcceptes().isEmpty());
   }
 
+  // régression : normaliserTexte remplace l'apostrophe de "N'Dour" par une espace ("n dour") alors
+  // qu'Eventim omet totalement l'apostrophe ("NDour" → "ndour") — ni égalité stricte ni
+  // containment ne matchaient. L'égalité sans espaces doit accepter ce cas même identité confirmée
+  // (deezerId), contrairement au containment testé ci-dessus.
+  @Test
+  void fetchArtiste_apostropheOmiseParSourceIdentiteConfirmee_egaliteSansEspacesAcceptee() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-ndour","name":"Youssou NDour"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-ndour")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[],"totalResults":0}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    EventimSource source = new EventimSource(restClient);
+    List<ConcertBrut> resultats = source.fetchArtiste("Youssou N'Dour", "656219", null);
+
+    // Liste vide car products vide, mais l'attractionId a bien été utilisé (verify passe) —
+    // preuve que la correspondance a été acceptée malgré l'absence d'égalité stricte.
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
   // Identité non confirmée (ni deezerId ni wikidataId) : comportement historique inchangé, le
   // containment reste autorisé — non-régression du cas "-M-" ci-dessus via la nouvelle signature.
   @Test

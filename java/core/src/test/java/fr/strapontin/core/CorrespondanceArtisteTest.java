@@ -51,6 +51,13 @@ class CorrespondanceArtisteTest {
   }
 
   @Test
+  void estDoublonArtiste_apostropheOmiseSurNomCourt_retourneTrue() {
+    // Jaro("n dour", "ndour") = 0.944 < seuil 0.95 (nom court, l'espace insérée pèse davantage) ;
+    // égalité sans espaces couvre le cas.
+    assertTrue(CorrespondanceArtiste.estDoublonArtiste("n dour", "ndour"));
+  }
+
+  @Test
   void estDoublonArtiste_containmentSousLongueurMinimale_retourneFalse() {
     // "jo" (2) < LONGUEUR_MIN_CONTAINMENT_ARTISTE (4), même si contenu dans "john"
     assertFalse(CorrespondanceArtiste.estDoublonArtiste("jo", "john"));

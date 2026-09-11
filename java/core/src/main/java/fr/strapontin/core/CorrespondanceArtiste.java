@@ -29,9 +29,11 @@ public final class CorrespondanceArtiste {
   ///
   /// Jaro ≥ 0.95 (meilleur que Levenshtein pour les noms propres courts) complété par un
   /// containment avec ratio court/long ≥ 0.65 pour les troncatures TM ("aliz"/"alizee",
-  /// "fawn"/"fawnn") et les variations longues ("star academy"/"star academy 1"), puis par un
-  /// préfixe de mot complet pour un ajout plus substantiel (co-tête d'affiche, suffixe de tournée)
-  /// qui fait chuter le ratio de containment sous le seuil.
+  /// "fawn"/"fawnn") et les variations longues ("star academy"/"star academy 1"), par une égalité
+  /// sans espaces ({@link UtilitairesChaine#estEgaliteSansEspaces}) pour une contraction de nom
+  /// propre qu'une source omet ("N'Dour"/"NDour"), puis par un préfixe de mot complet pour un ajout
+  /// plus substantiel (co-tête d'affiche, suffixe de tournée) qui fait chuter le ratio de
+  /// containment sous le seuil.
   ///
   /// @param a premier nom normalisé
   /// @param b deuxième nom normalisé
@@ -45,6 +47,7 @@ public final class CorrespondanceArtiste {
         a, b, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE)) {
       return true;
     }
+    if (UtilitairesChaine.estEgaliteSansEspaces(a, b)) return true;
     return estPrefixeDeMotComplet(a, b);
   }
 

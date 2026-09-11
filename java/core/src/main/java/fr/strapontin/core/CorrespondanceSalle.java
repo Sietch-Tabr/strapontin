@@ -208,7 +208,7 @@ public final class CorrespondanceSalle {
         LONGUEUR_MIN_CONTAINMENT_SALLE,
         RATIO_MIN_CONTAINMENT_SALLE,
         pivotAutorise)) return true;
-    if (estEgaliteSansEspaces(a, b)) return true;
+    if (UtilitairesChaine.estEgaliteSansEspaces(a, b)) return true;
 
     Set<String> tokA = tokensSignificatifs(a);
     Set<String> tokB = tokensSignificatifs(b);
@@ -222,10 +222,6 @@ public final class CorrespondanceSalle {
       return true;
     }
     return estContainmentPartielSuffisant(specA, specB);
-  }
-
-  private static boolean estEgaliteSansEspaces(String a, String b) {
-    return a.replace(" ", "").equals(b.replace(" ", ""));
   }
 
   private static Set<String> intersection(Set<String> a, Set<String> b) {

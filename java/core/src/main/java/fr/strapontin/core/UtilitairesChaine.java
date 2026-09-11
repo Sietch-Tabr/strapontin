@@ -66,4 +66,18 @@ public final class UtilitairesChaine {
         && ratio >= ratioMinContainment
         && plusLong.contains(court);
   }
+
+  /// Vérifie l'égalité de deux chaînes une fois tous les espaces retirés — couvre le cas où {@link
+  /// Normalisation#normaliserTexte} remplace une apostrophe par une espace (ex. "N'Dour" → "n
+  /// dour") alors qu'une source omet totalement cette apostrophe (ex. "NDour" → "ndour") : sans ce
+  /// critère, les deux formes ne partagent aucun token commun. Partagé par {@link
+  /// CorrespondanceSalle} et {@link CorrespondanceArtiste}.
+  ///
+  /// @param a première chaîne
+  /// @param b deuxième chaîne
+  /// @return {@code true} si les deux chaînes sont identiques une fois les espaces retirés
+  /// @since 2.9.1
+  public static boolean estEgaliteSansEspaces(String a, String b) {
+    return a.replace(" ", "").equals(b.replace(" ", ""));
+  }
 }
