@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  Ruleset volontairement restreint aux règles de fond (complexité, taille, documentation
+  publique) — le formatage (indentation, espacement, longueur de ligne stricte) est déjà géré par
+  google-java-format à l'écriture, pas dupliqué ici.
+-->
+<module name="Checker">
+  <module name="TreeWalker">
+    <!-- Complexité et taille (java.md : < 10/méthode, < 50/classe, méthodes ≤ 50 lignes) -->
+    <module name="CyclomaticComplexity">
+      <property name="max" value="10"/>
+    </module>
+    <module name="MethodLength">
+      <property name="max" value="50"/>
+      <property name="countEmpty" value="false"/>
+    </module>
+    <module name="ParameterNumber">
+      <property name="max" value="7"/>
+    </module>
+
+    <!-- MissingJavadocMethod/Type volontairement absents : Checkstyle (core 9.3, embarqué par le
+         plugin) ne reconnaît pas la syntaxe Markdown `///` (JEP 467), déjà largement utilisée
+         dans le code existant — un run réel les signale en masse sur du code déjà documenté. -->
+
+    <!-- APIs interdites (java.md) -->
+    <module name="Regexp">
+      <property name="format" value="System\.exit\(|Runtime\.getRuntime\(\)\.exec\(|Thread\.stop\(|\.finalize\("/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="API interdite (java.md) : System.exit/Runtime.exec/Thread.stop/finalize"/>
+    </module>
+    <module name="RegexpSinglelineJava">
+      <property name="format" value="System\.(out|err)\."/>
+      <property name="message" value="Utiliser SLF4J, jamais System.out/err"/>
+    </module>
+  </module>
+
+  <!-- Classes (java.md : ≤ 500 lignes) -->
+  <module name="FileLength">
+    <property name="max" value="500"/>
+  </module>
+</module>

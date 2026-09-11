@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<ruleset name="Strapontin"
+    xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+  <description>
+    Ruleset ciblant les bugs potentiels et la conception (bestpractices/design/errorprone/
+    multithreading/performance/security) — le style/formatage est déjà géré par google-java-format
+    et le style Javadoc par Checkstyle, non dupliqués ici.
+  </description>
+
+  <rule ref="category/java/bestpractices.xml"/>
+  <rule ref="category/java/errorprone.xml"/>
+  <rule ref="category/java/multithreading.xml"/>
+  <rule ref="category/java/performance.xml"/>
+  <rule ref="category/java/security.xml"/>
+
+  <rule ref="category/java/design.xml">
+    <!-- Seuils alignés sur java.md ; LawOfDemeter/LoosePackageCoupling trop bruyants pour ce
+         style de code (façades/services Spring densément câblés), exclus après mesure. -->
+    <exclude name="LawOfDemeter"/>
+    <exclude name="LoosePackageCoupling"/>
+  </rule>
+  <rule ref="category/java/design.xml/CyclomaticComplexity">
+    <properties>
+      <property name="methodReportLevel" value="10"/>
+      <property name="classReportLevel" value="50"/>
+    </properties>
+  </rule>
+  <rule ref="category/java/design.xml/NcssCount">
+    <properties>
+      <property name="methodReportLevel" value="50"/>
+      <property name="classReportLevel" value="500"/>
+    </properties>
+  </rule>
+  <rule ref="category/java/design.xml/ExcessiveParameterList">
+    <properties>
+      <property name="minimum" value="8"/>
+    </properties>
+  </rule>
+  <rule ref="category/java/design.xml/TooManyMethods">
+    <properties>
+      <property name="maxmethods" value="30"/>
+    </properties>
+  </rule>
+</ruleset>
