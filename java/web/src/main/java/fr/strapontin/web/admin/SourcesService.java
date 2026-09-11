@@ -199,7 +199,9 @@ public class SourcesService {
    * @return nombre de concerts (≥ 0) ou -1 si inaccessible / slug invalide
    */
   public int testerDigitickSlug(final String slug) {
-    if (slug == null || slug.isBlank()) return -1;
+    if (slug == null || slug.isBlank()) {
+      return -1;
+    }
     try {
       final byte[] octets = restClient.get().uri(URL_DIGITICK, slug).retrieve().body(byte[].class);
       final String html =
@@ -271,7 +273,9 @@ public class SourcesService {
             "SELECT valeur_chiffree FROM app_config WHERE cle = 'TM_QUOTA_JSON'",
             Map.of(),
             String.class);
-    if (quotaJson.isEmpty()) return null;
+    if (quotaJson.isEmpty()) {
+      return null;
+    }
     try {
       return objectMapper.readValue(quotaJson.get(0), QuotaTM.class);
     } catch (Exception e) {
@@ -281,7 +285,9 @@ public class SourcesService {
   }
 
   private String calculerEtatQuota(final QuotaTM quota) {
-    if (quota == null || quota.total() == 0) return "ok";
+    if (quota == null || quota.total() == 0) {
+      return "ok";
+    }
     final int pct = quota.dispo() * 100 / quota.total();
     return pct < 10 ? "critique" : pct < 20 ? "attention" : "ok";
   }

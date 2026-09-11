@@ -83,7 +83,9 @@ public class SuggestionMotsGenericsService {
     for (var entree : frequences.entrySet()) {
       final String mot = entree.getKey();
       final int occurrences = entree.getValue();
-      if (occurrences < SEUIL_OCCURRENCES_MOT_GENERIQUE || dejaSuggeres.contains(mot)) continue;
+      if (occurrences < SEUIL_OCCURRENCES_MOT_GENERIQUE || dejaSuggeres.contains(mot)) {
+        continue;
+      }
 
       dejaSuggeres.add(mot);
       nouveaux++;
@@ -93,7 +95,9 @@ public class SuggestionMotsGenericsService {
           "mot potentiellement générique suggéré mot=" + mot + " occurrences=" + occurrences,
           Map.of("mot", mot, "occurrences", occurrences));
     }
-    if (nouveaux > 0) ecrireDejaSuggeres(dejaSuggeres);
+    if (nouveaux > 0) {
+      ecrireDejaSuggeres(dejaSuggeres);
+    }
 
     log.info("coherence:mots-generiques candidats={} suggeres={}", frequences.size(), nouveaux);
     return nouveaux;
@@ -106,7 +110,9 @@ public class SuggestionMotsGenericsService {
               "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
               Map.of("cle", CLE_CONFIG),
               String.class);
-      if (json == null) return new HashSet<>();
+      if (json == null) {
+        return new HashSet<>();
+      }
       return objectMapper.readValue(json, new TypeReference<HashSet<String>>() {});
     } catch (EmptyResultDataAccessException e) {
       return new HashSet<>();

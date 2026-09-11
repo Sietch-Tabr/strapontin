@@ -251,7 +251,9 @@ public class UserConfigService {
     params.put("userId", userId);
 
     for (String cle : champs.keySet()) {
-      if (setClauses.length() > 0) setClauses.append(", ");
+      if (setClauses.length() > 0) {
+        setClauses.append(", ");
+      }
       final String colonne = versColonne(cle);
       setClauses.append(colonne).append(" = ").append(versCast(cle, ":" + cle));
     }
@@ -299,8 +301,12 @@ public class UserConfigService {
 
   private String normaliserDept(final String d) {
     final String valeur = d.toUpperCase();
-    if (valeur.matches("2[AB]")) return "20";
-    if (FORMAT_DEPT.matcher(valeur).matches()) return valeur;
+    if (valeur.matches("2[AB]")) {
+      return "20";
+    }
+    if (FORMAT_DEPT.matcher(valeur).matches()) {
+      return valeur;
+    }
     return null;
   }
 

@@ -77,7 +77,9 @@ public class ControleIntegriteService {
     for (var entree : parentParSalle.entrySet()) {
       final UUID salleId = entree.getKey();
       final UUID parentId = entree.getValue();
-      if (parentId == null) continue;
+      if (parentId == null) {
+        continue;
+      }
       if (SalleHierarchie.creeraitCycle(parentId, salleId, parentParSalle::get)) {
         signalementMatchingService.signaler(
             "cycle_salle_parent",

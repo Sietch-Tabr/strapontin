@@ -59,7 +59,9 @@ class TotpServiceTest {
   @Test
   void base32RoundTrip_octetsAleatoires_identiques() {
     final byte[] original = new byte[20];
-    for (int i = 0; i < original.length; i++) original[i] = (byte) (i * 13 + 7);
+    for (int i = 0; i < original.length; i++) {
+      original[i] = (byte) (i * 13 + 7);
+    }
     final String encode = TotpService.base32Encoder(original);
     final byte[] decode = TotpService.base32Decoder(encode);
     assertArrayEquals(original, decode, "Le round-trip Base32 doit être sans perte");

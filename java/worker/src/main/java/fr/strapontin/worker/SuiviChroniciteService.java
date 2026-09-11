@@ -63,7 +63,9 @@ public class SuiviChroniciteService {
   public int enregistrerCycle(final String cle, final boolean cycleEnEchec) {
     final Map<String, Integer> streaks = lireStreaks();
     if (!cycleEnEchec) {
-      if (streaks.remove(cle) != null) ecrireStreaks(streaks);
+      if (streaks.remove(cle) != null) {
+        ecrireStreaks(streaks);
+      }
       return 0;
     }
     final int nouveau = streaks.getOrDefault(cle, 0) + 1;
@@ -82,7 +84,9 @@ public class SuiviChroniciteService {
    * @return le message complété si chronique, inchangé sinon
    */
   public String enrichirSiChronique(final String message, final int streak) {
-    if (streak < SEUIL_CYCLES_CHRONIQUE) return message;
+    if (streak < SEUIL_CYCLES_CHRONIQUE) {
+      return message;
+    }
     return message + " — chronique depuis " + streak + " cycles consécutifs";
   }
 
@@ -93,7 +97,9 @@ public class SuiviChroniciteService {
               "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
               Map.of("cle", CLE_CONFIG),
               String.class);
-      if (json == null) return new HashMap<>();
+      if (json == null) {
+        return new HashMap<>();
+      }
       return objectMapper.readValue(json, new TypeReference<HashMap<String, Integer>>() {});
     } catch (EmptyResultDataAccessException e) {
       return new HashMap<>();

@@ -227,7 +227,9 @@ public class DecouverteService {
   }
 
   private List<SyncDept> lireSyncParDept(final List<String> deptsActifs) {
-    if (deptsActifs.isEmpty()) return List.of();
+    if (deptsActifs.isEmpty()) {
+      return List.of();
+    }
     return jdbc.query(
         "SELECT dept, MAX(updated_at) AS derniere_sync FROM concerts"
             + " WHERE dept = ANY(:depts) GROUP BY dept",

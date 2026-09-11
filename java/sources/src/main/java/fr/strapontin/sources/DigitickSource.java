@@ -155,7 +155,9 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
 
     for (Element ev : evenements) {
       final ConcertBrut concert = parserEvenement(ev, slug);
-      if (concert != null) concerts.add(concert);
+      if (concert != null) {
+        concerts.add(concert);
+      }
     }
     return concerts;
   }
@@ -163,21 +165,31 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   private static ConcertBrut parserEvenement(final Element ev, final String slug) {
     // Filtre genre : uniquement les concerts
     final Element genreEl = ev.selectFirst(SEL_GENRE);
-    if (genreEl == null || !GENRE_CONCERT.equalsIgnoreCase(genreEl.ownText().trim())) return null;
+    if (genreEl == null || !GENRE_CONCERT.equalsIgnoreCase(genreEl.ownText().trim())) {
+      return null;
+    }
 
     // Filtre CP : exclut packs multi-dates sans salle fixe
     final Element cpEl = ev.selectFirst(SEL_CODE_POSTAL);
-    if (cpEl == null || cpEl.text().isBlank()) return null;
+    if (cpEl == null || cpEl.text().isBlank()) {
+      return null;
+    }
 
     // Date et heure depuis l'attribut datetime ISO 8601
     final Element timeEl = ev.selectFirst(SEL_DATETIME);
-    if (timeEl == null) return null;
+    if (timeEl == null) {
+      return null;
+    }
     final String[] datHeure = parserDatetime(timeEl.attr("datetime"));
-    if (datHeure == null) return null;
+    if (datHeure == null) {
+      return null;
+    }
 
     // Nom de l'artiste : premier lien .evenementNom, entités HTML déjà décodées par Jsoup
     final Element nomEl = ev.selectFirst(SEL_NOM);
-    if (nomEl == null || nomEl.text().isBlank()) return null;
+    if (nomEl == null || nomEl.text().isBlank()) {
+      return null;
+    }
     final String artiste = normaliserCasse(nomEl.text().trim());
 
     // Salle
@@ -224,7 +236,9 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * @return nom en casse normale (ex. {@code "Ronnie Romero + Gus G"})
    */
   static String normaliserCasse(final String nom) {
-    if (nom == null || nom.isBlank()) return nom;
+    if (nom == null || nom.isBlank()) {
+      return nom;
+    }
     final String lower = nom.toLowerCase(Locale.FRENCH);
     final StringBuilder sb = new StringBuilder(lower.length());
     boolean capitaliser = true;
@@ -249,9 +263,13 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * @return tableau {@code [date, heure]} ou {@code null} si le format est invalide
    */
   static String[] parserDatetime(final String datetime) {
-    if (datetime == null || datetime.length() < 10) return null;
+    if (datetime == null || datetime.length() < 10) {
+      return null;
+    }
     final String date = datetime.substring(0, 10);
-    if (datetime.length() < 16) return new String[] {date, null};
+    if (datetime.length() < 16) {
+      return new String[]{date, null};
+    }
     final String heure = datetime.substring(11, 16);
     return new String[] {date, "00:00".equals(heure) ? null : heure};
   }

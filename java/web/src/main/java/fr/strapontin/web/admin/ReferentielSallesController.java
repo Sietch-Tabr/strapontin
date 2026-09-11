@@ -73,9 +73,13 @@ public class ReferentielSallesController {
   public ResponseEntity<Map<String, Object>> modifierNomAffiche(
       @PathVariable final String uuid, @Valid @RequestBody final RequeteNomAffiche corps) {
     final UUID id = parseUuid(uuid);
-    if (id == null) return erreur(400, "UUID de salle invalide.");
+    if (id == null) {
+      return erreur(400, "UUID de salle invalide.");
+    }
     final boolean maj = service.modifierNomAffiche(id, corps.nomAffiche());
-    if (!maj) return erreur(404, "Salle inconnue.");
+    if (!maj) {
+      return erreur(404, "Salle inconnue.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
@@ -91,9 +95,13 @@ public class ReferentielSallesController {
   public ResponseEntity<Map<String, Object>> reinitialiserEnrichissement(
       @PathVariable final String uuid) {
     final UUID id = parseUuid(uuid);
-    if (id == null) return erreur(400, "UUID de salle invalide.");
+    if (id == null) {
+      return erreur(400, "UUID de salle invalide.");
+    }
     final boolean maj = service.reinitialiserEnrichissement(id);
-    if (!maj) return erreur(404, "Salle inconnue.");
+    if (!maj) {
+      return erreur(404, "Salle inconnue.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
@@ -109,10 +117,16 @@ public class ReferentielSallesController {
       @PathVariable final String uuid, @PathVariable final String uuidCible) {
     final UUID source = parseUuid(uuid);
     final UUID cible = parseUuid(uuidCible);
-    if (source == null || cible == null) return erreur(400, "UUID invalide.");
-    if (source.equals(cible)) return erreur(400, "Les deux salles doivent être différentes.");
+    if (source == null || cible == null) {
+      return erreur(400, "UUID invalide.");
+    }
+    if (source.equals(cible)) {
+      return erreur(400, "Les deux salles doivent être différentes.");
+    }
     final boolean fusionnee = service.fusionner(cible, source);
-    if (!fusionnee) return erreur(404, "Salle source ou cible inconnue.");
+    if (!fusionnee) {
+      return erreur(404, "Salle source ou cible inconnue.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 }

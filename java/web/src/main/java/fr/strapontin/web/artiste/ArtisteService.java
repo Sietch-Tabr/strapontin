@@ -391,17 +391,23 @@ public class ArtisteService {
     try {
       final Map<String, Object> root = objectMapper.readValue(json, Map.class);
       final List<Map<String, Object>> search = (List<Map<String, Object>>) root.get("search");
-      if (search == null) return resultats;
+      if (search == null) {
+        return resultats;
+      }
 
       for (Map<String, Object> item : search) {
         final String label = (String) item.get("label");
         final String id = (String) item.get("id");
-        if (label == null || label.isBlank() || id == null) continue;
+        if (label == null || label.isBlank() || id == null) {
+          continue;
+        }
         final String description = (String) item.get("description");
         // Description absente : on ne peut ni confirmer ni exclure — on garde plutôt que de
         // priver l'utilisateur d'un résultat potentiellement pertinent (simple suggestion,
         // l'utilisateur reste seul décideur au clic).
-        if (description != null && !MOTS_CLES_ARTISTE.matcher(description).find()) continue;
+        if (description != null && !MOTS_CLES_ARTISTE.matcher(description).find()) {
+          continue;
+        }
         resultats.add(new SuggestionArtiste(label, "wikidata", description, id));
       }
     } catch (Exception _) {
@@ -436,17 +442,27 @@ public class ArtisteService {
                   (_, resp) ->
                       new WorkerTriggerUtils.ReponseHttp(
                           resp.getStatusCode().value(), resp.bodyTo(String.class)));
-      if (reponse.statut() != 200) return null;
+      if (reponse.statut() != 200) {
+        return null;
+      }
 
       final Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
       final Map<String, Object> entities = (Map<String, Object>) root.get("entities");
-      if (entities == null) return null;
+      if (entities == null) {
+        return null;
+      }
       final Map<String, Object> entite = (Map<String, Object>) entities.get(wikidataId);
-      if (entite == null) return null;
+      if (entite == null) {
+        return null;
+      }
       final Map<String, Object> claims = (Map<String, Object>) entite.get("claims");
-      if (claims == null) return null;
+      if (claims == null) {
+        return null;
+      }
       final List<Map<String, Object>> p2722 = (List<Map<String, Object>>) claims.get("P2722");
-      if (p2722 == null || p2722.isEmpty()) return null;
+      if (p2722 == null || p2722.isEmpty()) {
+        return null;
+      }
       final Map<String, Object> mainsnak = (Map<String, Object>) p2722.get(0).get("mainsnak");
       final Map<String, Object> datavalue = (Map<String, Object>) mainsnak.get("datavalue");
       return (String) datavalue.get("value");
@@ -492,7 +508,9 @@ public class ArtisteService {
     try {
       final Map<String, Object> root = objectMapper.readValue(json, Map.class);
       final List<Map<String, Object>> data = (List<Map<String, Object>>) root.get("data");
-      if (data == null) return resultats;
+      if (data == null) {
+        return resultats;
+      }
 
       data.stream()
           .sorted(

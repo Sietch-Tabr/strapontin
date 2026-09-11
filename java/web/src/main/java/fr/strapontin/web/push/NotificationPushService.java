@@ -101,7 +101,9 @@ public class NotificationPushService {
   public boolean envoyerNotificationTest(final String userId, final String endpoint) {
     final Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
     final Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
-    if (clePublique.isEmpty() || clePrivee.isEmpty()) return false;
+    if (clePublique.isEmpty() || clePrivee.isEmpty()) {
+      return false;
+    }
 
     final List<Map<String, Object>> abonnements =
         endpoint != null && !endpoint.isBlank()
@@ -121,7 +123,9 @@ public class NotificationPushService {
                 LIMIT 1
                 """,
             Map.of("userId", userId));
-    if (abonnements.isEmpty()) return false;
+    if (abonnements.isEmpty()) {
+      return false;
+    }
 
     final String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
     final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
@@ -150,13 +154,17 @@ public class NotificationPushService {
 
   private static int extraireCodeHttp(final Exception e) {
     final String msg = e.getMessage();
-    if (msg == null) return -1;
+    if (msg == null) {
+      return -1;
+    }
     // webpush-java peut lancer une exception avec le code HTTP dans le message
     try {
       final String[] parties = msg.split("\\s+");
       for (String p : parties) {
         final int code = Integer.parseInt(p);
-        if (code >= 400 && code < 600) return code;
+        if (code >= 400 && code < 600) {
+          return code;
+        }
       }
     } catch (NumberFormatException _) {
       // pas de code HTTP dans le message

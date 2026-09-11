@@ -55,7 +55,9 @@ public class SignalementsAdminController {
   @PostMapping("/{id}/resoudre")
   public ResponseEntity<Map<String, Object>> resoudre(@PathVariable final long id) {
     final boolean resolu = service.resoudre(id);
-    if (!resolu) return erreur(404, "Signalement inconnu ou déjà résolu.");
+    if (!resolu) {
+      return erreur(404, "Signalement inconnu ou déjà résolu.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 }

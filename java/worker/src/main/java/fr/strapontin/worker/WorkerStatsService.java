@@ -236,7 +236,9 @@ public class WorkerStatsService {
    * @return {@code true} si une entrée a été insérée dans {@code logs_admin}
    */
   private boolean remonterBilan(final String typeJob, final String nomSource, final BilanFetch bilan) {
-    if (bilan == null || bilan.appels() == 0) return false;
+    if (bilan == null || bilan.appels() == 0) {
+      return false;
+    }
     if (bilan.erreursHttp() > 0) {
       meterRegistry
           .counter("strapontin.worker.source.erreurs", "source", nomSource)
@@ -269,7 +271,9 @@ public class WorkerStatsService {
    */
   private boolean remonterBilanConcertsManquesTm(final String typeJob) {
     final int concertsManques = tm.preleverConcertsManques();
-    if (concertsManques == 0) return false;
+    if (concertsManques == 0) {
+      return false;
+    }
     logsAdminWorker.inserer(
         "warn",
         "worker",
@@ -291,7 +295,9 @@ public class WorkerStatsService {
    */
   private boolean remonterContainmentsEventim(final String typeJob, final EventimSource eventim) {
     final List<String> containments = eventim.preleverContainmentsAcceptes();
-    if (containments.isEmpty()) return false;
+    if (containments.isEmpty()) {
+      return false;
+    }
     logsAdminWorker.inserer(
         "warn",
         "worker",

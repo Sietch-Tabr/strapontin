@@ -59,7 +59,9 @@ public class AlerteLogsAdminService {
   public void verifier() {
     final long curseur = lireCurseur();
     final List<LogAdminService.EntreeLogAdmin> erreurs = logAdminService.lireErreursDepuis(curseur);
-    if (erreurs.isEmpty()) return;
+    if (erreurs.isEmpty()) {
+      return;
+    }
 
     final Optional<String> email = emailAlerteService.obtenirDestinataireAlerte();
     if (email.isEmpty()) {

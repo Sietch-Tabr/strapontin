@@ -41,7 +41,9 @@ public final class UtilitairesChaine {
    * @since 2.8.7
    */
   public static String echapperHtml(final Object valeur) {
-    if (valeur == null) return "";
+    if (valeur == null) {
+      return "";
+    }
     return String.valueOf(valeur)
         .replace("&", "&amp;")
         .replace("<", "&lt;")

@@ -64,7 +64,9 @@ public class SuiviSanteSourcesService {
    */
   public void enregistrerResultatSalle(final String identifiantPrefixe, final int nbResultats) {
     final int sep = identifiantPrefixe.indexOf(':');
-    if (sep < 0) return;
+    if (sep < 0) {
+      return;
+    }
     final String source = normaliserSource(identifiantPrefixe.substring(0, sep));
     final String identifiant = identifiantPrefixe.substring(sep + 1);
     mettreAJourCompteur(TypeEntiteSource.SALLE, source, identifiant, nbResultats > 0);
@@ -141,7 +143,9 @@ public class SuiviSanteSourcesService {
    * @return {@code true} si l'effacement peut avoir lieu
    */
   private boolean peutEffacerIntervention(final String source, final String identifiant) {
-    if (!"ticketmaster".equals(source)) return true;
+    if (!"ticketmaster".equals(source)) {
+      return true;
+    }
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
@@ -150,9 +154,13 @@ public class SuiviSanteSourcesService {
                 WHERE asrc.source = :source AND asrc.identifiant_externe = :identifiant
                 """,
             Map.of("source", source, "identifiant", identifiant));
-    if (lignes.isEmpty() || lignes.get(0).get("necessite_intervention_le") == null) return true;
+    if (lignes.isEmpty() || lignes.get(0).get("necessite_intervention_le") == null) {
+      return true;
+    }
     final String nomAttraction = tm.recupererNomAttraction(identifiant);
-    if (nomAttraction == null) return false;
+    if (nomAttraction == null) {
+      return false;
+    }
     return Normalisation.normaliserTexte((String) lignes.get(0).get("nom"))
         .equals(Normalisation.normaliserTexte(nomAttraction));
   }

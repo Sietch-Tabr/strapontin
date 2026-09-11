@@ -121,7 +121,9 @@ public class RecalculerMatchesService {
             Map.of(CLE_USER_ID, userId),
             UUID.class);
 
-    if (artisteIds.isEmpty() && salleIds.isEmpty()) return;
+    if (artisteIds.isEmpty() && salleIds.isEmpty()) {
+      return;
+    }
 
     final List<String> departements = obtenirDepartementsUser(userId);
     final Set<UUID> concertIds = new LinkedHashSet<>();

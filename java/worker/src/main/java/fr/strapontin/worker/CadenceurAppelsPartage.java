@@ -58,7 +58,9 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
             Map.of("cle", cle, "delaiMs", delaiMinMs),
             Timestamp.class);
     final long attenteMs = Duration.between(Instant.now(), prochainAppelAutorise.toInstant()).toMillis();
-    if (attenteMs <= 0) return;
+    if (attenteMs <= 0) {
+      return;
+    }
     try {
       Thread.sleep(attenteMs);
     } catch (InterruptedException e) {

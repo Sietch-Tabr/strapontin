@@ -101,7 +101,9 @@ public class ReconciliateurArtistes {
 
     final Set<String> sallesNorms =
         new HashSet<>(lotApresIntraLot.stream().map(ValeurConcert::salleNorm).toList());
-    if (sallesNorms.isEmpty()) return lotApresIntraLot;
+    if (sallesNorms.isEmpty()) {
+      return lotApresIntraLot;
+    }
 
     final List<Map<String, Object>> existants =
         jdbc.queryForList(
@@ -145,7 +147,9 @@ public class ReconciliateurArtistes {
                     c.url() != null
                         && !EligibiliteResolutionDeezer.estEligible(c.classification(), c.source()))
             .toList();
-    if (candidats.isEmpty()) return;
+    if (candidats.isEmpty()) {
+      return;
+    }
 
     final List<String> urls = candidats.stream().map(ValeurConcert::url).distinct().toList();
     final List<Map<String, Object>> existants =
@@ -162,7 +166,9 @@ public class ReconciliateurArtistes {
 
     for (ValeurConcert c : candidats) {
       final String artisteNormExistant = artisteNormParUrl.get(c.url());
-      if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) continue;
+      if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) {
+        continue;
+      }
       corrigerArtisteParUrl(c);
     }
   }
@@ -206,10 +212,14 @@ public class ReconciliateurArtistes {
       final String cle = concert.date() + "|" + concert.salleNorm();
       parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>());
       final List<String> groupe = parGroupe.get(cle);
-      if (!groupe.contains(concert.artisteNorm())) groupe.add(concert.artisteNorm());
+      if (!groupe.contains(concert.artisteNorm())) {
+        groupe.add(concert.artisteNorm());
+      }
     }
     for (List<String> artistesNorm : parGroupe.values()) {
-      if (artistesNorm.size() > 1) ajouterDoublonsArtiste(artistesNorm, remplacements);
+      if (artistesNorm.size() > 1) {
+        ajouterDoublonsArtiste(artistesNorm, remplacements);
+      }
     }
     resoudreChaines(remplacements);
     return remplacements;
@@ -233,7 +243,9 @@ public class ReconciliateurArtistes {
   private ValeurConcert appliquerRemplacementArtiste(
       final ValeurConcert c, final Map<String, String> remplacements) {
     final String canonique = remplacements.get(c.artisteNorm());
-    if (canonique == null || canonique.equals(c.artisteNorm())) return c;
+    if (canonique == null || canonique.equals(c.artisteNorm())) {
+      return c;
+    }
     log.debug(
         "doublon artiste intra-lot réconcilié entrant={} canonique={}", c.artisteNorm(), canonique);
     return c.avecArtisteNorm(canonique);
@@ -256,7 +268,9 @@ public class ReconciliateurArtistes {
       final ValeurConcert concert, final Map<String, List<ArtisteExistant>> indexExistants) {
     final String cle = concert.date() + "|" + concert.salleNorm();
     final List<ArtisteExistant> artistesExistants = indexExistants.get(cle);
-    if (artistesExistants == null) return concert;
+    if (artistesExistants == null) {
+      return concert;
+    }
 
     for (ArtisteExistant existant : artistesExistants) {
       if (existant.artisteNorm().equals(concert.artisteNorm())) {
@@ -267,7 +281,9 @@ public class ReconciliateurArtistes {
       }
     }
     for (ArtisteExistant existant : artistesExistants) {
-      if (!estDoublonArtiste(concert.artisteNorm(), existant.artisteNorm())) continue;
+      if (!estDoublonArtiste(concert.artisteNorm(), existant.artisteNorm())) {
+        continue;
+      }
 
       final UUID artisteIdPropague =
           concert.artisteId() == null ? existant.artisteId() : concert.artisteId();
@@ -353,7 +369,9 @@ public class ReconciliateurArtistes {
             .map(ValeurConcert::artisteNorm)
             .distinct()
             .toList();
-    if (nomsNormSansId.isEmpty()) return concerts;
+    if (nomsNormSansId.isEmpty()) {
+      return concerts;
+    }
 
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
@@ -364,13 +382,17 @@ public class ReconciliateurArtistes {
     for (Map<String, Object> ligne : lignes) {
       parNomNorm.put((String) ligne.get("nom_norm"), (UUID) ligne.get("id"));
     }
-    if (parNomNorm.isEmpty()) return concerts;
+    if (parNomNorm.isEmpty()) {
+      return concerts;
+    }
 
     final List<ValeurConcert> enrichis =
         concerts.stream()
             .map(
                 c -> {
-                  if (c.artisteId() != null) return c;
+                  if (c.artisteId() != null) {
+                    return c;
+                  }
                   final UUID artisteId = parNomNorm.get(c.artisteNorm());
                   return artisteId != null ? c.avecArtisteId(artisteId) : c;
                 })
@@ -396,9 +418,13 @@ public class ReconciliateurArtistes {
     for (ValeurConcert c : concerts) {
       if (c.artisteId() == null
           || c.artisteSourceId() == null
-          || !nomNormsResolus.contains(c.artisteNorm())) continue;
+          || !nomNormsResolus.contains(c.artisteNorm())) {
+        continue;
+      }
       final int sep = c.artisteSourceId().indexOf(':');
-      if (sep <= 0) continue;
+      if (sep <= 0) {
+        continue;
+      }
       final String source = c.artisteSourceId().substring(0, sep);
       final String identifiant = c.artisteSourceId().substring(sep + 1);
       params.add(
@@ -407,7 +433,9 @@ public class ReconciliateurArtistes {
               .addValue("source", source)
               .addValue("identifiant", identifiant));
     }
-    if (params.isEmpty()) return;
+    if (params.isEmpty()) {
+      return;
+    }
     jdbc.batchUpdate(
         "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
             + " VALUES (CAST(:artisteId AS uuid), :source, :identifiant)"

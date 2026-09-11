@@ -90,7 +90,9 @@ public class ConfigAdminService {
    */
   public boolean testerApiTm() {
     final Optional<String> cle = configService.lireConfig("TICKETMASTER_API_KEY");
-    if (cle.isEmpty()) return false;
+    if (cle.isEmpty()) {
+      return false;
+    }
     try {
       cadenceurTicketmaster.attendre();
       restClient.get().uri(TM_URL_TEST, cle.get()).retrieve().toBodilessEntity();
@@ -137,7 +139,9 @@ public class ConfigAdminService {
     }
     if (valeur != null && !valeur.isEmpty()) {
       final String erreur = validerFormatConfig(cle, valeur);
-      if (erreur != null) throw new ErreurMetier(erreur);
+      if (erreur != null) {
+        throw new ErreurMetier(erreur);
+      }
     }
     configService.sauvegarderConfig(cle, valeur == null || valeur.isEmpty() ? null : valeur);
     logAdminService.logAdmin("info", "admin", "Config sauvegardée : " + cle, Map.of("cle", cle));

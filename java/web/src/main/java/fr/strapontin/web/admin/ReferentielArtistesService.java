@@ -121,7 +121,9 @@ public class ReferentielArtistesService {
   }
 
   private static List<String> lireSources(final String sourcesConcat) {
-    if (sourcesConcat == null || sourcesConcat.isBlank()) return List.of();
+    if (sourcesConcat == null || sourcesConcat.isBlank()) {
+      return List.of();
+    }
     return Arrays.stream(sourcesConcat.split(",")).toList();
   }
 
@@ -264,14 +266,18 @@ public class ReferentielArtistesService {
    */
   @Transactional
   public boolean fusionner(final UUID cibleId, final UUID sourceId) {
-    if (cibleId.equals(sourceId)) return false;
+    if (cibleId.equals(sourceId)) {
+      return false;
+    }
     final Long nbExistants =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM artistes WHERE id IN (CAST(:cible AS uuid), CAST(:source AS"
                 + " uuid))",
             Map.of("cible", cibleId.toString(), "source", sourceId.toString()),
             Long.class);
-    if (nbExistants == null || nbExistants < 2) return false;
+    if (nbExistants == null || nbExistants < 2) {
+      return false;
+    }
 
     final Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
 

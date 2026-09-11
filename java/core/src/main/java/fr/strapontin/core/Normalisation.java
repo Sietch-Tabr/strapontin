@@ -110,15 +110,21 @@ public final class Normalisation {
    * @return score Jaro entre 0.0 (aucune ressemblance) et 1.0 (identique)
    */
   public static double jaro(final String a, final String b) {
-    if (a.equals(b)) return 1.0;
+    if (a.equals(b)) {
+      return 1.0;
+    }
     final int m = a.length();
     final int n = b.length();
-    if (m == 0 || n == 0) return 0.0;
+    if (m == 0 || n == 0) {
+      return 0.0;
+    }
     final int fenetre = Math.max(0, Math.max(m, n) / 2 - 1);
     final boolean[] matchA = new boolean[m];
     final boolean[] matchB = new boolean[n];
     final int matchs = rechercherCorrespondances(a, b, fenetre, matchA, matchB);
-    if (matchs == 0) return 0.0;
+    if (matchs == 0) {
+      return 0.0;
+    }
     final int transpositions = compterTranspositions(a, b, matchA, matchB);
     return ((double) matchs / m + (double) matchs / n + (matchs - transpositions / 2.0) / matchs)
         / 3.0;
@@ -153,8 +159,12 @@ public final class Normalisation {
     int k = 0;
     for (int i = 0; i < a.length(); i++) {
       if (matchA[i]) {
-        while (!matchB[k]) k++;
-        if (a.charAt(i) != b.charAt(k)) transpositions++;
+        while (!matchB[k]) {
+          k++;
+        }
+        if (a.charAt(i) != b.charAt(k)) {
+          transpositions++;
+        }
         k++;
       }
     }
@@ -169,8 +179,12 @@ public final class Normalisation {
    * @return score entre 0.0 (aucune ressemblance) et 1.0 (identique)
    */
   public static double similarite(final String a, final String b) {
-    if (a.equals(b)) return 1.0;
-    if (a.isEmpty() || b.isEmpty()) return 0.0;
+    if (a.equals(b)) {
+      return 1.0;
+    }
+    if (a.isEmpty() || b.isEmpty()) {
+      return 0.0;
+    }
     final int longueur = Math.max(a.length(), b.length());
     return 1.0 - (double) levenshtein(a, b) / longueur;
   }
@@ -185,9 +199,13 @@ public final class Normalisation {
    * @return code département à 2 ou 3 chiffres, ou null si absent/invalide
    */
   public static String extraireDeptFrancais(final String codePostal) {
-    if (codePostal == null || codePostal.isBlank()) return null;
+    if (codePostal == null || codePostal.isBlank()) {
+      return null;
+    }
     final String cp = codePostal.trim();
-    if (cp.startsWith("97")) return cp.substring(0, 3);
+    if (cp.startsWith("97")) {
+      return cp.substring(0, 3);
+    }
     final String dept = cp.substring(0, Math.min(2, cp.length()));
     return dept.isEmpty() ? null : dept;
   }
@@ -202,7 +220,9 @@ public final class Normalisation {
    * @return nom en title case ou nom inchangé
    */
   public static String normaliserCasse(final String nom) {
-    if (!nom.equals(nom.toUpperCase())) return nom;
+    if (!nom.equals(nom.toUpperCase())) {
+      return nom;
+    }
     final Matcher m = SEP_NORMALISER_CASSE.matcher(nom);
     final StringBuilder sb = new StringBuilder();
     boolean debutPhrase = true;
@@ -235,7 +255,9 @@ public final class Normalisation {
   }
 
   private static String capitaliserAvecApostrophe(final String mot) {
-    if (mot.isEmpty()) return mot;
+    if (mot.isEmpty()) {
+      return mot;
+    }
     final StringBuilder sb = new StringBuilder();
     boolean majSuivante = true;
     for (int i = 0; i < mot.length(); i++) {
@@ -257,8 +279,12 @@ public final class Normalisation {
     final int m = a.length();
     final int n = b.length();
     final int[][] dp = new int[m + 1][n + 1];
-    for (int i = 0; i <= m; i++) dp[i][0] = i;
-    for (int j = 0; j <= n; j++) dp[0][j] = j;
+    for (int i = 0; i <= m; i++) {
+      dp[i][0] = i;
+    }
+    for (int j = 0; j <= n; j++) {
+      dp[0][j] = j;
+    }
     for (int i = 1; i <= m; i++) {
       for (int j = 1; j <= n; j++) {
         if (a.charAt(i - 1) == b.charAt(j - 1)) {

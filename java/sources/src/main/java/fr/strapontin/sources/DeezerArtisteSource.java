@@ -105,9 +105,13 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
     try {
       final String uri = DEEZER_BASE + "/search/artist?q=" + encode(artiste.nom()) + "&limit=5";
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) return Optional.empty();
+      if (data == null) {
+        return Optional.empty();
+      }
       final var dataList = (List<Map<String, Object>>) data.get("data");
-      if (dataList == null) return Optional.empty();
+      if (dataList == null) {
+        return Optional.empty();
+      }
 
       for (var candidat : dataList) {
         final String nomCandidat = (String) candidat.get("name");
@@ -116,7 +120,9 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
           continue;
         }
         final Object idCandidat = candidat.get("id");
-        if (idCandidat == null) continue;
+        if (idCandidat == null) {
+          continue;
+        }
         return Optional.of(
             new EnrichissementArtiste(
                 artiste.wikidataId(), nomCandidat, String.valueOf(idCandidat), null, null));

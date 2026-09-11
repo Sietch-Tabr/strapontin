@@ -39,13 +39,19 @@ final class MapeurProduitEventim {
    *   COALESCE(:ville, ville)} à la persistance)
    */
   static String corrigerVilleEventim(String ville, String dept, String salle) {
-    if (ville == null || dept == null) return ville;
-    if (DEPT_PARIS.equals(dept) || !VILLE_PARIS.equalsIgnoreCase(ville.trim())) return ville;
+    if (ville == null || dept == null) {
+      return ville;
+    }
+    if (DEPT_PARIS.equals(dept) || !VILLE_PARIS.equalsIgnoreCase(ville.trim())) {
+      return ville;
+    }
 
     final int idx = salle.lastIndexOf(SEPARATEUR_NOM_SALLE);
     if (idx > 0) {
       final String commune = salle.substring(idx + SEPARATEUR_NOM_SALLE.length()).strip();
-      if (!commune.isBlank()) return commune;
+      if (!commune.isBlank()) {
+        return commune;
+      }
     }
 
     log.warn(
@@ -65,7 +71,9 @@ final class MapeurProduitEventim {
     Objects.requireNonNull(dateStr, "dateStr");
     final String datePart = dateStr.substring(0, 10);
     final int tIndex = dateStr.indexOf('T');
-    if (tIndex == -1) return new String[] {datePart, null};
+    if (tIndex == -1) {
+      return new String[]{datePart, null};
+    }
     final String heurePart = dateStr.substring(tIndex + 1, Math.min(tIndex + 6, dateStr.length()));
     final String heure = "00:00".equals(heurePart) ? null : heurePart;
     return new String[] {datePart, heure};
@@ -86,7 +94,9 @@ final class MapeurProduitEventim {
     final String titreNormalise = titre.replace('\u00A0', ' ').replace('\u202F', ' ');
     for (String sep : new String[] {" - ", " : "}) {
       final int idx = titreNormalise.indexOf(sep);
-      if (idx > 0) return titreNormalise.substring(0, idx).strip();
+      if (idx > 0) {
+        return titreNormalise.substring(0, idx).strip();
+      }
     }
     return titre;
   }
@@ -106,10 +116,14 @@ final class MapeurProduitEventim {
     try {
       final var liveEnt = extraireLiveEntertainment(produit);
       final String dateStr = liveEnt != null ? (String) liveEnt.get("startDate") : null;
-      if (dateStr == null) return null;
+      if (dateStr == null) {
+        return null;
+      }
 
       final String titre = (String) produit.get("name");
-      if (titre == null) return null;
+      if (titre == null) {
+        return null;
+      }
 
       final String[] datHeure = parseDateEventim(dateStr);
       final String artiste = artisteFallback != null ? artisteFallback : extraireNomArtiste(titre);
@@ -133,7 +147,9 @@ final class MapeurProduitEventim {
   @SuppressWarnings("unchecked")
   private static String extraireUrlProduit(final Map<String, Object> produit) {
     final String lienDirect = (String) produit.get("link");
-    if (lienDirect != null && lienDirect.startsWith("http")) return lienDirect;
+    if (lienDirect != null && lienDirect.startsWith("http")) {
+      return lienDirect;
+    }
     final var urlObj = (Map<String, Object>) produit.get("url");
     if (urlObj != null && urlObj.get("domain") != null && urlObj.get("path") != null) {
       return urlObj.get("domain") + (String) urlObj.get("path");

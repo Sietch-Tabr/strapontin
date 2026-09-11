@@ -223,7 +223,9 @@ public class SecurityConfiguration {
                                   org.springframework.security.core.context.SecurityContextHolder
                                       .getContext()
                                       .getAuthentication();
-                              if (auth != null) meta.put("userId", auth.getName());
+                              if (auth != null) {
+                                meta.put("userId", auth.getName());
+                              }
                               logAdminService.logAdmin(
                                   "warn",
                                   "web",

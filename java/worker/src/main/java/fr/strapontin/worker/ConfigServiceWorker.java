@@ -60,7 +60,9 @@ public class ConfigServiceWorker {
             "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
             Map.of("cle", cle),
             (rs, _) -> rs.getString("valeur_chiffree"));
-    if (lignes.isEmpty()) return Optional.empty();
+    if (lignes.isEmpty()) {
+      return Optional.empty();
+    }
     try {
       return Optional.of(cipher.dechiffrer(lignes.get(0)));
     } catch (Exception e) {

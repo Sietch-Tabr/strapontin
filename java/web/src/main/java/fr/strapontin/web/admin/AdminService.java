@@ -170,7 +170,9 @@ public class AdminService {
   // page vide (offset au-delà du total, ex. dernier utilisateur supprimé depuis) : total_filtre
   // n'est renvoyé par aucune ligne, un second aller-retour reste alors nécessaire.
   private long compterUtilisateurs(final int pageNum) {
-    if (pageNum == 0) return 0;
+    if (pageNum == 0) {
+      return 0;
+    }
     final Long total = jdbc.queryForObject("SELECT COUNT(*) FROM users", Map.of(), Long.class);
     return total != null ? total : 0;
   }
@@ -307,7 +309,9 @@ public class AdminService {
   }
 
   private boolean detecterRetrogradationAdmin(final String userId, final String role) {
-    if (role.isEmpty()) return false;
+    if (role.isEmpty()) {
+      return false;
+    }
     final List<Map<String, Object>> roleActuelRows =
         jdbc.queryForList(
             "SELECT role::text AS role FROM users WHERE id = :id", Map.of("id", userId));
@@ -321,13 +325,23 @@ public class AdminService {
     final Map<String, Object> miseAJour = new HashMap<>();
     miseAJour.put("updatedAt", Timestamp.from(Instant.now()));
     miseAJour.put("userId", userId);
-    if (!champs.nom().isEmpty()) miseAJour.put("nom", champs.nom());
-    if (!champs.email().isEmpty()) miseAJour.put("email", champs.email());
-    if (!champs.role().isEmpty() && !retrogradationAdmin) miseAJour.put("role", champs.role());
+    if (!champs.nom().isEmpty()) {
+      miseAJour.put("nom", champs.nom());
+    }
+    if (!champs.email().isEmpty()) {
+      miseAJour.put("email", champs.email());
+    }
+    if (!champs.role().isEmpty() && !retrogradationAdmin) {
+      miseAJour.put("role", champs.role());
+    }
 
     final StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
-    if (!champs.nom().isEmpty()) setClauses.append(", display_username = :nom");
-    if (!champs.email().isEmpty()) setClauses.append(", email = :email");
+    if (!champs.nom().isEmpty()) {
+      setClauses.append(", display_username = :nom");
+    }
+    if (!champs.email().isEmpty()) {
+      setClauses.append(", email = :email");
+    }
     if (!champs.role().isEmpty() && !retrogradationAdmin) {
       setClauses.append(", role = CAST(:role AS role_utilisateur)");
     }
@@ -347,7 +361,9 @@ public class AdminService {
           "email modifié",
           Map.of("userId", userId, "nouvelEmail", champs.email(), "parAdmin", adminId));
     }
-    if (champs.role().isEmpty()) return;
+    if (champs.role().isEmpty()) {
+      return;
+    }
     if (retrogradationAdmin) {
       initierRevocationAdmin(userId, adminId);
       return;
@@ -405,7 +421,9 @@ public class AdminService {
     final List<Map<String, Object>> cible =
         jdbc.queryForList(
             "SELECT email, role::text AS role FROM users WHERE id = :id", Map.of("id", userId));
-    if (cible.isEmpty()) throw new ErreurMetier("Utilisateur introuvable.", 404);
+    if (cible.isEmpty()) {
+      throw new ErreurMetier("Utilisateur introuvable.", 404);
+    }
     if (!"admin".equals(cible.get(0).get("role"))) {
       throw new ErreurMetier("Cet utilisateur n'est pas administrateur.");
     }
@@ -493,7 +511,9 @@ public class AdminService {
     final List<Map<String, Object>> cible =
         jdbc.queryForList(
             "SELECT id, email FROM users WHERE id = :userId", Map.of("userId", userId));
-    if (cible.isEmpty()) return Optional.empty();
+    if (cible.isEmpty()) {
+      return Optional.empty();
+    }
 
     final String email = (String) cible.get(0).get("email");
     final String prefixeReset = "reset:" + email;
@@ -528,7 +548,9 @@ public class AdminService {
   public boolean reinitialiserTotp(final String userId, final String adminId) {
     final List<Map<String, Object>> cible =
         jdbc.queryForList("SELECT email FROM users WHERE id = :userId", Map.of("userId", userId));
-    if (cible.isEmpty()) return false;
+    if (cible.isEmpty()) {
+      return false;
+    }
 
     jdbc.update(
         "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false,"
@@ -553,7 +575,9 @@ public class AdminService {
     final List<Map<String, Object>> cible =
         jdbc.queryForList(
             "SELECT username FROM users WHERE id = :userId", Map.of("userId", userId));
-    if (cible.isEmpty()) return false;
+    if (cible.isEmpty()) {
+      return false;
+    }
 
     final int supprimees =
         jdbc.update(

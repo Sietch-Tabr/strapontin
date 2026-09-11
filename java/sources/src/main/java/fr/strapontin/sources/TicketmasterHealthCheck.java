@@ -96,14 +96,20 @@ final class TicketmasterHealthCheck {
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) return List.of();
+      if (data == null) {
+        return List.of();
+      }
       final var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
       final var venues = embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
-      if (venues == null) return List.of();
+      if (venues == null) {
+        return List.of();
+      }
       final List<CandidatVenueTM> resultat = new ArrayList<>();
       for (var v : venues) {
         final Object id = v.get("id");
-        if (id != null) resultat.add(new CandidatVenueTM((String) id, (String) v.get("name")));
+        if (id != null) {
+          resultat.add(new CandidatVenueTM((String) id, (String) v.get("name")));
+        }
       }
       return resultat;
     } catch (Exception e) {
@@ -127,7 +133,9 @@ final class TicketmasterHealthCheck {
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) return 0;
+      if (data == null) {
+        return 0;
+      }
       final var page = (Map<String, Object>) data.get("page");
       return page != null ? ((Number) page.get("totalElements")).intValue() : 0;
     } catch (Exception e) {

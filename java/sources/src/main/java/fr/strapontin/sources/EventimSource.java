@@ -259,14 +259,20 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   @SuppressWarnings("unchecked")
   private ResultatPageEventim parserReponseProduits(
       final Map<String, Object> data, final String artisteFallback, final String deptFiltre, final String artisteSourceId) {
-    if (data == null) return ResultatPageEventim.VIDE;
+    if (data == null) {
+      return ResultatPageEventim.VIDE;
+    }
     final var produits = (List<Map<String, Object>>) data.get(CLE_PRODUCTS);
-    if (produits == null || produits.isEmpty()) return ResultatPageEventim.VIDE;
+    if (produits == null || produits.isEmpty()) {
+      return ResultatPageEventim.VIDE;
+    }
 
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (var p : produits) {
       final ConcertBrut c = mapProduit(p, artisteFallback, artisteSourceId);
-      if (c != null && (deptFiltre == null || deptFiltre.equals(c.dept()))) concerts.add(c);
+      if (c != null && (deptFiltre == null || deptFiltre.equals(c.dept()))) {
+        concerts.add(c);
+      }
     }
     final int total =
         data.get(CLE_TOTAL_RESULTS) != null ? ((Number) data.get(CLE_TOTAL_RESULTS)).intValue() : 0;
@@ -296,9 +302,13 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     compteurBilan.enregistrerAppel();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) return null;
+      if (data == null) {
+        return null;
+      }
       final var attractions = (List<Map<String, Object>>) data.get("attractions");
-      if (attractions == null || attractions.isEmpty()) return null;
+      if (attractions == null || attractions.isEmpty()) {
+        return null;
+      }
 
       final String termeNorm = Normalisation.normaliserTexte(terme);
       Map<String, Object> exact = null;
@@ -343,7 +353,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
         return null;
       }
       Object id = exact.get("attractionId");
-      if (id == null) id = exact.get("id");
+      if (id == null) {
+        id = exact.get("id");
+      }
       return id != null ? String.valueOf(id) : null;
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
@@ -368,7 +380,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     final String artisteSourceId = "eventim:" + attractionId;
 
     for (int page = 1; page <= MAX_PAGES && continuer; page++) {
-      if (page > 1) continuer = attendreEntrePagesEventim();
+      if (page > 1) {
+        continuer = attendreEntrePagesEventim();
+      }
       if (continuer) {
         final String uri =
             UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
@@ -384,7 +398,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
                 .toUriString();
         final ResultatPageEventim resultat =
             chargerPageProduits(java.net.URI.create(uri), artisteFallback, null, artisteSourceId);
-        if (!resultat.succes()) succes = false;
+        if (!resultat.succes()) {
+          succes = false;
+        }
         concerts.addAll(resultat.concerts());
         continuer = !resultat.estVide() && concerts.size() < resultat.total();
       }
@@ -400,7 +416,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     boolean continuer = true;
 
     for (int page = 1; page <= MAX_PAGES && continuer; page++) {
-      if (page > 1) continuer = attendreEntrePagesEventim();
+      if (page > 1) {
+        continuer = attendreEntrePagesEventim();
+      }
       if (continuer) {
         var uriBuilder =
             UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
@@ -413,7 +431,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
                 .queryParam("in_stock", "true")
                 .queryParam("top", TAILLE_PAGE)
                 .queryParam("page", page);
-        for (String c : classifications) uriBuilder = uriBuilder.queryParam("categories", c);
+        for (String c : classifications) {
+          uriBuilder = uriBuilder.queryParam("categories", c);
+        }
         final java.net.URI uri = uriBuilder.build().encode().toUri();
         final ResultatPageEventim resultat = chargerPageProduits(uri, null, dept, null);
         concerts.addAll(resultat.concerts());
@@ -492,7 +512,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     for (String dept : depts) {
       final List<ConcertBrut> concerts = fetchProduitsParRegion(dept, categories);
       tous.addAll(concerts);
-      if (!attendreEntrePagesEventim()) break;
+      if (!attendreEntrePagesEventim()) {
+        break;
+      }
     }
 
     return tous;

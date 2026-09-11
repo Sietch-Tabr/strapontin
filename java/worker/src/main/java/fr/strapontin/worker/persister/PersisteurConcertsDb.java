@@ -113,7 +113,9 @@ public class PersisteurConcertsDb {
   List<ValeurConcert> resoudreParUrl(final List<ValeurConcert> concerts) {
     final List<ValeurConcert> avecUrl =
         concerts.stream().filter(c -> c.url() != null && "eventim".equals(c.source())).toList();
-    if (avecUrl.isEmpty()) return concerts;
+    if (avecUrl.isEmpty()) {
+      return concerts;
+    }
 
     final List<String> urls = avecUrl.stream().map(ValeurConcert::url).distinct().toList();
     final List<Map<String, Object>> lignesExistantes =
@@ -126,7 +128,9 @@ public class PersisteurConcertsDb {
                 """,
             Map.of("urls", urls));
 
-    if (lignesExistantes.isEmpty()) return concerts;
+    if (lignesExistantes.isEmpty()) {
+      return concerts;
+    }
 
     record CleUrl(String source, String url, LocalDate date, LocalTime heure) {}
 
@@ -146,14 +150,19 @@ public class PersisteurConcertsDb {
     return concerts.stream()
         .map(
             c -> {
-              if (c.url() == null) return c;
+              if (c.url() == null) {
+                return c;
+              }
               final CleUrl cle = new CleUrl(c.source(), c.url(), c.date(), c.heure());
               final Map<String, Object> existant = index.get(cle);
-              if (existant == null) return c;
+              if (existant == null) {
+                return c;
+              }
               final String artisteNormExistant = (String) existant.get("artiste_norm");
               final UUID artisteIdExistant = (UUID) existant.get("artiste_id");
-              if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm()))
+              if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) {
                 return c;
+              }
               log.debug(
                   "url doublon résolu entrant={} existant={} url={}",
                   c.artisteNorm(),
@@ -200,7 +209,9 @@ public class PersisteurConcertsDb {
                         && c.statut() != null
                         && STATUTS_REPORT_TM.contains(c.statut()))
             .toList();
-    if (reports.isEmpty()) return;
+    if (reports.isEmpty()) {
+      return;
+    }
 
     final List<String> urls = reports.stream().map(ValeurConcert::url).distinct().toList();
     final List<Map<String, Object>> existants =
@@ -223,14 +234,20 @@ public class PersisteurConcertsDb {
 
     for (ValeurConcert c : reports) {
       final List<Map<String, Object>> candidats = parCle.get(new CleUrlDate(c.url(), c.date()));
-      if (candidats == null) continue;
+      if (candidats == null) {
+        continue;
+      }
       final var heuresDistinctes =
           candidats.stream()
               .map(l -> ((java.sql.Time) l.get("heure")).toLocalTime())
               .collect(java.util.stream.Collectors.toSet());
-      if (heuresDistinctes.size() != 1) continue;
+      if (heuresDistinctes.size() != 1) {
+        continue;
+      }
       final LocalTime heureExistante = heuresDistinctes.iterator().next();
-      if (heureExistante.equals(c.heure())) continue;
+      if (heureExistante.equals(c.heure())) {
+        continue;
+      }
       final UUID idExistant = (UUID) candidats.get(0).get("id");
       jdbc.update(
           "UPDATE evenements SET heure = CAST(:heure AS time) WHERE id = CAST(:id AS uuid)",
@@ -259,8 +276,12 @@ public class PersisteurConcertsDb {
 
   private static boolean heuresCompatibles(
       final LocalTime existante, final LocalTime entrante, final boolean packageExistant, final boolean packageEntrant) {
-    if (packageExistant || packageEntrant) return true;
-    if (existante == null || entrante == null) return true;
+    if (packageExistant || packageEntrant) {
+      return true;
+    }
+    if (existante == null || entrante == null) {
+      return true;
+    }
     final long diffMinutes = Math.abs(Duration.between(existante, entrante).toMinutes());
     return diffMinutes <= TOLERANCE_HEURE_MINUTES;
   }
@@ -295,7 +316,9 @@ public class PersisteurConcertsDb {
                 + " AND salle_id IS NOT DISTINCT FROM CAST(:salleId AS uuid)",
             paramsExact,
             (rs, _) -> rs.getObject("id", UUID.class));
-    if (!exact.isEmpty()) return new ResolutionEvenement(exact.get(0), false);
+    if (!exact.isEmpty()) {
+      return new ResolutionEvenement(exact.get(0), false);
+    }
 
     if (v.salleId() != null) {
       final List<Map<String, Object>> candidats =
@@ -317,7 +340,9 @@ public class PersisteurConcertsDb {
                 ? v.artisteId().equals(candArtisteId)
                 : candArtisteId == null
                 && CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, v.artisteNorm());
-        if (!artisteCorrespond) continue;
+        if (!artisteCorrespond) {
+          continue;
+        }
         final java.sql.Time heureSql = (java.sql.Time) c.get("heure");
         final LocalTime heureExistante = heureSql != null ? heureSql.toLocalTime() : null;
         final boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
@@ -454,7 +479,9 @@ public class PersisteurConcertsDb {
    * @return décompte des événements créés et mis à jour du lot
    */
   PersisterConcerts.ResultatPersistance upsertLot(final List<ValeurConcert> valeurs) {
-    if (valeurs.isEmpty()) return new PersisterConcerts.ResultatPersistance(0, 0);
+    if (valeurs.isEmpty()) {
+      return new PersisterConcerts.ResultatPersistance(0, 0);
+    }
 
     int inserts = 0;
     int updates = 0;

@@ -57,7 +57,9 @@ public class ResendWebhooksAdminController {
   @PostMapping("/evenements/{id}/rejouer")
   public ResponseEntity<Map<String, Object>> rejouerEvenement(@PathVariable final String id) {
     final boolean rejoue = service.rejouerEvenement(id);
-    if (!rejoue) return erreur(502, "Rejeu impossible — vérifier la configuration Resend.");
+    if (!rejoue) {
+      return erreur(502, "Rejeu impossible — vérifier la configuration Resend.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 }

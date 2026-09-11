@@ -44,10 +44,14 @@ public final class Dates {
    * @return la date formatée, ou chaîne vide si l'entrée est {@code null} ou invalide
    */
   public static String formater(final String dateIso, final boolean longue) {
-    if (dateIso == null || dateIso.isBlank()) return "";
+    if (dateIso == null || dateIso.isBlank()) {
+      return "";
+    }
     try {
       final LocalDate date = LocalDate.parse(dateIso);
-      if (longue) return date.format(FORMAT_LONG);
+      if (longue) {
+        return date.format(FORMAT_LONG);
+      }
       final boolean autreAnnee = date.getYear() != LocalDate.now().getYear();
       return date.format(autreAnnee ? FORMAT_COURT_ANNEE : FORMAT_COURT);
     } catch (Exception e) {
@@ -65,12 +69,16 @@ public final class Dates {
    * @return la date (et l'heure) formatée, ex. "mer. 4 juin 20h30"
    */
   public static String formaterAvecHeure(final String dateIso, final String heureStr) {
-    if (dateIso == null || dateIso.isBlank()) return "";
+    if (dateIso == null || dateIso.isBlank()) {
+      return "";
+    }
     try {
       final LocalDate date = LocalDate.parse(dateIso);
       final boolean autreAnnee = date.getYear() != LocalDate.now().getYear();
       final String datePart = date.format(autreAnnee ? FORMAT_COURT_ANNEE : FORMAT_COURT);
-      if (heureStr == null || heureStr.isBlank()) return datePart;
+      if (heureStr == null || heureStr.isBlank()) {
+        return datePart;
+      }
       final String[] parts = heureStr.split(":");
       final int h = Integer.parseInt(parts[0]);
       final int m = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
@@ -87,7 +95,9 @@ public final class Dates {
    * @return la date/heure formatée, ou chaîne vide si {@code epochMs <= 0}
    */
   public static String formaterTs(final long epochMs) {
-    if (epochMs <= 0) return "";
+    if (epochMs <= 0) {
+      return "";
+    }
     return LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMs), ZONE_FR).format(FORMAT_HEURE);
   }
 
@@ -98,7 +108,9 @@ public final class Dates {
    * @return la date/heure formatée, ou chaîne vide si {@code null}
    */
   public static String formaterInstant(final Instant instant) {
-    if (instant == null) return "";
+    if (instant == null) {
+      return "";
+    }
     return LocalDateTime.ofInstant(instant, ZONE_FR).format(FORMAT_HEURE);
   }
 
@@ -109,7 +121,9 @@ public final class Dates {
    * @return la date/heure formatée, ou chaîne vide si {@code null} ou invalide
    */
   public static String formaterInstantStr(final String isoInstant) {
-    if (isoInstant == null || isoInstant.isBlank()) return "";
+    if (isoInstant == null || isoInstant.isBlank()) {
+      return "";
+    }
     try {
       return formaterInstant(Instant.parse(isoInstant));
     } catch (Exception e) {
@@ -124,7 +138,9 @@ public final class Dates {
    * @return la date/heure formatée, ou chaîne vide si {@code epochSec <= 0}
    */
   public static String formaterEpochSec(final long epochSec) {
-    if (epochSec <= 0) return "";
+    if (epochSec <= 0) {
+      return "";
+    }
     return LocalDateTime.ofInstant(Instant.ofEpochSecond(epochSec), ZONE_FR).format(FORMAT_HEURE);
   }
 }

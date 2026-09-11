@@ -68,7 +68,9 @@ public class GestionQuotaTM {
               "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
               Map.of("cle", CLE_QUOTA),
               String.class);
-      if (json == null) return Optional.empty();
+      if (json == null) {
+        return Optional.empty();
+      }
       final QuotaTM quota = objectMapper.readValue(json, QuotaTM.class);
       if (quota.reset() > 0 && quota.reset() <= Instant.now().toEpochMilli()) {
         final QuotaTM renouvele = new QuotaTM(quota.total(), quota.total(), 0L, Instant.now().toString());
@@ -113,7 +115,9 @@ public class GestionQuotaTM {
    */
   public boolean verifier(final String nomJob) {
     final Optional<QuotaTM> quotaOpt = lireQuota();
-    if (quotaOpt.isEmpty()) return true;
+    if (quotaOpt.isEmpty()) {
+      return true;
+    }
 
     final QuotaTM quota = quotaOpt.get();
     if (quota.dispo() < SEUIL_QUOTA_ABORT) {
@@ -145,7 +149,9 @@ public class GestionQuotaTM {
    */
   public boolean cronAutorise() {
     final Optional<QuotaTM> quotaOpt = lireQuota();
-    if (quotaOpt.isEmpty()) return true;
+    if (quotaOpt.isEmpty()) {
+      return true;
+    }
     final QuotaTM quota = quotaOpt.get();
     if (quota.dispo() < SEUIL_QUOTA_CRON) {
       log.warn("cron TM suspendu — quota insuffisant dispo={}", quota.dispo());

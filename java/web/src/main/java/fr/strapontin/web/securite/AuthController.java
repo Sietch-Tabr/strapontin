@@ -120,7 +120,9 @@ public class AuthController {
   public ResponseEntity<Void> logout(
       final HttpServletRequest httpRequest, final HttpServletResponse httpResponse) {
     final HttpSession session = httpRequest.getSession(false);
-    if (session != null) session.invalidate();
+    if (session != null) {
+      session.invalidate();
+    }
     SecurityContextHolder.clearContext();
     final Cookie cookie = new Cookie("SESSION", "");
     cookie.setMaxAge(0);
@@ -342,7 +344,9 @@ public class AuthController {
   private SessionOuverte ouvrirSession(
       final Authentication auth, final HttpServletRequest httpRequest, final String messageErreur) {
     final HttpSession sessionExistante = httpRequest.getSession(false);
-    if (sessionExistante != null) sessionExistante.invalidate();
+    if (sessionExistante != null) {
+      sessionExistante.invalidate();
+    }
 
     final SecurityContext contexte = SecurityContextHolder.createEmptyContext();
     contexte.setAuthentication(auth);

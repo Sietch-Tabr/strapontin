@@ -47,7 +47,9 @@ class RetrySerialisableTest {
                     "test",
                     () -> {
                       final int n = appels.incrementAndGet();
-                      if (n < 2) throw new PessimisticLockingFailureException("conflit");
+                      if (n < 2) {
+                        throw new PessimisticLockingFailureException("conflit");
+                      }
                       return 42;
                     });
     assertEquals(42, resultat);

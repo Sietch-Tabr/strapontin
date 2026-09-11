@@ -69,9 +69,13 @@ public class ReferentielArtistesController {
   public ResponseEntity<Map<String, Object>> modifierNomAffiche(
       @PathVariable final String uuid, @Valid @RequestBody final RequeteNomAffiche corps) {
     final UUID id = parseUuid(uuid);
-    if (id == null) return erreur(400, "UUID d'artiste invalide.");
+    if (id == null) {
+      return erreur(400, "UUID d'artiste invalide.");
+    }
     final boolean maj = service.modifierNomAffiche(id, corps.nomAffiche());
-    if (!maj) return erreur(404, "Artiste inconnu.");
+    if (!maj) {
+      return erreur(404, "Artiste inconnu.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
@@ -87,9 +91,13 @@ public class ReferentielArtistesController {
   public ResponseEntity<Map<String, Object>> reinitialiserEnrichissement(
       @PathVariable final String uuid) {
     final UUID id = parseUuid(uuid);
-    if (id == null) return erreur(400, "UUID d'artiste invalide.");
+    if (id == null) {
+      return erreur(400, "UUID d'artiste invalide.");
+    }
     final boolean maj = service.reinitialiserEnrichissement(id);
-    if (!maj) return erreur(404, "Artiste inconnu.");
+    if (!maj) {
+      return erreur(404, "Artiste inconnu.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
@@ -103,9 +111,13 @@ public class ReferentielArtistesController {
   @PostMapping("/artistes/{uuid}/ignorer-intervention")
   public ResponseEntity<Map<String, Object>> ignorerIntervention(@PathVariable final String uuid) {
     final UUID id = parseUuid(uuid);
-    if (id == null) return erreur(400, "UUID d'artiste invalide.");
+    if (id == null) {
+      return erreur(400, "UUID d'artiste invalide.");
+    }
     final boolean maj = service.ignorerIntervention(id);
-    if (!maj) return erreur(404, "Artiste inconnu.");
+    if (!maj) {
+      return erreur(404, "Artiste inconnu.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
@@ -122,9 +134,13 @@ public class ReferentielArtistesController {
   public ResponseEntity<Map<String, Object>> corrigerIdentifiantTm(
       @PathVariable final String uuid, @Valid @RequestBody final RequeteIdentifiantTm corps) {
     final UUID id = parseUuid(uuid);
-    if (id == null) return erreur(400, "UUID d'artiste invalide.");
+    if (id == null) {
+      return erreur(400, "UUID d'artiste invalide.");
+    }
     final boolean maj = service.corrigerIdentifiantTm(id, corps.identifiantExterne());
-    if (!maj) return erreur(404, "Artiste inconnu ou sans source Ticketmaster.");
+    if (!maj) {
+      return erreur(404, "Artiste inconnu ou sans source Ticketmaster.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
@@ -140,10 +156,16 @@ public class ReferentielArtistesController {
       @PathVariable final String uuid, @PathVariable final String uuidCible) {
     final UUID source = parseUuid(uuid);
     final UUID cible = parseUuid(uuidCible);
-    if (source == null || cible == null) return erreur(400, "UUID invalide.");
-    if (source.equals(cible)) return erreur(400, "Les deux artistes doivent être différents.");
+    if (source == null || cible == null) {
+      return erreur(400, "UUID invalide.");
+    }
+    if (source.equals(cible)) {
+      return erreur(400, "Les deux artistes doivent être différents.");
+    }
     final boolean fusionne = service.fusionner(cible, source);
-    if (!fusionne) return erreur(404, "Artiste source ou cible inconnu.");
+    if (!fusionne) {
+      return erreur(404, "Artiste source ou cible inconnu.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 }

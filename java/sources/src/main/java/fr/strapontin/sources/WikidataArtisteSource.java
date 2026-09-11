@@ -125,18 +125,26 @@ public class WikidataArtisteSource
 
   private Map<UUID, EnrichissementArtiste> enrichirLotConnu(final List<ArtisteAEnrichir> lot) {
     final Map<String, UUID> qidVersUuid = new HashMap<>();
-    for (ArtisteAEnrichir a : lot) qidVersUuid.put(a.wikidataId(), a.id());
+    for (ArtisteAEnrichir a : lot) {
+      qidVersUuid.put(a.wikidataId(), a.id());
+    }
 
     final String sparql = construireRequeteBatch(lot.stream().map(ArtisteAEnrichir::wikidataId).toList());
     final Map<String, Object> data = client.executer(sparql);
-    if (data == null) return Map.of();
+    if (data == null) {
+      return Map.of();
+    }
 
     final Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
     for (Map<String, Object> binding : ClientSparqlWikidata.extraireBindings(data)) {
       final String qid = extraireQid(binding);
-      if (qid == null) continue;
+      if (qid == null) {
+        continue;
+      }
       final UUID artisteId = qidVersUuid.get(qid);
-      if (artisteId == null) continue;
+      if (artisteId == null) {
+        continue;
+      }
       final EnrichissementArtiste enrichissement = construireEnrichissement(qid, binding);
       cache.put(qid, enrichissement);
       resultats.put(artisteId, enrichissement);
@@ -185,7 +193,9 @@ public class WikidataArtisteSource
   private Optional<EnrichissementArtiste> decouvrir(final ArtisteAEnrichir artiste) {
     final String sparql = construireRequeteDecouverte(artiste.nom());
     final Map<String, Object> data = client.executer(sparql);
-    if (data == null) return Optional.empty();
+    if (data == null) {
+      return Optional.empty();
+    }
 
     final List<Map<String, Object>> bindings = ClientSparqlWikidata.extraireBindings(data);
     if (bindings.isEmpty()) {
@@ -208,7 +218,9 @@ public class WikidataArtisteSource
     }
 
     final String qid = extraireQid(bindings.get(0));
-    if (qid == null) return Optional.empty();
+    if (qid == null) {
+      return Optional.empty();
+    }
     final EnrichissementArtiste enrichissement = construireEnrichissement(qid, bindings.get(0));
     cache.put(qid, enrichissement);
     return Optional.of(enrichissement);
@@ -278,7 +290,9 @@ public class WikidataArtisteSource
   // connu — filtrée explicitement plutôt que de produire une liste avec un unique élément vide.
   private static List<String> extraireAlias(final Map<String, Object> binding) {
     final String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
-    if (aliases == null || aliases.isBlank()) return List.of();
+    if (aliases == null || aliases.isBlank()) {
+      return List.of();
+    }
     return java.util.Arrays.stream(aliases.split("\\|")).filter(a -> !a.isBlank()).toList();
   }
 }

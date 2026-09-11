@@ -167,7 +167,9 @@ public class SalleService {
         final List<ResultatSalle> resultatsExternes = new ArrayList<>(futureNominatim.join());
         resultatsExternes.addAll(futureTm.join());
         for (ResultatSalle r : resultatsExternes) {
-          if (sallesDejaAjoutees.contains(normaliserSalleCle(r.salle()))) continue;
+          if (sallesDejaAjoutees.contains(normaliserSalleCle(r.salle()))) {
+            continue;
+          }
           fusionnerOuAjouter(listeResultats, r);
         }
       }
@@ -584,10 +586,14 @@ public class SalleService {
         final boolean pertinent =
             TYPES_SALLE_NOMINATIM.contains(type)
                 || (amenitySecondaire != null && TYPES_SALLE_NOMINATIM.contains(amenitySecondaire));
-        if (!pertinent) continue;
+        if (!pertinent) {
+          continue;
+        }
 
         final String displayName = (String) item.get("display_name");
-        if (displayName == null || displayName.isBlank()) continue;
+        if (displayName == null || displayName.isBlank()) {
+          continue;
+        }
         final String nom = displayName.split(",")[0].strip();
 
         final String osmType = (String) item.get("osm_type");
@@ -608,10 +614,14 @@ public class SalleService {
   }
 
   private static String extraireVille(final Map<String, Object> address) {
-    if (address == null) return null;
+    if (address == null) {
+      return null;
+    }
     for (String cle : List.of("city", "town", "village", "municipality")) {
       final Object valeur = address.get(cle);
-      if (valeur instanceof String s && !s.isBlank()) return s;
+      if (valeur instanceof String s && !s.isBlank()) {
+        return s;
+      }
     }
     return null;
   }
@@ -626,7 +636,9 @@ public class SalleService {
   @SuppressWarnings("unchecked")
   List<ResultatSalle> rechercherSallesTM(final String terme) {
     final Optional<String> tmKey = configService.lireConfig("TICKETMASTER_API_KEY");
-    if (tmKey.isEmpty()) return List.of();
+    if (tmKey.isEmpty()) {
+      return List.of();
+    }
 
     try {
       final String url =
@@ -645,21 +657,28 @@ public class SalleService {
                   (_, resp) ->
                       new WorkerTriggerUtils.ReponseHttp(
                           resp.getStatusCode().value(), resp.bodyTo(String.class)));
-      if (reponse.statut() != 200) return List.of();
+      if (reponse.statut() != 200) {
+        return List.of();
+      }
 
       final Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
       final Map<String, Object> embedded = (Map<String, Object>) root.get("_embedded");
-      if (embedded == null) return List.of();
+      if (embedded == null) {
+        return List.of();
+      }
 
       final List<Map<String, Object>> venues = (List<Map<String, Object>>) embedded.get("venues");
-      if (venues == null) return List.of();
+      if (venues == null) {
+        return List.of();
+      }
 
       return venues.stream()
           .map(
               v -> {
                 final String nomBrut = (String) v.get("name");
-                if (nomBrut == null)
+                if (nomBrut == null) {
                   return new ResultatSalle(null, null, null, null, "ticketmaster");
+                }
                 final String nom = Normalisation.normaliserCasse(nomBrut);
                 if (nomBrut.contains("??")) {
                   log.warn("TM salle nom corrompu id={} nom='{}'", v.get("id"), nomBrut);

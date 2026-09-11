@@ -290,7 +290,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       }
 
       final var data = response.getBody();
-      if (data == null) return new ResultatPage(List.of(), 0, NB_PAGES_MAX, quota, true);
+      if (data == null) {
+        return new ResultatPage(List.of(), 0, NB_PAGES_MAX, quota, true);
+      }
 
       final var page = (Map<String, Object>) data.get("page");
       final int total = page != null ? ((Number) page.get("totalElements")).intValue() : 0;
@@ -299,12 +301,16 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       final var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
       final List<Map<String, Object>> evts =
           embedded != null ? (List<Map<String, Object>>) embedded.get("events") : null;
-      if (evts == null) return new ResultatPage(List.of(), total, totalPages, quota, true);
+      if (evts == null) {
+        return new ResultatPage(List.of(), total, totalPages, quota, true);
+      }
 
       final List<ConcertBrut> concerts = new ArrayList<>();
       for (var evt : evts) {
         final ConcertBrut c = mapEvenement(evt, artisteFallback);
-        if (c != null) concerts.add(c);
+        if (c != null) {
+          concerts.add(c);
+        }
       }
       return new ResultatPage(concerts, total, totalPages, quota, true);
 
@@ -370,8 +376,12 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
     for (int numPage = 0; numPage < borneMax && continuer; numPage++) {
       final ResultatPage resultat = fetchPage(uriBase, numPage, artisteFallback);
-      if (!resultat.succes()) succes = false;
-      if (resultat.quota() != null) dernierQuota.set(resultat.quota());
+      if (!resultat.succes()) {
+        succes = false;
+      }
+      if (resultat.quota() != null) {
+        dernierQuota.set(resultat.quota());
+      }
       if (numPage == 0) {
         totalElements = resultat.total();
         borneMax = Math.min(resultat.totalPages(), NB_PAGES_MAX);
@@ -428,7 +438,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             .queryParam("startDateTime", fenetre.debut());
 
     final ResultatPage resultat = fetchPage(uriBase, 0, nom);
-    if (resultat.quota() != null) dernierQuota.set(resultat.quota());
+    if (resultat.quota() != null) {
+      dernierQuota.set(resultat.quota());
+    }
     if (resultat.succes()) {
       log.info("TM fetchArtiste artiste={} total={}", nom, resultat.total());
     } else {
@@ -493,11 +505,15 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) return null;
+      if (data == null) {
+        return null;
+      }
       final var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
       final var attractions =
           embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
-      if (attractions == null || attractions.isEmpty()) return null;
+      if (attractions == null || attractions.isEmpty()) {
+        return null;
+      }
       final String nomNorm = Normalisation.normaliserTexte(nom);
       for (var attraction : attractions) {
         final String nomAttraction = (String) attraction.getOrDefault("name", "");
@@ -528,7 +544,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   @Override
   public List<ConcertBrut> fetchArtistesLot(final List<String> attractionIds) {
-    if (attractionIds.isEmpty()) return List.of();
+    if (attractionIds.isEmpty()) {
+      return List.of();
+    }
     // Valeur exacte envoyée (pas seulement le nombre) — permet de corréler après coup un
     // identifiant attendu (base) avec celui réellement transmis en cas d'écart constaté.
     log.info("TM fetchArtistesLot ids envoyés={}", attractionIds);
@@ -628,7 +646,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   @Override
   public List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
-    if (classifs == null) classifs = CLASSIFICATIONS;
+    if (classifs == null) {
+      classifs = CLASSIFICATIONS;
+    }
     final List<ConcertBrut> tous = new ArrayList<>();
 
     for (int i = 0; i < depts.size(); i++) {

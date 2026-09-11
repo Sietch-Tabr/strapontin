@@ -331,7 +331,9 @@ public class EmailService {
    * @return {@code true} si l'email a été envoyé avec succès
    */
   public boolean envoyerDigestConcerts(final String email, final List<ConcertDigest> concerts) {
-    if (concerts.isEmpty()) return false;
+    if (concerts.isEmpty()) {
+      return false;
+    }
 
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {

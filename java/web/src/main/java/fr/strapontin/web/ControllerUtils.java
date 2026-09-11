@@ -37,7 +37,9 @@ public final class ControllerUtils {
    * @return l'UUID, ou {@code null} si {@code valeur} est absente ou mal formée
    */
   public static UUID parseUuid(final String valeur) {
-    if (valeur == null || valeur.isBlank()) return null;
+    if (valeur == null || valeur.isBlank()) {
+      return null;
+    }
     try {
       return UUID.fromString(valeur);
     } catch (IllegalArgumentException e) {

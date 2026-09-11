@@ -94,7 +94,9 @@ public class EnrichissementSallesService {
 
     int nbEnrichis = 0;
     for (int i = 0; i < candidats.size(); i += TAILLE_LOT_PERSISTANCE) {
-      if (i > 0) EnrichissementUtils.attendreEntreLots(DELAI_ENTRE_LOTS_MS);
+      if (i > 0) {
+        EnrichissementUtils.attendreEntreLots(DELAI_ENTRE_LOTS_MS);
+      }
       final List<SalleAEnrichir> lot =
           candidats.subList(i, Math.min(i + TAILLE_LOT_PERSISTANCE, candidats.size()));
       nbEnrichis += enrichirEtPersisterLot(lot);
@@ -130,9 +132,13 @@ public class EnrichissementSallesService {
    * @param nbEnrichis nombre de salles effectivement enrichies
    */
   private void alerterSiCycleImproductif(int nbCandidats, int nbEnrichis) {
-    if (nbCandidats < SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF) return;
+    if (nbCandidats < SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF) {
+      return;
+    }
     final double tauxReussite = (double) nbEnrichis / nbCandidats;
-    if (tauxReussite >= SEUIL_TAUX_REUSSITE_MIN_CYCLE) return;
+    if (tauxReussite >= SEUIL_TAUX_REUSSITE_MIN_CYCLE) {
+      return;
+    }
     logsAdminWorker.inserer(
         "warn",
         "reconciliation-nocturne",
@@ -153,9 +159,13 @@ public class EnrichissementSallesService {
    */
   private void remonterBilans() {
     for (SourceEnrichissementSalle source : sources) {
-      if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
+      if (!(source instanceof SourceAvecBilanFetch avecBilan)) {
+        continue;
+      }
       final BilanFetch bilan = avecBilan.preleverBilan();
-      if (bilan.appels() == 0) continue;
+      if (bilan.appels() == 0) {
+        continue;
+      }
       final int streak =
           suiviChronicite.enregistrerCycle(
               "reconciliation:nocturne|" + EnrichissementUtils.capitaliser(source.nom()),
@@ -189,8 +199,12 @@ public class EnrichissementSallesService {
     int nbEnrichis = 0;
     for (SalleAEnrichir salle : lot) {
       final EnrichissementSalle enrichissement = accumule.get(salle.id());
-      if (enrichissement == null) continue;
-      if (mettreAJourSalle(salle.id(), salle.nom(), enrichissement)) nbEnrichis++;
+      if (enrichissement == null) {
+        continue;
+      }
+      if (mettreAJourSalle(salle.id(), salle.nom(), enrichissement)) {
+        nbEnrichis++;
+      }
     }
     return nbEnrichis;
   }
@@ -331,7 +345,9 @@ public class EnrichissementSallesService {
         jdbc.queryForList(
             "SELECT latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)",
             Map.of("id", salleId.toString()));
-    if (lignes.isEmpty()) return false;
+    if (lignes.isEmpty()) {
+      return false;
+    }
     final Double latSalle = (Double) lignes.get(0).get("latitude");
     final Double lonSalle = (Double) lignes.get(0).get("longitude");
     final Double latPorteuse = (Double) porteuse.get("latitude");

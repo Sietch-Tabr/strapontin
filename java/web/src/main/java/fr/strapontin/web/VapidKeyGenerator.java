@@ -64,7 +64,9 @@ public final class VapidKeyGenerator {
 
   private static byte[] vers32Octets(final BigInteger n) {
     final byte[] raw = n.toByteArray();
-    if (raw.length == 32) return raw;
+    if (raw.length == 32) {
+      return raw;
+    }
     final byte[] result = new byte[32];
     if (raw.length > 32) {
       System.arraycopy(raw, raw.length - 32, result, 0, 32);

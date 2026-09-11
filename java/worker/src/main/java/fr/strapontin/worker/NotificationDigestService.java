@@ -204,8 +204,12 @@ public class NotificationDigestService {
                   groupes.emailsUtilisateurs().get(userId),
                   concerts,
                   groupes.configsUtilisateurs().get(userId));
-          if (res.emailOk()) nbEmailsOk++;
-          if (res.pushOk()) nbPushOk++;
+          if (res.emailOk()) {
+            nbEmailsOk++;
+          }
+          if (res.pushOk()) {
+            nbPushOk++;
+          }
           // Seuls les concerts du canal effectivement en succès sont marqués notifiés :
           // un digest mixte email+push où un seul canal échoue ne doit pas marquer à tort les
           // concerts du canal en échec comme notifiés.
@@ -407,7 +411,9 @@ public class NotificationDigestService {
   }
 
   private boolean envoyerEmail(final String email, final List<ConcertNotif> concerts) {
-    if (concerts.isEmpty()) return false;
+    if (concerts.isEmpty()) {
+      return false;
+    }
     final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) {
       log.debug("RESEND_API_KEY absent — digest email ignoré");
@@ -467,13 +473,19 @@ public class NotificationDigestService {
    * @return issue de l'envoi
    */
   static ResultatEnvoiPush interpreterStatutPush(final int status) {
-    if (status == 404 || status == 410) return ResultatEnvoiPush.ABONNEMENT_MORT;
-    if (status >= 200 && status < 300) return ResultatEnvoiPush.SUCCES;
+    if (status == 404 || status == 410) {
+      return ResultatEnvoiPush.ABONNEMENT_MORT;
+    }
+    if (status >= 200 && status < 300) {
+      return ResultatEnvoiPush.SUCCES;
+    }
     return ResultatEnvoiPush.ECHEC;
   }
 
   private boolean envoyerPush(final String userId, final List<ConcertNotif> concerts) {
-    if (concerts.isEmpty()) return false;
+    if (concerts.isEmpty()) {
+      return false;
+    }
     final Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
     final Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
     if (clePublique.isEmpty() || clePrivee.isEmpty()) {
@@ -484,7 +496,9 @@ public class NotificationDigestService {
         jdbc.queryForList(
             "SELECT id, endpoint, p256dh, auth FROM push_abonnements WHERE user_id = :userId",
             Map.of("userId", userId));
-    if (abonnements.isEmpty()) return false;
+    if (abonnements.isEmpty()) {
+      return false;
+    }
 
     final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     final String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
@@ -530,7 +544,9 @@ public class NotificationDigestService {
         log.warn("Push: échec envoi pour {} — {}", userId, ab.get("endpoint"), e);
       }
     }
-    if (nbEnvoyes > 0) log.info("Push digest envoyé : {} ({} abonnement(s))", userId, nbEnvoyes);
+    if (nbEnvoyes > 0) {
+      log.info("Push digest envoyé : {} ({} abonnement(s))", userId, nbEnvoyes);
+    }
     return nbEnvoyes > 0;
   }
 
@@ -585,8 +601,12 @@ public class NotificationDigestService {
     final StringBuilder corps = new StringBuilder();
     String artistePrecedent = null;
     for (ConcertNotif c : concerts) {
-      if (artistePrecedent != null && !artistePrecedent.equals(c.artiste())) corps.append('\n');
-      if (!corps.isEmpty()) corps.append('\n');
+      if (artistePrecedent != null && !artistePrecedent.equals(c.artiste())) {
+        corps.append('\n');
+      }
+      if (!corps.isEmpty()) {
+        corps.append('\n');
+      }
       corps
           .append(c.artiste())
           .append(" · ")

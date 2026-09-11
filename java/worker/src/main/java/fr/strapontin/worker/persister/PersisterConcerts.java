@@ -236,7 +236,9 @@ public class PersisterConcerts {
     for (ValeurConcert c : concerts) {
       if (c.salleSourceId() != null && cachesSalles.get(c.salleSourceId()) == null) {
         final UUID uuid = reconciliateurSalles.upsertSalleSource(c);
-        if (uuid != null) cachesSalles.put(c.salleSourceId(), uuid);
+        if (uuid != null) {
+          cachesSalles.put(c.salleSourceId(), uuid);
+        }
       }
     }
 
@@ -271,7 +273,9 @@ public class PersisterConcerts {
           c.salleSourceId() == null || mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus);
       if (besoinFallback && !cachesSallesParNom.containsKey(c.salleNorm())) {
         UUID salleId = reconciliateurSalles.chercherSalleParTokens(c.salle(), c.dept());
-        if (salleId == null) salleId = reconciliateurSalles.chercherSalleParCleForte(c);
+        if (salleId == null) {
+          salleId = reconciliateurSalles.chercherSalleParCleForte(c);
+        }
         cachesSallesParNom.put(c.salleNorm(), salleId);
       }
     }
@@ -289,7 +293,9 @@ public class PersisterConcerts {
                           : cachesSallesParNom.get(c.salleNorm());
                   final UUID artisteId =
                       c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
-                  if (salleId == null && artisteId == null) return c;
+                  if (salleId == null && artisteId == null) {
+                    return c;
+                  }
                   return c.avecUuids(
                       salleId != null ? salleId : c.salleId(),
                       artisteId != null ? artisteId : c.artisteId());
@@ -311,7 +317,9 @@ public class PersisterConcerts {
    */
   private static boolean mappingSalleIncoherent(
       final UUID salleMappee, final String deptEntrant, final Map<UUID, String> deptsConnus) {
-    if (salleMappee == null || deptEntrant == null) return false;
+    if (salleMappee == null || deptEntrant == null) {
+      return false;
+    }
     final String deptConnu = deptsConnus.get(salleMappee);
     return deptConnu != null && !deptConnu.equals(deptEntrant);
   }
@@ -337,7 +345,9 @@ public class PersisterConcerts {
    * @return résultat avec nombre d'insertions et de mises à jour
    */
   public ResultatPersistance persisterConcerts(final List<ConcertBrut> liste) {
-    if (liste.isEmpty()) return new ResultatPersistance(0, 0);
+    if (liste.isEmpty()) {
+      return new ResultatPersistance(0, 0);
+    }
 
     final List<ConcertBrut> apresDedup = deduplicerParCleConflit(liste);
     final List<ConcertBrut> listeFiltree =

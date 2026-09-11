@@ -57,9 +57,13 @@ public record BilanFetch(int appels, int erreursHttp) {
    * @return entrée à journaliser, vide si rien à signaler
    */
   public Optional<EntreeLog> evaluer(final String typeJob, final String nomSource, final int seuilAppelsMin) {
-    if (appels == 0) return Optional.empty();
+    if (appels == 0) {
+      return Optional.empty();
+    }
     final boolean panneTotale = panneTotale(seuilAppelsMin);
-    if (!panneTotale && erreursHttp == 0) return Optional.empty();
+    if (!panneTotale && erreursHttp == 0) {
+      return Optional.empty();
+    }
 
     final String niveau = panneTotale ? "error" : "warn";
     final String message =

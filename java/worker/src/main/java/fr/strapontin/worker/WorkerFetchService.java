@@ -295,7 +295,9 @@ public class WorkerFetchService {
   private static final String SQL_ABSENCES_SALLE = SQL_ABSENCES_BASE.formatted("salle_id");
 
   private void mettreAJourAbsences(final String colonne, final List<String> ids, final String debutCycle) {
-    if (ids.isEmpty()) return;
+    if (ids.isEmpty()) {
+      return;
+    }
     final String sql =
         switch (colonne) {
           case "artiste_id" -> SQL_ABSENCES_ARTISTE;
@@ -374,7 +376,9 @@ public class WorkerFetchService {
       final String nom = (String) row.get("artiste_affiche");
       final String artisteIdStr = (String) row.get("artiste_id_str");
       String attractionId = (String) row.get("attraction_id");
-      if (attractionIdAmbigu(row, nom, artisteIdStr)) continue;
+      if (attractionIdAmbigu(row, nom, artisteIdStr)) {
+        continue;
+      }
       if (attractionId == null) {
         attractionId = rechercherEtEnregistrerAttractionId(nom, artisteIdStr);
       }
@@ -390,7 +394,9 @@ public class WorkerFetchService {
   private boolean attractionIdAmbigu(final Map<String, Object> row, final String nom, final String artisteIdStr) {
     final Number nbIdsDistinctsNum = (Number) row.get("nb_ids_distincts");
     final int nbIdsDistincts = nbIdsDistinctsNum != null ? nbIdsDistinctsNum.intValue() : 0;
-    if (nbIdsDistincts <= 1) return false;
+    if (nbIdsDistincts <= 1) {
+      return false;
+    }
     log.warn(
         "artiste_sources ambigu — {} identifiant_externe ticketmaster distincts pour"
             + " artiste={} artisteId={}, fetch TM ignoré ce cycle",
@@ -532,7 +538,9 @@ public class WorkerFetchService {
     for (String[] depts : allDepts) {
       if (depts != null) {
         for (String d : depts) {
-          if (d != null && !d.isBlank()) tousLesDepts.add(d.trim());
+          if (d != null && !d.isBlank()) {
+            tousLesDepts.add(d.trim());
+          }
         }
       }
     }
@@ -600,7 +608,9 @@ public class WorkerFetchService {
    */
   public void executerFetchSalle(final String identifiantsStr) {
     log.info("fetch:salle démarré identifiants={}", identifiantsStr);
-    if (!gestionQuotaTM.verifier("fetch:salle")) return;
+    if (!gestionQuotaTM.verifier("fetch:salle")) {
+      return;
+    }
 
     final String[] identifiants = identifiantsStr.split(",");
     final List<ConcertBrut> concerts = new ArrayList<>();
@@ -791,14 +801,18 @@ public class WorkerFetchService {
    * @return {@code nomDeezer}, ou {@code nomBrut} si un {@code nom_affiche} déjà connu diverge
    */
   private String nomCanoniqueValideOuBrut(final String nomBrut, final String nomDeezer) {
-    if (nomDeezer.equals(nomBrut)) return nomDeezer;
+    if (nomDeezer.equals(nomBrut)) {
+      return nomDeezer;
+    }
     final List<String> nomsAffiches =
         jdbc.query(
             "SELECT nom_affiche FROM artistes WHERE nom_norm = :nomNorm AND nom_affiche IS NOT"
                 + " NULL",
             Map.of("nomNorm", Normalisation.normaliserTexte(nomBrut)),
             (rs, _) -> rs.getString("nom_affiche"));
-    if (nomsAffiches.isEmpty()) return nomDeezer;
+    if (nomsAffiches.isEmpty()) {
+      return nomDeezer;
+    }
     final String nomAffiche = nomsAffiches.get(0);
     if (CorrespondanceArtiste.estDoublonArtiste(
         Normalisation.normaliserTexte(nomAffiche), Normalisation.normaliserTexte(nomDeezer))) {
@@ -833,9 +847,13 @@ public class WorkerFetchService {
     return dedoublonnes.stream()
         .map(
             c -> {
-              if (!estEligibleResolutionDeezer(c)) return c;
+              if (!estEligibleResolutionDeezer(c)) {
+                return c;
+              }
               final String nomResolu = tableauResolution.getOrDefault(c.artiste(), c.artiste());
-              if (nomResolu.equals(c.artiste())) return c;
+              if (nomResolu.equals(c.artiste())) {
+                return c;
+              }
               return new ConcertBrut(
                   nomResolu,
                   c.date(),
@@ -858,7 +876,9 @@ public class WorkerFetchService {
 
   private void sauvegarderQuota() {
     final var quota = tm.obtenirQuota();
-    if (quota != null) gestionQuotaTM.ecrireQuota(quota);
+    if (quota != null) {
+      gestionQuotaTM.ecrireQuota(quota);
+    }
   }
 
   private void attendreRateLimit() {

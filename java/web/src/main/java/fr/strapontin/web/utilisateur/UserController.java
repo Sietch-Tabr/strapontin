@@ -199,7 +199,9 @@ public class UserController {
     }
     utilisateurRepository.supprimer(details.id());
     final HttpSession session = httpRequest.getSession(false);
-    if (session != null) session.invalidate();
+    if (session != null) {
+      session.invalidate();
+    }
     SecurityContextHolder.clearContext();
     return ResponseEntity.noContent().build();
   }

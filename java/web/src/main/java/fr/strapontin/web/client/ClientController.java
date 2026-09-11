@@ -86,7 +86,9 @@ public class ClientController {
   }
 
   private String tronquer(final String valeur, final int max) {
-    if (valeur == null) return null;
+    if (valeur == null) {
+      return null;
+    }
     return valeur.length() > max ? valeur.substring(0, max) : valeur;
   }
 }

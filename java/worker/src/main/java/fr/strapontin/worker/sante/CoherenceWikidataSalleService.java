@@ -91,20 +91,28 @@ public class CoherenceWikidataSalleService {
     int incoherences = 0;
     for (SalleAEnrichir salle : candidats) {
       final EnrichissementSalle enrichissement = resultats.get(salle.id());
-      if (enrichissement == null) continue;
+      if (enrichissement == null) {
+        continue;
+      }
       final String communeWikidata = enrichissement.ville();
-      if (communeWikidata == null || communeWikidata.isBlank()) continue;
+      if (communeWikidata == null || communeWikidata.isBlank()) {
+        continue;
+      }
       final Coherence coherence =
           evaluerCoherence(salle, communeWikidata, villesConcertsReelles.get(salle.id()));
       final String signatureConnue = signaturesDejaSignalees.get(salle.id());
       if (coherence == Coherence.COHERENTE) {
-        if (signatureConnue != null) memoriserSignature(salle.id(), null);
+        if (signatureConnue != null) {
+          memoriserSignature(salle.id(), null);
+        }
         continue;
       }
       incoherences++;
       final boolean partielle = coherence == Coherence.INCOHERENTE_PARTIELLE;
       final String signature = communeWikidata + "|" + partielle;
-      if (signature.equals(signatureConnue)) continue;
+      if (signature.equals(signatureConnue)) {
+        continue;
+      }
       memoriserSignature(salle.id(), signature);
       loggerIncoherence(salle, communeWikidata, partielle);
     }
@@ -162,7 +170,9 @@ public class CoherenceWikidataSalleService {
    * incohérence signalée a depuis été résolue.
    */
   private Map<UUID, String> chargerSignaturesDejaSignalees(final List<UUID> salleIds) {
-    if (salleIds.isEmpty()) return Map.of();
+    if (salleIds.isEmpty()) {
+      return Map.of();
+    }
     final Map<UUID, String> parSalle = new HashMap<>();
     jdbc.query(
         "SELECT id, coherence_wikidata_signalee FROM salles"
@@ -195,7 +205,9 @@ public class CoherenceWikidataSalleService {
    *   (ex. tous les concerts passés déjà purgés)
    */
   private Map<UUID, List<String>> chargerVillesConcertsReelles(final List<UUID> salleIds) {
-    if (salleIds.isEmpty()) return Map.of();
+    if (salleIds.isEmpty()) {
+      return Map.of();
+    }
     final Map<UUID, List<String>> parSalle = new HashMap<>();
     jdbc.query(
         "SELECT DISTINCT salle_id, ville FROM concerts"
@@ -247,7 +259,9 @@ public class CoherenceWikidataSalleService {
     if (villesConcertsReelles != null && !villesConcertsReelles.isEmpty()) {
       final long nbCoherentes =
           villesConcertsReelles.stream().filter(v -> villesCoherentes(v, communeWikidata)).count();
-      if (nbCoherentes == villesConcertsReelles.size()) return Coherence.COHERENTE;
+      if (nbCoherentes == villesConcertsReelles.size()) {
+        return Coherence.COHERENTE;
+      }
       return nbCoherentes > 0 ? Coherence.INCOHERENTE_PARTIELLE : Coherence.INCOHERENTE_TOTALE;
     }
     return villesCoherentes(salle.ville(), communeWikidata)
@@ -287,7 +301,9 @@ public class CoherenceWikidataSalleService {
   private static boolean villesCoherentes(final String villeSalle, final String communeWikidata) {
     final String villeSalleNorm = Normalisation.normaliserVille(villeSalle);
     final String communeNorm = Normalisation.normaliserVille(communeWikidata);
-    if (villeSalleNorm.equals(communeNorm)) return true;
+    if (villeSalleNorm.equals(communeNorm)) {
+      return true;
+    }
     if (!Collections.disjoint(canonicaliser(villeSalleNorm), canonicaliser(communeNorm))) {
       return true;
     }
@@ -296,9 +312,13 @@ public class CoherenceWikidataSalleService {
 
   private static Set<String> canonicaliser(final String villeNorm) {
     final Matcher matcher = ARRONDISSEMENT.matcher(villeNorm);
-    if (matcher.matches()) return Set.of(matcher.group(2));
+    if (matcher.matches()) {
+      return Set.of(matcher.group(2));
+    }
     final Set<String> quartier = QUARTIERS_EQUIVALENTS.get(villeNorm);
-    if (quartier != null) return quartier;
+    if (quartier != null) {
+      return quartier;
+    }
     return Set.of(villeNorm);
   }
 

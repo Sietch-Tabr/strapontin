@@ -65,11 +65,17 @@ public class DeriveVolumeFetchService {
    */
   public void verifier(final String typeJob, final int volumeCourant, final Timestamp avant) {
     final List<Integer> historique = lireVolumesRecents(typeJob, avant);
-    if (historique.size() < NB_EXECUTIONS_MOYENNE) return;
+    if (historique.size() < NB_EXECUTIONS_MOYENNE) {
+      return;
+    }
 
     final double moyenne = historique.stream().mapToInt(Integer::intValue).average().orElse(0);
-    if (moyenne < VOLUME_MOYEN_MIN_SIGNIFICATIF) return;
-    if (volumeCourant >= moyenne * (1 - SEUIL_DERIVE)) return;
+    if (moyenne < VOLUME_MOYEN_MIN_SIGNIFICATIF) {
+      return;
+    }
+    if (volumeCourant >= moyenne * (1 - SEUIL_DERIVE)) {
+      return;
+    }
 
     log.warn(
         "derive:volume typeJob={} volume={} moyenne{}={}",

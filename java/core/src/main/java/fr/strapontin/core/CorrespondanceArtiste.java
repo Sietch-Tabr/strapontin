@@ -45,13 +45,19 @@ public final class CorrespondanceArtiste {
   public static boolean estDoublonArtiste(final String a, final String b) {
     Objects.requireNonNull(a, "a");
     Objects.requireNonNull(b, "b");
-    if (a.equals(b)) return true;
-    if (Normalisation.jaro(a, b) >= SEUIL_JARO_ARTISTE) return true;
+    if (a.equals(b)) {
+      return true;
+    }
+    if (Normalisation.jaro(a, b) >= SEUIL_JARO_ARTISTE) {
+      return true;
+    }
     if (UtilitairesChaine.estContainmentRatio(
         a, b, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE)) {
       return true;
     }
-    if (UtilitairesChaine.estEgaliteSansEspaces(a, b)) return true;
+    if (UtilitairesChaine.estEgaliteSansEspaces(a, b)) {
+      return true;
+    }
     return estPrefixeDeMotComplet(a, b);
   }
 

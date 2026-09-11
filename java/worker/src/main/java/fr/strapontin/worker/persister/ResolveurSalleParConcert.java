@@ -57,7 +57,9 @@ class ResolveurSalleParConcert {
    */
   UUID upsertSalleSource(final ValeurConcert c) {
     final int sep = c.salleSourceId().indexOf(':');
-    if (sep <= 0) return null;
+    if (sep <= 0) {
+      return null;
+    }
     final String source = c.salleSourceId().substring(0, sep);
     final String identifiant = c.salleSourceId().substring(sep + 1);
 
@@ -114,7 +116,9 @@ class ResolveurSalleParConcert {
               UUID.class);
     }
 
-    if (salleId == null) return null;
+    if (salleId == null) {
+      return null;
+    }
 
     // salles.dept n'était écrit qu'à la création puis jamais mis à jour — 281/284 salles
     // sans dept en prod avaient pourtant l'info via un concert déjà lié. COALESCE : n'écrase
@@ -195,7 +199,9 @@ class ResolveurSalleParConcert {
     final String nomNorm = Normalisation.normaliserTexte(nom);
     final Set<String> tokens = CorrespondanceSalle.tokensSignificatifs(nomNorm);
     final String nomNormSquash = nomNorm.replace(" ", "");
-    if (tokens.isEmpty() && nomNormSquash.isEmpty()) return null;
+    if (tokens.isEmpty() && nomNormSquash.isEmpty()) {
+      return null;
+    }
 
     final List<Map<String, Object>> lignes = requeterCandidatsParTokens(tokens, nomNormSquash, dept);
     return meilleurCandidatValide(nom, nomNorm, lignes);
@@ -206,10 +212,14 @@ class ResolveurSalleParConcert {
     final List<String> tokensList = new ArrayList<>(tokens);
     final StringBuilder sbWhere = new StringBuilder("(");
     for (int i = 0; i < tokensList.size(); i++) {
-      if (i > 0) sbWhere.append(" OR ");
+      if (i > 0) {
+        sbWhere.append(" OR ");
+      }
       sbWhere.append("nom_norm LIKE :t").append(i);
     }
-    if (!tokensList.isEmpty()) sbWhere.append(" OR ");
+    if (!tokensList.isEmpty()) {
+      sbWhere.append(" OR ");
+    }
     sbWhere.append("replace(nom_norm, ' ', '') = :nomNormSquash)");
     final String whereTokens = sbWhere.toString();
 
@@ -263,8 +273,12 @@ class ResolveurSalleParConcert {
       final UUID uuid = (UUID) ligne.get("id");
       final String nomCandidat = (String) ligne.get("nom");
       final String nomNormCandidat = (String) ligne.get("nom_norm");
-      if (!CorrespondanceSalle.estDoublonSalle(nomNorm, nomNormCandidat)) continue;
-      if (CorrespondanceSalle.qualificatifsDivergents(nom, nomCandidat)) continue;
+      if (!CorrespondanceSalle.estDoublonSalle(nomNorm, nomNormCandidat)) {
+        continue;
+      }
+      if (CorrespondanceSalle.qualificatifsDivergents(nom, nomCandidat)) {
+        continue;
+      }
       final double score = CorrespondanceSalle.jaccardTokens(nomNorm, nomNormCandidat);
       if (score > meilleurScore) {
         meilleurScore = score;
@@ -300,10 +314,14 @@ class ResolveurSalleParConcert {
    */
   private UUID resoudreSousSalle(final String nom, final String dept) {
     final String base = CorrespondanceSalle.extraireBase(nom);
-    if (base == null) return null;
+    if (base == null) {
+      return null;
+    }
 
     final UUID complexeId = chercherSalleParTokens(base, dept);
-    if (complexeId == null) return null;
+    if (complexeId == null) {
+      return null;
+    }
 
     final String salleCle = Normalisation.normaliserTexte(nom);
     // MapSqlParameterSource plutôt que Map.of — dept peut être null ici (Map.of lève une NPE sur
@@ -348,7 +366,9 @@ class ResolveurSalleParConcert {
    * @return UUID de la salle du concert existant correspondant, ou {@code null} si aucun
    */
   UUID chercherSalleParCleForte(final ValeurConcert c) {
-    if (c.heure() == null || c.dept() == null || c.artisteNorm() == null) return null;
+    if (c.heure() == null || c.dept() == null || c.artisteNorm() == null) {
+      return null;
+    }
     final List<UUID> candidats =
         jdbc.query(
             "SELECT DISTINCT salle_id FROM concerts"
@@ -362,7 +382,9 @@ class ResolveurSalleParConcert {
                 "heure", c.heure(),
                 "dept", c.dept()),
             (rs, _) -> rs.getObject("salle_id", UUID.class));
-    if (candidats.isEmpty()) return null;
+    if (candidats.isEmpty()) {
+      return null;
+    }
 
     final UUID salleId = premierCandidatGeographiquementCoherent(candidats, c.dept());
     if (salleId == null) {
@@ -401,7 +423,9 @@ class ResolveurSalleParConcert {
     final Map<UUID, String> depts = deptsConnus(new HashSet<>(candidats));
     for (UUID candidat : candidats) {
       final String deptConnu = depts.get(candidat);
-      if (deptConnu == null || deptConnu.equals(deptEntrant)) return candidat;
+      if (deptConnu == null || deptConnu.equals(deptEntrant)) {
+        return candidat;
+      }
     }
     return null;
   }
@@ -434,7 +458,9 @@ class ResolveurSalleParConcert {
   List<ValeurConcert> raccrocherSallesParNomNorm(final List<ValeurConcert> concerts) {
     final Set<UUID> salleIdsExistants = new HashSet<>();
     for (ValeurConcert c : concerts) {
-      if (c.salleId() != null) salleIdsExistants.add(c.salleId());
+      if (c.salleId() != null) {
+        salleIdsExistants.add(c.salleId());
+      }
     }
     final Map<UUID, String> nomNormParSalleId = nomNormConnus(salleIdsExistants);
 
@@ -444,7 +470,9 @@ class ResolveurSalleParConcert {
             .map(ValeurConcert::salleNorm)
             .distinct()
             .toList();
-    if (sallesNormsARattacher.isEmpty()) return concerts;
+    if (sallesNormsARattacher.isEmpty()) {
+      return concerts;
+    }
 
     final Map<String, List<Map<String, Object>>> candidatsParNomNorm = new HashMap<>();
     jdbc.queryForList(
@@ -463,9 +491,13 @@ class ResolveurSalleParConcert {
     return concerts.stream()
         .map(
             c -> {
-              if (!salleIdDivergent(c, nomNormParSalleId)) return c;
+              if (!salleIdDivergent(c, nomNormParSalleId)) {
+                return c;
+              }
               final List<Map<String, Object>> candidats = candidatsParNomNorm.get(c.salleNorm());
-              if (candidats == null) return c;
+              if (candidats == null) {
+                return c;
+              }
               for (Map<String, Object> candidat : candidats) {
                 final String deptEffectif = (String) candidat.get("dept_effectif");
                 if (c.dept() == null || deptEffectif == null || deptEffectif.equals(c.dept())) {
@@ -484,7 +516,9 @@ class ResolveurSalleParConcert {
    *   réalignement sans confirmation positive de la divergence)
    */
   private static boolean salleIdDivergent(final ValeurConcert c, final Map<UUID, String> nomNormParSalleId) {
-    if (c.salleId() == null) return true;
+    if (c.salleId() == null) {
+      return true;
+    }
     final String nomNormActuel = nomNormParSalleId.get(c.salleId());
     return nomNormActuel != null && !nomNormActuel.equals(c.salleNorm());
   }
@@ -496,7 +530,9 @@ class ResolveurSalleParConcert {
    * @return {@code nom_norm} par salle
    */
   private Map<UUID, String> nomNormConnus(final Set<UUID> salleIds) {
-    if (salleIds.isEmpty()) return Map.of();
+    if (salleIds.isEmpty()) {
+      return Map.of();
+    }
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT id, nom_norm FROM salles WHERE id IN (:ids)", Map.of("ids", salleIds));
@@ -518,7 +554,9 @@ class ResolveurSalleParConcert {
    *   salles.dept}, ni aucun concert déjà rattaché)
    */
   Map<UUID, String> deptsConnus(final Set<UUID> salleIds) {
-    if (salleIds.isEmpty()) return Map.of();
+    if (salleIds.isEmpty()) {
+      return Map.of();
+    }
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT s.id AS id, COALESCE(s.dept, (SELECT c.dept FROM concerts c"
@@ -528,7 +566,9 @@ class ResolveurSalleParConcert {
     final Map<UUID, String> resultat = new HashMap<>();
     for (var ligne : lignes) {
       final String dept = (String) ligne.get("dept");
-      if (dept != null) resultat.put((UUID) ligne.get("id"), dept);
+      if (dept != null) {
+        resultat.put((UUID) ligne.get("id"), dept);
+      }
     }
     return resultat;
   }

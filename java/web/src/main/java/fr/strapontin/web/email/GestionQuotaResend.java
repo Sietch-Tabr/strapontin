@@ -53,7 +53,9 @@ class GestionQuotaResend {
       final String json =
           jdbc.queryForObject(
               "SELECT valeur_chiffree FROM app_config WHERE cle = ?", String.class, CLE_QUOTA);
-      if (json == null) return Optional.empty();
+      if (json == null) {
+        return Optional.empty();
+      }
       return Optional.of(objectMapper.readValue(json, CompteurEnvoisResend.class));
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
@@ -89,7 +91,9 @@ class GestionQuotaResend {
       final CompteurEnvoisResend c, final String jour, final String mois) {
     final boolean jourChange = !jour.equals(c.jour());
     final boolean moisChange = !mois.equals(c.mois());
-    if (!jourChange && !moisChange) return c;
+    if (!jourChange && !moisChange) {
+      return c;
+    }
     return new CompteurEnvoisResend(
         jour,
         jourChange ? 0 : c.envoyesJour(),

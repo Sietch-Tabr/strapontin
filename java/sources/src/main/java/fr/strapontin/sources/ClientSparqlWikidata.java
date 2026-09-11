@@ -150,9 +150,13 @@ final class ClientSparqlWikidata {
   }
 
   private static Optional<Long> extraireRetryAfterMs(final HttpHeaders headers) {
-    if (headers == null) return Optional.empty();
+    if (headers == null) {
+      return Optional.empty();
+    }
     final String valeur = headers.getFirst("Retry-After");
-    if (valeur == null) return Optional.empty();
+    if (valeur == null) {
+      return Optional.empty();
+    }
     try {
       return Optional.of(Long.parseLong(valeur) * 1000);
     } catch (NumberFormatException e) {
@@ -192,7 +196,9 @@ final class ClientSparqlWikidata {
   @SuppressWarnings("unchecked")
   static List<Map<String, Object>> extraireBindings(final Map<String, Object> data) {
     final var results = (Map<String, Object>) data.get("results");
-    if (results == null) return List.of();
+    if (results == null) {
+      return List.of();
+    }
     final var bindings = (List<Map<String, Object>>) results.get("bindings");
     return bindings != null ? bindings : List.of();
   }

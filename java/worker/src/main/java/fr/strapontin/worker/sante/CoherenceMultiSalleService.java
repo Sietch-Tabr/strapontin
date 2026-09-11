@@ -67,7 +67,9 @@ public class CoherenceMultiSalleService {
                 WHERE ss.identifiant_externe LIKE :prefixe
                 """,
             Map.of("prefixe", PREFIXE_INTERNAL + "%"));
-    if (lignes.isEmpty()) return 0;
+    if (lignes.isEmpty()) {
+      return 0;
+    }
 
     final Map<UUID, List<String>> nomsExtraitsParSalle = new HashMap<>();
     final Map<UUID, String> nomNormParSalle = new HashMap<>();
@@ -93,10 +95,14 @@ public class CoherenceMultiSalleService {
               .sorted()
               .toList();
       final String signatureActuelle = mesententes.isEmpty() ? null : String.join("|", mesententes);
-      if (Objects.equals(signatureActuelle, signaleeParSalle.get(salleId))) continue;
+      if (Objects.equals(signatureActuelle, signaleeParSalle.get(salleId))) {
+        continue;
+      }
 
       memoriserContaminationSignalee(salleId, signatureActuelle);
-      if (signatureActuelle == null) continue;
+      if (signatureActuelle == null) {
+        continue;
+      }
       signalees++;
       logsAdminWorker.inserer(
           "warn",
@@ -134,8 +140,12 @@ public class CoherenceMultiSalleService {
    * deux cas dès qu'un côté est bien plus long ou bien plus court que l'autre.
    */
   private static boolean estContaminationReelle(final String nomExtrait, final String nomNormSalle) {
-    if (CorrespondanceSalle.estDoublonSalle(nomExtrait, nomNormSalle)) return false;
-    if (nomContenuDansLAutre(nomExtrait, nomNormSalle)) return false;
+    if (CorrespondanceSalle.estDoublonSalle(nomExtrait, nomNormSalle)) {
+      return false;
+    }
+    if (nomContenuDansLAutre(nomExtrait, nomNormSalle)) {
+      return false;
+    }
     return !estSigleDe(nomExtrait, nomNormSalle);
   }
 
@@ -148,14 +158,20 @@ public class CoherenceMultiSalleService {
     final String court = a.length() <= b.length() ? a : b;
     final String plusLong = a.length() <= b.length() ? b : a;
     final String sigleObserve = court.replace(" ", "");
-    if (sigleObserve.length() < LONGUEUR_MIN_SIGLE) return false;
+    if (sigleObserve.length() < LONGUEUR_MIN_SIGLE) {
+      return false;
+    }
 
     final String[] mots = plusLong.split("\\s+");
-    if (mots.length != sigleObserve.length()) return false;
+    if (mots.length != sigleObserve.length()) {
+      return false;
+    }
 
     final StringBuilder initiales = new StringBuilder();
     for (String mot : mots) {
-      if (mot.isEmpty()) return false;
+      if (mot.isEmpty()) {
+        return false;
+      }
       initiales.append(mot.charAt(0));
     }
     return initiales.toString().equals(sigleObserve);
@@ -189,16 +205,22 @@ public class CoherenceMultiSalleService {
         final UUID parentB = (UUID) b.get("salle_parent_id");
         // Un complexe et sa sous-salle déjà reliée ne sont jamais des doublons — leur nom qualifié
         // ("X - Y") satisferait sinon le containment de tokens ci-dessous par construction.
-        if (idA.equals(parentB) || idB.equals(parentA)) continue;
+        if (idA.equals(parentB) || idB.equals(parentA)) {
+          continue;
+        }
         final String deptA = (String) a.get("dept");
         final String deptB = (String) b.get("dept");
-        if (deptA != null && deptB != null && !deptA.equals(deptB)) continue;
+        if (deptA != null && deptB != null && !deptA.equals(deptB)) {
+          continue;
+        }
         if (!nomContenuDansLAutre((String) a.get("nom_norm"), (String) b.get("nom_norm"))) {
           continue;
         }
 
         final String dejaSignale = (String) a.get("doublon_signale");
-        if (idB.toString().equals(dejaSignale)) continue;
+        if (idB.toString().equals(dejaSignale)) {
+          continue;
+        }
 
         memoriserDoublonSignale(idA, idB);
         signalees++;
@@ -226,7 +248,9 @@ public class CoherenceMultiSalleService {
   private static boolean nomContenuDansLAutre(final String nomNormA, final String nomNormB) {
     final String court = nomNormA.length() <= nomNormB.length() ? nomNormA : nomNormB;
     final String plusLong = nomNormA.length() <= nomNormB.length() ? nomNormB : nomNormA;
-    if (court.length() < LONGUEUR_MIN_CONTAINMENT_DOUBLON) return false;
+    if (court.length() < LONGUEUR_MIN_CONTAINMENT_DOUBLON) {
+      return false;
+    }
     final Set<String> tokensCourt = CorrespondanceSalle.tokensSignificatifs(court);
     final Set<String> tokensLong = CorrespondanceSalle.tokensSignificatifs(plusLong);
     return !tokensCourt.isEmpty() && tokensLong.containsAll(tokensCourt);

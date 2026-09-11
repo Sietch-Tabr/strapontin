@@ -77,7 +77,9 @@ public class PreferencesController {
       return erreur(400, "Le fichier doit être au format JSON.");
     }
 
-    if (export == null) return erreur(400, "Fichier invalide ou format non reconnu.");
+    if (export == null) {
+      return erreur(400, "Fichier invalide ou format non reconnu.");
+    }
     if (export.version() != 1) {
       return erreur(422, "Version de fichier non supportée : " + export.version() + ".");
     }

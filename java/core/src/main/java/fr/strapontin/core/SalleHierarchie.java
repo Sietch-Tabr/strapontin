@@ -35,12 +35,18 @@ public final class SalleHierarchie {
    */
   public static boolean creeraitCycle(
       final UUID candidatParentId, final UUID salleId, final Function<UUID, UUID> lecteurParent) {
-    if (candidatParentId == null || salleId == null) return false;
+    if (candidatParentId == null || salleId == null) {
+      return false;
+    }
     UUID courant = candidatParentId;
     int profondeur = 0;
     while (courant != null) {
-      if (courant.equals(salleId)) return true;
-      if (++profondeur > PROFONDEUR_MAX) return true;
+      if (courant.equals(salleId)) {
+        return true;
+      }
+      if (++profondeur > PROFONDEUR_MAX) {
+        return true;
+      }
       courant = lecteurParent.apply(courant);
     }
     return false;

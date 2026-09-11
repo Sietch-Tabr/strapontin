@@ -78,7 +78,9 @@ public class RetryLotsService {
    */
   public void gererResultat(final String typeJob, final List<String> identifiantsEnEchec) {
     final ConfigRetry config = CONFIGS_PAR_TYPE_JOB.get(typeJob);
-    if (config == null) return;
+    if (config == null) {
+      return;
+    }
 
     final String cleChronicite = "retry:" + typeJob;
     if (identifiantsEnEchec.isEmpty()) {

@@ -103,7 +103,9 @@ public class WorkerProxyService {
       final Map<String, Instant> resultat = new HashMap<>();
       data.forEach(
           (k, v) -> {
-            if (v instanceof Number n) resultat.put(k, Instant.ofEpochMilli(n.longValue()));
+            if (v instanceof Number n) {
+              resultat.put(k, Instant.ofEpochMilli(n.longValue()));
+            }
           });
       return resultat;
     } catch (Exception e) {

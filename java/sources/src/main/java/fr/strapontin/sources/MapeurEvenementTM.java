@@ -47,13 +47,17 @@ final class MapeurEvenementTM {
   static String[] parseDateTM(final String dateStr, final String heureStr) {
     Objects.requireNonNull(dateStr, "dateStr");
     final String date = dateStr.substring(0, 10);
-    if (heureStr == null) return new String[] {date, null};
+    if (heureStr == null) {
+      return new String[]{date, null};
+    }
     final String heure = heureStr.substring(0, 5);
     return new String[] {date, "00:00".equals(heure) ? null : heure};
   }
 
   private static String normaliserClassification(final String nom) {
-    if (nom == null) return null;
+    if (nom == null) {
+      return null;
+    }
     return CLASSIFICATION_MAP.getOrDefault(nom, nom);
   }
 
@@ -107,7 +111,9 @@ final class MapeurEvenementTM {
       }
       return Normalisation.normaliserCasse(nomAttraction);
     }
-    if (artisteFallback == null) return null;
+    if (artisteFallback == null) {
+      return null;
+    }
     final String nomEvenement = (String) evt.get("name");
     if (nomEvenement != null
         && nomEvenement.toLowerCase().contains(artisteFallback.toLowerCase())) {
@@ -120,7 +126,9 @@ final class MapeurEvenementTM {
   private static String extraireAttractionIdTM(final Map<String, Object> embedded) {
     final List<Map<String, Object>> attractions =
         embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
-    if (attractions == null || attractions.isEmpty()) return null;
+    if (attractions == null || attractions.isEmpty()) {
+      return null;
+    }
     final Object id = attractions.get(0).get("id");
     return id != null ? "ticketmaster:" + id : null;
   }
@@ -213,13 +221,17 @@ final class MapeurEvenementTM {
     final var dates = (Map<String, Object>) evt.get("dates");
     final var start = dates != null ? (Map<String, Object>) dates.get("start") : null;
     final String dateStr = start != null ? (String) start.get("localDate") : null;
-    if (dateStr == null) return null;
+    if (dateStr == null) {
+      return null;
+    }
 
     final String[] datHeure = parseDateTM(dateStr, (String) start.get("localTime"));
 
     final var embedded = (Map<String, Object>) evt.get(CLE_EMBEDDED);
     final String artiste = extraireArtisteTM(evt, embedded, artisteFallback);
-    if (artiste == null) return null;
+    if (artiste == null) {
+      return null;
+    }
 
     final List<Map<String, Object>> venues =
         embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;

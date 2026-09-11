@@ -42,7 +42,9 @@ public final class RetrySerialisable {
       try {
         return operation.get();
       } catch (PessimisticLockingFailureException e) {
-        if (tentative >= maxTentatives) throw e;
+        if (tentative >= maxTentatives) {
+          throw e;
+        }
         log.warn(
             "Conflit de sérialisation lors de {} — nouvelle tentative ({}/{})",
             contexte,

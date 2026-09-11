@@ -76,8 +76,12 @@ public final class CorrespondanceSalle {
       final int longueurMinContainment,
       final double ratioMinContainment,
       final boolean containmentAutorise) {
-    if (a.equals(b)) return true;
-    if (Normalisation.similarite(a, b) >= seuilSimilarite) return true;
+    if (a.equals(b)) {
+      return true;
+    }
+    if (Normalisation.similarite(a, b) >= seuilSimilarite) {
+      return true;
+    }
     // Le containment de caractères (un nom court entièrement préfixe/suffixe d'un nom plus long)
     // n'a aucun pouvoir discriminant propre — "la prade" est un préfixe strict de "la pradella",
     // deux lieux réels sans rapport — désactivé au même titre que le pivot quand aucun signal de
@@ -126,10 +130,14 @@ public final class CorrespondanceSalle {
   public static double jaccardTokens(final String a, final String b) {
     final Set<String> tokensA = tokensSignificatifs(a);
     final Set<String> tokensB = tokensSignificatifs(b);
-    if (tokensA.isEmpty() && tokensB.isEmpty()) return 1.0;
+    if (tokensA.isEmpty() && tokensB.isEmpty()) {
+      return 1.0;
+    }
     final Set<String> union = new HashSet<>(tokensA);
     union.addAll(tokensB);
-    if (union.isEmpty()) return 0.0;
+    if (union.isEmpty()) {
+      return 0.0;
+    }
     final Set<String> intersection = new HashSet<>(tokensA);
     intersection.retainAll(tokensB);
     return (double) intersection.size() / union.size();
@@ -156,9 +164,13 @@ public final class CorrespondanceSalle {
    * @return {@code true} si tous les tokens de {@code specCourt} sont couverts
    */
   private static boolean estContainmentTokensPartiel(final Set<String> specCourt, final Set<String> specLong) {
-    if (specCourt.isEmpty() || specLong.isEmpty()) return false;
+    if (specCourt.isEmpty() || specLong.isEmpty()) {
+      return false;
+    }
     for (String tokenCourt : specCourt) {
-      if (tokenCourt.length() < LONGUEUR_MIN_CONTAINMENT_TOKEN) return false;
+      if (tokenCourt.length() < LONGUEUR_MIN_CONTAINMENT_TOKEN) {
+        return false;
+      }
       // La garde de longueur doit aussi s'appliquer au token du nom long : sans elle, un article
       // court comme "les" (issu d'un nom mal désapostrophé, ex. "lessaion") valide trivialement un
       // containment sans aucun rapport sémantique réel avec le nom recherché.
@@ -166,7 +178,9 @@ public final class CorrespondanceSalle {
               specLong.stream()
                       .filter(t -> t.length() >= LONGUEUR_MIN_CONTAINMENT_TOKEN)
                       .anyMatch(t -> t.contains(tokenCourt) || tokenCourt.contains(t));
-      if (!couvert) return false;
+      if (!couvert) {
+        return false;
+      }
     }
     return true;
   }
@@ -221,8 +235,12 @@ public final class CorrespondanceSalle {
         SEUIL_SIMILARITE_SALLE,
         LONGUEUR_MIN_CONTAINMENT_SALLE,
         RATIO_MIN_CONTAINMENT_SALLE,
-        pivotAutorise)) return true;
-    if (UtilitairesChaine.estEgaliteSansEspaces(a, b)) return true;
+        pivotAutorise)) {
+      return true;
+    }
+    if (UtilitairesChaine.estEgaliteSansEspaces(a, b)) {
+      return true;
+    }
 
     final Set<String> tokA = tokensSignificatifs(a);
     final Set<String> tokB = tokensSignificatifs(b);
@@ -231,7 +249,9 @@ public final class CorrespondanceSalle {
     final Set<String> intersectionSpec = intersection(specA, specB);
     final double jaccardSpec = jaccard(specA, specB, intersectionSpec);
 
-    if (estJaccardSpecifiqueSuffisant(specA, specB, jaccardSpec)) return true;
+    if (estJaccardSpecifiqueSuffisant(specA, specB, jaccardSpec)) {
+      return true;
+    }
     if (pivotAutorise && estPivotSpecifique(tokA, tokB, jaccardSpec, intersectionSpec)) {
       return true;
     }
@@ -274,7 +294,9 @@ public final class CorrespondanceSalle {
   // quel autre nom partageant ce token comme simple nom de ville ("Théâtre Rive Gauche Paris 14",
   // "Cathédrale Américaine Paris 08"...), sans aucun rapport avec le lieu recherché.
   private static boolean estContainmentPartielSuffisant(final Set<String> specA, final Set<String> specB) {
-    if (specA.size() < 2 || specB.size() < 2) return false;
+    if (specA.size() < 2 || specB.size() < 2) {
+      return false;
+    }
     final Set<String> specCourt = specA.size() <= specB.size() ? specA : specB;
     final Set<String> specLong = specA.size() <= specB.size() ? specB : specA;
     return estContainmentTokensPartiel(specCourt, specLong);
@@ -286,7 +308,9 @@ public final class CorrespondanceSalle {
   // opère donc sur le nom brut, jamais sur nom_norm.
   private static String extraireQualificatif(final String nomBrut) {
     final int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
-    if (idx <= 0) return null;
+    if (idx <= 0) {
+      return null;
+    }
     final String qualif = nomBrut.substring(idx + SEPARATEUR_QUALIFICATIF.length()).trim();
     return qualif.isEmpty() ? null : qualif;
   }
@@ -301,7 +325,9 @@ public final class CorrespondanceSalle {
    */
   public static String extraireBase(final String nomBrut) {
     final int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
-    if (idx <= 0) return null;
+    if (idx <= 0) {
+      return null;
+    }
     final String base = nomBrut.substring(0, idx).trim();
     return base.isEmpty() ? null : base;
   }
@@ -319,7 +345,9 @@ public final class CorrespondanceSalle {
   public static boolean qualificatifsDivergents(final String nomBrutA, final String nomBrutB) {
     final String qualifA = extraireQualificatif(nomBrutA);
     final String qualifB = extraireQualificatif(nomBrutB);
-    if (qualifA == null || qualifB == null) return false;
+    if (qualifA == null || qualifB == null) {
+      return false;
+    }
     return !estDoublonSalle(
         Normalisation.normaliserTexte(qualifA), Normalisation.normaliserTexte(qualifB));
   }

@@ -87,7 +87,9 @@ public class EnrichissementArtistesService {
 
     int nbEnrichis = 0;
     for (int i = 0; i < candidats.size(); i += TAILLE_LOT_PERSISTANCE) {
-      if (i > 0) EnrichissementUtils.attendreEntreLots(DELAI_ENTRE_LOTS_MS);
+      if (i > 0) {
+        EnrichissementUtils.attendreEntreLots(DELAI_ENTRE_LOTS_MS);
+      }
       final List<ArtisteAEnrichir> lot =
           candidats.subList(i, Math.min(i + TAILLE_LOT_PERSISTANCE, candidats.size()));
       nbEnrichis += enrichirEtPersisterLot(lot);
@@ -105,7 +107,9 @@ public class EnrichissementArtistesService {
    */
   private void remonterBilans() {
     for (SourceEnrichissementArtiste source : sources) {
-      if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
+      if (!(source instanceof SourceAvecBilanFetch avecBilan)) {
+        continue;
+      }
       final BilanFetch bilan = avecBilan.preleverBilan();
       bilan
           .evaluer(
@@ -126,7 +130,9 @@ public class EnrichissementArtistesService {
    */
   private void remonterAmbiguites() {
     for (SourceEnrichissementArtiste source : sources) {
-      if (!(source instanceof SourceAvecAmbiguitesDecouverte avecAmbiguites)) continue;
+      if (!(source instanceof SourceAvecAmbiguitesDecouverte avecAmbiguites)) {
+        continue;
+      }
       for (UUID artisteId : avecAmbiguites.preleverAmbiguites()) {
         signalementMatchingService.signaler(
             "wikidata_ambiguite", "artiste", artisteId, "basse", null);
@@ -151,8 +157,12 @@ public class EnrichissementArtistesService {
     int nbEnrichis = 0;
     for (ArtisteAEnrichir artiste : lot) {
       final EnrichissementArtiste enrichissement = accumule.get(artiste.id());
-      if (enrichissement == null) continue;
-      if (!mettreAJourArtiste(artiste.id(), artiste.nom(), enrichissement)) continue;
+      if (enrichissement == null) {
+        continue;
+      }
+      if (!mettreAJourArtiste(artiste.id(), artiste.nom(), enrichissement)) {
+        continue;
+      }
       traiterCrossValidationP6262(
           artiste, enrichissement, attractionIdsExistants.get(artiste.id()));
       nbEnrichis++;
@@ -278,7 +288,9 @@ public class EnrichissementArtistesService {
   private void traiterCrossValidationP6262(
       final ArtisteAEnrichir artiste, final EnrichissementArtiste enrichissement, final String attractionIdExistant) {
     final String tmIdWikidata = enrichissement.ticketmasterAttractionId();
-    if (tmIdWikidata == null) return;
+    if (tmIdWikidata == null) {
+      return;
+    }
 
     if (attractionIdExistant == null) {
       final int lignesInserees =

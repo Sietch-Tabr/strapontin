@@ -121,7 +121,9 @@ public class ReferentielSallesService {
   }
 
   private static List<String> lireSources(final String sourcesConcat) {
-    if (sourcesConcat == null || sourcesConcat.isBlank()) return List.of();
+    if (sourcesConcat == null || sourcesConcat.isBlank()) {
+      return List.of();
+    }
     return Arrays.stream(sourcesConcat.split(",")).toList();
   }
 
@@ -199,13 +201,17 @@ public class ReferentielSallesService {
    */
   @Transactional
   public boolean fusionner(final UUID cibleId, final UUID sourceId) {
-    if (cibleId.equals(sourceId)) return false;
+    if (cibleId.equals(sourceId)) {
+      return false;
+    }
     final Long nbExistantes =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM salles WHERE id IN (CAST(:cible AS uuid), CAST(:source AS uuid))",
             Map.of("cible", cibleId.toString(), "source", sourceId.toString()),
             Long.class);
-    if (nbExistantes == null || nbExistantes < 2) return false;
+    if (nbExistantes == null || nbExistantes < 2) {
+      return false;
+    }
 
     final Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
 

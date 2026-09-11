@@ -89,7 +89,9 @@ public class WorkerRevocationService {
    * @param usernames identifiants (colonne {@code username}) des comptes venant d'être rétrogradés
    */
   private void revoquerSessions(final List<String> usernames) {
-    if (usernames.isEmpty()) return;
+    if (usernames.isEmpty()) {
+      return;
+    }
     try {
       final int supprimees =
           jdbc.update(

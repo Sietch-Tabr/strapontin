@@ -45,7 +45,9 @@ class AlerteQuotaResendService {
   @Scheduled(cron = "0 */15 * * * *")
   void verifier() {
     final CompteurEnvoisResend compteur = gestionQuotaResend.lireCompteurCourant();
-    if (!gestionQuotaResend.seuilFranchiNonSignale(compteur)) return;
+    if (!gestionQuotaResend.seuilFranchiNonSignale(compteur)) {
+      return;
+    }
 
     final Optional<String> destinataire = emailAlerteService.obtenirDestinataireAlerte();
     if (destinataire.isEmpty()) {

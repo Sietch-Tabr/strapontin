@@ -117,12 +117,16 @@ class ArtisteRepository {
    * @return jusqu'à 50 candidats {@code (id, nom_norm)}, vide si {@code tokens} est vide
    */
   List<Map<String, Object>> chercherCandidatsParTokens(final Set<String> tokens) {
-    if (tokens.isEmpty()) return List.of();
+    if (tokens.isEmpty()) {
+      return List.of();
+    }
 
     final List<String> tokensList = new ArrayList<>(tokens);
     final StringBuilder whereTokens = new StringBuilder("(");
     for (int i = 0; i < tokensList.size(); i++) {
-      if (i > 0) whereTokens.append(" OR ");
+      if (i > 0) {
+        whereTokens.append(" OR ");
+      }
       whereTokens.append("nom_norm LIKE :t").append(i);
     }
     whereTokens.append(")");

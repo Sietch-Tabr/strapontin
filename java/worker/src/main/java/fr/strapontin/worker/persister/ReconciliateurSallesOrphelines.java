@@ -51,7 +51,9 @@ class ReconciliateurSallesOrphelines {
             "SELECT id, salle, dept FROM concerts"
                 + " WHERE salle_id IS NULL AND date >= CURRENT_DATE",
             Map.of());
-    if (orphelins.isEmpty()) return 0;
+    if (orphelins.isEmpty()) {
+      return 0;
+    }
 
     // candidats chargés une seule fois (pas une requête SQL par orphelin) — le volume de salles
     // reste compatible avec un score en mémoire, contrairement au N+1 SQL que remplace cette
@@ -63,7 +65,9 @@ class ReconciliateurSallesOrphelines {
       final String salle = (String) orphelin.get("salle");
       final String dept = (String) orphelin.get("dept");
       final UUID salleId = meilleurCandidatEnMemoire(salle, dept, candidats);
-      if (salleId == null) continue;
+      if (salleId == null) {
+        continue;
+      }
       jdbc.update(
           "UPDATE evenements SET salle_id = CAST(:salleId AS uuid) WHERE id = :id",
           Map.of("salleId", salleId.toString(), "id", orphelin.get("id")));
@@ -126,7 +130,9 @@ class ReconciliateurSallesOrphelines {
           && !candidat.deptEffectif().equals(dept)) {
         continue;
       }
-      if (!CorrespondanceSalle.estDoublonSalle(nomNorm, candidat.nomNorm())) continue;
+      if (!CorrespondanceSalle.estDoublonSalle(nomNorm, candidat.nomNorm())) {
+        continue;
+      }
       final double score = CorrespondanceSalle.jaccardTokens(nomNorm, candidat.nomNorm());
       if (score > meilleurScore) {
         meilleurScore = score;

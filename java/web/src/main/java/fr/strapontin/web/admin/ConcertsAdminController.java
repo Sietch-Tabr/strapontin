@@ -58,9 +58,13 @@ public class ConcertsAdminController {
   @PostMapping("/{uuid}/confirmer")
   public ResponseEntity<Map<String, Object>> confirmer(@PathVariable final String uuid) {
     final UUID id = parseUuid(uuid);
-    if (id == null) return erreur(400, "UUID de concert invalide.");
+    if (id == null) {
+      return erreur(400, "UUID de concert invalide.");
+    }
     final boolean supprime = service.confirmerSuppression(id);
-    if (!supprime) return erreur(404, "Concert inconnu ou non flagué.");
+    if (!supprime) {
+      return erreur(404, "Concert inconnu ou non flagué.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
@@ -73,9 +77,13 @@ public class ConcertsAdminController {
   @PostMapping("/{uuid}/annuler")
   public ResponseEntity<Map<String, Object>> annuler(@PathVariable final String uuid) {
     final UUID id = parseUuid(uuid);
-    if (id == null) return erreur(400, "UUID de concert invalide.");
+    if (id == null) {
+      return erreur(400, "UUID de concert invalide.");
+    }
     final boolean annule = service.annulerSuppression(id);
-    if (!annule) return erreur(404, "Concert inconnu ou non flagué.");
+    if (!annule) {
+      return erreur(404, "Concert inconnu ou non flagué.");
+    }
     return ResponseEntity.ok(Map.of("succes", true));
   }
 }

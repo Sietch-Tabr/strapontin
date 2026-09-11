@@ -168,11 +168,15 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
 
   private Map<UUID, EnrichissementSalle> enrichirLotConnu(final List<SalleAEnrichir> lot) {
     final Map<String, UUID> qidVersUuid = new HashMap<>();
-    for (SalleAEnrichir s : lot) qidVersUuid.put(s.wikidataId(), s.id());
+    for (SalleAEnrichir s : lot) {
+      qidVersUuid.put(s.wikidataId(), s.id());
+    }
 
     final String sparql = construireRequeteSparql(lot.stream().map(SalleAEnrichir::wikidataId).toList());
     final Map<String, Object> data = client.executer(sparql);
-    if (data == null) return Map.of();
+    if (data == null) {
+      return Map.of();
+    }
     return mapperReponse(data, qidVersUuid);
   }
 
@@ -202,16 +206,24 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       final Map<String, Object> data, final Map<String, UUID> qidVersUuid) {
     final Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
     final var results = (Map<String, Object>) data.get("results");
-    if (results == null) return resultats;
+    if (results == null) {
+      return resultats;
+    }
     final var bindings = (List<Map<String, Object>>) results.get("bindings");
-    if (bindings == null) return resultats;
+    if (bindings == null) {
+      return resultats;
+    }
 
     for (var binding : bindings) {
       final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
-      if (itemUri == null) continue;
+      if (itemUri == null) {
+        continue;
+      }
       final String qid = itemUri.substring(itemUri.lastIndexOf('/') + 1);
       final UUID salleId = qidVersUuid.get(qid);
-      if (salleId == null) continue;
+      if (salleId == null) {
+        continue;
+      }
 
       final double[] coord = parserCoordonnees(ClientSparqlWikidata.valeurBinding(binding, "coord"));
       final EnrichissementSalle enrichissement =
@@ -251,15 +263,21 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   private Set<String> interrogerTypesInvalides(final List<String> qIds) {
     final String sparql = construireRequeteTypesInvalides(qIds);
     final Map<String, Object> data = client.executer(sparql);
-    if (data == null) return Set.of();
+    if (data == null) {
+      return Set.of();
+    }
 
     final Set<String> invalides = new HashSet<>();
     final var results = (Map<String, Object>) data.get("results");
     final var bindings = results == null ? null : (List<Map<String, Object>>) results.get("bindings");
-    if (bindings == null) return invalides;
+    if (bindings == null) {
+      return invalides;
+    }
     for (var binding : bindings) {
       final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
-      if (itemUri == null) continue;
+      if (itemUri == null) {
+        continue;
+      }
       invalides.add(itemUri.substring(itemUri.lastIndexOf('/') + 1));
     }
     return invalides;
@@ -295,9 +313,13 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
    * @return {@code [longitude, latitude]}, ou {@code null} si absent/mal formé
    */
   private static double[] parserCoordonnees(final String wkt) {
-    if (wkt == null) return null;
+    if (wkt == null) {
+      return null;
+    }
     final var matcher = COORDONNEES_WKT.matcher(wkt);
-    if (!matcher.find()) return null;
+    if (!matcher.find()) {
+      return null;
+    }
     try {
       return new double[] {
         Double.parseDouble(matcher.group(1)), Double.parseDouble(matcher.group(2))
@@ -319,10 +341,14 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
 
   private Optional<EnrichissementSalle> decouvrir(final SalleAEnrichir salle) {
     Optional<EnrichissementSalle> resultat = decouvrirParNom(salle, salle.nom());
-    if (resultat.isPresent()) return resultat;
+    if (resultat.isPresent()) {
+      return resultat;
+    }
 
     resultat = decouvrirNomTronqueParSeparateur(salle);
-    if (resultat.isPresent()) return resultat;
+    if (resultat.isPresent()) {
+      return resultat;
+    }
 
     return decouvrirSansDernierMot(salle);
   }
@@ -335,9 +361,13 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   // envoyée à Wikidata utilise le nom tronqué.
   private Optional<EnrichissementSalle> decouvrirNomTronqueParSeparateur(final SalleAEnrichir salle) {
     final var matcher = SEPARATEUR_SOUS_SALLE.matcher(salle.nom());
-    if (!matcher.find() || matcher.start() == 0) return Optional.empty();
+    if (!matcher.find() || matcher.start() == 0) {
+      return Optional.empty();
+    }
     final String nomTronque = salle.nom().substring(0, matcher.start()).trim();
-    if (nomTronque.isEmpty()) return Optional.empty();
+    if (nomTronque.isEmpty()) {
+      return Optional.empty();
+    }
 
     log.info(
         "Wikidata découverte salle — repli sur nom tronqué nom={} tronque={}",
@@ -358,13 +388,17 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   private Optional<EnrichissementSalle> decouvrirSansDernierMot(final SalleAEnrichir salle) {
     final String nom = salle.nom().trim();
     final int dernierEspace = nom.lastIndexOf(' ');
-    if (dernierEspace <= 0) return Optional.empty();
+    if (dernierEspace <= 0) {
+      return Optional.empty();
+    }
     // trim() ne retire que les espaces — un séparateur ("-", "/") laissé en bout de chaîne
     // produirait une recherche mwapi inutilement sale (ex. "Zenith Toulouse -")
     final String nomTronque =
         PONCTUATION_FINALE.matcher(nom.substring(0, dernierEspace)).replaceAll("").trim();
     // au moins deux mots restants — un seul mot est trop générique pour être discriminant
-    if (!nomTronque.contains(" ")) return Optional.empty();
+    if (!nomTronque.contains(" ")) {
+      return Optional.empty();
+    }
 
     log.info(
         "Wikidata découverte salle — repli sans dernier mot nom={} tronque={}",
@@ -376,11 +410,15 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   private Optional<EnrichissementSalle> decouvrirParNom(final SalleAEnrichir salle, final String nomRecherche) {
     final String sparql = construireRequeteDecouverte(nomRecherche);
     final Map<String, Object> data = client.executer(sparql);
-    if (data == null) return Optional.empty();
+    if (data == null) {
+      return Optional.empty();
+    }
 
     for (var binding : ClientSparqlWikidata.extraireBindings(data)) {
       final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
-      if (itemUri == null) continue;
+      if (itemUri == null) {
+        continue;
+      }
       final String itemLabel = ClientSparqlWikidata.valeurBinding(binding, "itemLabel");
       final String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
       final String communeLabel = ClientSparqlWikidata.valeurBinding(binding, "communeLabel");
@@ -391,7 +429,9 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
               || (codePostal != null && !codePostal.isBlank());
       final String labelCorrespondant =
           trouverLabelCorrespondant(salle.nomNorm(), itemLabel, aliases, localisationConnue);
-      if (labelCorrespondant == null) continue;
+      if (labelCorrespondant == null) {
+        continue;
+      }
 
       if (villeIncompatible(salle.ville(), communeLabel)) {
         log.info(
@@ -447,8 +487,12 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
    * @return {@code true} si les deux villes sont connues et ne correspondent pas
    */
   private static boolean villeIncompatible(final String villeSalle, final String communeLabel) {
-    if (villeSalle == null || villeSalle.isBlank()) return false;
-    if (communeLabel == null || communeLabel.isBlank()) return false;
+    if (villeSalle == null || villeSalle.isBlank()) {
+      return false;
+    }
+    if (communeLabel == null || communeLabel.isBlank()) {
+      return false;
+    }
     return !Normalisation.normaliserVille(villeSalle)
         .equals(Normalisation.normaliserVille(communeLabel));
   }
@@ -471,9 +515,13 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
    * @return {@code true} si les deux départements sont connus et ne correspondent pas
    */
   private static boolean deptIncompatible(final String deptSalle, final String codePostal) {
-    if (deptSalle == null || deptSalle.isBlank()) return false;
+    if (deptSalle == null || deptSalle.isBlank()) {
+      return false;
+    }
     final String deptCandidat = Normalisation.extraireDeptFrancais(codePostal);
-    if (deptCandidat == null) return false;
+    if (deptCandidat == null) {
+      return false;
+    }
     return !deptSalle.equals(deptCandidat);
   }
 
@@ -507,7 +555,9 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
             nomNormCible, Normalisation.normaliserTexte(itemLabel), localisationConnue)) {
       return itemLabel;
     }
-    if (aliases == null || aliases.isBlank()) return null;
+    if (aliases == null || aliases.isBlank()) {
+      return null;
+    }
     for (String alias : aliases.split("\\|")) {
       if (estCorrespondanceAsymetrique(
           nomNormCible, Normalisation.normaliserTexte(alias), localisationConnue)) {
@@ -549,7 +599,9 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       return true;
     }
     final Set<String> tokensCible = CorrespondanceSalle.tokensSignificatifs(nomNormCible);
-    if (tokensCible.size() < TAILLE_MIN_TOKENS_CONTAINMENT) return false;
+    if (tokensCible.size() < TAILLE_MIN_TOKENS_CONTAINMENT) {
+      return false;
+    }
     final Set<String> tokensCandidat = CorrespondanceSalle.tokensSignificatifs(candidatNorm);
     return tokensCandidat.containsAll(tokensCible);
   }

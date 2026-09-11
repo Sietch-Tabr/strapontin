@@ -30,6 +30,8 @@ public record EnrichissementArtiste(
     List<String> aliasWikidata) {
 
   public EnrichissementArtiste {
-    if (aliasWikidata == null) aliasWikidata = List.of();
+    if (aliasWikidata == null) {
+      aliasWikidata = List.of();
+    }
   }
 }

@@ -72,11 +72,15 @@ public class ResendWebhooksAdminService {
    */
   public List<EvenementWebhook> listerEvenements() {
     final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
-    if (cle.isEmpty()) return List.of();
+    if (cle.isEmpty()) {
+      return List.of();
+    }
     final Resend client = fabriqueResend.apply(cle.get());
 
     final String webhookId = resoudreWebhookId(client);
-    if (webhookId == null) return List.of();
+    if (webhookId == null) {
+      return List.of();
+    }
 
     try {
       final ListWebhookEventsResponseSuccess reponse = client.webhooks().listEvents(webhookId);
@@ -108,11 +112,15 @@ public class ResendWebhooksAdminService {
    */
   public boolean rejouerEvenement(final String eventId) {
     final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
-    if (cle.isEmpty()) return false;
+    if (cle.isEmpty()) {
+      return false;
+    }
     final Resend client = fabriqueResend.apply(cle.get());
 
     final String webhookId = resoudreWebhookId(client);
-    if (webhookId == null) return false;
+    if (webhookId == null) {
+      return false;
+    }
 
     try {
       client.webhooks().replayEvent(webhookId, eventId);
@@ -126,12 +134,16 @@ public class ResendWebhooksAdminService {
 
   private String resoudreWebhookId(final Resend client) {
     final Optional<String> baseUrl = configService.lireConfig("PUBLIC_BASE_URL");
-    if (baseUrl.isEmpty()) return null;
+    if (baseUrl.isEmpty()) {
+      return null;
+    }
     final String endpointAttendu = baseUrl.get() + "/api/webhooks/resend";
 
     try {
       final ListWebhooksResponseSuccess reponse = client.webhooks().list();
-      if (reponse.getData() == null) return null;
+      if (reponse.getData() == null) {
+        return null;
+      }
       return reponse.getData().stream()
           .filter(w -> endpointAttendu.equals(w.getEndpoint()))
           .map(WebhookDTO::getId)

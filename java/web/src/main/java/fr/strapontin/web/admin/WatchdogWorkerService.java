@@ -56,7 +56,9 @@ public class WatchdogWorkerService {
         derniereExec == null
             || Duration.between(derniereExec, Instant.now()).compareTo(SEUIL_INACTIVITE) > 0;
 
-    if (!inactif) return;
+    if (!inactif) {
+      return;
+    }
 
     if (derniereAlerte != null && Instant.now().isBefore(derniereAlerte.plus(SEUIL_INACTIVITE))) {
       log.debug("watchdog: worker inactif, alerte déjà envoyée récemment — ignorée");

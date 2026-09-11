@@ -96,7 +96,9 @@ public class SetupService {
         self.initialiserTransactionnel(requete);
         return;
       } catch (PessimisticLockingFailureException e) {
-        if (tentative >= MAX_TENTATIVES) throw e;
+        if (tentative >= MAX_TENTATIVES) {
+          throw e;
+        }
         log.warn(
             "Conflit de sérialisation lors du setup — nouvelle tentative ({}/{})",
             tentative,
@@ -128,10 +130,12 @@ public class SetupService {
           "L'identifiant doit contenir au moins 3 caractères"
               + " (lettres minuscules, chiffres, points, tirets, _).");
     }
-    if (email.isEmpty() || !email.contains("@"))
+    if (email.isEmpty() || !email.contains("@")) {
       throw new ErreurMetier("L'adresse email est invalide.");
-    if (motDePasse.length() < 12)
+    }
+    if (motDePasse.length() < 12) {
       throw new ErreurMetier("Le mot de passe doit contenir au moins 12 caractères.");
+    }
 
     final String userId = UUID.randomUUID().toString();
     final String hashMdp = bcrypt.encode(motDePasse);
@@ -164,8 +168,12 @@ public class SetupService {
 
     final String baseUrl = requete.baseUrl() == null ? "" : requete.baseUrl().strip();
     String contactEmail = requete.contactEmail() == null ? "" : requete.contactEmail().strip();
-    if (contactEmail.isEmpty()) contactEmail = email;
-    if (!baseUrl.isEmpty()) configService.sauvegarderConfig("PUBLIC_BASE_URL", baseUrl);
+    if (contactEmail.isEmpty()) {
+      contactEmail = email;
+    }
+    if (!baseUrl.isEmpty()) {
+      configService.sauvegarderConfig("PUBLIC_BASE_URL", baseUrl);
+    }
     configService.sauvegarderConfig("CONTACT_EMAIL", contactEmail);
 
     genererVapid();

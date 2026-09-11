@@ -48,7 +48,9 @@ public final class Dedoublonner {
    * @return les concerts dédoublonnés, chaque doublon fusionné vers sa version la plus complète
    */
   public static List<ConcertBrut> dedoublonner(final List<ConcertBrut> concerts) {
-    if (concerts.isEmpty()) return List.of();
+    if (concerts.isEmpty()) {
+      return List.of();
+    }
     final List<ConcertEnrichi> enrichis = concerts.stream().map(Dedoublonner::enrichir).toList();
     final List<ConcertEnrichi> apresPasseExacte = passeExacte(enrichis);
     final List<ConcertEnrichi> apresPasseFuzzy = passeFuzzyDateVille(apresPasseExacte);
@@ -110,13 +112,17 @@ public final class Dedoublonner {
     final boolean[] traites = new boolean[groupe.size()];
 
     for (int i = 0; i < groupe.size(); i++) {
-      if (traites[i]) continue;
+      if (traites[i]) {
+        continue;
+      }
       final List<ConcertEnrichi> sousGroupe = new ArrayList<>();
       sousGroupe.add(groupe.get(i));
       traites[i] = true;
 
       for (int j = i + 1; j < groupe.size(); j++) {
-        if (traites[j]) continue;
+        if (traites[j]) {
+          continue;
+        }
         final double sim =
                 Normalisation.similarite(groupe.get(i).artisteNorm(), groupe.get(j).artisteNorm());
         if (sim >= SEUIL_SIMILARITE && heuresCompatibles(groupe.get(i), groupe.get(j))) {
@@ -149,10 +155,14 @@ public final class Dedoublonner {
   private static boolean heuresCompatibles(final ConcertEnrichi a, final ConcertEnrichi b) {
     final var heureA = a.concert().heure();
     final var heureB = b.concert().heure();
-    if (heureA == null || heureB == null || heureA.equals(heureB)) return true;
+    if (heureA == null || heureB == null || heureA.equals(heureB)) {
+      return true;
+    }
     final Integer minutesA = minutesDepuisMinuit(heureA);
     final Integer minutesB = minutesDepuisMinuit(heureB);
-    if (minutesA == null || minutesB == null) return false;
+    if (minutesA == null || minutesB == null) {
+      return false;
+    }
     return Math.abs(minutesA - minutesB) <= TOLERANCE_HEURE_MINUTES;
   }
 
@@ -168,7 +178,9 @@ public final class Dedoublonner {
   private static ConcertEnrichi choisirMeilleur(final ConcertEnrichi meilleur, final ConcertEnrichi candidat) {
     final int scoreM = scoreCompletude(meilleur.concert());
     final int scoreC = scoreCompletude(candidat.concert());
-    if (scoreC > scoreM) return candidat;
+    if (scoreC > scoreM) {
+      return candidat;
+    }
     if (scoreC == scoreM) {
       return scoreNomRiche(candidat.concert().artiste())
               > scoreNomRiche(meilleur.concert().artiste())
@@ -189,7 +201,9 @@ public final class Dedoublonner {
       final int scoreC =
               scoreNomRiche(c.concert().salle()) * POIDS_DIACRITIQUES
                       + (c.concert().salle().equals(c.concert().salle().toUpperCase()) ? 0 : 1);
-      if (scoreC > scoreM) meilleureSalle = c.concert().salle();
+      if (scoreC > scoreM) {
+        meilleureSalle = c.concert().salle();
+      }
     }
 
     String meilleurArtiste = gagnant.concert().artiste();

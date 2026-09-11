@@ -163,7 +163,9 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     if (sansDept > 0) {
       log.debug("Overpass — {} salle(s) ignorée(s), département inconnu", sansDept);
     }
-    if (aTraiter.isEmpty()) return Map.of();
+    if (aTraiter.isEmpty()) {
+      return Map.of();
+    }
     if (echecsConsecutifsCycle.get() >= SEUIL_ECHECS_CONSECUTIFS) {
       log.debug("Overpass — disjoncteur déjà ouvert pour ce cycle, lot ignoré sans appel HTTP");
       return Map.of();
@@ -174,7 +176,9 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
         aTraiter.stream().collect(Collectors.groupingBy(SalleAEnrichir::dept));
     for (var entree : parDept.entrySet()) {
       final CentreDept centre = CentresDepartement.PAR_DEPT.get(entree.getKey());
-      if (centre == null) continue;
+      if (centre == null) {
+        continue;
+      }
       final List<SalleAEnrichir> sallesDept = entree.getValue();
       for (int i = 0; i < sallesDept.size(); i += TAILLE_LOT) {
         final List<SalleAEnrichir> lot =
@@ -299,14 +303,20 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   private static Map<UUID, EnrichissementSalle> mapperReponse(
       final Map<String, Object> data, final List<SalleAEnrichir> lot) {
     final Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
-    if (data == null) return resultats;
+    if (data == null) {
+      return resultats;
+    }
     final var elements = (List<Map<String, Object>>) data.get("elements");
-    if (elements == null) return resultats;
+    if (elements == null) {
+      return resultats;
+    }
 
     for (SalleAEnrichir salle : lot) {
       for (var element : elements) {
         final var tags = (Map<String, String>) element.get("tags");
-        if (tags == null) continue;
+        if (tags == null) {
+          continue;
+        }
         final String nomTag = tags.get("name");
         if (nomTag == null || !Normalisation.normaliserTexte(nomTag).equals(salle.nomNorm())) {
           continue;

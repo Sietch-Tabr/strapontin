@@ -338,7 +338,9 @@ class EnrichissementSallesServiceTest {
             invocation -> {
               final List<SalleAEnrichir> lot = invocation.getArgument(0);
               final Map<UUID, EnrichissementSalle> resultat = new HashMap<>();
-              for (SalleAEnrichir s : lot) resultat.put(s.id(), reponseAttendue.get(s.id()));
+              for (SalleAEnrichir s : lot) {
+                resultat.put(s.id(), reponseAttendue.get(s.id()));
+              }
               return resultat;
             });
 

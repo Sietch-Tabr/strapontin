@@ -93,11 +93,15 @@ public final class ClientNominatim {
   }
 
   private static Optional<Coordonnees> extraireCoordonnees(final List<Map<String, Object>> resultats) {
-    if (resultats == null || resultats.isEmpty()) return Optional.empty();
+    if (resultats == null || resultats.isEmpty()) {
+      return Optional.empty();
+    }
     final Map<String, Object> premier = resultats.get(0);
     final Object latBrut = premier.get("lat");
     final Object lonBrut = premier.get("lon");
-    if (latBrut == null || lonBrut == null) return Optional.empty();
+    if (latBrut == null || lonBrut == null) {
+      return Optional.empty();
+    }
     try {
       return Optional.of(
           new Coordonnees(

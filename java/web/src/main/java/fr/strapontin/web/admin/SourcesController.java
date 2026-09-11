@@ -85,7 +85,9 @@ public class SourcesController {
   public ResponseEntity<Map<String, Object>> mettreAJourDigitickSlug(
       @PathVariable final String salleId, @Valid @RequestBody final RequeteSlug corps) {
     final UUID uuid = parseUuid(salleId);
-    if (uuid == null) return erreur(400, "UUID de salle invalide.");
+    if (uuid == null) {
+      return erreur(400, "UUID de salle invalide.");
+    }
     sourcesService.mettreAJourDigitickSlug(uuid, corps.slug() == null ? "" : corps.slug());
     return ResponseEntity.ok(Map.of("succes", true));
   }
@@ -115,7 +117,9 @@ public class SourcesController {
   @PostMapping("/salles/{salleId}/fetch")
   public ResponseEntity<Map<String, Object>> fetchSalle(@PathVariable final String salleId) {
     final UUID uuid = parseUuid(salleId);
-    if (uuid == null) return erreur(400, "UUID de salle invalide.");
+    if (uuid == null) {
+      return erreur(400, "UUID de salle invalide.");
+    }
     final String identifiants = sourcesService.obtenirIdentifiantsSalle(uuid);
     if (identifiants == null) {
       return erreur(404, "Aucun identifiant source connu pour cette salle.");
@@ -138,8 +142,12 @@ public class SourcesController {
       @Valid @RequestBody final RequeteDigitickSalle requete) {
     final String nom = requete.nom() == null ? "" : requete.nom().strip();
     final String slug = requete.slug() == null ? "" : requete.slug().strip();
-    if (nom.isEmpty() || nom.length() > 200) return erreur(400, "Nom de salle invalide.");
-    if (slug.isEmpty() || slug.length() > 100) return erreur(400, "Slug Digitick invalide.");
+    if (nom.isEmpty() || nom.length() > 200) {
+      return erreur(400, "Nom de salle invalide.");
+    }
+    if (slug.isEmpty() || slug.length() > 100) {
+      return erreur(400, "Slug Digitick invalide.");
+    }
     final String ville =
         requete.ville() == null || requete.ville().isBlank() ? null : requete.ville().strip();
     final String dept =
@@ -159,7 +167,9 @@ public class SourcesController {
   public ResponseEntity<Map<String, Object>> modifierSalleDigitick(
       @PathVariable final String salleId, @Valid @RequestBody final RequeteDigitickSalle requete) {
     final UUID uuid = parseUuid(salleId);
-    if (uuid == null) return erreur(400, "UUID de salle invalide.");
+    if (uuid == null) {
+      return erreur(400, "UUID de salle invalide.");
+    }
     final String nom = requete.nom() == null || requete.nom().isBlank() ? null : requete.nom().strip();
     final String ville =
         requete.ville() == null || requete.ville().isBlank() ? null : requete.ville().strip();
@@ -179,7 +189,9 @@ public class SourcesController {
   @DeleteMapping("/digitick-salles/{salleId}")
   public ResponseEntity<?> supprimerSalleDigitick(@PathVariable final String salleId) {
     final UUID uuid = parseUuid(salleId);
-    if (uuid == null) return erreur(400, "UUID de salle invalide.");
+    if (uuid == null) {
+      return erreur(400, "UUID de salle invalide.");
+    }
     final boolean supprimee = sourcesService.supprimerSalleDigitick(uuid);
     if (!supprimee) {
       return erreur(409, "Cette salle est suivie par des utilisateurs ou possède des concerts.");

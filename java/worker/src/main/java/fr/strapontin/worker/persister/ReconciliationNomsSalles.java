@@ -90,7 +90,9 @@ class ReconciliationNomsSalles {
 
     final Set<String> artistesNorms =
         new HashSet<>(lotApresIntraLot.stream().map(ValeurConcert::artisteNorm).toList());
-    if (artistesNorms.isEmpty()) return lotApresIntraLot;
+    if (artistesNorms.isEmpty()) {
+      return lotApresIntraLot;
+    }
 
     final List<Map<String, Object>> existants =
         jdbc.queryForList(
@@ -156,10 +158,14 @@ class ReconciliationNomsSalles {
               concert.dept());
       parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>());
       final List<String> groupe = parGroupe.get(cle);
-      if (!groupe.contains(concert.salleNorm())) groupe.add(concert.salleNorm());
+      if (!groupe.contains(concert.salleNorm())) {
+        groupe.add(concert.salleNorm());
+      }
     }
     for (List<String> sallesNorm : parGroupe.values()) {
-      if (sallesNorm.size() > 1) ajouterDoublonsSalle(sallesNorm, remplacements);
+      if (sallesNorm.size() > 1) {
+        ajouterDoublonsSalle(sallesNorm, remplacements);
+      }
     }
     resoudreChaines(remplacements);
     return remplacements;
@@ -182,7 +188,9 @@ class ReconciliationNomsSalles {
   private ValeurConcert appliquerRemplacementSalle(
       final ValeurConcert c, final Map<String, String> remplacements) {
     final String canonique = remplacements.get(c.salleNorm());
-    if (canonique == null || canonique.equals(c.salleNorm())) return c;
+    if (canonique == null || canonique.equals(c.salleNorm())) {
+      return c;
+    }
     log.debug(
         "doublon salle intra-lot réconcilié entrant={} canonique={}", c.salleNorm(), canonique);
     return c.avecSalleNorm(canonique);
@@ -237,9 +245,13 @@ class ReconciliationNomsSalles {
     final Map<UUID, String> meilleurNom = new HashMap<>();
     final Map<UUID, Integer> meilleurScore = new HashMap<>();
     for (ValeurConcert c : concerts) {
-      if (c.salleSourceId() == null) continue;
+      if (c.salleSourceId() == null) {
+        continue;
+      }
       final UUID salleId = cachesSalles.get(c.salleSourceId());
-      if (salleId == null) continue;
+      if (salleId == null) {
+        continue;
+      }
       final int score = scoreSalle(c.salle());
       if (!meilleurNom.containsKey(salleId) || score > meilleurScore.get(salleId)) {
         meilleurNom.put(salleId, c.salle());

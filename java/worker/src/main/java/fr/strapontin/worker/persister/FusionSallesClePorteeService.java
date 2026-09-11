@@ -71,9 +71,13 @@ public class FusionSallesClePorteeService {
     final Set<UUID> dejaAbsorbees = new HashSet<>();
     int fusions = 0;
     for (PaireSalles paire : paires) {
-      if (dejaAbsorbees.contains(paire.a()) || dejaAbsorbees.contains(paire.b())) continue;
+      if (dejaAbsorbees.contains(paire.a()) || dejaAbsorbees.contains(paire.b())) {
+        continue;
+      }
       final UUID[] cibleSource = choisirCibleEtSource(paire.a(), paire.b());
-      if (cibleSource == null) continue;
+      if (cibleSource == null) {
+        continue;
+      }
       fusionnerUnePaire(cibleSource[0], cibleSource[1]);
       dejaAbsorbees.add(cibleSource[1]);
       fusions++;
@@ -116,8 +120,12 @@ public class FusionSallesClePorteeService {
     for (var ligne : lignes) {
       final String nomA = (String) ligne.get("nom_a");
       final String nomB = (String) ligne.get("nom_b");
-      if (!CorrespondanceSalle.estDoublonSalle(nomA, nomB)) continue;
-      if (distanceExcessive(ligne)) continue;
+      if (!CorrespondanceSalle.estDoublonSalle(nomA, nomB)) {
+        continue;
+      }
+      if (distanceExcessive(ligne)) {
+        continue;
+      }
       paires.add(new PaireSalles((UUID) ligne.get("salle_a"), (UUID) ligne.get("salle_b")));
     }
     return paires;
@@ -139,7 +147,9 @@ public class FusionSallesClePorteeService {
     final Double lonA = (Double) ligne.get("lon_a");
     final Double latB = (Double) ligne.get("lat_b");
     final Double lonB = (Double) ligne.get("lon_b");
-    if (latA == null || lonA == null || latB == null || lonB == null) return false;
+    if (latA == null || lonA == null || latB == null || lonB == null) {
+      return false;
+    }
     return distanceHaversineMetres(latA, lonA, latB, lonB) > DISTANCE_MAX_FUSION_METRES;
   }
 
@@ -156,7 +166,9 @@ public class FusionSallesClePorteeService {
    */
   public static boolean coordonneesConnuesEtProches(
       final Double latA, final Double lonA, final Double latB, final Double lonB) {
-    if (latA == null || lonA == null || latB == null || lonB == null) return false;
+    if (latA == null || lonA == null || latB == null || lonB == null) {
+      return false;
+    }
     return distanceHaversineMetres(latA, lonA, latB, lonB) <= DISTANCE_MAX_FUSION_METRES;
   }
 
@@ -195,18 +207,24 @@ public class FusionSallesClePorteeService {
                 FROM salles s WHERE s.id IN (CAST(:a AS uuid), CAST(:b AS uuid))
                 """,
             Map.of("a", a.toString(), "b", b.toString()));
-    if (lignes.size() < 2) return null;
+    if (lignes.size() < 2) {
+      return null;
+    }
 
     final Map<String, Object> la = lignes.get(0).get("id").equals(a) ? lignes.get(0) : lignes.get(1);
     final Map<String, Object> lb = lignes.get(0).get("id").equals(a) ? lignes.get(1) : lignes.get(0);
 
     final boolean aWikidata = la.get("wikidata_id") != null;
     final boolean bWikidata = lb.get("wikidata_id") != null;
-    if (aWikidata != bWikidata) return aWikidata ? new UUID[] {a, b} : new UUID[] {b, a};
+    if (aWikidata != bWikidata) {
+      return aWikidata ? new UUID[]{a, b} : new UUID[]{b, a};
+    }
 
     final long nbA = ((Number) la.get("nb_concerts")).longValue();
     final long nbB = ((Number) lb.get("nb_concerts")).longValue();
-    if (nbA != nbB) return nbA > nbB ? new UUID[] {a, b} : new UUID[] {b, a};
+    if (nbA != nbB) {
+      return nbA > nbB ? new UUID[]{a, b} : new UUID[]{b, a};
+    }
 
     return a.compareTo(b) <= 0 ? new UUID[] {a, b} : new UUID[] {b, a};
   }
@@ -418,7 +436,9 @@ public class FusionSallesClePorteeService {
   private static boolean laSourceEstPlusSaine(final Map<String, Object> conflit) {
     final boolean suspectSource = Boolean.TRUE.equals(conflit.get("suspect_source"));
     final boolean suspectCible = Boolean.TRUE.equals(conflit.get("suspect_cible"));
-    if (suspectSource != suspectCible) return !suspectSource;
+    if (suspectSource != suspectCible) {
+      return !suspectSource;
+    }
     final long santeSource = ((Number) conflit.get("sante_source")).longValue();
     final long santeCible = ((Number) conflit.get("sante_cible")).longValue();
     return santeSource <= santeCible;

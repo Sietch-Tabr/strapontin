@@ -290,7 +290,9 @@ class EnrichissementArtistesServiceTest {
             invocation -> {
               final List<ArtisteAEnrichir> lot = invocation.getArgument(0);
               final Map<UUID, EnrichissementArtiste> resultat = new HashMap<>();
-              for (ArtisteAEnrichir a : lot) resultat.put(a.id(), reponseAttendue.get(a.id()));
+              for (ArtisteAEnrichir a : lot) {
+                resultat.put(a.id(), reponseAttendue.get(a.id()));
+              }
               return resultat;
             });
 

@@ -101,9 +101,13 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     compteurBilan.enregistrerAppel();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) return null;
+      if (data == null) {
+        return null;
+      }
       final var dataList = (List<Map<String, Object>>) data.get("data");
-      if (dataList == null || dataList.isEmpty()) return null;
+      if (dataList == null || dataList.isEmpty()) {
+        return null;
+      }
 
       final String nomNormalise = Normalisation.normaliserTexte(nom);
       Map<String, Object> meilleurCandidat = null;
@@ -112,10 +116,14 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
       double meilleurePopulariteExacte = -1;
       for (Map<String, Object> candidat : dataList) {
         final String nomCandidat = (String) candidat.get("name");
-        if (nomCandidat == null) continue;
+        if (nomCandidat == null) {
+          continue;
+        }
         final String nomCandidatNormalise = Normalisation.normaliserTexte(nomCandidat);
         final double similarite = Normalisation.similarite(nomNormalise, nomCandidatNormalise);
-        if (similarite < SEUIL_CONFIANCE_DEEZER) continue;
+        if (similarite < SEUIL_CONFIANCE_DEEZER) {
+          continue;
+        }
         final double popularite = popularite(candidat);
         if (meilleurCandidat == null || popularite > meilleurePopularite) {
           meilleurCandidat = candidat;
@@ -129,8 +137,12 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
           meilleurePopulariteExacte = popularite;
         }
       }
-      if (meilleurCandidatExact != null) meilleurCandidat = meilleurCandidatExact;
-      if (meilleurCandidat == null) return null;
+      if (meilleurCandidatExact != null) {
+        meilleurCandidat = meilleurCandidatExact;
+      }
+      if (meilleurCandidat == null) {
+        return null;
+      }
 
       final String resultat = (String) meilleurCandidat.get("name");
       if (!resultat.equals(nom)) {
@@ -177,7 +189,9 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   public ResultatResolution resoudreNomCanonique(final String type, final String nom) {
     final String cleCache = type + ":" + nom;
     final ResultatResolution cached = cache.getIfPresent(cleCache);
-    if (cached != null) return cached;
+    if (cached != null) {
+      return cached;
+    }
 
     ResultatResolution resultat;
     if ("artiste".equals(type)) {

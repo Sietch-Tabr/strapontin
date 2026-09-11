@@ -92,7 +92,9 @@ public class WorkerSuiviCyclesService {
       final Instant derniereExec = dernieresExecs.get(typeJob);
       // Jamais exécuté depuis le démarrage (déploiement récent) — hors périmètre, aucune
       // référence pour juger d'un retard.
-      if (derniereExec == null) continue;
+      if (derniereExec == null) {
+        continue;
+      }
       final Duration ecart = Duration.between(derniereExec, Instant.now());
       if (ecart.compareTo(fraicheurMax) > 0) {
         enRetard++;

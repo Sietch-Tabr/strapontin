@@ -230,7 +230,8 @@ public class PreferencesService {
             Map.of(CLE_USER_ID, userId),
             Integer.class);
     final int restant = Math.max(0, 500 - (nbExistants != null ? nbExistants : 0));
-    int traites = 0, rejetes = 0;
+    int traites = 0;
+    int rejetes = 0;
     for (ArtisteExport a : artistes) {
       if (a.nom() == null || a.nom().isBlank()) {
         rejetes++;
@@ -270,7 +271,8 @@ public class PreferencesService {
             Map.of(CLE_USER_ID, userId),
             Integer.class);
     final int restant = Math.max(0, 200 - (nbExistants != null ? nbExistants : 0));
-    int traites = 0, rejetes = 0;
+    int traites = 0;
+    int rejetes = 0;
     for (SalleExport s : salles) {
       final String nomSalle = s.nom() != null && !s.nom().isBlank() ? s.nom().strip() : s.salleId();
       if (nomSalle == null || nomSalle.isBlank()) {
@@ -376,7 +378,9 @@ public class PreferencesService {
     final Runnable action =
         () -> {
           envoyerPostWorker(WORKER_URL + "/artiste");
-          if (salles == null) return;
+          if (salles == null) {
+            return;
+          }
           salles.stream()
               .filter(s -> s.tmVenueId() != null && !s.tmVenueId().isBlank())
               .map(SalleExport::tmVenueId)

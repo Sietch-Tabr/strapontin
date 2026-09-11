@@ -112,11 +112,15 @@ public class TotpService {
    *   utilisé
    */
   public boolean verifierCode(final String secret, final String code) {
-    if (secret == null || code == null) return false;
+    if (secret == null || code == null) {
+      return false;
+    }
     // Retire tous les espaces (et non seulement aux extrémités) : les applications TOTP comme
     // Bitwarden affichent le code par groupes (« 365 493 »), souvent collé tel quel.
     final String codeNorm = code.replaceAll("\\s", "");
-    if (!codeNorm.matches("\\d{6}")) return false;
+    if (!codeNorm.matches("\\d{6}")) {
+      return false;
+    }
     try {
       final byte[] secretOctets = base32Decoder(secret);
       final long compteur = System.currentTimeMillis() / 1000L / PERIODE_SECONDES;
@@ -128,7 +132,9 @@ public class TotpService {
           final String cleCache = secret + ":" + pas;
           final java.util.Set<String> utilises =
               codesConsommes.get(cleCache, _ -> java.util.concurrent.ConcurrentHashMap.newKeySet());
-          if (!utilises.add(codeNorm)) return false;
+          if (!utilises.add(codeNorm)) {
+            return false;
+          }
           return true;
         }
       }
@@ -157,7 +163,8 @@ public class TotpService {
 
   static String base32Encoder(final byte[] data) {
     final StringBuilder sb = new StringBuilder();
-    int tampon = 0, bitsRestants = 0;
+    int tampon = 0;
+    int bitsRestants = 0;
     for (byte b : data) {
       tampon = (tampon << 8) | (b & 0xFF);
       bitsRestants += 8;
@@ -175,10 +182,14 @@ public class TotpService {
   static byte[] base32Decoder(final String encoded) {
     final String norm = encoded.toUpperCase().replaceAll("[^A-Z2-7]", "");
     final byte[] resultat = new byte[norm.length() * 5 / 8];
-    int tampon = 0, bitsRestants = 0, idx = 0;
+    int tampon = 0;
+    int bitsRestants = 0;
+    int idx = 0;
     for (char c : norm.toCharArray()) {
       final int val = BASE32.indexOf(c);
-      if (val < 0) continue;
+      if (val < 0) {
+        continue;
+      }
       tampon = (tampon << 5) | val;
       bitsRestants += 5;
       if (bitsRestants >= 8) {

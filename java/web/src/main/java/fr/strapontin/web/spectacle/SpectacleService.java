@@ -185,8 +185,9 @@ public class SpectacleService {
               "SELECT artiste_id FROM user_artistes WHERE user_id = :u",
               Map.of("u", userId),
               UUID.class);
-      if (ids.isEmpty()) where.append(" AND false");
-      else {
+      if (ids.isEmpty()) {
+        where.append(" AND false");
+      } else {
         where.append(" AND c.artiste_id IN (:artisteIds)");
         params.put("artisteIds", ids);
       }
@@ -196,8 +197,9 @@ public class SpectacleService {
               "SELECT salle_id FROM user_salles WHERE user_id = :u",
               Map.of("u", userId),
               UUID.class);
-      if (ids.isEmpty()) where.append(" AND false");
-      else {
+      if (ids.isEmpty()) {
+        where.append(" AND false");
+      } else {
         where.append(" AND c.salle_id IN (:salleIds)");
         params.put("salleIds", ids);
       }

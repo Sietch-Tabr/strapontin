@@ -164,13 +164,19 @@ public class ReconciliationNocturneService {
       final String nomTmIgnore = (String) ligne.get("nom_tm_ignore");
       final boolean dejaSignale = ligne.get("necessite_intervention_le") != null;
       final String nomAttraction = tm.recupererNomAttraction(attractionId);
-      if (nomAttraction == null) continue;
+      if (nomAttraction == null) {
+        continue;
+      }
       if (CorrespondanceArtiste.estDoublonArtiste(
           Normalisation.normaliserTexte(nom), Normalisation.normaliserTexte(nomAttraction))) {
         continue;
       }
-      if (nomAttraction.equals(nomTmIgnore)) continue;
-      if (preAccepterSiAliasWikidataConnu(artisteId, nomAttraction)) continue;
+      if (nomAttraction.equals(nomTmIgnore)) {
+        continue;
+      }
+      if (preAccepterSiAliasWikidataConnu(artisteId, nomAttraction)) {
+        continue;
+      }
       incoherences++;
       signalerNomIncoherent(artisteId, attractionId, nom, nomAttraction, dejaSignale);
     }
@@ -187,7 +193,9 @@ public class ReconciliationNocturneService {
    */
   private boolean preAccepterSiAliasWikidataConnu(final UUID artisteId, final String nomAttraction) {
     final List<String> alias = lireAliasWikidata(artisteId);
-    if (alias.isEmpty()) return false;
+    if (alias.isEmpty()) {
+      return false;
+    }
     final String nomAttractionNorm = Normalisation.normaliserTexte(nomAttraction);
     final boolean correspond =
         alias.stream()
@@ -195,7 +203,9 @@ public class ReconciliationNocturneService {
                 a ->
                     CorrespondanceArtiste.estDoublonArtiste(
                         Normalisation.normaliserTexte(a), nomAttractionNorm));
-    if (!correspond) return false;
+    if (!correspond) {
+      return false;
+    }
     jdbc.update(
         """
         UPDATE artiste_sources
@@ -239,7 +249,9 @@ public class ReconciliationNocturneService {
         WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
         """,
         Map.of("artisteId", artisteId.toString(), "nomAttraction", nomAttraction));
-    if (dejaSignale) return;
+    if (dejaSignale) {
+      return;
+    }
     logsAdminWorker.inserer(
         "warn",
         "reconciliation-nocturne",
@@ -282,8 +294,11 @@ public class ReconciliationNocturneService {
       }
 
       final int resultatRedecouverte = redecouvrirSalle(salleId, ancienVenueId, nom);
-      if (resultatRedecouverte > 0) redecouvertes++;
-      else if (resultatRedecouverte < 0) ambigues++;
+      if (resultatRedecouverte > 0) {
+        redecouvertes++;
+      } else if (resultatRedecouverte < 0) {
+        ambigues++;
+      }
     }
     return new int[] {verifiees, redecouvertes, ambigues};
   }
@@ -431,7 +446,9 @@ public class ReconciliationNocturneService {
                 WHERE ss.source = 'digitick' AND ss.suspect_depuis IS NOT NULL
                 """,
             Map.of());
-    if (suspectes.isEmpty()) return;
+    if (suspectes.isEmpty()) {
+      return;
+    }
 
     logsAdminWorker.inserer(
         "warn",
