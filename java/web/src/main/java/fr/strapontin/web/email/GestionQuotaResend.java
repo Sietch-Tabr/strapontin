@@ -33,7 +33,7 @@ import org.springframework.stereotype.Component;
 @Component
 class GestionQuotaResend {
 
-  private static final Logger log = LoggerFactory.getLogger(GestionQuotaResend.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GestionQuotaResend.class);
 
   static final int LIMITE_JOUR = 100;
   static final int LIMITE_MOIS = 3000;
@@ -60,7 +60,7 @@ class GestionQuotaResend {
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
     } catch (JsonProcessingException e) {
-      log.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
+      LOG.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
     }
   }
@@ -75,7 +75,7 @@ class GestionQuotaResend {
           json,
           json);
     } catch (JsonProcessingException e) {
-      log.error("impossible de sérialiser le compteur Resend", e);
+      LOG.error("impossible de sérialiser le compteur Resend", e);
     }
   }
 
@@ -129,7 +129,7 @@ class GestionQuotaResend {
     final CompteurEnvoisResend actuel = lireCompteurCourant();
     if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {
       ecrireCompteur(actuel);
-      log.error(
+      LOG.error(
           "quota Resend atteint — envoi bloqué jour={}/{} mois={}/{}",
           actuel.envoyesJour(),
           LIMITE_JOUR,

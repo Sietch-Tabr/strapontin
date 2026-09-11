@@ -34,7 +34,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
-  private static final Logger log = LoggerFactory.getLogger(EventimSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EventimSource.class);
 
   private static final String BASE_URL =
       "https://public-api.eventim.com/websearch/search/api/exploration";
@@ -259,7 +259,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       return parserReponseProduits(data, artisteFallback, deptFiltre, artisteSourceId);
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
-      log.warn("Eventim erreur HTTP", e);
+      LOG.warn("Eventim erreur HTTP", e);
       return ResultatPageEventim.ECHEC;
     }
   }
@@ -349,7 +349,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       }
       if (exact == null && parContainment != null) {
         final String nomRetourne = (String) parContainment.getOrDefault("name", "");
-        log.info(
+        LOG.info(
             "Eventim: correspondance par containment pour terme={} — résultat={} accepté",
             terme,
             nomRetourne);
@@ -358,7 +358,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       }
       if (exact == null) {
         final String nomRetourne = (String) attractions.get(0).getOrDefault("name", "");
-        log.warn(
+        LOG.warn(
             "Eventim: aucune correspondance exacte pour terme={} — premier résultat={} ignoré",
             terme,
             nomRetourne);
@@ -371,7 +371,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       return id != null ? String.valueOf(id) : null;
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
-      log.warn("Eventim attractions erreur terme={}", terme, e);
+      LOG.warn("Eventim attractions erreur terme={}", terme, e);
       return null;
     }
   }
@@ -496,14 +496,14 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     final boolean identiteConfirmee = deezerId != null || wikidataId != null;
     final String attractionId = rechercherAttractionId(nom, identiteConfirmee);
     if (attractionId == null) {
-      log.info("Eventim: artiste non trouvé artiste={}", nom);
+      LOG.info("Eventim: artiste non trouvé artiste={}", nom);
       return List.of();
     }
     final ResultatArtisteEventim resultat = fetchProduitsParAttraction(attractionId, nom);
     if (resultat.succes()) {
-      log.info("Eventim fetchArtiste artiste={} total={}", nom, resultat.concerts().size());
+      LOG.info("Eventim fetchArtiste artiste={} total={}", nom, resultat.concerts().size());
     } else {
-      log.warn("Eventim fetchArtiste artiste={} échoué (voir erreur HTTP ci-dessus)", nom);
+      LOG.warn("Eventim fetchArtiste artiste={} échoué (voir erreur HTTP ci-dessus)", nom);
     }
     return resultat.concerts();
   }

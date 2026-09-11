@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 @Service
 class AlerteQuotaResendService {
 
-  private static final Logger log = LoggerFactory.getLogger(AlerteQuotaResendService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AlerteQuotaResendService.class);
 
   private final GestionQuotaResend gestionQuotaResend;
   private final EmailAlerteService emailAlerteService;
@@ -51,7 +51,7 @@ class AlerteQuotaResendService {
 
     final Optional<String> destinataire = emailAlerteService.obtenirDestinataireAlerte();
     if (destinataire.isEmpty()) {
-      log.warn("alerteQuotaResend: aucun destinataire d'alerte disponible");
+      LOG.warn("alerteQuotaResend: aucun destinataire d'alerte disponible");
       return;
     }
 
@@ -60,7 +60,7 @@ class AlerteQuotaResendService {
     if (envoye) {
       gestionQuotaResend.marquerAlerteEnvoyee(compteur);
     } else {
-      log.warn(
+      LOG.warn(
           "alerteQuotaResend: échec d'envoi — seuil non marqué signalé, retenté au cycle suivant");
     }
   }

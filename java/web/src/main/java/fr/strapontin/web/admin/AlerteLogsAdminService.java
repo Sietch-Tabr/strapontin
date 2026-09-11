@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AlerteLogsAdminService {
 
-  private static final Logger log = LoggerFactory.getLogger(AlerteLogsAdminService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AlerteLogsAdminService.class);
   private static final String CLE_CURSEUR = "ALERTE_LOGS_ADMIN_CURSEUR";
 
   private final LogAdminService logAdminService;
@@ -65,7 +65,7 @@ public class AlerteLogsAdminService {
 
     final Optional<String> email = emailAlerteService.obtenirDestinataireAlerte();
     if (email.isEmpty()) {
-      log.warn(
+      LOG.warn(
           "alerteLogsAdmin: aucun destinataire d'alerte disponible — {} erreur(s) en attente,"
               + " curseur non avancé",
           erreurs.size());
@@ -74,7 +74,7 @@ public class AlerteLogsAdminService {
 
     final boolean envoye = emailAlerteService.envoyerAlerteLogsAdmin(email.get(), erreurs);
     if (!envoye) {
-      log.warn(
+      LOG.warn(
           "alerteLogsAdmin: échec d'envoi — {} erreur(s) en attente, curseur non avancé",
           erreurs.size());
       return;

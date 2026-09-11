@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin")
 public class AdminController {
 
-  private static final Logger log = LoggerFactory.getLogger(AdminController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AdminController.class);
 
   private final AdminService adminService;
   private final ConfigAdminService configAdminService;
@@ -341,7 +341,7 @@ public class AdminController {
               "nbAbonnementsSupprimes",
               resultat.nbAbonnementsSupprimes()));
     } catch (Exception e) {
-      log.error("Erreur génération clés VAPID", e);
+      LOG.error("Erreur génération clés VAPID", e);
       return erreur(500, "Erreur lors de la génération des clés VAPID.");
     }
   }

@@ -33,7 +33,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class NotificationPushService {
 
-  private static final Logger log = LoggerFactory.getLogger(NotificationPushService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NotificationPushService.class);
   private static final String CLE_ENDPOINT = "endpoint";
 
   private final ConfigService configService;
@@ -83,7 +83,7 @@ public class NotificationPushService {
       if (status == 404 || status == 410) {
         supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
       } else {
-        log.warn("Push: échec envoi pour {} — {}", userId, ab.get(CLE_ENDPOINT), e);
+        LOG.warn("Push: échec envoi pour {} — {}", userId, ab.get(CLE_ENDPOINT), e);
       }
       return 0;
     }
@@ -144,7 +144,7 @@ public class NotificationPushService {
     try {
       pushService = new PushService(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
     } catch (Exception e) {
-      log.error("Impossible d'initialiser le service VAPID", e);
+      LOG.error("Impossible d'initialiser le service VAPID", e);
       return false;
     }
 
@@ -153,7 +153,7 @@ public class NotificationPushService {
 
   private void supprimerAbonnement(final UUID id, final String userId, final String endpoint) {
     jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", id));
-    log.info("Abonnement push révoqué, supprimé : {} — {}", userId, endpoint);
+    LOG.info("Abonnement push révoqué, supprimé : {} — {}", userId, endpoint);
     logAdminService.logAdmin("info", "web", "abonnement push révoqué", Map.of("userId", userId));
   }
 

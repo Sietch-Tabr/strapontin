@@ -45,7 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FusionSallesClePorteeService {
 
-  private static final Logger log = LoggerFactory.getLogger(FusionSallesClePorteeService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FusionSallesClePorteeService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
@@ -335,7 +335,7 @@ public class FusionSallesClePorteeService {
     // 7. Suppression de la salle source
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
 
-    log.info(
+    LOG.info(
         "reconciliation:nocturne — salles fusionnées par clé forte cible={} source={}",
         cibleId,
         sourceId);

@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
  */
 final class MapeurProduitEventim {
 
-  private static final Logger log = LoggerFactory.getLogger(MapeurProduitEventim.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MapeurProduitEventim.class);
   private static final String DEPT_PARIS = "75";
   private static final String VILLE_PARIS = "Paris";
   private static final String SEPARATEUR_NOM_SALLE = " - ";
@@ -54,7 +54,7 @@ final class MapeurProduitEventim {
       }
     }
 
-    log.warn(
+    LOG.warn(
         "Eventim ville incohérente non corrigée salle={} dept={} ville={}", salle, dept, ville);
     return null;
   }
@@ -133,7 +133,7 @@ final class MapeurProduitEventim {
       return construireConcertEventim(
           produit, location, artiste, datHeure[0], datHeure[1], artisteSourceId);
     } catch (Exception e) {
-      log.warn("erreur parsing produit Eventim", e);
+      LOG.warn("erreur parsing produit Eventim", e);
       return null;
     }
   }

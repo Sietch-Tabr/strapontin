@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
-  private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AuthService.class);
   private static final SecureRandom rng = new SecureRandom();
 
   private final VerificationRepository verificationRepository;
@@ -81,7 +81,7 @@ public class AuthService {
 
     final String lienReset = baseUrl + "/reset-password?token=" + token;
     emailService.envoyerResetMotDePasse(email, lienReset);
-    log.debug("Email reset MDP envoyé pour email hashé {}", email.hashCode());
+    LOG.debug("Email reset MDP envoyé pour email hashé {}", email.hashCode());
   }
 
   /**
@@ -127,7 +127,7 @@ public class AuthService {
       throw new ErreurMetier("Cet identifiant est déjà utilisé.");
     }
 
-    log.info("Activation compte invitation : emailHash={}", email.hashCode());
+    LOG.info("Activation compte invitation : emailHash={}", email.hashCode());
     verificationRepository.majMotDePasseParEmail(email, passwordEncoder.encode(motDePasse));
     try {
       verificationRepository.majUsernameEtActiverParEmail(email, identifiant);
@@ -160,7 +160,7 @@ public class AuthService {
 
     final String email = identifiant.contains(":") ? identifiant.split(":", 2)[1] : identifiant;
     final boolean estInvitation = identifiant.startsWith("invite:");
-    log.info(
+    LOG.info(
         "Réinitialisation mot de passe : type={}, emailHash={}",
         estInvitation ? "invite" : "reset",
         email.hashCode());

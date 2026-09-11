@@ -55,7 +55,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class NotificationDigestService {
 
-  private static final Logger log = LoggerFactory.getLogger(NotificationDigestService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NotificationDigestService.class);
 
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
@@ -176,7 +176,7 @@ public class NotificationDigestService {
    * @param frequence {@code "temps_reel"} (après chaque recalcul) ou {@code "quotidien"} (cron 8h)
    */
   public void executerDigest(final String frequence) {
-    log.info("notifier:digest démarré frequence={}", frequence);
+    LOG.info("notifier:digest démarré frequence={}", frequence);
     final long debut = System.currentTimeMillis();
     int nbUtilisateurs = 0;
     int nbMatchesNotifies = 0;
@@ -189,7 +189,7 @@ public class NotificationDigestService {
       final MatchesGroupes groupes = chargerMatchesNonNotifies(frequence);
 
       if (groupes.parUtilisateur().isEmpty()) {
-        log.info("notifier:digest — aucun match non notifié");
+        LOG.info("notifier:digest — aucun match non notifié");
         return;
       }
 
@@ -224,7 +224,7 @@ public class NotificationDigestService {
           }
         } catch (Exception e) {
           nbErreurs++;
-          log.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
+          LOG.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
         }
         if (!concertIdsNotifies.isEmpty()) {
           final int updated =
@@ -243,7 +243,7 @@ public class NotificationDigestService {
                       .addValue("concertIds", concertIdsNotifies));
           nbMatchesNotifies += updated;
         } else {
-          log.warn(
+          LOG.warn(
               "notifier:digest — notification échouée pour user={}, notification_envoyee_le non mis"
                   + " à jour",
               userId);
@@ -252,12 +252,12 @@ public class NotificationDigestService {
       }
     } catch (Exception e) {
       erreur = e.getMessage();
-      log.error("notifier:digest échoué", e);
+      LOG.error("notifier:digest échoué", e);
     } finally {
       enregistrerStat(System.currentTimeMillis() - debut, nbMatchesNotifies, erreur);
       logAdminDigest(nbEmailsOk, nbPushOk, nbErreurs);
       remonterBilanPush();
-      log.info("notifier:digest terminé users={} concerts={}", nbUtilisateurs, nbMatchesNotifies);
+      LOG.info("notifier:digest terminé users={} concerts={}", nbUtilisateurs, nbMatchesNotifies);
     }
   }
 
@@ -421,7 +421,7 @@ public class NotificationDigestService {
     }
     final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) {
-      log.debug("RESEND_API_KEY absent — digest email ignoré");
+      LOG.debug("RESEND_API_KEY absent — digest email ignoré");
       return false;
     }
     if (!gestionQuotaResendWorker.reserverEnvoi()) {
@@ -450,10 +450,10 @@ public class NotificationDigestService {
               .text(sujet)
               .build();
       resend.emails().send(options);
-      log.info("Digest email envoyé : {} ({} concert(s))", email, nb);
+      LOG.info("Digest email envoyé : {} ({} concert(s))", email, nb);
       return true;
     } catch (Exception e) {
-      log.error("Échec envoi digest email : {}", email, e);
+      LOG.error("Échec envoi digest email : {}", email, e);
       return false;
     }
   }
@@ -494,7 +494,7 @@ public class NotificationDigestService {
     final Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
     final Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
     if (clePublique.isEmpty() || clePrivee.isEmpty()) {
-      log.debug("VAPID non configuré — push digest ignoré pour {}", userId);
+      LOG.debug("VAPID non configuré — push digest ignoré pour {}", userId);
       return false;
     }
     final List<Map<String, Object>> abonnements =
@@ -512,7 +512,7 @@ public class NotificationDigestService {
       pushService =
           fabriquePushService.creer(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
     } catch (Exception e) {
-      log.error("Impossible d'initialiser le service VAPID", e);
+      LOG.error("Impossible d'initialiser le service VAPID", e);
       return false;
     }
 
@@ -533,7 +533,7 @@ public class NotificationDigestService {
             // Abonnement mort (410/404) : nettoyage attendu, pas une panne du canal push —
             // n'entre pas dans le bilan de panne.
             jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
-            log.info("Abonnement push révoqué : {} — {}", userId, ab.get("endpoint"));
+            LOG.info("Abonnement push révoqué : {} — {}", userId, ab.get("endpoint"));
           }
           case SUCCES -> nbEnvoyes++;
           case ECHEC -> {
@@ -541,16 +541,16 @@ public class NotificationDigestService {
             // succès implicite — sans cette branche, un push jamais délivré était compté
             // comme réussi.
             compteurPush.enregistrerErreur();
-            log.warn("Push: statut inattendu {} pour {} — {}", status, userId, ab.get("endpoint"));
+            LOG.warn("Push: statut inattendu {} pour {} — {}", status, userId, ab.get("endpoint"));
           }
         }
       } catch (Exception e) {
         compteurPush.enregistrerErreur();
-        log.warn("Push: échec envoi pour {} — {}", userId, ab.get("endpoint"), e);
+        LOG.warn("Push: échec envoi pour {} — {}", userId, ab.get("endpoint"), e);
       }
     }
     if (nbEnvoyes > 0) {
-      log.info("Push digest envoyé : {} ({} abonnement(s))", userId, nbEnvoyes);
+      LOG.info("Push digest envoyé : {} ({} abonnement(s))", userId, nbEnvoyes);
     }
     return nbEnvoyes > 0;
   }
@@ -707,7 +707,7 @@ public class NotificationDigestService {
               .addValue("message", message)
               .addValue("meta", metaJson));
     } catch (Exception e) {
-      log.warn("Impossible d'écrire log admin digest : {}", e.getMessage());
+      LOG.warn("Impossible d'écrire log admin digest : {}", e.getMessage());
     }
   }
 
@@ -732,7 +732,7 @@ public class NotificationDigestService {
           """,
           params);
     } catch (Exception e) {
-      log.warn("Impossible d'enregistrer stat notifier:digest : {}", e.getMessage());
+      LOG.warn("Impossible d'enregistrer stat notifier:digest : {}", e.getMessage());
     }
   }
 

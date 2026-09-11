@@ -40,7 +40,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class PersisteurConcertsDb {
 
-  private static final Logger log = LoggerFactory.getLogger(PersisteurConcertsDb.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PersisteurConcertsDb.class);
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -167,7 +167,7 @@ public class PersisteurConcertsDb {
               if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) {
                 return c;
               }
-              log.debug(
+              LOG.debug(
                   "url doublon résolu entrant={} existant={} url={}",
                   c.artisteNorm(),
                   artisteNormExistant,
@@ -255,7 +255,7 @@ public class PersisteurConcertsDb {
       jdbc.update(
           "UPDATE evenements SET heure = CAST(:heure AS time) WHERE id = CAST(:id AS uuid)",
           Map.of("heure", c.heure(), "id", idExistant.toString()));
-      log.info(
+      LOG.info(
           "report Ticketmaster aligné url={} date={} heure {}->{}",
           c.url(),
           c.date(),

@@ -59,7 +59,7 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 @EnableWebSecurity
 public class SecurityConfiguration {
 
-  private static final Logger log = LoggerFactory.getLogger(SecurityConfiguration.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SecurityConfiguration.class);
 
   /**
    * Registre de sessions persisté en JDBC — survit aux redémarrages.
@@ -205,7 +205,7 @@ public class SecurityConfiguration {
                                   "Accès API non authentifié : " + request.getServletPath(),
                                   meta);
                             } catch (Exception e) {
-                              log.warn("échec de la journalisation d'un accès non authentifié", e);
+                              LOG.warn("échec de la journalisation d'un accès non authentifié", e);
                             }
                             response.setStatus(401);
                             response.setContentType("application/json;charset=UTF-8");
@@ -232,7 +232,7 @@ public class SecurityConfiguration {
                                   "Accès API refusé : " + request.getServletPath(),
                                   meta);
                             } catch (Exception e) {
-                              log.warn("échec de la journalisation d'un accès refusé", e);
+                              LOG.warn("échec de la journalisation d'un accès refusé", e);
                             }
                             response.setStatus(403);
                             response.setContentType("application/json;charset=UTF-8");

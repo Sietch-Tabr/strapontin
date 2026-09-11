@@ -31,7 +31,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class EmailService {
 
-  private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EmailService.class);
 
   private final ConfigService configService;
   private final EmailSender emailSender;
@@ -62,7 +62,7 @@ public class EmailService {
   public void envoyerInvitation(final String email, final String lienReset) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — email invitation non envoyé");
+      LOG.warn("RESEND_API_KEY absent — email invitation non envoyé");
       return;
     }
 
@@ -82,9 +82,9 @@ public class EmailService {
     try {
       emailSender.envoyer(
           ctx.get(), email, ctx.get().expediteur(), "Votre invitation Strapontin", corps, texte);
-      log.info("Invitation envoyée : emailHash={}", email.hashCode());
+      LOG.info("Invitation envoyée : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi invitation : emailHash={}", email.hashCode(), e);
+      LOG.error("Échec envoi invitation : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -97,7 +97,7 @@ public class EmailService {
   public void envoyerResetMotDePasse(final String email, final String lienReset) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — email reset non envoyé");
+      LOG.warn("RESEND_API_KEY absent — email reset non envoyé");
       return;
     }
 
@@ -123,9 +123,9 @@ public class EmailService {
           "Réinitialisation de votre mot de passe Strapontin",
           corps,
           texte);
-      log.info("Email reset MDP envoyé : emailHash={}", email.hashCode());
+      LOG.info("Email reset MDP envoyé : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi reset MDP : emailHash={}", email.hashCode(), e);
+      LOG.error("Échec envoi reset MDP : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -137,7 +137,7 @@ public class EmailService {
   public void envoyer2faReinitialisee(final String email) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — email reset 2FA non envoyé");
+      LOG.warn("RESEND_API_KEY absent — email reset 2FA non envoyé");
       return;
     }
 
@@ -164,9 +164,9 @@ public class EmailService {
           "Votre double authentification Strapontin a été réinitialisée",
           corps,
           texte);
-      log.info("Email reset 2FA envoyé : emailHash={}", email.hashCode());
+      LOG.info("Email reset 2FA envoyé : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi reset 2FA : emailHash={}", email.hashCode(), e);
+      LOG.error("Échec envoi reset 2FA : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -179,7 +179,7 @@ public class EmailService {
   public void envoyerConfirmationEmail(final String email, final String lien) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — confirmation email non envoyée");
+      LOG.warn("RESEND_API_KEY absent — confirmation email non envoyée");
       return;
     }
 
@@ -205,9 +205,9 @@ public class EmailService {
           "Confirmez votre nouvelle adresse email — Strapontin",
           corps,
           texte);
-      log.info("Confirmation email envoyée : emailHash={}", email.hashCode());
+      LOG.info("Confirmation email envoyée : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi confirmation email : emailHash={}", email.hashCode(), e);
+      LOG.error("Échec envoi confirmation email : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -237,7 +237,7 @@ public class EmailService {
       final String emailUtilisateur) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — signalement salle manquante non envoyé");
+      LOG.warn("RESEND_API_KEY absent — signalement salle manquante non envoyé");
       return;
     }
 
@@ -256,10 +256,10 @@ public class EmailService {
           "[Strapontin] Salle manquante — " + nom,
           corpsAdmin,
           texteAdmin);
-      log.info(
+      LOG.info(
           "Signalement salle manquante envoyé par : emailHash={}", emailUtilisateur.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi signalement salle manquante", e);
+      LOG.error("Échec envoi signalement salle manquante", e);
       return;
     }
 
@@ -275,10 +275,10 @@ public class EmailService {
           "Votre signalement Strapontin a été transmis",
           corpsUser,
           texteUser);
-      log.info(
+      LOG.info(
           "Confirmation signalement salle envoyée : emailHash={}", emailUtilisateur.hashCode());
     } catch (Exception e) {
-      log.error(
+      LOG.error(
           "Échec envoi confirmation signalement salle : emailHash={}",
           emailUtilisateur.hashCode(),
           e);
@@ -296,7 +296,7 @@ public class EmailService {
       final String type, final String message, final String expediteurEmail) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — signalement non envoyé");
+      LOG.warn("RESEND_API_KEY absent — signalement non envoyé");
       return;
     }
 
@@ -322,9 +322,9 @@ public class EmailService {
           "[Strapontin] Signalement — %s".formatted(typeLabel),
           corps,
           texte);
-      log.info("Signalement envoyé : emailHash={}", expediteurEmail.hashCode());
+      LOG.info("Signalement envoyé : emailHash={}", expediteurEmail.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi signalement", e);
+      LOG.error("Échec envoi signalement", e);
     }
   }
 
@@ -342,7 +342,7 @@ public class EmailService {
 
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — digest concerts non envoyé");
+      LOG.warn("RESEND_API_KEY absent — digest concerts non envoyé");
       return false;
     }
 
@@ -366,10 +366,10 @@ public class EmailService {
 
     try {
       emailSender.envoyer(ctx.get(), email, ctx.get().expediteur(), sujet, corps, sujet);
-      log.info("Digest envoyé : emailHash={} ({} concert(s))", email.hashCode(), nb);
+      LOG.info("Digest envoyé : emailHash={} ({} concert(s))", email.hashCode(), nb);
       return true;
     } catch (Exception e) {
-      log.error("Échec envoi digest : emailHash={}", email.hashCode(), e);
+      LOG.error("Échec envoi digest : emailHash={}", email.hashCode(), e);
       return false;
     }
   }
@@ -382,7 +382,7 @@ public class EmailService {
   public void envoyerSuppressionCompte(final String email) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — email suppression compte non envoyé");
+      LOG.warn("RESEND_API_KEY absent — email suppression compte non envoyé");
       return;
     }
 
@@ -406,9 +406,9 @@ public class EmailService {
           "Votre compte Strapontin a été supprimé",
           corps,
           texte);
-      log.info("Email suppression compte envoyé : emailHash={}", email.hashCode());
+      LOG.info("Email suppression compte envoyé : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi suppression compte : emailHash={}", email.hashCode(), e);
+      LOG.error("Échec envoi suppression compte : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -421,7 +421,7 @@ public class EmailService {
   public boolean envoyerEmailTest(final String emailAdmin) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — email de test non envoyé");
+      LOG.warn("RESEND_API_KEY absent — email de test non envoyé");
       return false;
     }
     try {
@@ -433,10 +433,10 @@ public class EmailService {
           EmailTemplates.emailTest(ctx.get().baseUrl()),
           "Test de configuration email Strapontin. Si vous recevez cet email, la configuration"
               + " Resend est correcte.");
-      log.info("Email de test envoyé : emailHash={}", emailAdmin.hashCode());
+      LOG.info("Email de test envoyé : emailHash={}", emailAdmin.hashCode());
       return true;
     } catch (Exception e) {
-      log.error("Échec envoi email de test : emailHash={}", emailAdmin.hashCode(), e);
+      LOG.error("Échec envoi email de test : emailHash={}", emailAdmin.hashCode(), e);
       return false;
     }
   }
@@ -449,7 +449,7 @@ public class EmailService {
   public void envoyerPromotionAdmin(final String email) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — email promotion admin non envoyé");
+      LOG.warn("RESEND_API_KEY absent — email promotion admin non envoyé");
       return;
     }
 
@@ -472,9 +472,9 @@ public class EmailService {
           "Vous êtes maintenant administrateur Strapontin",
           corps,
           texte);
-      log.info("Email promotion admin envoyé : emailHash={}", email.hashCode());
+      LOG.info("Email promotion admin envoyé : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi email promotion admin : emailHash={}", email.hashCode(), e);
+      LOG.error("Échec envoi email promotion admin : emailHash={}", email.hashCode(), e);
     }
   }
 
@@ -487,7 +487,7 @@ public class EmailService {
   public void envoyerPreavisRevocationAdmin(final String email, final String dateEffective) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — email préavis révocation admin non envoyé");
+      LOG.warn("RESEND_API_KEY absent — email préavis révocation admin non envoyé");
       return;
     }
 
@@ -510,9 +510,9 @@ public class EmailService {
           "Strapontin — préavis de révocation admin",
           corps,
           texte);
-      log.info("Email préavis révocation admin envoyé : emailHash={}", email.hashCode());
+      LOG.info("Email préavis révocation admin envoyé : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi préavis révocation admin : emailHash={}", email.hashCode(), e);
+      LOG.error("Échec envoi préavis révocation admin : emailHash={}", email.hashCode(), e);
     }
   }
 

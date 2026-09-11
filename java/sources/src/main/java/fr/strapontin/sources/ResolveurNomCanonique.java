@@ -30,7 +30,7 @@ import org.springframework.web.client.RestClient;
  */
 public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
-  private static final Logger log = LoggerFactory.getLogger(ResolveurNomCanonique.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ResolveurNomCanonique.class);
 
   private static final String DEEZER_BASE = "https://api.deezer.com";
   // Un seuil trop permissif expose au cas où le vrai artiste n'apparaît pas du tout dans le pool
@@ -148,12 +148,12 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
       final String resultat = (String) meilleurCandidat.get("name");
       if (!resultat.equals(nom)) {
-        log.info("Deezer résolution artiste='{}' → '{}'", nom, resultat);
+        LOG.info("Deezer résolution artiste='{}' → '{}'", nom, resultat);
       }
       return resultat;
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
-      log.warn("Deezer erreur artiste='{}' : {}", nom, e.getMessage());
+      LOG.warn("Deezer erreur artiste='{}' : {}", nom, e.getMessage());
       return null;
     }
   }

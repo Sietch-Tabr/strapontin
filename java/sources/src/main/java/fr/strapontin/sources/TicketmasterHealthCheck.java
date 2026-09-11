@@ -21,7 +21,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 final class TicketmasterHealthCheck {
 
-  private static final Logger log = LoggerFactory.getLogger(TicketmasterHealthCheck.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TicketmasterHealthCheck.class);
   private static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
   private static final String CLE_EMBEDDED = "_embedded";
 
@@ -57,7 +57,7 @@ final class TicketmasterHealthCheck {
     } catch (HttpClientErrorException.NotFound e) {
       return StatutIdTM.MORT;
     } catch (Exception e) {
-      log.warn(
+      LOG.warn(
           "verifierRessource TM échoué chemin={} : {}",
           chemin,
           TicketmasterSource.redigerApiKey(e.getMessage()));
@@ -77,7 +77,7 @@ final class TicketmasterHealthCheck {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       return data != null ? (String) data.get("name") : null;
     } catch (Exception e) {
-      log.warn(
+      LOG.warn(
           "recupererNomAttraction TM échoué attractionId={} : {}",
           attractionId,
           TicketmasterSource.redigerApiKey(e.getMessage()));
@@ -115,7 +115,7 @@ final class TicketmasterHealthCheck {
       }
       return resultat;
     } catch (Exception e) {
-      log.warn(
+      LOG.warn(
           "rechercherVenuesParNom TM échoué nom='{}' : {}",
           nom,
           TicketmasterSource.redigerApiKey(e.getMessage()));
@@ -141,7 +141,7 @@ final class TicketmasterHealthCheck {
       final Map<String, Object> page = (Map<String, Object>) data.get("page");
       return page != null ? ((Number) page.get("totalElements")).intValue() : 0;
     } catch (Exception e) {
-      log.warn(
+      LOG.warn(
           "compterEventsVenue TM échoué venueId={} : {}",
           venueId,
           TicketmasterSource.redigerApiKey(e.getMessage()));

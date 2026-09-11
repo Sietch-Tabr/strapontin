@@ -32,7 +32,7 @@ import org.springframework.web.client.RestClient;
 @Service
 public class ConfigAdminService {
 
-  private static final Logger log = LoggerFactory.getLogger(ConfigAdminService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ConfigAdminService.class);
 
   private static final List<String> CLES_AUTORISEES =
       List.of(
@@ -99,7 +99,7 @@ public class ConfigAdminService {
       restClient.get().uri(TM_URL_TEST, cle.get()).retrieve().toBodilessEntity();
       return true;
     } catch (Exception e) {
-      log.warn("Test clé TM : réponse invalide — {}", e.getMessage());
+      LOG.warn("Test clé TM : réponse invalide — {}", e.getMessage());
       return false;
     }
   }

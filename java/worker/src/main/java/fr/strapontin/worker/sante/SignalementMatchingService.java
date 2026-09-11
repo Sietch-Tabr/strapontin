@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class SignalementMatchingService {
 
-  private static final Logger log = LoggerFactory.getLogger(SignalementMatchingService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SignalementMatchingService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
@@ -72,9 +72,9 @@ public class SignalementMatchingService {
               .addValue("confiance", confiance)
               .addValue("details", detailsJson));
     } catch (JsonProcessingException e) {
-      log.warn("Erreur sérialisation details signalement type={} : {}", type, e.getMessage());
+      LOG.warn("Erreur sérialisation details signalement type={} : {}", type, e.getMessage());
     } catch (Exception e) {
-      log.warn("Erreur insertion signalement type={} : {}", type, e.getMessage());
+      LOG.warn("Erreur insertion signalement type={} : {}", type, e.getMessage());
     }
   }
 }

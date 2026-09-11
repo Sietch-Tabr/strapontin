@@ -27,7 +27,7 @@ import org.springframework.web.client.RestClient;
  */
 public final class ClientNominatim {
 
-  private static final Logger log = LoggerFactory.getLogger(ClientNominatim.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClientNominatim.class);
 
   private static final String BASE_URL = "https://nominatim.openstreetmap.org/search";
   private static final String USER_AGENT =
@@ -87,7 +87,7 @@ public final class ClientNominatim {
           restClient.get().uri(url).header("User-Agent", USER_AGENT).retrieve().body(List.class);
       return extraireCoordonnees(resultats);
     } catch (Exception e) {
-      log.warn("Nominatim géocodage échoué nom={} : {}", nom, e.getMessage());
+      LOG.warn("Nominatim géocodage échoué nom={} : {}", nom, e.getMessage());
       return Optional.empty();
     }
   }

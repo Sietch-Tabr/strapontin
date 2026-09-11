@@ -33,7 +33,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class CoherenceMultiSalleService {
 
-  private static final Logger log = LoggerFactory.getLogger(CoherenceMultiSalleService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CoherenceMultiSalleService.class);
 
   private static final String PREFIXE_INTERNAL = "internal:";
 
@@ -117,7 +117,7 @@ public class CoherenceMultiSalleService {
               + signatureActuelle,
           Map.of("salleId", salleId.toString(), "mesententes", signatureActuelle));
     }
-    log.info(
+    LOG.info(
         "coherence:multi-salle:contamination candidats={} signalees={}",
         nomsExtraitsParSalle.size(),
         signalees);
@@ -239,7 +239,7 @@ public class CoherenceMultiSalleService {
             Map.of("salleA", idA.toString(), "salleB", idB.toString()));
       }
     }
-    log.info("coherence:multi-salle:doublon salles={} signalees={}", salles.size(), signalees);
+    LOG.info("coherence:multi-salle:doublon salles={} signalees={}", salles.size(), signalees);
     return signalees;
   }
 

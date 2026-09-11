@@ -35,7 +35,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkerStatsService {
 
-  private static final Logger log = LoggerFactory.getLogger(WorkerStatsService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WorkerStatsService.class);
 
   private final List<SourceConcerts> sources;
   private final TicketmasterSource tm;
@@ -124,7 +124,7 @@ public class WorkerStatsService {
           """,
           params);
     } catch (Exception e) {
-      log.warn("Impossible d'enregistrer stat job {} : {}", typeJob, e.getMessage());
+      LOG.warn("Impossible d'enregistrer stat job {} : {}", typeJob, e.getMessage());
     }
     if (typeJob.startsWith("fetch:")) {
       boolean bilanLoggue = false;
@@ -335,7 +335,7 @@ public class WorkerStatsService {
           """,
           params);
     } catch (Exception e) {
-      log.warn("Impossible de remonter le résultat vide pour {} : {}", typeJob, e.getMessage());
+      LOG.warn("Impossible de remonter le résultat vide pour {} : {}", typeJob, e.getMessage());
     }
   }
 }

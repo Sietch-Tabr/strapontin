@@ -30,7 +30,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserConfigService {
 
-  private static final Logger log = LoggerFactory.getLogger(UserConfigService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(UserConfigService.class);
   private static final Pattern FORMAT_DEPT = Pattern.compile("^\\d{2,3}$");
   private static final Set<String> FREQUENCES_VALIDES = Set.of("jamais", "temps_reel", "quotidien");
   private static final Set<String> THEMES_VALIDES = Set.of("auto", "clair", "sombre");
@@ -169,7 +169,7 @@ public class UserConfigService {
     champs.put("notifSallesPush", requete.notifSallesPush());
     upsertConfig(userId, champs);
 
-    log.info(
+    LOG.info(
         "notifications modifiées userId={} frequence={} artistes={} salles={} artistesPush={}"
             + " sallesPush={}",
         userId,

@@ -55,7 +55,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class CoherenceWikidataSalleService {
 
-  private static final Logger log = LoggerFactory.getLogger(CoherenceWikidataSalleService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CoherenceWikidataSalleService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final WikidataSalleSource wikidata;
@@ -84,7 +84,7 @@ public class CoherenceWikidataSalleService {
   public int verifier() {
     final List<SalleAEnrichir> candidats = selectionnerCandidats();
     if (candidats.isEmpty()) {
-      log.info("coherence:wikidata — aucun candidat");
+      LOG.info("coherence:wikidata — aucun candidat");
       return 0;
     }
 
@@ -121,7 +121,7 @@ public class CoherenceWikidataSalleService {
       memoriserSignature(salle.id(), signature);
       loggerIncoherence(salle, communeWikidata, partielle);
     }
-    log.info("coherence:wikidata candidats={} incoherences={}", candidats.size(), incoherences);
+    LOG.info("coherence:wikidata candidats={} incoherences={}", candidats.size(), incoherences);
     return incoherences;
   }
 
@@ -140,7 +140,7 @@ public class CoherenceWikidataSalleService {
   public int revaliderTypes() {
     final List<String> wikidataIds = selectionnerTousLesWikidataId();
     if (wikidataIds.isEmpty()) {
-      log.info("coherence:wikidata:types — aucun candidat");
+      LOG.info("coherence:wikidata:types — aucun candidat");
       return 0;
     }
 
@@ -148,7 +148,7 @@ public class CoherenceWikidataSalleService {
     for (final String qid : invalides) {
       invaliderWikidataId(qid);
     }
-    log.info(
+    LOG.info(
         "coherence:wikidata:types candidats={} invalides={}", wikidataIds.size(), invalides.size());
     return invalides.size();
   }

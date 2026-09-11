@@ -31,7 +31,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class SuiviChroniciteService {
 
-  private static final Logger log = LoggerFactory.getLogger(SuiviChroniciteService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SuiviChroniciteService.class);
 
   private static final String CLE_CONFIG = "FIABILITE_STREAKS_JSON";
 
@@ -109,7 +109,7 @@ public class SuiviChroniciteService {
     } catch (EmptyResultDataAccessException e) {
       return new HashMap<>();
     } catch (JsonProcessingException e) {
-      log.warn("streaks de chronicité malformés en base — réinitialisés : {}", e.getMessage());
+      LOG.warn("streaks de chronicité malformés en base — réinitialisés : {}", e.getMessage());
       return new HashMap<>();
     }
   }
@@ -125,7 +125,7 @@ public class SuiviChroniciteService {
           """,
           Map.of("cle", CLE_CONFIG, "json", json));
     } catch (JsonProcessingException e) {
-      log.error("impossible de sérialiser les streaks de chronicité", e);
+      LOG.error("impossible de sérialiser les streaks de chronicité", e);
     }
   }
 }

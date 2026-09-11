@@ -30,7 +30,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AppareilsService {
 
-  private static final Logger log = LoggerFactory.getLogger(AppareilsService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AppareilsService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -69,7 +69,7 @@ public class AppareilsService {
               "userAgent",
               userAgent == null ? "" : userAgent));
     } catch (DataAccessException e) {
-      log.warn("échec d'enregistrement de l'appareil pour la session, ignoré : {}", e.getMessage());
+      LOG.warn("échec d'enregistrement de l'appareil pour la session, ignoré : {}", e.getMessage());
     }
   }
 

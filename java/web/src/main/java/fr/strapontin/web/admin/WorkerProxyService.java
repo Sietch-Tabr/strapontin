@@ -29,7 +29,7 @@ import org.springframework.web.client.RestClientResponseException;
 @Service
 public class WorkerProxyService {
 
-  private static final Logger log = LoggerFactory.getLogger(WorkerProxyService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WorkerProxyService.class);
   private static final String WORKER_BASE_URL = "http://localhost:8081";
   private static final String CLE_MDC_CORRELATION_ID = "correlationId";
   private static final String HEADER_CORRELATION_ID = "X-Correlation-ID";
@@ -84,7 +84,7 @@ public class WorkerProxyService {
         return liste.stream().map(Object::toString).toList();
       }
     } catch (Exception e) {
-      log.debug("Worker inaccessible pour jobs actifs");
+      LOG.debug("Worker inaccessible pour jobs actifs");
     }
     return List.of();
   }
@@ -111,7 +111,7 @@ public class WorkerProxyService {
           });
       return resultat;
     } catch (Exception e) {
-      log.debug("Worker inaccessible pour prochaines exécutions");
+      LOG.debug("Worker inaccessible pour prochaines exécutions");
     }
     return Map.of();
   }
@@ -134,7 +134,7 @@ public class WorkerProxyService {
           "info", "admin", "Fetch salle déclenché", Map.of("identifiants", identifiants));
       return true;
     } catch (Exception e) {
-      log.warn("Erreur déclenchement salle identifiants={}", identifiants, e);
+      LOG.warn("Erreur déclenchement salle identifiants={}", identifiants, e);
       return false;
     }
   }
@@ -156,7 +156,7 @@ public class WorkerProxyService {
       return new ResultatRelance(
           false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
     } catch (Exception e) {
-      log.warn("Erreur appel worker trigger", e);
+      LOG.warn("Erreur appel worker trigger", e);
       return new ResultatRelance(false, "Worker inaccessible.", 503);
     }
   }
@@ -190,7 +190,7 @@ public class WorkerProxyService {
       return new ResultatRelance(
           false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
     } catch (Exception e) {
-      log.warn("Erreur appel worker trigger job typeJob={}", typeJob, e);
+      LOG.warn("Erreur appel worker trigger job typeJob={}", typeJob, e);
       return new ResultatRelance(false, "Worker inaccessible.", 503);
     }
   }

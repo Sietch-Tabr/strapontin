@@ -50,7 +50,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminService {
 
-  private static final Logger log = LoggerFactory.getLogger(AdminService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AdminService.class);
   private static final Pattern FORMAT_EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
   private static final Set<String> ROLES_VALIDES = Set.of("user", "admin");
   private static final int MAX_TENTATIVES_REVOCATION = 3;
@@ -402,7 +402,7 @@ public class AdminService {
   public void initierRevocationAdmin(final String userId, final String adminId) {
     RetrySerialisable.executer(
         MAX_TENTATIVES_REVOCATION,
-        log,
+        LOG,
         "la révocation admin",
         () -> self.initierRevocationAdminTransactionnel(userId, adminId));
   }

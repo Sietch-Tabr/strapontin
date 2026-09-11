@@ -33,7 +33,7 @@ import org.springframework.stereotype.Service;
 @Service
 class ResolveurSalleParConcert {
 
-  private static final Logger log = LoggerFactory.getLogger(ResolveurSalleParConcert.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ResolveurSalleParConcert.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ClientNominatim clientNominatim;
@@ -137,7 +137,7 @@ class ResolveurSalleParConcert {
             + " ON CONFLICT DO NOTHING",
         Map.of("uuid", salleId.toString(), "source", source, "identifiant", identifiant));
 
-    log.info(
+    LOG.info(
         "salle upsert source salle={} source={} identifiant={} uuid={}",
         c.salle(),
         source,
@@ -173,7 +173,7 @@ class ResolveurSalleParConcert {
       if (FusionSallesClePorteeService.coordonneesConnuesEtProches(
           coords.latitude(), coords.longitude(), latitude, longitude)) {
         final UUID salleId = (UUID) ligne.get("id");
-        log.info("salle résolue par proximité GPS (géocodage dernier recours) uuid={}", salleId);
+        LOG.info("salle résolue par proximité GPS (géocodage dernier recours) uuid={}", salleId);
         return salleId;
       }
     }
@@ -290,7 +290,7 @@ class ResolveurSalleParConcert {
       }
     }
     if (meilleurUuid != null) {
-      log.info(
+      LOG.info(
           "salle doublon détecté par tokens : '{}' ≈ '{}' uuid={} score={}",
           nom,
           meilleurNomNorm,
@@ -344,7 +344,7 @@ class ResolveurSalleParConcert {
             "SELECT id FROM salles WHERE salle_cle = :salleCle",
             Map.of("salleCle", salleCle),
             UUID.class);
-    log.info(
+    LOG.info(
         "sous-salle créée pour complexe nom={} base={} complexeId={} sousSalleId={}",
         nom,
         base,
@@ -391,7 +391,7 @@ class ResolveurSalleParConcert {
 
     final UUID salleId = premierCandidatGeographiquementCoherent(candidats, c.dept());
     if (salleId == null) {
-      log.warn(
+      LOG.warn(
           "clé forte (artiste+date+heure+dept) sans candidat géographiquement cohérent"
               + " artiste={} date={} candidats={}",
           c.artiste(),
@@ -400,7 +400,7 @@ class ResolveurSalleParConcert {
       return null;
     }
 
-    log.info(
+    LOG.info(
         "salle rattachée par clé forte (artiste+date+heure+dept) artiste={} date={} salle={}"
             + " uuid={}",
         c.artiste(),

@@ -44,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class AuthController {
 
-  private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AuthController.class);
   private static final Pattern FORMAT_IDENTIFIANT = Pattern.compile("^[a-zA-Z0-9._-]+$");
 
   private final AuthenticationManager authenticationManager;
@@ -98,7 +98,7 @@ public class AuthController {
           .session()
           .setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
     }
-    log.debug("Connexion réussie : {}", details.identifiant());
+    LOG.debug("Connexion réussie : {}", details.identifiant());
     return ResponseEntity.ok(
         new UtilisateurDto(
             details.id(),
@@ -172,18 +172,18 @@ public class AuthController {
     return switch (resultat.statut()) {
       case DEJA_VERROUILLE -> {
         session.invalidate();
-        log.debug("Compte TOTP verrouillé, session invalidée : {}", principal.identifiant());
+        LOG.debug("Compte TOTP verrouillé, session invalidée : {}", principal.identifiant());
         yield ResponseEntity.status(HttpStatus.UNAUTHORIZED)
             .body(Map.of("erreur", "Compte verrouillé. Contactez un administrateur."));
       }
       case SUCCES -> {
         session.removeAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE);
-        log.debug("Challenge TOTP validé : {}", principal.identifiant());
+        LOG.debug("Challenge TOTP validé : {}", principal.identifiant());
         yield ResponseEntity.ok(Map.of("succes", true));
       }
       case VERROUILLE_MAINTENANT -> {
         session.invalidate();
-        log.debug("Trop de tentatives TOTP, session invalidée : {}", principal.identifiant());
+        LOG.debug("Trop de tentatives TOTP, session invalidée : {}", principal.identifiant());
         yield ResponseEntity.status(HttpStatus.UNAUTHORIZED)
             .body(Map.of("erreur", "Trop de tentatives. Compte verrouillé."));
       }
@@ -308,7 +308,7 @@ public class AuthController {
       final UtilisateurDetails details =
           ouvrirSession(auth, httpRequest, "Principal inattendu après activation invitation")
               .details();
-      log.debug("Activation compte invitation, connexion : {}", details.identifiant());
+      LOG.debug("Activation compte invitation, connexion : {}", details.identifiant());
       return ResponseEntity.ok(
           new UtilisateurDto(
               details.id(), details.identifiant(), details.email(), details.role(), false, false));

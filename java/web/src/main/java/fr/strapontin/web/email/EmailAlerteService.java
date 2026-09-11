@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class EmailAlerteService {
 
-  private static final Logger log = LoggerFactory.getLogger(EmailAlerteService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EmailAlerteService.class);
 
   // Garde-fou anti-boucle : au plus une notification de bounce/plainte spam par heure,
   // persisté en app_config pour survivre aux redéploiements (même pattern que
@@ -83,16 +83,16 @@ public class EmailAlerteService {
   public void envoyerNotificationBounce(final String emailBouncee) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — notification bounce non envoyée");
+      LOG.warn("RESEND_API_KEY absent — notification bounce non envoyée");
       return;
     }
     if (alerteRecente(CLE_DERNIERE_ALERTE_BOUNCE)) {
-      log.debug("Notification bounce déjà envoyée récemment — ignorée (garde-fou anti-boucle)");
+      LOG.debug("Notification bounce déjà envoyée récemment — ignorée (garde-fou anti-boucle)");
       return;
     }
     final Optional<String> destinataire = obtenirDestinataireAlerte();
     if (destinataire.isEmpty()) {
-      log.warn("Aucun destinataire d'alerte disponible — notification bounce non envoyée");
+      LOG.warn("Aucun destinataire d'alerte disponible — notification bounce non envoyée");
       return;
     }
 
@@ -111,9 +111,9 @@ public class EmailAlerteService {
               + ctx.get().baseUrl()
               + "/admin");
       configService.sauvegarderConfig(CLE_DERNIERE_ALERTE_BOUNCE, Instant.now().toString());
-      log.info("Notification bounce envoyée : emailHash={}", emailBouncee.hashCode());
+      LOG.info("Notification bounce envoyée : emailHash={}", emailBouncee.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi notification bounce", e);
+      LOG.error("Échec envoi notification bounce", e);
     }
   }
 
@@ -130,17 +130,17 @@ public class EmailAlerteService {
   public void envoyerNotificationPlainteSpam(final String emailPlaignant) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — notification plainte spam non envoyée");
+      LOG.warn("RESEND_API_KEY absent — notification plainte spam non envoyée");
       return;
     }
     if (alerteRecente(CLE_DERNIERE_ALERTE_SPAM)) {
-      log.debug(
+      LOG.debug(
           "Notification plainte spam déjà envoyée récemment — ignorée (garde-fou anti-boucle)");
       return;
     }
     final Optional<String> destinataire = obtenirDestinataireAlerte();
     if (destinataire.isEmpty()) {
-      log.warn("Aucun destinataire d'alerte disponible — notification plainte spam non envoyée");
+      LOG.warn("Aucun destinataire d'alerte disponible — notification plainte spam non envoyée");
       return;
     }
 
@@ -159,9 +159,9 @@ public class EmailAlerteService {
               + ctx.get().baseUrl()
               + "/admin");
       configService.sauvegarderConfig(CLE_DERNIERE_ALERTE_SPAM, Instant.now().toString());
-      log.info("Notification plainte spam envoyée : emailHash={}", emailPlaignant.hashCode());
+      LOG.info("Notification plainte spam envoyée : emailHash={}", emailPlaignant.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi notification plainte spam", e);
+      LOG.error("Échec envoi notification plainte spam", e);
     }
   }
 
@@ -176,12 +176,12 @@ public class EmailAlerteService {
   public void envoyerAlerteBackup(final String horodatage, final String raison) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — alerte backup non envoyée");
+      LOG.warn("RESEND_API_KEY absent — alerte backup non envoyée");
       return;
     }
     final Optional<String> destinataire = obtenirDestinataireAlerte();
     if (destinataire.isEmpty()) {
-      log.warn("Aucun destinataire d'alerte disponible — alerte backup non envoyée");
+      LOG.warn("Aucun destinataire d'alerte disponible — alerte backup non envoyée");
       return;
     }
 
@@ -197,9 +197,9 @@ public class EmailAlerteService {
     try {
       emailSender.envoyer(
           ctx.get(), destinataire.get(), ctx.get().expediteur(), sujet, corps, texte);
-      log.info("Alerte backup envoyée");
+      LOG.info("Alerte backup envoyée");
     } catch (Exception e) {
-      log.error("Échec envoi alerte backup", e);
+      LOG.error("Échec envoi alerte backup", e);
     }
   }
 
@@ -214,12 +214,12 @@ public class EmailAlerteService {
   public void envoyerAlerteIntegrite(final String detail) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — alerte intégrité non envoyée");
+      LOG.warn("RESEND_API_KEY absent — alerte intégrité non envoyée");
       return;
     }
     final Optional<String> destinataire = obtenirDestinataireAlerte();
     if (destinataire.isEmpty()) {
-      log.warn("Aucun destinataire d'alerte disponible — alerte intégrité non envoyée");
+      LOG.warn("Aucun destinataire d'alerte disponible — alerte intégrité non envoyée");
       return;
     }
 
@@ -237,9 +237,9 @@ public class EmailAlerteService {
               + ". Consultez l'administration : "
               + ctx.get().baseUrl()
               + "/admin");
-      log.info("Alerte intégrité envoyée");
+      LOG.info("Alerte intégrité envoyée");
     } catch (Exception e) {
-      log.error("Échec envoi alerte intégrité", e);
+      LOG.error("Échec envoi alerte intégrité", e);
     }
   }
 
@@ -252,7 +252,7 @@ public class EmailAlerteService {
   public void envoyerAlerteWorkerInactif(final String email, final String derniereActiviteIso) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — alerte worker non envoyée");
+      LOG.warn("RESEND_API_KEY absent — alerte worker non envoyée");
       return;
     }
 
@@ -273,9 +273,9 @@ public class EmailAlerteService {
           corps,
           "Worker inactif — %s Consultez l'administration : %s/admin"
               .formatted(detail, ctx.get().baseUrl()));
-      log.info("Alerte worker envoyée : emailHash={}", email.hashCode());
+      LOG.info("Alerte worker envoyée : emailHash={}", email.hashCode());
     } catch (Exception e) {
-      log.error("Échec envoi alerte worker", e);
+      LOG.error("Échec envoi alerte worker", e);
     }
   }
 
@@ -296,7 +296,7 @@ public class EmailAlerteService {
   public boolean envoyerAlerteQuotaResend(final String email, final CompteurEnvoisResend compteur) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — alerte quota Resend non envoyée");
+      LOG.warn("RESEND_API_KEY absent — alerte quota Resend non envoyée");
       return false;
     }
 
@@ -322,10 +322,10 @@ public class EmailAlerteService {
                   compteur.envoyesMois(),
                   GestionQuotaResend.LIMITE_MOIS,
                   ctx.get().baseUrl()));
-      log.info("Alerte quota Resend envoyée : emailHash={}", email.hashCode());
+      LOG.info("Alerte quota Resend envoyée : emailHash={}", email.hashCode());
       return true;
     } catch (Exception e) {
-      log.error("Échec envoi alerte quota Resend", e);
+      LOG.error("Échec envoi alerte quota Resend", e);
       return false;
     }
   }
@@ -343,7 +343,7 @@ public class EmailAlerteService {
       final String email, final List<LogAdminService.EntreeLogAdmin> erreurs) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
-      log.warn("RESEND_API_KEY absent — alerte logs admin non envoyée");
+      LOG.warn("RESEND_API_KEY absent — alerte logs admin non envoyée");
       return false;
     }
 
@@ -360,10 +360,10 @@ public class EmailAlerteService {
               + " nouvelle(s) erreur(s) dans logs_admin. Consultez l'administration : "
               + ctx.get().baseUrl()
               + "/admin");
-      log.info("Alerte logs admin envoyée : emailHash={} nb={}", email.hashCode(), erreurs.size());
+      LOG.info("Alerte logs admin envoyée : emailHash={} nb={}", email.hashCode(), erreurs.size());
       return true;
     } catch (Exception e) {
-      log.error("Échec envoi alerte logs admin", e);
+      LOG.error("Échec envoi alerte logs admin", e);
       return false;
     }
   }

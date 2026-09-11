@@ -37,7 +37,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-  private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   private final LogAdminService logAdminService;
 
@@ -97,7 +97,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(DuplicateKeyException.class)
   @ResponseStatus(HttpStatus.CONFLICT)
   public Map<String, Object> gererDoublon(final DuplicateKeyException ex) {
-    log.debug("Contrainte d'unicité violée : {}", ex.getMessage());
+    LOG.debug("Contrainte d'unicité violée : {}", ex.getMessage());
     return Map.of("erreur", "Cette ressource existe déjà.");
   }
 
@@ -149,7 +149,7 @@ public class GlobalExceptionHandler {
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   public Map<String, Object> gererErreurBd(
       final DataAccessException ex, final HttpServletRequest request) {
-    log.error("Erreur d'accès aux données", ex);
+    LOG.error("Erreur d'accès aux données", ex);
     logErreurServeur(request, ex);
     return Map.of("erreur", "Erreur de base de données.");
   }
@@ -165,7 +165,7 @@ public class GlobalExceptionHandler {
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   public Map<String, Object> gererErreurInattendue(
       final Exception ex, final HttpServletRequest request) {
-    log.error("Erreur inattendue", ex);
+    LOG.error("Erreur inattendue", ex);
     logErreurServeur(request, ex);
     return Map.of("erreur", "Une erreur inattendue s'est produite.");
   }
@@ -179,7 +179,7 @@ public class GlobalExceptionHandler {
       logAdminService.logAdmin(
           "error", "web", "Erreur serveur : " + request.getServletPath(), meta);
     } catch (Exception e) {
-      log.warn("échec de la journalisation admin d'une erreur serveur", e);
+      LOG.warn("échec de la journalisation admin d'une erreur serveur", e);
     }
   }
 }

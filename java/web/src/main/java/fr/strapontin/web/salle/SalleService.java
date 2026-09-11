@@ -49,7 +49,7 @@ import org.springframework.web.client.RestClient;
 @Service
 public class SalleService {
 
-  private static final Logger log = LoggerFactory.getLogger(SalleService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SalleService.class);
   private static final String TM_VENUES_URL =
       "https://app.ticketmaster.com/discovery/v2/venues.json";
   private static final String NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
@@ -294,7 +294,7 @@ public class SalleService {
       try {
         self.mettreAJourWikidataIdEnSavepoint(salleId, wikidataId);
       } catch (DuplicateKeyException e) {
-        log.warn(
+        LOG.warn(
             "wikidataId déjà attribué à une autre salle — conflit ignoré salle={} wikidataId={}",
             nom,
             wikidataId);
@@ -423,7 +423,7 @@ public class SalleService {
     if (salleRepository.supprimerPourUtilisateur(userId, salleId) == 0) {
       return;
     }
-    log.info("salle supprimée userId={} salleId={}", userId, salleId);
+    LOG.info("salle supprimée userId={} salleId={}", userId, salleId);
     logAdminService.logAdmin(
         "warn", "web", "salle supprimée", Map.of("userId", userId, "salleId", salleId.toString()));
   }
@@ -557,12 +557,12 @@ public class SalleService {
                       new WorkerTriggerUtils.ReponseHttp(
                           resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) {
-        log.warn("Nominatim erreur HTTP {} pour '{}'", reponse.statut(), terme);
+        LOG.warn("Nominatim erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
       }
       return parseNominatimResultats(reponse.corps());
     } catch (Exception e) {
-      log.warn("Nominatim recherche salle échouée pour '{}'", terme, e);
+      LOG.warn("Nominatim recherche salle échouée pour '{}'", terme, e);
       return List.of();
     }
   }
@@ -618,7 +618,7 @@ public class SalleService {
         resultats.add(new ResultatSalle(nom, ville, null, null, "osm", osmId, wikidataId));
       }
     } catch (Exception e) {
-      log.warn("Nominatim parsing JSON échoué", e);
+      LOG.warn("Nominatim parsing JSON échoué", e);
     }
     return resultats;
   }
@@ -690,7 +690,7 @@ public class SalleService {
                 }
                 final String nom = Normalisation.normaliserCasse(nomBrut);
                 if (nomBrut.contains("??")) {
-                  log.warn("TM salle nom corrompu id={} nom='{}'", v.get("id"), nomBrut);
+                  LOG.warn("TM salle nom corrompu id={} nom='{}'", v.get("id"), nomBrut);
                 }
                 final String id = (String) v.get("id");
                 final Map<String, Object> city = (Map<String, Object>) v.get("city");
@@ -701,7 +701,7 @@ public class SalleService {
           .collect(Collectors.toList());
 
     } catch (Exception e) {
-      log.warn("TM recherche salle échouée pour '{}'", terme, e);
+      LOG.warn("TM recherche salle échouée pour '{}'", terme, e);
       return List.of();
     }
   }
@@ -709,7 +709,7 @@ public class SalleService {
   private void declencherWorkerSalle(final String identifiants) {
     WorkerTriggerUtils.declencherWorkerAsync(
         restClient,
-        log,
+        LOG,
         "http://localhost:8081/trigger/salle?identifiants="
             + URLEncoder.encode(identifiants, StandardCharsets.UTF_8),
         "Déclenchement worker salle impossible identifiants=" + identifiants);

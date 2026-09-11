@@ -41,7 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class GestionQuotaResendWorker {
 
-  private static final Logger log = LoggerFactory.getLogger(GestionQuotaResendWorker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GestionQuotaResendWorker.class);
 
   static final int LIMITE_JOUR = 100;
   static final int LIMITE_MOIS = 3000;
@@ -93,7 +93,7 @@ public class GestionQuotaResendWorker {
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
     } catch (JsonProcessingException e) {
-      log.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
+      LOG.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
     }
   }
@@ -106,7 +106,7 @@ public class GestionQuotaResendWorker {
               + " ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()",
           Map.of("cle", CLE_QUOTA, "json", json));
     } catch (JsonProcessingException e) {
-      log.error("impossible de sérialiser le compteur Resend", e);
+      LOG.error("impossible de sérialiser le compteur Resend", e);
     }
   }
 
@@ -157,7 +157,7 @@ public class GestionQuotaResendWorker {
    */
   public boolean reserverEnvoi() {
     return RetrySerialisable.executer(
-        MAX_TENTATIVES, log, "la réservation du quota Resend", self::reserverEnvoiTransactionnel);
+        MAX_TENTATIVES, LOG, "la réservation du quota Resend", self::reserverEnvoiTransactionnel);
   }
 
   /**
@@ -169,7 +169,7 @@ public class GestionQuotaResendWorker {
     final CompteurEnvoisResend actuel = lireCompteurCourant();
     if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {
       ecrireCompteur(actuel);
-      log.error(
+      LOG.error(
           "quota Resend atteint — envoi digest bloqué jour={}/{} mois={}/{}",
           actuel.envoyesJour(),
           LIMITE_JOUR,

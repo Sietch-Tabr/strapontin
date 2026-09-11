@@ -25,7 +25,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class DeriveVolumeFetchService {
 
-  private static final Logger log = LoggerFactory.getLogger(DeriveVolumeFetchService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DeriveVolumeFetchService.class);
 
   /** Nombre d'exécutions réussies récentes sur lesquelles porte la moyenne glissante. */
   static final int NB_EXECUTIONS_MOYENNE = 5;
@@ -79,7 +79,7 @@ public class DeriveVolumeFetchService {
       return;
     }
 
-    log.warn(
+    LOG.warn(
         "derive:volume typeJob={} volume={} moyenne{}={}",
         typeJob,
         volumeCourant,

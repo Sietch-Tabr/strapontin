@@ -89,7 +89,7 @@ import org.springframework.web.client.RestClient;
  */
 public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAvecBilanFetch {
 
-  private static final Logger log = LoggerFactory.getLogger(WikidataSalleSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WikidataSalleSource.class);
 
   /**
    * Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement.
@@ -377,7 +377,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       return Optional.empty();
     }
 
-    log.info(
+    LOG.info(
         "Wikidata découverte salle — repli sur nom tronqué nom={} tronque={}",
         salle.nom(),
         nomTronque);
@@ -408,7 +408,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       return Optional.empty();
     }
 
-    log.info(
+    LOG.info(
         "Wikidata découverte salle — repli sans dernier mot nom={} tronque={}",
         salle.nom(),
         nomTronque);
@@ -444,7 +444,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       }
 
       if (villeIncompatible(salle.ville(), communeLabel)) {
-        log.info(
+        LOG.info(
             "Wikidata découverte salle — rejet commune incompatible nom={} villeSalle={}"
                 + " communeCandidat={}",
             nomRecherche,
@@ -453,7 +453,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
         continue;
       }
       if (deptIncompatible(salle.dept(), codePostal)) {
-        log.info(
+        LOG.info(
             "Wikidata découverte salle — rejet département incompatible nom={} deptSalle={}"
                 + " codePostalCandidat={}",
             nomRecherche,
@@ -475,7 +475,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       cache.put(qid, enrichissement);
       return Optional.of(enrichissement);
     }
-    log.info("Wikidata découverte salle — aucun candidat exact nom={}", nomRecherche);
+    LOG.info("Wikidata découverte salle — aucun candidat exact nom={}", nomRecherche);
     return Optional.empty();
   }
 

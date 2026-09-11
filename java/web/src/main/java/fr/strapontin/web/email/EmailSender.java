@@ -33,7 +33,7 @@ import org.springframework.stereotype.Component;
 @Component
 class EmailSender {
 
-  private static final Logger log = LoggerFactory.getLogger(EmailSender.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EmailSender.class);
 
   private final ConfigService configService;
   private final JdbcTemplate jdbcTemplate;
@@ -95,7 +95,7 @@ class EmailSender {
       final String corps,
       final String texte) {
     if (!gestionQuotaResend.reserverEnvoi()) {
-      log.warn("quota Resend atteint — envoi ignoré destinataireHash={}", destinataire.hashCode());
+      LOG.warn("quota Resend atteint — envoi ignoré destinataireHash={}", destinataire.hashCode());
       return;
     }
     try {

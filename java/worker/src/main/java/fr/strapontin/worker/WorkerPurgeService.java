@@ -30,7 +30,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkerPurgeService {
 
-  private static final Logger log = LoggerFactory.getLogger(WorkerPurgeService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WorkerPurgeService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final WorkerStatsService workerStatsService;
@@ -48,16 +48,16 @@ public class WorkerPurgeService {
   /** Supprime les concerts passés depuis plus de 7 jours. */
   public void executerPurgerConcerts() {
     final LocalDate dateLimite = LocalDate.now().minusDays(7);
-    log.info("purger:concerts dateLimite={}", dateLimite);
+    LOG.info("purger:concerts dateLimite={}", dateLimite);
     workerStatsService.executerAvecStats(
-        log,
+        LOG,
         "purger:concerts",
         () -> {
           final int supprimes =
               jdbc.update(
                   "DELETE FROM evenements WHERE date < :dateLimite",
                   Map.of("dateLimite", dateLimite));
-          log.info("purger:concerts terminé supprimes={}", supprimes);
+          LOG.info("purger:concerts terminé supprimes={}", supprimes);
           return new ResultatPersistance(0, supprimes);
         });
   }
@@ -84,9 +84,9 @@ public class WorkerPurgeService {
    * Concerts).
    */
   public void executerPurgerConcertsNonConfirmes() {
-    log.info("purger:concerts-non-confirmes seuilAbsences={}", SEUIL_PURGE_ABSENCES);
+    LOG.info("purger:concerts-non-confirmes seuilAbsences={}", SEUIL_PURGE_ABSENCES);
     workerStatsService.executerAvecStats(
-        log,
+        LOG,
         "purger:concerts-non-confirmes",
         () -> {
           final int signales =
@@ -95,7 +95,7 @@ public class WorkerPurgeService {
                       + " WHERE absences_consecutives >= :seuil AND date >= CURRENT_DATE"
                       + " AND suppression_suggeree_le IS NULL",
                   Map.of("seuil", SEUIL_PURGE_ABSENCES));
-          log.info("purger:concerts-non-confirmes terminé signales={}", signales);
+          LOG.info("purger:concerts-non-confirmes terminé signales={}", signales);
           return new ResultatPersistance(0, signales);
         });
   }
@@ -116,9 +116,9 @@ public class WorkerPurgeService {
    * suppression_suggeree_le}, revue manuelle depuis l'admin.
    */
   public void executerPurgerConcertsHorsPortee() {
-    log.info("purger:concerts-hors-portee seuilJours={}", SEUIL_JOURS_HORS_PORTEE);
+    LOG.info("purger:concerts-hors-portee seuilJours={}", SEUIL_JOURS_HORS_PORTEE);
     workerStatsService.executerAvecStats(
-        log,
+        LOG,
         "purger:concerts-hors-portee",
         () -> {
           final int signales =
@@ -128,7 +128,7 @@ public class WorkerPurgeService {
                       + " AND updated_at < now() - make_interval(days => :seuilJours)"
                       + " AND suppression_suggeree_le IS NULL",
                   Map.of("seuilJours", SEUIL_JOURS_HORS_PORTEE));
-          log.info("purger:concerts-hors-portee terminé signales={}", signales);
+          LOG.info("purger:concerts-hors-portee terminé signales={}", signales);
           return new ResultatPersistance(0, signales);
         });
   }
@@ -155,9 +155,9 @@ public class WorkerPurgeService {
    * seulement celle en cause.
    */
   public void executerPurgerSalles() {
-    log.info("purger:salles démarré");
+    LOG.info("purger:salles démarré");
     workerStatsService.executerAvecStats(
-        log,
+        LOG,
         "purger:salles",
         () -> {
           final List<UUID> candidats =
@@ -180,14 +180,14 @@ public class WorkerPurgeService {
               jdbc.update("DELETE FROM salles WHERE id = CAST(:id AS uuid)", Map.of("id", id));
               supprimes++;
             } catch (DuplicateKeyException e) {
-              log.warn(
+              LOG.warn(
                   "purger:salles suppression bloquée salleId={} — probable doublon TM/Eventim"
                       + " jamais fusionné",
                   id);
             }
           }
 
-          log.info("purger:salles terminé supprimes={}", supprimes);
+          LOG.info("purger:salles terminé supprimes={}", supprimes);
           return new ResultatPersistance(0, supprimes);
         });
   }
@@ -205,9 +205,9 @@ public class WorkerPurgeService {
    * <p>Doit s'exécuter après {@link #executerPurgerSalles()} (cf. {@code PurgerArtistesJob}).
    */
   public void executerPurgerArtistes() {
-    log.info("purger:artistes démarré");
+    LOG.info("purger:artistes démarré");
     workerStatsService.executerAvecStats(
-        log,
+        LOG,
         "purger:artistes",
         () -> {
           final int supprimes =
@@ -220,7 +220,7 @@ public class WorkerPurgeService {
                       SELECT 1 FROM user_artistes WHERE artiste_id = artistes.id)
                   """,
                   Map.of());
-          log.info("purger:artistes terminé supprimes={}", supprimes);
+          LOG.info("purger:artistes terminé supprimes={}", supprimes);
           return new ResultatPersistance(0, supprimes);
         });
   }
@@ -237,9 +237,9 @@ public class WorkerPurgeService {
     final long seuilLogs = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
     final Instant seuilHistorique = Instant.now().minusSeconds(7L * 24 * 60 * 60);
     final Instant seuilVerifications = Instant.now().minusSeconds(7L * 24 * 60 * 60);
-    log.info("purger:logs-admin seuilLogs={} seuilHistorique={}", seuilLogs, seuilHistorique);
+    LOG.info("purger:logs-admin seuilLogs={} seuilHistorique={}", seuilLogs, seuilHistorique);
     workerStatsService.executerAvecStats(
-        log,
+        LOG,
         "purger:logs-admin",
         () -> {
           final int supprimesLogs =
@@ -252,7 +252,7 @@ public class WorkerPurgeService {
               jdbc.update(
                   "DELETE FROM verifications WHERE expires_at < :seuil",
                   Map.of("seuil", Timestamp.from(seuilVerifications)));
-          log.info(
+          LOG.info(
               "purger:logs-admin terminé supprimesLogs={} supprimesHistorique={}"
                   + " supprimesVerifications={}",
               supprimesLogs,

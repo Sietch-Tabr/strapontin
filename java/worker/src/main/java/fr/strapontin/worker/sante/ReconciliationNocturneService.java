@@ -46,7 +46,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ReconciliationNocturneService {
 
-  private static final Logger log = LoggerFactory.getLogger(ReconciliationNocturneService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReconciliationNocturneService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final TicketmasterSource tm;
@@ -343,7 +343,7 @@ public class ReconciliationNocturneService {
           WHERE salle_id = CAST(:salleId AS uuid) AND source = 'ticketmaster'
           """,
           Map.of("nouveauId", nouveauId, "salleId", salleId.toString()));
-      log.info(
+      LOG.info(
           "reconciliation:nocturne — salle redécouverte nom={} ancien={} nouveau={}",
           nom,
           ancienVenueId,
@@ -423,7 +423,7 @@ public class ReconciliationNocturneService {
           WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
           """,
           Map.of("nouveauId", nouveauId, "artisteId", artisteId.toString()));
-      log.info(
+      LOG.info(
           "reconciliation:nocturne — artiste redécouvert nom={} ancien={} nouveau={}",
           nom,
           ancienAttractionId,

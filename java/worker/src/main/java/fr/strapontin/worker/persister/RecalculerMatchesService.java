@@ -41,7 +41,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class RecalculerMatchesService {
 
-  private static final Logger log = LoggerFactory.getLogger(RecalculerMatchesService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RecalculerMatchesService.class);
   private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -97,7 +97,7 @@ public class RecalculerMatchesService {
                               txParUser.executeWithoutResult(
                                   _ -> recalculerPourUser(userId, aujourdhui));
                             } catch (Exception e) {
-                              log.error(
+                              LOG.error(
                                   "erreur recalcul userId={} : {}", userId, e.getMessage(), e);
                             }
                           },
@@ -140,7 +140,7 @@ public class RecalculerMatchesService {
 
     if (concertIds.isEmpty()) {
       jdbc.update("DELETE FROM user_matches WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
-      log.info("matches supprimés userId={} aucun concert correspondant", userId);
+      LOG.info("matches supprimés userId={} aucun concert correspondant", userId);
       return;
     }
 
@@ -149,7 +149,7 @@ public class RecalculerMatchesService {
     marquerIndisponiblesCommeLus(userId, concertIds);
     reinitialiserNotifPreventesOuvertes(userId);
 
-    log.info("matches recalculés userId={} matches={}", userId, concertIds.size());
+    LOG.info("matches recalculés userId={} matches={}", userId, concertIds.size());
   }
 
   private List<String> obtenirDepartementsUser(final String userId) {
@@ -282,7 +282,7 @@ public class RecalculerMatchesService {
             "DELETE FROM user_matches WHERE user_id NOT IN (:userIds)",
             Map.of("userIds", usersAvecAbonnements));
     if (supprimes > 0) {
-      log.info("matches orphelins supprimés count={}", supprimes);
+      LOG.info("matches orphelins supprimés count={}", supprimes);
     }
   }
 }

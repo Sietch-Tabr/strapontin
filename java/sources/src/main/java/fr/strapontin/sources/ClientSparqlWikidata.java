@@ -31,7 +31,7 @@ import org.springframework.web.client.UnknownContentTypeException;
  */
 final class ClientSparqlWikidata {
 
-  private static final Logger log = LoggerFactory.getLogger(ClientSparqlWikidata.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClientSparqlWikidata.class);
 
   static final String BASE_URL = "https://query.wikidata.org/sparql";
   private static final String USER_AGENT =
@@ -113,14 +113,14 @@ final class ClientSparqlWikidata {
       } catch (HttpClientErrorException.TooManyRequests e) {
         final long attenteMs =
             extraireRetryAfterMs(e.getResponseHeaders()).orElse(1000L << tentative);
-        log.warn("Wikidata 429 — attente {} ms avant retry", attenteMs);
+        LOG.warn("Wikidata 429 — attente {} ms avant retry", attenteMs);
         dormir(attenteMs);
       } catch (HttpServerErrorException.ServiceUnavailable
           | HttpServerErrorException.BadGateway
           | UnknownContentTypeException e) {
         tentativesTransitoires++;
         if (tentativesTransitoires >= RETRY_TRANSITOIRE_MAX) {
-          log.warn(
+          LOG.warn(
               "Wikidata erreur transitoire après {} tentatives, abandon : {}",
               RETRY_TRANSITOIRE_MAX,
               e.getMessage());
@@ -130,12 +130,12 @@ final class ClientSparqlWikidata {
         dormir(1000L * tentativesTransitoires);
       } catch (Exception e) {
         compteurBilan.enregistrerErreur();
-        log.warn("Wikidata SPARQL erreur : {}", e.getMessage());
+        LOG.warn("Wikidata SPARQL erreur : {}", e.getMessage());
         return null;
       }
     }
     compteurBilan.enregistrerErreur();
-    log.warn("Wikidata SPARQL abandon après {} tentatives", RETRY_TOTAL_MAX);
+    LOG.warn("Wikidata SPARQL abandon après {} tentatives", RETRY_TOTAL_MAX);
     return null;
   }
 

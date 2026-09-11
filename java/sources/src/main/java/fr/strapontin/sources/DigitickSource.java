@@ -38,7 +38,7 @@ import org.springframework.web.client.RestClient;
  */
 public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
 
-  private static final Logger log = LoggerFactory.getLogger(DigitickSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DigitickSource.class);
 
   static final String PREFIXE = "digitick:";
   private static final String URL_BILLETTERIE =
@@ -109,7 +109,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   public List<ConcertBrut> fetchSalle(final String identifiant) {
     final String slug = identifiant.substring(PREFIXE.length());
     if (slug.isBlank()) {
-      log.warn("Digitick fetchSalle — slug vide pour identifiant={}", identifiant);
+      LOG.warn("Digitick fetchSalle — slug vide pour identifiant={}", identifiant);
       return List.of();
     }
     compteurBilan.enregistrerAppel();
@@ -117,16 +117,16 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
       final byte[] octets =
           restClient.get().uri(URL_BILLETTERIE, slug).retrieve().body(byte[].class);
       if (octets == null || octets.length == 0) {
-        log.warn("Digitick fetchSalle — réponse vide slug={}", slug);
+        LOG.warn("Digitick fetchSalle — réponse vide slug={}", slug);
         return List.of();
       }
       final String html = new String(octets, CHARSET_DIGITICK);
       final List<ConcertBrut> concerts = parserConcerts(html, slug);
-      log.info("Digitick fetchSalle slug={} total={}", slug, concerts.size());
+      LOG.info("Digitick fetchSalle slug={} total={}", slug, concerts.size());
       return concerts;
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
-      log.warn("Digitick fetchSalle erreur slug={} : {}", slug, e.getMessage());
+      LOG.warn("Digitick fetchSalle erreur slug={} : {}", slug, e.getMessage());
       return List.of();
     }
   }

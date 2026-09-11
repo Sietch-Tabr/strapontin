@@ -18,22 +18,23 @@ import org.bouncycastle.crypto.generators.SCrypt;
 /**
  * Chiffrement/déchiffrement AES-256-GCM de {@code app_config}, clé dérivée via SCrypt.
  *
- * Extrait de {@code web.ConfigService}/{@code worker.ConfigServiceWorker} — les deux modules dérivaient et
- * utilisaient une clé strictement identique, dupliquée verbatim ; un correctif de sécurité
- * appliqué à un seul module ne se serait jamais répercuté dans l'autre.
+ * <p>Extrait de {@code web.ConfigService}/{@code worker.ConfigServiceWorker} — les deux modules
+ * dérivaient et utilisaient une clé strictement identique, dupliquée verbatim ; un correctif de
+ * sécurité appliqué à un seul module ne se serait jamais répercuté dans l'autre.
  *
- * La clé AES-256 est dérivée de {@code APP_CONFIG_SECRET} via SCrypt (paramètres par défaut Node.js :
- * N=16384, r=8, p=1, dkLen=32) — DIFFÉRENT de {@code BetterAuthPasswordEncoder} (r=16, Better-Auth).
+ * <p>La clé AES-256 est dérivée de {@code APP_CONFIG_SECRET} via SCrypt (paramètres par défaut
+ * Node.js : N=16384, r=8, p=1, dkLen=32) — DIFFÉRENT de {@code BetterAuthPasswordEncoder} (r=16,
+ * Better-Auth).
  *
- * Format de stockage : {@code base64(IV(12) || TAG(16) || données_chiffrées)}. Compatible avec les
- * valeurs chiffrées par l'ancien module TypeScript.
+ * <p>Format de stockage : {@code base64(IV(12) || TAG(16) || données_chiffrées)}. Compatible avec
+ * les valeurs chiffrées par l'ancien module TypeScript.
  *
  * @since 2.7.0
  * @author Kwaite
  */
 public final class ConfigCipher {
 
-  private static final SecureRandom rng = new SecureRandom();
+  private static final SecureRandom RNG = new SecureRandom();
 
   private static final int N = 16384;
   private static final int R = 8;
@@ -62,7 +63,7 @@ public final class ConfigCipher {
   /**
    * Chiffre une valeur en AES-256-GCM.
    *
-   * Format de sortie : {@code base64(IV(12) || TAG(16) || données_chiffrées)}
+   * <p>Format de sortie : {@code base64(IV(12) || TAG(16) || données_chiffrées)}
    *
    * @param valeur valeur en clair
    * @return valeur chiffrée encodée en base64
@@ -70,7 +71,7 @@ public final class ConfigCipher {
   public String chiffrer(final String valeur) {
     try {
       final byte[] iv = new byte[12];
-      rng.nextBytes(iv);
+      RNG.nextBytes(iv);
 
       final Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
       cipher.init(
@@ -96,7 +97,7 @@ public final class ConfigCipher {
   /**
    * Déchiffre une valeur AES-256-GCM.
    *
-   * Format attendu : {@code base64(IV(12) || TAG(16) || données_chiffrées)}
+   * <p>Format attendu : {@code base64(IV(12) || TAG(16) || données_chiffrées)}
    *
    * @param chiffre valeur chiffrée encodée en base64
    * @return valeur en clair

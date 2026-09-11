@@ -39,7 +39,7 @@ import uk.org.okapibarcode.output.SvgRenderer;
 @Service
 public class TotpService {
 
-  private static final Logger log = LoggerFactory.getLogger(TotpService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TotpService.class);
   private static final String ISSUER = "Strapontin";
   private static final String BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   private static final int TAILLE_SECRET_OCTETS = 20;
@@ -96,7 +96,7 @@ public class TotpService {
       renderer.render(qrCode);
       return baos.toString(StandardCharsets.UTF_8);
     } catch (Exception e) {
-      log.warn("Erreur génération QR code SVG TOTP", e);
+      LOG.warn("Erreur génération QR code SVG TOTP", e);
       return null;
     }
   }
@@ -141,7 +141,7 @@ public class TotpService {
       }
       return false;
     } catch (Exception e) {
-      log.warn("Erreur vérification code TOTP", e);
+      LOG.warn("Erreur vérification code TOTP", e);
       return false;
     }
   }

@@ -34,7 +34,7 @@ import org.springframework.web.client.RestClient;
 @Service
 public class SourcesService {
 
-  private static final Logger log = LoggerFactory.getLogger(SourcesService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SourcesService.class);
   private static final String URL_DIGITICK =
       "https://web.digitick.com/ext/billetterie5/index.php?site={slug}&action=ajax&op=1";
   private static final int TAILLE_PAGE_SALLES = 50;
@@ -211,7 +211,7 @@ public class SourcesService {
           octets != null ? new String(octets, java.nio.charset.StandardCharsets.ISO_8859_1) : "";
       return (int) PATTERN_EVENEMENT.matcher(html).results().count();
     } catch (Exception e) {
-      log.debug("Test slug Digitick '{}' — inaccessible : {}", slug, e.getMessage());
+      LOG.debug("Test slug Digitick '{}' — inaccessible : {}", slug, e.getMessage());
       return -1;
     }
   }
@@ -282,7 +282,7 @@ public class SourcesService {
     try {
       return objectMapper.readValue(quotaJson.get(0), QuotaTM.class);
     } catch (Exception e) {
-      log.warn("Quota TM malformé — ignoré");
+      LOG.warn("Quota TM malformé — ignoré");
       return null;
     }
   }
@@ -304,7 +304,7 @@ public class SourcesService {
               Timestamp.class);
       return ts != null ? ts.toInstant() : null;
     } catch (Exception e) {
-      log.debug("Impossible de lire le dernier fetch : {}", e.getMessage());
+      LOG.debug("Impossible de lire le dernier fetch : {}", e.getMessage());
       return null;
     }
   }
@@ -378,7 +378,7 @@ public class SourcesService {
       final Integer nb = jdbc.queryForObject(sql, params, Integer.class);
       return nb != null ? nb : 0;
     } catch (Exception e) {
-      log.debug("Impossible de compter {} : {}", descriptionEchec, e.getMessage());
+      LOG.debug("Impossible de compter {} : {}", descriptionEchec, e.getMessage());
       return 0;
     }
   }

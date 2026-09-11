@@ -38,7 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SetupService {
 
-  private static final Logger log = LoggerFactory.getLogger(SetupService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SetupService.class);
   private static final int MAX_TENTATIVES = 3;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -99,7 +99,7 @@ public class SetupService {
         if (tentative >= MAX_TENTATIVES) {
           throw e;
         }
-        log.warn(
+        LOG.warn(
             "Conflit de sérialisation lors du setup — nouvelle tentative ({}/{})",
             tentative,
             MAX_TENTATIVES);
@@ -177,7 +177,7 @@ public class SetupService {
     configService.sauvegarderConfig("CONTACT_EMAIL", contactEmail);
 
     genererVapid();
-    log.info("Premier administrateur créé : {}", identifiant);
+    LOG.info("Premier administrateur créé : {}", identifiant);
   }
 
   private void genererVapid() {
@@ -186,7 +186,7 @@ public class SetupService {
       configService.sauvegarderConfig("VAPID_PUBLIC_KEY", paire.clePublique());
       configService.sauvegarderConfig("VAPID_PRIVATE_KEY", paire.clePrivee());
     } catch (Exception e) {
-      log.warn("Impossible de générer les clés VAPID lors du setup", e);
+      LOG.warn("Impossible de générer les clés VAPID lors du setup", e);
     }
   }
 }

@@ -44,7 +44,7 @@ import org.springframework.web.client.RestClient;
 @Service
 public class ArtisteService {
 
-  private static final Logger log = LoggerFactory.getLogger(ArtisteService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ArtisteService.class);
   private static final String DEEZER_URL = "https://api.deezer.com/search/artist";
   private static final String WIKIDATA_API_URL = "https://www.wikidata.org/w/api.php";
   private static final String WIKIDATA_USER_AGENT =
@@ -266,7 +266,7 @@ public class ArtisteService {
       }
       artisteRepository.mettreAJourIdsWikidata(artisteId, wikidataId, deezerId);
     } catch (DuplicateKeyException e) {
-      log.warn(
+      LOG.warn(
           "wikidataId déjà attribué à un autre artiste — conflit ignoré artiste={} wikidataId={}",
           nom,
           wikidataId);
@@ -343,7 +343,7 @@ public class ArtisteService {
     if (artisteRepository.supprimer(userId, artisteId) == 0) {
       return;
     }
-    log.info("artiste supprimé userId={} artisteId={}", userId, artisteId);
+    LOG.info("artiste supprimé userId={} artisteId={}", userId, artisteId);
     logAdminService.logAdmin(
         "warn",
         "web",
@@ -382,12 +382,12 @@ public class ArtisteService {
                       new WorkerTriggerUtils.ReponseHttp(
                           resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) {
-        log.warn("Wikidata Search erreur HTTP {} pour '{}'", reponse.statut(), terme);
+        LOG.warn("Wikidata Search erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
       }
       return parseWikidataResultats(reponse.corps());
     } catch (Exception e) {
-      log.warn("Wikidata Search échouée pour '{}'", terme, e);
+      LOG.warn("Wikidata Search échouée pour '{}'", terme, e);
       return List.of();
     }
   }
@@ -418,7 +418,7 @@ public class ArtisteService {
         resultats.add(new SuggestionArtiste(label, "wikidata", description, id));
       }
     } catch (Exception _) {
-      log.warn("Wikidata Search parsing JSON échoué");
+      LOG.warn("Wikidata Search parsing JSON échoué");
     }
     return resultats;
   }
@@ -474,7 +474,7 @@ public class ArtisteService {
       final Map<String, Object> datavalue = (Map<String, Object>) mainsnak.get("datavalue");
       return (String) datavalue.get("value");
     } catch (Exception e) {
-      log.warn("Wikidata wbgetentities échoué pour '{}'", wikidataId, e);
+      LOG.warn("Wikidata wbgetentities échoué pour '{}'", wikidataId, e);
       return null;
     }
   }
@@ -498,12 +498,12 @@ public class ArtisteService {
                       new WorkerTriggerUtils.ReponseHttp(
                           resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) {
-        log.warn("Deezer erreur HTTP {} pour '{}'", reponse.statut(), terme);
+        LOG.warn("Deezer erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
       }
       return parseDeezerResultats(reponse.corps());
     } catch (Exception e) {
-      log.warn("Deezer recherche artiste échouée pour '{}'", terme, e);
+      LOG.warn("Deezer recherche artiste échouée pour '{}'", terme, e);
       return List.of();
     }
   }
@@ -529,7 +529,7 @@ public class ArtisteService {
           .distinct()
           .forEach(name -> resultats.add(new SuggestionArtiste(name, "deezer")));
     } catch (Exception _) {
-      log.warn("Deezer parsing JSON échoué");
+      LOG.warn("Deezer parsing JSON échoué");
     }
     return resultats;
   }
@@ -537,7 +537,7 @@ public class ArtisteService {
   private void declencherWorkerArtiste() {
     WorkerTriggerUtils.declencherWorkerAsync(
         restClient,
-        log,
+        LOG,
         "http://localhost:8081/trigger/artiste",
         "Déclenchement worker artiste impossible");
   }

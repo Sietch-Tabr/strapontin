@@ -39,7 +39,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class RetryLotsService {
 
-  private static final Logger log = LoggerFactory.getLogger(RetryLotsService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RetryLotsService.class);
 
   private static final long DELAI_RETRY_MINUTES = 15;
 
@@ -118,13 +118,13 @@ public class RetryLotsService {
               .startAt(Date.from(Instant.now().plus(DELAI_RETRY_MINUTES, ChronoUnit.MINUTES)))
               .build();
       scheduler.scheduleJob(trigger);
-      log.info(
+      LOG.info(
           "retry:lots programmé typeJob={} identifiants={} dans={}min",
           typeJob,
           identifiants.size(),
           DELAI_RETRY_MINUTES);
     } catch (SchedulerException e) {
-      log.warn("retry:lots échec de planification typeJob={}", typeJob, e);
+      LOG.warn("retry:lots échec de planification typeJob={}", typeJob, e);
     }
   }
 }

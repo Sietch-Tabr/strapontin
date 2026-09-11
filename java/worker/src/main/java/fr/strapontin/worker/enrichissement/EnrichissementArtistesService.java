@@ -46,7 +46,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class EnrichissementArtistesService {
 
-  private static final Logger log = LoggerFactory.getLogger(EnrichissementArtistesService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EnrichissementArtistesService.class);
 
   static final int TAILLE_LOT_PERSISTANCE = 25;
   // Délai entre deux lots de persistance, en plus du délai intra-source (500ms/appel côté
@@ -87,7 +87,7 @@ public class EnrichissementArtistesService {
   public int enrichir() {
     final List<ArtisteAEnrichir> candidats = selectionnerCandidats();
     if (candidats.isEmpty()) {
-      log.info("enrichissement:artistes — aucun candidat");
+      LOG.info("enrichissement:artistes — aucun candidat");
       return 0;
     }
 
@@ -100,7 +100,7 @@ public class EnrichissementArtistesService {
           candidats.subList(i, Math.min(i + TAILLE_LOT_PERSISTANCE, candidats.size()));
       nbEnrichis += enrichirEtPersisterLot(lot);
     }
-    log.info("enrichissement:artistes candidats={} enrichis={}", candidats.size(), nbEnrichis);
+    LOG.info("enrichissement:artistes candidats={} enrichis={}", candidats.size(), nbEnrichis);
     remonterBilans();
     return nbEnrichis;
   }
@@ -311,7 +311,7 @@ public class EnrichissementArtistesService {
               """,
               Map.of("artisteId", artiste.id().toString(), "tmId", tmIdWikidata));
       if (lignesInserees > 0) {
-        log.info("P6262 — lien TM inséré artiste={} attractionId={}", artiste.nom(), tmIdWikidata);
+        LOG.info("P6262 — lien TM inséré artiste={} attractionId={}", artiste.nom(), tmIdWikidata);
       } else {
         // Conflit réel sur la PK (source, identifiant_externe) — cet identifiant TM est déjà
         // attribué à un autre artiste, contrairement à la collision wikidata_id, ce cas n'avait

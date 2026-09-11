@@ -39,7 +39,7 @@ import org.springframework.web.client.RestClient;
 @Service
 public class PreferencesService {
 
-  private static final Logger log = LoggerFactory.getLogger(PreferencesService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PreferencesService.class);
   private static final String CLE_USER_ID = "userId";
   private static final String WORKER_URL = "http://localhost:8081/trigger";
 
@@ -83,7 +83,7 @@ public class PreferencesService {
     try {
       return objectMapper.readValue(contenu, ExportComplet.class);
     } catch (Exception e) {
-      log.warn("Import préférences : désérialisation échouée", e);
+      LOG.warn("Import préférences : désérialisation échouée", e);
       return null;
     }
   }
@@ -112,7 +112,7 @@ public class PreferencesService {
       nbSupprimesSalles =
           jdbc.update(
               "DELETE FROM user_salles WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
-      log.warn(
+      LOG.warn(
           "import préférences mode écraser : {} artiste(s) et {} salle(s) supprimés userId={}",
           nbSupprimesArtistes,
           nbSupprimesSalles,
@@ -140,7 +140,7 @@ public class PreferencesService {
     declencherWorkerApresImport(export.salles());
     final ResultatImportComplet resultat =
         new ResultatImportComplet(artistes[0], salles[0], artistes[1] + salles[1]);
-    log.info(
+    LOG.info(
         "import préférences userId={} artistes={} salles={} rejetes={} mode={}",
         userId,
         resultat.artistes(),
@@ -407,7 +407,7 @@ public class PreferencesService {
 
   private void envoyerPostWorker(final String url) {
     WorkerTriggerUtils.declencherWorkerAsync(
-        restClient, log, url, "Déclenchement worker impossible : " + url);
+        restClient, LOG, url, "Déclenchement worker impossible : " + url);
   }
 
   /**

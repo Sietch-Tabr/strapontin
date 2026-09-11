@@ -46,7 +46,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class EnrichissementSallesService {
 
-  private static final Logger log = LoggerFactory.getLogger(EnrichissementSallesService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EnrichissementSallesService.class);
 
   static final int TAILLE_LOT_PERSISTANCE = 25;
   // Délai entre deux lots de persistance, en plus du délai intra-source (500ms/appel côté
@@ -96,7 +96,7 @@ public class EnrichissementSallesService {
   public int enrichir() {
     final List<SalleAEnrichir> candidats = selectionnerCandidats();
     if (candidats.isEmpty()) {
-      log.info("enrichissement:salles — aucun candidat");
+      LOG.info("enrichissement:salles — aucun candidat");
       return 0;
     }
 
@@ -109,7 +109,7 @@ public class EnrichissementSallesService {
           candidats.subList(i, Math.min(i + TAILLE_LOT_PERSISTANCE, candidats.size()));
       nbEnrichis += enrichirEtPersisterLot(lot);
     }
-    log.info("enrichissement:salles candidats={} enrichis={}", candidats.size(), nbEnrichis);
+    LOG.info("enrichissement:salles candidats={} enrichis={}", candidats.size(), nbEnrichis);
     alerterSiCycleImproductif(candidats.size(), nbEnrichis);
     remonterBilans();
     return nbEnrichis;
@@ -317,7 +317,7 @@ public class EnrichissementSallesService {
       final UUID salleId, final String nom, final EnrichissementSalle e) {
     final Map<String, Object> porteuse = trouverPorteuseWikidataId(e.wikidataId());
     if (porteuse != null && tenterFusionParCoordonnees(salleId, porteuse)) {
-      log.info(
+      LOG.info(
           "collision wikidata_id résolue par fusion automatique salle={} wikidataId={} cible={}",
           nom,
           e.wikidataId(),

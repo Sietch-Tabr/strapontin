@@ -42,7 +42,7 @@ import org.springframework.web.client.RestClient;
  */
 public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceAvecBilanFetch {
 
-  private static final Logger log = LoggerFactory.getLogger(DeezerArtisteSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DeezerArtisteSource.class);
 
   private static final String DEEZER_BASE = "https://api.deezer.com";
 
@@ -130,7 +130,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
       return Optional.empty();
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
-      log.warn("Deezer découverte erreur nom={} : {}", artiste.nom(), e.getMessage());
+      LOG.warn("Deezer découverte erreur nom={} : {}", artiste.nom(), e.getMessage());
       return Optional.empty();
     }
   }
@@ -158,7 +158,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
               artiste.wikidataId(), nomCanonique, artiste.deezerId(), null, null));
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
-      log.warn("Deezer erreur artistId={} : {}", artiste.deezerId(), e.getMessage());
+      LOG.warn("Deezer erreur artistId={} : {}", artiste.deezerId(), e.getMessage());
       return Optional.empty();
     }
   }

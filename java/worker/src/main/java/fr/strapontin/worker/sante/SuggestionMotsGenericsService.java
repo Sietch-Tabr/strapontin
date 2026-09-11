@@ -38,7 +38,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class SuggestionMotsGenericsService {
 
-  private static final Logger log = LoggerFactory.getLogger(SuggestionMotsGenericsService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SuggestionMotsGenericsService.class);
 
   private static final String CLE_CONFIG = "MOTS_GENERIQUES_SUGGERES_JSON";
 
@@ -107,7 +107,7 @@ public class SuggestionMotsGenericsService {
       ecrireDejaSuggeres(dejaSuggeres);
     }
 
-    log.info("coherence:mots-generiques candidats={} suggeres={}", frequences.size(), nouveaux);
+    LOG.info("coherence:mots-generiques candidats={} suggeres={}", frequences.size(), nouveaux);
     return nouveaux;
   }
 
@@ -125,7 +125,7 @@ public class SuggestionMotsGenericsService {
     } catch (EmptyResultDataAccessException e) {
       return new HashSet<>();
     } catch (JsonProcessingException e) {
-      log.warn(
+      LOG.warn(
           "liste des mots génériques suggérés malformée en base — réinitialisée : {}",
           e.getMessage());
       return new HashSet<>();
@@ -143,7 +143,7 @@ public class SuggestionMotsGenericsService {
           """,
           Map.of("cle", CLE_CONFIG, "json", json));
     } catch (JsonProcessingException e) {
-      log.error("impossible de sérialiser les mots génériques suggérés", e);
+      LOG.error("impossible de sérialiser les mots génériques suggérés", e);
     }
   }
 }

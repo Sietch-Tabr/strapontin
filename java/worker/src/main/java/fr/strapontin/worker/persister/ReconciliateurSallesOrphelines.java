@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 @Service
 class ReconciliateurSallesOrphelines {
 
-  private static final Logger log = LoggerFactory.getLogger(ReconciliateurSallesOrphelines.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReconciliateurSallesOrphelines.class);
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -74,7 +74,7 @@ class ReconciliateurSallesOrphelines {
       resolus++;
     }
     if (resolus > 0) {
-      log.info(
+      LOG.info(
           "réconciliation salles orphelines candidats={} résolus={}", orphelins.size(), resolus);
     }
     return resolus;

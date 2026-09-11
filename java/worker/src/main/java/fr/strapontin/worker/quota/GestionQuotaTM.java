@@ -34,7 +34,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class GestionQuotaTM {
 
-  private static final Logger log = LoggerFactory.getLogger(GestionQuotaTM.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GestionQuotaTM.class);
 
   static final int SEUIL_QUOTA_CRON = 500;
   static final int SEUIL_QUOTA_ABORT = 50;
@@ -80,14 +80,14 @@ public class GestionQuotaTM {
         final QuotaTM renouvele =
             new QuotaTM(quota.total(), quota.total(), 0L, Instant.now().toString());
         ecrireQuota(renouvele);
-        log.info("quota TM renouvelé automatiquement après reset — dispo={}", renouvele.dispo());
+        LOG.info("quota TM renouvelé automatiquement après reset — dispo={}", renouvele.dispo());
         return Optional.of(renouvele);
       }
       return Optional.of(quota);
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
     } catch (JsonProcessingException e) {
-      log.warn("quota TM malformé en base — ignoré : {}", e.getMessage());
+      LOG.warn("quota TM malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
     }
   }
@@ -108,7 +108,7 @@ public class GestionQuotaTM {
           """,
           Map.of("cle", CLE_QUOTA, "json", json));
     } catch (JsonProcessingException e) {
-      log.error("impossible de sérialiser le quota TM", e);
+      LOG.error("impossible de sérialiser le quota TM", e);
     }
   }
 
@@ -126,7 +126,7 @@ public class GestionQuotaTM {
 
     final QuotaTM quota = quotaOpt.get();
     if (quota.dispo() < SEUIL_QUOTA_ABORT) {
-      log.error(
+      LOG.error(
           "quota TM épuisé — job annulé dispo={} total={} job={}",
           quota.dispo(),
           quota.total(),
@@ -138,7 +138,7 @@ public class GestionQuotaTM {
       return false;
     }
     if (quota.dispo() < SEUIL_QUOTA_WARN) {
-      log.warn("quota TM faible dispo={} total={} job={}", quota.dispo(), quota.total(), nomJob);
+      LOG.warn("quota TM faible dispo={} total={} job={}", quota.dispo(), quota.total(), nomJob);
       logAdmin(
           "warn",
           "Quota TM faible",
@@ -159,7 +159,7 @@ public class GestionQuotaTM {
     }
     final QuotaTM quota = quotaOpt.get();
     if (quota.dispo() < SEUIL_QUOTA_CRON) {
-      log.warn("cron TM suspendu — quota insuffisant dispo={}", quota.dispo());
+      LOG.warn("cron TM suspendu — quota insuffisant dispo={}", quota.dispo());
       logAdmin(
           "warn",
           "Cron TM suspendu — quota insuffisant",
@@ -185,9 +185,9 @@ public class GestionQuotaTM {
           """,
           params);
     } catch (JsonProcessingException e) {
-      log.warn("Erreur sérialisation meta log quota : {}", e.getMessage());
+      LOG.warn("Erreur sérialisation meta log quota : {}", e.getMessage());
     } catch (Exception _) {
-      log.warn("Impossible d'insérer log quota admin");
+      LOG.warn("Impossible d'insérer log quota admin");
     }
   }
 }

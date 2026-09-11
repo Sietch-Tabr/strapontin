@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class LogAdminJobListener implements JobListener {
 
-  private static final Logger log = LoggerFactory.getLogger(LogAdminJobListener.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LogAdminJobListener.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
@@ -94,9 +94,9 @@ public class LogAdminJobListener implements JobListener {
           """,
           params);
     } catch (JsonProcessingException e) {
-      log.warn("Erreur sérialisation meta log admin : {}", e.getMessage());
+      LOG.warn("Erreur sérialisation meta log admin : {}", e.getMessage());
     } catch (Exception e) {
-      log.warn("Impossible d'insérer log admin : {}", e.getMessage());
+      LOG.warn("Impossible d'insérer log admin : {}", e.getMessage());
     }
   }
 }

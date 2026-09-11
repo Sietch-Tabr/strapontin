@@ -43,7 +43,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFetch {
 
-  private static final Logger log = LoggerFactory.getLogger(TicketmasterSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TicketmasterSource.class);
 
   private static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
 
@@ -328,10 +328,10 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       // cause) — le cadenceur n'espace que l'instant de départ côté client, jamais l'instant
       // d'arrivée effective côté serveur TM.
       if (e instanceof HttpClientErrorException httpEx && httpEx.getStatusCode().value() == 429) {
-        log.warn(
+        LOG.warn(
             "Ticketmaster 429 (Spike Arrest) url={} dureeAppelHttpMs={}", uriSafe, dureeAppelMs);
       } else {
-        log.warn("erreur HTTP Ticketmaster url={} : {}", uriSafe, redigerApiKey(e.getMessage()));
+        LOG.warn("erreur HTTP Ticketmaster url={} : {}", uriSafe, redigerApiKey(e.getMessage()));
       }
       compteurBilan.enregistrerErreur();
       return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
@@ -403,7 +403,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     final int nbPagesTotal = (int) Math.ceil((double) totalElements / TAILLE_PAGE_REGION);
     if (nbPagesTotal > NB_PAGES_MAX) {
       concertsManquesCumules.addAndGet(Math.max(0, totalElements - tousLesEvents.size()));
-      log.warn(
+      LOG.warn(
           "NB_PAGES_MAX atteint contexte={} — concerts manqués total={} recuperes={}"
               + " pagesFetched={} pagesTotal={}",
           contexte,
@@ -448,9 +448,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       dernierQuota.set(resultat.quota());
     }
     if (resultat.succes()) {
-      log.info("TM fetchArtiste artiste={} total={}", nom, resultat.total());
+      LOG.info("TM fetchArtiste artiste={} total={}", nom, resultat.total());
     } else {
-      log.warn("TM fetchArtiste artiste={} échoué (voir erreur HTTP ci-dessus)", nom);
+      LOG.warn("TM fetchArtiste artiste={} échoué (voir erreur HTTP ci-dessus)", nom);
     }
     return resultat.concerts();
   }
@@ -481,9 +481,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
     final ResultatMultiPage resultat = fetchToutesPages(uriBase, null, "salle=" + venueId);
     if (resultat.succes()) {
-      log.info("TM fetchSalle venueId={} total={}", venueId, resultat.concerts().size());
+      LOG.info("TM fetchSalle venueId={} total={}", venueId, resultat.concerts().size());
     } else {
-      log.warn("TM fetchSalle venueId={} échoué (voir erreur HTTP ci-dessus)", venueId);
+      LOG.warn("TM fetchSalle venueId={} échoué (voir erreur HTTP ci-dessus)", venueId);
     }
     return resultat.concerts();
   }
@@ -529,14 +529,14 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       }
       if (avertissementsAttractionIntrouvable.getIfPresent(nomNorm) == null) {
         avertissementsAttractionIntrouvable.put(nomNorm, Boolean.TRUE);
-        log.warn("rechercherAttractionId TM — pas de correspondance exacte nom={}", nom);
+        LOG.warn("rechercherAttractionId TM — pas de correspondance exacte nom={}", nom);
       } else {
-        log.debug(
+        LOG.debug(
             "rechercherAttractionId TM — pas de correspondance exacte nom={} (déjà signalé)", nom);
       }
       return null;
     } catch (Exception e) {
-      log.warn(
+      LOG.warn(
           "rechercherAttractionId TM échoué nom='{}' : {}", nom, redigerApiKey(e.getMessage()));
       return null;
     }
@@ -555,7 +555,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     }
     // Valeur exacte envoyée (pas seulement le nombre) — permet de corréler après coup un
     // identifiant attendu (base) avec celui réellement transmis en cas d'écart constaté.
-    log.info("TM fetchArtistesLot ids envoyés={}", attractionIds);
+    LOG.info("TM fetchArtistesLot ids envoyés={}", attractionIds);
     final FenetreTemps fenetre = obtenirFenetreTemps();
     final UriComponentsBuilder uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
@@ -566,10 +566,10 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
     final ResultatMultiPage resultat = fetchToutesPages(uriBase, null, "lot");
     if (!resultat.succes()) {
-      log.warn(
+      LOG.warn(
           "TM fetchArtistesLot ids={} échoué (voir erreur HTTP ci-dessus)", attractionIds.size());
     } else if (dernierQuota.get() != null) {
-      log.info(
+      LOG.info(
           "TM fetchArtistesLot ids={} total={}", attractionIds.size(), resultat.concerts().size());
     }
     return resultat.concerts();
@@ -659,7 +659,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       final String dept = depts.get(i);
       final CentreDept centre = CentresDepartement.PAR_DEPT.get(dept);
       if (centre == null) {
-        log.warn("département sans coordonnées connues, ignoré dept={}", dept);
+        LOG.warn("département sans coordonnées connues, ignoré dept={}", dept);
       } else {
         final FenetreTemps fenetre = obtenirFenetreTemps();
         final UriComponentsBuilder uriBase =

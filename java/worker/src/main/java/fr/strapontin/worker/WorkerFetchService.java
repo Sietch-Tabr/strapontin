@@ -44,7 +44,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkerFetchService {
 
-  private static final Logger log = LoggerFactory.getLogger(WorkerFetchService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WorkerFetchService.class);
 
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
   private static final int TAILLE_LOT_TM = 20;
@@ -165,13 +165,13 @@ public class WorkerFetchService {
 
   private void executerFetchArtistesBatchInterne(final List<String> artisteIdsCibles) {
     final boolean retry = artisteIdsCibles != null;
-    log.info("fetch:artistes:batch démarré{}", retry ? " (retry ciblé)" : "");
+    LOG.info("fetch:artistes:batch démarré{}", retry ? " (retry ciblé)" : "");
     workerStatsService.executerAvecStatsToleretErreur(
-        log,
+        LOG,
         "fetch:artistes:batch",
         () -> {
           if (!gestionQuotaTM.cronAutorise()) {
-            log.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
+            LOG.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
             return new WorkerStatsService.ResultatJob(
                 new ResultatPersistance(0, 0), "quota insuffisant");
           }
@@ -193,7 +193,7 @@ public class WorkerFetchService {
                   retry ? Map.of("ids", artisteIdsCibles) : Map.of());
 
           if (rows.isEmpty()) {
-            log.info("fetch:artistes:batch — aucun artiste suivi");
+            LOG.info("fetch:artistes:batch — aucun artiste suivi");
             return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
           }
 
@@ -210,7 +210,7 @@ public class WorkerFetchService {
             try {
               resultat = accumuler(resultat, traiterLotArtistesBatch(lot, sourcesSimples));
             } catch (Exception e) {
-              log.error(
+              LOG.error(
                   "fetch:artistes:batch lot {}-{} échoué : {}",
                   i,
                   i + lot.size(),
@@ -224,7 +224,7 @@ public class WorkerFetchService {
           sauvegarderQuota();
           recalculerMatchesService.recalculerMatches(null);
           notificationDigestService.executerDigest("temps_reel");
-          log.info("fetch:artistes:batch terminé");
+          LOG.info("fetch:artistes:batch terminé");
           return WorkerStatsService.ResultatJob.succes(resultat);
         });
   }
@@ -255,7 +255,7 @@ public class WorkerFetchService {
         try {
           concertsAutresSources.addAll(source.fetchArtiste(nom, deezerId, wikidataId));
         } catch (Exception e) {
-          log.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
+          LOG.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
         }
         attendreRateLimit();
       }
@@ -265,7 +265,7 @@ public class WorkerFetchService {
     tous.addAll(concertsAutresSources);
 
     final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
-    log.info(
+    LOG.info(
         "fetch:artistes:batch lot={} bruts={} dédoublonnés={}",
         lot.size(),
         tous.size(),
@@ -349,7 +349,7 @@ public class WorkerFetchService {
           destination.addAll(resultat);
           suiviSanteSourcesService.enregistrerResultatSalle(identifiant, resultat.size());
         } catch (Exception e) {
-          log.error(
+          LOG.error(
               "{} fetchSalle échoué identifiant={} : {}",
               source.nom(),
               identifiant,
@@ -421,7 +421,7 @@ public class WorkerFetchService {
     if (nbIdsDistincts <= 1) {
       return false;
     }
-    log.warn(
+    LOG.warn(
         "artiste_sources ambigu — {} identifiant_externe ticketmaster distincts pour"
             + " artiste={} artisteId={}, fetch TM ignoré ce cycle",
         nbIdsDistincts,
@@ -447,7 +447,7 @@ public class WorkerFetchService {
             Map.of("artisteId", artisteIdStr, "attractionId", attractionId));
       }
     } catch (Exception e) {
-      log.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());
+      LOG.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());
     }
     // Throttle nécessaire ici : un lot avec plusieurs artistes jamais résolus peut générer une
     // rafale d'appels /attractions.json sans délai sinon.
@@ -465,7 +465,7 @@ public class WorkerFetchService {
         resultats.addAll(concertsLot);
         suiviSanteSourcesService.enregistrerResultatArtistesLot(lot, concertsLot);
       } catch (Exception e) {
-        log.warn("TM fetchArtistesLot lot={} échoué : {}", lot.size(), e.getMessage());
+        LOG.warn("TM fetchArtistesLot lot={} échoué : {}", lot.size(), e.getMessage());
       }
     }
     return resultats;
@@ -477,7 +477,7 @@ public class WorkerFetchService {
       try {
         resultats.addAll(tm.fetchArtiste(nom));
       } catch (Exception e) {
-        log.warn("TM fetchArtiste échoué artiste={} : {}", nom, e.getMessage());
+        LOG.warn("TM fetchArtiste échoué artiste={} : {}", nom, e.getMessage());
       }
       attendreRateLimit();
     }
@@ -505,13 +505,13 @@ public class WorkerFetchService {
 
   private void executerFetchRegionInterne(final List<String> deptsCibles) {
     final boolean retry = deptsCibles != null;
-    log.info("fetch:region démarré{}", retry ? " (retry ciblé)" : "");
+    LOG.info("fetch:region démarré{}", retry ? " (retry ciblé)" : "");
     workerStatsService.executerAvecStatsToleretErreur(
-        log,
+        LOG,
         "fetch:region",
         () -> {
           if (!gestionQuotaTM.cronAutorise()) {
-            log.warn("fetch:region suspendu — quota TM insuffisant");
+            LOG.warn("fetch:region suspendu — quota TM insuffisant");
             return new WorkerStatsService.ResultatJob(
                 new ResultatPersistance(0, 0), "quota insuffisant");
           }
@@ -529,7 +529,7 @@ public class WorkerFetchService {
           }
 
           if (deptsListe.isEmpty()) {
-            log.info("fetch:region — aucun département configuré");
+            LOG.info("fetch:region — aucun département configuré");
             return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
           }
 
@@ -543,7 +543,7 @@ public class WorkerFetchService {
             try {
               resultat = accumuler(resultat, traiterLotDepartements(lotDepts));
             } catch (Exception e) {
-              log.error("fetch:region lot {} échoué : {}", lotDepts, e.getMessage(), e);
+              LOG.error("fetch:region lot {} échoué : {}", lotDepts, e.getMessage(), e);
               echecsLots.add("depts=" + lotDepts + " : " + e.getMessage());
               deptsEnEchec.addAll(lotDepts);
             }
@@ -552,7 +552,7 @@ public class WorkerFetchService {
           sauvegarderQuota();
           recalculerMatchesService.recalculerMatches(null);
           notificationDigestService.executerDigest("temps_reel");
-          log.info("fetch:region terminé");
+          LOG.info("fetch:region terminé");
           return WorkerStatsService.ResultatJob.succes(resultat);
         });
   }
@@ -593,12 +593,12 @@ public class WorkerFetchService {
       try {
         tous.addAll(source.fetchRegion(lotDepts, null));
       } catch (Exception e) {
-        log.warn("{} fetchRegion échoué depts={} : {}", source.nom(), lotDepts, e.getMessage());
+        LOG.warn("{} fetchRegion échoué depts={} : {}", source.nom(), lotDepts, e.getMessage());
       }
     }
 
     final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
-    log.info(
+    LOG.info(
         "fetch:region depts={} bruts={} dédoublonnés={}",
         lotDepts.size(),
         tous.size(),
@@ -631,7 +631,7 @@ public class WorkerFetchService {
    * @param identifiantsStr identifiants préfixés séparés par des virgules
    */
   public void executerFetchSalle(final String identifiantsStr) {
-    log.info("fetch:salle démarré identifiants={}", identifiantsStr);
+    LOG.info("fetch:salle démarré identifiants={}", identifiantsStr);
     if (!gestionQuotaTM.verifier("fetch:salle")) {
       return;
     }
@@ -644,14 +644,14 @@ public class WorkerFetchService {
     sauvegarderQuota();
 
     final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(concerts);
-    log.info(
+    LOG.info(
         "fetch:salle identifiants={} bruts={} dédoublonnés={}",
         identifiantsStr,
         concerts.size(),
         dedoublonnes.size());
     persisterConcerts.persisterConcerts(dedoublonnes);
     recalculerMatchesService.recalculerMatches(null);
-    log.info("fetch:salle terminé identifiants={}", identifiantsStr);
+    LOG.info("fetch:salle terminé identifiants={}", identifiantsStr);
   }
 
   /**
@@ -684,13 +684,13 @@ public class WorkerFetchService {
 
   private void executerFetchSallesAllInterne(final List<String> salleIdsCibles) {
     final boolean retry = salleIdsCibles != null;
-    log.info("fetch:salles:all démarré{}", retry ? " (retry ciblé)" : "");
+    LOG.info("fetch:salles:all démarré{}", retry ? " (retry ciblé)" : "");
     workerStatsService.executerAvecStatsToleretErreur(
-        log,
+        LOG,
         "fetch:salles:all",
         () -> {
           if (!gestionQuotaTM.cronAutorise()) {
-            log.warn("fetch:salles:all suspendu — quota TM insuffisant");
+            LOG.warn("fetch:salles:all suspendu — quota TM insuffisant");
             return new WorkerStatsService.ResultatJob(
                 new ResultatPersistance(0, 0), "quota insuffisant");
           }
@@ -698,7 +698,7 @@ public class WorkerFetchService {
           final List<SalleAFetcher> sallesAFetcher =
               recupererIdentifiantsSallesSuivies(salleIdsCibles);
           if (sallesAFetcher.isEmpty()) {
-            log.info("fetch:salles:all — aucune salle suivie avec source configurée");
+            LOG.info("fetch:salles:all — aucune salle suivie avec source configurée");
             return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
           }
 
@@ -706,7 +706,7 @@ public class WorkerFetchService {
           sauvegarderQuota();
           recalculerMatchesService.recalculerMatches(null);
           notificationDigestService.executerDigest("temps_reel");
-          log.info("fetch:salles:all terminé");
+          LOG.info("fetch:salles:all terminé");
           return WorkerStatsService.ResultatJob.succes(resultat);
         });
   }
@@ -757,7 +757,7 @@ public class WorkerFetchService {
       try {
         resultat = accumuler(resultat, traiterLotSalles(lotSalles));
       } catch (Exception e) {
-        log.error(
+        LOG.error(
             "fetch:salles:all lot {}-{} échoué : {}", i, i + lotSalles.size(), e.getMessage(), e);
         echecsLots.add("lot " + i + "-" + (i + lotSalles.size()) + " : " + e.getMessage());
         lotSalles.forEach(salle -> salleIdsEnEchec.add(salle.salleId()));
@@ -787,7 +787,7 @@ public class WorkerFetchService {
     }
 
     final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
-    log.info(
+    LOG.info(
         "fetch:salles:all salles={} bruts={} dédoublonnés={}",
         lotSalles.size(),
         tous.size(),
@@ -844,7 +844,7 @@ public class WorkerFetchService {
         Normalisation.normaliserTexte(nomAffiche), Normalisation.normaliserTexte(nomDeezer))) {
       return nomDeezer;
     }
-    log.info(
+    LOG.info(
         "résolution Deezer rejetée — divergence avec nom_affiche Wikidata connu brut={} deezer={}"
             + " nomAffiche={}",
         nomBrut,

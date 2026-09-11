@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkerService {
 
-  private static final Logger log = LoggerFactory.getLogger(WorkerService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WorkerService.class);
 
   private final RecalculerMatchesService recalculerMatchesService;
   private final NotificationDigestService notificationDigestService;
@@ -58,14 +58,14 @@ public class WorkerService {
    * @param userIds IDs à recalculer, ou {@code null} pour tous
    */
   public void executerRecalculerMatches(final List<String> userIds) {
-    log.info("recalculer:matches démarré userIds={}", userIds);
+    LOG.info("recalculer:matches démarré userIds={}", userIds);
     workerStatsService.executerAvecStats(
-        log,
+        LOG,
         "recalculer:matches",
         () -> {
           final int nbUsers = recalculerMatchesService.recalculerMatches(userIds);
           notificationDigestService.executerDigest("temps_reel");
-          log.info("recalculer:matches terminé users={}", nbUsers);
+          LOG.info("recalculer:matches terminé users={}", nbUsers);
           return new ResultatPersistance(0, 0);
         });
   }
@@ -75,13 +75,13 @@ public class WorkerService {
    * identifiants suspects, puis enrichissement Wikidata/OSM/Deezer.
    */
   public void executerReconciliationNocturne() {
-    log.info("reconciliation:nocturne démarré");
+    LOG.info("reconciliation:nocturne démarré");
     workerStatsService.executerAvecStats(
-        log,
+        LOG,
         "reconciliation:nocturne",
         () -> {
           final ResultatReconciliation bilan = reconciliationNocturneService.executer();
-          log.info(
+          LOG.info(
               "reconciliation:nocturne terminé sallesVerifiees={} redecouvertes={} ambigues={}"
                   + " enrichissementsSalle={} enrichissementsArtiste={} typesWikidataInvalides={}"
                   + " nomsIncoherentsTM={} contaminationsMultiSalleSignalees={}"

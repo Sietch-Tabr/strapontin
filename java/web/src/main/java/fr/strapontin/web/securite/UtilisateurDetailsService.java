@@ -25,7 +25,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class UtilisateurDetailsService implements UserDetailsService {
 
-  private static final Logger log = LoggerFactory.getLogger(UtilisateurDetailsService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(UtilisateurDetailsService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -60,7 +60,7 @@ public class UtilisateurDetailsService implements UserDetailsService {
         Map.of("identifiant", identifiant),
         rs -> {
           if (!rs.next()) {
-            log.debug("Identifiant non trouvé : {}", identifiant);
+            LOG.debug("Identifiant non trouvé : {}", identifiant);
             throw new UsernameNotFoundException("Identifiant ou mot de passe incorrect");
           }
           return new UtilisateurDetails(

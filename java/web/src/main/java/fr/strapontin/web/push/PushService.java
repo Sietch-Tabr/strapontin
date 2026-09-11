@@ -33,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PushService {
 
-  private static final Logger log = LoggerFactory.getLogger(PushService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PushService.class);
   private static final int CAP_ABONNEMENTS = 10;
   private static final int MAX_TENTATIVES_ABONNEMENT = 3;
   private static final String CLE_USER_ID = "userId";
@@ -110,7 +110,7 @@ public class PushService {
 
     RetrySerialisable.executer(
         MAX_TENTATIVES_ABONNEMENT,
-        log,
+        LOG,
         "l'abonnement push",
         () -> self.abonnerTransactionnel(userId, requete));
   }

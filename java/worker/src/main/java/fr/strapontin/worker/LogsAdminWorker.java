@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class LogsAdminWorker {
 
-  private static final Logger log = LoggerFactory.getLogger(LogsAdminWorker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LogsAdminWorker.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
@@ -70,9 +70,9 @@ public class LogsAdminWorker {
               "message", message,
               "meta", metaJson));
     } catch (JsonProcessingException e) {
-      log.warn("Erreur sérialisation meta log admin source={} : {}", source, e.getMessage());
+      LOG.warn("Erreur sérialisation meta log admin source={} : {}", source, e.getMessage());
     } catch (Exception e) {
-      log.warn("Erreur insertion log admin source={} : {}", source, e.getMessage());
+      LOG.warn("Erreur insertion log admin source={} : {}", source, e.getMessage());
     }
   }
 }

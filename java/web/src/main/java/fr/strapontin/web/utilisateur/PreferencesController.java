@@ -34,7 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/preferences")
 public class PreferencesController {
 
-  private static final Logger log = LoggerFactory.getLogger(PreferencesController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PreferencesController.class);
 
   private final PreferencesService preferencesService;
 
@@ -73,7 +73,7 @@ public class PreferencesController {
     try {
       export = preferencesService.deserialiserExport(fichier.getBytes());
     } catch (Exception e) {
-      log.warn("Échec de désérialisation d'un export de préférences", e);
+      LOG.warn("Échec de désérialisation d'un export de préférences", e);
       return erreur(400, "Le fichier doit être au format JSON.");
     }
 

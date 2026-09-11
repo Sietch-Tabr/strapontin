@@ -30,7 +30,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ControleIntegriteService {
 
-  private static final Logger log = LoggerFactory.getLogger(ControleIntegriteService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ControleIntegriteService.class);
 
   /**
    * Signale un événement futur sans {@code salle_id} ni {@code artiste_id} avant que {@code
@@ -64,7 +64,7 @@ public class ControleIntegriteService {
     signales += verifierCoherenceDeptSalle();
     signales += verifierEvenementsOrphelinsAnciens();
     signales += verifierSourcesOrphelines();
-    log.info("controle:integrite signales={}", signales);
+    LOG.info("controle:integrite signales={}", signales);
     return signales;
   }
 

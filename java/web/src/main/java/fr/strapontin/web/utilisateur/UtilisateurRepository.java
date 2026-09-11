@@ -26,7 +26,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 class UtilisateurRepository {
 
-  private static final Logger log = LoggerFactory.getLogger(UtilisateurRepository.class);
+  private static final Logger LOG = LoggerFactory.getLogger(UtilisateurRepository.class);
   private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -144,7 +144,7 @@ class UtilisateurRepository {
     try {
       return cipher.dechiffrer(brut);
     } catch (RuntimeException e) {
-      log.warn("Secret TOTP non chiffré détecté pour l'utilisateur {} (legacy)", userId);
+      LOG.warn("Secret TOTP non chiffré détecté pour l'utilisateur {} (legacy)", userId);
       return brut;
     }
   }

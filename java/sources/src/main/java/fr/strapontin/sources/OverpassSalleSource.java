@@ -52,7 +52,7 @@ import org.springframework.web.client.RestClient;
  */
 public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAvecBilanFetch {
 
-  private static final Logger log = LoggerFactory.getLogger(OverpassSalleSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(OverpassSalleSource.class);
 
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
   // Champ (et non variable locale d'enrichirLot) pour que le disjoncteur protège tout le cycle
@@ -161,13 +161,13 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     final int sansDept =
         (int) salles.stream().filter(s -> s.wikidataId() == null).count() - aTraiter.size();
     if (sansDept > 0) {
-      log.debug("Overpass — {} salle(s) ignorée(s), département inconnu", sansDept);
+      LOG.debug("Overpass — {} salle(s) ignorée(s), département inconnu", sansDept);
     }
     if (aTraiter.isEmpty()) {
       return Map.of();
     }
     if (echecsConsecutifsCycle.get() >= SEUIL_ECHECS_CONSECUTIFS) {
-      log.debug("Overpass — disjoncteur déjà ouvert pour ce cycle, lot ignoré sans appel HTTP");
+      LOG.debug("Overpass — disjoncteur déjà ouvert pour ce cycle, lot ignoré sans appel HTTP");
       return Map.of();
     }
 
@@ -189,7 +189,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
         if (!resultat.succes()) {
           final int echecs = echecsConsecutifsCycle.incrementAndGet();
           if (echecs >= SEUIL_ECHECS_CONSECUTIFS) {
-            log.warn(
+            LOG.warn(
                 "Overpass — {} échecs consécutifs, instance probablement indisponible, cycle"
                     + " interrompu (candidats restants retentés au prochain cycle)",
                 echecs);
@@ -235,7 +235,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
         }
       }
     }
-    log.warn("Overpass erreur lot taille={} : {}", lot.size(), derniereErreur.getMessage());
+    LOG.warn("Overpass erreur lot taille={} : {}", lot.size(), derniereErreur.getMessage());
     return new ResultatLot(Map.of(), false);
   }
 

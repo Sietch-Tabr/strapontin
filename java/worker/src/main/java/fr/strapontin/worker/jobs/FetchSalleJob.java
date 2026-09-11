@@ -24,7 +24,7 @@ public class FetchSalleJob extends QuartzJobBean {
 
   public static final String CLE_IDENTIFIANTS = "identifiants";
 
-  private static final Logger log = LoggerFactory.getLogger(FetchSalleJob.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FetchSalleJob.class);
 
   private WorkerFetchService workerFetchService;
 
@@ -40,13 +40,13 @@ public class FetchSalleJob extends QuartzJobBean {
   protected void executeInternal(final JobExecutionContext context) {
     final String identifiants = context.getMergedJobDataMap().getString(CLE_IDENTIFIANTS);
     if (identifiants == null || identifiants.isBlank()) {
-      log.warn("fetch:salle — identifiants absents dans la JobDataMap");
+      LOG.warn("fetch:salle — identifiants absents dans la JobDataMap");
       return;
     }
     try {
       workerFetchService.executerFetchSalle(identifiants);
     } catch (Exception e) {
-      log.error("fetch:salle échoué identifiants={}", identifiants, e);
+      LOG.error("fetch:salle échoué identifiants={}", identifiants, e);
       throw e;
     }
   }

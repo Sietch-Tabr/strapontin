@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class ResendWebhookController {
 
-  private static final Logger log = LoggerFactory.getLogger(ResendWebhookController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ResendWebhookController.class);
 
   private final ConfigService configService;
   private final EmailAlerteService emailAlerteService;
@@ -82,7 +82,7 @@ public class ResendWebhookController {
 
     final Optional<String> secret = configService.lireConfig("RESEND_WEBHOOK_SECRET");
     if (secret.isEmpty()) {
-      log.warn("RESEND_WEBHOOK_SECRET absent — webhook Resend rejeté");
+      LOG.warn("RESEND_WEBHOOK_SECRET absent — webhook Resend rejeté");
       return ResponseEntity.badRequest().build();
     }
 
@@ -104,7 +104,7 @@ public class ResendWebhookController {
       // aussi une NumberFormatException non enveloppée sur un svix-timestamp non numérique
       // sans ce catch, l'exception technique remonte en 500 (au lieu du 401 attendu
       // pour une signature invalide) et déclenche une alerte email admin parasite.
-      log.warn("Signature webhook Resend invalide : {}", e.getMessage());
+      LOG.warn("Signature webhook Resend invalide : {}", e.getMessage());
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
@@ -138,7 +138,7 @@ public class ResendWebhookController {
         emailAlerteService.envoyerNotificationPlainteSpam(emailDestinataire);
       }
     } catch (Exception e) {
-      log.error("Erreur lors du traitement du webhook Resend", e);
+      LOG.error("Erreur lors du traitement du webhook Resend", e);
     }
   }
 
@@ -151,7 +151,7 @@ public class ResendWebhookController {
   private void traiterIncidentEmail(
       final String libelle, final String messageLogAdmin, final String email, final String svixId) {
     final String emailHash = String.valueOf(email.hashCode());
-    log.warn("{} email Resend : emailHash={}", libelle, emailHash);
+    LOG.warn("{} email Resend : emailHash={}", libelle, emailHash);
     logAdminService.logAdmin(
         "warn", "web", messageLogAdmin, Map.of("email", emailHash, "svixId", nvl(svixId)));
   }

@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkerRevocationService {
 
-  private static final Logger log = LoggerFactory.getLogger(WorkerRevocationService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WorkerRevocationService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final WorkerStatsService workerStatsService;
@@ -51,9 +51,9 @@ public class WorkerRevocationService {
    * dans {@code logs_admin}.
    */
   public void executerRevoquerAdmins() {
-    log.info("revoquer:admins démarré");
+    LOG.info("revoquer:admins démarré");
     workerStatsService.executerAvecStats(
-        log,
+        LOG,
         "revoquer:admins",
         () -> {
           final List<String> usernamesRevoques =
@@ -69,7 +69,7 @@ public class WorkerRevocationService {
                   WHERE revocation_admin_le < now() AND role = 'admin'
                   """,
                   Map.of());
-          log.info("revoquer:admins terminé nb={}", nb);
+          LOG.info("revoquer:admins terminé nb={}", nb);
           if (nb > 0) {
             revoquerSessions(usernamesRevoques);
             jdbc.update(
@@ -103,10 +103,10 @@ public class WorkerRevocationService {
               "DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME IN (:usernames)",
               Map.of("usernames", usernames));
       if (supprimees > 0) {
-        log.info("revoquer:admins — sessions révoquées count={}", supprimees);
+        LOG.info("revoquer:admins — sessions révoquées count={}", supprimees);
       }
     } catch (Exception e) {
-      log.warn("revoquer:admins — impossible de révoquer les sessions : {}", e.getMessage());
+      LOG.warn("revoquer:admins — impossible de révoquer les sessions : {}", e.getMessage());
     }
   }
 }

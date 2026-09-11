@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
  */
 final class MapeurEvenementTM {
 
-  private static final Logger log = LoggerFactory.getLogger(MapeurEvenementTM.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MapeurEvenementTM.class);
   private static final String CLE_EMBEDDED = "_embedded";
 
   private static final Map<String, String> CLASSIFICATION_MAP =
@@ -76,7 +76,7 @@ final class MapeurEvenementTM {
     try {
       return parseEvenementTM(evt, artisteFallback);
     } catch (Exception e) {
-      log.warn("erreur parsing événement TM", e);
+      LOG.warn("erreur parsing événement TM", e);
       return null;
     }
   }

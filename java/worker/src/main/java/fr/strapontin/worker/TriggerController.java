@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/trigger")
 public class TriggerController {
 
-  private static final Logger log = LoggerFactory.getLogger(TriggerController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TriggerController.class);
 
   private final Scheduler scheduler;
 
@@ -68,7 +68,7 @@ public class TriggerController {
             .min()
             .ifPresent(t -> resultat.put(entree.getValue(), t));
       } catch (SchedulerException e) {
-        log.debug("Impossible de lire trigger pour {}", entree.getKey());
+        LOG.debug("Impossible de lire trigger pour {}", entree.getKey());
       }
     }
     return ResponseEntity.ok(resultat);
@@ -92,7 +92,7 @@ public class TriggerController {
               .toList();
       return ResponseEntity.ok(Map.of("actifs", actifs));
     } catch (SchedulerException e) {
-      log.warn("Erreur lecture jobs actifs", e);
+      LOG.warn("Erreur lecture jobs actifs", e);
       return ResponseEntity.ok(Map.of("actifs", List.of()));
     }
   }
@@ -107,15 +107,15 @@ public class TriggerController {
   public ResponseEntity<Map<String, String>> relancerTout() {
     try {
       if (jobEnCours("fetchArtistesBatch") || jobEnCours("fetchRegion")) {
-        log.debug("fetchArtistesBatch ou fetchRegion déjà en cours — ignoré");
+        LOG.debug("fetchArtistesBatch ou fetchRegion déjà en cours — ignoré");
         return ResponseEntity.ok(Map.of("statut", "déjà en cours"));
       }
       scheduler.triggerJob(JobKey.jobKey("fetchArtistesBatch"));
       scheduler.triggerJob(JobKey.jobKey("fetchRegion"));
-      log.info("Déclenchement manuel : fetchArtistesBatch + fetchRegion");
+      LOG.info("Déclenchement manuel : fetchArtistesBatch + fetchRegion");
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     } catch (SchedulerException e) {
-      log.warn("Erreur déclenchement manuel", e);
+      LOG.warn("Erreur déclenchement manuel", e);
       return ResponseEntity.internalServerError()
           .body(Map.of("erreur", "Erreur Quartz : " + e.getMessage()));
     }
@@ -132,14 +132,14 @@ public class TriggerController {
   public ResponseEntity<Map<String, String>> relancerArtistes() {
     try {
       if (jobEnCours("fetchArtistesBatch")) {
-        log.debug("fetchArtistesBatch déjà en cours — ignoré");
+        LOG.debug("fetchArtistesBatch déjà en cours — ignoré");
         return ResponseEntity.ok(Map.of("statut", "déjà en cours"));
       }
       scheduler.triggerJob(JobKey.jobKey("fetchArtistesBatch"));
-      log.info("Déclenchement artiste : fetchArtistesBatch");
+      LOG.info("Déclenchement artiste : fetchArtistesBatch");
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     } catch (SchedulerException e) {
-      log.warn("Erreur déclenchement artiste", e);
+      LOG.warn("Erreur déclenchement artiste", e);
       return ResponseEntity.internalServerError()
           .body(Map.of("erreur", "Erreur Quartz : " + e.getMessage()));
     }
@@ -162,14 +162,14 @@ public class TriggerController {
     }
     try {
       if (jobEnCours(cle)) {
-        log.debug("{} déjà en cours — ignoré", typeJob);
+        LOG.debug("{} déjà en cours — ignoré", typeJob);
         return ResponseEntity.ok(Map.of("statut", "déjà en cours"));
       }
       scheduler.triggerJob(JobKey.jobKey(cle));
-      log.info("Déclenchement manuel : {}", typeJob);
+      LOG.info("Déclenchement manuel : {}", typeJob);
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     } catch (SchedulerException e) {
-      log.warn("Erreur déclenchement {}", typeJob, e);
+      LOG.warn("Erreur déclenchement {}", typeJob, e);
       return ResponseEntity.internalServerError()
           .body(Map.of("erreur", "Erreur Quartz : " + e.getMessage()));
     }
@@ -196,7 +196,7 @@ public class TriggerController {
     try {
       final String cleJob = "fetchSalle-" + identifiants;
       if (jobEnCours(cleJob)) {
-        log.debug("fetchSalle {} déjà en cours — ignoré", identifiants);
+        LOG.debug("fetchSalle {} déjà en cours — ignoré", identifiants);
         return ResponseEntity.ok(Map.of("statut", "déjà en cours"));
       }
       final JobDetail jobDetail =
@@ -205,10 +205,10 @@ public class TriggerController {
               .usingJobData(FetchSalleJob.CLE_IDENTIFIANTS, identifiants)
               .build();
       scheduler.scheduleJob(jobDetail, TriggerBuilder.newTrigger().startNow().build());
-      log.info("Déclenchement salle : identifiants={}", identifiants);
+      LOG.info("Déclenchement salle : identifiants={}", identifiants);
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     } catch (SchedulerException e) {
-      log.warn("Erreur déclenchement salle identifiants={}", identifiants, e);
+      LOG.warn("Erreur déclenchement salle identifiants={}", identifiants, e);
       return ResponseEntity.internalServerError()
           .body(Map.of("erreur", "Erreur Quartz : " + e.getMessage()));
     }

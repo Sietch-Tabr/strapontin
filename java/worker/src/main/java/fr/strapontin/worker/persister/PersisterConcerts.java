@@ -51,7 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PersisterConcerts {
 
-  private static final Logger log = LoggerFactory.getLogger(PersisterConcerts.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PersisterConcerts.class);
 
   private static final int TAILLE_LOT = 500;
 
@@ -358,7 +358,7 @@ public class PersisterConcerts {
             .filter(
                 c -> {
                   if (Normalisation.normaliserTexte(c.artiste()).isBlank()) {
-                    log.warn(
+                    LOG.warn(
                         "concert rejeté — artiste_norm vide artiste={} date={} salle={}",
                         c.artiste(),
                         c.date(),
@@ -380,7 +380,7 @@ public class PersisterConcerts {
       totalUpdates += resultatLot.nbMisAJour();
     }
 
-    log.info(
+    LOG.info(
         "concerts persistés total={} inserts={} updates={}",
         totalInserts + totalUpdates,
         totalInserts,

@@ -33,7 +33,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkerSuiviCyclesService {
 
-  private static final Logger log = LoggerFactory.getLogger(WorkerSuiviCyclesService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WorkerSuiviCyclesService.class);
 
   // Fraîcheur maximale attendue par type de job, dérivée du cadencement réel de Planificateur
   // (marge x2 sur l'écart maximal normal entre deux déclenchements consécutifs) — à réaligner si
@@ -76,13 +76,13 @@ public class WorkerSuiviCyclesService {
    * attendue et journalise un warn pour chaque type resté silencieux au-delà.
    */
   public void executerSuiviCycles() {
-    log.info("suivi:cycles-jobs démarré");
+    LOG.info("suivi:cycles-jobs démarré");
     workerStatsService.executerAvecStats(
-        log,
+        LOG,
         "suivi:cycles-jobs",
         () -> {
           final int enRetard = verifier();
-          log.info("suivi:cycles-jobs terminé enRetard={}", enRetard);
+          LOG.info("suivi:cycles-jobs terminé enRetard={}", enRetard);
           return new ResultatPersistance(0, enRetard);
         });
   }

@@ -37,7 +37,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ReconciliateurArtistes {
 
-  private static final Logger log = LoggerFactory.getLogger(ReconciliateurArtistes.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReconciliateurArtistes.class);
 
   private record ArtisteExistant(String artisteNorm, UUID artisteId) {}
 
@@ -197,7 +197,7 @@ public class ReconciliateurArtistes {
             + " WHERE url = :url",
         params);
     if (nbCorrigees > 0) {
-      log.info(
+      LOG.info(
           "artiste corrigé par url url={} nouveau={} count={}",
           concert.url(),
           concert.artisteNorm(),
@@ -247,7 +247,7 @@ public class ReconciliateurArtistes {
     if (canonique == null || canonique.equals(c.artisteNorm())) {
       return c;
     }
-    log.debug(
+    LOG.debug(
         "doublon artiste intra-lot réconcilié entrant={} canonique={}", c.artisteNorm(), canonique);
     return c.avecArtisteNorm(canonique);
   }
@@ -304,7 +304,7 @@ public class ReconciliateurArtistes {
         return concert.avecArtisteId(artisteIdPropague);
       }
 
-      log.debug(
+      LOG.debug(
           "doublon artiste inter-jobs réconcilié entrant={} existant={} artisteId={}",
           concert.artisteNorm(),
           existant.artisteNorm(),
@@ -345,7 +345,7 @@ public class ReconciliateurArtistes {
               + "   WHERE artiste_norm = :nouvelArtisteNorm AND date = CAST(:date AS date)"
               + "     AND salle_norm = :salleNorm)",
           params);
-      log.info(
+      LOG.info(
           "artiste corrigé rétroactivement ancien={} nouveau={} count={}",
           existant.artisteNorm(),
           concert.artisteNorm(),
@@ -443,6 +443,6 @@ public class ReconciliateurArtistes {
             + " VALUES (CAST(:artisteId AS uuid), :source, :identifiant)"
             + " ON CONFLICT DO NOTHING",
         params.toArray(new SqlParameterSource[0]));
-    log.info("artiste_sources persistés en lot count={}", params.size());
+    LOG.info("artiste_sources persistés en lot count={}", params.size());
   }
 }

@@ -37,7 +37,7 @@ import org.springframework.stereotype.Service;
 @Service
 class ReconciliationNomsSalles {
 
-  private static final Logger log = LoggerFactory.getLogger(ReconciliationNomsSalles.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReconciliationNomsSalles.class);
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -192,7 +192,7 @@ class ReconciliationNomsSalles {
     if (canonique == null || canonique.equals(c.salleNorm())) {
       return c;
     }
-    log.debug(
+    LOG.debug(
         "doublon salle intra-lot réconcilié entrant={} canonique={}", c.salleNorm(), canonique);
     return c.avecSalleNorm(canonique);
   }
@@ -226,7 +226,7 @@ class ReconciliationNomsSalles {
     }
     for (final String salleNormExistante : sallesExistantes) {
       if (CorrespondanceSalle.estDoublonSalle(concert.salleNorm(), salleNormExistante)) {
-        log.debug(
+        LOG.debug(
             "doublon salle inter-jobs réconcilié entrant={} existant={}",
             concert.salleNorm(),
             salleNormExistante);
@@ -274,7 +274,7 @@ class ReconciliationNomsSalles {
                   "uuid",
                   entree.getKey().toString()));
       if (modifies > 0) {
-        log.info("renommage salle absorbé salleId={} nouveauNom={}", entree.getKey(), nouveauNom);
+        LOG.info("renommage salle absorbé salleId={} nouveauNom={}", entree.getKey(), nouveauNom);
       }
     }
   }

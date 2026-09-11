@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class WatchdogWorkerService {
 
-  private static final Logger log = LoggerFactory.getLogger(WatchdogWorkerService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WatchdogWorkerService.class);
 
   static final int SEUIL_HEURES = 3;
   private static final Duration SEUIL_INACTIVITE = Duration.ofHours(SEUIL_HEURES);
@@ -62,12 +62,12 @@ public class WatchdogWorkerService {
     }
 
     if (derniereAlerte != null && Instant.now().isBefore(derniereAlerte.plus(SEUIL_INACTIVITE))) {
-      log.debug("watchdog: worker inactif, alerte déjà envoyée récemment — ignorée");
+      LOG.debug("watchdog: worker inactif, alerte déjà envoyée récemment — ignorée");
       return;
     }
 
     final String detailIso = derniereExec != null ? derniereExec.toString() : null;
-    log.warn("watchdog: worker inactif depuis {} — envoi alerte", detailIso);
+    LOG.warn("watchdog: worker inactif depuis {} — envoi alerte", detailIso);
 
     emailAlerteService
         .obtenirDestinataireAlerte()
@@ -77,7 +77,7 @@ public class WatchdogWorkerService {
               derniereAlerte = Instant.now();
             },
             () ->
-                log.warn("watchdog: aucun destinataire d'alerte disponible — alerte non envoyée"));
+                LOG.warn("watchdog: aucun destinataire d'alerte disponible — alerte non envoyée"));
   }
 
   private Instant lireDerniereExecReussie() {
@@ -89,7 +89,7 @@ public class WatchdogWorkerService {
               Timestamp.class);
       return ts != null ? ts.toInstant() : null;
     } catch (Exception e) {
-      log.warn("watchdog: impossible de lire fetch_jobs — {}", e.getMessage());
+      LOG.warn("watchdog: impossible de lire fetch_jobs — {}", e.getMessage());
       return null;
     }
   }

@@ -30,7 +30,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ConfigServiceWorker {
 
-  private static final Logger log = LoggerFactory.getLogger(ConfigServiceWorker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ConfigServiceWorker.class);
 
   private final ConfigCipher cipher;
   private final NamedParameterJdbcTemplate jdbc;
@@ -66,7 +66,7 @@ public class ConfigServiceWorker {
     try {
       return Optional.of(cipher.dechiffrer(lignes.get(0)));
     } catch (Exception e) {
-      log.error("Échec déchiffrement config '{}' — APP_CONFIG_SECRET modifié ?", cle, e);
+      LOG.error("Échec déchiffrement config '{}' — APP_CONFIG_SECRET modifié ?", cle, e);
       return Optional.empty();
     }
   }

@@ -38,7 +38,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ConfigService {
 
-  private static final Logger log = LoggerFactory.getLogger(ConfigService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ConfigService.class);
 
   private final ConfigCipher cipher;
   private final NamedParameterJdbcTemplate jdbc;
@@ -80,7 +80,7 @@ public class ConfigService {
     cache.invalidate(cle);
     if (valeur == null || valeur.isBlank()) {
       jdbc.update("DELETE FROM app_config WHERE cle = :cle", Map.of("cle", cle));
-      log.info("config supprimée cle={}", cle);
+      LOG.info("config supprimée cle={}", cle);
       return;
     }
     final String valeurChiffree = cipher.chiffrer(valeur);
@@ -118,7 +118,7 @@ public class ConfigService {
     try {
       return Optional.of(cipher.dechiffrer(lignes.get(0)));
     } catch (Exception e) {
-      log.error("Échec déchiffrement config '{}' — APP_CONFIG_SECRET modifié ?", cle, e);
+      LOG.error("Échec déchiffrement config '{}' — APP_CONFIG_SECRET modifié ?", cle, e);
       return Optional.empty();
     }
   }

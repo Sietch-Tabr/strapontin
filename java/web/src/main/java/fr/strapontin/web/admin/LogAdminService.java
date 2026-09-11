@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class LogAdminService {
 
-  private static final Logger log = LoggerFactory.getLogger(LogAdminService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LogAdminService.class);
   private static final int LIMITE_ERREURS_DEPUIS = 1000;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -100,9 +100,9 @@ public class LogAdminService {
           params);
 
     } catch (JsonProcessingException e) {
-      log.warn("Erreur sérialisation meta log admin", e);
+      LOG.warn("Erreur sérialisation meta log admin", e);
     } catch (Exception e) {
-      log.warn("Erreur insertion log admin", e);
+      LOG.warn("Erreur insertion log admin", e);
     }
   }
 

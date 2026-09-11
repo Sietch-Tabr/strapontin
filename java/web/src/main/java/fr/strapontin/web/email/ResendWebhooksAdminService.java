@@ -33,7 +33,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ResendWebhooksAdminService {
 
-  private static final Logger log = LoggerFactory.getLogger(ResendWebhooksAdminService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ResendWebhooksAdminService.class);
 
   private final ConfigService configService;
   private final Function<String, Resend> fabriqueResend;
@@ -102,7 +102,7 @@ public class ResendWebhooksAdminService {
               : List.of();
       return evenements;
     } catch (ResendException e) {
-      log.warn("Erreur listing événements webhook Resend : {}", e.getMessage());
+      LOG.warn("Erreur listing événements webhook Resend : {}", e.getMessage());
       return List.of();
     }
   }
@@ -128,10 +128,10 @@ public class ResendWebhooksAdminService {
 
     try {
       client.webhooks().replayEvent(webhookId, eventId);
-      log.info("rejeu événement webhook Resend id={}", eventId);
+      LOG.info("rejeu événement webhook Resend id={}", eventId);
       return true;
     } catch (ResendException e) {
-      log.warn("Erreur rejeu événement webhook Resend id={} : {}", eventId, e.getMessage());
+      LOG.warn("Erreur rejeu événement webhook Resend id={} : {}", eventId, e.getMessage());
       return false;
     }
   }
@@ -154,7 +154,7 @@ public class ResendWebhooksAdminService {
           .findFirst()
           .orElse(null);
     } catch (ResendException e) {
-      log.warn("Erreur résolution du webhookId Resend : {}", e.getMessage());
+      LOG.warn("Erreur résolution du webhookId Resend : {}", e.getMessage());
       return null;
     }
   }

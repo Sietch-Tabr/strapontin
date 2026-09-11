@@ -35,7 +35,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class SuiviSanteSourcesService {
 
-  private static final Logger log = LoggerFactory.getLogger(SuiviSanteSourcesService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SuiviSanteSourcesService.class);
 
   static final int SEUIL_SUSPECT = 3;
 
@@ -133,7 +133,7 @@ public class SuiviSanteSourcesService {
               "identifiant", identifiant,
               "effacerIntervention", effacerIntervention));
     } catch (Exception e) {
-      log.warn(
+      LOG.warn(
           "Impossible de mettre à jour la santé source={} identifiant={}", source, identifiant, e);
     }
   }

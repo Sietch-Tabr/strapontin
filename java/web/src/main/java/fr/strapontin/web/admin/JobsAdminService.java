@@ -32,7 +32,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class JobsAdminService {
 
-  private static final Logger log = LoggerFactory.getLogger(JobsAdminService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JobsAdminService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
@@ -88,7 +88,7 @@ public class JobsAdminService {
       try {
         quotaTM = objectMapper.readValue(quotaJson.get(0), QuotaTM.class);
       } catch (Exception _) {
-        log.warn("Quota TM malformé — ignoré");
+        LOG.warn("Quota TM malformé — ignoré");
       }
     }
 
@@ -101,7 +101,7 @@ public class JobsAdminService {
               Timestamp.class);
       workerLastSuccess = ts != null ? ts.toInstant() : null;
     } catch (Exception _) {
-      log.debug("Impossible de lire le dernier job réussi");
+      LOG.debug("Impossible de lire le dernier job réussi");
     }
 
     final List<String> jobsEnCours = workerProxyService.obtenirJobsEnCours();

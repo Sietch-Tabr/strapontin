@@ -37,7 +37,7 @@ import org.springframework.web.client.RestClientResponseException;
 @Service
 public class DecouverteService {
 
-  private static final Logger log = LoggerFactory.getLogger(DecouverteService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DecouverteService.class);
   private static final String CLE_DEPTS = "depts";
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -172,7 +172,7 @@ public class DecouverteService {
       erreur.put("erreur", "Worker inaccessible (statut " + e.getStatusCode().value() + ").");
       return ResponseEntity.status(503).body(erreur);
     } catch (Exception e) {
-      log.warn("Erreur appel worker trigger (découverte)", e);
+      LOG.warn("Erreur appel worker trigger (découverte)", e);
       final Map<String, Object> erreur = new HashMap<>();
       erreur.put("erreur", "Worker inaccessible.");
       return ResponseEntity.status(503).body(erreur);

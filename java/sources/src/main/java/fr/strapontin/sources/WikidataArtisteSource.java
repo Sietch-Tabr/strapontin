@@ -44,7 +44,7 @@ import org.springframework.web.client.RestClient;
 public class WikidataArtisteSource
     implements SourceEnrichissementArtiste, SourceAvecBilanFetch, SourceAvecAmbiguitesDecouverte {
 
-  private static final Logger log = LoggerFactory.getLogger(WikidataArtisteSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WikidataArtisteSource.class);
 
   // Rempli par decouvrir() sur ambiguïté humain/groupe, vidé par preleverAmbiguites() — même
   // patron "prélever" que preleverBilan (BilanFetch), pas de dépendance JDBC dans ce module.
@@ -204,7 +204,7 @@ public class WikidataArtisteSource
 
     final List<Map<String, Object>> bindings = ClientSparqlWikidata.extraireBindings(data);
     if (bindings.isEmpty()) {
-      log.info("Wikidata découverte — aucun candidat nom={}", artiste.nom());
+      LOG.info("Wikidata découverte — aucun candidat nom={}", artiste.nom());
       return Optional.empty();
     }
 
@@ -214,7 +214,7 @@ public class WikidataArtisteSource
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
     if (typesDistincts.size() > 1) {
-      log.warn(
+      LOG.warn(
           "Wikidata découverte — candidats ambigus (types {}) nom={} — non rapproché",
           typesDistincts,
           artiste.nom());
