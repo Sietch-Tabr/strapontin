@@ -381,4 +381,98 @@ class ResolveurSalleParConcertTest {
 
     assertEquals(uuidToulouse, resultat.get(0).salleId());
   }
+
+  // Fiche Eventim résolue au complexe avant réconciliation, puis salleNorm réécrit vers celui
+  // d'une sous-salle déjà établie — le salleId doit être réaligné, pas rester celui du complexe.
+  @Test
+  void raccrocherSallesParNomNorm_salleIdResoluNomNormDivergent_realigneVersSousSalle() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
+    UUID complexe = UUID.randomUUID();
+    UUID sousSalle = UUID.randomUUID();
+
+    Map<String, Object> nomNormComplexe = new HashMap<>();
+    nomNormComplexe.put("id", complexe);
+    nomNormComplexe.put("nom_norm", "la seine musicale boulogne billancourt");
+
+    Map<String, Object> candidatSousSalle = new HashMap<>();
+    candidatSousSalle.put("nom_norm", "la seine musicale grande seine");
+    candidatSousSalle.put("id", sousSalle);
+    candidatSousSalle.put("dept_effectif", "92");
+
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(List.of(nomNormComplexe))
+        .thenReturn(List.of(candidatSousSalle));
+
+    ValeurConcert entrant =
+        new ValeurConcert(
+            "Lara Fabian",
+            "lara fabian",
+            LocalDate.of(2026, 10, 15),
+            LocalTime.of(20, 0),
+            "La Seine Musicale - Boulogne Billancourt",
+            "la seine musicale grande seine",
+            "Boulogne-Billancourt",
+            "92",
+            null,
+            "eventim",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            complexe,
+            null);
+
+    List<ValeurConcert> resultat = resolveur.raccrocherSallesParNomNorm(List.of(entrant));
+
+    assertEquals(sousSalle, resultat.get(0).salleId());
+  }
+
+  // Un concert résolu par clé forte sur un nom sans rapport (chercherSalleParCleForte) ne partage
+  // par construction aucune correspondance exacte de nom_norm — doit rester inchangé.
+  @Test
+  void raccrocherSallesParNomNorm_salleIdResoluParCleForteSansHomonyme_resteInchange() {
+    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    ClientNominatim clientNominatim = mock(ClientNominatim.class);
+    ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
+    UUID salleResolue = UUID.randomUUID();
+
+    Map<String, Object> nomNormSalleResolue = new HashMap<>();
+    nomNormSalleResolue.put("id", salleResolue);
+    nomNormSalleResolue.put("nom_norm", "espace dollfus noack");
+
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(List.of(nomNormSalleResolue))
+        .thenReturn(List.of());
+
+    ValeurConcert entrant =
+        new ValeurConcert(
+            "Artiste",
+            "artiste",
+            LocalDate.of(2026, 11, 28),
+            null,
+            "Ed&n",
+            "ed n",
+            null,
+            "31",
+            null,
+            "eventim",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            salleResolue,
+            null);
+
+    List<ValeurConcert> resultat = resolveur.raccrocherSallesParNomNorm(List.of(entrant));
+
+    assertEquals(salleResolue, resultat.get(0).salleId());
+  }
 }

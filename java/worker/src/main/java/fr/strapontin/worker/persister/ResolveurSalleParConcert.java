@@ -390,8 +390,10 @@ class ResolveurSalleParConcert {
     return null;
   }
 
-  /// Rattache les concerts sans {@code salleId} à leur salle via correspondance exacte sur {@code
-  /// salle_norm} / {@code nom_norm}.
+  /// Rattache à leur salle les concerts sans {@code salleId}, ou réaligne ceux dont le {@code
+  /// salleId} déjà résolu pointe vers une salle dont le {@code nom_norm} diverge désormais du
+  /// {@code salleNorm} du concert — via correspondance exacte sur {@code salle_norm} / {@code
+  /// nom_norm}.
   ///
   /// <p>(rattrapage) : une simple égalité de {@code nom_norm} ignorait le département, défaisant
   /// silencieusement le filtre dept de {@link #chercherSalleParTokens} pour deux salles homonymes
@@ -400,16 +402,31 @@ class ResolveurSalleParConcert {
   /// exacte le retrouvait quand même en aval, sans filtre). Même repli sur le département d'un
   /// concert déjà rattaché que {@link #chercherSalleParTokens} quand {@code salles.dept} est vide.
   ///
+  /// <p>Le réalignement couvre le cas d'un concert résolu par nom avant réconciliation (ex. une
+  /// fiche Eventim sans indication de sous-salle, résolue au complexe parent) dont le {@code
+  /// salleNorm} converge ensuite, via {@code reconcilierSalles}, vers celui d'une sous-salle déjà
+  /// établie — sans ce réalignement, le {@code salleId} restait celui du complexe, créant un
+  /// événement cross-source distinct pour la même date/artiste. Une correspondance exacte de {@code
+  /// nom_norm} n'existant que pour une salle réellement homonyme, ce réalignement laisse inchangés
+  /// les concerts résolus par clé forte sur un nom sans rapport ({@link #chercherSalleParCleForte}
+  /// — leur {@code salleNorm} ne partage par construction aucune correspondance exacte en base).
+  ///
   /// @param concerts concerts après déduplication
-  /// @return liste enrichie avec les {@code salleId} résolus par nom_norm
+  /// @return liste enrichie avec les {@code salleId} résolus ou réalignés par nom_norm
   List<ValeurConcert> raccrocherSallesParNomNorm(List<ValeurConcert> concerts) {
-    List<String> sallesNormsSansUuid =
+    Set<UUID> salleIdsExistants = new HashSet<>();
+    for (ValeurConcert c : concerts) {
+      if (c.salleId() != null) salleIdsExistants.add(c.salleId());
+    }
+    Map<UUID, String> nomNormParSalleId = nomNormConnus(salleIdsExistants);
+
+    List<String> sallesNormsARattacher =
         concerts.stream()
-            .filter(c -> c.salleId() == null)
+            .filter(c -> salleIdDivergent(c, nomNormParSalleId))
             .map(ValeurConcert::salleNorm)
             .distinct()
             .toList();
-    if (sallesNormsSansUuid.isEmpty()) return concerts;
+    if (sallesNormsARattacher.isEmpty()) return concerts;
 
     Map<String, List<Map<String, Object>>> candidatsParNomNorm = new HashMap<>();
     jdbc.queryForList(
@@ -418,7 +435,7 @@ class ResolveurSalleParConcert {
                 + "                   WHERE c.salle_id = s.id AND c.dept IS NOT NULL LIMIT 1))"
                 + "   AS dept_effectif"
                 + " FROM salles s WHERE s.nom_norm IN (:normsNoms)",
-            Map.of("normsNoms", sallesNormsSansUuid))
+            Map.of("normsNoms", sallesNormsARattacher))
         .forEach(
             r ->
                 candidatsParNomNorm
@@ -428,7 +445,7 @@ class ResolveurSalleParConcert {
     return concerts.stream()
         .map(
             c -> {
-              if (c.salleId() != null) return c;
+              if (!salleIdDivergent(c, nomNormParSalleId)) return c;
               List<Map<String, Object>> candidats = candidatsParNomNorm.get(c.salleNorm());
               if (candidats == null) return c;
               for (Map<String, Object> candidat : candidats) {
@@ -440,6 +457,32 @@ class ResolveurSalleParConcert {
               return c;
             })
         .toList();
+  }
+
+  /// @return {@code true} si le concert n'a pas encore de {@code salleId}, ou si celui déjà résolu
+  ///   pointe vers une salle dont le {@code nom_norm} connu diverge du {@code salleNorm} actuel du
+  ///   concert (silencieux si le {@code nom_norm} de la salle résolue n'est pas connu — pas de
+  ///   réalignement sans confirmation positive de la divergence)
+  private static boolean salleIdDivergent(ValeurConcert c, Map<UUID, String> nomNormParSalleId) {
+    if (c.salleId() == null) return true;
+    String nomNormActuel = nomNormParSalleId.get(c.salleId());
+    return nomNormActuel != null && !nomNormActuel.equals(c.salleNorm());
+  }
+
+  /// Charge en une seule requête le {@code nom_norm} connu de chaque salle donnée.
+  ///
+  /// @param salleIds identifiants des salles à vérifier
+  /// @return {@code nom_norm} par salle
+  private Map<UUID, String> nomNormConnus(Set<UUID> salleIds) {
+    if (salleIds.isEmpty()) return Map.of();
+    List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT id, nom_norm FROM salles WHERE id IN (:ids)", Map.of("ids", salleIds));
+    Map<UUID, String> resultat = new HashMap<>();
+    for (var ligne : lignes) {
+      resultat.put((UUID) ligne.get("id"), (String) ligne.get("nom_norm"));
+    }
+    return resultat;
   }
 
   /// Charge en une seule requête le département connu de chaque salle donnée (colonne {@code dept},

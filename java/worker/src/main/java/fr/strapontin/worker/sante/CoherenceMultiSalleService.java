@@ -177,9 +177,8 @@ public class CoherenceMultiSalleService {
         UUID idB = (UUID) b.get("id");
         UUID parentA = (UUID) a.get("salle_parent_id");
         UUID parentB = (UUID) b.get("salle_parent_id");
-        // Un complexe et sa sous-salle légitime (salle_parent_id déjà posé) ne sont jamais des
-        // doublons — leurs noms qualifiés ("X - Y") satisfont presque toujours le containment de
-        // tokens ci-dessous par construction, sans rapport avec un résidu de fusion antérieur.
+        // Un complexe et sa sous-salle déjà reliée ne sont jamais des doublons — leur nom qualifié
+        // ("X - Y") satisferait sinon le containment de tokens ci-dessous par construction.
         if (idA.equals(parentB) || idB.equals(parentA)) continue;
         String deptA = (String) a.get("dept");
         String deptB = (String) b.get("dept");

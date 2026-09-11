@@ -136,9 +136,8 @@ class CoherenceMultiSalleServiceTest {
 
   @Test
   void detecterContamination_divergenceReelleMalgreLongueurAsymetrique_journalise() {
-    // "theatre la boussole grande salle" / "theatre marigny grande salle" — ni nom+ville ni sigle,
-    // divergence réelle malgré des longueurs de mots proches, ne doit pas être écartée du même
-    // geste que les faux positifs nom+ville/sigle.
+    // "theatre la boussole grande salle" / "theatre marigny grande salle" — divergence réelle,
+    // ni nom+ville ni sigle, ne doit pas être écartée avec les faux positifs.
     UUID salleId = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
@@ -215,9 +214,8 @@ class CoherenceMultiSalleServiceTest {
 
   @Test
   void detecterDoublons_complexeEtSousSalleDejaRelies_neJournalisePas() {
-    // "La Seine Musicale" / "La Seine Musicale - Grande Seine" satisferait le containment de
-    // tokens par construction, mais salle_parent_id les relie déjà comme complexe/sous-salle
-    // légitimes — pas un résidu de fusion antérieur.
+    // Satisferait le containment de tokens par construction, mais salle_parent_id les relie déjà
+    // comme complexe/sous-salle légitimes.
     UUID complexe = UUID.randomUUID();
     UUID sousSalle = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap()))
