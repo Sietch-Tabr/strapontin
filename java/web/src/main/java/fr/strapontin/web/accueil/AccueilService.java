@@ -33,7 +33,8 @@ public class AccueilService {
    * @param jdbc              accès JDBC
    * @param userConfigService lecture du filtre de disponibilité
    */
-  public AccueilService(final NamedParameterJdbcTemplate jdbc, final UserConfigService userConfigService) {
+  public AccueilService(
+      final NamedParameterJdbcTemplate jdbc, final UserConfigService userConfigService) {
     this.jdbc = jdbc;
     this.userConfigService = userConfigService;
   }
@@ -76,7 +77,10 @@ public class AccueilService {
    * @return groupes artiste/concerts avec compteurs
    */
   public ReponseAccueil accueil(
-      final String userId, final boolean masques, final String indisponibles, final boolean nouveau) {
+      final String userId,
+      final boolean masques,
+      final String indisponibles,
+      final boolean nouveau) {
     final LocalDate aujourd8 = LocalDate.now();
     final boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
     final boolean inclureIndisponibles =

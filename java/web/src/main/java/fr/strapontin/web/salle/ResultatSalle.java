@@ -38,7 +38,11 @@ public record ResultatSalle(
    * @param source       origine du résultat
    */
   public ResultatSalle(
-      final String salle, final String ville, final String tmVenueId, final String digitickSlug, final String source) {
+      final String salle,
+      final String ville,
+      final String tmVenueId,
+      final String digitickSlug,
+      final String source) {
     this(salle, ville, tmVenueId, digitickSlug, source, null, null);
   }
 }

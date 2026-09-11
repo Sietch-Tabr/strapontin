@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -26,7 +27,7 @@ import org.springframework.web.client.RestClient;
 /**
  * Client SPARQL Wikidata pour l'enrichissement des salles (étape 2).
  *
- * Deux modes selon que le Q-ID est déjà connu :
+ * <p>Deux modes selon que le Q-ID est déjà connu :
  *
  * <ul>
  *   <li>{@code wikidataId != null} (fourni par {@link OverpassSalleSource} ou déjà stocké en base)
@@ -40,29 +41,29 @@ import org.springframework.web.client.RestClient;
  *       P279 de « gymnase » Q14092), un filtre transitif risquerait de faire correspondre des
  *       équipements sportifs. Un filtre négatif exclut en revanche les entités de type
  *       région/département/commune (P31 région administrative, département français, commune
- *       française) ainsi que les infrastructures de transport (gare, arrêt de tram) : une
- *       recherche par nom peut sinon retourner une entité administrative ou de transport homonyme
- *       plutôt que le lieu physique recherché — constaté en production sur une gare (Villepinte)
- *       et un arrêt de tram (Bordeaux) retenus à tort. Le département de la commune du candidat
- *       (déduit de son code postal, P281) est également confronté au département connu de la salle
- *       Strapontin quand les deux sont disponibles (voir {@link #deptIncompatible}) — {@code
- *       salles.ville} peut rester vide au moment de cet enrichissement quand {@code salles.dept}
- *       est déjà fiable (renseigné dès la création à partir d'un concert réel). En contrepartie,
- *       la requête exige {@code wdt:P625} (coordonnées géographiques) : sans ce garde-fou, une
- *       recherche par nom seul peut retourner en premier résultat une œuvre culturelle homonyme
- *       (constaté en production : pour « L'Olympia », le premier candidat mwapi est un
- *       <em>album</em> d'Émilie Simon sorti en 2007, pas la salle) — un album/single/livre n'a pas
- *       de coordonnées, une salle en a toujours une. Exception vérifiée : un candidat typé {@code
- *       wd:Q1060829} (bâtiment de salle de concert) est accepté même sans coordonnées — constaté
- *       en production sur « salle Paul-Fort » (Nantes), correcte mais structurellement exclue par
- *       l'exigence de coordonnées seule, laissant un homonyme sans rapport (« salle Paul Bouin »,
- *       Basse-Goulaine) devenir l'unique candidat retourné. La désambiguïsation finale réutilise
- *       {@link CorrespondanceSalle#estDoublonSalle} (module {@code core}, même algorithme que
- *       {@code ReconciliateurSalles} côté worker : Levenshtein ≥ 0.75, Jaccard tokens, critère
- *       pivot) plutôt qu'une simple égalité de chaîne — nécessaire pour absorber à la fois
- *       l'article défini français (« L'Olympia » ↔ « Olympia », via containment) et les suffixes
- *       descriptifs fréquents côté Strapontin absents du libellé Wikidata (« Zenith Paris - la
- *       Villette » ↔ « Zénith Paris », via Jaccard tokens). La comparaison porte aussi sur les
+ *       française) ainsi que les infrastructures de transport (gare, arrêt de tram) : une recherche
+ *       par nom peut sinon retourner une entité administrative ou de transport homonyme plutôt que
+ *       le lieu physique recherché — constaté en production sur une gare (Villepinte) et un arrêt
+ *       de tram (Bordeaux) retenus à tort. Le département de la commune du candidat (déduit de son
+ *       code postal, P281) est également confronté au département connu de la salle Strapontin
+ *       quand les deux sont disponibles (voir {@link #deptIncompatible}) — {@code salles.ville}
+ *       peut rester vide au moment de cet enrichissement quand {@code salles.dept} est déjà fiable
+ *       (renseigné dès la création à partir d'un concert réel). En contrepartie, la requête exige
+ *       {@code wdt:P625} (coordonnées géographiques) : sans ce garde-fou, une recherche par nom
+ *       seul peut retourner en premier résultat une œuvre culturelle homonyme (constaté en
+ *       production : pour « L'Olympia », le premier candidat mwapi est un <em>album</em> d'Émilie
+ *       Simon sorti en 2007, pas la salle) — un album/single/livre n'a pas de coordonnées, une
+ *       salle en a toujours une. Exception vérifiée : un candidat typé {@code wd:Q1060829}
+ *       (bâtiment de salle de concert) est accepté même sans coordonnées — constaté en production
+ *       sur « salle Paul-Fort » (Nantes), correcte mais structurellement exclue par l'exigence de
+ *       coordonnées seule, laissant un homonyme sans rapport (« salle Paul Bouin », Basse-Goulaine)
+ *       devenir l'unique candidat retourné. La désambiguïsation finale réutilise {@link
+ *       CorrespondanceSalle#estDoublonSalle} (module {@code core}, même algorithme que {@code
+ *       ReconciliateurSalles} côté worker : Levenshtein ≥ 0.75, Jaccard tokens, critère pivot)
+ *       plutôt qu'une simple égalité de chaîne — nécessaire pour absorber à la fois l'article
+ *       défini français (« L'Olympia » ↔ « Olympia », via containment) et les suffixes descriptifs
+ *       fréquents côté Strapontin absents du libellé Wikidata (« Zenith Paris - la Villette » ↔ «
+ *       Zénith Paris », via Jaccard tokens). La comparaison porte aussi sur les
  *       <strong>alias</strong> ({@code skos:altLabel}) : les grandes salles changent régulièrement
  *       de nom commercial (sponsoring) et Wikidata conserve souvent l'ancien nom comme libellé
  *       principal, le nom actuel n'étant qu'un alias — constaté en production : « Accor Arena »
@@ -80,7 +81,8 @@ import org.springframework.web.client.RestClient;
  *       correspondance exacte immédiate, aucun seuil flou impliqué). La requête exige donc {@code
  *       wdt:P17 wd:Q142} (pays = France) : Strapontin ne suit que des concerts français
  *       (TM/Eventim/Digitick France), toute salle hors de ce périmètre est nécessairement une
- *       fausse correspondance. </ul>
+ *       fausse correspondance.
+ * </ul>
  *
  * @since 2.6.0
  * @author Kwaite
@@ -104,9 +106,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   private final ClientSparqlWikidata client;
   private final Cache<String, EnrichissementSalle> cache;
 
-  /**
-   * Crée une instance avec un client SPARQL par défaut et un cache 24h.
-   */
+  /** Crée une instance avec un client SPARQL par défaut et un cache 24h. */
   public WikidataSalleSource() {
     this(
         new ClientSparqlWikidata(),
@@ -119,7 +119,8 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
    * @param restClient client HTTP à utiliser
    * @param cache cache Caffeine à utiliser
    */
-  public WikidataSalleSource(final RestClient restClient, final Cache<String, EnrichissementSalle> cache) {
+  public WikidataSalleSource(
+      final RestClient restClient, final Cache<String, EnrichissementSalle> cache) {
     this(new ClientSparqlWikidata(restClient), cache);
   }
 
@@ -138,8 +139,10 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   public Map<UUID, EnrichissementSalle> enrichirLot(final List<SalleAEnrichir> salles) {
     final Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
 
-    final List<SalleAEnrichir> connues = salles.stream().filter(s -> s.wikidataId() != null).toList();
-    final List<SalleAEnrichir> aDecouvrir = salles.stream().filter(s -> s.wikidataId() == null).toList();
+    final List<SalleAEnrichir> connues =
+        salles.stream().filter(s -> s.wikidataId() != null).toList();
+    final List<SalleAEnrichir> aDecouvrir =
+        salles.stream().filter(s -> s.wikidataId() == null).toList();
 
     final List<SalleAEnrichir> nonCachees = new ArrayList<>();
     for (final SalleAEnrichir s : connues) {
@@ -172,7 +175,8 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       qidVersUuid.put(s.wikidataId(), s.id());
     }
 
-    final String sparql = construireRequeteSparql(lot.stream().map(SalleAEnrichir::wikidataId).toList());
+    final String sparql =
+        construireRequeteSparql(lot.stream().map(SalleAEnrichir::wikidataId).toList());
     final Map<String, Object> data = client.executer(sparql);
     if (data == null) {
       return Map.of();
@@ -205,16 +209,16 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   private Map<UUID, EnrichissementSalle> mapperReponse(
       final Map<String, Object> data, final Map<String, UUID> qidVersUuid) {
     final Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
-    final var results = (Map<String, Object>) data.get("results");
+    final Map<String, Object> results = (Map<String, Object>) data.get("results");
     if (results == null) {
       return resultats;
     }
-    final var bindings = (List<Map<String, Object>>) results.get("bindings");
+    final List<Map<String, Object>> bindings = (List<Map<String, Object>>) results.get("bindings");
     if (bindings == null) {
       return resultats;
     }
 
-    for (final var binding : bindings) {
+    for (final Map<String, Object> binding : bindings) {
       final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
       if (itemUri == null) {
         continue;
@@ -225,7 +229,8 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
         continue;
       }
 
-      final double[] coord = parserCoordonnees(ClientSparqlWikidata.valeurBinding(binding, "coord"));
+      final double[] coord =
+          parserCoordonnees(ClientSparqlWikidata.valeurBinding(binding, "coord"));
       final EnrichissementSalle enrichissement =
           new EnrichissementSalle(
               qid,
@@ -253,7 +258,8 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   public Set<String> typesInvalides(final List<String> wikidataIds) {
     final Set<String> invalides = new HashSet<>();
     for (int i = 0; i < wikidataIds.size(); i += TAILLE_LOT_MAX) {
-      final List<String> lot = wikidataIds.subList(i, Math.min(i + TAILLE_LOT_MAX, wikidataIds.size()));
+      final List<String> lot =
+          wikidataIds.subList(i, Math.min(i + TAILLE_LOT_MAX, wikidataIds.size()));
       invalides.addAll(interrogerTypesInvalides(lot));
     }
     return invalides;
@@ -268,12 +274,13 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     }
 
     final Set<String> invalides = new HashSet<>();
-    final var results = (Map<String, Object>) data.get("results");
-    final var bindings = results == null ? null : (List<Map<String, Object>>) results.get("bindings");
+    final Map<String, Object> results = (Map<String, Object>) data.get("results");
+    final List<Map<String, Object>> bindings =
+        results == null ? null : (List<Map<String, Object>>) results.get("bindings");
     if (bindings == null) {
       return invalides;
     }
-    for (final var binding : bindings) {
+    for (final Map<String, Object> binding : bindings) {
       final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
       if (itemUri == null) {
         continue;
@@ -316,7 +323,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     if (wkt == null) {
       return null;
     }
-    final var matcher = COORDONNEES_WKT.matcher(wkt);
+    final Matcher matcher = COORDONNEES_WKT.matcher(wkt);
     if (!matcher.find()) {
       return null;
     }
@@ -332,8 +339,8 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   // --- Mode découverte (Q-ID inconnu) ---
 
   /**
-   * Sépare le premier séparateur significatif de sous-salle/qualificatif ({@code -}, {@code /}, {@code (}) d'un nom
-   * de salle, le cas échéant.
+   * Sépare le premier séparateur significatif de sous-salle/qualificatif ({@code -}, {@code /},
+   * {@code (}) d'un nom de salle, le cas échéant.
    */
   private static final Pattern SEPARATEUR_SOUS_SALLE = Pattern.compile("[-/(]");
 
@@ -359,8 +366,9 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   // produit dans l'appel mwapi, avant même la comparaison des candidats. La validation du candidat
   // reste faite contre salle.nomNorm() (nom complet), inchangée — seule la requête de recherche
   // envoyée à Wikidata utilise le nom tronqué.
-  private Optional<EnrichissementSalle> decouvrirNomTronqueParSeparateur(final SalleAEnrichir salle) {
-    final var matcher = SEPARATEUR_SOUS_SALLE.matcher(salle.nom());
+  private Optional<EnrichissementSalle> decouvrirNomTronqueParSeparateur(
+      final SalleAEnrichir salle) {
+    final Matcher matcher = SEPARATEUR_SOUS_SALLE.matcher(salle.nom());
     if (!matcher.find() || matcher.start() == 0) {
       return Optional.empty();
     }
@@ -407,14 +415,15 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     return decouvrirParNom(salle, nomTronque);
   }
 
-  private Optional<EnrichissementSalle> decouvrirParNom(final SalleAEnrichir salle, final String nomRecherche) {
+  private Optional<EnrichissementSalle> decouvrirParNom(
+      final SalleAEnrichir salle, final String nomRecherche) {
     final String sparql = construireRequeteDecouverte(nomRecherche);
     final Map<String, Object> data = client.executer(sparql);
     if (data == null) {
       return Optional.empty();
     }
 
-    for (final var binding : ClientSparqlWikidata.extraireBindings(data)) {
+    for (final Map<String, Object> binding : ClientSparqlWikidata.extraireBindings(data)) {
       final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
       if (itemUri == null) {
         continue;
@@ -423,7 +432,8 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       final String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
       final String communeLabel = ClientSparqlWikidata.valeurBinding(binding, "communeLabel");
       final String codePostal = ClientSparqlWikidata.valeurBinding(binding, "codePostal");
-      final double[] coord = parserCoordonnees(ClientSparqlWikidata.valeurBinding(binding, "coord"));
+      final double[] coord =
+          parserCoordonnees(ClientSparqlWikidata.valeurBinding(binding, "coord"));
       final boolean localisationConnue =
           (communeLabel != null && !communeLabel.isBlank())
               || (codePostal != null && !codePostal.isBlank());
@@ -478,11 +488,10 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
    * d'Avignon", alors que la salle recherchée est à Chinon) — aucune des désambiguïsations de
    * {@link #trouverLabelCorrespondant} ne porte sur la localisation. Ce garde-fou n'écarte que les
    * cas où les deux villes sont connues et diffèrent ; une ville inconnue d'un côté ou de l'autre
-   * ne bloque rien (reste au niveau de risque actuel, pas de régression sur les cas déjà
-   * couverts).
+   * ne bloque rien (reste au niveau de risque actuel, pas de régression sur les cas déjà couverts).
    *
-   * @param villeSalle ville connue de la salle Strapontin ({@link SalleAEnrichir#ville}), peut
-   *   être {@code null}
+   * @param villeSalle ville connue de la salle Strapontin ({@link SalleAEnrichir#ville}), peut être
+   *     {@code null}
    * @param communeLabel commune du candidat Wikidata (P131), peut être {@code null}
    * @return {@code true} si les deux villes sont connues et ne correspondent pas
    */
@@ -509,9 +518,8 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
    * #villeIncompatible} : ne rejette que si les deux départements sont connus et diffèrent.
    *
    * @param deptSalle département connu de la salle Strapontin ({@link SalleAEnrichir#dept}), peut
-   *   être {@code null}
-   * @param codePostal code postal de la commune du candidat Wikidata (P281), peut être {@code
-   *   null}
+   *     être {@code null}
+   * @param codePostal code postal de la commune du candidat Wikidata (P281), peut être {@code null}
    * @return {@code true} si les deux départements sont connus et ne correspondent pas
    */
   private static boolean deptIncompatible(final String deptSalle, final String codePostal) {
@@ -536,20 +544,23 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
    * principal Wikidata ou l'un de ses alias.
    *
    * <p>Les alias sont vérifiés en plus du libellé principal, pas à la place : les grandes salles
-   * changent régulièrement de nom commercial (sponsoring) et Wikidata conserve souvent l'ancien
-   * nom comme libellé principal, le nom actuel n'étant qu'un alias.
+   * changent régulièrement de nom commercial (sponsoring) et Wikidata conserve souvent l'ancien nom
+   * comme libellé principal, le nom actuel n'étant qu'un alias.
    *
    * @param nomNormCible nom de la salle Strapontin, normalisé ({@link SalleAEnrichir#nomNorm})
    * @param itemLabel libellé principal du candidat Wikidata (peut être {@code null})
    * @param aliases alias du candidat séparés par {@code "|"} (peut être {@code null} ou vide)
    * @param localisationConnue {@code false} si le candidat n'a ni commune ni code postal Wikidata
-   *   connus — désactive alors le critère pivot d'{@link CorrespondanceSalle}, sans aucun signal
-   *   indépendant pour confirmer un candidat validé sur ce seul critère (voir {@link
-   *   CorrespondanceSalle#estDoublonSalle(String, String, boolean)})
+   *     connus — désactive alors le critère pivot d'{@link CorrespondanceSalle}, sans aucun signal
+   *     indépendant pour confirmer un candidat validé sur ce seul critère (voir {@link
+   *     CorrespondanceSalle#estDoublonSalle(String, String, boolean)})
    * @return le libellé (principal ou alias) qui correspond, ou {@code null} si aucun
    */
   private static String trouverLabelCorrespondant(
-      final String nomNormCible, final String itemLabel, final String aliases, final boolean localisationConnue) {
+      final String nomNormCible,
+      final String itemLabel,
+      final String aliases,
+      final boolean localisationConnue) {
     if (itemLabel != null
         && estCorrespondanceAsymetrique(
             nomNormCible, Normalisation.normaliserTexte(itemLabel), localisationConnue)) {
@@ -568,20 +579,20 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   /**
-   * Complète {@link CorrespondanceSalle#estDoublonSalle} par un containment de tokens asymétrique
-   * : couvre le cas où Wikidata combine l'ancien et le nouveau nom dans un seul alias (constaté en
-   * production : « Dôme de Paris » — nom Strapontin actuel — n'est rapproché d'aucun candidat
-   * mwapi malgré l'existence de l'entité correcte en rang 0, son libellé principal étant « Palais
-   * des sports » et son alias le plus proche « Dôme de Paris - Palais des Sports »). Cet alias est
-   * trop long relativement à notre nom pour satisfaire le containment de caractères (ratio {@code
-   * < 0.5}) ou le Jaccard symétrique (0.4, sous le seuil 0.5) de {@code estDoublonSalle} — les
-   * deux critères pénalisent le nombre de mots supplémentaires côté Wikidata, alors que ces mots
+   * Complète {@link CorrespondanceSalle#estDoublonSalle} par un containment de tokens asymétrique :
+   * couvre le cas où Wikidata combine l'ancien et le nouveau nom dans un seul alias (constaté en
+   * production : « Dôme de Paris » — nom Strapontin actuel — n'est rapproché d'aucun candidat mwapi
+   * malgré l'existence de l'entité correcte en rang 0, son libellé principal étant « Palais des
+   * sports » et son alias le plus proche « Dôme de Paris - Palais des Sports »). Cet alias est trop
+   * long relativement à notre nom pour satisfaire le containment de caractères (ratio {@code <
+   * 0.5}) ou le Jaccard symétrique (0.4, sous le seuil 0.5) de {@code estDoublonSalle} — les deux
+   * critères pénalisent le nombre de mots supplémentaires côté Wikidata, alors que ces mots
    * supplémentaires sont justement l'ancien nom, pas du bruit.
    *
    * <p>Asymétrique à dessein : exige que <strong>tous</strong> les tokens significatifs de notre
-   * nom (le plus souvent court, le nom commercial actuel) soient présents dans le candidat
-   * Wikidata (souvent plus long, combinant plusieurs noms), jamais l'inverse — un candidat plus
-   * court que notre nom reste filtré par {@code estDoublonSalle} seul. Le {@value
+   * nom (le plus souvent court, le nom commercial actuel) soient présents dans le candidat Wikidata
+   * (souvent plus long, combinant plusieurs noms), jamais l'inverse — un candidat plus court que
+   * notre nom reste filtré par {@code estDoublonSalle} seul. Le {@value
    * #TAILLE_MIN_TOKENS_CONTAINMENT} minimum de tokens cible évite qu'un nom d'un seul mot
    * corresponde à n'importe quel candidat le contenant (même risque de faux positif qu'un Jaccard
    * non borné, documenté dans {@link CorrespondanceSalle}).
@@ -589,9 +600,9 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
    * @param nomNormCible nom Strapontin normalisé
    * @param candidatNorm libellé ou alias Wikidata normalisé
    * @param localisationConnue transmis tel quel à {@link
-   *   CorrespondanceSalle#estDoublonSalle(String, String, boolean)}
+   *     CorrespondanceSalle#estDoublonSalle(String, String, boolean)}
    * @return {@code true} si les tokens significatifs de {@code nomNormCible} sont tous inclus dans
-   *   ceux de {@code candidatNorm}
+   *     ceux de {@code candidatNorm}
    */
   private static boolean estCorrespondanceAsymetrique(
       final String nomNormCible, final String candidatNorm, final boolean localisationConnue) {

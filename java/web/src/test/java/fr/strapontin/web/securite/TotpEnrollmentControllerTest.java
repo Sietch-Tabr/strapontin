@@ -129,7 +129,8 @@ class TotpEnrollmentControllerTest {
     when(userController.lireSecretTotp("user-1")).thenReturn(null);
     when(totpService.verifierCode(null, "123456")).thenReturn(false);
 
-    final ResponseEntity<Map<String, Object>> rep = controller.desactiver(new TotpChallengeRequest("123456"), auth);
+    final ResponseEntity<Map<String, Object>> rep =
+        controller.desactiver(new TotpChallengeRequest("123456"), auth);
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
     verify(userController, never()).desactiverTotp(anyString());
@@ -141,7 +142,8 @@ class TotpEnrollmentControllerTest {
     when(userController.lireSecretTotp("user-1")).thenReturn("SECRET");
     when(totpService.verifierCode("SECRET", "123456")).thenReturn(true);
 
-    final ResponseEntity<Map<String, Object>> rep = controller.desactiver(new TotpChallengeRequest("123456"), auth);
+    final ResponseEntity<Map<String, Object>> rep =
+        controller.desactiver(new TotpChallengeRequest("123456"), auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     verify(userController).desactiverTotp("user-1");

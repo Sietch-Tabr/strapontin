@@ -118,7 +118,8 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
-  public Map<String, Object> gererMethodeNonSupportee(final HttpRequestMethodNotSupportedException ex) {
+  public Map<String, Object> gererMethodeNonSupportee(
+      final HttpRequestMethodNotSupportedException ex) {
     return Map.of("erreur", "Méthode non supportée.");
   }
 
@@ -143,7 +144,8 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(DataAccessException.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-  public Map<String, Object> gererErreurBd(final DataAccessException ex, final HttpServletRequest request) {
+  public Map<String, Object> gererErreurBd(
+      final DataAccessException ex, final HttpServletRequest request) {
     log.error("Erreur d'accès aux données", ex);
     logErreurServeur(request, ex);
     return Map.of("erreur", "Erreur de base de données.");
@@ -158,7 +160,8 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(Exception.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-  public Map<String, Object> gererErreurInattendue(final Exception ex, final HttpServletRequest request) {
+  public Map<String, Object> gererErreurInattendue(
+      final Exception ex, final HttpServletRequest request) {
     log.error("Erreur inattendue", ex);
     logErreurServeur(request, ex);
     return Map.of("erreur", "Une erreur inattendue s'est produite.");

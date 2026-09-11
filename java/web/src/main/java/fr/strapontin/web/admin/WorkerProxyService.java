@@ -44,7 +44,9 @@ public class WorkerProxyService {
    * @param logAdminService service de logs admin
    */
   public WorkerProxyService(
-      final RestClient restClient, final ObjectMapper objectMapper, final LogAdminService logAdminService) {
+      final RestClient restClient,
+      final ObjectMapper objectMapper,
+      final LogAdminService logAdminService) {
     this.restClient = restClient;
     this.objectMapper = objectMapper;
     this.logAdminService = logAdminService;
@@ -75,8 +77,8 @@ public class WorkerProxyService {
           ajouterCorrelationId(restClient.get().uri(WORKER_BASE_URL + "/trigger/actif"))
               .retrieve()
               .body(String.class);
-      @SuppressWarnings("unchecked") final
-          Map<String, Object> data = objectMapper.readValue(corps, Map.class);
+      @SuppressWarnings("unchecked")
+      final Map<String, Object> data = objectMapper.readValue(corps, Map.class);
       final Object actifs = data.get("actifs");
       if (actifs instanceof List<?> liste) {
         return liste.stream().map(Object::toString).toList();
@@ -98,8 +100,8 @@ public class WorkerProxyService {
           ajouterCorrelationId(restClient.get().uri(WORKER_BASE_URL + "/trigger/prochaines-exec"))
               .retrieve()
               .body(String.class);
-      @SuppressWarnings("unchecked") final
-          Map<String, Object> data = objectMapper.readValue(corps, Map.class);
+      @SuppressWarnings("unchecked")
+      final Map<String, Object> data = objectMapper.readValue(corps, Map.class);
       final Map<String, Instant> resultat = new HashMap<>();
       data.forEach(
           (k, v) -> {

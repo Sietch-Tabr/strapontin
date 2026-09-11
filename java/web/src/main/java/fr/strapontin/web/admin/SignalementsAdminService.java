@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -51,31 +52,31 @@ public class SignalementsAdminService {
     final List<EntreeSignalement> signalements =
         jdbc.query(
             """
-                SELECT * FROM (
-                  SELECT 'nouveau' AS categorie, sm.id::text AS id, sm.type AS type,
-                         sm.entite_type AS entite_type, sm.entite_id::text AS entite_id,
-                         sm.confiance AS confiance, sm.detecte_le AS detecte_le,
-                         sm.details::text AS details
-                  FROM signalements_matching sm WHERE sm.resolu_le IS NULL
-                  UNION ALL
-                  SELECT 'necessite_intervention', a.artiste_id::text, 'necessite_intervention',
-                         'artiste', a.artiste_id::text, 'moyenne', a.necessite_intervention_le, NULL
-                  FROM artiste_sources a WHERE a.necessite_intervention_le IS NOT NULL
-                  UNION ALL
-                  SELECT 'contamination_salle', s.id::text, 'contamination_salle', 'salle',
-                         s.id::text, 'moyenne', NULL, s.contamination_signalee
-                  FROM salles s WHERE s.contamination_signalee IS NOT NULL
-                  UNION ALL
-                  SELECT 'doublon_salle', s.id::text, 'doublon_salle', 'salle', s.id::text, 'moyenne',
-                         NULL, s.doublon_signale
-                  FROM salles s WHERE s.doublon_signale IS NOT NULL
-                ) t
-                ORDER BY t.detecte_le DESC NULLS LAST
-                LIMIT :taille OFFSET :offset
-                """,
+            SELECT * FROM (
+              SELECT 'nouveau' AS categorie, sm.id::text AS id, sm.type AS type,
+                     sm.entite_type AS entite_type, sm.entite_id::text AS entite_id,
+                     sm.confiance AS confiance, sm.detecte_le AS detecte_le,
+                     sm.details::text AS details
+              FROM signalements_matching sm WHERE sm.resolu_le IS NULL
+              UNION ALL
+              SELECT 'necessite_intervention', a.artiste_id::text, 'necessite_intervention',
+                     'artiste', a.artiste_id::text, 'moyenne', a.necessite_intervention_le, NULL
+              FROM artiste_sources a WHERE a.necessite_intervention_le IS NOT NULL
+              UNION ALL
+              SELECT 'contamination_salle', s.id::text, 'contamination_salle', 'salle',
+                     s.id::text, 'moyenne', NULL, s.contamination_signalee
+              FROM salles s WHERE s.contamination_signalee IS NOT NULL
+              UNION ALL
+              SELECT 'doublon_salle', s.id::text, 'doublon_salle', 'salle', s.id::text, 'moyenne',
+                     NULL, s.doublon_signale
+              FROM salles s WHERE s.doublon_signale IS NOT NULL
+            ) t
+            ORDER BY t.detecte_le DESC NULLS LAST
+            LIMIT :taille OFFSET :offset
+            """,
             paramsPage,
             (rs, _) -> {
-              final var ts = rs.getTimestamp("detecte_le");
+              final Timestamp ts = rs.getTimestamp("detecte_le");
               return new EntreeSignalement(
                   rs.getString("categorie"),
                   rs.getString("id"),
@@ -96,12 +97,12 @@ public class SignalementsAdminService {
     final Long total =
         jdbc.queryForObject(
             """
-                SELECT
-                  (SELECT COUNT(*) FROM signalements_matching WHERE resolu_le IS NULL)
-                  + (SELECT COUNT(*) FROM artiste_sources WHERE necessite_intervention_le IS NOT NULL)
-                  + (SELECT COUNT(*) FROM salles WHERE contamination_signalee IS NOT NULL)
-                  + (SELECT COUNT(*) FROM salles WHERE doublon_signale IS NOT NULL)
-                """,
+            SELECT
+              (SELECT COUNT(*) FROM signalements_matching WHERE resolu_le IS NULL)
+              + (SELECT COUNT(*) FROM artiste_sources WHERE necessite_intervention_le IS NOT NULL)
+              + (SELECT COUNT(*) FROM salles WHERE contamination_signalee IS NOT NULL)
+              + (SELECT COUNT(*) FROM salles WHERE doublon_signale IS NOT NULL)
+            """,
             Map.of(),
             Long.class);
     return total != null ? total : 0;

@@ -23,6 +23,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.client.RestClient;
 
@@ -234,20 +235,17 @@ class PreferencesServiceTest {
     when(jdbc.query(
             org.mockito.ArgumentMatchers.contains("user_artistes"),
             anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<ArtisteExport>>any()))
+            org.mockito.ArgumentMatchers.<RowMapper<ArtisteExport>>any()))
         .thenReturn(List.of(new ArtisteExport("Radiohead", "radiohead")));
     when(jdbc.query(
             org.mockito.ArgumentMatchers.contains("user_salles"),
             anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<SalleExport>>any()))
+            org.mockito.ArgumentMatchers.<RowMapper<SalleExport>>any()))
         .thenReturn(List.of(new SalleExport("zenithparis", null, "Zenith Paris")));
     when(jdbc.query(
             org.mockito.ArgumentMatchers.contains("user_config"),
             anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<ConfigExport>>any()))
+            org.mockito.ArgumentMatchers.<RowMapper<ConfigExport>>any()))
         .thenReturn(List.of());
 
     final ExportComplet export = service.exporter("u1");

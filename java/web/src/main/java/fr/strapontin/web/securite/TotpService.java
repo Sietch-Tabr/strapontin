@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web.securite;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.io.ByteArrayOutputStream;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
@@ -12,6 +14,9 @@ import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
@@ -43,12 +48,8 @@ public class TotpService {
   private static final int[] PUISSANCES_10 = {1, 10, 100, 1_000, 10_000, 100_000, 1_000_000};
 
   private final SecureRandom rng = new SecureRandom();
-  private final com.github.benmanes.caffeine.cache.Cache<String, java.util.Set<String>>
-      codesConsommes =
-          com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
-              .expireAfterWrite(90, java.util.concurrent.TimeUnit.SECONDS)
-              .maximumSize(10_000)
-              .build();
+  private final Cache<String, Set<String>> codesConsommes =
+      Caffeine.newBuilder().expireAfterWrite(90, TimeUnit.SECONDS).maximumSize(10_000).build();
 
   /**
    * Génère un nouveau secret TOTP encodé en Base32.
@@ -130,8 +131,8 @@ public class TotpService {
             calculerCode(secretOctets, pas).getBytes(StandardCharsets.UTF_8),
             codeNorm.getBytes(StandardCharsets.UTF_8))) {
           final String cleCache = secret + ":" + pas;
-          final java.util.Set<String> utilises =
-              codesConsommes.get(cleCache, _ -> java.util.concurrent.ConcurrentHashMap.newKeySet());
+          final Set<String> utilises =
+              codesConsommes.get(cleCache, _ -> ConcurrentHashMap.newKeySet());
           if (!utilises.add(codeNorm)) {
             return false;
           }

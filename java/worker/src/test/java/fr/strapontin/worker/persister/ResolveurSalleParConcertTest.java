@@ -35,7 +35,11 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 class ResolveurSalleParConcertTest {
 
   private static ValeurConcert concert(
-      final String artisteNorm, final LocalDate date, final LocalTime heure, final String salleNorm, final String dept) {
+      final String artisteNorm,
+      final LocalDate date,
+      final LocalTime heure,
+      final String salleNorm,
+      final String dept) {
     return new ValeurConcert(
         "Artiste",
         artisteNorm,
@@ -146,7 +150,8 @@ class ResolveurSalleParConcertTest {
     when(jdbc.queryForList(anyString(), any(SqlParameterSource.class)))
         .thenReturn(List.of(candidatMoinsBon, candidatMeilleur));
 
-    final UUID resultat = resolveur.chercherSalleParTokens("La Seine Musicale - Grande Seine", null);
+    final UUID resultat =
+        resolveur.chercherSalleParTokens("La Seine Musicale - Grande Seine", null);
 
     assertEquals(meilleur, resultat);
   }

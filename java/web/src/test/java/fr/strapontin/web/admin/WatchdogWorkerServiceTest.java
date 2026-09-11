@@ -47,7 +47,8 @@ class WatchdogWorkerServiceTest {
   @Test
   void verifier_workerInactifEtDestinataireDisponible_envoieAlerte() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
-    when(emailAlerteService.obtenirDestinataireAlerte()).thenReturn(Optional.of("alerte@exemple.fr"));
+    when(emailAlerteService.obtenirDestinataireAlerte())
+        .thenReturn(Optional.of("alerte@exemple.fr"));
 
     service.verifier();
 

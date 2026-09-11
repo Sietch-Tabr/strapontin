@@ -71,10 +71,10 @@ public class EmailService {
     final String texte =
         """
             Bienvenue sur Strapontin
-            
+
             Votre compte a été créé. Cliquez sur le lien ci-dessous pour choisir
             votre identifiant et votre mot de passe (lien valable 7 jours) :
-            
+
             %s
             """
             .formatted(lienReset);
@@ -106,11 +106,11 @@ public class EmailService {
     final String texte =
         """
             Réinitialisation du mot de passe
-            
+
             Cliquez sur ce lien pour réinitialiser votre mot de passe (valable 1 heure) :
-            
+
             %s
-            
+
             Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
             """
             .formatted(lienReset);
@@ -146,12 +146,12 @@ public class EmailService {
     final String texte =
         """
             Votre double authentification a été réinitialisée
-            
+
             Un administrateur a réinitialisé la double authentification (2FA) de votre compte.
             Vous pouvez vous reconnecter sans code, puis la reconfigurer depuis vos paramètres :
-            
+
             %s/parametres/totp
-            
+
             Si vous n'êtes pas à l'origine de cette action, contactez l'administrateur.
             """
             .formatted(ctx.get().baseUrl());
@@ -188,11 +188,11 @@ public class EmailService {
     final String texte =
         """
             Confirmation de votre nouvelle adresse email
-            
+
             Cliquez sur ce lien pour valider votre nouvelle adresse (valable 24 heures) :
-            
+
             %s
-            
+
             Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
             """
             .formatted(lien);
@@ -230,7 +230,11 @@ public class EmailService {
    * @param emailUtilisateur l'adresse email de l'utilisateur connecté
    */
   public void envoyerSignalementSalleManquante(
-      final String nom, final String ville, final String urlSite, final String commentaire, final String emailUtilisateur) {
+      final String nom,
+      final String ville,
+      final String urlSite,
+      final String commentaire,
+      final String emailUtilisateur) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — signalement salle manquante non envoyé");
@@ -288,7 +292,8 @@ public class EmailService {
    * @param message le message
    * @param expediteurEmail l'email de l'expéditeur
    */
-  public void envoyerSignalement(final String type, final String message, final String expediteurEmail) {
+  public void envoyerSignalement(
+      final String type, final String message, final String expediteurEmail) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — signalement non envoyé");
@@ -386,10 +391,10 @@ public class EmailService {
     final String texte =
         """
             Votre compte Strapontin a été supprimé
-            
+
             Votre compte Strapontin a été supprimé par un administrateur.
             Vos données ont été effacées.
-            
+
             Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.
             """;
 
@@ -453,7 +458,7 @@ public class EmailService {
     final String texte =
         """
             Vous êtes maintenant administrateur Strapontin
-            
+
             Votre compte a été promu au rôle administrateur.
             Accédez au panneau d'administration : %s/admin
             """
@@ -491,7 +496,7 @@ public class EmailService {
     final String texte =
         """
             Préavis de révocation admin
-            
+
             Votre accès administrateur Strapontin sera supprimé le %s.
             Si vous pensez qu'il s'agit d'une erreur, contactez un autre administrateur.
             """

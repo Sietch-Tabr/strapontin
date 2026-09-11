@@ -46,7 +46,8 @@ class TriggerControllerTest {
     when(scheduler.getCurrentlyExecutingJobs()).thenReturn(List.of());
     final TriggerController controller = new TriggerController(scheduler);
 
-    final ResponseEntity<Map<String, String>> reponse = controller.relancerJob("reconciliation:nocturne");
+    final ResponseEntity<Map<String, String>> reponse =
+        controller.relancerJob("reconciliation:nocturne");
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals("déclenché", reponse.getBody().get("statut"));
@@ -77,7 +78,8 @@ class TriggerControllerTest {
     when(scheduler.getCurrentlyExecutingJobs()).thenReturn(List.of(ctxEnCours));
     final TriggerController controller = new TriggerController(scheduler);
 
-    final ResponseEntity<Map<String, String>> reponse = controller.relancerJob("reconciliation:nocturne");
+    final ResponseEntity<Map<String, String>> reponse =
+        controller.relancerJob("reconciliation:nocturne");
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals("déjà en cours", reponse.getBody().get("statut"));
@@ -91,7 +93,8 @@ class TriggerControllerTest {
         .thenThrow(new org.quartz.SchedulerException("boom"));
     final TriggerController controller = new TriggerController(scheduler);
 
-    final ResponseEntity<Map<String, String>> reponse = controller.relancerJob("reconciliation:nocturne");
+    final ResponseEntity<Map<String, String>> reponse =
+        controller.relancerJob("reconciliation:nocturne");
 
     assertEquals(500, reponse.getStatusCode().value());
   }

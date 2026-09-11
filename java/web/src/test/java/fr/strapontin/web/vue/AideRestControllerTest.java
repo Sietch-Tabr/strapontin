@@ -10,6 +10,7 @@ import static org.mockito.Mockito.*;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,10 +48,8 @@ class AideRestControllerTest {
   @Test
   void config_retourneResendDisponibleContactEmailEtSignalLien() {
     when(emailService.estDisponible()).thenReturn(true);
-    when(configService.lireConfig("CONTACT_EMAIL"))
-        .thenReturn(java.util.Optional.of("contact@test.fr"));
-    when(configService.lireConfig("SIGNAL_LIEN"))
-        .thenReturn(java.util.Optional.of("https://signal.me/x"));
+    when(configService.lireConfig("CONTACT_EMAIL")).thenReturn(Optional.of("contact@test.fr"));
+    when(configService.lireConfig("SIGNAL_LIEN")).thenReturn(Optional.of("https://signal.me/x"));
 
     final var rep = controller.config();
 
@@ -63,8 +62,8 @@ class AideRestControllerTest {
   @Test
   void config_valeursAbsentes_replieSurChainesVides() {
     when(emailService.estDisponible()).thenReturn(false);
-    when(configService.lireConfig("CONTACT_EMAIL")).thenReturn(java.util.Optional.empty());
-    when(configService.lireConfig("SIGNAL_LIEN")).thenReturn(java.util.Optional.empty());
+    when(configService.lireConfig("CONTACT_EMAIL")).thenReturn(Optional.empty());
+    when(configService.lireConfig("SIGNAL_LIEN")).thenReturn(Optional.empty());
 
     final var rep = controller.config();
 
@@ -90,7 +89,8 @@ class AideRestControllerTest {
     for (int i = 0; i < 3; i++) {
       controller.signaler(new RequeteSignalement("bug", "message test"), auth, request);
     }
-    final var rep = controller.signaler(new RequeteSignalement("bug", "message test"), auth, request);
+    final var rep =
+        controller.signaler(new RequeteSignalement("bug", "message test"), auth, request);
     assertEquals(HttpStatus.TOO_MANY_REQUESTS, rep.getStatusCode());
   }
 

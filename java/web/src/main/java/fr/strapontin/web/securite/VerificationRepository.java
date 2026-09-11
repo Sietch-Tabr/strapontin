@@ -64,7 +64,8 @@ public class VerificationRepository {
    * @param tokenHash  hash SHA-256 du token
    * @param expiresAt  date d'expiration
    */
-  public void inserer(final String id, final String identifiant, final String tokenHash, final Instant expiresAt) {
+  public void inserer(
+      final String id, final String identifiant, final String tokenHash, final Instant expiresAt) {
     jdbc.update(
         """
         INSERT INTO verifications (id, identifier, value, expires_at, created_at, updated_at)

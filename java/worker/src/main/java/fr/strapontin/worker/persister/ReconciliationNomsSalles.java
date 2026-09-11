@@ -171,7 +171,8 @@ class ReconciliationNomsSalles {
     return remplacements;
   }
 
-  private void ajouterDoublonsSalle(final List<String> sallesNorm, final Map<String, String> remplacements) {
+  private void ajouterDoublonsSalle(
+      final List<String> sallesNorm, final Map<String, String> remplacements) {
     for (int i = 0; i < sallesNorm.size(); i++) {
       for (int j = i + 1; j < sallesNorm.size(); j++) {
         final String a = sallesNorm.get(i);
@@ -241,7 +242,8 @@ class ReconciliationNomsSalles {
    * @param concerts concerts avec {@code salleSourceId} résolus
    * @param cachesSalles map sourceId → UUID
    */
-  void absorberRenommagesSalles(final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
+  void absorberRenommagesSalles(
+      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
     final Map<UUID, String> meilleurNom = new HashMap<>();
     final Map<UUID, Integer> meilleurScore = new HashMap<>();
     for (final ValeurConcert c : concerts) {
@@ -258,7 +260,7 @@ class ReconciliationNomsSalles {
         meilleurScore.put(salleId, score);
       }
     }
-    for (final var entree : meilleurNom.entrySet()) {
+    for (final Map.Entry<UUID, String> entree : meilleurNom.entrySet()) {
       final String nouveauNom = entree.getValue();
       final int modifies =
           jdbc.update(

@@ -42,7 +42,8 @@ public class SourcesController {
    * @param sourcesService service de gestion des sources
    * @param workerProxyService proxy HTTP vers le worker
    */
-  public SourcesController(final SourcesService sourcesService, final WorkerProxyService workerProxyService) {
+  public SourcesController(
+      final SourcesService sourcesService, final WorkerProxyService workerProxyService) {
     this.sourcesService = sourcesService;
     this.workerProxyService = workerProxyService;
   }
@@ -102,7 +103,8 @@ public class SourcesController {
   @PostMapping("/salles/{salleId}/tester-digitick")
   public ResponseEntity<Map<String, Object>> testerDigitickSlug(
       @PathVariable final String salleId, @Valid @RequestBody final RequeteSlug corps) {
-    final int nbConcerts = sourcesService.testerDigitickSlug(corps.slug() == null ? "" : corps.slug());
+    final int nbConcerts =
+        sourcesService.testerDigitickSlug(corps.slug() == null ? "" : corps.slug());
     return nbConcerts >= 0
         ? ResponseEntity.ok(Map.of("accessible", true, "nbConcerts", nbConcerts))
         : ResponseEntity.status(404).body(Map.of("accessible", false, "nbConcerts", 0));
@@ -170,7 +172,8 @@ public class SourcesController {
     if (uuid == null) {
       return erreur(400, "UUID de salle invalide.");
     }
-    final String nom = requete.nom() == null || requete.nom().isBlank() ? null : requete.nom().strip();
+    final String nom =
+        requete.nom() == null || requete.nom().isBlank() ? null : requete.nom().strip();
     final String ville =
         requete.ville() == null || requete.ville().isBlank() ? null : requete.ville().strip();
     final String dept =

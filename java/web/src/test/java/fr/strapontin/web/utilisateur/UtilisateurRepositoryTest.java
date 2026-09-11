@@ -55,8 +55,8 @@ class UtilisateurRepositoryTest {
 
   @Test
   void activerTotp_secretFourni_stockeValeurChiffreeDifferenteDuSecret() {
-    @SuppressWarnings("unchecked") final
-        ArgumentCaptor<Map<String, Object>> params = ArgumentCaptor.forClass(Map.class);
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<Map<String, Object>> params = ArgumentCaptor.forClass(Map.class);
 
     repository.activerTotp("user-1", "JBSWY3DPEHPK3PXP");
 
@@ -66,8 +66,8 @@ class UtilisateurRepositoryTest {
 
   @Test
   void lireSecretTotp_valeurChiffree_retourneSecretDechiffre() {
-    @SuppressWarnings("unchecked") final
-        ArgumentCaptor<Map<String, Object>> params = ArgumentCaptor.forClass(Map.class);
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<Map<String, Object>> params = ArgumentCaptor.forClass(Map.class);
     repository.activerTotp("user-1", "JBSWY3DPEHPK3PXP");
     verify(jdbc).update(anyString(), params.capture());
     final String chiffre = (String) params.getValue().get("secret");

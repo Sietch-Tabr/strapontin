@@ -7,6 +7,7 @@ package fr.strapontin.web.utilisateur;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.GenerateurSecrets;
 import fr.strapontin.web.securite.UtilisateurDetails;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -127,7 +128,7 @@ public class ParametresService {
             "id", UUID.randomUUID().toString(),
             "identifier", prefixe,
             "value", GenerateurSecrets.sha256Hex(token),
-            "expiresAt", java.sql.Timestamp.from(Instant.now().plus(24, ChronoUnit.HOURS))));
+            "expiresAt", Timestamp.from(Instant.now().plus(24, ChronoUnit.HOURS))));
     jdbc.update(
         "UPDATE users SET pending_email = :email WHERE id = :id",
         Map.of("email", emailNorm, "id", details.id()));

@@ -207,7 +207,8 @@ public class AuthController {
    * @return l'utilisateur courant ou 401 si non authentifié
    */
   @GetMapping("/api/auth/me")
-  public ResponseEntity<UtilisateurDto> moi(final Authentication auth, final HttpServletRequest httpRequest) {
+  public ResponseEntity<UtilisateurDto> moi(
+      final Authentication auth, final HttpServletRequest httpRequest) {
     if (!(auth != null
         && auth.isAuthenticated()
         && auth.getPrincipal() instanceof UtilisateurDetails details)) {
@@ -217,7 +218,7 @@ public class AuthController {
     final boolean totpRequis =
         session != null
             && Boolean.TRUE.equals(
-            session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE));
+                session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE));
     return ResponseEntity.ok(
         new UtilisateurDto(
             details.id(),
@@ -296,7 +297,8 @@ public class AuthController {
                     "L'identifiant ne peut contenir que des lettres, chiffres, points,"
                         + " tirets et underscores."));
       }
-      final String identFinal = authService.activerCompteInvite(req.token(), ident, req.motDePasse());
+      final String identFinal =
+          authService.activerCompteInvite(req.token(), ident, req.motDePasse());
 
       final UsernamePasswordAuthenticationToken tokenNonAuthentifie =
           UsernamePasswordAuthenticationToken.unauthenticated(identFinal, req.motDePasse());

@@ -207,7 +207,8 @@ class SalleRepository {
    * @param dept numéro de département (null si inconnu)
    * @return UUID stable de la salle
    */
-  UUID upsertSalleAvecLoc(final String salleCle, final String nom, final String ville, final String dept) {
+  UUID upsertSalleAvecLoc(
+      final String salleCle, final String nom, final String ville, final String dept) {
     final Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
     params.put("nom", nom);
@@ -240,7 +241,8 @@ class SalleRepository {
    * @param ville nouvelle ville (null = inchangée)
    * @param dept nouveau numéro de département (null = inchangé)
    */
-  void mettreAJourSalle(final UUID salleId, final String nom, final String ville, final String dept) {
+  void mettreAJourSalle(
+      final UUID salleId, final String nom, final String ville, final String dept) {
     final MapSqlParameterSource params = new MapSqlParameterSource();
     params.addValue("uuid", salleId.toString());
     params.addValue("nom", nom);
@@ -363,7 +365,8 @@ class SalleRepository {
    * @param source nom de la source (ex. {@code "ticketmaster"})
    * @param identifiantExterne identifiant dans la source externe
    */
-  void enregistrerSalleSource(final UUID salleId, final String source, final String identifiantExterne) {
+  void enregistrerSalleSource(
+      final UUID salleId, final String source, final String identifiantExterne) {
     jdbc.update(
         """
         INSERT INTO salle_sources (salle_id, source, identifiant_externe)

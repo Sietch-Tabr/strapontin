@@ -70,7 +70,8 @@ public class SalleController {
    */
   @GetMapping
   public ResponseEntity<ReponseSalles> listerSalles(
-      @RequestParam(required = false, defaultValue = "") final String q, final Authentication auth) {
+      @RequestParam(required = false, defaultValue = "") final String q,
+      final Authentication auth) {
     final String userId = utilisateur(auth).id();
     return ResponseEntity.ok(salleService.lister(userId, q));
   }
@@ -114,7 +115,8 @@ public class SalleController {
    * @return 204 si supprimée
    */
   @DeleteMapping("/{salleId}")
-  public ResponseEntity<Void> supprimerSalle(@PathVariable final UUID salleId, final Authentication auth) {
+  public ResponseEntity<Void> supprimerSalle(
+      @PathVariable final UUID salleId, final Authentication auth) {
     final String userId = utilisateur(auth).id();
     salleService.supprimer(userId, salleId);
     return ResponseEntity.noContent().build();

@@ -16,6 +16,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.web.client.RestClient;
 
 class WikidataArtisteSourceTest {
@@ -36,7 +37,8 @@ class WikidataArtisteSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", null);
+    final ArtisteAEnrichir artiste =
+        new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -52,7 +54,8 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat =
+        source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals(1, resultat.size());
     final EnrichissementArtiste enrichissement = resultat.get(id);
@@ -85,7 +88,8 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat =
+        source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals(List.of("-M-", "Matthieu Chedid"), resultat.get(id).aliasWikidata());
     serveur.verify();
@@ -98,7 +102,8 @@ class WikidataArtisteSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", null);
+    final ArtisteAEnrichir artiste =
+        new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -113,7 +118,8 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat =
+        source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals(List.of(), resultat.get(id).aliasWikidata());
     serveur.verify();
@@ -131,7 +137,7 @@ class WikidataArtisteSourceTest {
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("wikibase%3Amwapi")))
         .andRespond(
             withSuccess(
@@ -144,7 +150,8 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat =
+        source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals(1, resultat.size());
     assertEquals("Q243550", resultat.get(id).wikidataId());
@@ -169,8 +176,7 @@ class WikidataArtisteSourceTest {
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
-                .string(org.hamcrest.Matchers.containsString("P279")))
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P279")))
         .andRespond(
             withSuccess(
                 """
@@ -183,7 +189,8 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat =
+        source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals("Q22151", resultat.get(id).wikidataId());
     assertEquals("705", resultat.get(id).deezerId());
@@ -209,7 +216,8 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat =
+        source(restClient).enrichirLot(List.of(artiste));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -231,7 +239,7 @@ class WikidataArtisteSourceTest {
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("Q245068")))
         .andRespond(
             withSuccess(
@@ -245,7 +253,8 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat =
+        source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals("Q3382524", resultat.get(id).wikidataId());
     serveur.verify();
@@ -268,7 +277,7 @@ class WikidataArtisteSourceTest {
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("Q12406482")))
         .andRespond(
             withSuccess(
@@ -282,7 +291,8 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat =
+        source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals("Q17350457", resultat.get(id).wikidataId());
     serveur.verify();

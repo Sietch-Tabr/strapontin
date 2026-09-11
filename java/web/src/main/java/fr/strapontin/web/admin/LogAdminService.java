@@ -71,7 +71,11 @@ public class LogAdminService {
    * @param message message
    * @param meta métadonnées (sérialisées en JSON), ou null
    */
-  public void logAdmin(final String niveau, final String source, final String message, final Map<String, Object> meta) {
+  public void logAdmin(
+      final String niveau,
+      final String source,
+      final String message,
+      final Map<String, Object> meta) {
     try {
       final PGobject pgMeta = new PGobject();
       pgMeta.setType("jsonb");

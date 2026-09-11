@@ -58,7 +58,8 @@ class UserConfigControllerTest {
 
   @Test
   void majNotifications_delegueAuServiceAvecUserId() {
-    final RequeteNotifications requete = new RequeteNotifications("quotidien", true, false, false, false);
+    final RequeteNotifications requete =
+        new RequeteNotifications("quotidien", true, false, false, false);
 
     controller.majNotifications(requete, authPour("u1"));
 

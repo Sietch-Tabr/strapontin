@@ -20,12 +20,15 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
 import fr.strapontin.web.salle.SalleService;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.client.RestClient;
 
@@ -52,7 +55,7 @@ class SourcesServiceTest {
   @SuppressWarnings("unchecked")
   void lireSources_sansQuota_retourneSourcesAvecEtatOk() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
 
     final Map<String, Object> resultat = sourcesService.lireSources();
@@ -94,7 +97,7 @@ class SourcesServiceTest {
   @SuppressWarnings("unchecked")
   void lireSources_comptesParSource_interrogeTicketmasterEtEventim() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
     final ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     when(jdbc.queryForObject(anyString(), paramsCaptor.capture(), eq(Integer.class))).thenReturn(0);
 
@@ -103,7 +106,7 @@ class SourcesServiceTest {
     final List<Object> sourcesInterrogees =
         paramsCaptor.getAllValues().stream()
             .map(m -> m.get("source"))
-            .filter(java.util.Objects::nonNull)
+            .filter(Objects::nonNull)
             .toList();
     assertTrue(sourcesInterrogees.contains("ticketmaster"));
     assertTrue(sourcesInterrogees.contains("eventim"));
@@ -116,7 +119,7 @@ class SourcesServiceTest {
     final QuotaTM quota = new QuotaTM(90, 1000, 0L, "2026-06-19T10:00:00Z");
     final String quotaJson = new ObjectMapper().writeValueAsString(quota);
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of(quotaJson));
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
 
     final Map<String, Object> resultat = sourcesService.lireSources();
@@ -190,8 +193,7 @@ class SourcesServiceTest {
     when(jdbc.query(
             sqlCaptor.capture(),
             anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
+            org.mockito.ArgumentMatchers.<RowMapper<SalleSourceAdmin>>any()))
         .thenReturn(List.of());
 
     sourcesService.listerSalles(false, 0, null);
@@ -220,8 +222,7 @@ class SourcesServiceTest {
     when(jdbc.query(
             sqlCaptor.capture(),
             anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
+            org.mockito.ArgumentMatchers.<RowMapper<SalleSourceAdmin>>any()))
         .thenReturn(List.of());
 
     sourcesService.listerSalles(false, 0, null);
@@ -250,7 +251,7 @@ class SourcesServiceTest {
   @SuppressWarnings("unchecked")
   void lireSources_comptageDigitick_reporteNbSallesConfigurees() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
 
     final Map<String, Object> resultat = sourcesService.lireSources();
@@ -264,10 +265,7 @@ class SourcesServiceTest {
   void listerSalles_nominal_retourneLesSalles() {
     final UUID uuid = UUID.randomUUID();
     when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
+            anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<SalleSourceAdmin>>any()))
         .thenReturn(List.of(new SalleSourceAdmin(uuid, "L'Olympia", null, null, null)));
 
     final ReponseSallesSources reponse = sourcesService.listerSalles(false, 0, null);

@@ -90,7 +90,8 @@ public class DecouverteController {
    * @return 200 si déclenché, 429 si trop de relances récentes, 503 si le worker est inaccessible
    */
   @PostMapping("/fetcher")
-  public ResponseEntity<Map<String, Object>> fetcher(@Valid @RequestBody final RequeteFetch requete) {
+  public ResponseEntity<Map<String, Object>> fetcher(
+      @Valid @RequestBody final RequeteFetch requete) {
     if (!bucketFetcher.tryConsume(1)) {
       return ResponseEntity.status(429)
           .body(Map.of("erreur", "Trop de relances récentes. Réessayez dans quelques minutes."));

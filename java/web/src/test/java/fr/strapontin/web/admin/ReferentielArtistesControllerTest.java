@@ -41,7 +41,8 @@ class ReferentielArtistesControllerTest {
     when(service.lister(0, "Jain", null, false))
         .thenReturn(new ReponseReferentielArtistes(List.of(), 0, 1, 0));
 
-    final ResponseEntity<ReponseReferentielArtistes> reponse = controller.lister(0, "Jain", null, false);
+    final ResponseEntity<ReponseReferentielArtistes> reponse =
+        controller.lister(0, "Jain", null, false);
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(service).lister(0, "Jain", null, false);
@@ -100,7 +101,8 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void ignorerIntervention_uuidInvalide_retourne400() {
-    final ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention("pas-un-uuid");
+    final ResponseEntity<Map<String, Object>> reponse =
+        controller.ignorerIntervention("pas-un-uuid");
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(service, never()).ignorerIntervention(any());
@@ -111,7 +113,8 @@ class ReferentielArtistesControllerTest {
     final UUID id = UUID.randomUUID();
     when(service.ignorerIntervention(id)).thenReturn(false);
 
-    final ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention(id.toString());
+    final ResponseEntity<Map<String, Object>> reponse =
+        controller.ignorerIntervention(id.toString());
 
     assertEquals(404, reponse.getStatusCode().value());
   }
@@ -121,7 +124,8 @@ class ReferentielArtistesControllerTest {
     final UUID id = UUID.randomUUID();
     when(service.ignorerIntervention(id)).thenReturn(true);
 
-    final ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention(id.toString());
+    final ResponseEntity<Map<String, Object>> reponse =
+        controller.ignorerIntervention(id.toString());
 
     assertEquals(200, reponse.getStatusCode().value());
   }

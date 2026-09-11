@@ -10,6 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +37,8 @@ class SourcesControllerTest {
 
   @Test
   void mettreAJourDigitickSlug_uuidInvalide_retourne400() {
-    final var reponse = controller.mettreAJourDigitickSlug("pas-un-uuid", new RequeteSlug("slug-x"));
+    final var reponse =
+        controller.mettreAJourDigitickSlug("pas-un-uuid", new RequeteSlug("slug-x"));
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(sourcesService, org.mockito.Mockito.never()).mettreAJourDigitickSlug(any(), any());
@@ -66,7 +68,8 @@ class SourcesControllerTest {
   void testerDigitickSlug_accessible_retourne200AvecNbConcerts() {
     when(sourcesService.testerDigitickSlug("le-splendid")).thenReturn(5);
 
-    final var reponse = controller.testerDigitickSlug("id-non-utilise", new RequeteSlug("le-splendid"));
+    final var reponse =
+        controller.testerDigitickSlug("id-non-utilise", new RequeteSlug("le-splendid"));
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals(5, reponse.getBody().get("nbConcerts"));
@@ -76,7 +79,8 @@ class SourcesControllerTest {
   void testerDigitickSlug_inaccessible_retourne404() {
     when(sourcesService.testerDigitickSlug("mauvais-slug")).thenReturn(-1);
 
-    final var reponse = controller.testerDigitickSlug("id-non-utilise", new RequeteSlug("mauvais-slug"));
+    final var reponse =
+        controller.testerDigitickSlug("id-non-utilise", new RequeteSlug("mauvais-slug"));
 
     assertEquals(404, reponse.getStatusCode().value());
   }
@@ -139,7 +143,7 @@ class SourcesControllerTest {
   @Test
   void listerSalles_delegueAuServiceAvecLesParametres() {
     when(sourcesService.listerSalles(true, 2, "olympia"))
-        .thenReturn(new ReponseSallesSources(java.util.List.of(), 2, 3, 120));
+        .thenReturn(new ReponseSallesSources(List.of(), 2, 3, 120));
 
     final var reponse = controller.listerSalles(true, 2, "olympia");
 

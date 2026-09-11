@@ -4,6 +4,8 @@
  */
 package fr.strapontin.core;
 
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,7 +37,8 @@ public final class Dedoublonner {
     // concerts sans ville — deux concerts du même artiste le même jour, dans deux villes
     // réellement différentes mais toutes deux non renseignées, ne fusionnent alors que s'ils
     // partagent aussi la même salle.
-    final String villeNorm = c.ville() != null ? Normalisation.normaliserVille(c.ville()) : salleNorm;
+    final String villeNorm =
+        c.ville() != null ? Normalisation.normaliserVille(c.ville()) : salleNorm;
     return new ConcertEnrichi(c, Normalisation.normaliserTexte(c.artiste()), villeNorm, salleNorm);
   }
 
@@ -65,14 +68,15 @@ public final class Dedoublonner {
     for (final ConcertEnrichi c : enrichis) {
       final String heureCle = c.concert().heure() != null ? c.concert().heure() : SANS_HEURE;
       final String cle =
-              c.artisteNorm() + "|" + c.concert().date() + "|" + heureCle + "|" + c.villeNorm();
+          c.artisteNorm() + "|" + c.concert().date() + "|" + heureCle + "|" + c.villeNorm();
       groupes.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
     }
     return groupes.values().stream().map(Dedoublonner::fusionner).toList();
   }
 
   // Passe 2 : fuzzy — (date, ville_norm) + similarité artiste >= seuil.
-  private static List<ConcertEnrichi> passeFuzzyDateVille(final List<ConcertEnrichi> apresPasseExacte) {
+  private static List<ConcertEnrichi> passeFuzzyDateVille(
+      final List<ConcertEnrichi> apresPasseExacte) {
     final Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
     for (final ConcertEnrichi c : apresPasseExacte) {
       final String cle = c.concert().date() + "|" + c.villeNorm();
@@ -90,7 +94,8 @@ public final class Dedoublonner {
   }
 
   // Fallback : (date, salle_norm) pour les grandes salles avec villes divergentes entre sources.
-  private static List<ConcertBrut> passeFallbackDateSalle(final List<ConcertEnrichi> apresPasseFuzzy) {
+  private static List<ConcertBrut> passeFallbackDateSalle(
+      final List<ConcertEnrichi> apresPasseFuzzy) {
     final Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
     for (final ConcertEnrichi c : apresPasseFuzzy) {
       final String cle = c.concert().date() + "|" + c.salleNorm();
@@ -124,7 +129,7 @@ public final class Dedoublonner {
           continue;
         }
         final double sim =
-                Normalisation.similarite(groupe.get(i).artisteNorm(), groupe.get(j).artisteNorm());
+            Normalisation.similarite(groupe.get(i).artisteNorm(), groupe.get(j).artisteNorm());
         if (sim >= SEUIL_SIMILARITE && heuresCompatibles(groupe.get(i), groupe.get(j))) {
           sousGroupe.add(groupe.get(j));
           traites[j] = true;
@@ -153,8 +158,8 @@ public final class Dedoublonner {
    * @return {@code true} si les heures ne s'opposent pas à une fusion
    */
   private static boolean heuresCompatibles(final ConcertEnrichi a, final ConcertEnrichi b) {
-    final var heureA = a.concert().heure();
-    final var heureB = b.concert().heure();
+    final String heureA = a.concert().heure();
+    final String heureB = b.concert().heure();
     if (heureA == null || heureB == null || heureA.equals(heureB)) {
       return true;
     }
@@ -168,14 +173,15 @@ public final class Dedoublonner {
 
   private static Integer minutesDepuisMinuit(final String heure) {
     try {
-      final java.time.LocalTime lt = java.time.LocalTime.parse(heure);
+      final LocalTime lt = LocalTime.parse(heure);
       return lt.getHour() * 60 + lt.getMinute();
-    } catch (java.time.format.DateTimeParseException e) {
+    } catch (DateTimeParseException e) {
       return null;
     }
   }
 
-  private static ConcertEnrichi choisirMeilleur(final ConcertEnrichi meilleur, final ConcertEnrichi candidat) {
+  private static ConcertEnrichi choisirMeilleur(
+      final ConcertEnrichi meilleur, final ConcertEnrichi candidat) {
     final int scoreM = scoreCompletude(meilleur.concert());
     final int scoreC = scoreCompletude(candidat.concert());
     if (scoreC > scoreM) {
@@ -191,16 +197,17 @@ public final class Dedoublonner {
   }
 
   private static ConcertEnrichi fusionner(final List<ConcertEnrichi> concerts) {
-    final ConcertEnrichi gagnant = concerts.stream().reduce(Dedoublonner::choisirMeilleur).orElseThrow();
+    final ConcertEnrichi gagnant =
+        concerts.stream().reduce(Dedoublonner::choisirMeilleur).orElseThrow();
 
     String meilleureSalle = gagnant.concert().salle();
     for (final ConcertEnrichi c : concerts) {
       final int scoreM =
-              scoreNomRiche(meilleureSalle) * POIDS_DIACRITIQUES
-                      + (meilleureSalle.equals(meilleureSalle.toUpperCase()) ? 0 : 1);
+          scoreNomRiche(meilleureSalle) * POIDS_DIACRITIQUES
+              + (meilleureSalle.equals(meilleureSalle.toUpperCase()) ? 0 : 1);
       final int scoreC =
-              scoreNomRiche(c.concert().salle()) * POIDS_DIACRITIQUES
-                      + (c.concert().salle().equals(c.concert().salle().toUpperCase()) ? 0 : 1);
+          scoreNomRiche(c.concert().salle()) * POIDS_DIACRITIQUES
+              + (c.concert().salle().equals(c.concert().salle().toUpperCase()) ? 0 : 1);
       if (scoreC > scoreM) {
         meilleureSalle = c.concert().salle();
       }
@@ -215,22 +222,22 @@ public final class Dedoublonner {
 
     final ConcertBrut cb = gagnant.concert();
     final ConcertBrut fusionne =
-            new ConcertBrut(
-                    meilleurArtiste,
-                    cb.date(),
-                    cb.heure(),
-                    meilleureSalle,
-                    cb.ville(),
-                    cb.dept(),
-                    cb.url(),
-                    cb.source(),
-                    cb.classification(),
-                    cb.genre(),
-                    cb.statut(),
-                    cb.presaleDebut(),
-                    cb.presaleNom(),
-                    cb.salleSourceId(),
-                    cb.artisteSourceId());
+        new ConcertBrut(
+            meilleurArtiste,
+            cb.date(),
+            cb.heure(),
+            meilleureSalle,
+            cb.ville(),
+            cb.dept(),
+            cb.url(),
+            cb.source(),
+            cb.classification(),
+            cb.genre(),
+            cb.statut(),
+            cb.presaleDebut(),
+            cb.presaleNom(),
+            cb.salleSourceId(),
+            cb.artisteSourceId());
     return new ConcertEnrichi(
         fusionne, gagnant.artisteNorm(), gagnant.villeNorm(), gagnant.salleNorm());
   }

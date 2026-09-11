@@ -26,9 +26,14 @@ import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import fr.strapontin.worker.sante.SuiviSanteSourcesService;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -127,9 +132,9 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_plusDeVingtCinqArtistes_persisteParLotDeVingt() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    final java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
+    final List<Map<String, Object>> rows = new ArrayList<>();
     for (int i = 0; i < 25; i++) {
-      final java.util.Map<String, Object> row = new java.util.HashMap<>();
+      final Map<String, Object> row = new HashMap<>();
       row.put("artiste_id_str", "artiste-" + i);
       row.put("artiste_affiche", "Artiste " + i);
       row.put("attraction_id", "attractionId" + i);
@@ -151,7 +156,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_lotEnEchec_remonteLogsAdminNiveauError() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    final java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final Map<String, Object> row = new HashMap<>();
     row.put("artiste_id_str", "artiste-1");
     row.put("artiste_affiche", "Artiste 1");
     row.put("attraction_id", "attractionId1");
@@ -166,7 +171,7 @@ class WorkerFetchServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "error".equals(params.get("niveau"))
                         && params.get("message").toString().contains("fetch:artistes:batch")
@@ -178,7 +183,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_lotEnEchec_transmetLesIdsAuRetryLotsService() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    final java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final Map<String, Object> row = new HashMap<>();
     row.put("artiste_id_str", "artiste-1");
     row.put("artiste_affiche", "Artiste 1");
     row.put("attraction_id", "attractionId1");
@@ -197,13 +202,13 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_avecIdsCibles_neFetchQueCesArtistes() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    final java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final Map<String, Object> row = new HashMap<>();
     row.put("artiste_id_str", "artiste-1");
     row.put("artiste_affiche", "Artiste 1");
     row.put("attraction_id", "attractionId1");
     when(jdbc.queryForList(
             contains("artiste_id::text IN"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params -> List.of("artiste-1").equals(params.get("ids")))))
         .thenReturn(List.of(row));
     when(tm.fetchArtistesLot(any())).thenReturn(List.of());
@@ -220,7 +225,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_cyclePropre_notifieRetryLotsServiceSansEchec() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    final java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final Map<String, Object> row = new HashMap<>();
     row.put("artiste_id_str", "artiste-1");
     row.put("artiste_affiche", "Artiste 1");
     row.put("attraction_id", "attractionId1");
@@ -239,7 +244,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_lotTraite_metAJourLesAbsencesConsecutives() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    final java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final Map<String, Object> row = new HashMap<>();
     row.put("artiste_id_str", "artiste-123");
     row.put("artiste_affiche", "Indila");
     row.put("attraction_id", "attractionId1");
@@ -254,7 +259,7 @@ class WorkerFetchServiceTest {
         .update(
             org.mockito.ArgumentMatchers.contains("absences_consecutives"),
             org.mockito.ArgumentMatchers.argThat(
-                (java.util.Map<String, Object> params) ->
+                (Map<String, Object> params) ->
                     ((List<?>) params.get("ids")).contains("artiste-123")));
   }
 
@@ -265,7 +270,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_identifiantTmAmbigu_ignoreLeFetchEtFlagueIntervention() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    final java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final Map<String, Object> row = new HashMap<>();
     row.put("artiste_id_str", "artiste-ambigu");
     row.put("artiste_affiche", "U2");
     row.put("attraction_id", "K8vZ91712W7");
@@ -279,7 +284,7 @@ class WorkerFetchServiceTest {
     verify(jdbc)
         .update(
             org.mockito.ArgumentMatchers.contains("necessite_intervention_le"),
-            eq(java.util.Map.of("artisteId", "artiste-ambigu")));
+            eq(Map.of("artisteId", "artiste-ambigu")));
   }
 
   // deezer_id/wikidata_id doivent être transmis à fetchArtiste(nom, deezerId,
@@ -288,7 +293,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_artisteAvecDeezerIdConnu_transmisAFetchArtiste() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    final java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final Map<String, Object> row = new HashMap<>();
     row.put("artiste_id_str", "artiste-furies");
     row.put("artiste_affiche", "Furies");
     row.put("attraction_id", "attractionIdFuries");
@@ -499,10 +504,7 @@ class WorkerFetchServiceTest {
         .thenReturn(
             new ResolveurNomCanonique.ResultatResolution(
                 "Niño Árbol", ResolveurNomCanonique.SourceResolution.DEEZER));
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String>>any()))
+    when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<String>>any()))
         .thenReturn(List.of("Nino Arial"));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
@@ -544,10 +546,7 @@ class WorkerFetchServiceTest {
         .thenReturn(
             new ResolveurNomCanonique.ResultatResolution(
                 "Stromae", ResolveurNomCanonique.SourceResolution.DEEZER));
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String>>any()))
+    when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<String>>any()))
         .thenReturn(List.of("STROMAE "));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
@@ -592,10 +591,7 @@ class WorkerFetchServiceTest {
   void executerFetchRegion_plusDeCinqDepartements_persisteParLotDeCinq() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any()))
+    when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<String[]>>any()))
         .thenReturn(List.<String[]>of(depts));
     when(tm.fetchRegion(any(), any())).thenReturn(List.of());
     when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
@@ -612,10 +608,7 @@ class WorkerFetchServiceTest {
   void executerFetchRegion_unLotEnEchecParmiPlusieurs_remonteLogsAdminNiveauWarn() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any()))
+    when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<String[]>>any()))
         .thenReturn(List.<String[]>of(depts));
     when(tm.fetchRegion(any(), any())).thenReturn(List.of());
     when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
@@ -630,7 +623,7 @@ class WorkerFetchServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "warn".equals(params.get("niveau"))
                         && params.get("message").toString().contains("1/3 lot(s) échoué")));
@@ -640,10 +633,7 @@ class WorkerFetchServiceTest {
   void executerFetchRegion_unLotEnEchec_transmetLesDeptsAuRetryLotsService() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any()))
+    when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<String[]>>any()))
         .thenReturn(List.<String[]>of(depts));
     when(tm.fetchRegion(any(), any())).thenReturn(List.of());
     when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
@@ -674,7 +664,7 @@ class WorkerFetchServiceTest {
         .query(
             contains("user_config"),
             anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any());
+            org.mockito.ArgumentMatchers.<RowMapper<String[]>>any());
   }
 
   @Test
@@ -702,11 +692,7 @@ class WorkerFetchServiceTest {
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(
-                java.util.Map.of(
-                    "salle_id",
-                    java.util.UUID.randomUUID().toString(),
-                    "identifiants",
-                    "tm:venue-99")));
+                Map.of("salle_id", UUID.randomUUID().toString(), "identifiants", "tm:venue-99")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle("tm:venue-99")).thenReturn(true);
     when(tm.fetchSalle("tm:venue-99")).thenReturn(List.of());
@@ -728,9 +714,9 @@ class WorkerFetchServiceTest {
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(
-                java.util.Map.of(
+                Map.of(
                     "salle_id",
-                    java.util.UUID.randomUUID().toString(),
+                    UUID.randomUUID().toString(),
                     "identifiants",
                     "ticketmaster:venue-99")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
@@ -751,11 +737,7 @@ class WorkerFetchServiceTest {
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(
-                java.util.Map.of(
-                    "salle_id",
-                    java.util.UUID.randomUUID().toString(),
-                    "identifiants",
-                    "tm:venue-99")));
+                Map.of("salle_id", UUID.randomUUID().toString(), "identifiants", "tm:venue-99")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle("tm:venue-99")).thenReturn(true);
     when(tm.fetchSalle("tm:venue-99")).thenReturn(List.of());
@@ -771,11 +753,9 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchSallesAll_plusDeVingtSalles_persisteParLotDeVingt() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    final java.util.List<java.util.Map<String, Object>> lignes = new java.util.ArrayList<>();
+    final List<Map<String, Object>> lignes = new ArrayList<>();
     for (int i = 0; i < 25; i++) {
-      lignes.add(
-          java.util.Map.of(
-              "salle_id", java.util.UUID.randomUUID().toString(), "identifiants", "tm:venue-" + i));
+      lignes.add(Map.of("salle_id", UUID.randomUUID().toString(), "identifiants", "tm:venue-" + i));
     }
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(lignes);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
@@ -793,11 +773,9 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchSallesAll_unLotEnEchecParmiPlusieurs_remonteLogsAdminNiveauWarn() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    final java.util.List<java.util.Map<String, Object>> lignes = new java.util.ArrayList<>();
+    final List<Map<String, Object>> lignes = new ArrayList<>();
     for (int i = 0; i < 25; i++) {
-      lignes.add(
-          java.util.Map.of(
-              "salle_id", java.util.UUID.randomUUID().toString(), "identifiants", "tm:venue-" + i));
+      lignes.add(Map.of("salle_id", UUID.randomUUID().toString(), "identifiants", "tm:venue-" + i));
     }
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(lignes);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
@@ -813,7 +791,7 @@ class WorkerFetchServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "warn".equals(params.get("niveau"))
                         && params.get("message").toString().contains("1/2 lot(s) échoué")));
@@ -823,7 +801,7 @@ class WorkerFetchServiceTest {
   void executerFetchSallesAll_lotEnEchec_transmetLesSalleIdsAuRetryLotsService() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     when(jdbc.queryForList(anyString(), anyMap()))
-        .thenReturn(List.of(java.util.Map.of("salle_id", "salle-1", "identifiants", "tm:venue-1")));
+        .thenReturn(List.of(Map.of("salle_id", "salle-1", "identifiants", "tm:venue-1")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
     when(tm.fetchSalle(anyString())).thenReturn(List.of());
@@ -841,9 +819,9 @@ class WorkerFetchServiceTest {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     when(jdbc.queryForList(
             contains("salle_id::text IN"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params -> List.of("salle-1").equals(params.get("ids")))))
-        .thenReturn(List.of(java.util.Map.of("salle_id", "salle-1", "identifiants", "tm:venue-1")));
+        .thenReturn(List.of(Map.of("salle_id", "salle-1", "identifiants", "tm:venue-1")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
     when(tm.fetchSalle(anyString())).thenReturn(List.of());

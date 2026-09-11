@@ -163,7 +163,8 @@ public final class CorrespondanceSalle {
    * @param specLong tokens spécifiques du nom le plus long
    * @return {@code true} si tous les tokens de {@code specCourt} sont couverts
    */
-  private static boolean estContainmentTokensPartiel(final Set<String> specCourt, final Set<String> specLong) {
+  private static boolean estContainmentTokensPartiel(
+      final Set<String> specCourt, final Set<String> specLong) {
     if (specCourt.isEmpty() || specLong.isEmpty()) {
       return false;
     }
@@ -175,9 +176,9 @@ public final class CorrespondanceSalle {
       // court comme "les" (issu d'un nom mal désapostrophé, ex. "lessaion") valide trivialement un
       // containment sans aucun rapport sémantique réel avec le nom recherché.
       final boolean couvert =
-              specLong.stream()
-                      .filter(t -> t.length() >= LONGUEUR_MIN_CONTAINMENT_TOKEN)
-                      .anyMatch(t -> t.contains(tokenCourt) || tokenCourt.contains(t));
+          specLong.stream()
+              .filter(t -> t.length() >= LONGUEUR_MIN_CONTAINMENT_TOKEN)
+              .anyMatch(t -> t.contains(tokenCourt) || tokenCourt.contains(t));
       if (!couvert) {
         return false;
       }
@@ -228,7 +229,8 @@ public final class CorrespondanceSalle {
    *   confirmer un candidat validé sur l'un de ces deux seuls critères
    * @return {@code true} si les salles sont considérées identiques
    */
-  public static boolean estDoublonSalle(final String a, final String b, final boolean pivotAutorise) {
+  public static boolean estDoublonSalle(
+      final String a, final String b, final boolean pivotAutorise) {
     if (estDoublonTexte(
         a,
         b,
@@ -264,7 +266,8 @@ public final class CorrespondanceSalle {
     return resultat;
   }
 
-  private static double jaccard(final Set<String> a, final Set<String> b, final Set<String> intersection) {
+  private static double jaccard(
+      final Set<String> a, final Set<String> b, final Set<String> intersection) {
     final Set<String> union = new HashSet<>(a);
     union.addAll(b);
     return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
@@ -281,7 +284,10 @@ public final class CorrespondanceSalle {
   // Pivot : requiert ≥ 2 tokens dans chaque nom pour éviter les faux positifs de type
   // "galaxie" (1 token) vs "le galaxie amneville".
   private static boolean estPivotSpecifique(
-      final Set<String> tokA, final Set<String> tokB, final double jaccardSpec, final Set<String> intersectionSpec) {
+      final Set<String> tokA,
+      final Set<String> tokB,
+      final double jaccardSpec,
+      final Set<String> intersectionSpec) {
     return tokA.size() >= 2
         && tokB.size() >= 2
         && jaccardSpec > SEUIL_JACCARD_PIVOT
@@ -293,7 +299,8 @@ public final class CorrespondanceSalle {
   // Paris" → seul "paris" reste après retrait de "casino") correspond trivialement à n'importe
   // quel autre nom partageant ce token comme simple nom de ville ("Théâtre Rive Gauche Paris 14",
   // "Cathédrale Américaine Paris 08"...), sans aucun rapport avec le lieu recherché.
-  private static boolean estContainmentPartielSuffisant(final Set<String> specA, final Set<String> specB) {
+  private static boolean estContainmentPartielSuffisant(
+      final Set<String> specA, final Set<String> specB) {
     if (specA.size() < 2 || specB.size() < 2) {
       return false;
     }

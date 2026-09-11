@@ -81,7 +81,8 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
     final String ip = request.getRemoteAddr();
     final String cleBucket = ip + ":" + chemin;
     final boolean estReset = URL_RESET_PASSWORD.equals(chemin);
-    final Bucket bucket = buckets.get(cleBucket, _ -> estReset ? creerBucketReset() : creerBucketLogin());
+    final Bucket bucket =
+        buckets.get(cleBucket, _ -> estReset ? creerBucketReset() : creerBucketLogin());
 
     if (bucket.tryConsume(1)) {
       chain.doFilter(request, response);

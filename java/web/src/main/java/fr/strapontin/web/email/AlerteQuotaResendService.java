@@ -55,7 +55,8 @@ class AlerteQuotaResendService {
       return;
     }
 
-    final boolean envoye = emailAlerteService.envoyerAlerteQuotaResend(destinataire.get(), compteur);
+    final boolean envoye =
+        emailAlerteService.envoyerAlerteQuotaResend(destinataire.get(), compteur);
     if (envoye) {
       gestionQuotaResend.marquerAlerteEnvoyee(compteur);
     } else {

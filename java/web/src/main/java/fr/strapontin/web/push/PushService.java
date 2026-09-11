@@ -8,6 +8,7 @@ import fr.strapontin.core.RetrySerialisable;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -189,5 +190,5 @@ public class PushService {
    * @param endpoint URL de l'endpoint push (identifiant de révocation)
    * @param creeLe date de création de l'abonnement
    */
-  public record AbonnementDto(String endpoint, java.time.Instant creeLe) {}
+  public record AbonnementDto(String endpoint, Instant creeLe) {}
 }

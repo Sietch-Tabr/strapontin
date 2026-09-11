@@ -45,7 +45,8 @@ public class SuiviChroniciteService {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
-  public SuiviChroniciteService(final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
+  public SuiviChroniciteService(
+      final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
   }

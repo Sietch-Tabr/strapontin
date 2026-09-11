@@ -39,7 +39,8 @@ public class SourcesHealthIndicator implements HealthIndicator {
   private final GestionQuotaTM gestionQuotaTM;
   private final NamedParameterJdbcTemplate jdbc;
 
-  public SourcesHealthIndicator(final GestionQuotaTM gestionQuotaTM, final NamedParameterJdbcTemplate jdbc) {
+  public SourcesHealthIndicator(
+      final GestionQuotaTM gestionQuotaTM, final NamedParameterJdbcTemplate jdbc) {
     this.gestionQuotaTM = gestionQuotaTM;
     this.jdbc = jdbc;
   }

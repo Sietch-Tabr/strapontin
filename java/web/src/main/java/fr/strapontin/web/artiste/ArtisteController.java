@@ -49,7 +49,8 @@ public class ArtisteController {
    */
   @GetMapping
   public ResponseEntity<ReponseArtistes> listerArtistes(
-      @RequestParam(required = false, defaultValue = "") final String q, final Authentication auth) {
+      @RequestParam(required = false, defaultValue = "") final String q,
+      final Authentication auth) {
     final String userId = utilisateur(auth).id();
     return ResponseEntity.ok(artisteService.lister(userId, q));
   }
@@ -77,7 +78,8 @@ public class ArtisteController {
    * @return 204 si supprimé
    */
   @DeleteMapping("/{artisteId}")
-  public ResponseEntity<Void> supprimerArtiste(@PathVariable final UUID artisteId, final Authentication auth) {
+  public ResponseEntity<Void> supprimerArtiste(
+      @PathVariable final UUID artisteId, final Authentication auth) {
     final String userId = utilisateur(auth).id();
     artisteService.supprimer(userId, artisteId);
     return ResponseEntity.noContent().build();

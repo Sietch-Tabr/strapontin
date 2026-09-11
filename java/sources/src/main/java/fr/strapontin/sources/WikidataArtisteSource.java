@@ -6,6 +6,7 @@ package fr.strapontin.sources;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -86,7 +87,8 @@ public class WikidataArtisteSource
    * @param restClient client HTTP à utiliser
    * @param cache cache Caffeine à utiliser
    */
-  public WikidataArtisteSource(final RestClient restClient, final Cache<String, EnrichissementArtiste> cache) {
+  public WikidataArtisteSource(
+      final RestClient restClient, final Cache<String, EnrichissementArtiste> cache) {
     this(new ClientSparqlWikidata(restClient), cache);
   }
 
@@ -105,12 +107,14 @@ public class WikidataArtisteSource
   public Map<UUID, EnrichissementArtiste> enrichirLot(final List<ArtisteAEnrichir> artistes) {
     final Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
 
-    final List<ArtisteAEnrichir> connus = artistes.stream().filter(a -> a.wikidataId() != null).toList();
+    final List<ArtisteAEnrichir> connus =
+        artistes.stream().filter(a -> a.wikidataId() != null).toList();
     final List<ArtisteAEnrichir> aDecouvrir =
         artistes.stream().filter(a -> a.wikidataId() == null).toList();
 
     for (int i = 0; i < connus.size(); i += TAILLE_LOT_MAX) {
-      final List<ArtisteAEnrichir> lot = connus.subList(i, Math.min(i + TAILLE_LOT_MAX, connus.size()));
+      final List<ArtisteAEnrichir> lot =
+          connus.subList(i, Math.min(i + TAILLE_LOT_MAX, connus.size()));
       resultats.putAll(enrichirLotConnu(lot));
     }
 
@@ -129,7 +133,8 @@ public class WikidataArtisteSource
       qidVersUuid.put(a.wikidataId(), a.id());
     }
 
-    final String sparql = construireRequeteBatch(lot.stream().map(ArtisteAEnrichir::wikidataId).toList());
+    final String sparql =
+        construireRequeteBatch(lot.stream().map(ArtisteAEnrichir::wikidataId).toList());
     final Map<String, Object> data = client.executer(sparql);
     if (data == null) {
       return Map.of();
@@ -293,6 +298,6 @@ public class WikidataArtisteSource
     if (aliases == null || aliases.isBlank()) {
       return List.of();
     }
-    return java.util.Arrays.stream(aliases.split("\\|")).filter(a -> !a.isBlank()).toList();
+    return Arrays.stream(aliases.split("\\|")).filter(a -> !a.isBlank()).toList();
   }
 }

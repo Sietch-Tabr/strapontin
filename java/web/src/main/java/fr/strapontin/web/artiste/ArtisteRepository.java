@@ -182,7 +182,8 @@ class ArtisteRepository {
    * @param source             nom de la source (ex. {@code "wikidata"}, {@code "deezer"})
    * @param identifiantExterne identifiant dans la source externe
    */
-  void enregistrerArtisteSource(final UUID artisteId, final String source, final String identifiantExterne) {
+  void enregistrerArtisteSource(
+      final UUID artisteId, final String source, final String identifiantExterne) {
     jdbc.update(
         """
         INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)
@@ -206,7 +207,8 @@ class ArtisteRepository {
    * @param wikidataId Q-ID Wikidata (peut être {@code null})
    * @param deezerId   identifiant Deezer (peut être {@code null})
    */
-  void mettreAJourIdsWikidata(final UUID artisteId, final String wikidataId, final String deezerId) {
+  void mettreAJourIdsWikidata(
+      final UUID artisteId, final String wikidataId, final String deezerId) {
     final Map<String, Object> params = new HashMap<>();
     params.put("id", artisteId.toString());
     params.put("wikidataId", wikidataId);

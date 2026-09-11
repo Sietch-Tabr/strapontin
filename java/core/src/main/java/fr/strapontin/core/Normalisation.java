@@ -133,7 +133,11 @@ public final class Normalisation {
   // Marque dans matchA/matchB les caractères de a et b qui se correspondent dans la fenêtre
   // Jaro, et retourne leur nombre.
   private static int rechercherCorrespondances(
-      final String a, final String b, final int fenetre, final boolean[] matchA, final boolean[] matchB) {
+      final String a,
+      final String b,
+      final int fenetre,
+      final boolean[] matchA,
+      final boolean[] matchB) {
     final int m = a.length();
     final int n = b.length();
     int matchs = 0;
@@ -154,7 +158,8 @@ public final class Normalisation {
 
   // Compte, parmi les caractères déjà marqués correspondants, ceux dont l'ordre relatif diffère
   // entre a et b.
-  private static int compterTranspositions(final String a, final String b, final boolean[] matchA, final boolean[] matchB) {
+  private static int compterTranspositions(
+      final String a, final String b, final boolean[] matchA, final boolean[] matchB) {
     int transpositions = 0;
     int k = 0;
     for (int i = 0; i < a.length(); i++) {

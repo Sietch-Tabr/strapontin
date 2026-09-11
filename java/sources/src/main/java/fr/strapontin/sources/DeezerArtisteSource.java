@@ -108,12 +108,12 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
       if (data == null) {
         return Optional.empty();
       }
-      final var dataList = (List<Map<String, Object>>) data.get("data");
+      final List<Map<String, Object>> dataList = (List<Map<String, Object>>) data.get("data");
       if (dataList == null) {
         return Optional.empty();
       }
 
-      for (final var candidat : dataList) {
+      for (final Map<String, Object> candidat : dataList) {
         final String nomCandidat = (String) candidat.get("name");
         if (nomCandidat == null
             || !Normalisation.normaliserTexte(nomCandidat).equals(artiste.nomNorm())) {

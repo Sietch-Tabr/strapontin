@@ -101,7 +101,8 @@ class TotpServiceTest {
     final String secret = service.genererSecret();
     final byte[] secretOctets = TotpService.base32Decoder(secret);
     final long compteur = System.currentTimeMillis() / 1000L / 30L;
-    final Method calculer = TotpService.class.getDeclaredMethod("calculerCode", byte[].class, long.class);
+    final Method calculer =
+        TotpService.class.getDeclaredMethod("calculerCode", byte[].class, long.class);
     calculer.setAccessible(true);
     final String code = (String) calculer.invoke(service, secretOctets, compteur);
     assertTrue(service.verifierCode(secret, code), "Le code calculé doit être accepté");
@@ -112,7 +113,8 @@ class TotpServiceTest {
     final String secret = service.genererSecret();
     final byte[] secretOctets = TotpService.base32Decoder(secret);
     final long compteur = System.currentTimeMillis() / 1000L / 30L;
-    final Method calculer = TotpService.class.getDeclaredMethod("calculerCode", byte[].class, long.class);
+    final Method calculer =
+        TotpService.class.getDeclaredMethod("calculerCode", byte[].class, long.class);
     calculer.setAccessible(true);
     final String code = (String) calculer.invoke(service, secretOctets, compteur);
 
@@ -128,7 +130,8 @@ class TotpServiceTest {
     // RFC 6238 Appendix B (SHA1) : secret ASCII "12345678901234567890", période 30 s.
     // Garantit la compatibilité avec les applications standard (Google Authenticator, Aegis…).
     final byte[] octets = "12345678901234567890".getBytes(StandardCharsets.US_ASCII);
-    final Method calculer = TotpService.class.getDeclaredMethod("calculerCode", byte[].class, long.class);
+    final Method calculer =
+        TotpService.class.getDeclaredMethod("calculerCode", byte[].class, long.class);
     calculer.setAccessible(true);
     assertEquals("287082", calculer.invoke(service, octets, 1L)); // T=59 s
     assertEquals("081804", calculer.invoke(service, octets, 37037036L)); // T=1111111109

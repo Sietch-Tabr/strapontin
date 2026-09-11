@@ -22,6 +22,7 @@ import fr.strapontin.worker.LogsAdminWorker;
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.jdbc.core.RowCallbackHandler;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -55,10 +57,7 @@ class CoherenceWikidataSalleServiceTest {
 
   @SuppressWarnings("unchecked")
   private void simulerCandidats(final List<SalleAEnrichir> candidats) {
-    when(jdbc.query(
-            org.mockito.ArgumentMatchers.anyString(),
-            any(Map.class),
-            any(org.springframework.jdbc.core.RowMapper.class)))
+    when(jdbc.query(org.mockito.ArgumentMatchers.anyString(), any(Map.class), any(RowMapper.class)))
         .thenReturn(candidats);
   }
 
@@ -429,7 +428,7 @@ class CoherenceWikidataSalleServiceTest {
             org.mockito.ArgumentMatchers.anyMap(),
             eq(String.class)))
         .thenReturn(List.of("Q110597455"));
-    when(wikidata.typesInvalides(List.of("Q110597455"))).thenReturn(java.util.Set.of("Q110597455"));
+    when(wikidata.typesInvalides(List.of("Q110597455"))).thenReturn(Set.of("Q110597455"));
 
     final int resultat = service.revaliderTypes();
 
@@ -454,7 +453,7 @@ class CoherenceWikidataSalleServiceTest {
             org.mockito.ArgumentMatchers.anyMap(),
             eq(String.class)))
         .thenReturn(List.of("Q537720"));
-    when(wikidata.typesInvalides(List.of("Q537720"))).thenReturn(java.util.Set.of());
+    when(wikidata.typesInvalides(List.of("Q537720"))).thenReturn(Set.of());
 
     final int resultat = service.revaliderTypes();
 

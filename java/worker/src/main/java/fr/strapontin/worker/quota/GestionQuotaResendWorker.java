@@ -54,7 +54,9 @@ public class GestionQuotaResendWorker {
   private GestionQuotaResendWorker self;
 
   public GestionQuotaResendWorker(
-      final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper, final LogsAdminWorker logsAdminWorker) {
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper objectMapper,
+      final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.logsAdminWorker = logsAdminWorker;

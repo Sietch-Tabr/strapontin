@@ -14,6 +14,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -21,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
 
 /**
  * Tests unitaires pour {@link AuthController} — challenge TOTP et réinitialisation de mot de
@@ -257,9 +259,7 @@ class AuthControllerTest {
         ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
     verify(authenticationManager).authenticate(tokenCaptor.capture());
     assertNotNull(tokenCaptor.getValue().getDetails());
-    assertInstanceOf(
-        org.springframework.security.web.authentication.WebAuthenticationDetails.class,
-        tokenCaptor.getValue().getDetails());
+    assertInstanceOf(WebAuthenticationDetails.class, tokenCaptor.getValue().getDetails());
   }
 
   // --- logout ---
@@ -320,7 +320,8 @@ class AuthControllerTest {
     final HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(true)).thenReturn(session);
 
-    final var reponse = authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
+    final var reponse =
+        authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals("alice", reponse.getBody().identifiant());
@@ -359,7 +360,8 @@ class AuthControllerTest {
     final HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(true)).thenReturn(session);
 
-    final var reponse = authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
+    final var reponse =
+        authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
 
     assertTrue(reponse.getBody().totpRequis());
     verify(session).setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
@@ -384,9 +386,7 @@ class AuthControllerTest {
         ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
     verify(authenticationManager).authenticate(tokenCaptor.capture());
     assertNotNull(tokenCaptor.getValue().getDetails());
-    assertInstanceOf(
-        org.springframework.security.web.authentication.WebAuthenticationDetails.class,
-        tokenCaptor.getValue().getDetails());
+    assertInstanceOf(WebAuthenticationDetails.class, tokenCaptor.getValue().getDetails());
   }
 
   @Test
@@ -472,9 +472,10 @@ class AuthControllerTest {
   @Test
   void motDePasseOublieEndpoint_emailPresent_normaliseEtDelegueAuService() {
     when(configService.lireConfig("PUBLIC_BASE_URL"))
-        .thenReturn(java.util.Optional.of("https://strapontin.fr"));
+        .thenReturn(Optional.of("https://strapontin.fr"));
 
-    final var reponse = authController.motDePasseOublie(new ForgotPasswordRequest(" Alice@Test.FR "));
+    final var reponse =
+        authController.motDePasseOublie(new ForgotPasswordRequest(" Alice@Test.FR "));
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(authService).motDePasseOublie("alice@test.fr", "https://strapontin.fr");
@@ -486,7 +487,7 @@ class AuthControllerTest {
   // contrôlé par un attaquant.
   @Test
   void motDePasseOublieEndpoint_baseUrlNonConfiguree_neDelegueRienEtAlerte() {
-    when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(java.util.Optional.empty());
+    when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(Optional.empty());
 
     final var reponse = authController.motDePasseOublie(new ForgotPasswordRequest("alice@test.fr"));
 

@@ -97,7 +97,8 @@ class ResolveurNomCanoniqueTest {
                 MediaType.APPLICATION_JSON));
 
     final ResolveurNomCanonique resolveur = resolveurAvecServeur(serveur, restClient);
-    final ResultatResolution resultat = resolveur.resoudreNomCanonique("artiste", "Artiste Inconnu");
+    final ResultatResolution resultat =
+        resolveur.resoudreNomCanonique("artiste", "Artiste Inconnu");
 
     assertEquals("Artiste Inconnu", resultat.nom());
     assertEquals(SourceResolution.INCHANGE, resultat.source());
@@ -169,7 +170,8 @@ class ResolveurNomCanoniqueTest {
                 MediaType.APPLICATION_JSON));
 
     final ResolveurNomCanonique resolveur = resolveurAvecServeur(serveur, restClient);
-    final ResultatResolution resultat = resolveur.resoudreNomCanonique("artiste", "The Halo Effect");
+    final ResultatResolution resultat =
+        resolveur.resoudreNomCanonique("artiste", "The Halo Effect");
 
     assertEquals("The Halo Effect", resultat.nom());
     assertEquals(SourceResolution.DEEZER, resultat.source());

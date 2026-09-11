@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.sources.TicketmasterSource;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -181,9 +182,7 @@ class SuiviSanteSourcesServiceTest {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     final TicketmasterSource tm = mock(TicketmasterSource.class);
     when(jdbc.queryForList(anyString(), org.mockito.ArgumentMatchers.anyMap()))
-        .thenReturn(
-            List.of(
-                Map.of("necessite_intervention_le", java.time.Instant.now(), "nom", "Calogero")));
+        .thenReturn(List.of(Map.of("necessite_intervention_le", Instant.now(), "nom", "Calogero")));
     when(tm.recupererNomAttraction("K1")).thenReturn("Calogero");
     final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
@@ -203,8 +202,7 @@ class SuiviSanteSourcesServiceTest {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     final TicketmasterSource tm = mock(TicketmasterSource.class);
     when(jdbc.queryForList(anyString(), org.mockito.ArgumentMatchers.anyMap()))
-        .thenReturn(
-            List.of(Map.of("necessite_intervention_le", java.time.Instant.now(), "nom", "Furies")));
+        .thenReturn(List.of(Map.of("necessite_intervention_le", Instant.now(), "nom", "Furies")));
     when(tm.recupererNomAttraction("K1")).thenReturn("Love & Furies");
     final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
@@ -223,9 +221,7 @@ class SuiviSanteSourcesServiceTest {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     final TicketmasterSource tm = mock(TicketmasterSource.class);
     when(jdbc.queryForList(anyString(), org.mockito.ArgumentMatchers.anyMap()))
-        .thenReturn(
-            List.of(
-                Map.of("necessite_intervention_le", java.time.Instant.now(), "nom", "Calogero")));
+        .thenReturn(List.of(Map.of("necessite_intervention_le", Instant.now(), "nom", "Calogero")));
     when(tm.recupererNomAttraction("K1")).thenReturn(null);
     final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 

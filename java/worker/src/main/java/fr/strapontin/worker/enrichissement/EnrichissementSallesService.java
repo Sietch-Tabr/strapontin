@@ -190,7 +190,7 @@ public class EnrichissementSallesService {
     List<SalleAEnrichir> courant = lot;
     for (final SourceEnrichissementSalle source : sources) {
       final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(courant);
-      for (final var entree : resultat.entrySet()) {
+      for (final Map.Entry<UUID, EnrichissementSalle> entree : resultat.entrySet()) {
         accumule.merge(entree.getKey(), entree.getValue(), EnrichissementSallesService::fusionner);
       }
       courant = appliquerWikidataIdConnu(courant, accumule);
@@ -243,13 +243,15 @@ public class EnrichissementSallesService {
         .map(
             s -> {
               final EnrichissementSalle e = accumule.get(s.id());
-              final String qid = e != null && e.wikidataId() != null ? e.wikidataId() : s.wikidataId();
+              final String qid =
+                  e != null && e.wikidataId() != null ? e.wikidataId() : s.wikidataId();
               return new SalleAEnrichir(s.id(), s.nom(), s.nomNorm(), s.ville(), s.dept(), qid);
             })
         .toList();
   }
 
-  private static EnrichissementSalle fusionner(final EnrichissementSalle a, final EnrichissementSalle b) {
+  private static EnrichissementSalle fusionner(
+      final EnrichissementSalle a, final EnrichissementSalle b) {
     return new EnrichissementSalle(
         b.wikidataId() != null ? b.wikidataId() : a.wikidataId(),
         b.nomAffiche() != null ? b.nomAffiche() : a.nomAffiche(),
@@ -267,7 +269,8 @@ public class EnrichissementSallesService {
    *   ({@link SignalementMatchingService}) pour revue manuelle plutôt que de faire échouer tout le
    *   cycle de réconciliation.
    */
-  private boolean mettreAJourSalle(final UUID salleId, final String nom, final EnrichissementSalle e) {
+  private boolean mettreAJourSalle(
+      final UUID salleId, final String nom, final EnrichissementSalle e) {
     final Map<String, Object> params = new HashMap<>();
     params.put("wikidataId", e.wikidataId());
     params.put("nomAffiche", e.nomAffiche());
@@ -302,7 +305,8 @@ public class EnrichissementSallesService {
    * l'absence de preuve géographique doit donc empêcher la fusion plutôt que l'autoriser par
    * défaut.
    */
-  private boolean gererCollisionWikidataId(final UUID salleId, final String nom, final EnrichissementSalle e) {
+  private boolean gererCollisionWikidataId(
+      final UUID salleId, final String nom, final EnrichissementSalle e) {
     final Map<String, Object> porteuse = trouverPorteuseWikidataId(e.wikidataId());
     if (porteuse != null && tenterFusionParCoordonnees(salleId, porteuse)) {
       log.info(
@@ -340,7 +344,8 @@ public class EnrichissementSallesService {
     return lignes.isEmpty() ? null : lignes.get(0);
   }
 
-  private boolean tenterFusionParCoordonnees(final UUID salleId, final Map<String, Object> porteuse) {
+  private boolean tenterFusionParCoordonnees(
+      final UUID salleId, final Map<String, Object> porteuse) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)",

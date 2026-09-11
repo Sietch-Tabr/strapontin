@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -29,8 +30,8 @@ class FiltreConcertsBuilderTest {
     FiltreConcertsBuilder.appliquerMois(where, params, "2026-07");
 
     assertTrue(where.toString().contains("moisDebut"));
-    assertEquals(java.time.LocalDate.of(2026, 7, 1), params.get("moisDebut"));
-    assertEquals(java.time.LocalDate.of(2026, 8, 1), params.get("moisFin"));
+    assertEquals(LocalDate.of(2026, 7, 1), params.get("moisDebut"));
+    assertEquals(LocalDate.of(2026, 8, 1), params.get("moisFin"));
   }
 
   @Test

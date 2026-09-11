@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.resend.Resend;
+import com.resend.core.exception.ResendException;
 import com.resend.services.emails.Emails;
 import fr.strapontin.web.config.ConfigService;
 import java.util.Optional;
@@ -103,8 +104,7 @@ class EmailSenderTest {
   }
 
   @Test
-  void envoyer_quotaResendDisponible_contacteResend()
-      throws com.resend.core.exception.ResendException {
+  void envoyer_quotaResendDisponible_contacteResend() throws ResendException {
     when(gestionQuotaResend.reserverEnvoi()).thenReturn(true);
     final Resend client = mock(Resend.class);
     final Emails emails = mock(Emails.class);

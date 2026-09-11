@@ -29,7 +29,8 @@ public class ConcertsAdminService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
-  public ConcertsAdminService(final NamedParameterJdbcTemplate jdbc, final LogAdminService logAdminService) {
+  public ConcertsAdminService(
+      final NamedParameterJdbcTemplate jdbc, final LogAdminService logAdminService) {
     this.jdbc = jdbc;
     this.logAdminService = logAdminService;
   }

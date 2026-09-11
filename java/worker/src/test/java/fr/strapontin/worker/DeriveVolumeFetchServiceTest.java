@@ -16,6 +16,7 @@ import java.sql.Timestamp;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -41,7 +42,7 @@ class DeriveVolumeFetchServiceTest {
     when(jdbc.query(
             contains("fetch_jobs_historique"),
             anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<Integer>>any()))
+            org.mockito.ArgumentMatchers.<RowMapper<Integer>>any()))
         .thenReturn(volumes);
   }
 

@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web;
 
+import java.io.Serial;
+
 /**
  * Exception non-vérifiée pour les violations de règles métier.
  *
@@ -15,7 +17,7 @@ package fr.strapontin.web;
  */
 public class ErreurMetier extends RuntimeException {
 
-  @java.io.Serial private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   private final int status;
 

@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 /**
  * Tests unitaires de {@link ReconciliateurArtistes} — priorité exacte avant flou.
@@ -29,7 +30,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 class ReconciliateurArtistesTest {
 
-  private static ValeurConcert concert(final String artisteNorm, final LocalDate date, final String salleNorm) {
+  private static ValeurConcert concert(
+      final String artisteNorm, final LocalDate date, final String salleNorm) {
     return new ValeurConcert(
         "Artiste",
         artisteNorm,
@@ -133,21 +135,17 @@ class ReconciliateurArtistesTest {
     verify(jdbc)
         .update(
             org.mockito.ArgumentMatchers.contains("UPDATE evenements"),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.namedparam.SqlParameterSource>argThat(
-                    params ->
-                        "nino arial".equals(params.getValue("nouvelArtisteNorm"))
-                            && "https://tm.example/nino-arial-billet"
-                                .equals(params.getValue("url"))));
+            org.mockito.ArgumentMatchers.<SqlParameterSource>argThat(
+                params ->
+                    "nino arial".equals(params.getValue("nouvelArtisteNorm"))
+                        && "https://tm.example/nino-arial-billet".equals(params.getValue("url"))));
     verify(jdbc)
         .update(
             org.mockito.ArgumentMatchers.contains("UPDATE observations"),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.namedparam.SqlParameterSource>argThat(
-                    params ->
-                        "Nino Arial".equals(params.getValue("nouvelArtiste"))
-                            && "https://tm.example/nino-arial-billet"
-                                .equals(params.getValue("url"))));
+            org.mockito.ArgumentMatchers.<SqlParameterSource>argThat(
+                params ->
+                    "Nino Arial".equals(params.getValue("nouvelArtiste"))
+                        && "https://tm.example/nino-arial-billet".equals(params.getValue("url"))));
   }
 
   @Test
@@ -176,8 +174,6 @@ class ReconciliateurArtistesTest {
 
     reconciliateur.corrigerParUrl(List.of(entrant));
 
-    verify(jdbc, never())
-        .update(
-            anyString(), any(org.springframework.jdbc.core.namedparam.SqlParameterSource.class));
+    verify(jdbc, never()).update(anyString(), any(SqlParameterSource.class));
   }
 }

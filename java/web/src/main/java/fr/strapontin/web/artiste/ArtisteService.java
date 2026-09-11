@@ -68,7 +68,7 @@ public class ArtisteService {
    * @param artisteRepository accès aux données artistes
    * @param objectMapper désérialiseur JSON (pour l'API Deezer)
    * @param restClient client HTTP partagé (timeout 5s/10s défini dans {@link
-   *   fr.strapontin.web.WebConfiguration})
+   *     fr.strapontin.web.WebConfiguration})
    * @param logAdminService journalisation des actions admin
    */
   public ArtisteService(
@@ -128,8 +128,10 @@ public class ArtisteService {
       // constaté en E2E (webkit, timeout d'assertion à 25 s dépassé). En parallèle, l'attente
       // totale est bornée par le plus lent des deux, pas leur somme.
       if (resultatsSuggestions.size() < 3) {
-        final var futureWikidata = CompletableFuture.supplyAsync(() -> rechercherWikidata(recherche));
-        final var futureDeezer = CompletableFuture.supplyAsync(() -> rechercherDeezer(recherche));
+        final CompletableFuture<List<SuggestionArtiste>> futureWikidata =
+            CompletableFuture.supplyAsync(() -> rechercherWikidata(recherche));
+        final CompletableFuture<List<SuggestionArtiste>> futureDeezer =
+            CompletableFuture.supplyAsync(() -> rechercherDeezer(recherche));
         ajouterSuggestionsInedites(resultatsSuggestions, nomsDejaPresents, futureWikidata.join());
         ajouterSuggestionsInedites(resultatsSuggestions, nomsDejaPresents, futureDeezer.join());
       }
@@ -142,7 +144,9 @@ public class ArtisteService {
   }
 
   private static void ajouterSuggestionsInedites(
-      final List<SuggestionArtiste> cible, final Set<String> nomsDejaPresents, final List<SuggestionArtiste> source) {
+      final List<SuggestionArtiste> cible,
+      final Set<String> nomsDejaPresents,
+      final List<SuggestionArtiste> source) {
     for (final SuggestionArtiste r : source) {
       final String norm = Normalisation.normaliserTexte(r.nom());
       if (!nomsDejaPresents.contains(norm)) {
@@ -185,8 +189,8 @@ public class ArtisteService {
    * IDs stables immédiatement, sans attendre le job d'enrichissement nocturne. Un conflit sur
    * l'index unique {@code idx_artistes_wikidata_id} (Q-ID déjà porté par un autre artiste) est
    * rattrapé et loggé plutôt que de faire échouer l'ajout — même pattern que {@code
-   * EnrichissementArtistesService} (jalon 2.6.0) : mieux vaut suivre l'artiste sans son Q-ID que
-   * ne pas pouvoir le suivre du tout.
+   * EnrichissementArtistesService} (jalon 2.6.0) : mieux vaut suivre l'artiste sans son Q-ID que ne
+   * pas pouvoir le suivre du tout.
    *
    * @param userId identifiant de l'utilisateur
    * @param nom nom de l'artiste (non-vide, max 200 car.)
@@ -222,15 +226,16 @@ public class ArtisteService {
    * <p>Sans cela, l'appel HTTP synchrone vers Wikidata ({@link #resoudreDeezerId}) retenait une
    * connexion JDBC HikariCP pendant toute sa durée (jusqu'à 5s), et le déclenchement du worker
    * pouvait s'exécuter avant que l'{@code INSERT} ne soit visible en base (isolation {@code READ
-   * COMMITTED}), faisant manquer l'artiste tout juste ajouté au cycle de fetch qu'il vient
-   * lui-même de déclencher. Exécute immédiatement si aucune transaction n'est active (ex. tests
-   * unitaires sans contexte Spring).
+   * COMMITTED}), faisant manquer l'artiste tout juste ajouté au cycle de fetch qu'il vient lui-même
+   * de déclencher. Exécute immédiatement si aucune transaction n'est active (ex. tests unitaires
+   * sans contexte Spring).
    *
    * @param artisteId UUID de l'artiste résolu/créé dans la transaction en cours
    * @param nom nom affiché tel que saisi
    * @param wikidataId Q-ID Wikidata optionnel (peut être {@code null})
    */
-  private void executerApresCommit(final UUID artisteId, final String nom, final String wikidataId) {
+  private void executerApresCommit(
+      final UUID artisteId, final String nom, final String wikidataId) {
     final Runnable action =
         () -> {
           if (wikidataId != null && !wikidataId.isBlank()) {
@@ -251,7 +256,8 @@ public class ArtisteService {
     }
   }
 
-  private void resoudreEtPersisterWikidata(final UUID artisteId, final String nom, final String wikidataId) {
+  private void resoudreEtPersisterWikidata(
+      final UUID artisteId, final String nom, final String wikidataId) {
     try {
       artisteRepository.enregistrerArtisteSource(artisteId, "wikidata", wikidataId);
       final String deezerId = resoudreDeezerId(wikidataId);
@@ -291,7 +297,8 @@ public class ArtisteService {
    */
   public UUID resoudreArtisteId(final String nom, final String normalise) {
     final Set<String> tokens = CorrespondanceSalle.tokensSignificatifs(normalise);
-    for (final Map<String, Object> candidat : artisteRepository.chercherCandidatsParTokens(tokens)) {
+    for (final Map<String, Object> candidat :
+        artisteRepository.chercherCandidatsParTokens(tokens)) {
       final String nomNormCandidat = (String) candidat.get("nom_norm");
       if (nomNormCandidat.equals(normalise)) {
         return artisteRepository.upsertArtiste(nom, normalise);
@@ -306,10 +313,10 @@ public class ArtisteService {
   /**
    * Indique si une recherche correspond, même partiellement, à un artiste déjà suivi.
    *
-   * <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un
-   * terme partiel (ex. "Yael" ne matchait pas "yaelnaim") alors que l'artiste a bien été trouvé
-   * puis exclu des suggestions car déjà suivi — l'utilisateur n'avait alors aucun signal
-   * expliquant l'absence de résultat.
+   * <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un terme
+   * partiel (ex. "Yael" ne matchait pas "yaelnaim") alors que l'artiste a bien été trouvé puis
+   * exclu des suggestions car déjà suivi — l'utilisateur n'avait alors aucun signal expliquant
+   * l'absence de résultat.
    *
    * <p>Package-private (plutôt que {@code private}) pour être testable directement.
    *
@@ -317,7 +324,8 @@ public class ArtisteService {
    * @param nomsNorm noms normalisés des artistes déjà suivis
    * @return {@code true} si un artiste déjà suivi contient la recherche
    */
-  static boolean contientCorrespondancePartielle(final String rechercheNorm, final Set<String> nomsNorm) {
+  static boolean contientCorrespondancePartielle(
+      final String rechercheNorm, final Set<String> nomsNorm) {
     return nomsNorm.stream().anyMatch(nom -> nom.contains(rechercheNorm));
   }
 
@@ -347,16 +355,15 @@ public class ArtisteService {
    * Recherche des artistes par nom via Wikidata Search ({@code wbsearchentities}).
    *
    * <p>Ne résout pas le P2722 (Deezer ID) à ce stade — un appel {@code wbgetentities}
-   * supplémentaire par candidat serait disproportionné pour de l'autocomplete interactif ; le
-   * P2722 n'est résolu qu'à la sélection effective (voir {@link #resoudreDeezerId}).
+   * supplémentaire par candidat serait disproportionné pour de l'autocomplete interactif ; le P2722
+   * n'est résolu qu'à la sélection effective (voir {@link #resoudreDeezerId}).
    *
    * @param terme terme de recherche saisi par l'utilisateur
    * @return suggestions Wikidata filtrées par mots-clés de description, vide si aucune ou en cas
-   *   d'échec réseau
-   *
-   *   <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
-   *   ({@code Mockito.spy}) évitant un appel réseau réel vers Wikidata en test unitaire — même
-   *   motif que {@link #resoudreDeezerId}.
+   *     d'échec réseau
+   *     <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
+   *     ({@code Mockito.spy}) évitant un appel réseau réel vers Wikidata en test unitaire — même
+   *     motif que {@link #resoudreDeezerId}.
    */
   List<SuggestionArtiste> rechercherWikidata(final String terme) {
     try {
@@ -419,8 +426,8 @@ public class ArtisteService {
   /**
    * Résout le P2722 (Deezer ID) d'un artiste Wikidata via {@code wbgetentities}.
    *
-   * <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
-   * ({@code Mockito.spy}) évitant un appel réseau réel vers Wikidata en test unitaire.
+   * <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution ({@code
+   * Mockito.spy}) évitant un appel réseau réel vers Wikidata en test unitaire.
    *
    * @param wikidataId Q-ID Wikidata
    * @return identifiant Deezer, ou {@code null} si absent ou en cas d'échec réseau
@@ -475,9 +482,8 @@ public class ArtisteService {
   /**
    * @param terme terme de recherche saisi par l'utilisateur
    * @return suggestions Deezer, vide si aucune ou en cas d'échec réseau
-   *
-   *   <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même motif
-   *   que {@link #rechercherWikidata}.
+   *     <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même
+   *     motif que {@link #rechercherWikidata}.
    */
   List<SuggestionArtiste> rechercherDeezer(final String terme) {
     try {

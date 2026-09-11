@@ -91,19 +91,22 @@ class SecurityConfigurationTest {
 
   @Test
   void cookieSerializer_maxAge_est30Jours() {
-    final DefaultCookieSerializer serialiseur = (DefaultCookieSerializer) config.cookieSerializer(false);
+    final DefaultCookieSerializer serialiseur =
+        (DefaultCookieSerializer) config.cookieSerializer(false);
     assertEquals(2592000, lireMaxAge(serialiseur));
   }
 
   @Test
   void cookieSerializer_httpOnly_estActif() {
-    final DefaultCookieSerializer serialiseur = (DefaultCookieSerializer) config.cookieSerializer(false);
+    final DefaultCookieSerializer serialiseur =
+        (DefaultCookieSerializer) config.cookieSerializer(false);
     assertTrue(lireHttpOnly(serialiseur));
   }
 
   @Test
   void cookieSerializer_sameSite_estLax() {
-    final DefaultCookieSerializer serialiseur = (DefaultCookieSerializer) config.cookieSerializer(false);
+    final DefaultCookieSerializer serialiseur =
+        (DefaultCookieSerializer) config.cookieSerializer(false);
     assertEquals("Lax", lireSameSite(serialiseur));
   }
 

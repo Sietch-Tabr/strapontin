@@ -56,7 +56,8 @@ public record BilanFetch(int appels, int erreursHttp) {
    * @param seuilAppelsMin nombre minimal d'appels pour déclencher l'escalade en {@code error}
    * @return entrée à journaliser, vide si rien à signaler
    */
-  public Optional<EntreeLog> evaluer(final String typeJob, final String nomSource, final int seuilAppelsMin) {
+  public Optional<EntreeLog> evaluer(
+      final String typeJob, final String nomSource, final int seuilAppelsMin) {
     if (appels == 0) {
       return Optional.empty();
     }
@@ -67,16 +68,16 @@ public record BilanFetch(int appels, int erreursHttp) {
 
     final String niveau = panneTotale ? "error" : "warn";
     final String message =
-            typeJob
-                    + " — "
-                    + nomSource
-                    + " "
-                    + (panneTotale ? "intégralement en échec" : "en échec partiel")
-                    + " sur ce cycle ("
-                    + erreursHttp
-                    + "/"
-                    + appels
-                    + " appels HTTP)";
+        typeJob
+            + " — "
+            + nomSource
+            + " "
+            + (panneTotale ? "intégralement en échec" : "en échec partiel")
+            + " sur ce cycle ("
+            + erreursHttp
+            + "/"
+            + appels
+            + " appels HTTP)";
     final Map<String, Object> meta = Map.of("appels", appels, "erreursHttp", erreursHttp);
     return Optional.of(new EntreeLog(niveau, message, meta));
   }

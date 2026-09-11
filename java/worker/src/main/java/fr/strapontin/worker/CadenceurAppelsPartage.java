@@ -38,7 +38,8 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
    * @param cle identifiant du service externe cadencé (ex. {@code "ticketmaster"})
    * @param delaiMinMs écart minimal en millisecondes entre deux appels successifs
    */
-  public CadenceurAppelsPartage(final NamedParameterJdbcTemplate jdbc, final String cle, final long delaiMinMs) {
+  public CadenceurAppelsPartage(
+      final NamedParameterJdbcTemplate jdbc, final String cle, final long delaiMinMs) {
     this.jdbc = jdbc;
     this.cle = cle;
     this.delaiMinMs = delaiMinMs;
@@ -57,7 +58,8 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
                 """,
             Map.of("cle", cle, "delaiMs", delaiMinMs),
             Timestamp.class);
-    final long attenteMs = Duration.between(Instant.now(), prochainAppelAutorise.toInstant()).toMillis();
+    final long attenteMs =
+        Duration.between(Instant.now(), prochainAppelAutorise.toInstant()).toMillis();
     if (attenteMs <= 0) {
       return;
     }

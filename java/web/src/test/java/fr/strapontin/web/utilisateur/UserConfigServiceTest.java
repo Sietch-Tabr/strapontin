@@ -44,7 +44,8 @@ class UserConfigServiceTest {
 
   @Test
   void majNotifications_frequenceInvalide_leveErreurMetier() {
-    final RequeteNotifications requete = new RequeteNotifications("invalide", true, false, false, false);
+    final RequeteNotifications requete =
+        new RequeteNotifications("invalide", true, false, false, false);
 
     assertThatThrownBy(() -> service.majNotifications("user-1", requete))
         .isInstanceOf(ErreurMetier.class);
@@ -61,7 +62,8 @@ class UserConfigServiceTest {
 
   @Test
   void majNotifications_frequenceJamaisSansCanal_neLevePasErreur() {
-    final RequeteNotifications requete = new RequeteNotifications("jamais", false, false, false, false);
+    final RequeteNotifications requete =
+        new RequeteNotifications("jamais", false, false, false, false);
 
     service.majNotifications("user-1", requete);
 

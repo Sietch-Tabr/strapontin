@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -39,10 +40,7 @@ class ControleIntegriteServiceTest {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     signalementMatchingService = mock(SignalementMatchingService.class);
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<UUID>>any()))
+    when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<UUID>>any()))
         .thenReturn(List.of());
     service = new ControleIntegriteService(jdbc, signalementMatchingService);
   }
@@ -111,9 +109,7 @@ class ControleIntegriteServiceTest {
   void verifier_evenementOrphelinAncien_signale() {
     final UUID evenementId = UUID.randomUUID();
     when(jdbc.query(
-            contains("evenements"),
-            anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<UUID>>any()))
+            contains("evenements"), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<UUID>>any()))
         .thenReturn(List.of(evenementId));
 
     final int total = service.verifier();

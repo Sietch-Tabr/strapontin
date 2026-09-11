@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -135,7 +136,7 @@ public class AdminService {
         GROUP BY PRINCIPAL_NAME
         """,
         Map.of(),
-        (org.springframework.jdbc.core.RowCallbackHandler)
+        (RowCallbackHandler)
             rs -> activiteParUsername.put(rs.getString("PRINCIPAL_NAME"), rs.getLong("derniere")));
 
     final List<UtilisateurAdmin> utilisateurs =
@@ -144,8 +145,7 @@ public class AdminService {
                 u -> {
                   final String username = (String) u.get("username");
                   final Long derniereMs = activiteParUsername.get(username);
-                  final java.sql.Timestamp revocationTs =
-                      (java.sql.Timestamp) u.get("revocation_admin_le");
+                  final Timestamp revocationTs = (Timestamp) u.get("revocation_admin_le");
                   final Number nbSallesNum = (Number) u.get("nb_salles");
                   final Number nbArtistesNum = (Number) u.get("nb_artistes");
                   return new UtilisateurAdmin(
@@ -155,7 +155,7 @@ public class AdminService {
                       username,
                       (String) u.get("display_username"),
                       (Boolean) u.get("must_change_credentials"),
-                      ((java.sql.Timestamp) u.get("created_at")).toInstant(),
+                      ((Timestamp) u.get("created_at")).toInstant(),
                       derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null,
                       revocationTs != null ? revocationTs.toInstant() : null,
                       nbSallesNum != null ? nbSallesNum.intValue() : 0,
@@ -186,10 +186,11 @@ public class AdminService {
    * @return résultat de la création, ou {@link Optional#empty()} si l'email est déjà pris
    */
   @Transactional
-  public Optional<ResultatCreation> creerUtilisateur(final String email, final String adminId, final String baseUrl) {
+  public Optional<ResultatCreation> creerUtilisateur(
+      final String email, final String adminId, final String baseUrl) {
     final boolean emailExistant =
         !jdbc.queryForList(
-            "SELECT 1 FROM users WHERE email = :email", Map.of("email", email), Integer.class)
+                "SELECT 1 FROM users WHERE email = :email", Map.of("email", email), Integer.class)
             .isEmpty();
     if (emailExistant) {
       return Optional.empty();
@@ -349,7 +350,10 @@ public class AdminService {
   }
 
   private void notifierModification(
-      final String userId, final String adminId, final ChampsModification champs, final boolean retrogradationAdmin) {
+      final String userId,
+      final String adminId,
+      final ChampsModification champs,
+      final boolean retrogradationAdmin) {
     if (!champs.nom().isEmpty()) {
       logAdminService.logAdmin(
           "info", "admin", "nom modifié", Map.of("userId", userId, "parAdmin", adminId));
@@ -507,7 +511,8 @@ public class AdminService {
    * @return le résultat (email + lien) si l'utilisateur existe, {@link Optional#empty()} sinon
    */
   @Transactional
-  public Optional<ResultatReset> reinitialiserMdp(final String userId, final String adminId, final String baseUrl) {
+  public Optional<ResultatReset> reinitialiserMdp(
+      final String userId, final String adminId, final String baseUrl) {
     final List<Map<String, Object>> cible =
         jdbc.queryForList(
             "SELECT id, email FROM users WHERE id = :userId", Map.of("userId", userId));

@@ -147,7 +147,10 @@ final class EmailTemplates {
    * @return le HTML de l'email de signalement
    */
   static String signalement(
-      final String typeLabel, final String expediteurEmail, final String message, final String baseUrl) {
+      final String typeLabel,
+      final String expediteurEmail,
+      final String message,
+      final String baseUrl) {
     final String corps =
         """
             <table style="border-collapse: collapse; width: 100%%; margin-bottom: 24px">
@@ -170,14 +173,15 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML du digest
    */
-  static String digestConcerts(final String sujet, final List<LigneConcert> lignes, final String baseUrl) {
+  static String digestConcerts(
+      final String sujet, final List<LigneConcert> lignes, final String baseUrl) {
     final StringBuilder lignesHtml = new StringBuilder();
     String artistePrecedent = null;
     for (final LigneConcert c : lignes) {
       final String urlBillets =
           c.url() != null
               ? (" — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"
-              .formatted(e(c.url()), C_NOIR))
+                  .formatted(e(c.url()), C_NOIR))
               : "";
       // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
       // digest couvrant plusieurs artistes se lit comme une liste continue.
@@ -228,7 +232,7 @@ final class EmailTemplates {
             <p style="color: #333; font-size: 13px; font-family: monospace; background: #f5f5f5; \
             border-left: 3px solid %s; padding: 8px 12px; margin: 0 0 16px; word-break: break-all">%s</p>
             """
-            .formatted(C_ERREUR, e(raison)))
+                .formatted(C_ERREUR, e(raison)))
             : "";
     final String corps =
         """
@@ -368,7 +372,11 @@ final class EmailTemplates {
    * @return le HTML de l'alerte quota Resend
    */
   static String alerteQuotaResend(
-      final int envoyesJour, final int limiteJour, final int envoyesMois, final int limiteMois, final String baseUrl) {
+      final int envoyesJour,
+      final int limiteJour,
+      final int envoyesMois,
+      final int limiteMois,
+      final String baseUrl) {
     final String corps =
         """
             <p style="color: %s; font-size: 14px; margin: 0 0 8px">
@@ -479,7 +487,7 @@ final class EmailTemplates {
             <p style="color: %s; font-size: 14px; white-space: pre-wrap;\
              border-left: 3px solid %s; padding-left: 12px; margin: 16px 0 0">%s</p>
             """
-            .formatted(C_TEXTE, C_BORDURE, e(commentaire))
+                .formatted(C_TEXTE, C_BORDURE, e(commentaire))
             : "";
     final String corps =
         """
@@ -604,7 +612,8 @@ final class EmailTemplates {
     return enveloppAvecCouleur(C_NOIR, titre, corps, baseUrl);
   }
 
-  private static String enveloppErreur(final String titre, final String corps, final String baseUrl) {
+  private static String enveloppErreur(
+      final String titre, final String corps, final String baseUrl) {
     return enveloppAvecCouleur(C_ERREUR, titre, corps, baseUrl);
   }
 

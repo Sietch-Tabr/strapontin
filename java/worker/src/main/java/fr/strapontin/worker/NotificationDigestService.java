@@ -33,6 +33,7 @@ import nl.martijndwars.webpush.Subscription;
 import org.apache.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -89,7 +90,7 @@ public class NotificationDigestService {
    * {@code @Autowired} que sur ce constructeur, sans quoi Spring ne peut pas déterminer lequel des
    * deux constructeurs utiliser dès qu'il en existe plus d'un.
    */
-  @org.springframework.beans.factory.annotation.Autowired
+  @Autowired
   public NotificationDigestService(
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
@@ -193,7 +194,8 @@ public class NotificationDigestService {
       }
 
       final Timestamp maintenant = Timestamp.from(Instant.now());
-      for (final Map.Entry<String, List<ConcertNotif>> entree : groupes.parUtilisateur().entrySet()) {
+      for (final Map.Entry<String, List<ConcertNotif>> entree :
+          groupes.parUtilisateur().entrySet()) {
         final String userId = entree.getKey();
         final List<ConcertNotif> concerts = entree.getValue();
         final Set<UUID> concertIdsNotifies = new LinkedHashSet<>();
@@ -387,16 +389,19 @@ public class NotificationDigestService {
   }
 
   private ResultatDigest envoyerDigest(
-      final String userId, final String email, final List<ConcertNotif> concerts, final ConfigNotifUser config) {
+      final String userId,
+      final String email,
+      final List<ConcertNotif> concerts,
+      final ConfigNotifUser config) {
     final boolean emailActif = !"jamais".equals(config.frequenceNotifications());
     final List<ConcertNotif> concertsEmail =
         emailActif
             ? concerts.stream()
-            .filter(
-                c ->
-                    ("ARTISTE".equals(c.source()) && config.notifArtistes())
-                        || ("SALLE".equals(c.source()) && config.notifSalles()))
-            .toList()
+                .filter(
+                    c ->
+                        ("ARTISTE".equals(c.source()) && config.notifArtistes())
+                            || ("SALLE".equals(c.source()) && config.notifSalles()))
+                .toList()
             : List.of();
     final List<ConcertNotif> concertsPush =
         concerts.stream()
@@ -555,7 +560,8 @@ public class NotificationDigestService {
   // route déclarée avec un schéma https:// en préfixe si PUBLIC_BASE_URL est configurée
   // (navigation muette au lieu du scroll/anchor visé). icon reste préfixé par baseUrl (ou
   // relatif si absente), résolu par le service worker contre sa propre origine dans les deux cas.
-  private static String construirePayloadPush(final List<ConcertNotif> concerts, final String baseUrl) {
+  private static String construirePayloadPush(
+      final List<ConcertNotif> concerts, final String baseUrl) {
     final ConcertNotif premier = concerts.get(0);
     final String titre =
         concerts.size() == 1
@@ -564,8 +570,8 @@ public class NotificationDigestService {
     final String corps =
         concerts.size() == 1
             ? ("presale".equals(premier.statut()) ? "Prévente · " : "")
-            + formaterDate(premier.date())
-            + (premier.ville() != null ? " · " + premier.ville() : "")
+                + formaterDate(premier.date())
+                + (premier.ville() != null ? " · " + premier.ville() : "")
             : construireLignesPreventePush(concerts);
     String url;
     if (concerts.size() == 1) {
@@ -630,7 +636,7 @@ public class NotificationDigestService {
       final String lien =
           c.url() != null
               ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
-              .formatted(e(c.url()))
+                  .formatted(e(c.url()))
               : "";
       final String prevente =
           "presale".equals(c.statut())

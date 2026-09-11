@@ -7,6 +7,7 @@ package fr.strapontin.web.securite;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -53,7 +54,8 @@ public class AppareilsService {
    * @param userId identifiant de l'utilisateur
    * @param userAgent en-tête {@code User-Agent} de la requête de connexion, peut être {@code null}
    */
-  public void enregistrerAppareil(final String sessionId, final String userId, final String userAgent) {
+  public void enregistrerAppareil(
+      final String sessionId, final String userId, final String userAgent) {
     try {
       jdbc.update(
           "INSERT INTO session_appareils (session_id, user_id, user_agent)"
@@ -91,7 +93,7 @@ public class AppareilsService {
         Map.of("userId", userId),
         (rs, _) ->
             new AppareilDto(
-                rs.getObject("appareil_id", java.util.UUID.class).toString(),
+                rs.getObject("appareil_id", UUID.class).toString(),
                 rs.getString("user_agent"),
                 Instant.ofEpochMilli(rs.getLong("creation_time")),
                 Instant.ofEpochMilli(rs.getLong("last_access_time")),

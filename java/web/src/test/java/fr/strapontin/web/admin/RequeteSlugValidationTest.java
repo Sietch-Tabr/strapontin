@@ -27,7 +27,8 @@ class RequeteSlugValidationTest {
   @Test
   void slug_null_estValide() {
     // null/vide est légitime : suppression du slug existant.
-    final Set<ConstraintViolation<RequeteSlug>> violations = VALIDATOR.validate(new RequeteSlug(null));
+    final Set<ConstraintViolation<RequeteSlug>> violations =
+        VALIDATOR.validate(new RequeteSlug(null));
     assertTrue(violations.isEmpty());
   }
 

@@ -174,7 +174,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     final Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
     final Map<String, List<SalleAEnrichir>> parDept =
         aTraiter.stream().collect(Collectors.groupingBy(SalleAEnrichir::dept));
-    for (final var entree : parDept.entrySet()) {
+    for (final Map.Entry<String, List<SalleAEnrichir>> entree : parDept.entrySet()) {
       final CentreDept centre = CentresDepartement.PAR_DEPT.get(entree.getKey());
       if (centre == null) {
         continue;
@@ -215,8 +215,8 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     for (int essai = 1; essai <= NB_ESSAIS_MAX; essai++) {
       compteurBilan.enregistrerAppel();
       try {
-        @SuppressWarnings("unchecked") final
-            Map<String, Object> data =
+        @SuppressWarnings("unchecked")
+        final Map<String, Object> data =
             restClient
                 .post()
                 .uri(BASE_URL)
@@ -279,7 +279,8 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     return APOSTROPHE_DROITE.matcher(echappeGuillemets).replaceAll("['’]");
   }
 
-  private static String construireRequeteOverpassQL(final List<SalleAEnrichir> lot, final CentreDept centre) {
+  private static String construireRequeteOverpassQL(
+      final List<SalleAEnrichir> lot, final CentreDept centre) {
     final String nomsRegex =
         lot.stream().map(s -> echapperRegex(s.nom())).collect(Collectors.joining("|"));
     final int rayonMetres = centre.rayon() * 1000 + MARGE_RAYON_METRES;
@@ -306,14 +307,14 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     if (data == null) {
       return resultats;
     }
-    final var elements = (List<Map<String, Object>>) data.get("elements");
+    final List<Map<String, Object>> elements = (List<Map<String, Object>>) data.get("elements");
     if (elements == null) {
       return resultats;
     }
 
     for (final SalleAEnrichir salle : lot) {
-      for (final var element : elements) {
-        final var tags = (Map<String, String>) element.get("tags");
+      for (final Map<String, Object> element : elements) {
+        final Map<String, String> tags = (Map<String, String>) element.get("tags");
         if (tags == null) {
           continue;
         }

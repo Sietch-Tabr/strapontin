@@ -76,7 +76,8 @@ class AppareilsServiceTest {
               return List.of(mapper.mapRow(rs, 0));
             });
 
-    final List<AppareilsService.AppareilDto> resultat = service.listerAppareils("u1", "sess-courante");
+    final List<AppareilsService.AppareilDto> resultat =
+        service.listerAppareils("u1", "sess-courante");
 
     assertEquals(1, resultat.size());
     assertEquals(appareilId.toString(), resultat.get(0).appareilId());

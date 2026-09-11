@@ -11,6 +11,7 @@ import fr.strapontin.web.concert.FiltreConcertsBuilder;
 import fr.strapontin.web.utilisateur.UserConfigService;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,7 +43,8 @@ public class SpectacleService {
    * @param jdbc accès JDBC
    * @param userConfigService lecture du filtre de disponibilité
    */
-  public SpectacleService(final NamedParameterJdbcTemplate jdbc, final UserConfigService userConfigService) {
+  public SpectacleService(
+      final NamedParameterJdbcTemplate jdbc, final UserConfigService userConfigService) {
     this.jdbc = jdbc;
     this.userConfigService = userConfigService;
   }
@@ -73,16 +75,16 @@ public class SpectacleService {
 
     final String selectSql =
         """
-            SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
-                   c.salle, c.ville, c.url, c.classification, c.first_seen, c.statut, um.vu_le,
-                   c.presale_debut, c.presale_nom, c.absence_detectee_le
-            FROM user_matches um
-            INNER JOIN concerts c ON um.concert_id = c.id
-            LEFT JOIN artistes a ON a.id = c.artiste_id
-            WHERE %s
-            ORDER BY %s
-            LIMIT :limit OFFSET :offset
-            """
+        SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
+               c.salle, c.ville, c.url, c.classification, c.first_seen, c.statut, um.vu_le,
+               c.presale_debut, c.presale_nom, c.absence_detectee_le
+        FROM user_matches um
+        INNER JOIN concerts c ON um.concert_id = c.id
+        LEFT JOIN artistes a ON a.id = c.artiste_id
+        WHERE %s
+        ORDER BY %s
+        LIMIT :limit OFFSET :offset
+        """
             .formatted(whereClause, FiltreConcertsBuilder.clauseTri(filtre.tri()));
 
     final Map<String, Object> paramsPage = new HashMap<>(params);
@@ -92,11 +94,14 @@ public class SpectacleService {
     final Map<String, Object> baseParams = Map.of("userId", userId, "aujourd8", aujourd8);
 
     // COUNT et nbSuivi démarrés en parallèle pendant l'exécution de la requête principale
-    final var futureTotal = CompletableFuture.supplyAsync(() -> compterTotal(whereClause, params));
-    final var futureNbSuivi = CompletableFuture.supplyAsync(() -> compterSuivi(baseParams));
+    final CompletableFuture<Integer> futureTotal =
+        CompletableFuture.supplyAsync(() -> compterTotal(whereClause, params));
+    final CompletableFuture<Integer> futureNbSuivi =
+        CompletableFuture.supplyAsync(() -> compterSuivi(baseParams));
 
     // Requête principale sur le thread courant pendant que les futures s'exécutent
-    final List<SpectacleDto> concerts = jdbc.query(selectSql, paramsPage, (rs, _) -> mapSpectacle(rs));
+    final List<SpectacleDto> concerts =
+        jdbc.query(selectSql, paramsPage, (rs, _) -> mapSpectacle(rs));
 
     final FiltresDisponibles filtresDispos = chargerFiltresDisponibles(conditionMasque, baseParams);
 
@@ -137,10 +142,10 @@ public class SpectacleService {
     final StringBuilder where =
         new StringBuilder(
             """
-                um.user_id = :userId
-                AND c.date >= :aujourd8
-                AND um.masque_le IS %s
-                """
+            um.user_id = :userId
+            AND c.date >= :aujourd8
+            AND um.masque_le IS %s
+            """
                 .formatted(conditionMasque));
 
     if (filtre.quinzaine()) {
@@ -175,8 +180,12 @@ public class SpectacleService {
    * @param sources sources actives ({@code "artistes"}, {@code "salles"})
    */
   private void appliquerFiltreSources(
-      final StringBuilder where, final Map<String, Object> params, final String userId, final List<String> sources) {
-    final boolean sourceArtistes = sources == null || sources.isEmpty() || sources.contains("artistes");
+      final StringBuilder where,
+      final Map<String, Object> params,
+      final String userId,
+      final List<String> sources) {
+    final boolean sourceArtistes =
+        sources == null || sources.isEmpty() || sources.contains("artistes");
     final boolean sourceSalles = sources == null || sources.isEmpty() || sources.contains("salles");
 
     if (sourceArtistes && !sourceSalles) {
@@ -251,25 +260,25 @@ public class SpectacleService {
       final String conditionMasque, final Map<String, Object> baseParams) {
     final String cteFiltresSql =
         """
-            WITH filtres_base AS (
-              SELECT c.genre, to_char(c.date, 'YYYY-MM') AS mois, c.classification
-              FROM user_matches um
-              INNER JOIN concerts c ON um.concert_id = c.id
-              WHERE um.user_id = :userId
-                AND c.date >= :aujourd8
-                AND um.masque_le IS %s
-            )
-            SELECT 'genre'          AS type, genre          AS valeur
-              FROM (SELECT DISTINCT genre FROM filtres_base WHERE genre IS NOT NULL) g
-            UNION ALL
-            SELECT 'mois'           AS type, mois           AS valeur
-              FROM (SELECT DISTINCT mois  FROM filtres_base) m
-            UNION ALL
-            SELECT 'classification' AS type, classification AS valeur
-              FROM (SELECT DISTINCT classification FROM filtres_base
-                    WHERE classification IS NOT NULL) cl
-            ORDER BY type, valeur
-            """
+        WITH filtres_base AS (
+          SELECT c.genre, to_char(c.date, 'YYYY-MM') AS mois, c.classification
+          FROM user_matches um
+          INNER JOIN concerts c ON um.concert_id = c.id
+          WHERE um.user_id = :userId
+            AND c.date >= :aujourd8
+            AND um.masque_le IS %s
+        )
+        SELECT 'genre'          AS type, genre          AS valeur
+          FROM (SELECT DISTINCT genre FROM filtres_base WHERE genre IS NOT NULL) g
+        UNION ALL
+        SELECT 'mois'           AS type, mois           AS valeur
+          FROM (SELECT DISTINCT mois  FROM filtres_base) m
+        UNION ALL
+        SELECT 'classification' AS type, classification AS valeur
+          FROM (SELECT DISTINCT classification FROM filtres_base
+                WHERE classification IS NOT NULL) cl
+        ORDER BY type, valeur
+        """
             .formatted(conditionMasque);
 
     final List<String> genres = new ArrayList<>();
@@ -296,9 +305,9 @@ public class SpectacleService {
    * @throws SQLException en cas d'erreur de lecture
    */
   private SpectacleDto mapSpectacle(final ResultSet rs) throws SQLException {
-    final java.time.Instant firstSeen =
+    final Instant firstSeen =
         rs.getTimestamp("first_seen") != null ? rs.getTimestamp("first_seen").toInstant() : null;
-    final java.time.Instant presaleDebut =
+    final Instant presaleDebut =
         rs.getTimestamp("presale_debut") != null
             ? rs.getTimestamp("presale_debut").toInstant()
             : null;
@@ -330,9 +339,9 @@ public class SpectacleService {
     final String sql =
         masquer
             ? "UPDATE user_matches SET masque_le = now() WHERE user_id = :userId AND concert_id"
-            + " = CAST(:concertId AS uuid)"
+                + " = CAST(:concertId AS uuid)"
             : "UPDATE user_matches SET masque_le = NULL WHERE user_id = :userId AND concert_id"
-            + " = CAST(:concertId AS uuid)";
+                + " = CAST(:concertId AS uuid)";
     jdbc.update(sql, Map.of("userId", userId, "concertId", concertId));
   }
 

@@ -38,7 +38,8 @@ class ResolveurSalleParConcert {
   private final NamedParameterJdbcTemplate jdbc;
   private final ClientNominatim clientNominatim;
 
-  ResolveurSalleParConcert(final NamedParameterJdbcTemplate jdbc, final ClientNominatim clientNominatim) {
+  ResolveurSalleParConcert(
+      final NamedParameterJdbcTemplate jdbc, final ClientNominatim clientNominatim) {
     this.jdbc = jdbc;
     this.clientNominatim = clientNominatim;
   }
@@ -158,14 +159,15 @@ class ResolveurSalleParConcert {
    * @return UUID de la salle existante la plus proche dans le rayon autorisé, ou {@code null} si
    *   aucune
    */
-  private UUID chercherSalleParProximiteGps(final ClientNominatim.Coordonnees coords, final String dept) {
+  private UUID chercherSalleParProximiteGps(
+      final ClientNominatim.Coordonnees coords, final String dept) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT id, latitude, longitude FROM salles"
                 + " WHERE latitude IS NOT NULL AND longitude IS NOT NULL"
                 + " AND (:dept IS NULL OR dept IS NULL OR dept = :dept)",
             new MapSqlParameterSource().addValue("dept", dept, Types.VARCHAR));
-    for (final var ligne : lignes) {
+    for (final Map<String, Object> ligne : lignes) {
       final Double latitude = (Double) ligne.get("latitude");
       final Double longitude = (Double) ligne.get("longitude");
       if (FusionSallesClePorteeService.coordonneesConnuesEtProches(
@@ -203,7 +205,8 @@ class ResolveurSalleParConcert {
       return null;
     }
 
-    final List<Map<String, Object>> lignes = requeterCandidatsParTokens(tokens, nomNormSquash, dept);
+    final List<Map<String, Object>> lignes =
+        requeterCandidatsParTokens(tokens, nomNormSquash, dept);
     return meilleurCandidatValide(nom, nomNorm, lignes);
   }
 
@@ -269,7 +272,7 @@ class ResolveurSalleParConcert {
     UUID meilleurUuid = null;
     String meilleurNomNorm = null;
     double meilleurScore = -1;
-    for (final var ligne : lignes) {
+    for (final Map<String, Object> ligne : lignes) {
       final UUID uuid = (UUID) ligne.get("id");
       final String nomCandidat = (String) ligne.get("nom");
       final String nomNormCandidat = (String) ligne.get("nom_norm");
@@ -419,7 +422,8 @@ class ResolveurSalleParConcert {
    * @param deptEntrant département du concert à résoudre
    * @return premier candidat géographiquement cohérent, ou {@code null} si aucun ne l'est
    */
-  private UUID premierCandidatGeographiquementCoherent(final List<UUID> candidats, final String deptEntrant) {
+  private UUID premierCandidatGeographiquementCoherent(
+      final List<UUID> candidats, final String deptEntrant) {
     final Map<UUID, String> depts = deptsConnus(new HashSet<>(candidats));
     for (final UUID candidat : candidats) {
       final String deptConnu = depts.get(candidat);
@@ -515,7 +519,8 @@ class ResolveurSalleParConcert {
    *   concert (silencieux si le {@code nom_norm} de la salle résolue n'est pas connu — pas de
    *   réalignement sans confirmation positive de la divergence)
    */
-  private static boolean salleIdDivergent(final ValeurConcert c, final Map<UUID, String> nomNormParSalleId) {
+  private static boolean salleIdDivergent(
+      final ValeurConcert c, final Map<UUID, String> nomNormParSalleId) {
     if (c.salleId() == null) {
       return true;
     }
@@ -537,7 +542,7 @@ class ResolveurSalleParConcert {
         jdbc.queryForList(
             "SELECT id, nom_norm FROM salles WHERE id IN (:ids)", Map.of("ids", salleIds));
     final Map<UUID, String> resultat = new HashMap<>();
-    for (final var ligne : lignes) {
+    for (final Map<String, Object> ligne : lignes) {
       resultat.put((UUID) ligne.get("id"), (String) ligne.get("nom_norm"));
     }
     return resultat;
@@ -564,7 +569,7 @@ class ResolveurSalleParConcert {
                 + " FROM salles s WHERE s.id IN (:ids)",
             Map.of("ids", salleIds));
     final Map<UUID, String> resultat = new HashMap<>();
-    for (final var ligne : lignes) {
+    for (final Map<String, Object> ligne : lignes) {
       final String dept = (String) ligne.get("dept");
       if (dept != null) {
         resultat.put((UUID) ligne.get("id"), dept);

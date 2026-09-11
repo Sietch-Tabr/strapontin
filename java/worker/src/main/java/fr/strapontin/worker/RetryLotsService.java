@@ -101,7 +101,8 @@ public class RetryLotsService {
     programmerRetry(typeJob, config, identifiantsEnEchec);
   }
 
-  private void programmerRetry(final String typeJob, final ConfigRetry config, final List<String> identifiants) {
+  private void programmerRetry(
+      final String typeJob, final ConfigRetry config, final List<String> identifiants) {
     try {
       final Trigger trigger =
           TriggerBuilder.newTrigger()

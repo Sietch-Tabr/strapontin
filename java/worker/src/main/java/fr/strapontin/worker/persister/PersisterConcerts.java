@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -131,7 +132,8 @@ public class PersisterConcerts {
   private static int scoreArtisteSalle(final String artiste, final String salle) {
     final int artisteDiacr =
         Normalizer.normalize(artiste, Normalizer.Form.NFD).length() - artiste.length();
-    final int salleDiacr = Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
+    final int salleDiacr =
+        Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
     final int artisteCasseMixte = artiste.equals(artiste.toUpperCase()) ? 0 : 5;
     final int salleCasseMixte = salle.equals(salle.toUpperCase()) ? 0 : 1;
     return artisteDiacr * 10 + artisteCasseMixte + salleDiacr + salleCasseMixte;
@@ -248,13 +250,14 @@ public class PersisterConcerts {
         concerts.stream()
             .filter(c -> c.salleSourceId() != null)
             .map(c -> cachesSalles.get(c.salleSourceId()))
-            .filter(java.util.Objects::nonNull)
+            .filter(Objects::nonNull)
             .collect(Collectors.toSet());
     final Map<UUID, String> deptsConnus = reconciliateurSalles.deptsConnus(sallesMappees);
 
     final Map<String, UUID> cachesSallesParNom = new HashMap<>();
     for (final ValeurConcert c : concerts) {
-      final UUID salleMappee = c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
+      final UUID salleMappee =
+          c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
       if (mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)) {
         logsAdminWorker.inserer(
             "warn",
@@ -288,7 +291,7 @@ public class PersisterConcerts {
                       c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
                   final UUID salleId =
                       c.salleSourceId() != null
-                          && !mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)
+                              && !mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)
                           ? salleMappee
                           : cachesSallesParNom.get(c.salleNorm());
                   final UUID artisteId =

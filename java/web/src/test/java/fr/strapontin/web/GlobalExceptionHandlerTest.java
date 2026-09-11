@@ -139,7 +139,8 @@ class GlobalExceptionHandlerTest {
         .when(logAdminService)
         .logAdmin(anyString(), anyString(), anyString(), any());
 
-    final Map<String, Object> rep = handler.gererErreurInattendue(new RuntimeException("panne"), request);
+    final Map<String, Object> rep =
+        handler.gererErreurInattendue(new RuntimeException("panne"), request);
 
     assertEquals("Une erreur inattendue s'est produite.", rep.get("erreur"));
   }

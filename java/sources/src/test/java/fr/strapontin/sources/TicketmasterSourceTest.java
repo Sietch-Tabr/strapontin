@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
@@ -15,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -132,7 +135,8 @@ class TicketmasterSourceTest {
             Map.of(
                 "_embedded",
                 Map.of(
-                    "attractions", List.of(),
+                    "attractions",
+                    List.of(),
                     "venues",
                     List.of(
                         Map.of(
@@ -153,7 +157,8 @@ class TicketmasterSourceTest {
                 "Radiohead - OK Computer Tour",
                 "_embedded",
                 Map.of(
-                    "attractions", List.of(),
+                    "attractions",
+                    List.of(),
                     "venues",
                     List.of(
                         Map.of(
@@ -177,7 +182,8 @@ class TicketmasterSourceTest {
             Map.of(
                 "_embedded",
                 Map.of(
-                    "attractions", List.of(Map.of("name", "Julien Clerc")),
+                    "attractions",
+                    List.of(Map.of("name", "Julien Clerc")),
                     "venues",
                     List.of(
                         Map.of(
@@ -198,7 +204,8 @@ class TicketmasterSourceTest {
                 "Déjeuner pour 2 personnes Tour Eiffel",
                 "_embedded",
                 Map.of(
-                    "attractions", List.of(),
+                    "attractions",
+                    List.of(),
                     "venues",
                     List.of(
                         Map.of(
@@ -217,7 +224,8 @@ class TicketmasterSourceTest {
                 "2 Unlimited - Greatest Hits Tour",
                 "_embedded",
                 Map.of(
-                    "attractions", List.of(),
+                    "attractions",
+                    List.of(),
                     "venues",
                     List.of(
                         Map.of(
@@ -267,7 +275,8 @@ class TicketmasterSourceTest {
             Map.of(
                 "_embedded",
                 Map.of(
-                    "attractions", List.of(Map.of("name", "Artiste")),
+                    "attractions",
+                    List.of(Map.of("name", "Artiste")),
                     "venues",
                     List.of(
                         Map.of(
@@ -288,7 +297,8 @@ class TicketmasterSourceTest {
             Map.of(
                 "_embedded",
                 Map.of(
-                    "attractions", List.of(Map.of("name", "Artiste")),
+                    "attractions",
+                    List.of(Map.of("name", "Artiste")),
                     "venues",
                     List.of(
                         Map.of(
@@ -313,7 +323,8 @@ class TicketmasterSourceTest {
             Map.of(
                 "_embedded",
                 Map.of(
-                    "attractions", List.of(Map.of("name", "Artiste")),
+                    "attractions",
+                    List.of(Map.of("name", "Artiste")),
                     "venues",
                     List.of(
                         Map.of(
@@ -585,8 +596,7 @@ class TicketmasterSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    final com.github.benmanes.caffeine.cache.Cache<String, Boolean> cache =
-        com.github.benmanes.caffeine.cache.Caffeine.newBuilder().build();
+    final Cache<String, Boolean> cache = Caffeine.newBuilder().build();
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient, cache);
     final String id = source.rechercherAttractionId("Furies");
 
@@ -674,7 +684,8 @@ class TicketmasterSourceTest {
                 Map.of(
                     "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
                     "status", Map.of("code", "offsale")),
-                "sales", Map.of("public", Map.of("startDateTime", "2099-01-01T12:00:00Z"))));
+                "sales",
+                Map.of("public", Map.of("startDateTime", "2099-01-01T12:00:00Z"))));
 
     final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
 
@@ -708,7 +719,8 @@ class TicketmasterSourceTest {
                 Map.of(
                     "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
                     "status", Map.of("code", "offsale")),
-                "sales", Map.of("public", Map.of("startDateTime", "2020-01-01T12:00:00Z"))));
+                "sales",
+                Map.of("public", Map.of("startDateTime", "2020-01-01T12:00:00Z"))));
 
     final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
 
@@ -801,7 +813,8 @@ class TicketmasterSourceTest {
             Map.of(
                 "_embedded",
                 Map.of(
-                    "attractions", List.of(Map.of("name", "Anuv Jain")),
+                    "attractions",
+                    List.of(Map.of("name", "Anuv Jain")),
                     "venues",
                     List.of(
                         Map.of(
@@ -820,7 +833,8 @@ class TicketmasterSourceTest {
             Map.of(
                 "_embedded",
                 Map.of(
-                    "attractions", List.of(Map.of("name", "Julien Clerc")),
+                    "attractions",
+                    List.of(Map.of("name", "Julien Clerc")),
                     "venues",
                     List.of(
                         Map.of(
@@ -865,7 +879,7 @@ class TicketmasterSourceTest {
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/venues/venueMort.json")))
-        .andRespond(withStatus(org.springframework.http.HttpStatus.NOT_FOUND));
+        .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     assertEquals(TicketmasterSource.StatutIdTM.MORT, source.verifierVenue("venueMort"));
@@ -881,7 +895,7 @@ class TicketmasterSourceTest {
     serveur
         .expect(
             requestTo(org.hamcrest.Matchers.containsString("/attractions/attractionMorte.json")))
-        .andRespond(withStatus(org.springframework.http.HttpStatus.NOT_FOUND));
+        .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     assertEquals(TicketmasterSource.StatutIdTM.MORT, source.verifierAttraction("attractionMorte"));
@@ -1015,7 +1029,7 @@ class TicketmasterSourceTest {
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
-        .andRespond(withStatus(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS));
+        .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     final List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");

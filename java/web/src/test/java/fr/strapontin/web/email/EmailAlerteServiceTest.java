@@ -146,7 +146,8 @@ class EmailAlerteServiceTest {
   void envoyerAlerteQuotaResend_resendApiKeyAbsent_retourneFalse() {
     when(emailSender.obtenirContexte()).thenReturn(Optional.empty());
 
-    final boolean resultat = service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
+    final boolean resultat =
+        service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
 
     assertFalse(resultat);
   }
@@ -158,7 +159,8 @@ class EmailAlerteServiceTest {
             Optional.of(
                 new EmailSender.ContexteEmail(null, "noreply@exemple.fr", "https://exemple.fr")));
 
-    final boolean resultat = service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
+    final boolean resultat =
+        service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
 
     assertTrue(resultat);
     verify(emailSender)
@@ -181,7 +183,8 @@ class EmailAlerteServiceTest {
         .when(emailSender)
         .envoyer(any(), anyString(), anyString(), anyString(), anyString(), anyString());
 
-    final boolean resultat = service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
+    final boolean resultat =
+        service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
 
     assertFalse(resultat);
   }

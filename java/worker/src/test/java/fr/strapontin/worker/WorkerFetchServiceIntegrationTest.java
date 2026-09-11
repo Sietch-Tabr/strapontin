@@ -22,6 +22,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -127,7 +128,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
             "INSERT INTO evenements (artiste_norm, date, salle_norm, artiste_id, updated_at)"
                 + " VALUES (:artisteNorm, :date, 'salle test', CAST(:artisteId AS uuid),"
                 + " now() - interval '1 hour') RETURNING id",
-            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+            new MapSqlParameterSource()
                 .addValue("artisteNorm", artisteNorm.toLowerCase())
                 .addValue("date", LocalDate.now().plusMonths(1))
                 .addValue("artisteId", artisteId.toString()),
@@ -167,7 +168,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
             "INSERT INTO evenements (artiste_norm, date, salle_norm, salle_id, updated_at)"
                 + " VALUES ('artiste salle', :date, 'salle test', CAST(:salleId AS uuid),"
                 + " now() - interval '1 hour') RETURNING id",
-            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+            new MapSqlParameterSource()
                 .addValue("date", LocalDate.now().plusMonths(1))
                 .addValue("salleId", salleId.toString()),
             UUID.class);

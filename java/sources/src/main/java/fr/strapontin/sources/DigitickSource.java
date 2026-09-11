@@ -114,7 +114,8 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     }
     compteurBilan.enregistrerAppel();
     try {
-      final byte[] octets = restClient.get().uri(URL_BILLETTERIE, slug).retrieve().body(byte[].class);
+      final byte[] octets =
+          restClient.get().uri(URL_BILLETTERIE, slug).retrieve().body(byte[].class);
       if (octets == null || octets.length == 0) {
         log.warn("Digitick fetchSalle — réponse vide slug={}", slug);
         return List.of();
@@ -268,7 +269,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     }
     final String date = datetime.substring(0, 10);
     if (datetime.length() < 16) {
-      return new String[]{date, null};
+      return new String[] {date, null};
     }
     final String heure = datetime.substring(11, 16);
     return new String[] {date, "00:00".equals(heure) ? null : heure};

@@ -82,8 +82,8 @@ public final class ClientNominatim {
               + "?q="
               + URLEncoder.encode(nom, StandardCharsets.UTF_8)
               + "&format=json&limit=1&countrycodes=fr";
-      @SuppressWarnings("unchecked") final
-          List<Map<String, Object>> resultats =
+      @SuppressWarnings("unchecked")
+      final List<Map<String, Object>> resultats =
           restClient.get().uri(url).header("User-Agent", USER_AGENT).retrieve().body(List.class);
       return extraireCoordonnees(resultats);
     } catch (Exception e) {
@@ -92,7 +92,8 @@ public final class ClientNominatim {
     }
   }
 
-  private static Optional<Coordonnees> extraireCoordonnees(final List<Map<String, Object>> resultats) {
+  private static Optional<Coordonnees> extraireCoordonnees(
+      final List<Map<String, Object>> resultats) {
     if (resultats == null || resultats.isEmpty()) {
       return Optional.empty();
     }

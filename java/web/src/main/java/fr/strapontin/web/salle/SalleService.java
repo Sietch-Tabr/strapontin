@@ -81,9 +81,9 @@ public class SalleService {
    * @param configService lecture de la clé API Ticketmaster
    * @param objectMapper désérialiseur JSON (pour l'API Ticketmaster)
    * @param restClient client HTTP partagé (timeout 5s/10s défini dans {@link
-   *   fr.strapontin.web.WebConfiguration})
+   *     fr.strapontin.web.WebConfiguration})
    * @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker (voir {@link
-   *   fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
+   *     fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
    * @param logAdminService journalisation des suppressions dans {@code logs_admin}
    */
   public SalleService(
@@ -118,9 +118,9 @@ public class SalleService {
   /**
    * Liste les salles suivies, avec suggestions si {@code q} est fourni.
    *
-   * <p>Complète la base avec Nominatim si moins de 3 résultats locaux, puis avec l'API
-   * Ticketmaster si Nominatim retourne moins de 2 résultats. Une salle retournée par les deux
-   * sources externes est fusionnée en une seule suggestion (osmId + tmVenueId).
+   * <p>Complète la base avec Nominatim si moins de 3 résultats locaux, puis avec l'API Ticketmaster
+   * si Nominatim retourne moins de 2 résultats. Une salle retournée par les deux sources externes
+   * est fusionnée en une seule suggestion (osmId + tmVenueId).
    *
    * @param userId identifiant de l'utilisateur
    * @param q terme de recherche (optionnel, min 2 caractères)
@@ -161,9 +161,10 @@ public class SalleService {
       // ArtisteService.lister). En parallèle, l'attente totale est bornée par le plus lent des
       // deux appels, pas leur somme.
       if (listeResultats.size() < 3) {
-        final var futureNominatim =
+        final CompletableFuture<List<ResultatSalle>> futureNominatim =
             CompletableFuture.supplyAsync(() -> rechercherSallesNominatim(recherche));
-        final var futureTm = CompletableFuture.supplyAsync(() -> rechercherSallesTM(recherche));
+        final CompletableFuture<List<ResultatSalle>> futureTm =
+            CompletableFuture.supplyAsync(() -> rechercherSallesTM(recherche));
         final List<ResultatSalle> resultatsExternes = new ArrayList<>(futureNominatim.join());
         resultatsExternes.addAll(futureTm.join());
         for (final ResultatSalle r : resultatsExternes) {
@@ -226,9 +227,9 @@ public class SalleService {
    * Ajoute une salle à la liste de suivi dans une transaction atomique.
    *
    * <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation. La
-   * résolution de la salle dans le référentiel global tolère les variantes orthographiques
-   * mineures (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une salle
-   * déjà présente sous une graphie légèrement différente.
+   * résolution de la salle dans le référentiel global tolère les variantes orthographiques mineures
+   * (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une salle déjà
+   * présente sous une graphie légèrement différente.
    *
    * @param userId identifiant de l'utilisateur
    * @param nom nom de la salle (non-vide, max 200 car.)
@@ -245,14 +246,14 @@ public class SalleService {
    * Ajoute une salle à la liste de suivi dans une transaction atomique.
    *
    * <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation. La
-   * résolution de la salle dans le référentiel global tolère les variantes orthographiques
-   * mineures (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une salle
-   * déjà présente sous une graphie légèrement différente.
+   * résolution de la salle dans le référentiel global tolère les variantes orthographiques mineures
+   * (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une salle déjà
+   * présente sous une graphie légèrement différente.
    *
    * <p>Si {@code osmId}/{@code wikidataId} sont fournis (l'utilisateur a choisi une suggestion
    * Nominatim), les IDs stables sont persistés immédiatement sans attendre le job d'enrichissement
-   * nocturne. Un conflit sur l'index unique {@code idx_salles_wikidata_id} (Q-ID déjà porté par
-   * une autre salle) est rattrapé et loggé plutôt que de faire échouer l'ajout — même pattern que
+   * nocturne. Un conflit sur l'index unique {@code idx_salles_wikidata_id} (Q-ID déjà porté par une
+   * autre salle) est rattrapé et loggé plutôt que de faire échouer l'ajout — même pattern que
    * {@code EnrichissementSallesService} (jalon 2.6.0).
    *
    * @param userId identifiant de l'utilisateur
@@ -265,7 +266,11 @@ public class SalleService {
    */
   @Transactional
   public void ajouter(
-      final String userId, final String nom, final String tmVenueId, final String osmId, final String wikidataId) {
+      final String userId,
+      final String nom,
+      final String tmVenueId,
+      final String osmId,
+      final String wikidataId) {
     final String salleCle = normaliserSalleCle(nom);
     if (salleCle.isEmpty()) {
       throw new ErreurMetier("Nom de salle invalide.");
@@ -304,11 +309,11 @@ public class SalleService {
    * Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction.
    *
    * <p>Sans cela, le déclenchement synchrone (thread virtuel, appel HTTP immédiat vers le worker)
-   * pouvait s'exécuter avant que l'{@code INSERT}/{@code UPDATE} ne soit visible en base
-   * (isolation {@code READ COMMITTED}), faisant manquer la salle tout juste ajoutée au cycle de
-   * fetch qu'elle vient elle-même de déclencher — même correctif que {@code
-   * ArtisteService#executerApresCommit}. Exécute immédiatement si aucune transaction n'est active
-   * (ex. tests unitaires sans contexte Spring).
+   * pouvait s'exécuter avant que l'{@code INSERT}/{@code UPDATE} ne soit visible en base (isolation
+   * {@code READ COMMITTED}), faisant manquer la salle tout juste ajoutée au cycle de fetch qu'elle
+   * vient elle-même de déclencher — même correctif que {@code ArtisteService#executerApresCommit}.
+   * Exécute immédiatement si aucune transaction n'est active (ex. tests unitaires sans contexte
+   * Spring).
    *
    * @param salleId UUID de la salle ajoutée/créée dans la transaction en cours
    */
@@ -328,20 +333,21 @@ public class SalleService {
   }
 
   /**
-   * Met à jour le wikidataId d'une salle sous savepoint (conflit possible sur l'index unique
-   * {@code idx_salles_wikidata_id} si le Q-ID est déjà porté par une autre salle).
+   * Met à jour le wikidataId d'une salle sous savepoint (conflit possible sur l'index unique {@code
+   * idx_salles_wikidata_id} si le Q-ID est déjà porté par une autre salle).
    *
    * <p>{@code Propagation.NESTED} isole ce conflit du reste de {@link #ajouter} via un savepoint
    * sur la connexion existante (pas une nouvelle transaction/connexion, contrairement à {@code
-   * REQUIRES_NEW}) : sans ce savepoint, PostgreSQL marque toute la transaction englobante «
-   * annulée » dès la violation de contrainte, faisant échouer le {@code INSERT INTO user_salles}
-   * suivant même si l'exception est capturée côté Java (constaté en E2E réel — invisible en test
-   * unitaire, {@code salleRepository} y étant mocké).
+   * REQUIRES_NEW}) : sans ce savepoint, PostgreSQL marque toute la transaction englobante « annulée
+   * » dès la violation de contrainte, faisant échouer le {@code INSERT INTO user_salles} suivant
+   * même si l'exception est capturée côté Java (constaté en E2E réel — invisible en test unitaire,
+   * {@code salleRepository} y étant mocké).
    *
    * <p>L'exception doit se propager en dehors de cette méthode (pas de try/catch ici) pour que
-   * l'intercepteur transactionnel Spring exécute un {@code ROLLBACK TO SAVEPOINT} — la capturer
-   * ici ferait au contraire tenter une <em>libération</em> du savepoint sur une connexion déjà en
-   * échec, provoquant un second échec ({@code TransactionSystemException}). Capturée par l'appelant.
+   * l'intercepteur transactionnel Spring exécute un {@code ROLLBACK TO SAVEPOINT} — la capturer ici
+   * ferait au contraire tenter une <em>libération</em> du savepoint sur une connexion déjà en
+   * échec, provoquant un second échec ({@code TransactionSystemException}). Capturée par
+   * l'appelant.
    *
    * @param salleId UUID de la salle
    * @param wikidataId Q-ID Wikidata à attribuer
@@ -360,8 +366,8 @@ public class SalleService {
    * {@code WikidataSalleSource} côté enrichissement, et {@link #fusionnerOuAjouter} côté
    * suggestions (un seul algorithme de dédoublonnage salle dans tout le projet). En cas de
    * correspondance exacte de {@code salle_cle}, passe par {@code upsertSalle} pour conserver le
-   * comportement existant de mise à jour du nom affiché ; en cas de correspondance floue
-   * seulement, réutilise l'UUID existant sans toucher au nom déjà établi.
+   * comportement existant de mise à jour du nom affiché ; en cas de correspondance floue seulement,
+   * réutilise l'UUID existant sans toucher au nom déjà établi.
    *
    * <p>Public (pas seulement utilisé par {@link #ajouter}) : réutilisé par {@code
    * PreferencesService.importerSalles} pour que l'import de préférences applique la même dédup
@@ -441,7 +447,8 @@ public class SalleService {
    * @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
    */
   @Transactional
-  public UUID creerSalleDigitick(final String nom, final String slug, final String ville, final String dept) {
+  public UUID creerSalleDigitick(
+      final String nom, final String slug, final String ville, final String dept) {
     final String salleCle = normaliserSalleCle(nom);
     final UUID salleId = salleRepository.upsertSalleAvecLoc(salleCle, nom, ville, dept);
     salleRepository
@@ -463,13 +470,13 @@ public class SalleService {
    * @param ville nouvelle ville (null = inchangée)
    * @param dept nouveau numéro de département (null = inchangé)
    */
-  public void mettreAJourSalle(final UUID salleId, final String nom, final String ville, final String dept) {
+  public void mettreAJourSalle(
+      final UUID salleId, final String nom, final String ville, final String dept) {
     salleRepository.mettreAJourSalle(salleId, nom, ville, dept);
   }
 
   /**
-   * Retourne les identifiants sources CSV d'une salle (ex. {@code
-   * "digitick:lempreinte,tm:rZ..."}).
+   * Retourne les identifiants sources CSV d'une salle (ex. {@code "digitick:lempreinte,tm:rZ..."}).
    *
    * @param salleId UUID de la salle
    * @return CSV d'identifiants ou {@code null} si aucun
@@ -502,10 +509,10 @@ public class SalleService {
   /**
    * Indique si une recherche correspond, même partiellement, à une salle déjà suivie.
    *
-   * <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un
-   * terme partiel (ex. "Zenith" ne matchait pas "zenithparis") alors que la salle a bien été
-   * trouvée puis exclue des suggestions car déjà suivie — l'utilisateur n'avait alors aucun signal
-   * expliquant l'absence de résultat.
+   * <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un terme
+   * partiel (ex. "Zenith" ne matchait pas "zenithparis") alors que la salle a bien été trouvée puis
+   * exclue des suggestions car déjà suivie — l'utilisateur n'avait alors aucun signal expliquant
+   * l'absence de résultat.
    *
    * <p>Package-private (plutôt que {@code private}) pour être testable directement.
    *
@@ -513,27 +520,28 @@ public class SalleService {
    * @param clesNorm clés normalisées des salles déjà suivies
    * @return {@code true} si une salle déjà suivie contient la recherche
    */
-  static boolean contientCorrespondancePartielle(final String rechercheNorm, final Set<String> clesNorm) {
+  static boolean contientCorrespondancePartielle(
+      final String rechercheNorm, final Set<String> clesNorm) {
     return clesNorm.stream().anyMatch(cle -> cle.contains(rechercheNorm));
   }
 
   /**
    * Recherche des salles par nom via Nominatim (OSM).
    *
-   * <p>Sans clé API — couvre les salles hors référentiel Ticketmaster. User-Agent obligatoire
-   * selon la politique d'usage Nominatim.
+   * <p>Sans clé API — couvre les salles hors référentiel Ticketmaster. User-Agent obligatoire selon
+   * la politique d'usage Nominatim.
    *
    * @param terme terme de recherche saisi par l'utilisateur
    * @return suggestions filtrées par type de lieu pertinent, vide si aucune ou en cas d'échec
-   *   réseau
-   *
-   *   <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
-   *   ({@code Mockito.spy}) évitant un appel réseau réel — même motif que {@code
-   *   ArtisteService#rechercherWikidata}.
+   *     réseau
+   *     <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
+   *     ({@code Mockito.spy}) évitant un appel réseau réel — même motif que {@code
+   *     ArtisteService#rechercherWikidata}.
    */
   List<ResultatSalle> rechercherSallesNominatim(final String terme) {
     try {
-      final String contact = configService.lireConfig("CONTACT_EMAIL").orElse("contact@strapontin.fr");
+      final String contact =
+          configService.lireConfig("CONTACT_EMAIL").orElse("contact@strapontin.fr");
       final String url =
           NOMINATIM_URL
               + "?q="
@@ -565,8 +573,8 @@ public class SalleService {
    * <p>Un résultat est pertinent si son {@code type} de premier niveau ou son {@code
    * extratags.amenity} (tag secondaire) figure dans {@link #TYPES_SALLE_NOMINATIM} — {@code
    * class=amenity} seul n'est plus suffisant (trop large : laissait passer des bornes de recharge
-   * électrique) et une salle classée sous {@code leisure}/{@code tourism} (ex. un stade avec
-   * {@code extratags.amenity=music_venue}) n'est plus rejetée à tort.
+   * électrique) et une salle classée sous {@code leisure}/{@code tourism} (ex. un stade avec {@code
+   * extratags.amenity=music_venue}) n'est plus rejetée à tort.
    *
    * <p>Package-private (plutôt que {@code private}) pour être testable directement, sans appel
    * réseau réel.
@@ -582,7 +590,8 @@ public class SalleService {
       for (final Map<String, Object> item : items) {
         final String type = (String) item.get("type");
         final Map<String, Object> extratags = (Map<String, Object>) item.get("extratags");
-        final String amenitySecondaire = extratags != null ? (String) extratags.get("amenity") : null;
+        final String amenitySecondaire =
+            extratags != null ? (String) extratags.get("amenity") : null;
         final boolean pertinent =
             TYPES_SALLE_NOMINATIM.contains(type)
                 || (amenitySecondaire != null && TYPES_SALLE_NOMINATIM.contains(amenitySecondaire));
@@ -598,7 +607,8 @@ public class SalleService {
 
         final String osmType = (String) item.get("osm_type");
         final Object osmIdBrut = item.get("osm_id");
-        final String osmId = osmType != null && osmIdBrut != null ? osmType + "/" + osmIdBrut : null;
+        final String osmId =
+            osmType != null && osmIdBrut != null ? osmType + "/" + osmIdBrut : null;
 
         final Map<String, Object> address = (Map<String, Object>) item.get("address");
         final String ville = extraireVille(address);
@@ -629,9 +639,8 @@ public class SalleService {
   /**
    * @param terme terme de recherche saisi par l'utilisateur
    * @return suggestions Ticketmaster, vide si aucune, si non configuré, ou en cas d'échec réseau
-   *
-   *   <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même motif
-   *   que {@link #rechercherSallesNominatim}.
+   *     <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même
+   *     motif que {@link #rechercherSallesNominatim}.
    */
   @SuppressWarnings("unchecked")
   List<ResultatSalle> rechercherSallesTM(final String terme) {

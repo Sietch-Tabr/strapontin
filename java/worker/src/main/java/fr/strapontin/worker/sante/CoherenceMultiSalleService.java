@@ -74,7 +74,7 @@ public class CoherenceMultiSalleService {
     final Map<UUID, List<String>> nomsExtraitsParSalle = new HashMap<>();
     final Map<UUID, String> nomNormParSalle = new HashMap<>();
     final Map<UUID, String> signaleeParSalle = new HashMap<>();
-    for (final var ligne : lignes) {
+    for (final Map<String, Object> ligne : lignes) {
       final UUID salleId = (UUID) ligne.get("salle_id");
       final String identifiant = (String) ligne.get("identifiant");
       nomsExtraitsParSalle
@@ -85,7 +85,7 @@ public class CoherenceMultiSalleService {
     }
 
     int signalees = 0;
-    for (final var entree : nomsExtraitsParSalle.entrySet()) {
+    for (final Map.Entry<UUID, List<String>> entree : nomsExtraitsParSalle.entrySet()) {
       final UUID salleId = entree.getKey();
       final String nomNormSalle = nomNormParSalle.get(salleId);
       final List<String> mesententes =
@@ -139,7 +139,8 @@ public class CoherenceMultiSalleService {
    * dollfus noack") — {@link CorrespondanceSalle#estDoublonSalle} seul rejette mécaniquement ces
    * deux cas dès qu'un côté est bien plus long ou bien plus court que l'autre.
    */
-  private static boolean estContaminationReelle(final String nomExtrait, final String nomNormSalle) {
+  private static boolean estContaminationReelle(
+      final String nomExtrait, final String nomNormSalle) {
     if (CorrespondanceSalle.estDoublonSalle(nomExtrait, nomNormSalle)) {
       return false;
     }
@@ -197,8 +198,8 @@ public class CoherenceMultiSalleService {
     int signalees = 0;
     for (int i = 0; i < salles.size(); i++) {
       for (int j = i + 1; j < salles.size(); j++) {
-        final var a = salles.get(i);
-        final var b = salles.get(j);
+        final Map<String, Object> a = salles.get(i);
+        final Map<String, Object> b = salles.get(j);
         final UUID idA = (UUID) a.get("id");
         final UUID idB = (UUID) b.get("id");
         final UUID parentA = (UUID) a.get("salle_parent_id");

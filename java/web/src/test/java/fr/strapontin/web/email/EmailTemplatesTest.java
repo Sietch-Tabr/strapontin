@@ -45,7 +45,8 @@ class EmailTemplatesTest {
 
   @Test
   void resetMotDePasse_contientLienReset() {
-    final String html = EmailTemplates.resetMotDePasse("https://exemple.fr/reset/xyz", "https://app.fr");
+    final String html =
+        EmailTemplates.resetMotDePasse("https://exemple.fr/reset/xyz", "https://app.fr");
     assertThat(html).contains("href=\"https://exemple.fr/reset/xyz\"");
     assertThat(html).contains("Réinitialiser mon mot de passe");
     assertThat(html).contains("1 heure");
@@ -91,7 +92,8 @@ class EmailTemplatesTest {
         List.of(
             new LigneConcert("Daft Punk", "samedi 1 mars 2025", "AccorHotels Arena", null),
             new LigneConcert("Téléphone", "dimanche 2 mars 2025", "Zénith Paris", null));
-    final String html = EmailTemplates.digestConcerts("2 nouveaux concerts", lignes, "https://app.fr");
+    final String html =
+        EmailTemplates.digestConcerts("2 nouveaux concerts", lignes, "https://app.fr");
     assertThat(html).contains("Daft Punk");
     assertThat(html).contains("Téléphone");
     assertThat(html).contains("samedi 1 mars 2025");
@@ -105,7 +107,8 @@ class EmailTemplatesTest {
     final var lignes =
         List.of(
             new LigneConcert("Stromae", "lundi 3 mars 2025", "Bercy", "https://billets.fr/123"));
-    final String html = EmailTemplates.digestConcerts("1 nouveau concert", lignes, "https://app.fr");
+    final String html =
+        EmailTemplates.digestConcerts("1 nouveau concert", lignes, "https://app.fr");
     assertThat(html).contains("Billets →");
     assertThat(html).contains("href=\"https://billets.fr/123\"");
   }
@@ -114,7 +117,8 @@ class EmailTemplatesTest {
   void digestConcerts_concertSansUrl_nAffichePasLienBillets() {
     final var lignes =
         List.of(new LigneConcert("Indochine", "mardi 4 mars 2025", "Stade de France", null));
-    final String html = EmailTemplates.digestConcerts("1 nouveau concert", lignes, "https://app.fr");
+    final String html =
+        EmailTemplates.digestConcerts("1 nouveau concert", lignes, "https://app.fr");
     assertThat(html).doesNotContain("Billets →");
   }
 
@@ -125,7 +129,8 @@ class EmailTemplatesTest {
             new LigneConcert("Daft Punk", "samedi 1 mars 2025", "AccorHotels Arena", null),
             new LigneConcert("Daft Punk", "dimanche 2 mars 2025", "Bercy", null),
             new LigneConcert("Téléphone", "lundi 3 mars 2025", "Zénith Paris", null));
-    final String html = EmailTemplates.digestConcerts("3 nouveaux concerts", lignes, "https://app.fr");
+    final String html =
+        EmailTemplates.digestConcerts("3 nouveaux concerts", lignes, "https://app.fr");
     assertThat(html).containsOnlyOnce("border-top: 2px solid #ddd");
   }
 
@@ -135,7 +140,8 @@ class EmailTemplatesTest {
         List.of(
             new LigneConcert("Daft Punk", "samedi 1 mars 2025", "AccorHotels Arena", null),
             new LigneConcert("Daft Punk", "dimanche 2 mars 2025", "Bercy", null));
-    final String html = EmailTemplates.digestConcerts("2 nouveaux concerts", lignes, "https://app.fr");
+    final String html =
+        EmailTemplates.digestConcerts("2 nouveaux concerts", lignes, "https://app.fr");
     assertThat(html).doesNotContain("border-top: 2px solid #ddd");
   }
 
@@ -180,7 +186,8 @@ class EmailTemplatesTest {
 
   @Test
   void alerteIntegrite_detailAvecCaracteresSpeciaux_estEchappe() {
-    final String html = EmailTemplates.alerteIntegrite("<script>alert(1)</script>", "https://app.fr");
+    final String html =
+        EmailTemplates.alerteIntegrite("<script>alert(1)</script>", "https://app.fr");
     assertThat(html).doesNotContain("<script>alert(1)</script>");
   }
 
@@ -296,7 +303,8 @@ class EmailTemplatesTest {
 
   @Test
   void confirmationSignalementSalle_nomAvecBalises_estEchappe() {
-    final String html = EmailTemplates.confirmationSignalementSalle("<b>Salle</b>", "https://app.fr");
+    final String html =
+        EmailTemplates.confirmationSignalementSalle("<b>Salle</b>", "https://app.fr");
     assertThat(html).contains("&lt;b&gt;Salle&lt;/b&gt;");
     assertThat(html).doesNotContain("<b>Salle</b>");
   }

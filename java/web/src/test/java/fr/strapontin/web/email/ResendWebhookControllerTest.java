@@ -49,7 +49,8 @@ class ResendWebhookControllerTest {
   void recevoirEvenement_secretAbsent_retourne400() {
     when(configService.lireConfig("RESEND_WEBHOOK_SECRET")).thenReturn(Optional.empty());
 
-    final ResponseEntity<Void> reponse = controller.recevoirEvenement("id-1", "1700000000", "sig", "{}");
+    final ResponseEntity<Void> reponse =
+        controller.recevoirEvenement("id-1", "1700000000", "sig", "{}");
 
     assertEquals(HttpStatus.BAD_REQUEST, reponse.getStatusCode());
   }

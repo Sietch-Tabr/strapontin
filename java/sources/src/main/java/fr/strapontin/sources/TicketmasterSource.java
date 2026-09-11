@@ -24,6 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -31,9 +33,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 /**
  * Client HTTP pour l'API Ticketmaster Discovery v2.
  *
- * Effectue les appels REST vers TM : par artiste, par salle (venueId), par lot d'attractionIds et
- * par région (géolocalisation département). Respecte le rate limit de 5 req/s via des pauses entre
- * les pages. Le quota journalier est extrait des headers {@code Rate-Limit-*} de chaque réponse.
+ * <p>Effectue les appels REST vers TM : par artiste, par salle (venueId), par lot d'attractionIds
+ * et par région (géolocalisation département). Respecte le rate limit de 5 req/s via des pauses
+ * entre les pages. Le quota journalier est extrait des headers {@code Rate-Limit-*} de chaque
+ * réponse.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -138,7 +141,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param restClient client HTTP Spring à utiliser
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    */
-  TicketmasterSource(final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
+  TicketmasterSource(
+      final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
     this(
         apiKey,
         restClient,
@@ -189,7 +193,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Retourne le dernier quota TM extrait des headers HTTP, ou {@code null} si aucun appel n'a été fait.
+   * Retourne le dernier quota TM extrait des headers HTTP, ou {@code null} si aucun appel n'a été
+   * fait.
    *
    * @return quota courant ou null
    */
@@ -235,18 +240,18 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * Mappe un événement TM brut (JSON désérialisé) vers un [ConcertBrut].
    *
    * @param evt événement TM sous forme de Map imbriquée
-   * @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être
-   *   null
+   * @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être null
    * @return concert extrait, ou null si l'événement est invalide ou hors périmètre
    */
-  public static ConcertBrut mapEvenement(final Map<String, Object> evt, final String artisteFallback) {
+  public static ConcertBrut mapEvenement(
+      final Map<String, Object> evt, final String artisteFallback) {
     return MapeurEvenementTM.mapper(evt, artisteFallback);
   }
 
   /**
    * @param succes {@code false} si l'appel HTTP a échoué (voir {@link #fetchPage}) — distingue une
-   *   page réellement vide (succès, 0 résultat) d'un appel qui n'a jamais abouti, faute de quoi
-   *   les deux se traduisent identiquement par {@code concerts} vide et {@code total=0}.
+   *     page réellement vide (succès, 0 résultat) d'un appel qui n'a jamais abouti, faute de quoi
+   *     les deux se traduisent identiquement par {@code concerts} vide et {@code total=0}.
    */
   private record ResultatPage(
       List<ConcertBrut> concerts, int total, int totalPages, QuotaTM quota, boolean succes) {}
@@ -275,10 +280,10 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     compteurBilan.enregistrerAppel();
     final Instant avantAppelHttp = Instant.now();
     try {
-      final var response = restClient.get().uri(uri).retrieve().toEntity(Map.class);
+      final ResponseEntity<Map> response = restClient.get().uri(uri).retrieve().toEntity(Map.class);
 
       QuotaTM quota = null;
-      final var headers = response.getHeaders();
+      final HttpHeaders headers = response.getHeaders();
       if (headers.get("Rate-Limit-Available") != null) {
         quota =
             new QuotaTM(
@@ -289,16 +294,17 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
                 Instant.now().toString());
       }
 
-      final var data = response.getBody();
+      final Map data = response.getBody();
       if (data == null) {
         return new ResultatPage(List.of(), 0, NB_PAGES_MAX, quota, true);
       }
 
-      final var page = (Map<String, Object>) data.get("page");
+      final Map<String, Object> page = (Map<String, Object>) data.get("page");
       final int total = page != null ? ((Number) page.get("totalElements")).intValue() : 0;
-      final int totalPages = page != null ? ((Number) page.get("totalPages")).intValue() : NB_PAGES_MAX;
+      final int totalPages =
+          page != null ? ((Number) page.get("totalPages")).intValue() : NB_PAGES_MAX;
 
-      final var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
+      final Map<String, Object> embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
       final List<Map<String, Object>> evts =
           embedded != null ? (List<Map<String, Object>>) embedded.get("events") : null;
       if (evts == null) {
@@ -306,7 +312,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       }
 
       final List<ConcertBrut> concerts = new ArrayList<>();
-      for (final var evt : evts) {
+      for (final Map<String, Object> evt : evts) {
         final ConcertBrut c = mapEvenement(evt, artisteFallback);
         if (c != null) {
           concerts.add(c);
@@ -335,8 +341,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   /**
    * Retire toute clé API Ticketmaster (paramètre {@code apikey=...}) d'un message avant
    * journalisation. Sur une panne réseau bas niveau, l'exception Spring ({@code
-   * ResourceAccessException}) embarque l'URI complète — y compris sa query string — dans son
-   * propre message, contournant toute rédaction faite en amont sur l'URI seule.
+   * ResourceAccessException}) embarque l'URI complète — y compris sa query string — dans son propre
+   * message, contournant toute rédaction faite en amont sur l'URI seule.
    *
    * @param message message à assainir, peut être {@code null}
    * @return le message avec toute clé API masquée, ou {@code null} si {@code message} est null
@@ -361,10 +367,10 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param uriBase URI de base de la requête, sans pagination
    * @param artisteFallback nom de l'artiste cherché (fetch:artiste uniquement), peut être null
    * @param contexte identifiant du centre de recherche (ex. {@code "dept=75"}) inclus dans le log
-   *   de plafonnement de pagination, pour distinguer les départements/salles chroniquement
-   *   affectés
+   *     de plafonnement de pagination, pour distinguer les départements/salles chroniquement
+   *     affectés
    * @return les concerts récupérés sur toutes les pages parcourues, et si toutes les pages ont été
-   *   récupérées avec succès (voir {@link ResultatPage#succes})
+   *     récupérées avec succès (voir {@link ResultatPage#succes})
    */
   private ResultatMultiPage fetchToutesPages(
       final UriComponentsBuilder uriBase, final String artisteFallback, final String contexte) {
@@ -429,7 +435,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   @Override
   public List<ConcertBrut> fetchArtiste(final String nom) {
     final FenetreTemps fenetre = obtenirFenetreTemps();
-    final var uriBase =
+    final UriComponentsBuilder uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("keyword", nom)
             .queryParam("classificationName", CLASSIFICATIONS.toArray())
@@ -465,7 +471,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             ? identifiant.substring(PREFIXE_IDENTIFIANT.length() + 1)
             : identifiant;
     final FenetreTemps fenetre = obtenirFenetreTemps();
-    final var uriBase =
+    final UriComponentsBuilder uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("venueId", venueId)
             .queryParam("size", TAILLE_PAGE_REGION)
@@ -508,14 +514,14 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       if (data == null) {
         return null;
       }
-      final var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
-      final var attractions =
+      final Map<String, Object> embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
+      final List<Map<String, Object>> attractions =
           embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
       if (attractions == null || attractions.isEmpty()) {
         return null;
       }
       final String nomNorm = Normalisation.normaliserTexte(nom);
-      for (final var attraction : attractions) {
+      for (final Map<String, Object> attraction : attractions) {
         final String nomAttraction = (String) attraction.getOrDefault("name", "");
         if (Normalisation.normaliserTexte(nomAttraction).equals(nomNorm)) {
           return (String) attraction.get("id");
@@ -551,7 +557,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     // identifiant attendu (base) avec celui réellement transmis en cas d'écart constaté.
     log.info("TM fetchArtistesLot ids envoyés={}", attractionIds);
     final FenetreTemps fenetre = obtenirFenetreTemps();
-    final var uriBase =
+    final UriComponentsBuilder uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("attractionId", String.join(",", attractionIds))
             .queryParam("size", TAILLE_PAGE_REGION)
@@ -569,9 +575,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     return resultat.concerts();
   }
 
-  /**
-   * Statut de vivacité d'un identifiant TM (phase 1).
-   */
+  /** Statut de vivacité d'un identifiant TM (phase 1). */
   public enum StatutIdTM {
     VIVANT,
     MORT
@@ -658,7 +662,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
         log.warn("département sans coordonnées connues, ignoré dept={}", dept);
       } else {
         final FenetreTemps fenetre = obtenirFenetreTemps();
-        final var uriBase =
+        final UriComponentsBuilder uriBase =
             UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
                 .queryParam("latlong", centre.lat() + "," + centre.lng())
                 .queryParam("radius", centre.rayon())

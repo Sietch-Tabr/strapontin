@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +31,8 @@ public class SignalementMatchingService {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
-  public SignalementMatchingService(final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
+  public SignalementMatchingService(
+      final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
   }
@@ -59,7 +61,7 @@ public class SignalementMatchingService {
           VALUES (:type, :entiteType, CAST(:entiteId AS uuid), :confiance, CAST(:details AS jsonb))
           ON CONFLICT DO NOTHING
           """,
-          new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+          new MapSqlParameterSource()
               .addValue("type", type)
               .addValue("entiteType", entiteType)
               .addValue("entiteId", entiteId.toString())

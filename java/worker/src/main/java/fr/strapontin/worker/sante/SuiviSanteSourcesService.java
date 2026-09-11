@@ -50,7 +50,8 @@ public class SuiviSanteSourcesService {
   private final NamedParameterJdbcTemplate jdbc;
   private final TicketmasterSource tm;
 
-  public SuiviSanteSourcesService(final NamedParameterJdbcTemplate jdbc, final TicketmasterSource tm) {
+  public SuiviSanteSourcesService(
+      final NamedParameterJdbcTemplate jdbc, final TicketmasterSource tm) {
     this.jdbc = jdbc;
     this.tm = tm;
   }
@@ -96,14 +97,17 @@ public class SuiviSanteSourcesService {
   }
 
   private void mettreAJourCompteur(
-      final TypeEntiteSource type, final String source, final String identifiant, final boolean succes) {
+      final TypeEntiteSource type,
+      final String source,
+      final String identifiant,
+      final boolean succes) {
     // necessite_intervention_le n'existe que sur artiste_sources — résolution naturelle
     // dès qu'un fetch redevient positif ET que le nom TM revérifié reste cohérent.
     final boolean estArtisteSources = type == TypeEntiteSource.ARTISTE;
     final String colonneInterventionResolue =
         estArtisteSources
             ? ", necessite_intervention_le = CASE WHEN :effacerIntervention THEN NULL ELSE"
-            + " necessite_intervention_le END"
+                + " necessite_intervention_le END"
             : "";
     final String sql =
         "UPDATE "

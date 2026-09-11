@@ -107,7 +107,8 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_emailInvalide_leveErreurMetier() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    final RequeteSetup requete = new RequeteSetup("admin", "pas-un-email", "motdepasse12345", null, null);
+    final RequeteSetup requete =
+        new RequeteSetup("admin", "pas-un-email", "motdepasse12345", null, null);
 
     assertThrows(ErreurMetier.class, () -> setupService.initialiserTransactionnel(requete));
   }

@@ -30,7 +30,8 @@ class DedoublonnerTest {
         null);
   }
 
-  private static ConcertBrut concert(final String artiste, final String date, final String salle, final String ville) {
+  private static ConcertBrut concert(
+      final String artiste, final String date, final String salle, final String ville) {
     return new ConcertBrut(
         artiste,
         date,
@@ -50,7 +51,11 @@ class DedoublonnerTest {
   }
 
   private static ConcertBrut concert(
-      final String artiste, final String date, final String salle, final String ville, final String source) {
+      final String artiste,
+      final String date,
+      final String salle,
+      final String ville,
+      final String source) {
     return new ConcertBrut(
         artiste, date, null, salle, ville, null, null, source, null, null, null, null, null, null,
         null);
@@ -72,22 +77,22 @@ class DedoublonnerTest {
   @Test
   void dedoublonner_concertUnique_conserveTousLesChamps() {
     final var c =
-            new ConcertBrut(
-                    "Radiohead",
-                    "2025-06-15",
-                    "20:00",
-                    "Zénith Paris",
-                    "Paris",
-                    "75",
-                    "https://example.com",
-                    "ticketmaster",
-                    "music",
-                    "Rock",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
+        new ConcertBrut(
+            "Radiohead",
+            "2025-06-15",
+            "20:00",
+            "Zénith Paris",
+            "Paris",
+            "75",
+            "https://example.com",
+            "ticketmaster",
+            "music",
+            "Rock",
+            null,
+            null,
+            null,
+            null,
+            null);
     final var resultat = Dedoublonner.dedoublonner(List.of(c));
     assertEquals(1, resultat.size());
     final var r = resultat.get(0);
@@ -101,41 +106,42 @@ class DedoublonnerTest {
   @Test
   void dedoublonner_passeExacte_fusionneDeuxConcertsMemeDateVille() {
     final var concerts =
-            List.of(
-                    concert("Beyoncé", "2025-07-10", "Stade de France", "Paris", "ticketmaster"),
-                    concert("Beyoncé", "2025-07-10", "Stade de France", "Paris", "eventim"));
+        List.of(
+            concert("Beyoncé", "2025-07-10", "Stade de France", "Paris", "ticketmaster"),
+            concert("Beyoncé", "2025-07-10", "Stade de France", "Paris", "eventim"));
     assertEquals(1, Dedoublonner.dedoublonner(concerts).size());
   }
 
   @Test
   void dedoublonner_passeExacte_nePasseDeuxArtistesDistincts() {
     final var concerts =
-            List.of(
-                    concert("Radiohead", "2025-06-15", "Zénith Paris", "Paris"),
-                    concert("Coldplay", "2025-06-15", "Accor Arena", "Paris"));
+        List.of(
+            concert("Radiohead", "2025-06-15", "Zénith Paris", "Paris"),
+            concert("Coldplay", "2025-06-15", "Accor Arena", "Paris"));
     assertEquals(2, Dedoublonner.dedoublonner(concerts).size());
   }
 
   @Test
   void dedoublonner_passeExacte_choisitPlusComplet() {
     final var complet =
-            new ConcertBrut(
-                    "Daft Punk",
-                    "2025-08-20",
-                    "21:00",
-                    "Zénith Paris",
-                    "Paris",
-                    null,
-                    "https://example.com",
-                    "eventim",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
-    final var incomplet = concert("Daft Punk", "2025-08-20", "Zénith Paris", "Paris", "ticketmaster");
+        new ConcertBrut(
+            "Daft Punk",
+            "2025-08-20",
+            "21:00",
+            "Zénith Paris",
+            "Paris",
+            null,
+            "https://example.com",
+            "eventim",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    final var incomplet =
+        concert("Daft Punk", "2025-08-20", "Zénith Paris", "Paris", "ticketmaster");
     final var resultat = Dedoublonner.dedoublonner(List.of(incomplet, complet));
     assertEquals(1, resultat.size());
     assertEquals("https://example.com", resultat.get(0).url());
@@ -157,39 +163,39 @@ class DedoublonnerTest {
     // liste quel que soit son statut — placer le concert sans statut en tête reproduit le biais
     // d'ordre du bug.
     final var sansStatut =
-            new ConcertBrut(
-                    "Angele",
-                    "2026-11-06",
-                    "20:30",
-                    "Zenith",
-                    "Paris",
-                    "75",
-                    "https://example.com",
-                    "eventim",
-                    "music",
-                    "Pop",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
+        new ConcertBrut(
+            "Angele",
+            "2026-11-06",
+            "20:30",
+            "Zenith",
+            "Paris",
+            "75",
+            "https://example.com",
+            "eventim",
+            "music",
+            "Pop",
+            null,
+            null,
+            null,
+            null,
+            null);
     final var avecStatut =
-            new ConcertBrut(
-                    "Angele",
-                    "2026-11-06",
-                    "20:30",
-                    "Zenith",
-                    "Paris",
-                    "75",
-                    "https://example.com",
-                    "ticketmaster",
-                    "music",
-                    "Pop",
-                    "presale",
-                    null,
-                    null,
-                    null,
-                    null);
+        new ConcertBrut(
+            "Angele",
+            "2026-11-06",
+            "20:30",
+            "Zenith",
+            "Paris",
+            "75",
+            "https://example.com",
+            "ticketmaster",
+            "music",
+            "Pop",
+            "presale",
+            null,
+            null,
+            null,
+            null);
 
     final var resultat = Dedoublonner.dedoublonner(List.of(sansStatut, avecStatut));
 
@@ -203,9 +209,9 @@ class DedoublonnerTest {
   void dedoublonner_passeFuzzy_fusionne2NomsSimilaires() {
     // "julien clerc" vs "julien clere" — distance 1, sim ~0.917
     final var concerts =
-            List.of(
-                    concert("Julien Clerc", "2025-10-05", "Casino de Paris", "Paris", "ticketmaster"),
-                    concert("Julien Clere", "2025-10-05", "Casino de Paris", "Paris", "bandsintown"));
+        List.of(
+            concert("Julien Clerc", "2025-10-05", "Casino de Paris", "Paris", "ticketmaster"),
+            concert("Julien Clere", "2025-10-05", "Casino de Paris", "Paris", "bandsintown"));
     assertEquals(1, Dedoublonner.dedoublonner(concerts).size());
   }
 
@@ -213,18 +219,18 @@ class DedoublonnerTest {
   void dedoublonner_passeFuzzy_nePasseBeatlesVsTheBeatles() {
     // "beatles" vs "the beatles" — distance 4, sim ≈ 0.636
     final var concerts =
-            List.of(
-                    concert("The Beatles", "2025-11-01", "Olympia", "Paris", "ticketmaster"),
-                    concert("Beatles", "2025-11-01", "Olympia", "Paris", "eventim"));
+        List.of(
+            concert("The Beatles", "2025-11-01", "Olympia", "Paris", "ticketmaster"),
+            concert("Beatles", "2025-11-01", "Olympia", "Paris", "eventim"));
     assertEquals(2, Dedoublonner.dedoublonner(concerts).size());
   }
 
   @Test
   void dedoublonner_passeFuzzy_nePasseArtistesDistincts() {
     final var concerts =
-            List.of(
-                    concert("Radiohead", "2025-11-12", "Accor Arena", "Paris", "ticketmaster"),
-                    concert("Coldplay", "2025-11-12", "Stade de France", "Paris", "eventim"));
+        List.of(
+            concert("Radiohead", "2025-11-12", "Accor Arena", "Paris", "ticketmaster"),
+            concert("Coldplay", "2025-11-12", "Stade de France", "Paris", "eventim"));
     assertEquals(2, Dedoublonner.dedoublonner(concerts).size());
   }
 
@@ -234,18 +240,18 @@ class DedoublonnerTest {
   void dedoublonner_fallbackSalle_fusionneVillesDivergentes() {
     // Stade de France : TM donne Paris, Eventim donne Saint-Denis
     final var concerts =
-            List.of(
-                    concert("Beyoncé", "2025-06-15", "Stade de France", "Paris", "ticketmaster"),
-                    concert("Beyoncé", "2025-06-15", "Stade de France", "Saint-Denis", "eventim"));
+        List.of(
+            concert("Beyoncé", "2025-06-15", "Stade de France", "Paris", "ticketmaster"),
+            concert("Beyoncé", "2025-06-15", "Stade de France", "Saint-Denis", "eventim"));
     assertEquals(1, Dedoublonner.dedoublonner(concerts).size());
   }
 
   @Test
   void dedoublonner_fallbackSalle_nePasseArtistesDistincts() {
     final var concerts =
-            List.of(
-                    concert("Radiohead", "2025-06-15", "Stade de France", "Paris", "ticketmaster"),
-                    concert("Coldplay", "2025-06-15", "Stade de France", "Saint-Denis", "eventim"));
+        List.of(
+            concert("Radiohead", "2025-06-15", "Stade de France", "Paris", "ticketmaster"),
+            concert("Coldplay", "2025-06-15", "Stade de France", "Saint-Denis", "eventim"));
     assertEquals(2, Dedoublonner.dedoublonner(concerts).size());
   }
 
@@ -263,7 +269,8 @@ class DedoublonnerTest {
   @Test
   void dedoublonner_passeExacte_prefereSalleAvecCasseMixte() {
     final var casseMixte = concert("Stromae", "2025-11-05", "Accor Arena", "Paris", "eventim");
-    final var toutMajuscules = concert("Stromae", "2025-11-05", "ACCOR ARENA", "Paris", "ticketmaster");
+    final var toutMajuscules =
+        concert("Stromae", "2025-11-05", "ACCOR ARENA", "Paris", "ticketmaster");
     final var resultat = Dedoublonner.dedoublonner(List.of(toutMajuscules, casseMixte));
     assertEquals(1, resultat.size());
     assertEquals("Accor Arena", resultat.get(0).salle());
@@ -275,18 +282,18 @@ class DedoublonnerTest {
   void dedoublonner_villeNull_fusionneMemeSalle() {
     // ville null des deux côtés, même salle → repli sur salle_norm comme clé → fusionné
     final var concerts =
-            List.of(
-                    concert("Portishead", "2025-05-20", "La Cigale", null, "bandsintown"),
-                    concert("Portishead", "2025-05-20", "La Cigale", null, "ticketmaster"));
+        List.of(
+            concert("Portishead", "2025-05-20", "La Cigale", null, "bandsintown"),
+            concert("Portishead", "2025-05-20", "La Cigale", null, "ticketmaster"));
     assertEquals(1, Dedoublonner.dedoublonner(concerts).size());
   }
 
   @Test
   void dedoublonner_villeNull_nePasseSallesDifferentes() {
     final var concerts =
-            List.of(
-                    concert("Portishead", "2025-05-20", "La Cigale", null, "bandsintown"),
-                    concert("Portishead", "2025-05-21", "Olympia", null, "ticketmaster"));
+        List.of(
+            concert("Portishead", "2025-05-20", "La Cigale", null, "bandsintown"),
+            concert("Portishead", "2025-05-21", "Olympia", null, "ticketmaster"));
     assertEquals(2, Dedoublonner.dedoublonner(concerts).size());
   }
 
@@ -297,9 +304,9 @@ class DedoublonnerTest {
   @Test
   void dedoublonner_villeNullMemeDateSallesDifferentes_nePasseFusionner() {
     final var concerts =
-            List.of(
-                    concert("Portishead", "2025-05-20", "La Cigale", null, "bandsintown"),
-                    concert("Portishead", "2025-05-20", "Olympia", null, "ticketmaster"));
+        List.of(
+            concert("Portishead", "2025-05-20", "La Cigale", null, "bandsintown"),
+            concert("Portishead", "2025-05-20", "Olympia", null, "ticketmaster"));
     assertEquals(2, Dedoublonner.dedoublonner(concerts).size());
   }
 
@@ -308,39 +315,39 @@ class DedoublonnerTest {
   @Test
   void dedoublonner_matineeEtSoiree_nePasseFusionnerHeuresDifferentes() {
     final var matinee =
-            new ConcertBrut(
-                    "Comédie Musicale",
-                    "2025-06-15",
-                    "15:00",
-                    "Zénith Paris",
-                    "Paris",
-                    null,
-                    null,
-                    "ticketmaster",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            "15:00",
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     final var soiree =
-            new ConcertBrut(
-                    "Comédie Musicale",
-                    "2025-06-15",
-                    "20:00",
-                    "Zénith Paris",
-                    "Paris",
-                    null,
-                    null,
-                    "eventim",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            "20:00",
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "eventim",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     assertEquals(2, Dedoublonner.dedoublonner(List.of(matinee, soiree)).size());
   }
 
@@ -349,117 +356,117 @@ class DedoublonnerTest {
   @Test
   void dedoublonner_heuresEcartUneMinute_fusionneMalgreEcart() {
     final var prestation =
-            new ConcertBrut(
-                    "Baby Keem",
-                    "2026-09-03",
-                    "20:31",
-                    "L'Olympia",
-                    "Paris",
-                    null,
-                    null,
-                    "ticketmaster",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
+        new ConcertBrut(
+            "Baby Keem",
+            "2026-09-03",
+            "20:31",
+            "L'Olympia",
+            "Paris",
+            null,
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     final var pack =
-            new ConcertBrut(
-                    "Baby Keem",
-                    "2026-09-03",
-                    "20:30",
-                    "L'Olympia",
-                    "Paris",
-                    null,
-                    null,
-                    "ticketmaster",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
+        new ConcertBrut(
+            "Baby Keem",
+            "2026-09-03",
+            "20:30",
+            "L'Olympia",
+            "Paris",
+            null,
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     assertEquals(1, Dedoublonner.dedoublonner(List.of(prestation, pack)).size());
   }
 
   @Test
   void dedoublonner_heuresEcartAuDelaDeLaTolerance_nePasseFusionner() {
     final var vingtHeures =
-            new ConcertBrut(
-                    "Comédie Musicale",
-                    "2025-06-15",
-                    "20:00",
-                    "Zénith Paris",
-                    "Paris",
-                    null,
-                    null,
-                    "ticketmaster",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            "20:00",
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     final var vingtHeuresDix =
-            new ConcertBrut(
-                    "Comédie Musicale",
-                    "2025-06-15",
-                    "20:10",
-                    "Zénith Paris",
-                    "Paris",
-                    null,
-                    null,
-                    "eventim",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            "20:10",
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "eventim",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     assertEquals(2, Dedoublonner.dedoublonner(List.of(vingtHeures, vingtHeuresDix)).size());
   }
 
   @Test
   void dedoublonner_heureAbsenteDunCote_fusionneMalgreTout() {
     final var sansHeure =
-            new ConcertBrut(
-                    "Comédie Musicale",
-                    "2025-06-15",
-                    null,
-                    "Zénith Paris",
-                    "Paris",
-                    null,
-                    null,
-                    "ticketmaster",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            null,
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     final var avecHeure =
-            new ConcertBrut(
-                    "Comédie Musicale",
-                    "2025-06-15",
-                    "20:00",
-                    "Zénith Paris",
-                    "Paris",
-                    null,
-                    null,
-                    "eventim",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
+        new ConcertBrut(
+            "Comédie Musicale",
+            "2025-06-15",
+            "20:00",
+            "Zénith Paris",
+            "Paris",
+            null,
+            null,
+            "eventim",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     assertEquals(1, Dedoublonner.dedoublonner(List.of(sansHeure, avecHeure)).size());
   }
 }

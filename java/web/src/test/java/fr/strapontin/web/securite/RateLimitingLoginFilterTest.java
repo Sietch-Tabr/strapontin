@@ -125,7 +125,8 @@ class RateLimitingLoginFilterTest {
     final String ip = "10.0.0.2";
 
     for (int i = 0; i < 15; i++) {
-      final HttpServletRequest req = requete(HttpMethod.POST.name(), "/api/auth/reset-password", ip);
+      final HttpServletRequest req =
+          requete(HttpMethod.POST.name(), "/api/auth/reset-password", ip);
       final HttpServletResponse resp = reponse();
       filtre.doFilter(req, resp, chain);
     }

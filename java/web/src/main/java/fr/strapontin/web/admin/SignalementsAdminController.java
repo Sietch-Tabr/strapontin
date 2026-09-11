@@ -42,7 +42,8 @@ public class SignalementsAdminController {
    * @return 200 avec la page de résultats
    */
   @GetMapping
-  public ResponseEntity<ReponseSignalements> lister(@RequestParam(defaultValue = "0") final int page) {
+  public ResponseEntity<ReponseSignalements> lister(
+      @RequestParam(defaultValue = "0") final int page) {
     return ResponseEntity.ok(service.lister(page));
   }
 

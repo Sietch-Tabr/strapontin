@@ -147,7 +147,7 @@ public class EnrichissementArtistesService {
     List<ArtisteAEnrichir> courant = lot;
     for (final SourceEnrichissementArtiste source : sources) {
       final Map<UUID, EnrichissementArtiste> resultat = source.enrichirLot(courant);
-      for (final var entree : resultat.entrySet()) {
+      for (final Map.Entry<UUID, EnrichissementArtiste> entree : resultat.entrySet()) {
         accumule.merge(
             entree.getKey(), entree.getValue(), EnrichissementArtistesService::fusionner);
       }
@@ -201,7 +201,7 @@ public class EnrichissementArtistesService {
                 """,
             Map.of("ids", ids));
     final Map<UUID, String> resultat = new HashMap<>();
-    for (final var ligne : lignes) {
+    for (final Map<String, Object> ligne : lignes) {
       resultat.put((UUID) ligne.get("artiste_id"), (String) ligne.get("identifiant_externe"));
     }
     return resultat;
@@ -215,13 +215,15 @@ public class EnrichissementArtistesService {
               final EnrichissementArtiste e = accumule.get(a.id());
               final String wikidataId =
                   e != null && e.wikidataId() != null ? e.wikidataId() : a.wikidataId();
-              final String deezerId = e != null && e.deezerId() != null ? e.deezerId() : a.deezerId();
+              final String deezerId =
+                  e != null && e.deezerId() != null ? e.deezerId() : a.deezerId();
               return new ArtisteAEnrichir(a.id(), a.nom(), a.nomNorm(), wikidataId, deezerId);
             })
         .toList();
   }
 
-  private static EnrichissementArtiste fusionner(final EnrichissementArtiste a, final EnrichissementArtiste b) {
+  private static EnrichissementArtiste fusionner(
+      final EnrichissementArtiste a, final EnrichissementArtiste b) {
     return new EnrichissementArtiste(
         b.wikidataId() != null ? b.wikidataId() : a.wikidataId(),
         b.nomAffiche() != null ? b.nomAffiche() : a.nomAffiche(),
@@ -242,7 +244,8 @@ public class EnrichissementArtistesService {
    *   aucun signal géographique de cross-validation n'existe pour départager un homonyme réel d'un
    *   doublon.
    */
-  private boolean mettreAJourArtiste(final UUID artisteId, final String nom, final EnrichissementArtiste e) {
+  private boolean mettreAJourArtiste(
+      final UUID artisteId, final String nom, final EnrichissementArtiste e) {
     final Map<String, Object> params = new HashMap<>();
     params.put("wikidataId", e.wikidataId());
     params.put("nomAffiche", e.nomAffiche());
@@ -286,7 +289,9 @@ public class EnrichissementArtistesService {
    * P6262 fait autorité pour le lien TM, indépendamment de la découverte par mot-clé.
    */
   private void traiterCrossValidationP6262(
-      final ArtisteAEnrichir artiste, final EnrichissementArtiste enrichissement, final String attractionIdExistant) {
+      final ArtisteAEnrichir artiste,
+      final EnrichissementArtiste enrichissement,
+      final String attractionIdExistant) {
     final String tmIdWikidata = enrichissement.ticketmasterAttractionId();
     if (tmIdWikidata == null) {
       return;

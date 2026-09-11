@@ -113,7 +113,8 @@ class DeezerArtisteSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", "27");
+    final ArtisteAEnrichir artiste =
+        new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", "27");
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/artist/27")))
@@ -142,7 +143,8 @@ class DeezerArtisteSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Artiste", "artiste", null, "999999999");
+    final ArtisteAEnrichir artiste =
+        new ArtisteAEnrichir(id, "Artiste", "artiste", null, "999999999");
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/artist/999999999")))

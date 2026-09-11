@@ -8,6 +8,7 @@ import static fr.strapontin.web.concert.FiltreConcertsBuilder.CONCERTS_PAR_PAGE;
 
 import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.concert.FiltreConcertsBuilder;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -88,7 +89,8 @@ public class DecouverteService {
 
     final Map<String, Object> baseParams = new HashMap<>();
     baseParams.put("aujourd8", aujourd8);
-    final StringBuilder whereBase = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
+    final StringBuilder whereBase =
+        new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
     if (!deptsActifs.isEmpty()) {
       whereBase.append(" AND c.dept = ANY(:depts)");
       baseParams.put(CLE_DEPTS, deptsActifs.toArray(String[]::new));
@@ -99,23 +101,26 @@ public class DecouverteService {
     countParams.remove("offset");
 
     // Requêtes indépendantes lancées en parallèle pendant l'exécution de la requête principale
-    final var futureTotal = CompletableFuture.supplyAsync(() -> compterTotal(where, countParams));
-    final var futureFiltres =
+    final CompletableFuture<Integer> futureTotal =
+        CompletableFuture.supplyAsync(() -> compterTotal(where, countParams));
+    final CompletableFuture<FiltresDisponibles> futureFiltres =
         CompletableFuture.supplyAsync(() -> chargerFiltresDisponibles(whereBase, baseParams));
-    final var futureSyncTs = CompletableFuture.supplyAsync(this::lireDerniereSync);
-    final var futureSyncParDept = CompletableFuture.supplyAsync(() -> lireSyncParDept(deptsActifs));
+    final CompletableFuture<Timestamp> futureSyncTs =
+        CompletableFuture.supplyAsync(this::lireDerniereSync);
+    final CompletableFuture<List<SyncDept>> futureSyncParDept =
+        CompletableFuture.supplyAsync(() -> lireSyncParDept(deptsActifs));
 
     final List<ConcertDecouverte> concerts =
         jdbc.query(
             """
-                SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
-                       c.salle, c.ville, c.dept, c.url, c.classification, c.genre, c.statut, c.first_seen
-                FROM concerts c
-                LEFT JOIN artistes a ON a.id = c.artiste_id
-                WHERE %s
-                ORDER BY %s
-                LIMIT :limit OFFSET :offset
-                """
+            SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
+                   c.salle, c.ville, c.dept, c.url, c.classification, c.genre, c.statut, c.first_seen
+            FROM concerts c
+            LEFT JOIN artistes a ON a.id = c.artiste_id
+            WHERE %s
+            ORDER BY %s
+            LIMIT :limit OFFSET :offset
+            """
                 .formatted(where, orderBy),
             params,
             (rs, _) ->
@@ -137,7 +142,7 @@ public class DecouverteService {
 
     final int total = futureTotal.join();
     final FiltresDisponibles filtres = futureFiltres.join();
-    final java.sql.Timestamp syncTs = futureSyncTs.join();
+    final Timestamp syncTs = futureSyncTs.join();
     final List<SyncDept> syncParDept = futureSyncParDept.join();
 
     return new ReponseDecouverte(
@@ -185,21 +190,21 @@ public class DecouverteService {
       final StringBuilder whereBase, final Map<String, Object> baseParams) {
     final String sql =
         """
-            WITH base AS (
-              SELECT c.genre, to_char(c.date, 'YYYY-MM') AS mois, c.classification
-              FROM concerts c
-              WHERE %s
-            )
-            SELECT 'genre'          AS type, genre          AS valeur
-              FROM (SELECT DISTINCT genre FROM base WHERE genre IS NOT NULL) g
-            UNION ALL
-            SELECT 'mois'           AS type, mois           AS valeur
-              FROM (SELECT DISTINCT mois FROM base) m
-            UNION ALL
-            SELECT 'classification' AS type, classification AS valeur
-              FROM (SELECT DISTINCT classification FROM base WHERE classification IS NOT NULL) cl
-            ORDER BY type, valeur
-            """
+        WITH base AS (
+          SELECT c.genre, to_char(c.date, 'YYYY-MM') AS mois, c.classification
+          FROM concerts c
+          WHERE %s
+        )
+        SELECT 'genre'          AS type, genre          AS valeur
+          FROM (SELECT DISTINCT genre FROM base WHERE genre IS NOT NULL) g
+        UNION ALL
+        SELECT 'mois'           AS type, mois           AS valeur
+          FROM (SELECT DISTINCT mois FROM base) m
+        UNION ALL
+        SELECT 'classification' AS type, classification AS valeur
+          FROM (SELECT DISTINCT classification FROM base WHERE classification IS NOT NULL) cl
+        ORDER BY type, valeur
+        """
             .formatted(whereBase);
 
     final List<String> genres = new ArrayList<>();
@@ -218,12 +223,12 @@ public class DecouverteService {
     return new FiltresDisponibles(genres, mois, classifications);
   }
 
-  private java.sql.Timestamp lireDerniereSync() {
+  private Timestamp lireDerniereSync() {
     return jdbc.queryForObject(
         "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE type_job = 'fetch:region'"
             + " AND derniere_exec IS NOT NULL",
         Map.of(),
-        java.sql.Timestamp.class);
+        Timestamp.class);
   }
 
   private List<SyncDept> lireSyncParDept(final List<String> deptsActifs) {
@@ -235,7 +240,7 @@ public class DecouverteService {
             + " WHERE dept = ANY(:depts) GROUP BY dept",
         Map.of(CLE_DEPTS, deptsActifs.toArray(String[]::new)),
         (rs, _) -> {
-          final java.sql.Timestamp ts = rs.getTimestamp("derniere_sync");
+          final Timestamp ts = rs.getTimestamp("derniere_sync");
           return new SyncDept(rs.getString("dept"), ts != null ? ts.toInstant() : null);
         });
   }

@@ -14,6 +14,7 @@ import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
 import fr.strapontin.worker.persister.ReconciliateurSalles;
+import java.sql.Array;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -157,7 +158,7 @@ public class ReconciliationNocturneService {
             Map.of());
 
     int incoherences = 0;
-    for (final var ligne : lies) {
+    for (final Map<String, Object> ligne : lies) {
       final UUID artisteId = (UUID) ligne.get("artiste_id");
       final String attractionId = (String) ligne.get("identifiant_externe");
       final String nom = (String) ligne.get("nom");
@@ -191,7 +192,8 @@ public class ReconciliationNocturneService {
    *
    * @return {@code true} si le nom a été pré-accepté (aucun signalement à faire)
    */
-  private boolean preAccepterSiAliasWikidataConnu(final UUID artisteId, final String nomAttraction) {
+  private boolean preAccepterSiAliasWikidataConnu(
+      final UUID artisteId, final String nomAttraction) {
     final List<String> alias = lireAliasWikidata(artisteId);
     if (alias.isEmpty()) {
       return false;
@@ -223,7 +225,7 @@ public class ReconciliationNocturneService {
             "SELECT alias_wikidata FROM artistes WHERE id = CAST(:id AS uuid)",
             Map.of("id", artisteId.toString()),
             (rs, _) -> {
-              final java.sql.Array tableau = rs.getArray("alias_wikidata");
+              final Array tableau = rs.getArray("alias_wikidata");
               return tableau != null ? (String[]) tableau.getArray() : new String[0];
             });
     return resultats.isEmpty() ? List.of() : Arrays.asList(resultats.get(0));
@@ -240,7 +242,11 @@ public class ReconciliationNocturneService {
    * comme accepté, pas une valeur obsolète d'une nuit précédente.
    */
   private void signalerNomIncoherent(
-      final UUID artisteId, final String attractionId, final String nom, final String nomAttraction, final boolean dejaSignale) {
+      final UUID artisteId,
+      final String attractionId,
+      final String nom,
+      final String nomAttraction,
+      final boolean dejaSignale) {
     jdbc.update(
         """
         UPDATE artiste_sources
@@ -283,7 +289,7 @@ public class ReconciliationNocturneService {
     int verifiees = 0;
     int redecouvertes = 0;
     int ambigues = 0;
-    for (final var ligne : suspectes) {
+    for (final Map<String, Object> ligne : suspectes) {
       final UUID salleId = (UUID) ligne.get("salle_id");
       final String ancienVenueId = (String) ligne.get("identifiant_externe");
       final String nom = (String) ligne.get("nom");
@@ -361,7 +367,7 @@ public class ReconciliationNocturneService {
                 """,
             Map.of());
 
-    for (final var ligne : suspects) {
+    for (final Map<String, Object> ligne : suspects) {
       final UUID artisteId = (UUID) ligne.get("artiste_id");
       final String ancienAttractionId = (String) ligne.get("identifiant_externe");
       final String nom = (String) ligne.get("nom");
@@ -391,7 +397,8 @@ public class ReconciliationNocturneService {
         Map.of("id", id.toString()));
   }
 
-  private void redecouvrirArtiste(final UUID artisteId, final String ancienAttractionId, final String nom) {
+  private void redecouvrirArtiste(
+      final UUID artisteId, final String ancienAttractionId, final String nom) {
     final String nouveauId = tm.rechercherAttractionId(nom);
     if (nouveauId != null
         && !nouveauId.equals(ancienAttractionId)

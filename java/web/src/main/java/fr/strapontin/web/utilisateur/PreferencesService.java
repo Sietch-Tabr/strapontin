@@ -14,9 +14,11 @@ import fr.strapontin.web.salle.SalleService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -97,7 +99,10 @@ public class PreferencesService {
    */
   @Transactional
   public ResultatImportComplet importer(
-      final String userId, final ExportComplet export, final boolean ecraser, final boolean importerConfig) {
+      final String userId,
+      final ExportComplet export,
+      final boolean ecraser,
+      final boolean importerConfig) {
     int nbSupprimesArtistes = 0;
     int nbSupprimesSalles = 0;
     if (ecraser) {
@@ -143,7 +148,7 @@ public class PreferencesService {
         resultat.rejetes(),
         ecraser ? "ecraser" : "fusionner");
     final String niveauLog = ecraser ? "warn" : "info";
-    final Map<String, Object> metaImport = new java.util.LinkedHashMap<>();
+    final Map<String, Object> metaImport = new LinkedHashMap<>();
     metaImport.put("userId", userId);
     metaImport.put("artistes", resultat.artistes());
     metaImport.put("salles", resultat.salles());
@@ -361,8 +366,7 @@ public class PreferencesService {
         Map.of(CLE_USER_ID, userId, "depts", nouveauxDepts));
   }
 
-  private static final java.util.regex.Pattern VENUE_ID_PATTERN =
-      java.util.regex.Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
+  private static final Pattern VENUE_ID_PATTERN = Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
 
   /**
    * Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction d'import

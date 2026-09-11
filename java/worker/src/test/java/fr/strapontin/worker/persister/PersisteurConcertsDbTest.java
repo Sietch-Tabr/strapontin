@@ -29,7 +29,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 class PersisteurConcertsDbTest {
 
-  private static ValeurConcert concert(final String url, final LocalTime heure, final String statut) {
+  private static ValeurConcert concert(
+      final String url, final LocalTime heure, final String statut) {
     return new ValeurConcert(
         "Artiste",
         "artiste",
@@ -71,7 +72,8 @@ class PersisteurConcertsDbTest {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     final PersisteurConcertsDb db = new PersisteurConcertsDb(jdbc);
 
-    final List<ValeurConcert> concerts = List.of(concert("http://tm/123", LocalTime.of(20, 0), "onsale"));
+    final List<ValeurConcert> concerts =
+        List.of(concert("http://tm/123", LocalTime.of(20, 0), "onsale"));
 
     db.alignerHeureReportTM(concerts);
 

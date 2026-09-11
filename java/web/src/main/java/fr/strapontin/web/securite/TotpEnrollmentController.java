@@ -45,7 +45,9 @@ public class TotpEnrollmentController {
    * @param logAdminService journal d'administration
    */
   public TotpEnrollmentController(
-      final TotpService totpService, final UserController userController, final LogAdminService logAdminService) {
+      final TotpService totpService,
+      final UserController userController,
+      final LogAdminService logAdminService) {
     this.totpService = totpService;
     this.userController = userController;
     this.logAdminService = logAdminService;
@@ -59,7 +61,8 @@ public class TotpEnrollmentController {
    * @return {@code {otpUri, totpSecret, qrCodeSvg}}
    */
   @GetMapping("/setup")
-  public ResponseEntity<Map<String, Object>> setup(final HttpSession session, final Authentication auth) {
+  public ResponseEntity<Map<String, Object>> setup(
+      final HttpSession session, final Authentication auth) {
     final UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
     // Réutilise le secret déjà en session tant que l'enrollment n'est pas confirmé : éviter de
     // générer un nouveau secret à chaque appel (rechargement de page), ce qui laisserait des clés
@@ -90,7 +93,9 @@ public class TotpEnrollmentController {
    */
   @PostMapping("/confirmer")
   public ResponseEntity<Map<String, Object>> confirmer(
-      @Valid @RequestBody final TotpChallengeRequest corps, final HttpSession session, final Authentication auth) {
+      @Valid @RequestBody final TotpChallengeRequest corps,
+      final HttpSession session,
+      final Authentication auth) {
     final String secret = (String) session.getAttribute(SESSION_TOTP_SETUP);
     if (secret == null) {
       return erreur(400, "Session expirée. Recommencez la configuration.");

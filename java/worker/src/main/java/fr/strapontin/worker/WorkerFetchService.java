@@ -8,6 +8,7 @@ import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.Dedoublonner;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.QuotaTM;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceAvecFetchLot;
 import fr.strapontin.sources.SourceConcerts;
@@ -21,8 +22,10 @@ import fr.strapontin.worker.sante.SuiviSanteSourcesService;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -32,7 +35,7 @@ import org.springframework.stereotype.Service;
  * Orchestration des jobs de fetch : fetch → dédoublonnage → résolution → persistance → recalcul.
  * Extrait de {@code WorkerService}.
  *
- * Délégué par les jobs Quartz {@code FetchArtistesBatchJob}, {@code FetchRegionJob}, {@code
+ * <p>Délégué par les jobs Quartz {@code FetchArtistesBatchJob}, {@code FetchRegionJob}, {@code
  * FetchSalleJob}, {@code FetchSallesAllJob}.
  *
  * @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
@@ -89,14 +92,14 @@ public class WorkerFetchService {
   }
 
   /**
-   * Remonte dans {@code logs_admin} les échecs de lots d'un job multi-lots, indépendamment du résultat
-   * des autres lots — sans cela, un lot en échec reste invisible tant que le job dans son ensemble
-   * se termine sans exception et que son bilan agrégé reste positif grâce aux autres lots.
+   * Remonte dans {@code logs_admin} les échecs de lots d'un job multi-lots, indépendamment du
+   * résultat des autres lots — sans cela, un lot en échec reste invisible tant que le job dans son
+   * ensemble se termine sans exception et que son bilan agrégé reste positif grâce aux autres lots.
    *
    * <p>Niveau {@code error} si tous les lots du job ont échoué (panne totale), {@code warn} sinon
    * (échec partiel, même convention que {@code WorkerStatsService#remonterBilan}). Délègue ensuite
-   * à {@link RetryLotsService} la décision de retenter ou d'abandonner les identifiants en échec,
-   * y compris quand ce cycle est propre (remise à zéro du compteur de tentatives).
+   * à {@link RetryLotsService} la décision de retenter ou d'abandonner les identifiants en échec, y
+   * compris quand ce cycle est propre (remise à zéro du compteur de tentatives).
    *
    * @param typeJob type de job (ex. {@code "fetch:salles:all"})
    * @param echecs messages d'échec, un par lot en échec
@@ -104,7 +107,10 @@ public class WorkerFetchService {
    * @param identifiantsEnEchec identifiants des entités des lots en échec, pour un retry ciblé
    */
   private void remonterEchecsLots(
-      final String typeJob, final List<String> echecs, final int totalLots, final List<String> identifiantsEnEchec) {
+      final String typeJob,
+      final List<String> echecs,
+      final int totalLots,
+      final List<String> identifiantsEnEchec) {
     if (!echecs.isEmpty()) {
       final String niveau = echecs.size() == totalLots ? "error" : "warn";
       final String message =
@@ -123,7 +129,7 @@ public class WorkerFetchService {
   /**
    * Fetch global de tous les artistes suivis (TM par attraction ID + Eventim individuel).
    *
-   * Suspendu si le quota TM est inférieur à 500 (SEUIL_QUOTA_CRON). Une exception dans un lot
+   * <p>Suspendu si le quota TM est inférieur à 500 (SEUIL_QUOTA_CRON). Une exception dans un lot
    * n'interrompt pas les lots suivants : le recalcul de matchs et le digest de notification
    * s'exécutent toujours sur la base des lots effectivement réussis, plutôt que d'être sautés en
    * cas d'échec partiel.
@@ -215,8 +221,8 @@ public class WorkerFetchService {
    * <p>Persistance par lot plutôt qu'en un seul bloc final : sans cela, une interruption
    * (redéploiement, crash) avant la fin du cycle complet perdrait tout le travail de fetch déjà
    * effectué sur ce cycle (quota TM consommé pour rien). Le dédoublonnage cross-sources
-   * (TM/Eventim) reste correct à cette granularité : un même concert n'est jamais rapporté par
-   * deux sources pour deux artistes différents, la comparaison par lot suffit.
+   * (TM/Eventim) reste correct à cette granularité : un même concert n'est jamais rapporté par deux
+   * sources pour deux artistes différents, la comparaison par lot suffit.
    *
    * @param lot sous-ensemble de lignes artiste (taille {@value TAILLE_LOT_TM})
    * @param sourcesSimples sources hors {@link SourceAvecFetchLot} (fetch individuel par artiste)
@@ -253,7 +259,8 @@ public class WorkerFetchService {
 
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    final List<String> artisteIds = lot.stream().map(row -> (String) row.get("artiste_id_str")).toList();
+    final List<String> artisteIds =
+        lot.stream().map(row -> (String) row.get("artiste_id_str")).toList();
     mettreAJourAbsences("artiste_id", artisteIds, debutLot);
     return resultat;
   }
@@ -269,8 +276,8 @@ public class WorkerFetchService {
 
   /**
    * Met à jour le compteur d'absences consécutives des concerts futurs liés aux entités
-   * effectivement retraitées dans ce cycle : remis à zéro pour tout concert réellement revu
-   * ({@code updated_at} avancé par l'upsert), incrémenté sinon.
+   * effectivement retraitées dans ce cycle : remis à zéro pour tout concert réellement revu ({@code
+   * updated_at} avancé par l'upsert), incrémenté sinon.
    *
    * @param colonne "artiste_id" ou "salle_id"
    * @param ids identifiants (texte) des entités traitées dans ce cycle
@@ -294,7 +301,8 @@ public class WorkerFetchService {
   private static final String SQL_ABSENCES_ARTISTE = SQL_ABSENCES_BASE.formatted("artiste_id");
   private static final String SQL_ABSENCES_SALLE = SQL_ABSENCES_BASE.formatted("salle_id");
 
-  private void mettreAJourAbsences(final String colonne, final List<String> ids, final String debutCycle) {
+  private void mettreAJourAbsences(
+      final String colonne, final List<String> ids, final String debutCycle) {
     if (ids.isEmpty()) {
       return;
     }
@@ -307,7 +315,8 @@ public class WorkerFetchService {
     jdbc.update(sql, Map.of("debut", debutCycle, "seuil", SEUIL_ABSENCES_CONSECUTIVES, "ids", ids));
   }
 
-  private static ResultatPersistance accumuler(final ResultatPersistance a, final ResultatPersistance b) {
+  private static ResultatPersistance accumuler(
+      final ResultatPersistance a, final ResultatPersistance b) {
     return new ResultatPersistance(a.nbInseres() + b.nbInseres(), a.nbMisAJour() + b.nbMisAJour());
   }
 
@@ -350,7 +359,7 @@ public class WorkerFetchService {
    * </ol>
    *
    * @param rows lignes agrégées par {@code artiste_id} avec {@code artiste_affiche}, {@code
-   *   artiste_id_str}, {@code attraction_id}, {@code nb_ids_distincts}
+   *     artiste_id_str}, {@code attraction_id}, {@code nb_ids_distincts}
    * @return concerts bruts collectés depuis TM
    */
   private record ResolutionAttractionIds(List<String> attractionIds, List<String> nomsSansTmId) {}
@@ -391,7 +400,8 @@ public class WorkerFetchService {
     return new ResolutionAttractionIds(attractionIds, nomsSansTmId);
   }
 
-  private boolean attractionIdAmbigu(final Map<String, Object> row, final String nom, final String artisteIdStr) {
+  private boolean attractionIdAmbigu(
+      final Map<String, Object> row, final String nom, final String artisteIdStr) {
     final Number nbIdsDistinctsNum = (Number) row.get("nb_ids_distincts");
     final int nbIdsDistincts = nbIdsDistinctsNum != null ? nbIdsDistinctsNum.intValue() : 0;
     if (nbIdsDistincts <= 1) {
@@ -463,7 +473,7 @@ public class WorkerFetchService {
   /**
    * Fetch par région pour tous les départements configurés.
    *
-   * Suspendu si le quota TM est insuffisant.
+   * <p>Suspendu si le quota TM est insuffisant.
    */
   public void executerFetchRegion() {
     executerFetchRegionInterne(null);
@@ -533,8 +543,8 @@ public class WorkerFetchService {
         });
   }
 
-  private static java.util.Set<String> collecterTousLesDepts(final List<String[]> allDepts) {
-    final java.util.Set<String> tousLesDepts = new java.util.LinkedHashSet<>();
+  private static Set<String> collecterTousLesDepts(final List<String[]> allDepts) {
+    final Set<String> tousLesDepts = new LinkedHashSet<>();
     for (final String[] depts : allDepts) {
       if (depts != null) {
         for (final String d : depts) {
@@ -556,8 +566,8 @@ public class WorkerFetchService {
    * un même concert n'étant jamais rapporté par deux sources dans deux départements différents.
    *
    * <p>Met à jour les absences des salles du lot indépendamment de tout suivi utilisateur — {@code
-   * fetch:region} est browse-only, un concert découvert ici peut n'être jamais suivi ni par
-   * artiste ni par salle, auquel cas il n'entrerait autrement dans le périmètre d'aucun suivi de
+   * fetch:region} est browse-only, un concert découvert ici peut n'être jamais suivi ni par artiste
+   * ni par salle, auquel cas il n'entrerait autrement dans le périmètre d'aucun suivi de
    * péremption.
    *
    * @param lotDepts sous-ensemble de départements (taille {@value TAILLE_LOT_DEPTS})
@@ -631,17 +641,17 @@ public class WorkerFetchService {
   }
 
   /**
-   * Fetch périodique des salles suivies ({@code user_salles}) ayant des sources configurées dans {@code
-   * salle_sources}.
+   * Fetch périodique des salles suivies ({@code user_salles}) ayant des sources configurées dans
+   * {@code salle_sources}.
    *
-   * Restreint aux salles réellement suivies par un utilisateur depuis — jusque-là toutes les
+   * <p>Restreint aux salles réellement suivies par un utilisateur depuis — jusque-là toutes les
    * salles du référentiel (255 avec source TM en prod le 18/07/2026) étaient refetchées à chaque
    * cycle, épuisant le quota TM en une journée dès que a débloqué cet appel pour de vrai. Les
-   * salles non suivies n'apportent aucune valeur ici : un artiste suivi qui y jouerait est de
-   * toute façon déjà détecté par {@code fetch:artistes:batch} (recherche nationale par nom,
-   * indépendante du département).
+   * salles non suivies n'apportent aucune valeur ici : un artiste suivi qui y jouerait est de toute
+   * façon déjà détecté par {@code fetch:artistes:batch} (recherche nationale par nom, indépendante
+   * du département).
    *
-   * Boucle sur les salles suivies et exécute le même pipeline que {@link #executerFetchSalle} en
+   * <p>Boucle sur les salles suivies et exécute le même pipeline que {@link #executerFetchSalle} en
    * agrégeant les concerts avant persistance. Suspendu si le quota TM est insuffisant.
    */
   public void executerFetchSallesAll() {
@@ -671,7 +681,8 @@ public class WorkerFetchService {
                 new ResultatPersistance(0, 0), "quota insuffisant");
           }
 
-          final List<SalleAFetcher> sallesAFetcher = recupererIdentifiantsSallesSuivies(salleIdsCibles);
+          final List<SalleAFetcher> sallesAFetcher =
+              recupererIdentifiantsSallesSuivies(salleIdsCibles);
           if (sallesAFetcher.isEmpty()) {
             log.info("fetch:salles:all — aucune salle suivie avec source configurée");
             return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
@@ -699,7 +710,8 @@ public class WorkerFetchService {
   // salle_sources.source) — sans cette traduction, fetchSalle n'est jamais invoqué pour aucune
   // salle TM (mismatch silencieux, aucune exception, aucun log d'erreur). Restreint aux salles
   // suivies (user_salles) — voir Javadoc de executerFetchSallesAll.
-  private List<SalleAFetcher> recupererIdentifiantsSallesSuivies(final List<String> salleIdsCibles) {
+  private List<SalleAFetcher> recupererIdentifiantsSallesSuivies(
+      final List<String> salleIdsCibles) {
     final boolean filtre = salleIdsCibles != null;
     return jdbc
         .queryForList(
@@ -778,10 +790,10 @@ public class WorkerFetchService {
    * Détermine si un concert est éligible à la résolution du nom canonique via Deezer.
    *
    * <p>Exclut les classifications "theatre", "divers" et "sports" ({@link
-   * #CLASSIFICATIONS_NON_MUSICALES}, jamais un vrai musicien côté Deezer) ainsi que,
-   * spécifiquement pour Eventim, une classification vide/absente — Digitick omet aussi sa
-   * classification mais uniquement pour de vrais concerts (filtré en amont sur le genre
-   * "Concert"), alors qu'Eventim l'omet fréquemment y compris pour des spectacles non musicaux.
+   * #CLASSIFICATIONS_NON_MUSICALES}, jamais un vrai musicien côté Deezer) ainsi que, spécifiquement
+   * pour Eventim, une classification vide/absente — Digitick omet aussi sa classification mais
+   * uniquement pour de vrais concerts (filtré en amont sur le genre "Concert"), alors qu'Eventim
+   * l'omet fréquemment y compris pour des spectacles non musicaux.
    *
    * @param c concert à évaluer
    * @return {@code true} si la résolution Deezer peut s'appliquer à ce concert
@@ -875,7 +887,7 @@ public class WorkerFetchService {
   }
 
   private void sauvegarderQuota() {
-    final var quota = tm.obtenirQuota();
+    final QuotaTM quota = tm.obtenirQuota();
     if (quota != null) {
       gestionQuotaTM.ecrireQuota(quota);
     }

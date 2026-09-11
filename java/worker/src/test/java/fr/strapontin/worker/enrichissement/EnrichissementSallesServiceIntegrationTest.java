@@ -22,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -68,7 +69,8 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
   @Test
   @SuppressWarnings("unchecked")
   void enrichir_salleDuJourBatchCourant_estCandidate() {
-    final UUID salleAujourdhui = insererSalle("Salle Aujourdhui", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    final UUID salleAujourdhui =
+        insererSalle("Salle Aujourdhui", "EXTRACT(ISODOW FROM CURRENT_DATE)");
 
     service.enrichir();
 
@@ -102,8 +104,7 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
             "INSERT INTO evenements (artiste_norm, date, salle_norm, dept, salle_id)"
                 + " VALUES ('artiste', CURRENT_DATE + 30, 'salle sans dept', '87',"
                 + " CAST(:salleId AS uuid)) RETURNING id",
-            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
-                .addValue("salleId", salleId.toString()),
+            new MapSqlParameterSource().addValue("salleId", salleId.toString()),
             UUID.class);
     jdbc.update(
         "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut)"

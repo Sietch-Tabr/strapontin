@@ -117,7 +117,7 @@ public class FusionSallesClePorteeService {
                 """,
             Map.of());
     final List<PaireSalles> paires = new ArrayList<>();
-    for (final var ligne : lignes) {
+    for (final Map<String, Object> ligne : lignes) {
       final String nomA = (String) ligne.get("nom_a");
       final String nomB = (String) ligne.get("nom_b");
       if (!CorrespondanceSalle.estDoublonSalle(nomA, nomB)) {
@@ -183,9 +183,9 @@ public class FusionSallesClePorteeService {
     final double a =
         Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2)
             + Math.cos(phi1)
-            * Math.cos(phi2)
-            * Math.sin(deltaLambda / 2)
-            * Math.sin(deltaLambda / 2);
+                * Math.cos(phi2)
+                * Math.sin(deltaLambda / 2)
+                * Math.sin(deltaLambda / 2);
     final double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return RAYON_TERRE_METRES * c;
   }
@@ -211,19 +211,21 @@ public class FusionSallesClePorteeService {
       return null;
     }
 
-    final Map<String, Object> la = lignes.get(0).get("id").equals(a) ? lignes.get(0) : lignes.get(1);
-    final Map<String, Object> lb = lignes.get(0).get("id").equals(a) ? lignes.get(1) : lignes.get(0);
+    final Map<String, Object> la =
+        lignes.get(0).get("id").equals(a) ? lignes.get(0) : lignes.get(1);
+    final Map<String, Object> lb =
+        lignes.get(0).get("id").equals(a) ? lignes.get(1) : lignes.get(0);
 
     final boolean aWikidata = la.get("wikidata_id") != null;
     final boolean bWikidata = lb.get("wikidata_id") != null;
     if (aWikidata != bWikidata) {
-      return aWikidata ? new UUID[]{a, b} : new UUID[]{b, a};
+      return aWikidata ? new UUID[] {a, b} : new UUID[] {b, a};
     }
 
     final long nbA = ((Number) la.get("nb_concerts")).longValue();
     final long nbB = ((Number) lb.get("nb_concerts")).longValue();
     if (nbA != nbB) {
-      return nbA > nbB ? new UUID[]{a, b} : new UUID[]{b, a};
+      return nbA > nbB ? new UUID[] {a, b} : new UUID[] {b, a};
     }
 
     return a.compareTo(b) <= 0 ? new UUID[] {a, b} : new UUID[] {b, a};
@@ -240,7 +242,8 @@ public class FusionSallesClePorteeService {
    */
   @Transactional
   public void fusionnerUnePaire(final UUID cibleId, final UUID sourceId) {
-    final Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
+    final Map<String, Object> ids =
+        Map.of("cible", cibleId.toString(), "source", sourceId.toString());
 
     // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible) : leurs
     // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui

@@ -48,7 +48,8 @@ public class ResendWebhooksAdminService {
    * d'injection HTTP public (contrairement à {@code RestClient} pour les autres sources), la
    * fabrique est le seul moyen de substituer un client {@link Resend} mocké en test.
    */
-  ResendWebhooksAdminService(final ConfigService configService, final Function<String, Resend> fabriqueResend) {
+  ResendWebhooksAdminService(
+      final ConfigService configService, final Function<String, Resend> fabriqueResend) {
     this.configService = configService;
     this.fabriqueResend = fabriqueResend;
   }
@@ -87,14 +88,14 @@ public class ResendWebhooksAdminService {
       final List<EvenementWebhook> evenements =
           reponse.getData() != null
               ? reponse.getData().stream()
-              .map(
-                  e ->
-                      new EvenementWebhook(
-                          e.getId(),
-                          e.getType(),
-                          e.getStatus() != null ? e.getStatus().getValue() : null,
-                          e.getCreatedAt()))
-              .toList()
+                  .map(
+                      e ->
+                          new EvenementWebhook(
+                              e.getId(),
+                              e.getType(),
+                              e.getStatus() != null ? e.getStatus().getValue() : null,
+                              e.getCreatedAt()))
+                  .toList()
               : List.of();
       return evenements;
     } catch (ResendException e) {

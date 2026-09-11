@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.salle.SalleService;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -102,7 +103,8 @@ public class SourcesService {
    * @param cp code postal 5 chiffres (peut être {@code null})
    * @return UUID stable de la salle créée ou retrouvée
    */
-  public UUID creerSalleDigitick(final String nom, final String slug, final String ville, final String cp) {
+  public UUID creerSalleDigitick(
+      final String nom, final String slug, final String ville, final String cp) {
     return salleService.creerSalleDigitick(nom, slug, ville, cp);
   }
 
@@ -114,7 +116,8 @@ public class SourcesService {
    * @param ville nouvelle ville (null = inchangée)
    * @param cp nouveau code postal (null = inchangé)
    */
-  public void modifierSalleDigitick(final UUID salleId, final String nom, final String ville, final String cp) {
+  public void modifierSalleDigitick(
+      final UUID salleId, final String nom, final String ville, final String cp) {
     salleService.mettreAJourSalle(salleId, nom, ville, cp);
   }
 
@@ -294,11 +297,11 @@ public class SourcesService {
 
   private Instant lireDernierFetch() {
     try {
-      final java.sql.Timestamp ts =
+      final Timestamp ts =
           jdbc.queryForObject(
               "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE erreur IS NULL OR erreur = ''",
               Map.of(),
-              java.sql.Timestamp.class);
+              Timestamp.class);
       return ts != null ? ts.toInstant() : null;
     } catch (Exception e) {
       log.debug("Impossible de lire le dernier fetch : {}", e.getMessage());
@@ -390,7 +393,8 @@ public class SourcesService {
    * @param nom filtre nom partiel (insensible à la casse), peut être null
    * @return page de résultats
    */
-  public ReponseSallesSources listerSalles(final boolean digitick, final int page, final String nom) {
+  public ReponseSallesSources listerSalles(
+      final boolean digitick, final int page, final String nom) {
     return digitick ? listerSallesAvecDigitick(page, nom) : listerSallesSansTmNiEventim(page, nom);
   }
 

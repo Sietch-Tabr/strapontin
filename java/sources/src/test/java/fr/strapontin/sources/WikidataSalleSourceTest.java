@@ -10,6 +10,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.web.client.RestClient;
 
 class WikidataSalleSourceTest {
@@ -47,17 +49,14 @@ class WikidataSalleSourceTest {
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("wikibase%3Amwapi")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
-                .string(org.hamcrest.Matchers.containsString("P625")))
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P625")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
-                .string(org.hamcrest.Matchers.containsString("P17")))
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P17")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
-                .string(org.hamcrest.Matchers.containsString("Q142")))
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("Q142")))
         .andRespond(
             withSuccess(
                 """
@@ -239,7 +238,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Espace Nova", "espace nova", null, null, null);
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Espace Nova", "espace nova", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -329,7 +329,7 @@ class WikidataSalleSourceTest {
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("wdt%3AP17+wd%3AQ142")))
         .andRespond(
             withSuccess(
@@ -358,13 +358,12 @@ class WikidataSalleSourceTest {
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("Q3455524")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
-                .string(org.hamcrest.Matchers.containsString("Q6465")))
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("Q6465")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("Q484170")))
         .andRespond(
             withSuccess(
@@ -426,7 +425,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Accor Arena", "accor arena", null, null, null);
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Accor Arena", "accor arena", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -642,7 +642,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Accor Arena", "accor arena", null, "75", null);
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Accor Arena", "accor arena", null, "75", null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -676,15 +677,16 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Le Splendid", "le splendid", null, null, null);
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Le Splendid", "le splendid", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("Q55488")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("Q2175765")))
         .andRespond(
             withSuccess(
@@ -715,10 +717,10 @@ class WikidataSalleSourceTest {
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("Q187456")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("Q11707")))
         .andRespond(
             withSuccess(
@@ -750,7 +752,7 @@ class WikidataSalleSourceTest {
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andExpect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+            MockRestRequestMatchers.content()
                 .string(org.hamcrest.Matchers.containsString("Q1060829")))
         .andRespond(
             withSuccess(
@@ -1070,7 +1072,7 @@ class WikidataSalleSourceTest {
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     final RestClient restClient = builder.build();
 
-    final List<SalleAEnrichir> salles = new java.util.ArrayList<>();
+    final List<SalleAEnrichir> salles = new ArrayList<>();
     for (int i = 0; i < 60; i++) {
       salles.add(
           new SalleAEnrichir(UUID.randomUUID(), "Salle" + i, "salle" + i, null, null, "Q" + i));

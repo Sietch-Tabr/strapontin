@@ -15,6 +15,7 @@ import fr.strapontin.web.admin.LogAdminService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -200,20 +201,17 @@ class ArtisteServiceTest {
   // résultat" alors que l'artiste était déjà suivi.
   @Test
   void contientCorrespondancePartielle_rechercheSubstringDunNomSuivi_retourneTrue() {
-    assertTrue(
-        ArtisteService.contientCorrespondancePartielle("yael", java.util.Set.of("yaelnaim")));
+    assertTrue(ArtisteService.contientCorrespondancePartielle("yael", Set.of("yaelnaim")));
   }
 
   @Test
   void contientCorrespondancePartielle_correspondanceExacte_retourneTrue() {
-    assertTrue(
-        ArtisteService.contientCorrespondancePartielle("yaelnaim", java.util.Set.of("yaelnaim")));
+    assertTrue(ArtisteService.contientCorrespondancePartielle("yaelnaim", Set.of("yaelnaim")));
   }
 
   @Test
   void contientCorrespondancePartielle_aucuneCorrespondance_retourneFalse() {
-    assertFalse(
-        ArtisteService.contientCorrespondancePartielle("radiohead", java.util.Set.of("yaelnaim")));
+    assertFalse(ArtisteService.contientCorrespondancePartielle("radiohead", Set.of("yaelnaim")));
   }
 
   // Wikidata et Deezer partent en parallèle dès que la recherche en base ne suffit pas — un

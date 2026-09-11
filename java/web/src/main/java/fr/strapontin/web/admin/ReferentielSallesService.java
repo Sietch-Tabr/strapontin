@@ -56,7 +56,12 @@ public class ReferentielSallesService {
    * @return page de résultats
    */
   public ReponseReferentielSalles lister(
-      final int page, final String nom, final String ville, final String dept, final String statut, final boolean wikidataManquant) {
+      final int page,
+      final String nom,
+      final String ville,
+      final String dept,
+      final String statut,
+      final boolean wikidataManquant) {
     final int pageNum = Math.max(0, page);
     final StringBuilder where = new StringBuilder(" WHERE 1=1 ");
     final Map<String, Object> params = new HashMap<>();
@@ -213,7 +218,8 @@ public class ReferentielSallesService {
       return false;
     }
 
-    final Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
+    final Map<String, Object> ids =
+        Map.of("cible", cibleId.toString(), "source", sourceId.toString());
 
     // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible) : leurs
     // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui

@@ -87,7 +87,8 @@ class AppareilEnregistrementInterceptorTest {
 
     final UtilisateurDetails details =
         new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false);
-    final Authentication auth = UsernamePasswordAuthenticationToken.authenticated(details, null, null);
+    final Authentication auth =
+        UsernamePasswordAuthenticationToken.authenticated(details, null, null);
     SecurityContextHolder.getContext().setAuthentication(auth);
 
     assertTrue(interceptor.preHandle(request, response, new Object()));

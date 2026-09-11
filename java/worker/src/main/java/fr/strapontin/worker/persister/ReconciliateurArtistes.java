@@ -96,8 +96,8 @@ public class ReconciliateurArtistes {
         remplacementsIntraLot.isEmpty()
             ? lot
             : lot.stream()
-            .map(c -> appliquerRemplacementArtiste(c, remplacementsIntraLot))
-            .toList();
+                .map(c -> appliquerRemplacementArtiste(c, remplacementsIntraLot))
+                .toList();
 
     final Set<String> sallesNorms =
         new HashSet<>(lotApresIntraLot.stream().map(ValeurConcert::salleNorm).toList());
@@ -205,7 +205,8 @@ public class ReconciliateurArtistes {
     }
   }
 
-  private Map<String, String> construireRemplacementsArtisteIntraLot(final List<ValeurConcert> lot) {
+  private Map<String, String> construireRemplacementsArtisteIntraLot(
+      final List<ValeurConcert> lot) {
     final Map<String, String> remplacements = new HashMap<>();
     final Map<String, List<String>> parGroupe = new LinkedHashMap<>();
     for (final ValeurConcert concert : lot) {
@@ -320,7 +321,8 @@ public class ReconciliateurArtistes {
    * @param existant ancienne identité (erronée) à corriger
    * @param concert concert entrant portant l'identité corrigée
    */
-  private void corrigerArtisteExistantEnBase(final ArtisteExistant existant, final ValeurConcert concert) {
+  private void corrigerArtisteExistantEnBase(
+      final ArtisteExistant existant, final ValeurConcert concert) {
     final MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("nouvelArtiste", concert.artiste())
@@ -413,7 +415,7 @@ public class ReconciliateurArtistes {
    * @param nomNormsResolus noms normalisés effectivement résolus par le lookup
    */
   private void persistersArtistesSources(
-      final List<ValeurConcert> concerts, final java.util.Set<String> nomNormsResolus) {
+      final List<ValeurConcert> concerts, final Set<String> nomNormsResolus) {
     final List<SqlParameterSource> params = new ArrayList<>();
     for (final ValeurConcert c : concerts) {
       if (c.artisteId() == null

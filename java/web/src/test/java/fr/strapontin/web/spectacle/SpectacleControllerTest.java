@@ -107,7 +107,8 @@ class SpectacleControllerTest {
 
   @Test
   void demasquerArtiste_artisteIdManquant_retourne400SansDelegation() {
-    final ResponseEntity<?> rep = controller.demasquerArtiste(new RequeteMasquerArtiste(null), auth);
+    final ResponseEntity<?> rep =
+        controller.demasquerArtiste(new RequeteMasquerArtiste(null), auth);
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
     verify(spectacleService, never()).demasquerArtiste(any(), any());

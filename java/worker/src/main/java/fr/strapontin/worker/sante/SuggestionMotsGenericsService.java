@@ -54,7 +54,9 @@ public class SuggestionMotsGenericsService {
   private final ObjectMapper objectMapper;
 
   public SuggestionMotsGenericsService(
-      final NamedParameterJdbcTemplate jdbc, final LogsAdminWorker logsAdminWorker, final ObjectMapper objectMapper) {
+      final NamedParameterJdbcTemplate jdbc,
+      final LogsAdminWorker logsAdminWorker,
+      final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
     this.objectMapper = objectMapper;
@@ -67,7 +69,8 @@ public class SuggestionMotsGenericsService {
    * @return nombre de mots nouvellement suggérés
    */
   public int suggerer() {
-    final List<String> noms = jdbc.queryForList("SELECT nom_norm FROM salles", Map.of(), String.class);
+    final List<String> noms =
+        jdbc.queryForList("SELECT nom_norm FROM salles", Map.of(), String.class);
 
     final Map<String, Integer> frequences = new HashMap<>();
     for (final String nom : noms) {
@@ -80,7 +83,7 @@ public class SuggestionMotsGenericsService {
 
     final Set<String> dejaSuggeres = lireDejaSuggeres();
     int nouveaux = 0;
-    for (final var entree : frequences.entrySet()) {
+    for (final Map.Entry<String, Integer> entree : frequences.entrySet()) {
       final String mot = entree.getKey();
       final int occurrences = entree.getValue();
       if (occurrences < SEUIL_OCCURRENCES_MOT_GENERIQUE || dejaSuggeres.contains(mot)) {

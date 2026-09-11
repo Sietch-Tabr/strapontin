@@ -8,12 +8,17 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
+import java.io.IOException;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 class OverpassSalleSourceTest {
@@ -123,7 +128,7 @@ class OverpassSalleSourceTest {
     // Requête envoyée en corps form-urlencoded (data=...) : la comparaison doit passer par le
     // même encodage que le client, pas par la chaîne brute.
     final String fragmentAttendu =
-        java.net.URLEncoder.encode(
+        URLEncoder.encode(
             "name\"~\"Salle \\\"Le Central\\\"\",i", java.nio.charset.StandardCharsets.UTF_8);
     serveur
         .expect(requestTo(urlOverpass()))
@@ -257,7 +262,7 @@ class OverpassSalleSourceTest {
             content()
                 .string(
                     org.hamcrest.Matchers.containsString(
-                        java.net.URLEncoder.encode(
+                        URLEncoder.encode(
                             "L['’]Empreinte", java.nio.charset.StandardCharsets.UTF_8))))
         .andRespond(
             withSuccess(
@@ -285,14 +290,14 @@ class OverpassSalleSourceTest {
   void delaiAvantRetry_429_backoffPlusLongQuUneErreurReseau() {
     final long delai429 =
         OverpassSalleSource.delaiAvantRetry(
-            org.springframework.web.client.HttpClientErrorException.create(
-                org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
+            HttpClientErrorException.create(
+                HttpStatus.TOO_MANY_REQUESTS,
                 "Too Many Requests",
-                org.springframework.http.HttpHeaders.EMPTY,
+                HttpHeaders.EMPTY,
                 new byte[0],
                 null));
     final long delaiErreurReseau =
-        OverpassSalleSource.delaiAvantRetry(new java.io.IOException("connexion refusée"));
+        OverpassSalleSource.delaiAvantRetry(new IOException("connexion refusée"));
 
     assertTrue(delai429 > delaiErreurReseau);
   }

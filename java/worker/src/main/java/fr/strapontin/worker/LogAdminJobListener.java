@@ -73,7 +73,8 @@ public class LogAdminJobListener implements JobListener {
     return NomsJobs.PAR_CLE_QUARTZ.getOrDefault(cle, cle);
   }
 
-  private void insererLog(final String niveau, final String message, final Map<String, Object> meta) {
+  private void insererLog(
+      final String niveau, final String message, final Map<String, Object> meta) {
     try {
       final String metaJson = meta != null ? jackson.writeValueAsString(meta) : null;
       final Map<String, Object> params = new HashMap<>();

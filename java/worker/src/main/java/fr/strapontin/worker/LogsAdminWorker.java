@@ -47,7 +47,11 @@ public class LogsAdminWorker {
    * @param message message lisible
    * @param meta métadonnées structurées, peut être null
    */
-  public void inserer(final String niveau, final String source, final String message, final Map<String, Object> meta) {
+  public void inserer(
+      final String niveau,
+      final String source,
+      final String message,
+      final Map<String, Object> meta) {
     try {
       final String metaJson = meta != null ? objectMapper.writeValueAsString(meta) : "{}";
       jdbc.update(

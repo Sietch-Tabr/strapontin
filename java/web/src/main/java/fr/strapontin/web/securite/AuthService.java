@@ -107,7 +107,8 @@ public class AuthService {
    * @throws ErreurMetier si le token est invalide, expiré, non-invite ou l'identifiant pris
    */
   @Transactional
-  public String activerCompteInvite(final String token, final String identifiant, final String motDePasse) {
+  public String activerCompteInvite(
+      final String token, final String identifiant, final String motDePasse) {
     final String tokenHash = GenerateurSecrets.sha256Hex(token);
     final String fullIdentifiant =
         verificationRepository

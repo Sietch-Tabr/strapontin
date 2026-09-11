@@ -242,7 +242,8 @@ class NotificationDigestServiceTest {
             "ARTISTE",
             null);
 
-    final String payload = invoquerPayloadPush(List.of(c1, c2, c3), "https://strapontin.exemple.fr");
+    final String payload =
+        invoquerPayloadPush(List.of(c1, c2, c3), "https://strapontin.exemple.fr");
     final String corps = payload.split("\"body\":\"")[1].split("\",\"icon\"")[0];
 
     assertEquals(1, corps.split("\\\\n\\\\n", -1).length - 1, "Une seule rupture entre artistes");
@@ -558,7 +559,8 @@ class NotificationDigestServiceTest {
   }
 
   private static String invoquerPayloadPush(
-      final List<NotificationDigestService.ConcertNotif> concerts, final String baseUrl) throws Exception {
+      final List<NotificationDigestService.ConcertNotif> concerts, final String baseUrl)
+      throws Exception {
     final Method m =
         NotificationDigestService.class.getDeclaredMethod(
             "construirePayloadPush", List.class, String.class);
@@ -567,7 +569,9 @@ class NotificationDigestServiceTest {
   }
 
   private static String invoquerCorpsEmail(
-      final String sujet, final List<NotificationDigestService.ConcertNotif> concerts, final String baseUrl)
+      final String sujet,
+      final List<NotificationDigestService.ConcertNotif> concerts,
+      final String baseUrl)
       throws Exception {
     final Method m =
         NotificationDigestService.class.getDeclaredMethod(

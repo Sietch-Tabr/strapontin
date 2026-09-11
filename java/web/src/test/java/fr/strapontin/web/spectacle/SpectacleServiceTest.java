@@ -10,6 +10,8 @@ import static org.mockito.Mockito.*;
 
 import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.utilisateur.UserConfigService;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -192,7 +194,7 @@ class SpectacleServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void masquerArtiste_executeMiseAJourAvecArtisteId() {
-    final java.util.UUID artisteId = java.util.UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
 
     service.masquerArtiste("u1", artisteId);
 
@@ -371,9 +373,8 @@ class SpectacleServiceTest {
     assertEquals(List.of("concert"), rep.classificationsDisponibles());
   }
 
-  private static java.sql.ResultSet ligneFiltre(final String type, final String valeur)
-      throws java.sql.SQLException {
-    final java.sql.ResultSet rs = mock(java.sql.ResultSet.class);
+  private static ResultSet ligneFiltre(final String type, final String valeur) throws SQLException {
+    final ResultSet rs = mock(ResultSet.class);
     when(rs.getString("type")).thenReturn(type);
     when(rs.getString("valeur")).thenReturn(valeur);
     return rs;
@@ -382,7 +383,7 @@ class SpectacleServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void demasquerArtiste_executeMiseAJourAvecArtisteId() {
-    final java.util.UUID artisteId = java.util.UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
 
     service.demasquerArtiste("u1", artisteId);
 

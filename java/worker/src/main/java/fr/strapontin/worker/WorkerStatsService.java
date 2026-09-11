@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -54,7 +55,7 @@ public class WorkerStatsService {
    * @param meterRegistry registre Micrometer pour la métrique de durée par type de job
    * @param suiviChronicite suivi des cycles consécutifs en échec par job/source
    * @param deriveVolumeFetchService détection de repli de volume significatif par rapport à
-   *   l'historique récent
+   *     l'historique récent
    */
   public WorkerStatsService(
       final List<SourceConcerts> sources,
@@ -85,7 +86,10 @@ public class WorkerStatsService {
    * @param erreur message d'erreur, ou {@code null} si le job s'est terminé sans exception
    */
   public void enregistrerStatJob(
-      final String typeJob, final long dureeMs, final ResultatPersistance resultat, final String erreur) {
+      final String typeJob,
+      final long dureeMs,
+      final ResultatPersistance resultat,
+      final String erreur) {
     final Timestamp maintenant = Timestamp.from(Instant.now());
     Timer.builder("strapontin.worker.job.duration")
         .description("Durée d'exécution d'un job worker (fetch/purge/révocation/réconciliation)")
@@ -154,14 +158,14 @@ public class WorkerStatsService {
    * WorkerFetchService (chronométrage manuel + try/catch identiques à chaque méthode de job).
    *
    * @param callerLog logger de l'appelant, pour journaliser un échec sous son propre nom de classe
-   *   plutôt que celui de ce service
+   *     plutôt que celui de ce service
    * @param typeJob type de job (voir {@link #enregistrerStatJob})
    * @param travail travail à exécuter, retournant le bilan de persistance en cas de succès
    */
   public void executerAvecStats(
       final org.slf4j.Logger callerLog,
       final String typeJob,
-      final java.util.function.Supplier<ResultatPersistance> travail) {
+      final Supplier<ResultatPersistance> travail) {
     final long debut = System.currentTimeMillis();
     try {
       final ResultatPersistance resultat = travail.get();
@@ -194,20 +198,18 @@ public class WorkerStatsService {
   }
 
   /**
-   * Variante de {@link #executerAvecStats} pour les jobs pouvant se terminer par un retour
-   * anticipé sur un cas métier (ex. {@code WorkerFetchService} : "quota insuffisant") plutôt que
-   * par une exception — leur contrôle de flux ne s'accommode pas du contrat plus simple d'{@link
+   * Variante de {@link #executerAvecStats} pour les jobs pouvant se terminer par un retour anticipé
+   * sur un cas métier (ex. {@code WorkerFetchService} : "quota insuffisant") plutôt que par une
+   * exception — leur contrôle de flux ne s'accommode pas du contrat plus simple d'{@link
    * #executerAvecStats} (erreur seulement en cas d'exception).
    *
    * @param callerLog logger de l'appelant, pour journaliser un échec sous son propre nom de classe
-   *   plutôt que celui de ce service
+   *     plutôt que celui de ce service
    * @param typeJob type de job (voir {@link #enregistrerStatJob})
    * @param travail travail à exécuter, retournant le bilan et un message d'erreur optionnel
    */
   public void executerAvecStatsToleretErreur(
-      final org.slf4j.Logger callerLog,
-      final String typeJob,
-      final java.util.function.Supplier<ResultatJob> travail) {
+      final org.slf4j.Logger callerLog, final String typeJob, final Supplier<ResultatJob> travail) {
     final long debut = System.currentTimeMillis();
     try {
       final ResultatJob rj = travail.get();
@@ -224,8 +226,8 @@ public class WorkerStatsService {
 
   /**
    * Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs d'une source pour le cycle qui
-   * vient de se terminer — mécanisme générique remplaçant les anciennes méthodes dédiées
-   * {@code remonterBilanTm}/{@code remonterBilanEventim} : une panne totale (100% d'échecs sur un nombre
+   * vient de se terminer — mécanisme générique remplaçant les anciennes méthodes dédiées {@code
+   * remonterBilanTm}/{@code remonterBilanEventim} : une panne totale (100% d'échecs sur un nombre
    * suffisant d'appels — voir {@link BilanFetch#SEUIL_APPELS_MIN_ALERTE_DEFAUT}) est remontée en
    * niveau {@code error}, captée automatiquement par {@code AlerteLogsAdminService} (digest niveau
    * erreur) ; un échec partiel reste en {@code warn}.
@@ -235,7 +237,8 @@ public class WorkerStatsService {
    * @param bilan bilan prélevé pour cette source depuis le dernier cycle
    * @return {@code true} si une entrée a été insérée dans {@code logs_admin}
    */
-  private boolean remonterBilan(final String typeJob, final String nomSource, final BilanFetch bilan) {
+  private boolean remonterBilan(
+      final String typeJob, final String nomSource, final BilanFetch bilan) {
     if (bilan == null || bilan.appels() == 0) {
       return false;
     }
@@ -263,8 +266,8 @@ public class WorkerStatsService {
 
   /**
    * Remonte dans {@code logs_admin} le nombre de concerts TM non récupérés par plafonnement de la
-   * pagination pour le cycle qui vient de se terminer. Métrique spécifique à TM, distincte du
-   * bilan appels/erreurs commun porté par {@link #remonterBilan}.
+   * pagination pour le cycle qui vient de se terminer. Métrique spécifique à TM, distincte du bilan
+   * appels/erreurs commun porté par {@link #remonterBilan}.
    *
    * @param typeJob le type de job de fetch (préfixe {@code fetch:})
    * @return {@code true} si un warn a été inséré dans {@code logs_admin}
@@ -283,8 +286,8 @@ public class WorkerStatsService {
   }
 
   /**
-   * Remonte dans {@code logs_admin} les correspondances Eventim par containment acceptées pour le cycle
-   * qui vient de se terminer — un containment n'est pas nécessairement une erreur (Eventim ne
+   * Remonte dans {@code logs_admin} les correspondances Eventim par containment acceptées pour le
+   * cycle qui vient de se terminer — un containment n'est pas nécessairement une erreur (Eventim ne
    * persiste aucun identifiant, {@code rechercherAttractionId} est rappelé à chaque cycle) mais
    * reste invisible jusque-là (log SLF4J niveau INFO uniquement) : signalé en {@code warn} pour
    * permettre une vérification manuelle rapide plutôt qu'une acceptation silencieuse.
@@ -311,8 +314,8 @@ public class WorkerStatsService {
   }
 
   /**
-   * Remonte dans {@code logs_admin} un warn de résultat vide (nb_inseres + nb_mis_a_jour = 0) pour un
-   * fetch qui s'est terminé sans erreur mais sans aucun concert persisté.
+   * Remonte dans {@code logs_admin} un warn de résultat vide (nb_inseres + nb_mis_a_jour = 0) pour
+   * un fetch qui s'est terminé sans erreur mais sans aucun concert persisté.
    *
    * @param typeJob le type de job de fetch
    * @param execLe l'horodatage de l'exécution

@@ -72,7 +72,7 @@ final class MapeurProduitEventim {
     final String datePart = dateStr.substring(0, 10);
     final int tIndex = dateStr.indexOf('T');
     if (tIndex == -1) {
-      return new String[]{datePart, null};
+      return new String[] {datePart, null};
     }
     final String heurePart = dateStr.substring(tIndex + 1, Math.min(tIndex + 6, dateStr.length()));
     final String heure = "00:00".equals(heurePart) ? null : heurePart;
@@ -112,9 +112,11 @@ final class MapeurProduitEventim {
    */
   @SuppressWarnings("unchecked")
   static ConcertBrut mapper(
-      final Map<String, Object> produit, final String artisteFallback, final String artisteSourceId) {
+      final Map<String, Object> produit,
+      final String artisteFallback,
+      final String artisteSourceId) {
     try {
-      final var liveEnt = extraireLiveEntertainment(produit);
+      final Map<String, Object> liveEnt = extraireLiveEntertainment(produit);
       final String dateStr = liveEnt != null ? (String) liveEnt.get("startDate") : null;
       if (dateStr == null) {
         return null;
@@ -127,7 +129,7 @@ final class MapeurProduitEventim {
 
       final String[] datHeure = parseDateEventim(dateStr);
       final String artiste = artisteFallback != null ? artisteFallback : extraireNomArtiste(titre);
-      final var location = (Map<String, Object>) liveEnt.get("location");
+      final Map<String, Object> location = (Map<String, Object>) liveEnt.get("location");
       return construireConcertEventim(
           produit, location, artiste, datHeure[0], datHeure[1], artisteSourceId);
     } catch (Exception e) {
@@ -138,7 +140,7 @@ final class MapeurProduitEventim {
 
   @SuppressWarnings("unchecked")
   private static Map<String, Object> extraireLiveEntertainment(final Map<String, Object> produit) {
-    final var typeAttributes = (Map<String, Object>) produit.get("typeAttributes");
+    final Map<String, Object> typeAttributes = (Map<String, Object>) produit.get("typeAttributes");
     return typeAttributes != null
         ? (Map<String, Object>) typeAttributes.get("liveEntertainment")
         : null;
@@ -150,7 +152,7 @@ final class MapeurProduitEventim {
     if (lienDirect != null && lienDirect.startsWith("http")) {
       return lienDirect;
     }
-    final var urlObj = (Map<String, Object>) produit.get("url");
+    final Map<String, Object> urlObj = (Map<String, Object>) produit.get("url");
     if (urlObj != null && urlObj.get("domain") != null && urlObj.get("path") != null) {
       return urlObj.get("domain") + (String) urlObj.get("path");
     }

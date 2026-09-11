@@ -38,7 +38,8 @@ class DecouverteControllerFetcherTest {
 
   @Test
   void fetcher_premierAppel_declencheEtRetourne200() {
-    final ResponseEntity<Map<String, Object>> reponse = controller.fetcher(new RequeteFetch(List.of()));
+    final ResponseEntity<Map<String, Object>> reponse =
+        controller.fetcher(new RequeteFetch(List.of()));
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(decouverteService, times(1)).fetcher();
@@ -48,7 +49,8 @@ class DecouverteControllerFetcherTest {
   void fetcher_appelsRepetes_retourne429SansRedeclencher() {
     controller.fetcher(new RequeteFetch(List.of()));
 
-    final ResponseEntity<Map<String, Object>> deuxieme = controller.fetcher(new RequeteFetch(List.of()));
+    final ResponseEntity<Map<String, Object>> deuxieme =
+        controller.fetcher(new RequeteFetch(List.of()));
 
     assertEquals(429, deuxieme.getStatusCode().value());
     verify(decouverteService, times(1)).fetcher();

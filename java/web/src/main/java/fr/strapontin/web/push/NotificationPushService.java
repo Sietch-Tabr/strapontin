@@ -108,21 +108,21 @@ public class NotificationPushService {
     final List<Map<String, Object>> abonnements =
         endpoint != null && !endpoint.isBlank()
             ? jdbc.queryForList(
-            """
+                """
                 SELECT id, endpoint, p256dh, auth
                 FROM push_abonnements
                 WHERE user_id = :userId AND endpoint = :endpoint
                 """,
-            Map.of("userId", userId, CLE_ENDPOINT, endpoint))
+                Map.of("userId", userId, CLE_ENDPOINT, endpoint))
             : jdbc.queryForList(
-            """
+                """
                 SELECT id, endpoint, p256dh, auth
                 FROM push_abonnements
                 WHERE user_id = :userId
                 ORDER BY id DESC
                 LIMIT 1
                 """,
-            Map.of("userId", userId));
+                Map.of("userId", userId));
     if (abonnements.isEmpty()) {
       return false;
     }

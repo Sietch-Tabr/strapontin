@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -78,7 +79,7 @@ final class ClientSparqlWikidata {
   }
 
   @SuppressWarnings("unchecked")
-  private java.util.Map<String, Object> effectuerRequete(final String sparql) {
+  private Map<String, Object> effectuerRequete(final String sparql) {
     return restClient
         .post()
         .uri(BASE_URL)
@@ -87,7 +88,7 @@ final class ClientSparqlWikidata {
         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
         .body("query=" + URLEncoder.encode(sparql, StandardCharsets.UTF_8))
         .retrieve()
-        .body(java.util.Map.class);
+        .body(Map.class);
   }
 
   /**
@@ -98,7 +99,7 @@ final class ClientSparqlWikidata {
    * @param sparql corps de la requête SPARQL
    * @return corps JSON désérialisé, ou null en cas d'échec définitif
    */
-  java.util.Map<String, Object> executer(final String sparql) {
+  Map<String, Object> executer(final String sparql) {
     // un appel logique = un executer, quel que soit le nombre de retries internes —
     // seul un échec définitif (retries épuisés) compte comme erreur pour le bilan de panne.
     compteurBilan.enregistrerAppel();
@@ -110,7 +111,8 @@ final class ClientSparqlWikidata {
       try {
         return effectuerRequete(sparql);
       } catch (HttpClientErrorException.TooManyRequests e) {
-        final long attenteMs = extraireRetryAfterMs(e.getResponseHeaders()).orElse(1000L << tentative);
+        final long attenteMs =
+            extraireRetryAfterMs(e.getResponseHeaders()).orElse(1000L << tentative);
         log.warn("Wikidata 429 — attente {} ms avant retry", attenteMs);
         dormir(attenteMs);
       } catch (HttpServerErrorException.ServiceUnavailable
@@ -180,8 +182,8 @@ final class ClientSparqlWikidata {
    * @return valeur textuelle, ou null si absente
    */
   @SuppressWarnings("unchecked")
-  static String valeurBinding(final java.util.Map<String, Object> binding, final String cle) {
-    final var v = (java.util.Map<String, Object>) binding.get(cle);
+  static String valeurBinding(final Map<String, Object> binding, final String cle) {
+    final Map<String, Object> v = (Map<String, Object>) binding.get(cle);
     return v != null ? (String) v.get("value") : null;
   }
 
@@ -195,11 +197,11 @@ final class ClientSparqlWikidata {
    */
   @SuppressWarnings("unchecked")
   static List<Map<String, Object>> extraireBindings(final Map<String, Object> data) {
-    final var results = (Map<String, Object>) data.get("results");
+    final Map<String, Object> results = (Map<String, Object>) data.get("results");
     if (results == null) {
       return List.of();
     }
-    final var bindings = (List<Map<String, Object>>) results.get("bindings");
+    final List<Map<String, Object>> bindings = (List<Map<String, Object>>) results.get("bindings");
     return bindings != null ? bindings : List.of();
   }
 
@@ -215,8 +217,7 @@ final class ClientSparqlWikidata {
     return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
 
-  private static final java.util.regex.Pattern MOTIF_Q_ID =
-      java.util.regex.Pattern.compile("^Q[0-9]+$");
+  private static final Pattern MOTIF_Q_ID = Pattern.compile("^Q[0-9]+$");
 
   /**
    * Vérifie qu'une chaîne est un Q-ID Wikidata valide (ex. {@code Q3438008}), avant de la

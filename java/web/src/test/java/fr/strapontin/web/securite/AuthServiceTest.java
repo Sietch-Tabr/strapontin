@@ -16,6 +16,8 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -147,11 +149,11 @@ class AuthServiceTest {
     authService.motDePasseOublie("alice@exemple.fr", "https://strapontin.fr");
 
     verify(verificationRepository).supprimerParIdentifiant("reset:alice@exemple.fr");
-    final ArgumentCaptor<java.time.Instant> expiration = ArgumentCaptor.forClass(java.time.Instant.class);
+    final ArgumentCaptor<Instant> expiration = ArgumentCaptor.forClass(Instant.class);
     verify(verificationRepository)
         .inserer(any(), eq("reset:alice@exemple.fr"), any(), expiration.capture());
     final long minutesAvantExpiration =
-        java.time.Duration.between(java.time.Instant.now(), expiration.getValue()).toMinutes();
+        Duration.between(Instant.now(), expiration.getValue()).toMinutes();
     assertThat(minutesAvantExpiration).isBetween(58L, 60L);
     verify(emailService).envoyerResetMotDePasse(eq("alice@exemple.fr"), any());
   }

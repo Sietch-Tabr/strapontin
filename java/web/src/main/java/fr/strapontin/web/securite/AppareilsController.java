@@ -6,6 +6,7 @@ package fr.strapontin.web.securite;
 
 import fr.strapontin.web.ErreurMetier;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -45,7 +46,7 @@ public class AppareilsController {
   public List<AppareilsService.AppareilDto> lister(
       final Authentication auth, final HttpServletRequest httpRequest) {
     final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
-    final var session = httpRequest.getSession(false);
+    final HttpSession session = httpRequest.getSession(false);
     return appareilsService.listerAppareils(userId, session != null ? session.getId() : null);
   }
 
@@ -57,7 +58,8 @@ public class AppareilsController {
    * @return 204 si révoqué, 404 si l'appareil n'existe pas ou n'appartient pas à l'utilisateur
    */
   @DeleteMapping("/{appareilId}")
-  public ResponseEntity<Void> revoquer(@PathVariable final String appareilId, final Authentication auth) {
+  public ResponseEntity<Void> revoquer(
+      @PathVariable final String appareilId, final Authentication auth) {
     final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
     if (!appareilsService.revoquerAppareil(userId, appareilId)) {
       throw new ErreurMetier("Appareil introuvable.", 404);

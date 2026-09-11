@@ -6,6 +6,7 @@ package fr.strapontin.web.push;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -35,7 +36,8 @@ public class PushController {
    * @param pushService service de gestion des abonnements push
    * @param notificationPushService service d'envoi de notifications push
    */
-  public PushController(final PushService pushService, final NotificationPushService notificationPushService) {
+  public PushController(
+      final PushService pushService, final NotificationPushService notificationPushService) {
     this.pushService = pushService;
     this.notificationPushService = notificationPushService;
   }
@@ -76,7 +78,8 @@ public class PushController {
    */
   @PostMapping("/tester")
   public ResponseEntity<Map<String, Object>> tester(
-      @Valid @RequestBody(required = false) final RequeteTesterPush requete, final Authentication auth) {
+      @Valid @RequestBody(required = false) final RequeteTesterPush requete,
+      final Authentication auth) {
     final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
     final String endpoint = requete != null ? requete.endpoint() : null;
     final boolean envoye = notificationPushService.envoyerNotificationTest(userId, endpoint);
@@ -106,7 +109,7 @@ public class PushController {
    * @return les abonnements actifs
    */
   @GetMapping("/abonnements")
-  public ResponseEntity<java.util.List<PushService.AbonnementDto>> listerAbonnements(
+  public ResponseEntity<List<PushService.AbonnementDto>> listerAbonnements(
       final Authentication auth) {
     return ResponseEntity.ok(
         pushService.listerAbonnements(((UtilisateurDetails) auth.getPrincipal()).id()));

@@ -163,7 +163,11 @@ class CoherenceMultiSalleServiceTest {
   }
 
   private static Map<String, Object> ligneSalle(
-      final UUID id, final String nomNorm, final String dept, final String doublonSignale, final UUID salleParentId) {
+      final UUID id,
+      final String nomNorm,
+      final String dept,
+      final String doublonSignale,
+      final UUID salleParentId) {
     final Map<String, Object> ligne = new HashMap<>();
     ligne.put("id", id);
     ligne.put("nom_norm", nomNorm);

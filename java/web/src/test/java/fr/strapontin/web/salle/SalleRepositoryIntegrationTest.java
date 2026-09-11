@@ -16,6 +16,7 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
@@ -184,7 +185,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
             "INSERT INTO evenements (artiste_norm, date, salle_norm, salle_id)"
                 + " VALUES (:artisteNorm, '2026-06-15', :salleNorm, CAST(:salleId AS uuid))"
                 + " RETURNING id",
-            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+            new MapSqlParameterSource()
                 .addValue("artisteNorm", artiste.toLowerCase())
                 .addValue("salleNorm", salle.toLowerCase())
                 .addValue("salleId", salleId != null ? salleId.toString() : null),

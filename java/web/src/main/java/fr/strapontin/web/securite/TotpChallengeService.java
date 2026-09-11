@@ -58,7 +58,8 @@ public class TotpChallengeService {
    * @param ip adresse IP de la requête (pour les logs)
    * @return le résultat du challenge
    */
-  public ResultatTotp verifier(final String userId, final String identifiant, final String code, final String ip) {
+  public ResultatTotp verifier(
+      final String userId, final String identifiant, final String code, final String ip) {
     final int echecsCourants = userController.lireEchecsTotp(userId);
     if (echecsCourants >= MAX_ECHECS_TOTP) {
       return ResultatTotp.dejaVerrouille();

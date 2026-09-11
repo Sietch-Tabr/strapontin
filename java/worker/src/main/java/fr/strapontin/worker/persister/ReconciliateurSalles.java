@@ -81,7 +81,8 @@ public class ReconciliateurSalles {
   /**
    * @see ReconciliationNomsSalles#absorberRenommagesSalles
    */
-  void absorberRenommagesSalles(final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
+  void absorberRenommagesSalles(
+      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
     reconciliationNoms.absorberRenommagesSalles(concerts, cachesSalles);
   }
 

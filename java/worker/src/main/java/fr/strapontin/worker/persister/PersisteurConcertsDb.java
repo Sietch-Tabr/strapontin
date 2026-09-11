@@ -6,6 +6,8 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.Normalisation;
+import java.sql.Date;
+import java.sql.Time;
 import java.sql.Types;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -14,7 +16,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -75,18 +79,18 @@ public class PersisteurConcertsDb {
     final String sql =
         estSalle
             ? "SELECT salle_id, identifiant_externe FROM salle_sources"
-            + " WHERE source = :source AND identifiant_externe IN (:ids)"
+                + " WHERE source = :source AND identifiant_externe IN (:ids)"
             : "SELECT artiste_id, identifiant_externe FROM artiste_sources"
-            + " WHERE source = :source AND identifiant_externe IN (:ids)";
+                + " WHERE source = :source AND identifiant_externe IN (:ids)";
     final String colUuid = estSalle ? "salle_id" : "artiste_id";
 
     final Map<String, UUID> cache = new HashMap<>();
-    for (final var entry : parSource.entrySet()) {
+    for (final Map.Entry<String, List<String>> entry : parSource.entrySet()) {
       final String source = entry.getKey();
       final List<String> ids = entry.getValue().stream().distinct().toList();
       final List<Map<String, Object>> lignes =
           jdbc.queryForList(sql, Map.of("source", source, "ids", ids));
-      for (final var ligne : lignes) {
+      for (final Map<String, Object> ligne : lignes) {
         final String cle = source + ":" + ligne.get("identifiant_externe");
         cache.put(cle, (UUID) ligne.get(colUuid));
       }
@@ -95,20 +99,20 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Résout les concerts Eventim dont l'URL existe déjà en base (via une observation) sous un
-   * {@code artiste_norm} différent.
+   * Résout les concerts Eventim dont l'URL existe déjà en base (via une observation) sous un {@code
+   * artiste_norm} différent.
    *
-   * <p>Couvre le cas des pages festival Eventim : une même URL peut exposer des artistes
-   * différents selon le fetch. Sans cette résolution, deux événements coexisteraient en base avec
-   * le même {@code (source, url, date)} mais des {@code artiste_norm} différents.
+   * <p>Couvre le cas des pages festival Eventim : une même URL peut exposer des artistes différents
+   * selon le fetch. Sans cette résolution, deux événements coexisteraient en base avec le même
+   * {@code (source, url, date)} mais des {@code artiste_norm} différents.
    *
    * <p>Restreint à Eventim (seule source concernée par le cas documenté ci-dessus) : appliqué à
    * toutes les sources, ce mécanisme empêcherait toute guérison d'une corruption de {@code
    * artiste_norm} déjà persistée une fois sa cause racine corrigée en amont.
    *
    * @param concerts concerts après résolution des identités sources
-   * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour
-   *   Eventim uniquement
+   * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour Eventim
+   *     uniquement
    */
   List<ValeurConcert> resoudreParUrl(final List<ValeurConcert> concerts) {
     final List<ValeurConcert> avecUrl =
@@ -121,11 +125,11 @@ public class PersisteurConcertsDb {
     final List<Map<String, Object>> lignesExistantes =
         jdbc.queryForList(
             """
-                SELECT e.artiste_norm AS artiste_norm, e.artiste_id AS artiste_id, e.date AS date,
-                       e.heure AS heure, o.source AS source, o.url AS url
-                FROM observations o JOIN evenements e ON e.id = o.evenement_id
-                WHERE o.url IN (:urls) AND o.source = 'eventim'
-                """,
+            SELECT e.artiste_norm AS artiste_norm, e.artiste_id AS artiste_id, e.date AS date,
+                   e.heure AS heure, o.source AS source, o.url AS url
+            FROM observations o JOIN evenements e ON e.id = o.evenement_id
+            WHERE o.url IN (:urls) AND o.source = 'eventim'
+            """,
             Map.of("urls", urls));
 
     if (lignesExistantes.isEmpty()) {
@@ -136,8 +140,8 @@ public class PersisteurConcertsDb {
 
     final Map<CleUrl, Map<String, Object>> index = new HashMap<>();
     for (final Map<String, Object> l : lignesExistantes) {
-      final java.sql.Date sqlDate = (java.sql.Date) l.get("date");
-      final java.sql.Time sqlHeure = (java.sql.Time) l.get("heure");
+      final Date sqlDate = (Date) l.get("date");
+      final Time sqlHeure = (Time) l.get("heure");
       final CleUrl cle =
           new CleUrl(
               (String) l.get("source"),
@@ -178,8 +182,8 @@ public class PersisteurConcertsDb {
    * Statuts Ticketmaster signant le remplacement d'une représentation existante (report,
    * annulation) plutôt qu'une représentation supplémentaire.
    */
-  private static final java.util.Set<String> STATUTS_REPORT_TM =
-      java.util.Set.of("rescheduled", "cancelled", "postponed");
+  private static final Set<String> STATUTS_REPORT_TM =
+      Set.of("rescheduled", "cancelled", "postponed");
 
   /**
    * Aligne l'heure d'un événement Ticketmaster déjà en base sur celle d'un report entrant (une de
@@ -192,9 +196,9 @@ public class PersisteurConcertsDb {
    *
    * <p>Ne s'applique que si une seule heure distincte existe déjà pour ce couple {@code (url,
    * date)} : certaines productions à représentations multiples (théâtre, cirque, ballet) partagent
-   * un seul idmanif Ticketmaster pour plusieurs séances le même jour (matinée/soirée) — en
-   * présence de cette ambiguïté, impossible de déterminer laquelle est concernée par le report, un
-   * nouvel événement est alors créé plutôt que de risquer d'altérer la mauvaise représentation.
+   * un seul idmanif Ticketmaster pour plusieurs séances le même jour (matinée/soirée) — en présence
+   * de cette ambiguïté, impossible de déterminer laquelle est concernée par le report, un nouvel
+   * événement est alors créé plutôt que de risquer d'altérer la mauvaise représentation.
    *
    * @param concerts concerts après réconciliation, avant upsert
    */
@@ -217,18 +221,17 @@ public class PersisteurConcertsDb {
     final List<Map<String, Object>> existants =
         jdbc.queryForList(
             """
-                SELECT e.id AS id, o.url AS url, e.date AS date, e.heure AS heure
-                FROM observations o JOIN evenements e ON e.id = o.evenement_id
-                WHERE o.source = 'ticketmaster' AND o.url IN (:urls)
-                """,
+            SELECT e.id AS id, o.url AS url, e.date AS date, e.heure AS heure
+            FROM observations o JOIN evenements e ON e.id = o.evenement_id
+            WHERE o.source = 'ticketmaster' AND o.url IN (:urls)
+            """,
             Map.of("urls", urls));
 
     record CleUrlDate(String url, LocalDate date) {}
     final Map<CleUrlDate, List<Map<String, Object>>> parCle = new HashMap<>();
     for (final Map<String, Object> ligne : existants) {
       final CleUrlDate cle =
-          new CleUrlDate(
-              (String) ligne.get("url"), ((java.sql.Date) ligne.get("date")).toLocalDate());
+          new CleUrlDate((String) ligne.get("url"), ((Date) ligne.get("date")).toLocalDate());
       parCle.computeIfAbsent(cle, _ -> new ArrayList<>()).add(ligne);
     }
 
@@ -237,10 +240,10 @@ public class PersisteurConcertsDb {
       if (candidats == null) {
         continue;
       }
-      final var heuresDistinctes =
+      final Set<LocalTime> heuresDistinctes =
           candidats.stream()
-              .map(l -> ((java.sql.Time) l.get("heure")).toLocalTime())
-              .collect(java.util.stream.Collectors.toSet());
+              .map(l -> ((Time) l.get("heure")).toLocalTime())
+              .collect(Collectors.toSet());
       if (heuresDistinctes.size() != 1) {
         continue;
       }
@@ -275,7 +278,10 @@ public class PersisteurConcertsDb {
   private static final int TOLERANCE_HEURE_MINUTES = 3;
 
   private static boolean heuresCompatibles(
-      final LocalTime existante, final LocalTime entrante, final boolean packageExistant, final boolean packageEntrant) {
+      final LocalTime existante,
+      final LocalTime entrante,
+      final boolean packageExistant,
+      final boolean packageEntrant) {
     if (packageExistant || packageEntrant) {
       return true;
     }
@@ -290,16 +296,16 @@ public class PersisteurConcertsDb {
 
   /**
    * Résout l'événement canonique correspondant à un concert entrant, ou en crée un nouveau — point
-   * unique de dédoublonnage (#1192), remplaçant les trois mécanismes de suppression a posteriori
-   * de l'ancien modèle.
+   * unique de dédoublonnage (#1192), remplaçant les trois mécanismes de suppression a posteriori de
+   * l'ancien modèle.
    *
    * <p>Trois niveaux : correspondance exacte sur la clé {@code (artiste_norm, date, heure,
    * salle_id)} (NULLS NOT DISTINCT) ; à défaut, repli flou parmi les événements de la même salle à
-   * la même date, avec tolérance d'heure package/normal ({@link #heuresCompatibles}) et
-   * comparaison floue de l'artiste ({@link CorrespondanceArtiste#estDoublonArtiste}) quand aucun
-   * {@code artiste_id} n'est résolu des deux côtés — mêmes critères que les anciens {@code
-   * supprimerDoublonsParSalleId}/{@code supprimerDoublonsSansArtisteId}, appliqués avant
-   * l'écriture plutôt qu'en nettoyage après coup ; sinon, création.
+   * la même date, avec tolérance d'heure package/normal ({@link #heuresCompatibles}) et comparaison
+   * floue de l'artiste ({@link CorrespondanceArtiste#estDoublonArtiste}) quand aucun {@code
+   * artiste_id} n'est résolu des deux côtés — mêmes critères que les anciens {@code
+   * supprimerDoublonsParSalleId}/{@code supprimerDoublonsSansArtisteId}, appliqués avant l'écriture
+   * plutôt qu'en nettoyage après coup ; sinon, création.
    */
   private ResolutionEvenement resoudreOuCreerEvenement(final ValeurConcert v) {
     final MapSqlParameterSource paramsExact =
@@ -324,26 +330,26 @@ public class PersisteurConcertsDb {
       final List<Map<String, Object>> candidats =
           jdbc.queryForList(
               """
-                  SELECT e.id AS id, e.artiste_id AS artiste_id, e.artiste_norm AS artiste_norm,
-                         e.heure AS heure,
-                         EXISTS(SELECT 1 FROM observations o WHERE o.evenement_id = e.id
-                                AND o.url ~* '/pack/') AS a_observation_package
-                  FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
-                  """,
+              SELECT e.id AS id, e.artiste_id AS artiste_id, e.artiste_norm AS artiste_norm,
+                     e.heure AS heure,
+                     EXISTS(SELECT 1 FROM observations o WHERE o.evenement_id = e.id
+                            AND o.url ~* '/pack/') AS a_observation_package
+              FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
+              """,
               Map.of("salleId", v.salleId().toString(), "date", v.date()));
       final boolean entrantPackage = estPackage(v.url());
-      for (final var c : candidats) {
+      for (final Map<String, Object> c : candidats) {
         final UUID candArtisteId = (UUID) c.get("artiste_id");
         final String candArtisteNorm = (String) c.get("artiste_norm");
         final boolean artisteCorrespond =
             v.artisteId() != null
                 ? v.artisteId().equals(candArtisteId)
                 : candArtisteId == null
-                && CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, v.artisteNorm());
+                    && CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, v.artisteNorm());
         if (!artisteCorrespond) {
           continue;
         }
-        final java.sql.Time heureSql = (java.sql.Time) c.get("heure");
+        final Time heureSql = (Time) c.get("heure");
         final LocalTime heureExistante = heureSql != null ? heureSql.toLocalTime() : null;
         final boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
         if (!heuresCompatibles(heureExistante, v.heure(), candidatPackage, entrantPackage)) {
@@ -356,14 +362,14 @@ public class PersisteurConcertsDb {
     final UUID nouveauId =
         jdbc.queryForObject(
             """
-                INSERT INTO evenements
-                    (artiste_norm, date, heure, salle_id, salle_norm, ville, dept, classification,
-                     genre, statut, presale_debut, presale_nom, artiste_id)
-                VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm, :ville, :dept,
-                        :classification, :genre, :statut, CAST(:presaleDebut AS timestamptz),
-                        :presaleNom, CAST(:artisteId AS uuid))
-                RETURNING id
-                """,
+            INSERT INTO evenements
+                (artiste_norm, date, heure, salle_id, salle_norm, ville, dept, classification,
+                 genre, statut, presale_debut, presale_nom, artiste_id)
+            VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm, :ville, :dept,
+                    :classification, :genre, :statut, CAST(:presaleDebut AS timestamptz),
+                    :presaleNom, CAST(:artisteId AS uuid))
+            RETURNING id
+            """,
             paramsCreation(v),
             UUID.class);
     return new ResolutionEvenement(nouveauId, true);
@@ -449,20 +455,20 @@ public class PersisteurConcertsDb {
   /**
    * Retrouve, parmi les observations déjà attachées à un événement, le {@code salle_brut} de celle
    * qui servirait de référence dans la vue {@code concerts} — même priorité (package puis TM &gt;
-   * Eventim &gt; Digitick) que la vue elle-même, pour garder {@code evenements.salle_norm}
-   * cohérent avec ce que {@code concerts.salle} affichera.
+   * Eventim &gt; Digitick) que la vue elle-même, pour garder {@code evenements.salle_norm} cohérent
+   * avec ce que {@code concerts.salle} affichera.
    */
   private String meilleurSalleBrut(final UUID evenementId) {
     final List<String> resultat =
         jdbc.query(
             """
-                SELECT salle_brut FROM observations WHERE evenement_id = CAST(:id AS uuid)
-                ORDER BY (CASE WHEN url ~* '/pack/' THEN 10 ELSE 0 END
-                          + CASE source::text
-                              WHEN 'ticketmaster' THEN 1 WHEN 'eventim' THEN 2 WHEN 'digitick' THEN 3
-                              ELSE 4 END)
-                LIMIT 1
-                """,
+            SELECT salle_brut FROM observations WHERE evenement_id = CAST(:id AS uuid)
+            ORDER BY (CASE WHEN url ~* '/pack/' THEN 10 ELSE 0 END
+                      + CASE source::text
+                          WHEN 'ticketmaster' THEN 1 WHEN 'eventim' THEN 2 WHEN 'digitick' THEN 3
+                          ELSE 4 END)
+            LIMIT 1
+            """,
             Map.of("id", evenementId.toString()),
             (rs, _) -> rs.getString("salle_brut"));
     return resultat.isEmpty() ? null : resultat.get(0);

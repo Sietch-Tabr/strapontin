@@ -23,12 +23,14 @@ import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
 import fr.strapontin.worker.persister.ReconciliateurSalles;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -90,7 +92,8 @@ class ReconciliationNocturneServiceTest {
             controleIntegrite);
   }
 
-  private static Map<String, Object> ligneSalleSuspecte(final UUID salleId, final String venueId, final String nom) {
+  private static Map<String, Object> ligneSalleSuspecte(
+      final UUID salleId, final String venueId, final String nom) {
     final Map<String, Object> ligne = new HashMap<>();
     ligne.put("salle_id", salleId);
     ligne.put("identifiant_externe", venueId);
@@ -325,7 +328,7 @@ class ReconciliationNocturneServiceTest {
   void executer_nomTMDivergeDejaSignale_neJournalieQuUneFois() {
     final UUID artisteId = UUID.randomUUID();
     final Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "K8vZ9174y30", "U2");
-    ligne.put("necessite_intervention_le", java.time.Instant.now());
+    ligne.put("necessite_intervention_le", Instant.now());
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligne));
     when(tm.recupererNomAttraction("K8vZ9174y30")).thenReturn("U2 Experience");
@@ -397,7 +400,8 @@ class ReconciliationNocturneServiceTest {
   @Test
   void executer_nomTMDejaIgnoreParAdmin_neResignalePas() {
     final UUID artisteId = UUID.randomUUID();
-    final Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid");
+    final Map<String, Object> ligne =
+        ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid");
     ligne.put("nom_tm_ignore", "-M-");
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligne));
@@ -422,7 +426,7 @@ class ReconciliationNocturneServiceTest {
     when(jdbc.query(
             contains("alias_wikidata"),
             anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any()))
+            org.mockito.ArgumentMatchers.<RowMapper<String[]>>any()))
         .thenReturn(List.<String[]>of(new String[] {"-M-"}));
 
     final ResultatReconciliation resultat = service.executer();
@@ -442,7 +446,8 @@ class ReconciliationNocturneServiceTest {
   @Test
   void executer_nomTMChangeApresAccordAdmin_resignale() {
     final UUID artisteId = UUID.randomUUID();
-    final Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid");
+    final Map<String, Object> ligne =
+        ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid");
     ligne.put("nom_tm_ignore", "-M-");
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligne));

@@ -17,8 +17,13 @@ import static org.mockito.Mockito.when;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
+import java.sql.ResultSet;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -82,20 +87,16 @@ class PushServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void listerAbonnements_delegueAuJdbcAvecLUserId() {
-    final java.time.Instant creeLe = java.time.Instant.now();
-    final java.sql.Timestamp ts = java.sql.Timestamp.from(creeLe);
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers.any(org.springframework.jdbc.core.RowMapper.class)))
+    final Instant creeLe = Instant.now();
+    final Timestamp ts = Timestamp.from(creeLe);
+    when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.any(RowMapper.class)))
         .thenAnswer(
             invocation -> {
-              final org.springframework.jdbc.core.RowMapper<PushService.AbonnementDto> mapper =
-                  invocation.getArgument(2);
-              final java.sql.ResultSet rs = mock(java.sql.ResultSet.class);
+              final RowMapper<PushService.AbonnementDto> mapper = invocation.getArgument(2);
+              final ResultSet rs = mock(ResultSet.class);
               when(rs.getString("endpoint")).thenReturn("https://push.exemple/abc");
               when(rs.getTimestamp("cree_le")).thenReturn(ts);
-              return java.util.List.of(mapper.mapRow(rs, 0));
+              return List.of(mapper.mapRow(rs, 0));
             });
 
     final var resultat = service.listerAbonnements("u1");

@@ -255,7 +255,9 @@ public class CoherenceWikidataSalleService {
    * @return la classification de cohérence
    */
   private static Coherence evaluerCoherence(
-      final SalleAEnrichir salle, final String communeWikidata, final List<String> villesConcertsReelles) {
+      final SalleAEnrichir salle,
+      final String communeWikidata,
+      final List<String> villesConcertsReelles) {
     if (villesConcertsReelles != null && !villesConcertsReelles.isEmpty()) {
       final long nbCoherentes =
           villesConcertsReelles.stream().filter(v -> villesCoherentes(v, communeWikidata)).count();
@@ -336,7 +338,8 @@ public class CoherenceWikidataSalleService {
    *   distinct signalant une contamination partielle plutôt qu'un mauvais rapprochement total,
    *   pour ne pas induire un examinateur en erreur sur l'ampleur réelle
    */
-  private void loggerIncoherence(final SalleAEnrichir salle, final String communeWikidata, final boolean partielle) {
+  private void loggerIncoherence(
+      final SalleAEnrichir salle, final String communeWikidata, final boolean partielle) {
     logsAdminWorker.inserer(
         "warn",
         "coherence-wikidata",

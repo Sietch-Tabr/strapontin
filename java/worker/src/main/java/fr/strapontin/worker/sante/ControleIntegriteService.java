@@ -43,7 +43,8 @@ public class ControleIntegriteService {
   private final SignalementMatchingService signalementMatchingService;
 
   public ControleIntegriteService(
-      final NamedParameterJdbcTemplate jdbc, final SignalementMatchingService signalementMatchingService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final SignalementMatchingService signalementMatchingService) {
     this.jdbc = jdbc;
     this.signalementMatchingService = signalementMatchingService;
   }
@@ -69,12 +70,13 @@ public class ControleIntegriteService {
    */
   private int verifierCyclesSalleParent() {
     final Map<UUID, UUID> parentParSalle = new HashMap<>();
-    for (final var ligne : jdbc.queryForList("SELECT id, salle_parent_id FROM salles", Map.of())) {
+    for (final Map<String, Object> ligne :
+        jdbc.queryForList("SELECT id, salle_parent_id FROM salles", Map.of())) {
       parentParSalle.put((UUID) ligne.get("id"), (UUID) ligne.get("salle_parent_id"));
     }
 
     int signalees = 0;
-    for (final var entree : parentParSalle.entrySet()) {
+    for (final Map.Entry<UUID, UUID> entree : parentParSalle.entrySet()) {
       final UUID salleId = entree.getKey();
       final UUID parentId = entree.getValue();
       if (parentId == null) {
@@ -115,7 +117,7 @@ public class ControleIntegriteService {
             Map.of());
 
     int signalees = 0;
-    for (final var ligne : lignes) {
+    for (final Map<String, Object> ligne : lignes) {
       final UUID salleId = (UUID) ligne.get("salle_id");
       signalementMatchingService.signaler(
           "incoherence_dept_salle",
@@ -165,18 +167,18 @@ public class ControleIntegriteService {
     final String sql =
         switch (type) {
           case ARTISTE ->
-            "SELECT artiste_id AS entite_id, source, identifiant_externe FROM artiste_sources s"
-                + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id ="
-                + " s.artiste_id)";
+              "SELECT artiste_id AS entite_id, source, identifiant_externe FROM artiste_sources s"
+                  + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id ="
+                  + " s.artiste_id)";
           case SALLE ->
-            "SELECT salle_id AS entite_id, source, identifiant_externe FROM salle_sources s"
-                + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id)";
+              "SELECT salle_id AS entite_id, source, identifiant_externe FROM salle_sources s"
+                  + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id)";
         };
     final String entiteType = type == TypeEntiteSource.ARTISTE ? "artiste" : "salle";
 
     final List<Map<String, Object>> lignes = jdbc.queryForList(sql, Map.of());
     int signalees = 0;
-    for (final var ligne : lignes) {
+    for (final Map<String, Object> ligne : lignes) {
       final UUID entiteId = (UUID) ligne.get("entite_id");
       signalementMatchingService.signaler(
           "source_orpheline",

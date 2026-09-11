@@ -22,6 +22,7 @@ import fr.strapontin.sources.SourceEnrichissementArtiste;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.sante.SignalementMatchingService;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +55,7 @@ class EnrichissementArtistesServiceTest {
         attractionIdsExistants.entrySet().stream()
             .map(
                 e -> {
-                  final Map<String, Object> ligne = new java.util.HashMap<>();
+                  final Map<String, Object> ligne = new HashMap<>();
                   ligne.put("artiste_id", e.getKey());
                   ligne.put("identifiant_externe", e.getValue());
                   return ligne;
@@ -144,7 +145,7 @@ class EnrichissementArtistesServiceTest {
             org.mockito.ArgumentMatchers.contains("alias_wikidata"),
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
-                    java.util.Arrays.equals(
+                    Arrays.equals(
                         new String[] {"-M-", "Matthieu Chedid"},
                         (String[]) params.get("aliasWikidata"))));
   }
@@ -186,8 +187,7 @@ class EnrichissementArtistesServiceTest {
             org.mockito.ArgumentMatchers.contains("alias_wikidata"),
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
-                    java.util.Arrays.equals(
-                        new String[] {"-M-"}, (String[]) params.get("aliasWikidata"))));
+                    Arrays.equals(new String[] {"-M-"}, (String[]) params.get("aliasWikidata"))));
   }
 
   @Test
@@ -320,7 +320,8 @@ class EnrichissementArtistesServiceTest {
   @Test
   void enrichir_wikidataIdDejaAttribueAUnAutreArtiste_loggeLeConflitEtSauteLaCrossValidation() {
     final UUID artisteEnConflit = UUID.randomUUID();
-    final ArtisteAEnrichir candidat = new ArtisteAEnrichir(artisteEnConflit, "Jain", "jain", null, null);
+    final ArtisteAEnrichir candidat =
+        new ArtisteAEnrichir(artisteEnConflit, "Jain", "jain", null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
     when(jdbc.update(org.mockito.ArgumentMatchers.contains("UPDATE artistes"), anyMap()))
         .thenThrow(new DuplicateKeyException("idx_artistes_wikidata_id"));
@@ -354,7 +355,8 @@ class EnrichissementArtistesServiceTest {
   @Test
   void enrichir_wikidataIdDejaAttribueAUnAutreArtiste_signaleLaCollision() {
     final UUID artisteEnConflit = UUID.randomUUID();
-    final ArtisteAEnrichir candidat = new ArtisteAEnrichir(artisteEnConflit, "Jain", "jain", null, null);
+    final ArtisteAEnrichir candidat =
+        new ArtisteAEnrichir(artisteEnConflit, "Jain", "jain", null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat), Map.of());
     when(jdbc.update(org.mockito.ArgumentMatchers.contains("UPDATE artistes"), anyMap()))
         .thenThrow(new DuplicateKeyException("idx_artistes_wikidata_id"));

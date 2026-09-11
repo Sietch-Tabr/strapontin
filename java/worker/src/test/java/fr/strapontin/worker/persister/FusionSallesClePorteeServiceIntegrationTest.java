@@ -14,6 +14,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -51,7 +52,11 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   }
 
   private UUID creerSalle(
-      final String nom, final String dept, final String wikidataId, final Double latitude, final Double longitude) {
+      final String nom,
+      final String dept,
+      final String wikidataId,
+      final Double latitude,
+      final Double longitude) {
     final UUID id = UUID.randomUUID();
     // wikidataId/latitude/longitude peuvent être null (Map.of rejette les valeurs nulles) —
     // MapSqlParameterSource accepte les valeurs nulles sans lever d'exception.
@@ -59,7 +64,7 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
         "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept, wikidata_id, latitude, longitude)"
             + " VALUES (CAST(:id AS uuid), :cle, :nom, :nomNorm, :dept, :wikidataId, :latitude,"
             + " :longitude)",
-        new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+        new MapSqlParameterSource()
             .addValue("id", id.toString())
             .addValue("cle", nom.toLowerCase())
             .addValue("nom", nom)
@@ -71,13 +76,14 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
     return id;
   }
 
-  private void creerConcert(final String artisteNorm, final String heure, final String dept, final UUID salleId) {
+  private void creerConcert(
+      final String artisteNorm, final String heure, final String dept, final UUID salleId) {
     final UUID evenementId =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, dept, salle_id)"
                 + " VALUES (:artisteNorm, CAST(:date AS date), CAST(:heure AS time), 'salle',"
                 + " :dept, CAST(:salleId AS uuid)) RETURNING id",
-            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+            new MapSqlParameterSource()
                 .addValue("artisteNorm", artisteNorm)
                 .addValue("date", DATE_FUTURE)
                 .addValue("heure", heure)
@@ -106,7 +112,8 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
     assertEquals(1, fusions);
     final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(1L, nbSalles, "Une seule salle doit subsister après fusion");
-    final Long nbConcerts = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long nbConcerts =
+        jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(
         1L, nbConcerts, "Les deux concerts partageant la même clé forte doivent être dédupliqués");
     final String wikidataId =
@@ -167,7 +174,8 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   @Test
   void fusionner_coordonneesEloigneesNomsSimilaires_neFusionnePas() {
     final UUID salleParis = creerSalle("La Seine Musicale", "92", null, 48.8296, 2.2404);
-    final UUID salleMarseille = creerSalle("La Seine Musicale Marseille", "13", null, 43.2965, 5.3698);
+    final UUID salleMarseille =
+        creerSalle("La Seine Musicale Marseille", "13", null, 43.2965, 5.3698);
     creerConcert("collision upstream", "21:00", "92", salleParis);
     creerConcert("collision upstream", "21:00", "13", salleMarseille);
 

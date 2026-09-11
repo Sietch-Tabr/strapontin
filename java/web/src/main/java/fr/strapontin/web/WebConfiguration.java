@@ -31,7 +31,8 @@ public class WebConfiguration implements WebMvcConfigurer {
   /**
    * @param appareilEnregistrementInterceptor intercepteur d'enregistrement d'appareil
    */
-  public WebConfiguration(final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor) {
+  public WebConfiguration(
+      final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor) {
     this.appareilEnregistrementInterceptor = appareilEnregistrementInterceptor;
   }
 

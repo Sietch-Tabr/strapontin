@@ -21,6 +21,8 @@ import static org.mockito.Mockito.when;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.VerificationRepository;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,14 +95,16 @@ class AdminServiceTest {
 
   @Test
   void modifierUtilisateur_emailInvalide_leveErreurMetier() {
-    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, "pas-un-email", "");
+    final RequeteModifierUtilisateur requete =
+        new RequeteModifierUtilisateur(null, "pas-un-email", "");
     assertThrows(
         ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
 
   @Test
   void modifierUtilisateur_roleInvalide_leveErreurMetier() {
-    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, "", "superadmin");
+    final RequeteModifierUtilisateur requete =
+        new RequeteModifierUtilisateur(null, "", "superadmin");
     assertThrows(
         ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
@@ -412,7 +416,7 @@ class AdminServiceTest {
     ligne.put("username", "user1");
     ligne.put("display_username", "Utilisateur Un");
     ligne.put("must_change_credentials", false);
-    ligne.put("created_at", java.sql.Timestamp.from(java.time.Instant.now()));
+    ligne.put("created_at", Timestamp.from(Instant.now()));
     ligne.put("revocation_admin_le", null);
     ligne.put("nb_salles", 2);
     ligne.put("nb_artistes", 0);

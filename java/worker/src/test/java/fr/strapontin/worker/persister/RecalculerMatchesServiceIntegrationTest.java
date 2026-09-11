@@ -87,7 +87,12 @@ class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationT
   }
 
   private void insererConcert(
-      final String artiste, final String norm, final String date, final String salleNorm, final UUID artisteId, final UUID salleId) {
+      final String artiste,
+      final String norm,
+      final String date,
+      final String salleNorm,
+      final UUID artisteId,
+      final UUID salleId) {
     insererConcert(artiste, norm, date, salleNorm, artisteId, salleId, null);
   }
 

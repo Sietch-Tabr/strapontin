@@ -48,7 +48,8 @@ public record ValeurConcert(
   // Seul point de reconstruction du record — les méthodes avecXxx ci-dessous ne varient que sur
   // ces quatre champs (les seuls jamais modifiés après la résolution des identités sources) ;
   // l'ajout d'un futur champ au record ne demande de mettre à jour que cette seule méthode.
-  private ValeurConcert avec(final String artisteNorm, final String salleNorm, final UUID salleId, final UUID artisteId) {
+  private ValeurConcert avec(
+      final String artisteNorm, final String salleNorm, final UUID salleId, final UUID artisteId) {
     return new ValeurConcert(
         artiste,
         artisteNorm,
@@ -129,7 +130,8 @@ public record ValeurConcert(
    * @param nouvelArtisteId nouveau UUID d'artiste
    * @return nouveau record avec les champs modifiés
    */
-  public ValeurConcert avecArtisteNormEtId(final String nouvelArtisteNorm, final UUID nouvelArtisteId) {
+  public ValeurConcert avecArtisteNormEtId(
+      final String nouvelArtisteNorm, final UUID nouvelArtisteId) {
     return avec(nouvelArtisteNorm, salleNorm, salleId, nouvelArtisteId);
   }
 }

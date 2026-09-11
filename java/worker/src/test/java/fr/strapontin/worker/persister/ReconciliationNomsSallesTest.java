@@ -30,12 +30,17 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 class ReconciliationNomsSallesTest {
 
-  private static ValeurConcert concert(final String artisteNorm, final LocalDate date, final String salleNorm) {
+  private static ValeurConcert concert(
+      final String artisteNorm, final LocalDate date, final String salleNorm) {
     return concert(artisteNorm, date, null, salleNorm, null);
   }
 
   private static ValeurConcert concert(
-      final String artisteNorm, final LocalDate date, final LocalTime heure, final String salleNorm, final String dept) {
+      final String artisteNorm,
+      final LocalDate date,
+      final LocalTime heure,
+      final String salleNorm,
+      final String dept) {
     return new ValeurConcert(
         "Artiste",
         artisteNorm,
@@ -126,8 +131,8 @@ class ReconciliationNomsSallesTest {
 
     reconciliateur.absorberRenommagesSalles(List.of(entrant), Map.of("tm:venue1", salleId));
 
-    @SuppressWarnings("unchecked") final
-        ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     verify(jdbc).update(anyString(), paramsCaptor.capture());
     assertEquals(
         Normalisation.normaliserTexte("L'Olympia"), paramsCaptor.getValue().get("nomNorm"));
@@ -146,7 +151,8 @@ class ReconciliationNomsSallesTest {
     final ValeurConcert concert1 = concert("artiste x", date, null, "grand kursaal", "25");
     final ValeurConcert concert2 = concert("artiste x", date, null, "kursaal besancon", "90");
 
-    final List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+    final List<ValeurConcert> resultat =
+        reconciliateur.reconcilierSalles(List.of(concert1, concert2));
 
     assertEquals("grand kursaal", resultat.get(0).salleNorm());
     assertEquals("kursaal besancon", resultat.get(1).salleNorm());
@@ -161,11 +167,13 @@ class ReconciliationNomsSallesTest {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
     final LocalDate date = LocalDate.of(2026, 9, 1);
-    final ValeurConcert concert1 = concert("artiste x", date, LocalTime.of(15, 0), "grand kursaal", "25");
+    final ValeurConcert concert1 =
+        concert("artiste x", date, LocalTime.of(15, 0), "grand kursaal", "25");
     final ValeurConcert concert2 =
         concert("artiste x", date, LocalTime.of(20, 0), "kursaal besancon", "25");
 
-    final List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+    final List<ValeurConcert> resultat =
+        reconciliateur.reconcilierSalles(List.of(concert1, concert2));
 
     assertEquals("grand kursaal", resultat.get(0).salleNorm());
     assertEquals("kursaal besancon", resultat.get(1).salleNorm());
@@ -179,11 +187,13 @@ class ReconciliationNomsSallesTest {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
     final LocalDate date = LocalDate.of(2026, 9, 1);
-    final ValeurConcert concert1 = concert("artiste x", date, LocalTime.of(20, 0), "grand kursaal", "25");
+    final ValeurConcert concert1 =
+        concert("artiste x", date, LocalTime.of(20, 0), "grand kursaal", "25");
     final ValeurConcert concert2 =
         concert("artiste x", date, LocalTime.of(20, 0), "kursaal besancon", "25");
 
-    final List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+    final List<ValeurConcert> resultat =
+        reconciliateur.reconcilierSalles(List.of(concert1, concert2));
 
     assertEquals(resultat.get(0).salleNorm(), resultat.get(1).salleNorm());
   }

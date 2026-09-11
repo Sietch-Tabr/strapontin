@@ -25,14 +25,14 @@ class RetrySerialisableTest {
   void executer_succesDuPremierCoup_retourneLeResultatSansRetry() {
     final AtomicInteger appels = new AtomicInteger();
     final int resultat =
-            RetrySerialisable.executer(
-                    3,
-                    log,
-                    "test",
-                    () -> {
-                      appels.incrementAndGet();
-                      return 42;
-                    });
+        RetrySerialisable.executer(
+            3,
+            log,
+            "test",
+            () -> {
+              appels.incrementAndGet();
+              return 42;
+            });
     assertEquals(42, resultat);
     assertEquals(1, appels.get());
   }
@@ -41,17 +41,17 @@ class RetrySerialisableTest {
   void executer_conflitPuisSucces_retenteEtRetourneLeResultat() {
     final AtomicInteger appels = new AtomicInteger();
     final int resultat =
-            RetrySerialisable.executer(
-                    3,
-                    log,
-                    "test",
-                    () -> {
-                      final int n = appels.incrementAndGet();
-                      if (n < 2) {
-                        throw new PessimisticLockingFailureException("conflit");
-                      }
-                      return 42;
-                    });
+        RetrySerialisable.executer(
+            3,
+            log,
+            "test",
+            () -> {
+              final int n = appels.incrementAndGet();
+              if (n < 2) {
+                throw new PessimisticLockingFailureException("conflit");
+              }
+              return 42;
+            });
     assertEquals(42, resultat);
     assertEquals(2, appels.get());
   }

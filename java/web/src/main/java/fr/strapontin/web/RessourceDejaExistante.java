@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web;
 
+import java.io.Serial;
+
 /**
  * Exception non-vérifiée pour les conflits de ressource déjà existante.
  *
@@ -16,7 +18,7 @@ package fr.strapontin.web;
  */
 public class RessourceDejaExistante extends RuntimeException {
 
-  @java.io.Serial private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   /**
    * @param message message retourné dans la réponse JSON

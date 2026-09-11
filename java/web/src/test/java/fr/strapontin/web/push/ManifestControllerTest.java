@@ -24,7 +24,8 @@ import org.springframework.http.ResponseEntity;
  */
 class ManifestControllerTest {
 
-  private static HttpServletRequest requetePour(final String scheme, final String host, final int port) {
+  private static HttpServletRequest requetePour(
+      final String scheme, final String host, final int port) {
     final HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getScheme()).thenReturn(scheme);
     when(request.getServerName()).thenReturn(host);

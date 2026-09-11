@@ -25,13 +25,20 @@ import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.match.MockRestRequestMatchers;
+import org.springframework.test.web.client.response.MockRestResponseCreators;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -104,7 +111,7 @@ class SalleServiceTest {
     final UUID nouvelleSalle = UUID.randomUUID();
     when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(nouvelleSalle);
     when(salleRepository.trouverConflitDigitickSlug(eq("lempreinte"), eq(nouvelleSalle)))
-        .thenReturn(java.util.Optional.of("Autre Salle"));
+        .thenReturn(Optional.of("Autre Salle"));
 
     final ErreurMetier erreur =
         assertThrows(
@@ -196,7 +203,7 @@ class SalleServiceTest {
     when(salleRepository.upsertSalle("rockstore", "Rockstore")).thenReturn(uuid);
     when(salleRepository.existePourUtilisateur("u1", uuid)).thenReturn(false);
     when(salleRepository.compterPourUtilisateur("u1")).thenReturn(0);
-    org.mockito.Mockito.doThrow(new org.springframework.dao.DuplicateKeyException("conflit"))
+    org.mockito.Mockito.doThrow(new DuplicateKeyException("conflit"))
         .when(salleRepository)
         .mettreAJourWikidataId(uuid, "Q3438008");
 
@@ -211,10 +218,11 @@ class SalleServiceTest {
   @Test
   void fusionnerOuAjouter_candidatCorrespondantExistant_fusionneLesIdentifiants() {
     final List<ResultatSalle> liste =
-        new java.util.ArrayList<>(
+        new ArrayList<>(
             List.of(
                 new ResultatSalle("Rockstore", "Montpellier", null, null, "osm", "way/1", "Q1")));
-    final ResultatSalle candidatTm = new ResultatSalle("Rockstore", null, "tm123", null, "ticketmaster");
+    final ResultatSalle candidatTm =
+        new ResultatSalle("Rockstore", null, "tm123", null, "ticketmaster");
 
     SalleService.fusionnerOuAjouter(liste, candidatTm);
 
@@ -228,7 +236,7 @@ class SalleServiceTest {
 
   @Test
   void fusionnerOuAjouter_candidatSansCorrespondance_ajouteNouvelleEntree() {
-    final List<ResultatSalle> liste = new java.util.ArrayList<>();
+    final List<ResultatSalle> liste = new ArrayList<>();
     final ResultatSalle candidat =
         new ResultatSalle("Bataclan", "Paris", null, null, "osm", "way/2", "Q2");
 
@@ -484,23 +492,20 @@ class SalleServiceTest {
   @Test
   void rechercherSallesTM_cleConfiguree_attendLeCadenceurAvantLAppelHttp() {
     final ConfigService configService = mock(ConfigService.class);
-    when(configService.lireConfig("TICKETMASTER_API_KEY"))
-        .thenReturn(java.util.Optional.of("fake-key"));
+    when(configService.lireConfig("TICKETMASTER_API_KEY")).thenReturn(Optional.of("fake-key"));
     final fr.strapontin.sources.CadenceurAppels cadenceur =
         mock(fr.strapontin.sources.CadenceurAppels.class);
 
     final RestClient.Builder builder = RestClient.builder();
-    final org.springframework.test.web.client.MockRestServiceServer serveur =
-        org.springframework.test.web.client.MockRestServiceServer.bindTo(builder).build();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     final RestClient restClient = builder.build();
     serveur
         .expect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(
+            MockRestRequestMatchers.requestTo(
                 org.hamcrest.Matchers.containsString("app.ticketmaster.com")))
         .andRespond(
-            org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess(
-                "{\"_embedded\":{\"venues\":[]}}",
-                org.springframework.http.MediaType.APPLICATION_JSON));
+            MockRestResponseCreators.withSuccess(
+                "{\"_embedded\":{\"venues\":[]}}", MediaType.APPLICATION_JSON));
 
     final SalleService service =
         new SalleService(

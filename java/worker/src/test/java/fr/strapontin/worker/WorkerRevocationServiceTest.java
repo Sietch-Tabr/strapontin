@@ -20,6 +20,7 @@ import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -98,7 +99,7 @@ class WorkerRevocationServiceTest {
     verify(jdbc)
         .update(
             contains("DELETE FROM SPRING_SESSION"),
-            eq(java.util.Map.of("usernames", List.of("ex-admin1", "ex-admin2"))));
+            eq(Map.of("usernames", List.of("ex-admin1", "ex-admin2"))));
   }
 
   @Test

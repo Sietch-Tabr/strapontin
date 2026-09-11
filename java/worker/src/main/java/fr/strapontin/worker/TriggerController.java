@@ -188,7 +188,8 @@ public class TriggerController {
    * @return 200 si planifié ou déjà en cours, 500 en cas d'erreur Quartz
    */
   @PostMapping("/salle")
-  public ResponseEntity<Map<String, String>> relancerSalle(@RequestParam final String identifiants) {
+  public ResponseEntity<Map<String, String>> relancerSalle(
+      @RequestParam final String identifiants) {
     try {
       final String cleJob = "fetchSalle-" + identifiants;
       if (jobEnCours(cleJob)) {

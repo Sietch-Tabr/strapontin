@@ -15,8 +15,12 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.config.ConfigService;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.match.MockRestRequestMatchers;
+import org.springframework.test.web.client.response.MockRestResponseCreators;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -108,21 +112,18 @@ class ConfigAdminServiceTest {
   // rythme d'appel et le rate-limit TM (Spike Arrest) reste exposé.
   @Test
   void testerApiTm_cleConfiguree_attendLeCadenceurAvantLAppelHttp() {
-    when(configService.lireConfig("TICKETMASTER_API_KEY"))
-        .thenReturn(java.util.Optional.of("fake-key"));
+    when(configService.lireConfig("TICKETMASTER_API_KEY")).thenReturn(Optional.of("fake-key"));
     final fr.strapontin.sources.CadenceurAppels cadenceur =
         mock(fr.strapontin.sources.CadenceurAppels.class);
 
     final RestClient.Builder builder = RestClient.builder();
-    final org.springframework.test.web.client.MockRestServiceServer serveur =
-        org.springframework.test.web.client.MockRestServiceServer.bindTo(builder).build();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     final RestClient restClient = builder.build();
     serveur
         .expect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(
+            MockRestRequestMatchers.requestTo(
                 org.hamcrest.Matchers.containsString("app.ticketmaster.com")))
-        .andRespond(
-            org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess());
+        .andRespond(MockRestResponseCreators.withSuccess());
 
     final ConfigAdminService serviceCadence =
         new ConfigAdminService(configService, logAdminService, restClient, cadenceur);

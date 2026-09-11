@@ -7,6 +7,7 @@ package fr.strapontin.worker;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import fr.strapontin.worker.sante.ReconciliationNocturneService;
+import fr.strapontin.worker.sante.ResultatReconciliation;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,11 +16,11 @@ import org.springframework.stereotype.Service;
 /**
  * Orchestration des jobs de recalcul de matches et de réconciliation nocturne.
  *
- * <p>Depuis, le fetch (voir {@link WorkerFetchService}), la purge (voir {@link
- * WorkerPurgeService}) et la révocation admin (voir {@link WorkerRevocationService}) ont été
- * extraits dans des services dédiés — cette classe reste le point d'entrée fin délégué par les
- * jobs Quartz {@code RecalculerMatchesJob} et {@code ReconciliationNocturneJob}, les deux seules
- * méthodes ne partageant pas de logique privée substantielle avec les autres familles.
+ * <p>Depuis, le fetch (voir {@link WorkerFetchService}), la purge (voir {@link WorkerPurgeService})
+ * et la révocation admin (voir {@link WorkerRevocationService}) ont été extraits dans des services
+ * dédiés — cette classe reste le point d'entrée fin délégué par les jobs Quartz {@code
+ * RecalculerMatchesJob} et {@code ReconciliationNocturneJob}, les deux seules méthodes ne
+ * partageant pas de logique privée substantielle avec les autres familles.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -73,7 +74,7 @@ public class WorkerService {
         log,
         "reconciliation:nocturne",
         () -> {
-          final var bilan = reconciliationNocturneService.executer();
+          final ResultatReconciliation bilan = reconciliationNocturneService.executer();
           log.info(
               "reconciliation:nocturne terminé sallesVerifiees={} redecouvertes={} ambigues={}"
                   + " enrichissementsSalle={} enrichissementsArtiste={} typesWikidataInvalides={}"

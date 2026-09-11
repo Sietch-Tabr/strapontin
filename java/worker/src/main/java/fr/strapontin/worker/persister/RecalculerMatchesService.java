@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,9 +27,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Service de recalcul des correspondances utilisateurs (table {@code user_matches}).
  *
- * Pour chaque utilisateur, calcule l'intersection entre ses artistes/salles suivis et les concerts
- * futurs. Met à jour {@code user_matches} en conséquence. Les concerts indisponibles sont marqués
- * {@code notification_envoyee_le = now()} immédiatement pour ne pas déclencher de badge "Nouveau".
+ * <p>Pour chaque utilisateur, calcule l'intersection entre ses artistes/salles suivis et les
+ * concerts futurs. Met à jour {@code user_matches} en conséquence. Les concerts indisponibles sont
+ * marqués {@code notification_envoyee_le = now()} immédiatement pour ne pas déclencher de badge
+ * "Nouveau".
  *
  * <p>Les recalculs par utilisateur sont parallélisés via des threads virtuels, chacun dans sa
  * propre transaction ({@link TransactionTemplate}).
@@ -84,8 +86,8 @@ public class RecalculerMatchesService {
 
     final String aujourdhui = LocalDate.now().toString();
 
-    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-      final var futures =
+    try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      final List<CompletableFuture<Void>> futures =
           usersARecalculer.stream()
               .map(
                   userId ->
@@ -203,7 +205,8 @@ public class RecalculerMatchesService {
   // Suivre le complexe (salle parent) doit aussi remonter les concerts de ses sous-salles — un nom
   // sans qualificatif (voir ResolveurSalleParConcert) résout précisément vers ce parent, "site,
   // salle non précisée". Suivre une sous-salle précise reste inchangé (pas de remontée aux frères).
-  private List<UUID> rechercherConcertsParSalles(final List<UUID> salleIds, final String aujourdhui) {
+  private List<UUID> rechercherConcertsParSalles(
+      final List<UUID> salleIds, final String aujourdhui) {
     return jdbc.queryForList(
         "SELECT DISTINCT c.id FROM concerts c"
             + " WHERE (c.salle_id IN (:salleIds)"

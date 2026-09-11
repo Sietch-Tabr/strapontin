@@ -68,7 +68,10 @@ public final class UtilitairesChaine {
    * @since 2.7.11
    */
   public static boolean estContainmentRatio(
-      final String a, final String b, final int longueurMinContainment, final double ratioMinContainment) {
+      final String a,
+      final String b,
+      final int longueurMinContainment,
+      final double ratioMinContainment) {
     final String court = a.length() <= b.length() ? a : b;
     final String plusLong = a.length() <= b.length() ? b : a;
     final double ratio = (double) court.length() / plusLong.length();

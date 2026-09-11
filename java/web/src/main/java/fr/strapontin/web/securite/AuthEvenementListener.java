@@ -10,6 +10,7 @@ import java.util.Map;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.stereotype.Component;
 
@@ -67,7 +68,7 @@ public class AuthEvenementListener {
     logAdminService.logAdmin("warn", "auth", "Échec connexion : " + identifiant, meta);
   }
 
-  private String obtenirIp(final org.springframework.security.core.Authentication auth) {
+  private String obtenirIp(final Authentication auth) {
     if (auth.getDetails() instanceof WebAuthenticationDetails details) {
       return details.getRemoteAddress();
     }

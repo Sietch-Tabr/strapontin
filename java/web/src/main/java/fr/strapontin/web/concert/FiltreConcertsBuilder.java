@@ -67,7 +67,8 @@ public final class FiltreConcertsBuilder {
    * @param params paramètres nommés
    * @param mois   mois au format {@code YYYY-MM}
    */
-  public static void appliquerMois(final StringBuilder where, final Map<String, Object> params, final String mois) {
+  public static void appliquerMois(
+      final StringBuilder where, final Map<String, Object> params, final String mois) {
     if (mois.isBlank() || !mois.matches("\\d{4}-\\d{2}")) {
       return;
     }

@@ -33,7 +33,8 @@ class UtilisateurRepository {
   private final ConfigCipher cipher;
 
   UtilisateurRepository(
-      final NamedParameterJdbcTemplate jdbc, @Value("${app.config.secret}") final String secretConfig) {
+      final NamedParameterJdbcTemplate jdbc,
+      @Value("${app.config.secret}") final String secretConfig) {
     this.jdbc = jdbc;
     this.cipher = new ConfigCipher(secretConfig);
   }

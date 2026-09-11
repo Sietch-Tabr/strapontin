@@ -23,6 +23,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -219,10 +221,8 @@ public class SecurityConfiguration {
                               final Map<String, Object> meta = new HashMap<>();
                               meta.put("chemin", request.getServletPath());
                               meta.put("ip", request.getRemoteAddr());
-                              final var auth =
-                                  org.springframework.security.core.context.SecurityContextHolder
-                                      .getContext()
-                                      .getAuthentication();
+                              final Authentication auth =
+                                  SecurityContextHolder.getContext().getAuthentication();
                               if (auth != null) {
                                 meta.put("userId", auth.getName());
                               }
@@ -310,11 +310,11 @@ public class SecurityConfiguration {
    * Sérialiseur de cookies Spring Session — force {@code Secure}, {@code SameSite=Lax} et {@code
    * max-age} 30 jours.
    *
-   * <p>Les propriétés {@code server.servlet.session.cookie.*} sont ignorées par Spring Session
-   * JDBC ; ce bean prend le relais.
+   * <p>Les propriétés {@code server.servlet.session.cookie.*} sont ignorées par Spring Session JDBC
+   * ; ce bean prend le relais.
    *
-   * <p>{@code SameSite=Lax} (et non Strict) : Safari applique Strict plus strictement que Chrome
-   * et bloque le cookie sur toute navigation entrante (lien mail, barre d'adresse depuis un autre
+   * <p>{@code SameSite=Lax} (et non Strict) : Safari applique Strict plus strictement que Chrome et
+   * bloque le cookie sur toute navigation entrante (lien mail, barre d'adresse depuis un autre
    * site, retour d'une autre app iOS). Lax autorise le cookie sur les navigations GET entrantes
    * tout en le bloquant sur les requêtes cross-site non-GET — protection CSRF équivalente.
    *
@@ -322,7 +322,8 @@ public class SecurityConfiguration {
    * @return le sérialiseur de cookies configuré
    */
   @Bean
-  CookieSerializer cookieSerializer(@Value("${app.cookie.secure:true}") final boolean cookieSecure) {
+  CookieSerializer cookieSerializer(
+      @Value("${app.cookie.secure:true}") final boolean cookieSecure) {
     final DefaultCookieSerializer serialiseur = new DefaultCookieSerializer();
     serialiseur.setUseSecureCookie(cookieSecure);
     serialiseur.setSameSite("Lax");

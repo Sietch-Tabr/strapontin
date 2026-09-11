@@ -192,7 +192,8 @@ public class UserController {
    * @return 204 si supprimé, 409 si dernier admin
    */
   @DeleteMapping
-  public ResponseEntity<?> supprimerCompte(final Authentication auth, final HttpServletRequest httpRequest) {
+  public ResponseEntity<?> supprimerCompte(
+      final Authentication auth, final HttpServletRequest httpRequest) {
     final UtilisateurDetails details = utilisateur(auth);
     if ("admin".equals(details.role()) && utilisateurRepository.compterAdmins() == 1) {
       return erreur(409, "Impossible de supprimer le seul compte administrateur de l'instance.");

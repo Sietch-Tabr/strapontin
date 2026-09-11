@@ -5,9 +5,11 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -86,7 +88,7 @@ public class WorkerSuiviCyclesService {
   int verifier() {
     final Map<String, Instant> dernieresExecs = lireDernieresExecs();
     int enRetard = 0;
-    for (final var entree : FRAICHEUR_ATTENDUE.entrySet()) {
+    for (final Map.Entry<String, Duration> entree : FRAICHEUR_ATTENDUE.entrySet()) {
       final String typeJob = entree.getKey();
       final Duration fraicheurMax = entree.getValue();
       final Instant derniereExec = dernieresExecs.get(typeJob);
@@ -108,13 +110,16 @@ public class WorkerSuiviCyclesService {
     return jdbc.queryForList("SELECT type_job, derniere_exec FROM fetch_jobs", Map.of()).stream()
         .filter(ligne -> ligne.get("derniere_exec") != null)
         .collect(
-            java.util.stream.Collectors.toMap(
+            Collectors.toMap(
                 ligne -> (String) ligne.get("type_job"),
-                ligne -> ((java.sql.Timestamp) ligne.get("derniere_exec")).toInstant()));
+                ligne -> ((Timestamp) ligne.get("derniere_exec")).toInstant()));
   }
 
   private void signalerRetard(
-      final String typeJob, final Instant derniereExec, final Duration ecart, final Duration fraicheurMax) {
+      final String typeJob,
+      final Instant derniereExec,
+      final Duration ecart,
+      final Duration fraicheurMax) {
     logsAdminWorker.inserer(
         "warn",
         "worker",

@@ -9,6 +9,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.Normalisation;
+import java.net.URLEncoder;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -89,7 +90,8 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
    * @param restClient client HTTP à utiliser
    * @param cache cache Caffeine à utiliser
    */
-  public ResolveurNomCanonique(final RestClient restClient, final Cache<String, ResultatResolution> cache) {
+  public ResolveurNomCanonique(
+      final RestClient restClient, final Cache<String, ResultatResolution> cache) {
     this.restClient = restClient;
     this.cache = cache;
   }
@@ -104,7 +106,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
       if (data == null) {
         return null;
       }
-      final var dataList = (List<Map<String, Object>>) data.get("data");
+      final List<Map<String, Object>> dataList = (List<Map<String, Object>>) data.get("data");
       if (dataList == null || dataList.isEmpty()) {
         return null;
       }
@@ -173,7 +175,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   }
 
   private static String encode(final String s) {
-    return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
+    return URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
   }
 
   /**

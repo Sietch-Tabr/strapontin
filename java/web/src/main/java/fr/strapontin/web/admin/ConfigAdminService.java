@@ -7,6 +7,7 @@ package fr.strapontin.web.admin;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.config.ConfigService;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -167,7 +168,7 @@ public class ConfigAdminService {
     }
     if ("PUBLIC_BASE_URL".equals(cle)) {
       try {
-        final java.net.URI uri = java.net.URI.create(valeur);
+        final URI uri = URI.create(valeur);
         final String host = uri.getHost();
         final boolean estIp =
             "localhost".equals(host)

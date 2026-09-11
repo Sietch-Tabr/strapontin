@@ -29,7 +29,8 @@ final class TicketmasterHealthCheck {
   private final RestClient restClient;
   private final CadenceurAppels cadenceur;
 
-  TicketmasterHealthCheck(final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
+  TicketmasterHealthCheck(
+      final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
     this.apiKey = apiKey;
     this.restClient = restClient;
     this.cadenceur = cadenceur;
@@ -99,13 +100,14 @@ final class TicketmasterHealthCheck {
       if (data == null) {
         return List.of();
       }
-      final var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
-      final var venues = embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
+      final Map<String, Object> embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
+      final List<Map<String, Object>> venues =
+          embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
       if (venues == null) {
         return List.of();
       }
       final List<CandidatVenueTM> resultat = new ArrayList<>();
-      for (final var v : venues) {
+      for (final Map<String, Object> v : venues) {
         final Object id = v.get("id");
         if (id != null) {
           resultat.add(new CandidatVenueTM((String) id, (String) v.get("name")));
@@ -136,7 +138,7 @@ final class TicketmasterHealthCheck {
       if (data == null) {
         return 0;
       }
-      final var page = (Map<String, Object>) data.get("page");
+      final Map<String, Object> page = (Map<String, Object>) data.get("page");
       return page != null ? ((Number) page.get("totalElements")).intValue() : 0;
     } catch (Exception e) {
       log.warn(
